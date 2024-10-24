@@ -1,0 +1,18 @@
+.card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+        transform: scale(1.05); /* Slight zoom-in on hover */
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+    /* Stili per le card */
+    & img {
+        object-fit: cover;
+        height: 200px;
+
+        @media (max-width: 768px) {
+            height: inherit;
+        }
+    }
+}
