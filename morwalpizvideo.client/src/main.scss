@@ -34,11 +34,17 @@ body::before {
     z-index: 2; /* Metti il contenuto sopra l'overlay */
 }
 
-.btn {
+.btn, .pop-up {
     transition: transform 0.2s ease-in-out;
     &:hover{
         transform: scale(1.05);
     }
+}
+#root {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
 }
 /*:root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;

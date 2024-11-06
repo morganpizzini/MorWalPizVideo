@@ -1,5 +1,5 @@
 export function getMatches() {
-    return fetch('api/matches')
+    return fetch('/api/matches')
         .then((response) => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -9,7 +9,7 @@ export function getMatches() {
 }
 
 export function getMatch(id) {
-    return fetch(`api/matches/${id}`)
+    return fetch(`/api/matches/${id}`)
         .then((response) => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);

@@ -1,0 +1,91 @@
+﻿[
+  {
+    "thumbnailUrl": "VqOSvayqUMM",
+    "title": "Campionato Italiano 2024",
+    "description": "Gara IPSC in cui ho spaccato tutto!",
+    "url": "italiano-2024",
+    "creationDateTime": "2020-10-21T19:00:00.000000+01:00",
+    "videos": [
+      {
+        "id": "ZFpHU2cFXn0",
+        "title": "Da DUE, ne uscirá UNA giusta? - VLOG IPSC FINALE ITALIANO",
+        "description": "Video blog per la FINALE ITALIANA IPSC, allenamento, produzione dei colpi [..]",
+        "category": "Vlog",
+        "creationDateTime": "2024-10-14T17:00:00.000000+00:00"
+      },
+      {
+        "id": "VqOSvayqUMM",
+        "title": "HO spaccato TUTTO!! PROPRIO in FINALE",
+        "description": "Se vi state chiedendo cosa ho rotto questa volta... la risposta è [..]",
+        "category": "Gara",
+        "creationDateTime": "2024-10-15T17:00:00.000000+00:00"
+      },
+      {
+        "id": "XqUGRMjTrpM",
+        "title": "Una gara TRISTE, sia per il TEMPO, che per le PRESTAZIONI",
+        "description": "Mi sono ritagliato qualche minuto per fare un`analisi della mia gara dallo stage [..]",
+        "category": "Review",
+        "creationDateTime": "2024-10-18T17:00:00.000000+00:00"
+      },
+      {
+        "id": "ZLM_F0hsqbo",
+        "title": "Sparare con RISO ed OKI, perchè il PODIO non aspetta nessuno",
+        "description": "Seconda sezione della review degli stage",
+        "category": "Review",
+        "creationDateTime": "2024-10-21T17:00:00.000000+00:00"
+      }
+    ]
+  },
+  {
+    "thumbnailUrl": "Hok-1LIORa4",
+    "title": "SMETTILA di buttare SOLDI 💸 nella TERRA",
+    "description": "Vi mostro come riscaldarsi correttamente prima di un allenamento di tiro #IPSC, #IDPA, #USPSA, per migliorare precisione e performance [..]",
+    "url": "Hok-1LIORa4",
+    "isLink": true,
+    "category": "Consigli",
+    "creationDateTime": "2024-10-23T17:00:00.000000+00:00"
+  },
+  {
+    "thumbnailUrl": "WC2sEcEsti8",
+    "title": "MANI piccole = SKIP, MANI grandi = SOLUZIONE ✋🔫",
+    "description": "Oggi vi porto con me in un allenamento di tiro! [..]",
+    "url": "WC2sEcEsti8",
+    "isLink": true,
+    "category": "Vlog",
+    "creationDateTime": "2024-10-28T17:00:00.000000+00:00"
+  },
+  {
+    "thumbnailUrl": "gUkZrpujbPE",
+    "title": "NON VA come dovrebbe? CAMBIA TUTTO! MANUTENZIONE TANFOGLIO LIMITED CUSTOM",
+    "description": "Esploriamo tutte le complessità e i dettagli dello smontaggio della pistola Tanfoglio Limited Custom [..]",
+    "url": "gUkZrpujbPE",
+    "isLink": true,
+    "category": "Consigli",
+    "creationDateTime": "2024-10-31T17:00:00.000000+00:00"
+  },
+  {
+    "thumbnailUrl": "1AlRUdCcK0o",
+    "title": "Seconda prova IPSC Winter Championship MA1 - UBOLDO",
+    "description": "Sembrerà STRANO, ma TUTTO è ANDATO come DOVEVA",
+    "url": "winter-2024-uboldo",
+    "isLink": false,
+    "category": "Gara",
+    "creationDateTime": "2024-11-03T17:00:00.000000+00:00",
+    "videos": [
+      {
+        "id": "1AlRUdCcK0o",
+        "title": "Sembrerà STRANO, ma TUTTO è ANDATO come DOVEVA - IPSC Winter Championship UBOLDO",
+        "description": "Una giornata intensa tra allenamento e gara! 🔥 [..]",
+        "category": "Gara",
+        "creationDateTime": "2024-11-03T17:00:00.000000+00:00"
+      },
+      {
+        "id": "XNisy7wG5Zw",
+        "title": "In che STAGE ho lasciato più PUNTI? - REVIEW Winter Championship Uboldo 2024",
+        "description": "Se vi state chiedendo cosa ho rotto questa volta... la risposta è [..]",
+        "category": "Review",
+        "creationDateTime": "2024-11-05T17:00:00.000000+00:00"
+      }
+    ]
+  }
+]

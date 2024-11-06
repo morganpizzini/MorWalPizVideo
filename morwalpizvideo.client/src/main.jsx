@@ -4,6 +4,7 @@ import './main.scss'
 import Root from "./routes/root";
 import Matches, { loader as matchLoader } from "./routes/matches";
 import ErrorPage from "./error-page";
+import Accessories, { loader as accessoryLoader } from "./routes/accessories"
 import Index, { loader as indexLoader } from "./routes/index";
 import CookiePolicy from "./routes/cookie-policy";
 import {
@@ -35,7 +36,12 @@ const router = createBrowserRouter([
                 path: "matches/:matchId",
                 loader: matchLoader,
                 element: <Matches />,
-            },
+                },
+                {
+                    path: "attrezzatura",
+                    loader: accessoryLoader,
+                    element: <Accessories />,
+                },
             {
                 path: "cookie-policy",
                 element: <CookiePolicy />,

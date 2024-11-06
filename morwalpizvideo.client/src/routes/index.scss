@@ -16,3 +16,18 @@
         }
     }
 }
+
+.card-columns {
+    columns: 250px;
+    column-gap: 20px;
+
+    @media (max-width: 768px) {
+        columns: 150px;
+        column-gap: 10px;
+    }
+}
+
+.card {
+    break-inside: avoid-column;
+    margin-bottom: 1rem;
+}

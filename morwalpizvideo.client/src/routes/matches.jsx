@@ -2,7 +2,7 @@ import { useLoaderData } from "react-router-dom"
 import './matches.scss'
 import SEO from "@utils/seo";
 import { getMatch } from "@services/matches";
-
+import DateDisplay from "@utils/date-display";
 export async function loader({ params }) {
     const match = await getMatch(params.matchId);
     return { match };
@@ -28,8 +28,10 @@ export default function Matches() {
                             </div>
                             <div className="col-md-6 d-flex align-items-center">
                                 <div className="video-details">
+                                    <p className="text-muted">{video.category}</p>
                                     <div className="video-title">{video.title}</div>
                                     <div className="video-description">{video.description}</div>
+                                    <DateDisplay className="text-muted text-end" dateString={match.creationDateTime} />
                                 </div>
                             </div>
                         </div>

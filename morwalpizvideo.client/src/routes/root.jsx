@@ -1,5 +1,6 @@
 ﻿import { Outlet, useNavigation } from "react-router-dom";
 import TitleComponent from "@layouts/title-header";
+import Footer from "@layouts/footer";
 
 export default function Root() {
     const navigation = useNavigation();
@@ -7,10 +8,11 @@ export default function Root() {
         <>
             <TitleComponent />
             <div className={
-                `container mt-5 ${navigation.state === "loading" ? "loading" : ""}`
+                `container my-5 ${navigation.state === "loading" ? "loading" : ""}`
             }>
                 <Outlet />
             </div>
+            <Footer/>
         </>
     );
 }
