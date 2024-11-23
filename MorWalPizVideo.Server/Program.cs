@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
+using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using System.Net.Http;
@@ -40,15 +41,17 @@ app.UseHttpsRedirection();
 
 var apiGroup = app.MapGroup("/api");
 
-apiGroup.MapGet("/reset", (DataService dataService) =>
+apiGroup.MapGet("/reset", (DataService dataService, MyMemoryCache memoryCache) =>
 {
-    dataService.ResetItems();
+    memoryCache.Cache.Remove("data");
+    memoryCache.Cache.Remove("products");
+    memoryCache.Cache.Remove("sponsors");
     return Results.Ok();
 })
 .WithName("Reset")
 .WithOpenApi();
 
-apiGroup.MapGet("/matches", async (DataService dataService, MyMemoryCache memoryCache, IHttpClientFactory httpClientFactory) =>
+apiGroup.MapGet("/matches", async (IConfiguration configuration, DataService dataService, MyMemoryCache memoryCache, IHttpClientFactory httpClientFactory) =>
 {
     var cacheKey = "data";
     if(memoryCache.Cache.TryGetValue(cacheKey,out IList<Match>? matches))
@@ -63,39 +66,103 @@ apiGroup.MapGet("/matches", async (DataService dataService, MyMemoryCache memory
 
     query["part"] = "id,snippet,statistics,contentDetails";
     query["id"] = string.Join(",", matches.Where(x => x.Videos != null).SelectMany(x => x.Videos).Select(x => x.Id).ToList().Concat(matches.Select(m=>m.ThumbnailUrl).ToList()));
-    query["key"] = "";
+    query["key"] = configuration["YTApiKey"];
     string queryString = query.ToString() ?? "";
 
     var httpResponseMessage = await httpClient.GetAsync($"?{queryString}");
-    if (httpResponseMessage.IsSuccessStatusCode)
-    {
-        using var contentStream =
-            await httpResponseMessage.Content.ReadAsStreamAsync();
+    if (!httpResponseMessage.IsSuccessStatusCode)
+        return matches;
+    
+    using var contentStream =
+        await httpResponseMessage.Content.ReadAsStreamAsync();
 
-        //GitHubBranches = await JsonSerializer.DeserializeAsync
-        //    <IEnumerable<GitHubBranch>>(contentStream);
-        memoryCache.Cache.Set(cacheKey, matches, new MemoryCacheEntryOptions
+    var options = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+    var youtubeResponse = await JsonSerializer.DeserializeAsync<VideoResponse>(contentStream,options);
+
+    if(youtubeResponse == null)
+        return matches;
+
+    foreach (var item in youtubeResponse.Items)
+    {
+        var video = ContractUtils.Convert(item);
+        
+        var match = matches.FirstOrDefault(x => x.Videos != null && x.Videos.Any(v => v.Id == video.Id));
+        if (match != null)
         {
-            Size = 1
-        });
+            // is related video
+            var index = Array.FindIndex(match.Videos, x => x.Id == video.Id);
+            match.Videos[index] = video with { Category = match.Videos[index].Category };
+        } 
+        else
+        {
+            //is home page video
+            var element = matches.FirstOrDefault(x => x.ThumbnailUrl == video.Id);
+            if(element == null)
+                continue;
+            var index = matches.IndexOf(element);
+
+            matches[index] = element with { Title = video.Title, Description = video.Description, CreationDateTime = video.CreationDateTime, Url = video.Id };
+        }
     }
+    
+    memoryCache.Cache.Set(cacheKey, matches.OrderByDescending(x=>x.CreationDateTime), new MemoryCacheEntryOptions
+    {
+        Size = 1
+    });
+    
     return matches;
 })
 .WithName("Matches")
 .WithOpenApi();
 
-apiGroup.MapGet("/matches/{url}", (DataService dataService, string url) =>
+apiGroup.MapGet("/matches/{url}", (DataService dataService, MyMemoryCache memoryCache, string url) =>
 {
-    return dataService.GetItems().FirstOrDefault(x => x.Url == url);
+    var cacheKey = "data";
+    if (!memoryCache.Cache.TryGetValue(cacheKey, out IList<Match>? matches))
+    {
+        matches = dataService.GetItems();
+    }
+    return matches?.FirstOrDefault(x => x.Url == url);
 })
 .WithName("Match Detail")
 .WithOpenApi();
 
-apiGroup.MapGet("/products", (DataService dataService) =>
+apiGroup.MapGet("/products", (DataService dataService, MyMemoryCache memoryCache) =>
 {
-    return dataService.GetProducts();
+    var cacheKey = "products";
+    if (memoryCache.Cache.TryGetValue(cacheKey, out IList<Product>? products))
+    {
+        return products;
+    }
+    products = dataService.GetProducts();
+    memoryCache.Cache.Set(cacheKey, products, new MemoryCacheEntryOptions
+    {
+        Size = 1
+    });
+    return products;
 })
 .WithName("Products")
+.WithOpenApi();
+
+apiGroup.MapGet("/sponsors", (DataService dataService, MyMemoryCache memoryCache) =>
+{
+    var cacheKey = "sponsors";
+    if (memoryCache.Cache.TryGetValue(cacheKey, out IList<Sponsor>? sponsors))
+    {
+        return sponsors;
+    }
+    sponsors = dataService.GetSponsors();
+    memoryCache.Cache.Set(cacheKey, sponsors, new MemoryCacheEntryOptions
+    {
+        Size = 1
+    });
+    return sponsors;
+})
+.WithName("Sponsors")
 .WithOpenApi();
 
 app.MapFallbackToFile("/index.html");

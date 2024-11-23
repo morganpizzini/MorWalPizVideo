@@ -12,11 +12,14 @@ export default function TitleComponent() {
                 </Link>
             </div>
             <div className="social-buttons mt-3">
-                <a href="https://www.instagram.com/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-instagram">
-                    <i className="fab fa-instagram"></i> Seguimi
+                <a href="https://t.me/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-telegram">
+                    <i className="fab fa-telegram"></i> Aggiungi
                 </a>
                 <a href="https://www.youtube.com/@morwalpiz?sub_confirmation=1" target="_blank" rel="noopener noreferrer" className="btn btn-youtube">
                     <i className="fab fa-youtube"></i> Iscriviti
+                </a>
+                <a href="https://www.instagram.com/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-instagram">
+                    <i className="fab fa-instagram"></i> Seguimi
                 </a>
             </div>
         </div>

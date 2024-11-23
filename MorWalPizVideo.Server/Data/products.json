@@ -2,81 +2,183 @@
   {
     "title": "Telefono Pixel 8",
     "url": "https://amzn.to/4ee8H2S",
-    "category": "registrazione"
+    "category": "registrazione",
+    "category2": "Ripresa"
+  },
+  {
+    "title": "Gorilla pod",
+    "url": "https://amzn.to/48Ghrxw",
+    "category": "registrazione",
+    "category2": "Treppiedi"
+  },
+  {
+    "title": "Treppiede statico",
+    "url": "https://amzn.to/48CFixZ",
+    "category": "registrazione",
+    "category2": "Treppiedi"
   },
   {
     "title": "Action cam Insta360 go 3",
     "url": "https://amzn.to/40wu2Be",
-    "category": "registrazione"
+    "category": "registrazione",
+    "category2": "Ripresa"
   },
+  {
+    "title": "Conversione 3piede per attacco arca swiss",
+    "url": "https://amzn.to/3ULNeav",
+    "category": "registrazione",
+    "category2": "Treppiedi"
+  },
+  {
+    "title": "Porta cellulare arca",
+    "url": "https://amzn.to/4fH3gL8",
+    "category": "registrazione",
+    "category2": "Treppiedi"
+  },
+  {
+    "title": "Adattamento treppiede ad arca",
+    "url": "https://amzn.to/3NZTVSE",
+    "category": "registrazione",
+    "category2": "Treppiedi"
+  },
+
   {
     "title": "Luce action cam",
     "url": "https://amzn.to/48D4G76",
-    "category": "registrazione"
+    "category": "registrazione",
+    "category2": "Luci"
   },
+  {
+    "title": "Luce video",
+    "url": "https://amzn.to/3ObUIjB",
+    "category": "registrazione",
+    "category2": "Luci"
+  },
+  {
+    "title": "Softbox",
+    "url": "https://amzn.to/3OgA6GI ",
+    "category": "registrazione",
+    "category2": "Luci"
+  },
+  {
+    "title": "Luce colorata video",
+    "url": "https://amzn.to/3YGyKtJ",
+    "category": "registrazione",
+    "category2": "Luci"
+  },
+
   {
     "title": "Power bank",
     "url": "https://amzn.to/4eb7rxj",
-    "category": "registrazione"
+    "category": "registrazione",
+    "category2": "Altro"
   },
   {
-    "title": "Treppiede",
-    "url": "https://amzn.to/48CFixZ",
-    "category": "registrazione"
-  },
-  {
-    "title": "Processore PC Intel",
-    "url": "https://amzn.to/4fufhDo",
-    "category": "registrazione"
-  },
-  {
-    "title": "Ram PC 2x",
-    "url": "https://amzn.to/3YBXS4M",
-    "category": "registrazione"
-  },
-  {
-    "title": "Scheda video PC NVIDIA",
-    "url": "https://amzn.to/4ef9IYn",
-    "category": "registrazione"
+    "title": "Cavi usb",
+    "url": "https://amzn.to/3ClMD9d",
+    "category": "registrazione",
+    "category2": "Altro"
   },
   {
     "title": "Cuffie",
     "url": "https://amzn.to/3YOGGdL",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Tiro"
   },
   {
     "title": "Magnesite",
     "url": "https://amzn.to/48wniWh",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Tiro"
   },
   {
     "title": "Scalda mani",
     "url": "https://amzn.to/4f87V8M",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Tiro"
   },
   {
     "title": "Tape",
     "url": "https://amzn.to/3YOitnV",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Tiro"
+  },
+  {
+    "title": "Asciugamano",
+    "url": "https://amzn.to/40yHk0i",
+    "category": "attrezzatura",
+    "category2": "Tiro"
+  },
+  {
+    "title": "Moschettone",
+    "url": "https://amzn.to/3O0GgL5",
+    "category": "attrezzatura",
+    "category2": "Tiro"
   },
   {
     "title": "Scatola armi",
     "url": "https://amzn.to/3YAQB59",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Pulizia arma"
+  },
+  {
+    "title": "Bore cleaner",
+    "url": "https://amzn.to/4eoJsuX",
+    "category": "attrezzatura",
+    "category2": "Pulizia arma"
+  },
+  {
+    "title": "Set cacciaspine",
+    "url": "https://amzn.to/3AoidCR",
+    "category": "attrezzatura",
+    "category2": "Pulizia arma"
+  },
+  {
+    "title": "Frena filetto",
+    "url": "https://amzn.to/3OfuHQ9",
+    "category": "attrezzatura",
+    "category2": "Pulizia arma"
+  },
+  {
+    "title": "Calibro",
+    "url": "https://amzn.to/3AwymWM",
+    "category": "attrezzatura",
+    "category2": "Ricarica"
+  },
+  {
+    "title": "Bilancia",
+    "url": "https://amzn.to/3UIra0y",
+    "category": "attrezzatura",
+    "category2": "Ricarica"
   },
   {
     "title": "Separatore rotante",
     "url": "https://amzn.to/4enukxW",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Ricarica"
   },
   {
     "title": "Separatore graniglia",
     "url": "https://amzn.to/3UB30Fl",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Ricarica"
   },
   {
     "title": "Graniglia",
     "url": "https://amzn.to/3UDtG8p",
-    "category": "attrezzatura"
+    "category": "attrezzatura",
+    "category2": "Ricarica"
+  },
+  {
+    "title": "Luce ricarica",
+    "url": "https://amzn.to/3UEaE1p",
+    "category": "attrezzatura",
+    "category2": "Ricarica"
+  },
+  {
+    "title": "Conta colpi",
+    "url": "https://amzn.to/3CmHn5m",
+    "category": "attrezzatura",
+    "category2": "Ricarica"
   }
 ]

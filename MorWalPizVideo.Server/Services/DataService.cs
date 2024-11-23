@@ -1,67 +1,33 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using MorWalPizVideo.Server.Models;
+﻿using MorWalPizVideo.Server.Models;
 using System.Text.Json;
 
 namespace MorWalPizVideo.Server.Services
 {
-    public class MyMemoryCache
-    {
-        public MemoryCache Cache { get; } = new MemoryCache(
-            new MemoryCacheOptions
-            {
-                SizeLimit = 1024
-            });
-    }
     public class DataService
     {
         private readonly IWebHostEnvironment _environment;
-
-        private List<Match>? Items;
-        private List<Product>? Products;
         public DataService(IWebHostEnvironment environment)
         {
             _environment = environment;
         }
 
-        public void ResetItems()
-        {
-            Items = null;
-            Products = null;
-        }
+        public List<Match> GetItems() => ReadJson<Match>("data").OrderByDescending(x => x.CreationDateTime).ToList();
+       
+        public List<Product> GetProducts() => ReadJson<Product>("products");
 
-        public List<Match> GetItems()
+        public List<Sponsor> GetSponsors() => ReadJson<Sponsor>("sponsors");
+        
+
+        private List<T> ReadJson<T>(string jsonFileName)
         {
-            if(Items != null)
-            {
-                return Items;
-            }
-            var filePath = Path.Combine(_environment.ContentRootPath, "Data", "data.json");
+            var filePath = Path.Combine(_environment.ContentRootPath, "Data", $"{jsonFileName}.json");
             var jsonString = File.ReadAllText(filePath);
             var options = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 PropertyNameCaseInsensitive = true
             };
-            Items = JsonSerializer.Deserialize<List<Match>>(jsonString,options)?
-                            .OrderByDescending(x=>x.CreationDateTime).ToList() ?? new List<Match>();
-            return Items;
-        }
-
-        public List<Product> GetProducts()
-        {
-            if (Products != null)
-            {
-                return Products;
-            }
-            var filePath = Path.Combine(_environment.ContentRootPath, "Data", "products.json");
-            var jsonString = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-            Products = JsonSerializer.Deserialize<List<Product>>(jsonString, options)?.ToList() ?? new List<Product>();
-            return Products;
+            return JsonSerializer.Deserialize<List<T>>(jsonString, options)?.ToList() ?? new List<T>();
         }
     }
 }

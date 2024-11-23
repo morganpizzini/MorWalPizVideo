@@ -1,4 +1,4 @@
 ﻿namespace MorWalPizVideo.Server.Models
 {
-    public record Product(string Title,string Url,string Category) { }
+    public record Product(string Title,string Url,string Category,string? Category2) { }
 }

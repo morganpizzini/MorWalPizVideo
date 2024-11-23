@@ -63,6 +63,15 @@
     text-decoration: none;
 }
 
+.btn-telegram {
+    background-color: #2481cc;
+}
+
+.btn-telegram:hover, .btn-telegram:active {
+    background-color: #1a8ad5 !important;
+    color: #fff !important;
+}
+
 /* Instagram button */
 .btn-instagram {
     background-color: #E4405F;

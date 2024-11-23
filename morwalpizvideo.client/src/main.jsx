@@ -5,6 +5,7 @@ import Root from "./routes/root";
 import Matches, { loader as matchLoader } from "./routes/matches";
 import ErrorPage from "./error-page";
 import Accessories, { loader as accessoryLoader } from "./routes/accessories"
+import Sponsors, { loader as sponsorsLoader } from "./routes/sponsors"
 import Index, { loader as indexLoader } from "./routes/index";
 import CookiePolicy from "./routes/cookie-policy";
 import {
@@ -36,12 +37,17 @@ const router = createBrowserRouter([
                 path: "matches/:matchId",
                 loader: matchLoader,
                 element: <Matches />,
-                },
-                {
-                    path: "attrezzatura",
-                    loader: accessoryLoader,
-                    element: <Accessories />,
-                },
+            },
+            {
+                path: "attrezzatura",
+                loader: accessoryLoader,
+                element: <Accessories />,
+            },
+            {
+                path: "sponsors",
+                loader: sponsorsLoader,
+                element: <Sponsors />,
+            },
             {
                 path: "cookie-policy",
                 element: <CookiePolicy />,
