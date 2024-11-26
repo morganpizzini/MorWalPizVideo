@@ -1,11 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Net.Http.Headers;
-using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
-using System.Net.Http;
-using System.Text.Json;
-using System.Web;
 
 // https://www.googleapis.com/youtube/v3/videos?part=id,snippet,statistics,&id=WC2sEcEsti8&key=AIzaSyCSFaI1a70I39eF_tlnXWZWTJ49tfyNUWE
 // https://www.googleapis.com/youtube/v3/videos?part=id,snippet,suggestions,statistics,contentDetails&id=WC2sEcEsti8&key=AIzaSyCSFaI1a70I39eF_tlnXWZWTJ49tfyNUWE
@@ -23,8 +18,6 @@ builder.Services.AddSingleton<MyMemoryCache>();
 builder.Services.AddHttpClient("Youtube", httpClient =>
 {
     httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
-
-    
 });
 
 var app = builder.Build();
