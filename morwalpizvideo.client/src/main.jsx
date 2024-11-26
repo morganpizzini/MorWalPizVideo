@@ -13,6 +13,7 @@ import {
     RouterProvider,
 } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
+import ReactGA from 'react-ga4';
 // Import all of Bootstrap's JS
 //import * as bootstrap from 'bootstrap'
 //import Alert from 'bootstrap/js/dist/alert';
@@ -56,7 +57,12 @@ const router = createBrowserRouter([
     }
 ]);
 
-createRoot(document.getElementById('root')).render(
+const gaTrackingId = "G-ST9GQYL925";
+if (window.location.hostname != "localhost") {
+    ReactGA.initialize(gaTrackingId)
+}
+
+createRoot(document.getElementById('root')).render(    
     <StrictMode>
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>

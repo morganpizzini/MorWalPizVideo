@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig } from 'vite';
+import { VitePWA } from "vite-plugin-pwa";
 import plugin from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +16,49 @@ const baseFolder =
 const certificateName = "morwalpizvideo.client";
 const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
 const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
+
+// you can copy the base structure of manifest object.
+const manifestForPlugIn = {
+    registerType: 'prompt',
+    includeAssests: ['favicon.ico', "apple-touch-icon.png", "maskable_icon.png"],
+    manifest: {
+        name: "MorWalPiz",
+        short_name: "MWP",
+        description: "MorWalPiz - Morgan Pizzini",
+        icons: [{
+            src: '/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'favicon'
+        },
+        {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'favicon'
+        },
+        {
+            src: '/apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'apple touch icon',
+        },
+        {
+            src: '/maskable_icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+        }
+        ],
+        theme_color: '#cacaca',
+        background_color: '#7c7c7d',
+        display: "standalone",
+        scope: '/',
+        start_url: "/",
+        orientation: 'portrait'
+    }
+}
+
 
 if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
     if (0 !== child_process.spawnSync('dotnet', [
@@ -35,7 +79,7 @@ const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_H
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [plugin()],
+    plugins: [plugin(), VitePWA(manifestForPlugIn)],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),

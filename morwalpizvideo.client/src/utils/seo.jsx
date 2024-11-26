@@ -4,7 +4,10 @@ export default function SEO({ title, description, imageUrl }) {
         <Helmet>
             <title>{title}</title>
             <link rel="canonical" href={window.location.href} />
+            <meta name='title' content={title} />
             <meta name='description' content={description} />
+            <meta name='keywords' content="morwalpiz, yt, youtube, morgan walker pizzini, morgan pizzini" />
+            <link rel="image_src" href={imageUrl} />
 
             <meta property="og:type" content="article" />
             <meta property="og:title" content={title} />
