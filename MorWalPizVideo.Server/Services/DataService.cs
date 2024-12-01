@@ -1,33 +1,30 @@
 ﻿using MorWalPizVideo.Server.Models;
-using System.Text.Json;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Server.Services
 {
     public class DataService
     {
         private readonly IWebHostEnvironment _environment;
-        public DataService(IWebHostEnvironment environment)
+        private readonly IMatchRepository _matchRepository;
+        private readonly IProductRepository _productRepository;
+        private readonly ISponsorRepository _sponsorRepository;
+        private readonly IPageRepository _pageRepository;
+        public DataService(IWebHostEnvironment environment, IMatchRepository matchRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository)
         {
             _environment = environment;
+            _matchRepository = matchRepository;
+            _productRepository = productRepository;
+            _sponsorRepository = sponsorRepository;
+            _pageRepository = pageRepository;
         }
 
-        public List<Match> GetItems() => ReadJson<Match>("data").OrderByDescending(x => x.CreationDateTime).ToList();
+        public Task<IList<Match>> GetItems() => _matchRepository.GetItemsAsync();
        
-        public List<Product> GetProducts() => ReadJson<Product>("products");
+        public Task<IList<Product>> GetProducts() => _productRepository.GetItemsAsync();
 
-        public List<Sponsor> GetSponsors() => ReadJson<Sponsor>("sponsors");
+        public Task<IList<Sponsor>> GetSponsors() => _sponsorRepository.GetItemsAsync();
+        public Task<IList<Page>> GetPages() => _pageRepository.GetItemsAsync();
         
-
-        private List<T> ReadJson<T>(string jsonFileName)
-        {
-            var filePath = Path.Combine(_environment.ContentRootPath, "Data", $"{jsonFileName}.json");
-            var jsonString = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-            return JsonSerializer.Deserialize<List<T>>(jsonString, options)?.ToList() ?? new List<T>();
-        }
     }
 }

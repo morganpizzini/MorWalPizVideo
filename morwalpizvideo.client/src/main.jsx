@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './main.scss'
 import Root from "./routes/root";
 import Matches, { loader as matchLoader } from "./routes/matches";
+import Pages, { loader as pageLoader } from "./routes/pages";
 import ErrorPage from "./error-page";
 import Accessories, { loader as accessoryLoader } from "./routes/accessories"
 import Sponsors, { loader as sponsorsLoader } from "./routes/sponsors"
@@ -38,6 +39,11 @@ const router = createBrowserRouter([
                 path: "matches/:matchId",
                 loader: matchLoader,
                 element: <Matches />,
+                },
+            {
+                path: "pages/:pageId",
+                loader: pageLoader,
+                element: <Pages />,
             },
             {
                 path: "attrezzatura",

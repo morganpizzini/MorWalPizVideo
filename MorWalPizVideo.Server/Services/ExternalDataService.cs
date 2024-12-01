@@ -1,40 +1,85 @@
-﻿using Microsoft.Extensions.Configuration;
-using MorWalPizVideo.Server.Contracts;
+﻿using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Models;
-using System.Net.Http;
+using MorWalPizVideo.Server.Services.Interfaces;
 using System.Text.Json;
 using System.Web;
 
 namespace MorWalPizVideo.Server.Services
 {
-    public class ExternalDataService
+    public interface IExternalDataService
     {
-        private readonly IConfiguration _configuration;
+        Task<IList<Match>> FetchMatches();
+    }
+    public class ExternalDataMockService : IExternalDataService
+    {
         private readonly DataService _dataService;
-        private readonly IHttpClientFactory _httpClientFactory;
-        public ExternalDataService(IConfiguration configuration, DataService dataService, IHttpClientFactory httpClientFactory)
+        public ExternalDataMockService(DataService dataService)
         {
-            _configuration = configuration;
             _dataService = dataService;
+        }
+
+        public Task<IList<Match>> FetchMatches()
+        {
+            return _dataService.GetItems();
+        }
+    }
+
+    public class ExternalDataService : IExternalDataService
+    {
+        private readonly DataService _dataService;
+        private readonly IConfiguration _configuration;
+
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IMatchRepository _matchRepository;
+        public ExternalDataService(IConfiguration configuration, DataService dataService, IHttpClientFactory httpClientFactory, IMatchRepository matchRepository)
+        {
+            _dataService = dataService;
+            _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _matchRepository = matchRepository;
         }
 
         public async Task<IList<Match>> FetchMatches()
         {
-            var matches = _dataService.GetItems();
+            IList<Match> matches = await _dataService.GetItems();
 
-            var httpClient = _httpClientFactory.CreateClient("Youtube");
+            var videoIds = matches.Where(x => x.IsLink && string.IsNullOrEmpty(x.Title)).Select(x => x.ThumbnailUrl)
+                .Concat(
+                    matches.Where(x => x.Videos != null && x.Videos.Length != 0).SelectMany(x => x.Videos).Where(x => string.IsNullOrEmpty(x.Title)).Select(x => x.YoutubeId).ToList()
+                ).ToList();
+
+            if (videoIds.Count > 0)
+            {
+                var videos = await FetchFromYoutube(videoIds);
+
+                matches = ParseMatches(matches, videos);
+
+                var linkVideos = matches.Where(x => x.IsLink && videoIds.Contains(x.ThumbnailUrl)).ToList();
+                foreach (var linkVideo in linkVideos)
+                {
+                    await _matchRepository.UpdateItemAsync(linkVideo.Id, linkVideo);
+                }
+            }
+
+            return matches.OrderByDescending(x => x.CreationDateTime).ToList();
+        }
+        private async Task<IList<Video>> FetchFromYoutube(IList<string> videoIds)
+        {
+            var videos = new List<Video>();
+            if (videoIds.Count == 0)
+                return videos;
+            using var httpClient = _httpClientFactory.CreateClient("Youtube");
 
             var query = HttpUtility.ParseQueryString(string.Empty);
 
             query["part"] = "id,snippet,statistics,contentDetails";
-            query["id"] = string.Join(",", matches.Where(x => x.Videos != null).SelectMany(x => x.Videos).Select(x => x.Id).ToList().Concat(matches.Select(m => m.ThumbnailUrl).ToList()));
+            query["id"] = string.Join(",", videoIds);
             query["key"] = _configuration["YTApiKey"];
             string queryString = query.ToString() ?? "";
 
             var httpResponseMessage = await httpClient.GetAsync($"?{queryString}");
             if (!httpResponseMessage.IsSuccessStatusCode)
-                return matches;
+                return videos;
 
             using var contentStream =
                 await httpResponseMessage.Content.ReadAsStreamAsync();
@@ -47,36 +92,38 @@ namespace MorWalPizVideo.Server.Services
             var youtubeResponse = await JsonSerializer.DeserializeAsync<VideoResponse>(contentStream, options);
 
             if (youtubeResponse == null)
-                return matches;
+                return videos;
 
-            foreach (var item in youtubeResponse.Items)
+            return youtubeResponse.Items.Select(ContractUtils.Convert).ToList();
+        }
+        private IList<Match> ParseMatches(IList<Match> matches, IList<Video> videos)
+        {
+            // update video entities based on id
+            foreach (var video in videos)
             {
-                var video = ContractUtils.Convert(item);
-
-                var match = matches.FirstOrDefault(x => x.Videos != null && x.Videos.Any(v => v.Id == video.Id));
+                var match = matches.FirstOrDefault(x => x.Videos != null && x.Videos.Any(v => v.YoutubeId == video.YoutubeId));
                 if (match != null)
                 {
-                    // is related video
-                    var index = Array.FindIndex(match.Videos, x => x.Id == video.Id);
+                    var index = Array.FindIndex(match.Videos, x => x.YoutubeId == video.YoutubeId);
                     match.Videos[index] = video with { Category = match.Videos[index].Category };
                 }
                 else
                 {
-                    //is home page video
-                    var element = matches.FirstOrDefault(x => x.ThumbnailUrl == video.Id);
+                    var element = matches.FirstOrDefault(x => x.ThumbnailUrl == video.YoutubeId);
                     if (element == null)
                         continue;
                     var index = matches.IndexOf(element);
 
-                    matches[index] = element with { Title = video.Title, Description = video.Description, CreationDateTime = video.PublishedAt.ToDateTime(TimeOnly.MinValue), Url = video.Id };
+                    matches[index] = element with { Title = video.Title, Description = video.Description, CreationDateTime = video.PublishedAt.ToDateTime(TimeOnly.MinValue), Url = video.YoutubeId };
                 }
             }
 
-            return (matches.Select(match =>
+            return matches.Select(match =>
                     match.Videos?.Length > 0
                         ? match with { CreationDateTime = match.Videos.Min(x => x.PublishedAt).ToDateTime(TimeOnly.MinValue) }
                         : match
-                ).ToList()).OrderByDescending(x=>x.CreationDateTime).ToList();
+                ).ToList();
         }
+
     }
 }
