@@ -51,10 +51,14 @@ namespace MorWalPizVideo.Server.Services
             if (videoIds.Count > 0)
             {
                 var videos = await FetchFromYoutube(videoIds);
-
                 matches = ParseMatches(matches, videos);
 
-                var linkVideos = matches.Where(x => x.IsLink && videoIds.Contains(x.ThumbnailUrl)).ToList();
+                var linkVideos = matches.Where(x => x.IsLink && videoIds.Contains(x.ThumbnailUrl))
+                    .Concat(
+                        matches.Where(x => x.Videos != null && x.Videos.Length != 0)
+                                .Where(x => x.Videos.Any(v => videoIds.Contains(v.YoutubeId)))
+                    ).ToList();
+
                 foreach (var linkVideo in linkVideos)
                 {
                     await _matchRepository.UpdateItemAsync(linkVideo.Id, linkVideo);

@@ -7,6 +7,7 @@ import Pages, { loader as pageLoader } from "./routes/pages";
 import ErrorPage from "./error-page";
 import Accessories, { loader as accessoryLoader } from "./routes/accessories"
 import Sponsors, { loader as sponsorsLoader } from "./routes/sponsors"
+import Calendar, { loader as calendarLoader } from "./routes/calendar"
 import Index, { loader as indexLoader } from "./routes/index";
 import CookiePolicy from "./routes/cookie-policy";
 import {
@@ -39,7 +40,7 @@ const router = createBrowserRouter([
                 path: "matches/:matchId",
                 loader: matchLoader,
                 element: <Matches />,
-                },
+            },
             {
                 path: "pages/:pageId",
                 loader: pageLoader,
@@ -56,6 +57,11 @@ const router = createBrowserRouter([
                 element: <Sponsors />,
             },
             {
+                path: "calendar",
+                loader: calendarLoader,
+                element: <Calendar />,
+            },
+            {
                 path: "cookie-policy",
                 element: <CookiePolicy />,
             }]
@@ -68,7 +74,7 @@ if (window.location.hostname != "localhost") {
     ReactGA.initialize(gaTrackingId)
 }
 
-createRoot(document.getElementById('root')).render(    
+createRoot(document.getElementById('root')).render(
     <StrictMode>
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>

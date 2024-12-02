@@ -1,10 +1,12 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.Server.Models
 {
     [BsonIgnoreExtraElements]
     [DataContract]
+    [method: JsonConstructor]
     public record Video(
         [property: DataMember][property: BsonElement("youtubeId")] string YoutubeId,
         [property: DataMember][property: BsonElement("title")] string Title,
@@ -17,5 +19,8 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("duration")] string Duration,
         [property: DataMember][property: BsonElement("category")] string Category = "") : BaseEntity
     {
+        public Video(string youtubeId, string category) : this(youtubeId, string.Empty, string.Empty,0,0,0,DateOnly.MinValue, string.Empty,string.Empty, category)
+        {
+        }
     }
 }

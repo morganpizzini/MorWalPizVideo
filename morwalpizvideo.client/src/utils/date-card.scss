@@ -1,0 +1,25 @@
+.date-container {
+    text-align: center;
+    display: inline-block;
+    .month {
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: block;
+        line-height: 1;
+    }
+
+    .day {
+        font-size: 1.5rem;
+        font-weight: 600;
+        display: block;
+        line-height: 1;
+    }
+
+    .year {
+        font-size: 1rem;
+        font-weight: 600;
+        display: block;
+        line-height: 1;
+    }
+}

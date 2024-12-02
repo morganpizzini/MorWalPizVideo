@@ -10,13 +10,15 @@ namespace MorWalPizVideo.Server.Services
         private readonly IProductRepository _productRepository;
         private readonly ISponsorRepository _sponsorRepository;
         private readonly IPageRepository _pageRepository;
-        public DataService(IWebHostEnvironment environment, IMatchRepository matchRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository)
+        private readonly ICalendarEventRepository _calendarEventRepository;
+        public DataService(IWebHostEnvironment environment, IMatchRepository matchRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository, ICalendarEventRepository calendarEventRepository)
         {
             _environment = environment;
             _matchRepository = matchRepository;
             _productRepository = productRepository;
             _sponsorRepository = sponsorRepository;
             _pageRepository = pageRepository;
+            _calendarEventRepository = calendarEventRepository;
         }
 
         public Task<IList<Match>> GetItems() => _matchRepository.GetItemsAsync();
@@ -25,6 +27,7 @@ namespace MorWalPizVideo.Server.Services
 
         public Task<IList<Sponsor>> GetSponsors() => _sponsorRepository.GetItemsAsync();
         public Task<IList<Page>> GetPages() => _pageRepository.GetItemsAsync();
-        
+        public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
+
     }
 }

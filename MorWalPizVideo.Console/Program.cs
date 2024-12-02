@@ -39,7 +39,8 @@ client.DefaultRequestHeaders.Accept.Add(
 while (true)
 {
     Console.WriteLine("0 - exit");
-    Console.WriteLine("1 - add element");
+    Console.WriteLine("1 - add single link video");
+    Console.WriteLine("2 - add root element");
     Console.WriteLine("make a chioce");
     Console.WriteLine("");
     var choice = Console.ReadLine();
@@ -64,12 +65,82 @@ while (true)
                 Console.WriteLine("Not a valid category");
                 continue;
             }
-            Console.WriteLine("Is link? (Y/n)");
-            var isLinkResponse = Console.ReadLine();
-            var isLink = isLinkResponse?.ToLower() == "n" ? false : true;
-
-            matchCollection.InsertOne(new Match(element,isLink,category));
+            matchCollection.InsertOne(new Match(element,true,category));
             var json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/reset");
+            json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
+            break;
+        case "2":
+            Console.WriteLine("Enter root ID");
+            var element2 = Console.ReadLine();
+            if (string.IsNullOrEmpty(element2))
+            {
+                Console.WriteLine("Not a valid ID");
+                continue;
+            }
+            Console.WriteLine("Enter Category");
+            var category2 = Console.ReadLine();
+            if (string.IsNullOrEmpty(category2))
+            {
+                Console.WriteLine("Not a valid category");
+                continue;
+            }
+            Console.WriteLine("Enter title");
+            var title = Console.ReadLine();
+            if (string.IsNullOrEmpty(title))
+            {
+                Console.WriteLine("Not a valid title");
+                continue;
+            }
+            Console.WriteLine("Enter description");
+            var description = Console.ReadLine();
+            if (string.IsNullOrEmpty(description))
+            {
+                Console.WriteLine("Not a valid description");
+                continue;
+            }
+            var url = Console.ReadLine();
+            if (string.IsNullOrEmpty(url))
+            {
+                Console.WriteLine("Not a valid url");
+                continue;
+            }
+            matchCollection.InsertOne(new Match(element2, title, description, url, [], category2));
+            break;
+        case "3":
+            Console.WriteLine("Enter video ID");
+            var element3 = Console.ReadLine();
+            if (string.IsNullOrEmpty(element3))
+            {
+                Console.WriteLine("Not a valid ID");
+                continue;
+            }
+            var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == element3).FirstOrDefault();
+            if (existingMatch == null)
+            {
+                Console.WriteLine("Match do not exists");
+                continue;
+            }
+
+            Console.WriteLine("Enter video ID");
+            var videoId = Console.ReadLine();
+            if (string.IsNullOrEmpty(videoId))
+            {
+                Console.WriteLine("Not a valid ID");
+                continue;
+            }
+            Console.WriteLine("Enter Category");
+            var category3 = Console.ReadLine();
+            if (string.IsNullOrEmpty(category3))
+            {
+                Console.WriteLine("Not a valid category");
+                continue;
+            }
+            existingMatch = existingMatch with { Videos =  [.. existingMatch.Videos, new Video(videoId, category3)] };
+
+            await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+
+            var json3 = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/reset");
+            json3 = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
             break;
         default:
             Console.WriteLine("Invalid choice");

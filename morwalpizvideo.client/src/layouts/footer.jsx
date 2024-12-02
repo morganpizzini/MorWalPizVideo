@@ -17,6 +17,7 @@ export default function TitleComponent() {
                         <h5>Pagine</h5>
                         <ul className="nav flex-column">
                             <li className="nav-item mb-2"><Link to="/pages/chi-sono" className="nav-link p-0 link-light">Chi sono</Link></li>
+                            <li className="nav-item mb-2"><Link to="/calendar" className="nav-link p-0 link-light">Calendario</Link></li>
                         </ul>
                     </div>
                     <div className="col-4 col-md-3">
