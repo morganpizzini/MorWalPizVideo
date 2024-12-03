@@ -9,11 +9,15 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("title")] string Title,
         [property: DataMember][property: BsonElement("description")] string Description,
         [property: DataMember][property: BsonElement("date")] DateOnly Date,
-        [property: DataMember][property: BsonElement("url")] string MatchId,
-        [property: DataMember][property: BsonElement("category")] string Category) : BaseEntity
+        [property: DataMember][property: BsonElement("category")] string Category,
+        [property: DataMember][property: BsonElement("matchId")] string MatchId="") : BaseEntity
     {
         [DataMember]
         [BsonElement("calendarEvent")]
         public string CalendarEventId => Title;
+        [BsonIgnore]
+        public string MatchUrl { get; set; } = string.Empty;
+        [BsonIgnore]
+        public bool OldEvent => DateTime.Now.Date > Date.ToDateTime(new TimeOnly(0,0));
     }
 }

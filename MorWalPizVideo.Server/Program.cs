@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 
 // https://www.googleapis.com/youtube/v3/videos?part=id,snippet,statistics,&id=WC2sEcEsti8&key=AIzaSyCSFaI1a70I39eF_tlnXWZWTJ49tfyNUWE
@@ -36,7 +38,7 @@ else
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
-    if(dbConfig == null)
+    if (dbConfig == null)
     {
         throw new Exception("Cannot read configuration for MongoDB");
     }
@@ -79,48 +81,69 @@ var calendarEventsCacheKey = "calendarEvents";
 
 var apiGroup = app.MapGroup("/api");
 
-apiGroup.MapGet("/reset", (DataService dataService, MyMemoryCache memoryCache) =>
+apiGroup.MapGet("/reset", ([FromQuery(Name = "k")] string keys, DataService dataService, MyMemoryCache memoryCache) =>
 {
-    memoryCache.Cache.Remove(matchCacheKey);
-    memoryCache.Cache.Remove(productCacheKey);
-    memoryCache.Cache.Remove(sponsorCacheKey);
-    memoryCache.Cache.Remove(pagesCacheKey);
-    memoryCache.Cache.Remove(calendarEventsCacheKey);
+    if (string.IsNullOrEmpty(keys))
+    {
+        memoryCache.Cache.Remove(matchCacheKey);
+        memoryCache.Cache.Remove(productCacheKey);
+        memoryCache.Cache.Remove(sponsorCacheKey);
+        memoryCache.Cache.Remove(pagesCacheKey);
+        memoryCache.Cache.Remove(calendarEventsCacheKey);
+    }
+    foreach (var key in keys.Split(","))
+    {
+        switch (key)
+        {
+            case "match":
+                memoryCache.Cache.Remove(matchCacheKey);
+                break;
+            case "product":
+                memoryCache.Cache.Remove(productCacheKey);
+                break;
+            case "sponsor":
+                memoryCache.Cache.Remove(sponsorCacheKey);
+                break;
+            case "page":
+                memoryCache.Cache.Remove(pagesCacheKey);
+                break;
+            case "calendar":
+                memoryCache.Cache.Remove(calendarEventsCacheKey);
+                break;
+            default:
+                break;
+
+        }
+    }
+
     return Results.Ok();
 })
 .WithName("Reset")
 .WithOpenApi();
 
-apiGroup.MapGet("/matches", async (IExternalDataService dataService, MyMemoryCache memoryCache) =>
+static async Task<IList<Match>> FetchMatches(IExternalDataService dataService, MyMemoryCache memoryCache, string cacheKey)
 {
-    if (memoryCache.Cache.TryGetValue(matchCacheKey, out IList<Match>? entities))
+    if (memoryCache.Cache.TryGetValue(cacheKey, out IList<Match>? entities))
     {
-        return entities;
+        return entities ?? [];
     }
     entities = (await dataService.FetchMatches()).OrderByDescending(x => x.CreationDateTime).ToList();
 
-    memoryCache.Cache.Set(matchCacheKey, entities, new MemoryCacheEntryOptions
+    memoryCache.Cache.Set(cacheKey, entities, new MemoryCacheEntryOptions
     {
         Size = 1
     });
 
     return entities;
-})
+}
+apiGroup.MapGet("/matches", (IExternalDataService dataService, MyMemoryCache memoryCache) => FetchMatches(dataService, memoryCache, matchCacheKey))
 .WithName("Matches")
 .WithOpenApi();
 
 apiGroup.MapGet("/matches/{url}", async (IExternalDataService dataService, MyMemoryCache memoryCache, string url) =>
 {
-    if (!memoryCache.Cache.TryGetValue(matchCacheKey, out IList<Match>? entities))
-    {
-        entities = await dataService.FetchMatches();
+    return (await FetchMatches(dataService, memoryCache, matchCacheKey))?.FirstOrDefault(x => x.Url == url);
 
-        memoryCache.Cache.Set(matchCacheKey, entities.OrderByDescending(x => x.CreationDateTime), new MemoryCacheEntryOptions
-        {
-            Size = 1
-        });
-    }
-    return entities?.FirstOrDefault(x => x.Url == url);
 })
 .WithName("Match Detail")
 .WithOpenApi();
@@ -173,17 +196,27 @@ apiGroup.MapGet("/sponsors", async (DataService dataService, MyMemoryCache memor
 .WithName("Sponsors")
 .WithOpenApi();
 
-apiGroup.MapGet("/calendarEvents", async (DataService dataService, MyMemoryCache memoryCache) =>
+apiGroup.MapGet("/calendarEvents", async (DataService dataService, IExternalDataService externalDataService, MyMemoryCache memoryCache) =>
 {
     if (memoryCache.Cache.TryGetValue(calendarEventsCacheKey, out IList<CalendarEvent>? entities))
     {
         return entities;
     }
     entities = (await dataService.GetCalendarEvents()).OrderBy(x => x.Date).ToList();
+
+    var matches = await FetchMatches(externalDataService, memoryCache, matchCacheKey);
+
+    entities = entities.Select(entity =>
+    {
+        var match = matches.FirstOrDefault(x => x.MatchId == entity.MatchId);
+        return match == null ? entity : entity with { MatchUrl = match.IsLink ? match.ThumbnailUrl : match.Url };
+    }).Where(x => !string.IsNullOrEmpty(x.MatchUrl)).ToList();
+
     memoryCache.Cache.Set(calendarEventsCacheKey, entities, new MemoryCacheEntryOptions
     {
         Size = 1
     });
+
     return entities;
 })
 .WithName("CalendarEvents")

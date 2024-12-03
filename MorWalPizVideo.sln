@@ -7,9 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MorWalPizVideo.Server", "Mo
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "morwalpizvideo.client", "morwalpizvideo.client\morwalpizvideo.client.esproj", "{3AE453EF-6FB0-4125-9FAF-653A172211F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.Console", "MorWalPizVideo.Console\MorWalPizVideo.Console.csproj", "{894F37E0-4465-452A-876C-353484C273B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MorWalPizVideo.Operations", "MorWalPizVideo.Operations\MorWalPizVideo.Operations.csproj", "{894F37E0-4465-452A-876C-353484C273B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.Models", "MorWalPizVideo.Models\MorWalPizVideo.Models.csproj", "{25001FA5-76F5-4164-8EAC-AAA7B3454788}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MorWalPizVideo.Models", "MorWalPizVideo.Models\MorWalPizVideo.Models.csproj", "{25001FA5-76F5-4164-8EAC-AAA7B3454788}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
