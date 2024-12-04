@@ -1,5 +1,7 @@
 ﻿using MongoDB.Driver;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using System.Globalization;
 
 namespace MorWalPizVideo.Operations
 {
@@ -8,7 +10,7 @@ namespace MorWalPizVideo.Operations
         public static string[] AskFor(params string[] args) { 
             var results = new string[args.Length];
             for (int i = 0; i < args.Length; i++) { 
-                Console.WriteLine($"Enter {args}");
+                Console.WriteLine($"Enter {args[i]}");
                 results[i] = Console.ReadLine() ?? string.Empty;
             }
             return results;
@@ -20,12 +22,9 @@ namespace MorWalPizVideo.Operations
                 Console.WriteLine("Provided values are not valid");
             }
 
-            var x = DateOnly.Parse(results[1]);
+            collection.InsertOne(new CalendarEvent(results[0], results[3], DateOnly.ParseExact(results[1], "yy-MM-dd", CultureInfo.InvariantCulture), results[2], results[4]));
 
-            return;
-
-            collection.InsertOne(new CalendarEvent(results[0], results[3], DateOnly.Parse(results[1]), results[2], results[4]));
-            var json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/reset?k=calendar");
+            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.CalendarEvents}");
         }
     }
 }

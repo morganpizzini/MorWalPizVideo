@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
@@ -16,6 +18,11 @@ var config = builder.Configuration["Config"];
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(builder =>
+        builder.Expire(TimeSpan.FromMinutes(3)));
+});
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<DataService>();
 if (config == "dev")
@@ -72,54 +79,27 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseOutputCache();
 
-var matchCacheKey = "data";
-var productCacheKey = "product";
-var sponsorCacheKey = "sponsor";
-var pagesCacheKey = "pages";
-var calendarEventsCacheKey = "calendarEvents";
+var apiGroup = app.MapGroup("/api").WithOpenApi();
 
-var apiGroup = app.MapGroup("/api");
+apiGroup.MapGet("/purge/{tag}", async (IOutputCacheStore cache, string tag) =>
+{
+    await cache.EvictByTagAsync(tag, default);
+}).WithName("Purge");
 
 apiGroup.MapGet("/reset", ([FromQuery(Name = "k")] string keys, DataService dataService, MyMemoryCache memoryCache) =>
 {
     if (string.IsNullOrEmpty(keys))
-    {
-        memoryCache.Cache.Remove(matchCacheKey);
-        memoryCache.Cache.Remove(productCacheKey);
-        memoryCache.Cache.Remove(sponsorCacheKey);
-        memoryCache.Cache.Remove(pagesCacheKey);
-        memoryCache.Cache.Remove(calendarEventsCacheKey);
-    }
-    foreach (var key in keys.Split(","))
-    {
-        switch (key)
-        {
-            case "match":
-                memoryCache.Cache.Remove(matchCacheKey);
-                break;
-            case "product":
-                memoryCache.Cache.Remove(productCacheKey);
-                break;
-            case "sponsor":
-                memoryCache.Cache.Remove(sponsorCacheKey);
-                break;
-            case "page":
-                memoryCache.Cache.Remove(pagesCacheKey);
-                break;
-            case "calendar":
-                memoryCache.Cache.Remove(calendarEventsCacheKey);
-                break;
-            default:
-                break;
+        keys = $"{CacheKeys.Match},{CacheKeys.Product},{CacheKeys.Sponsor},{CacheKeys.Pages},{CacheKeys.CalendarEvents}";
 
-        }
+    foreach (var key in keys.ToLower().Split(","))
+    {
+        memoryCache.Cache.Remove(key);
     }
-
     return Results.Ok();
 })
-.WithName("Reset")
-.WithOpenApi();
+.WithName("Reset");
 
 static async Task<IList<Match>> FetchMatches(IExternalDataService dataService, MyMemoryCache memoryCache, string cacheKey)
 {
@@ -136,25 +116,27 @@ static async Task<IList<Match>> FetchMatches(IExternalDataService dataService, M
 
     return entities;
 }
-apiGroup.MapGet("/matches", (IExternalDataService dataService, MyMemoryCache memoryCache) => FetchMatches(dataService, memoryCache, matchCacheKey))
-.WithName("Matches")
-.WithOpenApi();
 
-apiGroup.MapGet("/matches/{url}", async (IExternalDataService dataService, MyMemoryCache memoryCache, string url) =>
+var matchGroup = apiGroup.MapGroup("matches")
+    .CacheOutput(builder => builder.Tag(ApiTagCacheKeys.Matches));
+
+matchGroup.MapGet("/", (IExternalDataService dataService, MyMemoryCache memoryCache) => FetchMatches(dataService, memoryCache, CacheKeys.Match))
+.WithName("Matches");
+
+matchGroup.MapGet("/{url}", async (IExternalDataService dataService, MyMemoryCache memoryCache, string url) =>
 {
-    return (await FetchMatches(dataService, memoryCache, matchCacheKey))?.FirstOrDefault(x => x.Url == url);
+    return (await FetchMatches(dataService, memoryCache, CacheKeys.Match))?.FirstOrDefault(x => x.Url == url);
 
 })
-.WithName("Match Detail")
-.WithOpenApi();
+.WithName("Match Detail");
 
 apiGroup.MapGet("/pages/{url}", async (DataService dataService, MyMemoryCache memoryCache, string url) =>
 {
-    if (!memoryCache.Cache.TryGetValue(pagesCacheKey, out IList<Page>? entities))
+    if (!memoryCache.Cache.TryGetValue(CacheKeys.Pages, out IList<Page>? entities))
     {
         entities = await dataService.GetPages();
 
-        memoryCache.Cache.Set(pagesCacheKey, entities.OrderByDescending(x => x.CreationDateTime), new MemoryCacheEntryOptions
+        memoryCache.Cache.Set(CacheKeys.Pages, entities.OrderByDescending(x => x.CreationDateTime), new MemoryCacheEntryOptions
         {
             Size = 1
         });
@@ -162,49 +144,49 @@ apiGroup.MapGet("/pages/{url}", async (DataService dataService, MyMemoryCache me
     return entities?.FirstOrDefault(x => x.Url == url);
 })
 .WithName("Page Detail")
-.WithOpenApi();
+.CacheOutput(builder => builder.Tag(ApiTagCacheKeys.Pages));
 
 apiGroup.MapGet("/products", async (DataService dataService, MyMemoryCache memoryCache) =>
 {
-    if (memoryCache.Cache.TryGetValue(productCacheKey, out IList<Product>? entities))
+    if (memoryCache.Cache.TryGetValue(CacheKeys.Product, out IList<Product>? entities))
     {
         return entities;
     }
     entities = await dataService.GetProducts();
-    memoryCache.Cache.Set(productCacheKey, entities, new MemoryCacheEntryOptions
+    memoryCache.Cache.Set(CacheKeys.Product, entities, new MemoryCacheEntryOptions
     {
         Size = 1
     });
     return entities;
 })
 .WithName("Products")
-.WithOpenApi();
+.CacheOutput(builder => builder.Tag(ApiTagCacheKeys.Products));
 
 apiGroup.MapGet("/sponsors", async (DataService dataService, MyMemoryCache memoryCache) =>
 {
-    if (memoryCache.Cache.TryGetValue(sponsorCacheKey, out IList<Sponsor>? entities))
+    if (memoryCache.Cache.TryGetValue(CacheKeys.Sponsor, out IList<Sponsor>? entities))
     {
         return entities;
     }
     entities = await dataService.GetSponsors();
-    memoryCache.Cache.Set(sponsorCacheKey, entities, new MemoryCacheEntryOptions
+    memoryCache.Cache.Set(CacheKeys.Sponsor, entities, new MemoryCacheEntryOptions
     {
         Size = 1
     });
     return entities;
 })
 .WithName("Sponsors")
-.WithOpenApi();
+.CacheOutput(builder => builder.Tag(ApiTagCacheKeys.Sponsors));
 
 apiGroup.MapGet("/calendarEvents", async (DataService dataService, IExternalDataService externalDataService, MyMemoryCache memoryCache) =>
 {
-    if (memoryCache.Cache.TryGetValue(calendarEventsCacheKey, out IList<CalendarEvent>? entities))
+    if (memoryCache.Cache.TryGetValue(CacheKeys.CalendarEvents, out IList<CalendarEvent>? entities))
     {
         return entities;
     }
     entities = (await dataService.GetCalendarEvents()).OrderBy(x => x.Date).ToList();
 
-    var matches = await FetchMatches(externalDataService, memoryCache, matchCacheKey);
+    var matches = await FetchMatches(externalDataService, memoryCache, CacheKeys.Match);
 
     entities = entities.Select(entity =>
     {
@@ -212,7 +194,7 @@ apiGroup.MapGet("/calendarEvents", async (DataService dataService, IExternalData
         return match == null ? entity : entity with { MatchUrl = match.IsLink ? match.ThumbnailUrl : match.Url };
     }).Where(x => !string.IsNullOrEmpty(x.MatchUrl)).ToList();
 
-    memoryCache.Cache.Set(calendarEventsCacheKey, entities, new MemoryCacheEntryOptions
+    memoryCache.Cache.Set(CacheKeys.CalendarEvents, entities, new MemoryCacheEntryOptions
     {
         Size = 1
     });
@@ -220,7 +202,7 @@ apiGroup.MapGet("/calendarEvents", async (DataService dataService, IExternalData
     return entities;
 })
 .WithName("CalendarEvents")
-.WithOpenApi();
+.CacheOutput(builder => builder.Tag(ApiTagCacheKeys.CalendarEvents));
 
 app.MapFallbackToFile("/index.html");
 

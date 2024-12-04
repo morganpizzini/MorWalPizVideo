@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Operations
@@ -38,7 +39,7 @@ namespace MorWalPizVideo.Operations
 
             await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
 
-            var json3 = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/reset?k=match");
+            var json3 = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
             json3 = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
         }
     }

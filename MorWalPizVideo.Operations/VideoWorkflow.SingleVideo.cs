@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Operations
@@ -21,7 +22,8 @@ namespace MorWalPizVideo.Operations
                 return;
             }
             matchCollection.InsertOne(new Match(element, true, category));
-            var json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/reset?k=match");
+            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
+            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge/{ApiTagCacheKeys.Matches}");
             json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
         }
     }

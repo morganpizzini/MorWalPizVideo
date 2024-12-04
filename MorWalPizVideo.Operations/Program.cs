@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Operations;
 using MorWalPizVideo.Server.Models;
 using System.Net.Http.Headers;
@@ -27,8 +28,8 @@ new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
 
 var database = new MongoClient(settings).GetDatabase(dbConfig.DatabaseName);
 
-var matchCollection = database.GetCollection<Match>("matches");
-var calendarEventsCollection = database.GetCollection<CalendarEvent>("calendarEvents");
+var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+var calendarEventsCollection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
 
 
 using HttpClient client = new();
@@ -44,6 +45,7 @@ while (true)
     Console.WriteLine("2 - add root element");
     Console.WriteLine("3 - add subVideo element");
     Console.WriteLine("4 - add calendar event");
+    Console.WriteLine("4 - update calendar event");
     Console.WriteLine("make a chioce");
     Console.WriteLine("");
     var choice = Console.ReadLine();
@@ -64,6 +66,9 @@ while (true)
             break;
         case "4":
             await AppWorkflow.AddCalendarEvent(calendarEventsCollection, client);
+            break;
+        case "5":
+            await AppWorkflow.UpdateCalendarEvent(calendarEventsCollection, client);
             break;
         default:
             Console.WriteLine("Invalid choice");
