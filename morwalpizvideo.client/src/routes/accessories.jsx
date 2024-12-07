@@ -1,13 +1,9 @@
-﻿import { Link, useLoaderData } from "react-router-dom";
+﻿import { Link, useLoaderData } from "react-router";
 import { useContext } from 'react';
 import AccordionContext from 'react-bootstrap/AccordionContext';
-import { getProducts } from "@services/products";
 import Accordion from 'react-bootstrap/Accordion';
 import { useAccordionButton } from 'react-bootstrap/AccordionButton';
-export async function loader() {
-    const products = await getProducts();
-    return { products };
-}
+
 export default function Accessories() {
     const { products } = useLoaderData();
 

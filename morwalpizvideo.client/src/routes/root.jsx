@@ -1,4 +1,4 @@
-﻿import { Outlet, useNavigation } from "react-router-dom";
+﻿import { Outlet, useNavigation } from "react-router";
 import TitleComponent from "@layouts/title-header";
 import Footer from "@layouts/footer";
 

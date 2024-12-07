@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 
@@ -33,6 +34,7 @@ if (config == "dev")
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
+    builder.Services.AddHttpClient();
 }
 else
 {
@@ -82,6 +84,18 @@ app.UseHttpsRedirection();
 app.UseOutputCache();
 
 var apiGroup = app.MapGroup("/api").WithOpenApi();
+
+apiGroup.MapGet("/test/{token}",async(IHttpClientFactory httpClientFactory, HttpContext context, string token)=> {
+    var client = httpClientFactory.CreateClient();
+    var host = context.Request.Host.Value;
+    var url = "https://www.google.com/recaptcha/api/siteverify";
+    var parameters = new Dictionary<string, string> { { "secret", "1" }, { "response", token }, { "remoteip", host } };
+    var encodedContent = new FormUrlEncodedContent(parameters);
+
+    var response = await client.PostAsync(url, encodedContent);
+    var result = await response.Content.ReadAsStringAsync();
+    return Results.Ok(result);
+}).WithName("Test");
 
 apiGroup.MapGet("/purge/{tag}", async (IOutputCacheStore cache, string tag) =>
 {

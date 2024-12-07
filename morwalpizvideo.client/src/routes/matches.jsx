@@ -1,13 +1,8 @@
-import { useLoaderData } from "react-router-dom"
+import { useLoaderData } from "react-router"
 import './matches.scss'
 import SEO from "@utils/seo";
-import { getMatch } from "@services/matches";
 import DateDisplay from "@utils/date-display";
 import ReactGA from "react-ga4"
-export async function loader({ params }) {
-    const match = await getMatch(params.matchId);
-    return { match };
-}
 
 export default function Matches() {
     const { match } = useLoaderData();
@@ -25,7 +20,8 @@ export default function Matches() {
                         <div className="row">
                             <div className="col-md-6">
                                 <div className="video-thumbnail">
-                                    <iframe width="100%" height="306px" className="rounded" src={`https://www.youtube.com/embed/${video.youtubeId}`}  title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                                    <iframe width="100%" height="306px" className="rounded"
+                                        src={`https://www.youtube.com/embed/${video.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
                                 </div>
                             </div>
                             <div className="col-md-6 d-flex align-items-center">
