@@ -7,14 +7,14 @@ namespace MorWalPizVideo.Operations
     static partial class VideoWorkflow
     {
         public static async Task SubVideo(IMongoCollection<Match> matchCollection, HttpClient client) {
-            Console.WriteLine("Enter video ID");
-            var element3 = Console.ReadLine();
-            if (string.IsNullOrEmpty(element3))
+            Console.WriteLine("Enter match ID");
+            var matchId = Console.ReadLine();
+            if (string.IsNullOrEmpty(matchId))
             {
                 Console.WriteLine("Not a valid ID");
                 return;
             }
-            var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == element3).FirstOrDefault();
+            var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == matchId).FirstOrDefault();
             if (existingMatch == null)
             {
                 Console.WriteLine("Match do not exists");
@@ -39,8 +39,11 @@ namespace MorWalPizVideo.Operations
 
             await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
 
-            var json3 = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
-            json3 = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
+
+            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
+            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge?k={ApiTagCacheKeys.Matches}");
+            
+            json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
         }
     }
 }

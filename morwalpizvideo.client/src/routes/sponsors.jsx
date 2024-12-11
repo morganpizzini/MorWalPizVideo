@@ -43,6 +43,9 @@ export default function Sponsors() {
                         <em>{errors.password}</em>
                     ) : null}
                 </label>
+                This site is protected by reCAPTCHA and the Google
+                <a href="https://policies.google.com/privacy">Privacy Policy</a> and
+                <a href="https://policies.google.com/terms">Terms of Service</a> apply.
                 <button type='submit' className='w-full text-white bg-[#403F3F] py-3 rounded-lg uppercase font-medium'>
                     {busy ? "Saving..." : "Save"}
                 </button>

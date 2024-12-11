@@ -25,6 +25,8 @@ namespace MorWalPizVideo.Operations
             collection.InsertOne(new CalendarEvent(results[0], results[3], DateOnly.ParseExact(results[1], "yy-MM-dd", CultureInfo.InvariantCulture), results[2], results[4]));
 
             var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.CalendarEvents}");
+            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge?k={ApiTagCacheKeys.CalendarEvents}");
+
         }
     }
 }

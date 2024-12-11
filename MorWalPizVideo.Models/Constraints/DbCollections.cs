@@ -8,5 +8,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Pages = "pages";
         public const string Sponsors = "sponsors";
         public const string Products = "products";
+        public const string ShortLinks = "shortLinks";
     }
 }

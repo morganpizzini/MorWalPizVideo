@@ -29,14 +29,13 @@ new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
 var database = new MongoClient(settings).GetDatabase(dbConfig.DatabaseName);
 
 var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
 var calendarEventsCollection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
-
 
 using HttpClient client = new();
 client.DefaultRequestHeaders.Accept.Clear();
 client.DefaultRequestHeaders.Accept.Add(
     new MediaTypeWithQualityHeaderValue("application/json"));
-
 
 while (true)
 {
@@ -45,7 +44,9 @@ while (true)
     Console.WriteLine("2 - add root element");
     Console.WriteLine("3 - add subVideo element");
     Console.WriteLine("4 - add calendar event");
-    Console.WriteLine("4 - update calendar event");
+    Console.WriteLine("5 - update calendar event");
+    Console.WriteLine("6 - create video shortlink");
+    Console.WriteLine("7 - get video shortlink");
     Console.WriteLine("make a chioce");
     Console.WriteLine("");
     var choice = Console.ReadLine();
@@ -69,6 +70,12 @@ while (true)
             break;
         case "5":
             await AppWorkflow.UpdateCalendarEvent(calendarEventsCollection, client);
+            break;
+        case "6":
+            await VideoWorkflow.CreateVideoShortlink(matchCollection, shortLinkCollection, client, config["SiteUrl"] ?? string.Empty);
+            break;
+        case "7":
+            await VideoWorkflow.GetVideoShortlink(shortLinkCollection, config["SiteUrl"] ?? string.Empty);
             break;
         default:
             Console.WriteLine("Invalid choice");

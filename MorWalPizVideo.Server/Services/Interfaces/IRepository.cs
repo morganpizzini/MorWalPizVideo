@@ -9,7 +9,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<T>> GetItemsAsync();
         Task<IList<T>> GetItemsAsync(Expression<Func<T, bool>> predicate);
         Task AddItemAsync(T item);
-        Task UpdateItemAsync(string id, T item);
+        Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
     public interface IMatchRepository : IRepository<Match> { }
@@ -17,4 +17,5 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ISponsorRepository : IRepository<Sponsor> { }
     public interface IPageRepository : IRepository<Page> { }
     public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
+    public interface IShortLinkRepository : IRepository<ShortLink> { }
 }

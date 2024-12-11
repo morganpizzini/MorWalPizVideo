@@ -11,7 +11,8 @@ namespace MorWalPizVideo.Server.Services
         private readonly ISponsorRepository _sponsorRepository;
         private readonly IPageRepository _pageRepository;
         private readonly ICalendarEventRepository _calendarEventRepository;
-        public DataService(IWebHostEnvironment environment, IMatchRepository matchRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository, ICalendarEventRepository calendarEventRepository)
+        private readonly IShortLinkRepository _shortLinkRepository;
+        public DataService(IWebHostEnvironment environment, IMatchRepository matchRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository, ICalendarEventRepository calendarEventRepository, IShortLinkRepository shortLinkRepository)
         {
             _environment = environment;
             _matchRepository = matchRepository;
@@ -19,10 +20,13 @@ namespace MorWalPizVideo.Server.Services
             _sponsorRepository = sponsorRepository;
             _pageRepository = pageRepository;
             _calendarEventRepository = calendarEventRepository;
+            _shortLinkRepository = shortLinkRepository;
         }
 
+        public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
+        public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x=>x.Code == shortLink)).FirstOrDefault();
+        public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
         public Task<IList<Match>> GetItems() => _matchRepository.GetItemsAsync();
-       
         public Task<IList<Product>> GetProducts() => _productRepository.GetItemsAsync();
 
         public Task<IList<Sponsor>> GetSponsors() => _sponsorRepository.GetItemsAsync();

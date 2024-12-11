@@ -8,8 +8,8 @@ namespace MorWalPizVideo.Operations
     {
         public static async Task SingleVideo(IMongoCollection<Match> matchCollection, HttpClient client) {
             Console.WriteLine("Enter video ID");
-            var element = Console.ReadLine();
-            if (string.IsNullOrEmpty(element))
+            var videoId = Console.ReadLine();
+            if (string.IsNullOrEmpty(videoId))
             {
                 Console.WriteLine("Not a valid ID");
                 return;
@@ -21,7 +21,9 @@ namespace MorWalPizVideo.Operations
                 Console.WriteLine("Not a valid category");
                 return;
             }
-            matchCollection.InsertOne(new Match(element, true, category));
+            
+            matchCollection.InsertOne(new Match(videoId, true, category));
+
             var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
             json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge/{ApiTagCacheKeys.Matches}");
             json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");

@@ -7,15 +7,15 @@ namespace MorWalPizVideo.Operations
     {
         public static void RootElement(IMongoCollection<Match> matchCollection) {
             Console.WriteLine("Enter root ID");
-            var element2 = Console.ReadLine();
-            if (string.IsNullOrEmpty(element2))
+            var videoId = Console.ReadLine();
+            if (string.IsNullOrEmpty(videoId))
             {
                 Console.WriteLine("Not a valid ID");
                 return;
             }
             Console.WriteLine("Enter Category");
-            var category2 = Console.ReadLine();
-            if (string.IsNullOrEmpty(category2))
+            var category = Console.ReadLine();
+            if (string.IsNullOrEmpty(category))
             {
                 Console.WriteLine("Not a valid category");
                 return;
@@ -34,13 +34,14 @@ namespace MorWalPizVideo.Operations
                 Console.WriteLine("Not a valid description");
                 return;
             }
+            Console.WriteLine("Enter url");
             var url = Console.ReadLine();
             if (string.IsNullOrEmpty(url))
             {
                 Console.WriteLine("Not a valid url");
                 return;
             }
-            matchCollection.InsertOne(new Match(element2, title, description, url, [], category2));
+            matchCollection.InsertOne(new Match(videoId, title, description, url, [], category));
         }
     }
 }

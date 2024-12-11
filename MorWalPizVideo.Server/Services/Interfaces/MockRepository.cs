@@ -32,4 +32,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
+    {
+        public ShortLinkMockRepository(IWebHostEnvironment environment) : base(environment, "shortLinks")
+        {
+        }
+    }
 }

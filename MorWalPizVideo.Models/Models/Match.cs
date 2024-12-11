@@ -19,8 +19,9 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("matchId")]
         public string MatchId => ThumbnailUrl;
 
-        public Match(string thumbnailUrl,bool isLink,string category) : this(thumbnailUrl, string.Empty, string.Empty, string.Empty, [], category,isLink)
+        public Match(string thumbnailUrl, bool isLink, string category) : this(thumbnailUrl, string.Empty, string.Empty, string.Empty, [], category, isLink)
         {
         }
+
     }
 }

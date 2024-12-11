@@ -34,4 +34,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class ShortLinkRepository : BaseRepository<ShortLink>, IShortLinkRepository
+    {
+        public ShortLinkRepository(IMongoDatabase database) : base(database, DbCollections.ShortLinks)
+        {
+        }
+    }
 }

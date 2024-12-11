@@ -28,6 +28,7 @@ namespace MorWalPizVideo.Operations
             await collection.ReplaceOneAsync(Builders<CalendarEvent>.Filter.Eq(e => e.Id, existing.Id), existing);
             
             var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.CalendarEvents}");
+            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge?k={ApiTagCacheKeys.CalendarEvents}");
         }
     }
 }
