@@ -17,4 +17,5 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ISponsorRepository : IRepository<Sponsor> { }
     public interface IPageRepository : IRepository<Page> { }
     public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
+    public interface IBioLinkRepository : IRepository<BioLink> { }
 }

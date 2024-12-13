@@ -46,21 +46,25 @@
     color: #000;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); /* Ombreggiatura leggera per il sottotitolo */
 }
+.container.small{
+    .social-buttons a {
+        padding: 4px 6px;
+    }
+}
 /* Centro i pulsanti */
 .social-buttons {
     display: flex;
     justify-content: center;
     gap: 15px;
     margin-top: 20px;
-}
 
-/* Stile per i bottoni */
-.social-buttons a {
-    padding: 10px 20px;
-    font-size: 18px;
-    color: #fff;
-    border-radius: 5px;
-    text-decoration: none;
+    a {
+        padding: 10px 20px;
+        font-size: 18px;
+        color: #fff;
+        border-radius: 5px;
+        text-decoration: none;
+    }
 }
 
 .btn-telegram {

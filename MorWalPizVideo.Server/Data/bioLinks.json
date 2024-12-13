@@ -1,0 +1,10 @@
+﻿[
+  {
+    "title": "La mia gara",
+    "description": "Questa è la mia descrizione",
+    "url": "http://google.com",
+    "icon": "fa f-home",
+    "bioLinkId": "La mia gara",
+    "order": 1
+  }
+]

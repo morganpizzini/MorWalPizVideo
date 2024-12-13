@@ -26,6 +26,7 @@ if (config == "dev")
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
+    builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
 }
 else
 {
@@ -35,6 +36,7 @@ else
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<IPageRepository, PageRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
+    builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
@@ -194,6 +196,23 @@ apiGroup.MapGet("/sponsors", async (DataService dataService, MyMemoryCache memor
     return entities;
 })
 .WithName("Sponsors")
+.WithOpenApi();
+
+apiGroup.MapGet("/biolinks", async (DataService dataService, MyMemoryCache memoryCache) =>
+{
+    var bioLinkCacheKey = "biolinkCache";
+    if (memoryCache.Cache.TryGetValue(bioLinkCacheKey, out IList<BioLink>? entities))
+    {
+        return entities;
+    }
+    entities = await dataService.GetBioLinks();
+    memoryCache.Cache.Set(sponsorCacheKey, entities, new MemoryCacheEntryOptions
+    {
+        Size = 1
+    });
+    return entities;
+})
+.WithName("BioLinks")
 .WithOpenApi();
 
 apiGroup.MapGet("/calendarEvents", async (DataService dataService, IExternalDataService externalDataService, MyMemoryCache memoryCache) =>

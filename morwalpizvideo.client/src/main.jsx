@@ -5,6 +5,7 @@ import Root from "./routes/root";
 import Matches, { loader as matchLoader } from "./routes/matches";
 import Pages, { loader as pageLoader } from "./routes/pages";
 import ErrorPage from "./error-page";
+import Bio, { loader as bioLoader } from "./routes/bio"
 import Accessories, { loader as accessoryLoader } from "./routes/accessories"
 import Sponsors, { loader as sponsorsLoader } from "./routes/sponsors"
 import Calendar, { loader as calendarLoader } from "./routes/calendar"
@@ -24,6 +25,11 @@ import ReactGA from 'react-ga4';
 //import { Tooltip, Toast, Popover } from 'bootstrap';
 
 const router = createBrowserRouter([
+    {
+        path: "bio",
+        loader: bioLoader,
+        element: <Bio />,
+    },
     {
         path: "/",
         element: <Root />,

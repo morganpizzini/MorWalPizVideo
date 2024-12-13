@@ -32,4 +32,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
+    {
+        public BioLinkMockRepository(IWebHostEnvironment environment) : base(environment, "bioLinks")
+        {
+        }
+    }
 }
