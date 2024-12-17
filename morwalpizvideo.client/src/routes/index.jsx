@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from "react-router";
+﻿import { Link, useLoaderData } from "react-router";
 import React from "react";
 import DateDisplay from "@utils/date-display";
 import SEO from "@utils/seo";
@@ -6,7 +6,7 @@ import './index.scss'
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from "react-share";
 import ReactGA from "react-ga4"
 export default function Index() {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title:"Home" })
+    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
     const { matches } = useLoaderData();
 
     let firstMatchId = matches[0];
@@ -30,9 +30,12 @@ export default function Index() {
                     <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
                 </div>
             </div>
+
             <div className="card-columns">
                 {matches.map((match, i) => (
                     <React.Fragment key={i}>
+                        {i === 4 &&
+                            <BuyMeACoffeeCard />}
                         {RenderMatchCard(match, i)}
                         {i === 7 &&
                             <Banner />
@@ -48,6 +51,7 @@ export default function Index() {
         </>
     );
 }
+
 function Banner() {
     return (
         <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
@@ -67,6 +71,25 @@ function Sponsors() {
         </Link>
     )
 }
+
+function BuyMeACoffeeCard() {
+    return (
+        <>
+            <div className="card position-relative">
+                <div className="px-2" style={{ "heigth": "200px" }}>
+                    <img src="/images/buyme-button.png" alt="Buy Me A Coffee" style={{ objectFit:"contain", "width":"100%"}} />
+                </div>
+                <div className="card-body">
+                    <p className="text-muted mb-1 text-uppercase">supporto</p>
+                    <h5 className="card-title">Aiutami nel mio percorso!</h5>
+                    <p className="card-text">Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i contenuti in anteprima e una chat diretta!</p>
+                </div>
+                <Link to="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer" className="stretched-link">
+                </Link> 
+            </div>
+
+        </>)
+}
 function RenderMatchCard(match, i) {
     const className = i == 0 ? "card position-relative d-md-none" : "card position-relative";
     return (
@@ -74,10 +97,10 @@ function RenderMatchCard(match, i) {
             <img src={`https://img.youtube.com/vi/${match.thumbnailUrl}/hqdefault.jpg`} className="card-img-top" alt="Video Thumbnail" />
             <div className="card-body">
                 {match.isLink &&
-                    <p className="text-muted mb-1">{match.category}</p>
+                    <p className="text-muted mb-1 text-uppercase">{match.category}</p>
                 }
                 {!match.isLink &&
-                    <p className="text-muted mb-1">{match.videos.length} video</p>
+                    <p className="text-muted mb-1 text-uppercase">{match.videos.length} video</p>
                 }
                 <h5 className="card-title">{match.title}</h5>
                 <p className="card-text">{match.description}</p>

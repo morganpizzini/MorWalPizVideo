@@ -23,6 +23,7 @@ import {
 import { RouterProvider } from "react-router/dom";
 import { HelmetProvider } from 'react-helmet-async';
 import ReactGA from 'react-ga4';
+import BuyMeWidget from "@utils/buy-me-widget";
 
 import {
     GoogleReCaptchaProvider
@@ -81,6 +82,7 @@ if (window.location.hostname != "localhost") {
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
+        <BuyMeWidget />
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>
             <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
