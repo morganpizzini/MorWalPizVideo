@@ -39,7 +39,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return await _collection.Find(predicate).ToListAsync();
         }
 
-        public async Task UpdateItemAsync(string id, T item)
+        public async Task UpdateItemAsync(T item)
         {
             await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq(e => e.Id, item.Id), item);
         }

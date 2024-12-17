@@ -19,7 +19,10 @@ const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
 
 // you can copy the base structure of manifest object.
 const manifestForPlugIn = {
-    registerType: 'prompt',
+    registerType: 'autoUpdate',
+    workbox: {
+        navigateFallbackDenylist: [/^\/sl/]
+    },
     includeAssests: ['favicon.ico', "apple-touch-icon.png", "maskable_icon.png"],
     manifest: {
         name: "MorWalPiz",
@@ -92,6 +95,10 @@ export default defineConfig({
     server: {
         proxy: {
             '^/api': {
+                target,
+                secure: false
+            },
+            '^/sl': {
                 target,
                 secure: false
             }

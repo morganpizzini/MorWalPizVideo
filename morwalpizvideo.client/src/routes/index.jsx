@@ -1,15 +1,10 @@
-import { Link, useLoaderData } from "react-router-dom";
-import { getMatches } from "@services/matches";
+import { Link, useLoaderData } from "react-router";
 import React from "react";
 import DateDisplay from "@utils/date-display";
 import SEO from "@utils/seo";
 import './index.scss'
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from "react-share";
 import ReactGA from "react-ga4"
-export async function loader() {
-    const matches = await getMatches();
-    return { matches };
-}
 export default function Index() {
     ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title:"Home" })
     const { matches } = useLoaderData();
@@ -39,25 +34,25 @@ export default function Index() {
                 {matches.map((match, i) => (
                     <React.Fragment key={i}>
                         {RenderMatchCard(match, i)}
-                        {i === 7 &&
+                        {i === 8 &&
                             <Banner />
                         }
-                        {i === 13 &&
+                        {i === 16 &&
                             <Sponsors />
                         }
                     </React.Fragment>
                 ))}
             </div>
-            {matches.length < 8 && <Banner />}
-            {matches.length < 14 && <Sponsors />}
+            {matches.length < 9 && <Banner />}
+            {matches.length < 17 && <Sponsors />}
         </>
     );
 }
 function Banner() {
     return (
         <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up" role="alert">
-                Tutta la mia attrezzatura <i className="fa fa-arrow-right"></i>
+            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
+                La mia attrezzatura <i className="fa fa-arrow-right"></i>
             </div>
         </Link>
     )
@@ -66,7 +61,7 @@ function Banner() {
 function Sponsors() {
     return (
         <Link to={`/sponsors`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up" role="alert">
+            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
                 I miei sponsors <i className="fa fa-arrow-right"></i>
             </div>
         </Link>

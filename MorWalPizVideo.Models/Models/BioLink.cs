@@ -12,6 +12,10 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("order")] int Order) : BaseEntity
     {
         [DataMember]
+        [BsonElement("enable")]
+        public bool Enable { get; set; } = true;
+
+        [DataMember]
         [BsonElement("bioLinkId")]
         public string BioLinkId => Title;
     }

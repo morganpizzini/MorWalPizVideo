@@ -1,13 +1,8 @@
-import { Link, useLoaderData } from "react-router-dom"
+import { Link, useLoaderData } from "react-router"
 import './calendar.scss'
 import SEO from "@utils/seo";
-import { getCalendar } from "@services/calendar";
 import DateDisplay from "@utils/date-card";
 import ReactGA from "react-ga4"
-export async function loader() {
-    const calendar = await getCalendar();
-    return { calendar };
-}
 
 export default function Calendar() {
     const { calendar } = useLoaderData();

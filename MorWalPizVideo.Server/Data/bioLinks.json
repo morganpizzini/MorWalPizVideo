@@ -3,7 +3,7 @@
     "title": "La mia gara",
     "description": "Questa è la mia descrizione",
     "url": "http://google.com",
-    "icon": "fa f-home",
+    "icon": "fa fa-home",
     "bioLinkId": "La mia gara",
     "order": 1
   }

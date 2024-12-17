@@ -61,7 +61,7 @@ namespace MorWalPizVideo.Server.Services
 
                 foreach (var linkVideo in linkVideos)
                 {
-                    await _matchRepository.UpdateItemAsync(linkVideo.Id, linkVideo);
+                    await _matchRepository.UpdateItemAsync(linkVideo);
                 }
             }
 

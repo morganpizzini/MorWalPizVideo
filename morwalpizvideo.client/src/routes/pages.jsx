@@ -1,13 +1,7 @@
-import { useLoaderData } from "react-router-dom"
+import { useLoaderData } from "react-router"
 import './pages.scss'
 import SEO from "@utils/seo";
-import { getPages } from "@services/pages";
 import ReactGA from "react-ga4"
-export async function loader({ params }) {
-    const page = await getPages(params.pageId);
-    return { page };
-}
-
 export default function Matches() {
     const { page } = useLoaderData();
     ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: page.title })

@@ -9,13 +9,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<T>> GetItemsAsync();
         Task<IList<T>> GetItemsAsync(Expression<Func<T, bool>> predicate);
         Task AddItemAsync(T item);
-        Task UpdateItemAsync(string id, T item);
+        Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
     public interface IMatchRepository : IRepository<Match> { }
     public interface IProductRepository : IRepository<Product> { }
     public interface ISponsorRepository : IRepository<Sponsor> { }
+    public interface ISponsorApplyRepository : IRepository<SponsorApply> { }
     public interface IPageRepository : IRepository<Page> { }
     public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
     public interface IBioLinkRepository : IRepository<BioLink> { }
+    public interface IShortLinkRepository : IRepository<ShortLink> { }
 }

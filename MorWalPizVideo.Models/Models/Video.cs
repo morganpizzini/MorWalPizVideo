@@ -19,8 +19,9 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("duration")] string Duration,
         [property: DataMember][property: BsonElement("category")] string Category = "") : BaseEntity
     {
-        public Video(string youtubeId, string category) : this(youtubeId, string.Empty, string.Empty,0,0,0,DateOnly.MinValue, string.Empty,string.Empty, category)
+        public Video(string youtubeId, string category) : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateOnly.MinValue, string.Empty, string.Empty, category)
         {
+
         }
     }
 }

@@ -44,7 +44,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return Task.FromResult(result);
         }
 
-        public Task UpdateItemAsync(string id, T item)
+        public Task UpdateItemAsync(T item)
         {
             return Task.CompletedTask;
         }

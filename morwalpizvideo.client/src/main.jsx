@@ -2,27 +2,32 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './main.scss'
 import Root from "./routes/root";
-import Matches, { loader as matchLoader } from "./routes/matches";
-import Pages, { loader as pageLoader } from "./routes/pages";
 import ErrorPage from "./error-page";
-import Bio, { loader as bioLoader } from "./routes/bio"
-import Accessories, { loader as accessoryLoader } from "./routes/accessories"
-import Sponsors, { loader as sponsorsLoader } from "./routes/sponsors"
-import Calendar, { loader as calendarLoader } from "./routes/calendar"
-import Index, { loader as indexLoader } from "./routes/index";
+import Bio from "./routes/bio"
+import Matches from "./routes/matches";
+import Pages from "./routes/pages";
+import Accessories from "./routes/accessories"
+import Sponsors from "./routes/sponsors"
+import Calendar from "./routes/calendar"
+import Index from "./routes/index";
+import bioLoader from "./routes/bio.loader"
+import matchLoader from "./routes/matches.loader";
+import pageLoader from "./routes/pages.loader";
+import accessoryLoader from "./routes/accessories.loader";
+import sponsorsLoader from "./routes/sponsors.loader";
+import sponsorsAction from "./routes/sponsors.action";
+import calendarLoader from "./routes/calendar.loader";
+import indexLoader from "./routes/index.loader";
 import CookiePolicy from "./routes/cookie-policy";
 import {
     createBrowserRouter,
-    RouterProvider,
-} from "react-router-dom";
+} from "react-router";
+import { RouterProvider } from "react-router/dom";
 import { HelmetProvider } from 'react-helmet-async';
 import ReactGA from 'react-ga4';
-// Import all of Bootstrap's JS
-//import * as bootstrap from 'bootstrap'
-//import Alert from 'bootstrap/js/dist/alert';
-
-// or, specify which plugins you need:
-//import { Tooltip, Toast, Popover } from 'bootstrap';
+import {
+    GoogleReCaptchaProvider
+} from 'react-google-recaptcha-v3';
 
 const router = createBrowserRouter([
     {
@@ -34,7 +39,6 @@ const router = createBrowserRouter([
         path: "/",
         element: <Root />,
         errorElement: <ErrorPage />,
-        //loader: rootLoader,
         children: [{
             errorElement: <ErrorPage />,
             children: [{
@@ -60,6 +64,7 @@ const router = createBrowserRouter([
             {
                 path: "sponsors",
                 loader: sponsorsLoader,
+                action: sponsorsAction,
                 element: <Sponsors />,
             },
             {
@@ -84,7 +89,9 @@ createRoot(document.getElementById('root')).render(
     <StrictMode>
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>
-            <RouterProvider router={router} />
+            <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
+                <RouterProvider router={router}/>
+            </GoogleReCaptchaProvider>
         </HelmetProvider>
     </StrictMode>,
 )

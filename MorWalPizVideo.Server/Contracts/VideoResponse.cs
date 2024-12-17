@@ -1,5 +1,6 @@
 ﻿using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Utils;
+using System.ComponentModel.DataAnnotations;
 namespace MorWalPizVideo.Server.Contracts
 {
     public static class ContractUtils
@@ -11,6 +12,8 @@ namespace MorWalPizVideo.Server.Contracts
                 DateOnly.FromDateTime(contract.Snippet.PublishedAt), contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration, "");
         }
     }
+    public record SponsorRequest([Required]string Name, [Required][EmailAddress] string Email, [Required][MinLength(10)] string Description, [Required] string Token) { }
+    public record RecaptchaResponse(bool success, string action) { }
     public record VideoResponse(IList<ItemResponse> Items)
     {
     }
