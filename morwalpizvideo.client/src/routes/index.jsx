@@ -37,17 +37,17 @@ export default function Index() {
                         {i === 4 &&
                             <BuyMeACoffeeCard />}
                         {RenderMatchCard(match, i)}
-                        {i === 7 &&
+                        {i === 8 &&
                             <Banner />
                         }
-                        {i === 13 &&
+                        {i === 16 &&
                             <Sponsors />
                         }
                     </React.Fragment>
                 ))}
             </div>
-            {matches.length < 8 && <Banner />}
-            {matches.length < 14 && <Sponsors />}
+            {matches.length < 9 && <Banner />}
+            {matches.length < 17 && <Sponsors />}
         </>
     );
 }
@@ -55,8 +55,8 @@ export default function Index() {
 function Banner() {
     return (
         <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up" role="alert">
-                Tutta la mia attrezzatura <i className="fa fa-arrow-right"></i>
+            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
+                La mia attrezzatura <i className="fa fa-arrow-right"></i>
             </div>
         </Link>
     )
@@ -65,7 +65,7 @@ function Banner() {
 function Sponsors() {
     return (
         <Link to={`/sponsors`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up" role="alert">
+            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
                 I miei sponsors <i className="fa fa-arrow-right"></i>
             </div>
         </Link>

@@ -24,9 +24,9 @@ namespace MorWalPizVideo.Operations
             
             matchCollection.InsertOne(new Match(videoId, true, category));
 
-            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
-            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge/{ApiTagCacheKeys.Matches}");
-            json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
+            var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Match}");
+            json = await client.GetStringAsync($"cache/purge/{ApiTagCacheKeys.Matches}");
+            json = await client.GetStringAsync("matches");
         }
     }
 }

@@ -1,15 +1,13 @@
 ﻿using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
-using System.Globalization;
-using System.Xml.Linq;
 
 namespace MorWalPizVideo.Operations
 {
     static partial class AppWorkflow
     {
         public static async Task UpdateCalendarEvent(IMongoCollection<CalendarEvent> collection, HttpClient client) {
-            var results = AskFor("Title", "MatchId");
+            var results = Utils.AskFor("Title", "MatchId");
             if (results.Any(string.IsNullOrEmpty))
             {
                 Console.WriteLine("Provided values are not valid");
@@ -27,8 +25,8 @@ namespace MorWalPizVideo.Operations
             
             await collection.ReplaceOneAsync(Builders<CalendarEvent>.Filter.Eq(e => e.Id, existing.Id), existing);
             
-            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.CalendarEvents}");
-            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge?k={ApiTagCacheKeys.CalendarEvents}");
+            var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.CalendarEvents}");
+            json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.CalendarEvents}");
         }
     }
 }

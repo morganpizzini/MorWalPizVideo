@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './main.scss'
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
+import Bio from "./routes/bio"
 import Matches from "./routes/matches";
 import Pages from "./routes/pages";
 import Accessories from "./routes/accessories"
 import Sponsors from "./routes/sponsors"
 import Calendar from "./routes/calendar"
 import Index from "./routes/index";
+import bioLoader from "./routes/bio.loader"
 import matchLoader from "./routes/matches.loader";
 import pageLoader from "./routes/pages.loader";
 import accessoryLoader from "./routes/accessories.loader";
@@ -30,6 +32,11 @@ import {
 } from 'react-google-recaptcha-v3';
 
 const router = createBrowserRouter([
+    {
+        path: "bio",
+        loader: bioLoader,
+        element: <Bio />,
+    },
     {
         path: "/",
         element: <Root />,
@@ -86,7 +93,7 @@ createRoot(document.getElementById('root')).render(
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>
             <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
-                <RouterProvider router={router} />
+                <RouterProvider router={router}/>
             </GoogleReCaptchaProvider>
         </HelmetProvider>
     </StrictMode>,

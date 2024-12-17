@@ -41,4 +41,17 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class SponsorApplyRepository : BaseRepository<SponsorApply>, ISponsorApplyRepository
+    {
+        public SponsorApplyRepository(IMongoDatabase database) : base(database, DbCollections.SponsorApplies)
+        {
+        }
+    }
+    public class BioLinkRepository : BaseRepository<BioLink>, IBioLinkRepository
+    {
+        public BioLinkRepository(IMongoDatabase database) : base(database, DbCollections.BioLinks)
+        {
+        }
+    }
 }

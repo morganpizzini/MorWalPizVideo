@@ -33,6 +33,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
+    {
+        public BioLinkMockRepository(IWebHostEnvironment environment) : base(environment, "bioLinks") { }
+    }
+
+    public class SponsorApplyMockRepository : BaseMockRepository<SponsorApply>, ISponsorApplyRepository
+    {
+        public SponsorApplyMockRepository(IWebHostEnvironment environment) : base(environment, "sponsorApplies") { }
+    }
+
     public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
     {
         public ShortLinkMockRepository(IWebHostEnvironment environment) : base(environment, "shortLinks")

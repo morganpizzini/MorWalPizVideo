@@ -5,27 +5,30 @@ export default async function action({
     }) {
     const formData = await request.formData();
     const email = String(formData.get("email"));
-    const password = String(formData.get("password"));
+    const name = String(formData.get("name"));
+    const token = String(formData.get("token"));
+    const description = String(formData.get("description"));
 
     const errors = {};
 
     if (!email.includes("@")) {
-        errors.email = "Invalid email address";
+        errors.email = "Indirizzo email non valido";
     }
 
-    if (password.length < 12) {
-        errors.password =
-            "Password should be at least 12 characters";
+    if (name.length == 0) {
+        errors.name =
+            "Inserire un nome";
+    }
+
+    if (description.length < 10) {
+        errors.description =
+            "Inserire una descrizione di almeno 10 caratteri";
     }
 
     if (Object.keys(errors).length > 0) {
         return data({ errors }, { status: 400 });
     }
 
-    return data({ title: "Hello" }, { status: 201 })
-    //let result = await askForSponsor();
-
-    //return result
-    // Redirect to dashboard if validation is successful
-    //return redirect("/dashboard");
+    await askForSponsor(name,email,description,token);
+    return data({ title: "Contatto salvato con successo!" }, { status: 201 })
 }

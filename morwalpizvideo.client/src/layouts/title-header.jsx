@@ -1,9 +1,9 @@
 import { Link } from "react-router";
 import "./title-header.scss"
-export default function TitleComponent() {
+export default function TitleComponent(props) {
     
     return (
-        <div className="container text-center">
+        <div className={`container text-center ${props.dimensions}`}>
             <div className="title-container">
                 <Link to={``}>
                     <h1 className="title">

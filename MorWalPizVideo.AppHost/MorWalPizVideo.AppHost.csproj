@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MorWalPizVideo.Operations\MorWalPizVideo.Operations.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.BackOffice\MorWalPizVideo.BackOffice.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.Server\MorWalPizVideo.Server.csproj" />
   </ItemGroup>
 

@@ -40,10 +40,10 @@ namespace MorWalPizVideo.Operations
             await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
 
 
-            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.Match}");
-            json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/purge?k={ApiTagCacheKeys.Matches}");
+            var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Match}");
+            json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.Matches}");
             
-            json = await client.GetStringAsync("https://morwalpiz.azurewebsites.net/api/matches");
+            json = await client.GetStringAsync("matches");
         }
     }
 }

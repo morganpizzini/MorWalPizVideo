@@ -23,6 +23,7 @@ if(dbConfig == null)
 MongoClientSettings settings = MongoClientSettings.FromUrl(
     new MongoUrl(dbConfig.ConnectionString)
 );
+
 settings.SslSettings =
 new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
 
@@ -31,8 +32,16 @@ var database = new MongoClient(settings).GetDatabase(dbConfig.DatabaseName);
 var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
 var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
 var calendarEventsCollection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
+var bioLinksCollection = database.GetCollection<BioLink>(DbCollections.BioLinks);
+
+var siteUrl = config["SiteUrl"];
+if (string.IsNullOrEmpty(siteUrl))
+{
+    throw new NullReferenceException("config SiteUrl is empty");
+}
 
 using HttpClient client = new();
+client.BaseAddress = new Uri($"{siteUrl}api/");
 client.DefaultRequestHeaders.Accept.Clear();
 client.DefaultRequestHeaders.Accept.Add(
     new MediaTypeWithQualityHeaderValue("application/json"));
@@ -47,6 +56,7 @@ while (true)
     Console.WriteLine("5 - update calendar event");
     Console.WriteLine("6 - create video shortlink");
     Console.WriteLine("7 - get video shortlink");
+    Console.WriteLine("8 - create bio link");
     Console.WriteLine("make a chioce");
     Console.WriteLine("");
     var choice = Console.ReadLine();
@@ -72,10 +82,22 @@ while (true)
             await AppWorkflow.UpdateCalendarEvent(calendarEventsCollection, client);
             break;
         case "6":
-            await VideoWorkflow.CreateVideoShortlink(matchCollection, shortLinkCollection, client, config["SiteUrl"] ?? string.Empty);
+            await VideoWorkflow.CreateVideoShortlink(matchCollection, shortLinkCollection, client, siteUrl);
             break;
         case "7":
-            await VideoWorkflow.GetVideoShortlink(shortLinkCollection, config["SiteUrl"] ?? string.Empty);
+            await VideoWorkflow.GetVideoShortlink(shortLinkCollection, siteUrl);
+            break;
+        case "8":
+            await BioWorkflow.CreateBioLink(bioLinksCollection, client);
+            break;
+        case "9":
+            await BioWorkflow.UpdateBioLink(bioLinksCollection, client);
+            break;
+        case "10":
+            await BioWorkflow.ToggleBioLink(bioLinksCollection, client);
+            break;
+        case "11":
+            await BioWorkflow.DeleteBioLink(bioLinksCollection, client);
             break;
         default:
             Console.WriteLine("Invalid choice");

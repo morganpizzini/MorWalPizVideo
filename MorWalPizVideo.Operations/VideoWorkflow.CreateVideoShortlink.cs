@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using System.Security.Cryptography;
@@ -35,7 +34,7 @@ namespace MorWalPizVideo.Operations
 
             await shortLinkCollection.InsertOneAsync(shortlink);
 
-            var json = await client.GetStringAsync($"https://morwalpiz.azurewebsites.net/api/reset?k={CacheKeys.ShortLink}");
+            var json = await client.GetStringAsync($"reset?k={CacheKeys.ShortLink}");
 
             Console.WriteLine($"Shortlink: {siteUrl}sl/{shortlink.Code}");
         }
