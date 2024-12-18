@@ -34,9 +34,9 @@ export default function Index() {
             <div className="card-columns">
                 {matches.map((match, i) => (
                     <React.Fragment key={i}>
-                        {i === 4 &&
-                            <BuyMeACoffeeCard />}
                         {RenderMatchCard(match, i)}
+                        {i === 3 &&
+                            <BuyMeACoffeeCard />}
                         {i === 8 &&
                             <Banner />
                         }

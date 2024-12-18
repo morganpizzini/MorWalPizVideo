@@ -12,6 +12,7 @@ public class ShortLinkRequest
     public string VideoId { get; set; } = string.Empty;
     public string QueryString { get; set; } = string.Empty;
 }
+
 public class ShortLinkController : ApplicationRepository
 {
     private readonly IMongoDatabase database;
