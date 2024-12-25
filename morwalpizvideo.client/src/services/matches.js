@@ -17,3 +17,12 @@ export function getMatch(id) {
             return response.json();
         })
 }
+export function getMatchImages(id) {
+    return fetch(`/api/matches/${id}/images`)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+}

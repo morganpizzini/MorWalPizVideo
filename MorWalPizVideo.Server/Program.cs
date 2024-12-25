@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
+using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
@@ -59,8 +61,21 @@ else
     builder.Services.AddScoped(s =>
         new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
 
-    builder.Services.AddHttpClient();
+    builder.Services.AddHttpClient("Recaptcha", httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://www.google.com/recaptcha/api/siteverify");
+    });
+    builder.Services.AddHttpClient("Youtube", httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
+    });
 }
+
+
+// Aggiungi configurazione per Blob Storage
+builder.Services.Configure<BlobStorageOptions>(
+    builder.Configuration.GetSection("BlobStorage"));
+builder.Services.AddScoped<BlobService>();
 
 builder.Services.AddSingleton<MyMemoryCache>();
 
@@ -81,7 +96,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseOutputCache();
+if(!app.Environment.IsDevelopment())
+    app.UseOutputCache();
 
 app.MapControllers();
 

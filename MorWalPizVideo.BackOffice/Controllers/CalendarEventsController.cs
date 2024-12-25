@@ -17,16 +17,14 @@ public class UpdateCalendarRequest
 {
     public string MatchId { get; set; } = string.Empty;
 }
-public class CalendarEventsController : ApplicationRepository
+public class CalendarEventsController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
-    private readonly IConfiguration configuration;
-    public CalendarEventsController(IMongoDatabase _database, IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    public CalendarEventsController(IMongoDatabase _database, IHttpClientFactory _clientFactory)
     {
         database = _database;
         client = _clientFactory;
-        configuration = _configuration;
     }
     [HttpPost]
     public async Task<IActionResult> AddCalendar(AddCalendarRequest request)

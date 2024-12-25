@@ -1,4 +1,6 @@
 using MongoDB.Driver;
+using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Configuration;
 using System.Net.Http.Headers;
 using System.Security.Authentication;
 
@@ -10,23 +12,31 @@ builder.AddServiceDefaults();
 
 builder.Services.AddControllers();
 
-MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
+var dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
 if (dbConfig == null)
-{
     throw new Exception("Cannot read configuration for MongoDB");
-}
+
+var telegramSettings = builder.Configuration.GetSection("TelegramSettings").Get<TelegramSettings>();
+
+if (telegramSettings == null)
+    throw new Exception("Cannot read configuration for Telegram");
+
+var discordSettings = builder.Configuration.GetSection("DiscordSettings").Get<TelegramSettings>();
+
+if (discordSettings == null)
+    throw new Exception("Cannot read configuration for Discord");
 
 MongoClientSettings settings = MongoClientSettings.FromUrl(
     new MongoUrl(dbConfig.ConnectionString)
 );
 settings.SslSettings =
-new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+    new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
 
 builder.Services.AddScoped(s =>
     new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
 
-var siteUrl = builder.Configuration["SiteUrl"];
+var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
 
 if (string.IsNullOrEmpty(siteUrl))
 {
@@ -40,6 +50,26 @@ builder.Services.AddHttpClient("MorWalPiz", httpClient =>
     httpClient.DefaultRequestHeaders.Accept.Add(
         new MediaTypeWithQualityHeaderValue("application/json"));
 });
+
+// Aggiungi HttpClient
+builder.Services.AddHttpClient("Discord", client =>
+{
+    client.BaseAddress = new Uri("https://discord.com/api/");
+    client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Bot", discordSettings.Token);
+});
+
+builder.Services.AddHttpClient("Telegram", httpClient =>
+{
+    httpClient.BaseAddress = new Uri($"https://api.telegram.org/bot{telegramSettings.Token}/sendMessage");
+    httpClient.DefaultRequestHeaders.Accept.Clear();
+    httpClient.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
+});
+
+builder.Services.Configure<BlobStorageOptions>(
+    builder.Configuration.GetSection("BlobStorage"));
+builder.Services.AddScoped<BlobService>();
 
 builder.Services.AddOpenApi();
 

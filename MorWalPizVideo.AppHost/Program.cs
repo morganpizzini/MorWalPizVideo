@@ -1,7 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-builder.AddProject<Projects.MorWalPizVideo_Server>("morwalpizvideo-server");
+builder.AddProject<Projects.MorWalPizVideo_Server>("app");
 
-builder.AddProject<Projects.MorWalPizVideo_BackOffice>("morwalpizvideo-backoffice");
+builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoffice");
 
 builder.Build().Run();

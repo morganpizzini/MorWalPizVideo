@@ -6,23 +6,7 @@ import DateDisplay from "@utils/date-display";
 import ReactGA from "react-ga4"
 import Gallery from "@utils/gallery";
 export default function Matches() {
-    const { match } = useLoaderData();
-    const images = [
-        {
-            source: 'https://placehold.co/800x400',
-            title: 'First slide',
-            description: 'Nulla vitae elit libero, a pharetra augue mollis interdum.',
-        },
-        {
-            source: 'https://placehold.co/800x400',
-            title: 'Second slide',
-            description: 'Nulla vitae elit libero, a pharetra augue mollis interdum.',
-        },
-        {
-            source: 'https://placehold.co/800x400',
-            title: 'Third slide',
-            description: 'Nulla vitae elit libero, a pharetra augue mollis interdum.',
-        }];
+    const { match, images } = useLoaderData();
     ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: match.title })
     return (
         <>

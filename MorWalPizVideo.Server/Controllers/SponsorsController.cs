@@ -40,13 +40,12 @@ namespace MorWalPizVideo.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(SponsorRequest request)
         {
-            using var client = httpClientFactory.CreateClient();
+            using var client = httpClientFactory.CreateClient("Recaptcha");
             var host = HttpContext.Request.Host.Value;
-            var url = "https://www.google.com/recaptcha/api/siteverify";
             var parameters = new Dictionary<string, string> { { "secret", configuration["RecaptchaSecretKey"] ?? string.Empty }, { "response", request.Token }, { "remoteip", host } };
             var encodedContent = new FormUrlEncodedContent(parameters);
 
-            var response = await client.PostAsync(url, encodedContent);
+            var response = await client.PostAsync("", encodedContent);
             var result = System.Text.Json.JsonSerializer.Deserialize<RecaptchaResponse>(await response.Content.ReadAsStringAsync());
             if (result == null || !result.success || result.action != "sponsorForm")
             {

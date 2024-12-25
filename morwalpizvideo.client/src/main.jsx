@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './main.scss'
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
+import ErrorPageRoot from "./error-page-root";
 import Bio from "./routes/bio"
 import Matches from "./routes/matches";
 import Pages from "./routes/pages";
@@ -36,11 +37,12 @@ const router = createBrowserRouter([
         path: "bio",
         loader: bioLoader,
         element: <Bio />,
+        errorElement: <ErrorPageRoot />
     },
     {
         path: "/",
         element: <Root />,
-        errorElement: <ErrorPage />,
+        errorElement: <ErrorPageRoot />,
         children: [{
             errorElement: <ErrorPage />,
             children: [{
@@ -89,12 +91,12 @@ if (window.location.hostname != "localhost") {
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <BuyMeWidget />
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>
             <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
                 <RouterProvider router={router}/>
             </GoogleReCaptchaProvider>
         </HelmetProvider>
+        <BuyMeWidget />
     </StrictMode>,
 )

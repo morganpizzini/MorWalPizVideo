@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.ServiceDefau
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.BackOffice", "MorWalPizVideo.BackOffice\MorWalPizVideo.BackOffice.csproj", "{73A10727-E26D-4AF2-97F3-6A93A6524456}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.Domain", "MorWalPizVideo.Domain\MorWalPizVideo.Domain.csproj", "{6FFB84D8-0441-4C17-AE24-1549C32F0F28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{73A10727-E26D-4AF2-97F3-6A93A6524456}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73A10727-E26D-4AF2-97F3-6A93A6524456}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73A10727-E26D-4AF2-97F3-6A93A6524456}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FFB84D8-0441-4C17-AE24-1549C32F0F28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FFB84D8-0441-4C17-AE24-1549C32F0F28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FFB84D8-0441-4C17-AE24-1549C32F0F28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FFB84D8-0441-4C17-AE24-1549C32F0F28}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

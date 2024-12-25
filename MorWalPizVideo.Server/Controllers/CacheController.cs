@@ -15,13 +15,18 @@ namespace MorWalPizVideo.Server.Controllers
             cache = _cache;
         }
         [HttpGet("purge")]
-        public ValueTask Index([FromQuery(Name = "k")] string tag) => cache.EvictByTagAsync(tag, default);
+        public async Task<IActionResult> Index([FromQuery(Name = "k")] string tag){
+            
+            await cache.EvictByTagAsync(tag, default);
+
+            return NoContent();
+        }
 
         [HttpGet("reset")]
         public IActionResult Reset([FromQuery(Name = "k")] string keys)
         {
             if (string.IsNullOrEmpty(keys))
-                keys = $"{CacheKeys.Match},{CacheKeys.Product},{CacheKeys.Sponsor},{CacheKeys.Pages},{CacheKeys.CalendarEvents}";
+                keys = $"{CacheKeys.Match},{CacheKeys.Product},{CacheKeys.Sponsor},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.BioLink},{CacheKeys.ShortLink}";
 
             foreach (var key in keys.ToLower().Split(","))
                 memoryCache.Cache.Remove(key);

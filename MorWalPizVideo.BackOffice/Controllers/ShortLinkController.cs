@@ -13,7 +13,7 @@ public class ShortLinkRequest
     public string QueryString { get; set; } = string.Empty;
 }
 
-public class ShortLinkController : ApplicationRepository
+public class ShortLinkController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
@@ -23,6 +23,17 @@ public class ShortLinkController : ApplicationRepository
         database = _database;
         client = _clientFactory;
         configuration = _configuration;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetShortLink()
+    {
+        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
+
+        var shortlinks = (await shortLinkCollection.FindAsync(x => true)).ToList();
+
+        var siteUrl = configuration.GetValue<string>("SiteUrl");
+        return Ok(shortlinks.Select(item => $"{siteUrl}sl/{item.Code}   VideoId: {item.VideoId}   QueryString: {item.QueryString}"));
     }
 
     [HttpGet("{videoId}")]
@@ -57,7 +68,7 @@ public class ShortLinkController : ApplicationRepository
         await shortLinkCollection.InsertOneAsync(shortlink);
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"reset?k={CacheKeys.ShortLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLink}");
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
         return Ok($"{siteUrl}sl/{shortlink.Code}");

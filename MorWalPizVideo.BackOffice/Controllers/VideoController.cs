@@ -37,7 +37,7 @@ public class SubVideoCrationRequest
     [Required]
     public string Category { get; set; } = string.Empty;
 }
-    public class VideoController : ApplicationRepository
+    public class VideoController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;

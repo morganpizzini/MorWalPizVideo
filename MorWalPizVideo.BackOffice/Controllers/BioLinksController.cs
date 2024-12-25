@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using System.Threading.Channels;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class ToggleBioLinkRequest
@@ -26,7 +27,7 @@ public class UpdateBioLinkRequest
     public int Order { get; set; }
 }
 
-public class BioLinksController : ApplicationRepository
+public class BioLinksController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;

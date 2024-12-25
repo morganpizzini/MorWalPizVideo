@@ -1,4 +1,4 @@
-﻿internal class MorWalPizDatabaseSettings
+﻿public class MorWalPizDatabaseSettings
 {
     public string ConnectionString { get; set; } = null!;
     public string DatabaseName { get; set; } = null!;

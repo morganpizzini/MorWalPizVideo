@@ -21,7 +21,7 @@ const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
 const manifestForPlugIn = {
     registerType: 'autoUpdate',
     workbox: {
-        navigateFallbackDenylist: [/^\/sl/]
+        navigateFallbackDenylist: [/^\/sl/, /^\/api\/cache/]
     },
     includeAssests: ['favicon.ico', "apple-touch-icon.png", "maskable_icon.png"],
     manifest: {

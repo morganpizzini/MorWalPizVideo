@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
       <Version>9.0.0</Version>
@@ -25,6 +26,7 @@
     <ProjectReference Include="..\morwalpizvideo.client\morwalpizvideo.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\MorWalPizVideo.Domain\MorWalPizVideo.Domain.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.ServiceDefaults\MorWalPizVideo.ServiceDefaults.csproj" />
   </ItemGroup>
