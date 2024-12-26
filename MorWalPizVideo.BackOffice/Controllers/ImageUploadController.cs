@@ -9,10 +9,10 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class ImageUploadController : ApplicationController
 {
-    private readonly BlobService blobServiceClient;
+    private readonly IBlobService blobServiceClient;
     private readonly IMongoDatabase database;
 
-    public ImageUploadController(IMongoDatabase _database, BlobService _blobServiceClient) 
+    public ImageUploadController(IMongoDatabase _database, IBlobService _blobServiceClient) 
     {
         database = _database;
         blobServiceClient = _blobServiceClient;

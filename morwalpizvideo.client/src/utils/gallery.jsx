@@ -15,10 +15,10 @@ export default function ControlledCarousel({images}) {
                 {images.map((image, i) => (
                     <Carousel.Item key={i}>
                         <img className="w-100 d-block" src={image.source} />
-                        <Carousel.Caption>
-                            <h3>{image.title}</h3>
-                            <p>{image.description}</p>
-                        </Carousel.Caption>
+                        {/*<Carousel.Caption>*/}
+                        {/*    <h3>{image.title}</h3>*/}
+                        {/*    <p>{image.description}</p>*/}
+                        {/*</Carousel.Caption>*/}
                     </Carousel.Item>))}
             </Carousel>
             <div className="row mt-3">

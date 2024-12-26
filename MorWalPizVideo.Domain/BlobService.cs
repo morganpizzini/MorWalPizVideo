@@ -5,7 +5,20 @@ using MongoDB.Driver.Core.Configuration;
 
 namespace MorWalPizVideo.Domain
 {
-    public class BlobService
+    public interface IBlobService
+    {
+        public Task<List<string>> GetImagesInFolderAsync(string folderName);
+        public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false);
+    }
+    public class BlobServiceMock : IBlobService
+    {
+        public Task<List<string>> GetImagesInFolderAsync(string folderName)
+            =>
+            Task.FromResult(new List<string> { "https://placehold.co/1920x1080", "https://placehold.co/1920x1080", "https://placehold.co/1920x1080" });
+        
+        public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false) => Task.CompletedTask;
+    }
+    public class BlobService : IBlobService
     {
         private readonly BlobStorageOptions _options;
         public BlobService(IOptions<BlobStorageOptions> options)

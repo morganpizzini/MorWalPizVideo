@@ -4,7 +4,6 @@ using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
-using MorWalPizVideo.Server.Utils;
 using System.Security.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +31,8 @@ if (config == "dev")
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
+
+    builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
 else
 {
@@ -44,6 +45,11 @@ else
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+
+    // Aggiungi configurazione per Blob Storage
+    builder.Services.Configure<BlobStorageOptions>(
+        builder.Configuration.GetSection("BlobStorage"));
+    builder.Services.AddScoped<IBlobService, BlobService>();
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
@@ -72,10 +78,6 @@ else
 }
 
 
-// Aggiungi configurazione per Blob Storage
-builder.Services.Configure<BlobStorageOptions>(
-    builder.Configuration.GetSection("BlobStorage"));
-builder.Services.AddScoped<BlobService>();
 
 builder.Services.AddSingleton<MyMemoryCache>();
 

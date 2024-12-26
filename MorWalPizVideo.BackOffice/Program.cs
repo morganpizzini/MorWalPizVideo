@@ -67,9 +67,17 @@ builder.Services.AddHttpClient("Telegram", httpClient =>
         new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
-builder.Services.Configure<BlobStorageOptions>(
+
+if(builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<IBlobService, BlobServiceMock>();
+}
+else
+{
+    builder.Services.Configure<BlobStorageOptions>(
     builder.Configuration.GetSection("BlobStorage"));
-builder.Services.AddScoped<BlobService>();
+    builder.Services.AddScoped<IBlobService, BlobService>();
+}
 
 builder.Services.AddOpenApi();
 

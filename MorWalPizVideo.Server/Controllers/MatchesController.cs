@@ -9,18 +9,21 @@ namespace MorWalPizVideo.Server.Controllers
 {
     public class MatchesController : ApplicationController
     {
-        private readonly BlobService _blobService;
-        public MatchesController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache, BlobService blobService) : base(_dataService, _extDataService, _memoryCache)
+        private readonly IBlobService _blobService;
+        public MatchesController(DataService _dataService,
+            IExternalDataService _extDataService,
+            MyMemoryCache _memoryCache,
+            IBlobService blobService) : base(_dataService, _extDataService, _memoryCache)
         {
             _blobService = blobService;
         }
+
         [OutputCache(Tags = [CacheKeys.Match])]
         [HttpGet]
         public async Task<IActionResult> Index() => Ok(await FetchMatches());
 
         [HttpGet("{url}")]
-        [OutputCache(Tags = [CacheKeys.Match],VaryByRouteValueNames = ["url"])]
+        [OutputCache(Tags = [CacheKeys.Match], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url)
         {
             var match = await FindMatch(url);
@@ -29,15 +32,16 @@ namespace MorWalPizVideo.Server.Controllers
 
         [HttpGet("{url}/images")]
         [OutputCache(Tags = [CacheKeys.Match], VaryByRouteValueNames = ["url"])]
-        public async Task<IActionResult> FetchImages(string url) {
+        public async Task<IActionResult> FetchImages(string url)
+        {
             var match = FindMatch(url);
-            if(match == null)
+            if (match == null)
                 return NotFound();
             var images = await _blobService.GetImagesInFolderAsync(url);
 
             return Ok(images);
         }
-            
+
         private async Task<Match?> FindMatch(string url) => (await FetchMatches())?.FirstOrDefault(x => x.Url == url);
     }
 }
