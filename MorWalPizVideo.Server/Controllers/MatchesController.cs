@@ -19,7 +19,7 @@ namespace MorWalPizVideo.Server.Controllers
             _blobService = blobService;
         }
 
-        [OutputCache(Tags = [CacheKeys.Match])]
+        [OutputCache(Tags = [CacheKeys.Matches])]
         [HttpGet]
         public async Task<IActionResult> Index(int skip = 0, int take = 23) {
             var count = await CountMatches();
@@ -29,7 +29,7 @@ namespace MorWalPizVideo.Server.Controllers
         }
 
         [HttpGet("{url}")]
-        [OutputCache(Tags = [CacheKeys.Match], VaryByRouteValueNames = ["url"])]
+        [OutputCache(Tags = [CacheKeys.Matches], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url)
         {
             var match = await FindMatch(url);
@@ -37,7 +37,7 @@ namespace MorWalPizVideo.Server.Controllers
         }
 
         [HttpGet("{url}/images")]
-        [OutputCache(Tags = [CacheKeys.Match], VaryByRouteValueNames = ["url"])]
+        [OutputCache(Tags = [CacheKeys.Matches], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> FetchImages(string url)
         {
             var match = FindMatch(url);

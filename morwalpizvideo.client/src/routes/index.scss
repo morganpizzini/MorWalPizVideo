@@ -47,6 +47,10 @@
     font-size: 12px;
 }
 
+.categories-container > button {
+    text-transform: capitalize;
+}
+
 .Demo__some-network__share-button {
     cursor: pointer;
 }

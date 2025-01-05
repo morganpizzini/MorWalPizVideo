@@ -10,7 +10,7 @@ export default function Matches() {
             <SEO
                 title={page.title}
                 description={page.shortContent}
-                imageUrl={`/images/pages/${page.thumbnailUrl}`}
+                imageUrl={page.thumbnailUrl}
                 type='article' />
             <div id="page-container" className="p-4 bg-white">
                 <h1 className="page-title">{page.title}</h1>
@@ -18,7 +18,7 @@ export default function Matches() {
                 <div className="page-text">
                     <div className="page-content" dangerouslySetInnerHTML={{ __html: page.content }}></div>
                     { page.thumbnailUrl.length > 0 && 
-                        <img className="page-image" alt={page.title} src={`${location.protocol + '//' + location.host}/images/pages/${page.thumbnailUrl}`} />
+                        <img className="page-image" alt={page.title} src={page.thumbnailUrl} />
                     }
                 </div>
             </div>

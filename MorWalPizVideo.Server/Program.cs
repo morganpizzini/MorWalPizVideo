@@ -20,6 +20,9 @@ builder.Services.AddOutputCache(options =>
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<DataService>();
+// Read configuration from appsettings.json
+builder.Services.Configure<BlobStorageOptions>(
+    builder.Configuration.GetSection("BlobStorage"));
 if (config == "dev")
 {
     builder.Services.AddScoped<IExternalDataService, ExternalDataMockService>();
@@ -46,9 +49,7 @@ else
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
 
-    // Aggiungi configurazione per Blob Storage
-    builder.Services.Configure<BlobStorageOptions>(
-        builder.Configuration.GetSection("BlobStorage"));
+   
     builder.Services.AddScoped<IBlobService, BlobService>();
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();

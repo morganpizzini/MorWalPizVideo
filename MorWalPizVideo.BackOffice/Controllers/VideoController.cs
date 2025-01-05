@@ -59,11 +59,11 @@ public class VideoController : ApplicationController
     {
         var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
 
-        matchCollection.InsertOne(new Match(request.VideoId, true, request.Category));
+        matchCollection.InsertOne(new Match(request.VideoId, true, request.Category.ToLower()));
 
         using var client = this.client.CreateClient("MorWalPiz");
 
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Match}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Matches}");
         json = await client.GetStringAsync($"cache/purge/{ApiTagCacheKeys.Matches}");
         json = await client.GetStringAsync("matches");
         return NoContent();
@@ -110,7 +110,7 @@ public class VideoController : ApplicationController
     public IActionResult RootCreation(RootCreationRequest request)
     {
         var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
-        matchCollection.InsertOne(new Match(request.VideoId, request.Title, request.Description, request.Url, [], request.Category));
+        matchCollection.InsertOne(new Match(request.VideoId, request.Title, request.Description, request.Url, [], request.Category.ToLower()));
         return NoContent();
     }
     [HttpPost("ImportSubCreation")]
@@ -122,13 +122,13 @@ public class VideoController : ApplicationController
         {
             return BadRequest("Match do not exists");
         }
-        existingMatch = existingMatch with { Videos = [.. existingMatch.Videos, new Video(request.VideoId, request.Category)] };
+        existingMatch = existingMatch with { Videos = [.. existingMatch.Videos, new Video(request.VideoId, request.Category.ToLower())] };
 
         await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
 
         using var client = this.client.CreateClient("MorWalPiz");
 
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Match}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Matches}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.Matches}");
 
         json = await client.GetStringAsync("matches");

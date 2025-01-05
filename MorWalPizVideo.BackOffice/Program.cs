@@ -1,4 +1,6 @@
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
 using System.Net.Http.Headers;
@@ -68,7 +70,9 @@ builder.Services.AddHttpClient("Telegram", httpClient =>
 });
 
 
-if(builder.Environment.IsDevelopment())
+builder.Services.AddScoped<IDiscordService, DiscordService>();
+builder.Services.AddScoped<ITelegramService, TelegramService>();
+if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }

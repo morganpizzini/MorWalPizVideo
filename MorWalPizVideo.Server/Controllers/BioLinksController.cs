@@ -15,15 +15,15 @@ namespace MorWalPizVideo.Server.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Tags = [CacheKeys.BioLink])]
+        [OutputCache(Tags = [CacheKeys.BioLinks])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.BioLink, out IList<BioLink>? entities))
+            if (memoryCache.Cache.TryGetValue(CacheKeys.BioLinks, out IList<BioLink>? entities))
             {
                 return Ok(entities);
             }
             entities = await dataService.GetBioLinks();
-            memoryCache.Cache.Set(CacheKeys.BioLink, entities, new MemoryCacheEntryOptions
+            memoryCache.Cache.Set(CacheKeys.BioLinks, entities, new MemoryCacheEntryOptions
             {
                 Size = 1
             });

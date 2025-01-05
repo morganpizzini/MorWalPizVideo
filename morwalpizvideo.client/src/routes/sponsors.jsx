@@ -34,7 +34,7 @@ export default function Sponsors() {
             <h1 className="text-center mb-3">SPONSORS</h1>
             <div className="row text-center mb-5">
                 {sponsors.map(sponsor => <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
-                    <img className="mw-100" src={`images/sponsors/${sponsor.imgSrc}`} />
+                    <img className="mw-100" src={sponsor.imgSrc} />
                     <Link to={sponsor.url} target="_blank" rel="noopener noreferrer" className="stretched-link"></Link>
                 </div>)}
             </div>

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Models;
@@ -13,28 +15,30 @@ namespace MorWalPizVideo.Server.Controllers
     {
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IConfiguration configuration;
+        private readonly BlobStorageOptions blobOptions;
         public SponsorsController(
             DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache,
-            IHttpClientFactory _httpClientFactory, IConfiguration _configuration) : base(_dataService,_extDataService,_memoryCache)
+            IHttpClientFactory _httpClientFactory, IConfiguration _configuration, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_extDataService,_memoryCache)
         {
             configuration = _configuration;
             httpClientFactory = _httpClientFactory;
+            blobOptions = _blobOptions.Value;
         }
 
         [HttpGet]
-        [OutputCache(Tags = [CacheKeys.Sponsor])]
+        [OutputCache(Tags = [CacheKeys.Sponsors])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Sponsor, out IList<Sponsor>? entities))
+            if (memoryCache.Cache.TryGetValue(CacheKeys.Sponsors, out IList<Sponsor>? entities))
             {
                 return Ok(entities);
             }
             entities = await dataService.GetSponsors();
-            memoryCache.Cache.Set(CacheKeys.Sponsor, entities, new MemoryCacheEntryOptions
+            memoryCache.Cache.Set(CacheKeys.Sponsors, entities, new MemoryCacheEntryOptions
             {
                 Size = 1
             });
-            return Ok(entities);
+            return Ok(entities.Select(x=>(x with { ImgSrc = $"{blobOptions.Endpoint}/{blobOptions.SponsorContainerName}/{x.ImgSrc}" })));
         }
 
         [HttpPost]

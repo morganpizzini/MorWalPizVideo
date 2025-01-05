@@ -59,7 +59,7 @@ public class BioLinksController : ApplicationController
         await collection.BulkWriteAsync(updates);
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
     }
@@ -95,7 +95,7 @@ public class BioLinksController : ApplicationController
 
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
     }
@@ -120,7 +120,7 @@ public class BioLinksController : ApplicationController
         var result = await collection.BulkWriteAsync(updates);
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
     }
@@ -138,7 +138,7 @@ public class BioLinksController : ApplicationController
         collection.DeleteOne(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
     }

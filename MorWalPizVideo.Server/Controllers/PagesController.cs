@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -9,9 +11,11 @@ namespace MorWalPizVideo.Server.Controllers
 {
     public class PagesController : ApplicationController
     {
+        private readonly BlobStorageOptions blobOptions;
         public PagesController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _extDataService, _memoryCache)
         {
+            blobOptions = _blobOptions.Value;
         }
 
         [HttpGet("{url}")]
@@ -26,7 +30,10 @@ namespace MorWalPizVideo.Server.Controllers
                     Size = 1
                 });
             }
-            return Ok(entities?.FirstOrDefault(x => x.Url == url));
+            var page = entities?.FirstOrDefault(x => x.Url == url);
+            if(page == null)
+                return NotFound();
+            return Ok(page with { ThumbnailUrl = $"{blobOptions.Endpoint}/{blobOptions.PageContainerName}/{page.Url}/thumbnail.jpg" });
         }
     }
 }

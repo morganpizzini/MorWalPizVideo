@@ -74,7 +74,7 @@ export default function Index() {
                     <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
                 </div>
             </div>
-            <div className="my-3 p-2 bg-white rounded" style={{ display: "flex", gap: "10px" }}>
+            <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
                 {allCategories.map((category) => {
                     const includeCategory = availableCategories.includes(category);
                     return (

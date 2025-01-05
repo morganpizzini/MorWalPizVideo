@@ -1,16 +1,20 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class ShortLinkRequest
 {
+    [Required]
     public string VideoId { get; set; } = string.Empty;
     public string QueryString { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
 }
 
 public class ShortLinkController : ApplicationController
@@ -18,11 +22,16 @@ public class ShortLinkController : ApplicationController
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
     private readonly IConfiguration configuration;
-    public ShortLinkController(IMongoDatabase _database, IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    private readonly IDiscordService discordService;
+    private readonly ITelegramService telegramService;
+    public ShortLinkController(IMongoDatabase _database, ITelegramService _telegramService, IHttpClientFactory _clientFactory, IConfiguration _configuration,
+        IDiscordService _discordService)
     {
         database = _database;
         client = _clientFactory;
         configuration = _configuration;
+        discordService = _discordService;
+        telegramService = _telegramService;
     }
 
     [HttpGet]
@@ -33,7 +42,7 @@ public class ShortLinkController : ApplicationController
         var shortlinks = (await shortLinkCollection.FindAsync(x => true)).ToList();
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(item => $"{siteUrl}sl/{item.Code}   VideoId: {item.VideoId}   QueryString: {item.QueryString}"));
+        return Ok(shortlinks.Select(item => $"{siteUrl}sl/{item.Code}   Counts: {item.ClicksCount}   VideoId: {item.VideoId}   QueryString: {item.QueryString}"));
     }
 
     [HttpGet("{videoId}")]
@@ -68,9 +77,16 @@ public class ShortLinkController : ApplicationController
         await shortLinkCollection.InsertOneAsync(shortlink);
 
         using var client = this.client.CreateClient("MorWalPiz");
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLink}");
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
+
+        if (!string.IsNullOrEmpty(request.Message))
+        {
+            await discordService.CreatePost(shortLinkCode, request.Message);
+            await telegramService.CreatePost(shortLinkCode, request.Message);
+        }
+
         return Ok($"{siteUrl}sl/{shortlink.Code}");
 
         async Task<string> CalculateShortLink(IMongoCollection<ShortLink> shortLinkCollection)

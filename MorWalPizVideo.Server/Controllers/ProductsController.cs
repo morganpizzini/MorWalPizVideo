@@ -15,13 +15,13 @@ namespace MorWalPizVideo.Server.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Tags = [CacheKeys.Product])]
+        [OutputCache(Tags = [CacheKeys.Products])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Product, out IList<Product>? entities))
+            if (memoryCache.Cache.TryGetValue(CacheKeys.Products, out IList<Product>? entities))
                 return Ok(entities);
             entities = await dataService.GetProducts();
-            memoryCache.Cache.Set(CacheKeys.Product, entities, new MemoryCacheEntryOptions
+            memoryCache.Cache.Set(CacheKeys.Products, entities, new MemoryCacheEntryOptions
             {
                 Size = 1
             });

@@ -31,6 +31,7 @@ import BuyMeWidget from "@utils/buy-me-widget";
 import {
     GoogleReCaptchaProvider
 } from 'react-google-recaptcha-v3';
+import { registerSW } from 'virtual:pwa-register';
 
 const router = createBrowserRouter([
     {
@@ -83,6 +84,21 @@ const router = createBrowserRouter([
         }],
     }
 ]);
+
+// Configurazione del registro SW con callback
+const updateSW = registerSW({
+    onNeedRefresh() {
+        const userConsent = window.confirm(
+            "Una nuova versione è disponibile. Vuoi aggiornare l'applicazione?"
+        );
+        if (userConsent) {
+            updateSW();
+        }
+    },
+    onOfflineReady() {
+        //alert("L'app è pronta per funzionare offline.");
+    },
+});
 
 const gaTrackingId = "G-ST9GQYL925";
 if (window.location.hostname != "localhost") {

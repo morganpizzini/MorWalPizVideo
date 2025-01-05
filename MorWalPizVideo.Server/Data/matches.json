@@ -15,7 +15,7 @@
         "publishedAt": "2024-11-17",
         "thumbnail": "https://i.ytimg.com/vi/CtH9p9XNFKo/sddefault.jpg",
         "duration": "PT11M1S",
-        "category": "Gara",
+        "category": "gara",
         "creationDateTime": "2024-11-28T23:03:20.5259753+01:00"
       },
       {
@@ -28,11 +28,11 @@
         "publishedAt": "2024-11-20",
         "thumbnail": "https://i.ytimg.com/vi/STbZ3H_5OpE/sddefault.jpg",
         "duration": "PT6M12S",
-        "category": "Comparativa",
+        "category": "comparativa",
         "creationDateTime": "2024-11-28T23:03:20.5259784+01:00"
       }
     ],
-    "category": "Gara",
+    "category": "gara",
     "isLink": false,
     "creationDateTime": "2024-11-17T00:00:00"
   },
@@ -52,7 +52,7 @@
         "PublishedAt": "2024-11-03",
         "Thumbnail": "https://i.ytimg.com/vi/1AlRUdCcK0o/sddefault.jpg",
         "Duration": "PT12M30S",
-        "Category": "Gara",
+        "Category": "gara",
         "CreationDateTime": "2024-11-28T23:03:20.525981+01:00"
       },
       {
@@ -65,11 +65,11 @@
         "PublishedAt": "2024-11-06",
         "Thumbnail": "https://i.ytimg.com/vi/XNisy7wG5Zw/sddefault.jpg",
         "Duration": "PT10M17S",
-        "Category": "Review",
+        "Category": "review",
         "CreationDateTime": "2024-11-28T23:03:20.5259829+01:00"
       }
     ],
-    "Category": "Gara",
+    "Category": "gara",
     "isLink": false,
     "CreationDateTime": "2024-11-03T00:00:00"
   },
@@ -79,7 +79,7 @@
     "Description": "I 15 articoli essenziali che hanno migliorato la mia esperienza nel mondo del tiro dinamico e che si [...]",
     "Url": "s-R10WIwwF0",
     "Videos": null,
-    "Category": "Consigli",
+    "Category": "consigli",
     "isLink": true,
     "CreationDateTime": "2024-11-22T00:00:00"
   },
@@ -89,7 +89,7 @@
     "Description": "Vi guider\u00F2 attraverso il contenuto del mio zaino da tiro al poligono, mostrando tutto ci\u00F2 che [...]",
     "Url": "Htu1X6yqsi0",
     "Videos": null,
-    "Category": "Consigli",
+    "Category": "consigli",
     "isLink": true,
     "CreationDateTime": "2024-11-14T00:00:00"
   },
@@ -99,7 +99,7 @@
     "Description": "In questo video vi porto dietro le quinte della preparazione delle munizioni per le gare, mostrando [...]",
     "Url": "GBpA2s7V0d0",
     "Videos": null,
-    "Category": "Consigli",
+    "Category": "consigli",
     "isLink": true,
     "CreationDateTime": "2024-11-11T00:00:00"
   },
@@ -109,7 +109,7 @@
     "Description": "Esploriamo tutte le complessit\u00E0 e i dettagli dello smontaggio della pistola Tanfoglio Limited [...]",
     "Url": "gUkZrpujbPE",
     "Videos": null,
-    "Category": "Consigli",
+    "Category": "consigli",
     "isLink": true,
     "CreationDateTime": "2024-10-31T00:00:00"
   },
@@ -119,7 +119,7 @@
     "Description": "Oggi vi porto con me in un allenamento di tiro! Vi mostrer\u00F2 come mi preparo e quali esercizi faccio [...]",
     "Url": "WC2sEcEsti8",
     "Videos": null,
-    "Category": "Vlog",
+    "Category": "vlog",
     "isLink": true,
     "CreationDateTime": "2024-10-28T00:00:00"
   },
@@ -129,7 +129,7 @@
     "Description": "In questo video, vi mostro come riscaldarsi correttamente prima di un allenamento di tiro #IPSC, [...]",
     "Url": "Hok-1LIORa4",
     "Videos": null,
-    "Category": "Consigli",
+    "Category": "consigli",
     "isLink": true,
     "CreationDateTime": "2024-10-23T00:00:00"
   },
@@ -139,7 +139,7 @@
     "Description": "Una gara fuori dall\u2019ordinario: ho gareggiato in una categoria diversa, con una metodologia mai [...]",
     "Url": "bzDO4WBcY9s",
     "Videos": null,
-    "Category": "Gara",
+    "Category": "gara",
     "isLink": true,
     "CreationDateTime": "2024-11-26T00:00:00"
   },
@@ -159,7 +159,7 @@
         "PublishedAt": "2024-10-14",
         "Thumbnail": "https://i.ytimg.com/vi/ZFpHU2cFXn0/sddefault.jpg",
         "Duration": "PT11M1S",
-        "Category": "Vlog",
+        "Category": "vlog",
         "CreationDateTime": "2024-11-28T23:03:20.5259838+01:00"
       },
       {
@@ -172,7 +172,7 @@
         "PublishedAt": "2024-10-15",
         "Thumbnail": "https://i.ytimg.com/vi/VqOSvayqUMM/sddefault.jpg",
         "Duration": "PT19M20S",
-        "Category": "Gara",
+        "Category": "gara",
         "CreationDateTime": "2024-11-28T23:03:20.5259849+01:00"
       },
       {
@@ -185,7 +185,7 @@
         "PublishedAt": "2024-10-18",
         "Thumbnail": "https://i.ytimg.com/vi/XqUGRMjTrpM/sddefault.jpg",
         "Duration": "PT13M39S",
-        "Category": "Review",
+        "Category": "review",
         "CreationDateTime": "2024-11-28T23:03:20.5259856+01:00"
       },
       {
@@ -198,11 +198,11 @@
         "PublishedAt": "2024-10-21",
         "Thumbnail": "https://i.ytimg.com/vi/ZLM_F0hsqbo/sddefault.jpg",
         "Duration": "PT11M37S",
-        "Category": "Review",
+        "Category": "review",
         "CreationDateTime": "2024-11-28T23:03:20.5259863+01:00"
       }
     ],
-    "Category": "Gara,Consigli",
+    "Category": "gara,Consigli",
     "isLink": false,
     "CreationDateTime": "2024-10-14T00:00:00"
   }

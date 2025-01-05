@@ -30,14 +30,14 @@ namespace MorWalPizVideo.Server.Controllers
         }
         protected async Task<IList<Match>> FetchMatches(int skip = 0, int take = int.MaxValue)
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Match, out IList<Match>? entities))
+            if (memoryCache.Cache.TryGetValue(CacheKeys.Matches, out IList<Match>? entities))
                 return entities ?? [];
 
             entities = (await externalDataService.FetchMatches())
                             .OrderByDescending(x => x.CreationDateTime)
                             .ToList();
 
-            memoryCache.Cache.Set(CacheKeys.Match, entities, new MemoryCacheEntryOptions
+            memoryCache.Cache.Set(CacheKeys.Matches, entities, new MemoryCacheEntryOptions
             {
                 Size = 1
             });

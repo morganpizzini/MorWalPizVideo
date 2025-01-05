@@ -23,10 +23,10 @@ namespace MorWalPizVideo.Server.Controllers
         }
 
         [HttpGet("reset")]
-        public IActionResult Reset([FromQuery(Name = "k")] string keys)
+        public IActionResult Reset([FromQuery(Name = "k")] string keys = "")
         {
             if (string.IsNullOrEmpty(keys))
-                keys = $"{CacheKeys.Match},{CacheKeys.Product},{CacheKeys.Sponsor},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.BioLink},{CacheKeys.ShortLink}";
+                keys = $"{CacheKeys.Matches},{CacheKeys.Products},{CacheKeys.Sponsors},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.BioLinks},{CacheKeys.ShortLinks}";
 
             foreach (var key in keys.ToLower().Split(","))
                 memoryCache.Cache.Remove(key);
