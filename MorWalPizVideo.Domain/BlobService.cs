@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MorWalPizVideo.Models.Configuration;
 using Azure.Storage.Blobs;
-using MongoDB.Driver.Core.Configuration;
 
 namespace MorWalPizVideo.Domain
 {

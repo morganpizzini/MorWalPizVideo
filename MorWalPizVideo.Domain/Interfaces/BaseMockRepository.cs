@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.Extensions.Hosting;
+using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MorWalPizVideo.Server.Models;
 using System.Linq.Expressions;
@@ -9,8 +10,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public abstract class BaseMockRepository<T> : IRepository<T> where T : BaseEntity
     {
         protected readonly string _fileName;
-        private readonly IWebHostEnvironment _environment;
-        public BaseMockRepository(IWebHostEnvironment environment, string fileName)
+        private readonly IHostEnvironment _environment;
+        public BaseMockRepository(IHostEnvironment environment, string fileName)
         {
             _environment = environment;
             _fileName = fileName;

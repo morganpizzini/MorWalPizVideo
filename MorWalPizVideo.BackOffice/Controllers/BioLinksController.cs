@@ -2,7 +2,6 @@
 using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
-using System.Threading.Channels;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class ToggleBioLinkRequest
@@ -58,7 +57,7 @@ public class BioLinksController : ApplicationController
 
         await collection.BulkWriteAsync(updates);
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
@@ -94,7 +93,7 @@ public class BioLinksController : ApplicationController
         var result = await collection.BulkWriteAsync(updates);
 
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
@@ -119,7 +118,7 @@ public class BioLinksController : ApplicationController
 
         var result = await collection.BulkWriteAsync(updates);
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();
@@ -137,7 +136,7 @@ public class BioLinksController : ApplicationController
         }
         collection.DeleteOne(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
         return NoContent();

@@ -1,4 +1,6 @@
-﻿namespace MorWalPizVideo.Server.Utils
+﻿using System.Text.RegularExpressions;
+
+namespace MorWalPizVideo.Server.Utils
 {
     public static class StringUtils
     {
@@ -20,6 +22,15 @@
 
             // Ritorna la stringa fino all'ultimo spazio con " [...]" aggiunto
             return description.Substring(0, lastSpaceIndex) + " [...]";
+        }
+
+        public static string ParseHTMLString(this string input)
+        {
+            // Rimuove tutti i tag HTML
+            string noHtml = Regex.Replace(input, "<.*?>", string.Empty);
+
+            // Decodifica i caratteri HTML
+            return System.Net.WebUtility.HtmlDecode(noHtml);
         }
     }
 

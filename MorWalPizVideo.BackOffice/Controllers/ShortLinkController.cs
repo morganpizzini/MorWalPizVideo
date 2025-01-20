@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
@@ -76,7 +75,7 @@ public class ShortLinkController : ApplicationController
 
         await shortLinkCollection.InsertOneAsync(shortlink);
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
@@ -93,7 +92,7 @@ public class ShortLinkController : ApplicationController
         {
             var shortlinks = (await shortLinkCollection.FindAsync(_ => true)).ToList();
 
-            var sl = shortlinks.Select(x => x.Code).ToList();
+            var sl = shortlinks.Select(x => x.Code.ToLower()).ToList();
 
             return GetUniqueValue(sl);
 
@@ -110,7 +109,7 @@ public class ShortLinkController : ApplicationController
                 string hash = Convert.ToHexString(hashBytes);
 
                 // Check if the truncated hash conflicts with inputs
-                string uniqueString = hash.Substring(0, 5);
+                string uniqueString = hash.Substring(0, 5).ToLower();
                 while (strings.Contains(uniqueString))
                 {
                     uniqueString = GetUniqueValue([.. strings, uniqueString]);

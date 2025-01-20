@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
-
 namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class DiscordController : ApplicationController

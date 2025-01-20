@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using MongoDB.Bson;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -23,7 +22,7 @@ namespace MorWalPizVideo.Server.Controllers
         }
         protected async Task<int> CountMatches()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Match, out IList<Match>? entities))
+            if (memoryCache.Cache.TryGetValue(CacheKeys.Matches, out IList<Match>? entities))
                 return entities?.Count ?? 0;
 
             return (await this.FetchMatches()).Count;

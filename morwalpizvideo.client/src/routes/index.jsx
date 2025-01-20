@@ -103,19 +103,22 @@ export default function Index() {
                 {filteredItems.map((match, i) => (
                     <React.Fragment key={i}>
                         {RenderMatchCard(match, selectedCategories.length == 0 ? i : -1)}
-                        {i === 3 && selectedCategories.length == 0 &&
-                            <BuyMeACoffeeCard />}
-                        {i === 7 && selectedCategories.length == 0 &&
-                            <Banner />
-                        }
-                        {i === 15 && selectedCategories.length == 0 &&
-                            <Sponsors />
-                        }
+                        {selectedCategories == 0 && <>
+                            {i === 3 &&
+                                <BuyMeACoffeeCard />}
+                            {i === 5 &&
+                                <GoToShortsCard />}
+                            {i === 6 &&
+                                <Banner />}
+                            {i === 14 &&
+                                <Sponsors />}
+                        </>}
+
                     </React.Fragment>
                 ))}
             </div>
-            {matches.length < 8 && <Banner />}
-            {matches.length < 16 && <Sponsors />}
+            {matches.length < 7 && <Banner />}
+            {matches.length < 15 && <Sponsors />}
         </>
     );
 }
@@ -145,7 +148,7 @@ function BuyMeACoffeeCard() {
         <>
             <div className="card position-relative">
                 <div className="px-2" style={{ "heigth": "200px" }}>
-                    <img src="/images/buyme-button.png" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
+                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
                 </div>
                 <div className="card-body">
                     <p className="text-muted mb-1 text-uppercase">supporto</p>
@@ -153,6 +156,25 @@ function BuyMeACoffeeCard() {
                     <p className="card-text">Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i contenuti in anteprima e una chat diretta!</p>
                 </div>
                 <Link to="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer" className="stretched-link">
+                </Link>
+            </div>
+
+        </>)
+}
+
+function GoToShortsCard() {
+    return (
+        <>
+            <div className="card position-relative">
+                <div className="px-2" style={{ "heigth": "200px" }}>
+                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
+                </div>
+                <div className="card-body">
+                    <p className="text-muted mb-1 text-uppercase">CONSIGLI</p>
+                    <h5 className="card-title">Poco tempo? Ci sono gli SHORTS!</h5>
+                    <p className="card-text">Guarda tutti i momenti salienti estratti dai miei video!</p>
+                </div>
+                <Link to="https://www.youtube.com/@morwalpiz/shorts" target="_blank" rel="noopener noreferrer" className="stretched-link">
                 </Link>
             </div>
 

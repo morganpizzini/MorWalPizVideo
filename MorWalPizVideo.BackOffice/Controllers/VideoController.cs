@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.FileSystemGlobbing;
 using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
-using System;
+using MorWalPizVideo.Server.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -49,10 +48,18 @@ public class VideoController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
-    public VideoController(IMongoDatabase _database, IHttpClientFactory _clientFactory)
+    private readonly IYTService yTService;
+    public VideoController(IMongoDatabase _database, IHttpClientFactory _clientFactory,
+        IYTService _yTService)
     {
         database = _database;
         client = _clientFactory;
+        yTService = _yTService;
+    }
+    [HttpPost("Translate")]
+    public async Task TranslateShort(IList<string> videoIds,string from = "it", string to = "en")
+    {
+        await yTService.TranslateYoutubeVideo(videoIds, from, to);
     }
     [HttpPost("ImportVideo")]
     public async Task<IActionResult> Import(VideoImportRequest request)
@@ -61,7 +68,7 @@ public class VideoController : ApplicationController
 
         matchCollection.InsertOne(new Match(request.VideoId, true, request.Category.ToLower()));
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
 
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Matches}");
         json = await client.GetStringAsync($"cache/purge/{ApiTagCacheKeys.Matches}");
@@ -126,7 +133,7 @@ public class VideoController : ApplicationController
 
         await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
 
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.Matches}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.Matches}");

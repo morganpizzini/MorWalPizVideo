@@ -17,9 +17,7 @@ namespace MorWalPizVideo.Server.Controllers
             if (string.IsNullOrWhiteSpace(videoShortLink))
                 return BadRequest("Video ID is required.");
 
-            var shortLinks = await dataService.FetchShortLinks();
-
-            var shortLink = shortLinks.FirstOrDefault(x => x.Code == videoShortLink);
+            var shortLink = await dataService.GetShortLink(videoShortLink);
 
             if (shortLink == null)
                 return BadRequest("shortLink not found");

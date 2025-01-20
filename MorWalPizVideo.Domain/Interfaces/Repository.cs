@@ -41,6 +41,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public class YTChannelRepository : BaseRepository<YTChannel>, IYTChannelRepository
+    {
+        public YTChannelRepository(IMongoDatabase database) : base(database, DbCollections.Channels)
+        {
+        }
+    }
 
     public class SponsorApplyRepository : BaseRepository<SponsorApply>, ISponsorApplyRepository
     {

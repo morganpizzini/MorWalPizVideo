@@ -1,5 +1,5 @@
-﻿using MorWalPizVideo.BackOffice.Controllers;
-using MorWalPizVideo.BackOffice.Services.Interfaces;
+﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
@@ -10,7 +10,7 @@ public class TelegramService : ITelegramService,IDisposable
     private readonly string siteUrl;
     public TelegramService(IHttpClientFactory _clientFactory, IConfiguration _configuration)
     {
-        client = _clientFactory.CreateClient("Telegram");
+        client = _clientFactory.CreateClient(HttpClientNames.Telegram);
         siteUrl = _configuration["SiteUrl"] ?? string.Empty;
         if (siteUrl == null)
             throw new NullReferenceException("SiteUrl is empty");

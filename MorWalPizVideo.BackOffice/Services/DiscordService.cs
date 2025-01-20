@@ -1,4 +1,5 @@
 ﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
 public class DiscordService : IDiscordService, IDisposable
@@ -8,7 +9,7 @@ public class DiscordService : IDiscordService, IDisposable
     private readonly string siteUrl;
     public DiscordService(IHttpClientFactory _clientFactory, IConfiguration _configuration)
     {
-        client = _clientFactory.CreateClient("Discord");
+        client = _clientFactory.CreateClient(HttpClientNames.Discord);
         siteUrl = _configuration["SiteUrl"] ?? string.Empty;
         if (siteUrl == null)
             throw new NullReferenceException("SiteUrl is empty");

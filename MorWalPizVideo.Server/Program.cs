@@ -2,6 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using System.Security.Authentication;
@@ -34,6 +35,8 @@ if (config == "dev")
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
+    builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
+    builder.Services.AddScoped<IYTService, YTServiceMock>();
 
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
@@ -48,8 +51,10 @@ else
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+    builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
+    builder.Services.AddScoped<IYTService, YTService>();
 
-   
+
     builder.Services.AddScoped<IBlobService, BlobService>();
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
@@ -68,17 +73,15 @@ else
     builder.Services.AddScoped(s =>
         new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
 
-    builder.Services.AddHttpClient("Recaptcha", httpClient =>
+    builder.Services.AddHttpClient(HttpClientNames.Recaptcha, httpClient =>
     {
         httpClient.BaseAddress = new Uri("https://www.google.com/recaptcha/api/siteverify");
     });
-    builder.Services.AddHttpClient("Youtube", httpClient =>
+    builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
     {
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
     });
 }
-
-
 
 builder.Services.AddSingleton<MyMemoryCache>();
 

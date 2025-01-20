@@ -1,10 +1,16 @@
+using Hangfire;
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
+using Hangfire.MemoryStorage;
 using System.Net.Http.Headers;
 using System.Security.Authentication;
+using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,12 +46,7 @@ builder.Services.AddScoped(s =>
 
 var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
 
-if (string.IsNullOrEmpty(siteUrl))
-{
-    throw new NullReferenceException("config SiteUrl is empty");
-}
-
-builder.Services.AddHttpClient("MorWalPiz", httpClient =>
+builder.Services.AddHttpClient(HttpClientNames.MorWalPiz, httpClient =>
 {
     httpClient.BaseAddress = new Uri(siteUrl);
     httpClient.DefaultRequestHeaders.Accept.Clear();
@@ -54,14 +55,19 @@ builder.Services.AddHttpClient("MorWalPiz", httpClient =>
 });
 
 // Aggiungi HttpClient
-builder.Services.AddHttpClient("Discord", client =>
+builder.Services.AddHttpClient(HttpClientNames.Discord, client =>
 {
     client.BaseAddress = new Uri("https://discord.com/api/");
     client.DefaultRequestHeaders.Authorization =
         new AuthenticationHeaderValue("Bot", discordSettings.Token);
 });
 
-builder.Services.AddHttpClient("Telegram", httpClient =>
+builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
+{
+    httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
+});
+
+builder.Services.AddHttpClient(HttpClientNames.Telegram, httpClient =>
 {
     httpClient.BaseAddress = new Uri($"https://api.telegram.org/bot{telegramSettings.Token}/sendMessage");
     httpClient.DefaultRequestHeaders.Accept.Clear();
@@ -70,6 +76,25 @@ builder.Services.AddHttpClient("Telegram", httpClient =>
 });
 
 
+var translatorSettings = builder.Configuration.GetSection("TranslatorSettings").Get<TranslatorSettings>();
+
+if(translatorSettings == null)
+    throw new Exception("Cannot read configuration for Translator");
+
+
+builder.Services.AddScoped<TranslatorService>((c) => { return new TranslatorService(translatorSettings.SubscriptionKey, translatorSettings.Endpoint, translatorSettings.Region); });
+builder.Services.AddScoped<DataService>();
+builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
+builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
+builder.Services.AddScoped<IPageRepository, PageRepository>();
+builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
+builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
+builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
+
+builder.Services.AddScoped<IYTService, YTService>();
 builder.Services.AddScoped<IDiscordService, DiscordService>();
 builder.Services.AddScoped<ITelegramService, TelegramService>();
 if (builder.Environment.IsDevelopment())
@@ -85,7 +110,39 @@ else
 
 builder.Services.AddOpenApi();
 
+// Configure Hangfire services
+builder.Services.AddHangfire(config =>
+{
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+          .UseSimpleAssemblyNameTypeSerializer()
+          .UseDefaultTypeSerializer();
+
+    if(!builder.Environment.IsDevelopment())
+    {
+        // run dotnet ef database update
+        config.UseSqlServerStorage(builder.Configuration.GetConnectionString("HangfireConnection"));
+    }
+    else
+    {
+        config.UseMemoryStorage();
+    }
+});
+
+// Add Hangfire Server (Background Worker)
+builder.Services.AddHangfireServer();
+
+
 var app = builder.Build();
+
+// Use Hangfire Dashboard (accessible via /hangfire)
+app.UseHangfireDashboard();
+
+// Schedule a recurring job
+RecurringJob.AddOrUpdate<NewsJobs>(
+    "news-job",            // Job ID
+    job => job.ExecuteAsync(), // The method to run
+    "0 18 * * 0"              // Cron expression: Sunday at 18:00
+);
 
 app.MapDefaultEndpoints();
 

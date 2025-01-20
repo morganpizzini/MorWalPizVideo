@@ -14,6 +14,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IMatchRepository : IRepository<Match> { }
     public interface IProductRepository : IRepository<Product> { }
+    public interface IYTChannelRepository : IRepository<YTChannel> { }
     public interface ISponsorRepository : IRepository<Sponsor> { }
     public interface ISponsorApplyRepository : IRepository<SponsorApply> { }
     public interface IPageRepository : IRepository<Page> { }

@@ -5,6 +5,11 @@ using MorWalPizVideo.Server.Models;
 using System.Globalization;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+public class AddChannelRequest
+{
+    public string ChannelName { get; set; } = string.Empty;
+
+}
 public class AddCalendarRequest
 {
     public string Title { get; set; } = string.Empty;
@@ -17,7 +22,8 @@ public class UpdateCalendarRequest
 {
     public string MatchId { get; set; } = string.Empty;
 }
-public class CalendarEventsController : ApplicationController
+
+    public class CalendarEventsController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
@@ -33,14 +39,14 @@ public class CalendarEventsController : ApplicationController
 
         collection.InsertOne(new CalendarEvent(request.Title, request.Description, DateOnly.ParseExact(request.Date, "yy-MM-dd", CultureInfo.InvariantCulture), request.Category, request.Category));
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.CalendarEvents}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.CalendarEvents}");
 
         return NoContent();
     }
     [HttpPut("{title}")]
-    public async Task<IActionResult> AddCalendar(string title,[FromBody]UpdateCalendarRequest request)
+    public async Task<IActionResult> AttachMatchId(string title,[FromBody]UpdateCalendarRequest request)
     {
         var collection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
         
@@ -55,7 +61,7 @@ public class CalendarEventsController : ApplicationController
 
         await collection.ReplaceOneAsync(Builders<CalendarEvent>.Filter.Eq(e => e.Id, existing.Id), existing);
 
-        using var client = this.client.CreateClient("MorWalPiz");
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.CalendarEvents}");
         json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.CalendarEvents}");
 

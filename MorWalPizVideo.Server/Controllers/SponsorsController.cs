@@ -44,7 +44,7 @@ namespace MorWalPizVideo.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(SponsorRequest request)
         {
-            using var client = httpClientFactory.CreateClient("Recaptcha");
+            using var client = httpClientFactory.CreateClient(HttpClientNames.Recaptcha);
             var host = HttpContext.Request.Host.Value;
             var parameters = new Dictionary<string, string> { { "secret", configuration["RecaptchaSecretKey"] ?? string.Empty }, { "response", request.Token }, { "remoteip", host } };
             var encodedContent = new FormUrlEncodedContent(parameters);

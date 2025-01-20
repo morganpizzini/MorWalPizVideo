@@ -1,8 +1,5 @@
-﻿using MorWalPizVideo.Server.Contracts;
-using MorWalPizVideo.Server.Models;
+﻿using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
-using System.Text.Json;
-using System.Web;
 
 namespace MorWalPizVideo.Server.Services
 {
@@ -24,19 +21,17 @@ namespace MorWalPizVideo.Server.Services
         }
     }
 
+    
     public class ExternalDataService : IExternalDataService
     {
         private readonly DataService _dataService;
-        private readonly IConfiguration _configuration;
-
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMatchRepository _matchRepository;
-        public ExternalDataService(IConfiguration configuration, DataService dataService, IHttpClientFactory httpClientFactory, IMatchRepository matchRepository)
+        private readonly IYTService _youtubeService;
+        public ExternalDataService(DataService dataService, IYTService youtubeService, IMatchRepository matchRepository)
         {
             _dataService = dataService;
-            _configuration = configuration;
-            _httpClientFactory = httpClientFactory;
             _matchRepository = matchRepository;
+            _youtubeService = youtubeService;
         }
 
         public async Task<IList<Match>> FetchMatches()
@@ -50,7 +45,7 @@ namespace MorWalPizVideo.Server.Services
 
             if (videoIds.Count > 0)
             {
-                var videos = await FetchFromYoutube(videoIds);
+                var videos = await _youtubeService.FetchFromYoutube(videoIds);
                 matches = ParseMatches(matches, videos);
 
                 var linkVideos = matches.Where(x => x.IsLink && videoIds.Contains(x.ThumbnailUrl))
@@ -67,39 +62,7 @@ namespace MorWalPizVideo.Server.Services
 
             return matches.OrderByDescending(x => x.CreationDateTime).ToList();
         }
-        private async Task<IList<Video>> FetchFromYoutube(IList<string> videoIds)
-        {
-            var videos = new List<Video>();
-            if (videoIds.Count == 0)
-                return videos;
-            using var httpClient = _httpClientFactory.CreateClient("Youtube");
 
-            var query = HttpUtility.ParseQueryString(string.Empty);
-
-            query["part"] = "id,snippet,statistics,contentDetails";
-            query["id"] = string.Join(",", videoIds);
-            query["key"] = _configuration["YTApiKey"];
-            string queryString = query.ToString() ?? "";
-
-            var httpResponseMessage = await httpClient.GetAsync($"?{queryString}");
-            if (!httpResponseMessage.IsSuccessStatusCode)
-                return videos;
-
-            using var contentStream =
-                await httpResponseMessage.Content.ReadAsStreamAsync();
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-            var youtubeResponse = await JsonSerializer.DeserializeAsync<VideoResponse>(contentStream, options);
-
-            if (youtubeResponse == null)
-                return videos;
-
-            return youtubeResponse.Items.Select(ContractUtils.Convert).ToList();
-        }
         private IList<Match> ParseMatches(IList<Match> matches, IList<Video> videos)
         {
             // update video entities based on id
