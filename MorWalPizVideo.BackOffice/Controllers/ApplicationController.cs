@@ -6,4 +6,8 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 [Route("api/[controller]")]
 public abstract class ApplicationController : ControllerBase
 {
+    protected ApplicationController()
+    {
+        
+    }
 }

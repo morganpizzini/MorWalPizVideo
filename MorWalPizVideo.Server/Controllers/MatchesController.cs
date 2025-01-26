@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.OutputCaching;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.Models.Responses;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -20,7 +21,12 @@ namespace MorWalPizVideo.Server.Controllers
 
         [OutputCache(Tags = [CacheKeys.Match])]
         [HttpGet]
-        public async Task<IActionResult> Index() => Ok(await FetchMatches());
+        public async Task<IActionResult> Index(int skip = 0, int take = 23) {
+            var count = await CountMatches();
+            var entities = await FetchMatches(skip, take);
+            var next = skip > 0 ? take * skip : take;
+            return Ok(new BaseResponse<IList<Match>>(entities,count,$"skip={next}&take={take}"));
+        }
 
         [HttpGet("{url}")]
         [OutputCache(Tags = [CacheKeys.Match], VaryByRouteValueNames = ["url"])]

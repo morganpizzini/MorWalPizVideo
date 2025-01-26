@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using MongoDB.Bson;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -20,7 +21,14 @@ namespace MorWalPizVideo.Server.Controllers
             memoryCache = _memoryCache;
 
         }
-        protected async Task<IList<Match>> FetchMatches()
+        protected async Task<int> CountMatches()
+        {
+            if (memoryCache.Cache.TryGetValue(CacheKeys.Match, out IList<Match>? entities))
+                return entities?.Count ?? 0;
+
+            return (await this.FetchMatches()).Count;
+        }
+        protected async Task<IList<Match>> FetchMatches(int skip = 0, int take = int.MaxValue)
         {
             if (memoryCache.Cache.TryGetValue(CacheKeys.Match, out IList<Match>? entities))
                 return entities ?? [];
@@ -34,7 +42,7 @@ namespace MorWalPizVideo.Server.Controllers
                 Size = 1
             });
 
-            return entities;
+            return entities.Skip(skip).Take(take).ToList();
         }
 
         public virtual void Dispose()

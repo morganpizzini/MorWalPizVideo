@@ -15,6 +15,14 @@ public class VideoImportRequest
     public string Category { get; set; } = string.Empty;
 }
 
+public class SwapRootThumbnailRequest
+{
+    [Required]
+    public string CurrentVideoId { get; set; } = string.Empty;
+    [Required]
+    public string NewVideoId { get; set; } = string.Empty;
+}
+
 public class RootCreationRequest
 {
     [Required]
@@ -37,7 +45,7 @@ public class SubVideoCrationRequest
     [Required]
     public string Category { get; set; } = string.Empty;
 }
-    public class VideoController : ApplicationController
+public class VideoController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
@@ -60,6 +68,44 @@ public class SubVideoCrationRequest
         json = await client.GetStringAsync("matches");
         return NoContent();
     }
+    [HttpPost("ConvertIntoRoot")]
+    public async Task<IActionResult> ConvertIntoRoot(RootCreationRequest request)
+    {
+        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.VideoId).FirstOrDefault();
+        if (existingMatch == null)
+        {
+            return BadRequest("Match do not exists");
+        }
+        if (!existingMatch.IsLink)
+        {
+            return BadRequest("Match is already a root");
+        }
+        existingMatch = existingMatch with { Title = request.Title, Description = request.Description, Url = request.Url, Videos = new[] { new Video(existingMatch.ThumbnailUrl, existingMatch.Category) }, Category = request.Category, IsLink = false };
+
+        await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+
+        return NoContent();
+    }
+
+    [HttpPost("SwapThumbnailId")]
+    public async Task<IActionResult> SwapThumbnailUrl(SwapRootThumbnailRequest request)
+    {
+        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.CurrentVideoId).FirstOrDefault();
+        if (existingMatch == null)
+        {
+            return BadRequest("Match do not exists");
+        }
+        if (existingMatch.IsLink)
+        {
+            return BadRequest("Match is not a root match");
+        }
+        existingMatch = existingMatch with { ThumbnailUrl = request.NewVideoId };
+        await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+        return NoContent();
+    }
+
     [HttpPost("RootCreation")]
     public IActionResult RootCreation(RootCreationRequest request)
     {

@@ -7,7 +7,7 @@ import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } 
 import ReactGA from "react-ga4"
 export default function Index() {
     ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
-    const { matches } = useLoaderData();
+    const { matches,count } = useLoaderData();
 
     const [selectedCategories, setSelectedCategories] = useState([]);
 

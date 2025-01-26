@@ -75,7 +75,7 @@ if(builder.Environment.IsDevelopment())
 else
 {
     builder.Services.Configure<BlobStorageOptions>(
-    builder.Configuration.GetSection("BlobStorage"));
+        builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
 }
 
