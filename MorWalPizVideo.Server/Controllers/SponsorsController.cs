@@ -17,7 +17,7 @@ namespace MorWalPizVideo.Server.Controllers
         private readonly IConfiguration configuration;
         private readonly BlobStorageOptions blobOptions;
         public SponsorsController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache,
+            DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache,
             IHttpClientFactory _httpClientFactory, IConfiguration _configuration, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_extDataService,_memoryCache)
         {
             configuration = _configuration;
@@ -29,15 +29,8 @@ namespace MorWalPizVideo.Server.Controllers
         [OutputCache(Tags = [CacheKeys.Sponsors])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Sponsors, out IList<Sponsor>? entities))
-            {
-                return Ok(entities);
-            }
-            entities = await dataService.GetSponsors();
-            memoryCache.Cache.Set(CacheKeys.Sponsors, entities, new MemoryCacheEntryOptions
-            {
-                Size = 1
-            });
+            var entities = await cache.GetOrCreateAsync(CacheKeys.Sponsors, dataService.GetSponsors);
+           
             return Ok(entities.Select(x=>(x with { ImgSrc = $"{blobOptions.Endpoint}/{blobOptions.SponsorContainerName}/{x.ImgSrc}" })));
         }
 

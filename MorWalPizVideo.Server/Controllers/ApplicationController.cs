@@ -12,36 +12,30 @@ namespace MorWalPizVideo.Server.Controllers
     {   
         protected readonly IExternalDataService externalDataService;
         protected readonly DataService dataService;
-        protected readonly MyMemoryCache memoryCache;
-        protected ApplicationController(DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache)
+        protected readonly IMorWalPizCache cache;
+        protected ApplicationController(DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache)
         {
             dataService = _dataService;
             externalDataService = _extDataService;
-            memoryCache = _memoryCache;
+            cache = _memoryCache;
 
         }
         protected async Task<int> CountMatches()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Matches, out IList<Match>? entities))
+            var entities = cache.Get<IList<Match>>(CacheKeys.Matches);
+            if (entities!= null)
                 return entities?.Count ?? 0;
 
             return (await this.FetchMatches()).Count;
         }
         protected async Task<IList<Match>> FetchMatches(int skip = 0, int take = int.MaxValue)
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Matches, out IList<Match>? entities))
-                return entities ?? [];
-
-            entities = (await externalDataService.FetchMatches())
+            return (await cache.GetOrCreateAsync<IList<Match>>(CacheKeys.Matches, async () =>
+            {
+                return (await externalDataService.FetchMatches())
                             .OrderByDescending(x => x.CreationDateTime)
                             .ToList();
-
-            memoryCache.Cache.Set(CacheKeys.Matches, entities, new MemoryCacheEntryOptions
-            {
-                Size = 1
-            });
-
-            return entities.Skip(skip).Take(take).ToList();
+            })).Skip(skip).Take(take).ToList();
         }
 
         public virtual void Dispose()

@@ -40,9 +40,9 @@ namespace MorWalPizVideo.Server.Services
         private readonly HttpClient _client;
         //private readonly YouTubeService _youtubeService;
         private readonly YouTubeService _youtubeAuthService;
-        private readonly TranslatorService _translatorService;
+        private readonly ITranslatorService _translatorService;
         private readonly string _apiKey;
-        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory, TranslatorService translatorService)
+        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ITranslatorService translatorService)
         {
             _translatorService = translatorService;
             _apiKey = configuration["YTApiKey"] ?? string.Empty;
@@ -53,14 +53,17 @@ namespace MorWalPizVideo.Server.Services
             //    ApplicationName = GetType().ToString()
             //});
 
-            using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
+            //using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
 
-            var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                GoogleClientSecrets.FromStream(stream).Secrets,
-                new[] { YouTubeService.Scope.YoutubeForceSsl },
-                "morgan.pizzini@gmail.com",
-                CancellationToken.None
-            ).Result;
+            var credential = GoogleCredential.FromFile("credentials.json")
+               .CreateScoped(YouTubeService.Scope.YoutubeForceSsl);
+
+            //var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+            //    GoogleClientSecrets.FromStream(stream).Secrets,
+            //    new[] { YouTubeService.Scope.YoutubeForceSsl },
+            //    "morgan.pizzini@gmail.com",
+            //    CancellationToken.None
+            //).Result;
 
             _youtubeAuthService =  new YouTubeService(new BaseClientService.Initializer
             {

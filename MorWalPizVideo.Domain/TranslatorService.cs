@@ -4,7 +4,18 @@ using System.Text.RegularExpressions;
 
 namespace MorWalPizVideo.Domain
 {
-    public class TranslatorService
+    public interface ITranslatorService
+    {
+        Task<string> TranslateTextWithHashtags(string text, string from, string to);
+    }
+    public class TranslatorServiceMock : ITranslatorService
+    {
+        public Task<string> TranslateTextWithHashtags(string text, string from, string to)
+        {
+            return Task.FromResult(text);
+        }
+    }
+    public class TranslatorService : ITranslatorService
     {
         private readonly string _subscriptionKey;
         private readonly string _endpoint;
@@ -36,8 +47,8 @@ namespace MorWalPizVideo.Domain
 
             // Traduci il testo senza hashtag
             string translatedText = await TranslateTextAsync(processedText, from, to);
-            
-            var placeholderHandle = string.Join(" | ",placeholders.Select(x=>x.Value).ToList());
+
+            var placeholderHandle = string.Join(" | ", placeholders.Select(x => x.Value).ToList());
 
             string[] array = (await TranslateTextAsync(placeholderHandle, from, to))
                                 .Split(" | ");
@@ -76,7 +87,8 @@ namespace MorWalPizVideo.Domain
             string responseBody = await response.Content.ReadAsStringAsync();
             // Deserializza il risultato
             var result = JsonSerializer.Deserialize<TranslationResponse[]>(responseBody,
-                new JsonSerializerOptions {
+                new JsonSerializerOptions
+                {
                     PropertyNameCaseInsensitive = true
                 });
 

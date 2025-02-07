@@ -10,7 +10,7 @@ namespace MorWalPizVideo.Server.Controllers
     public class BioLinksController : ApplicationController
     {
         public BioLinksController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+            DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
         {
         }
 
@@ -18,15 +18,7 @@ namespace MorWalPizVideo.Server.Controllers
         [OutputCache(Tags = [CacheKeys.BioLinks])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.BioLinks, out IList<BioLink>? entities))
-            {
-                return Ok(entities);
-            }
-            entities = await dataService.GetBioLinks();
-            memoryCache.Cache.Set(CacheKeys.BioLinks, entities, new MemoryCacheEntryOptions
-            {
-                Size = 1
-            });
+            var entities = await cache.GetOrCreateAsync(CacheKeys.BioLinks, dataService.GetBioLinks);
             return Ok(entities);
         }
     }

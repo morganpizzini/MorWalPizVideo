@@ -8,7 +8,7 @@ namespace MorWalPizVideo.Server.Controllers
     public class CacheController : ApplicationController
     {
         private readonly IOutputCacheStore cache;
-        public CacheController(DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache,
+        public CacheController(DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache,
                                 IOutputCacheStore _cache)
                                     : base(_dataService, _extDataService, _memoryCache)
         {
@@ -29,7 +29,7 @@ namespace MorWalPizVideo.Server.Controllers
                 keys = $"{CacheKeys.Matches},{CacheKeys.Products},{CacheKeys.Sponsors},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.BioLinks},{CacheKeys.ShortLinks}";
 
             foreach (var key in keys.ToLower().Split(","))
-                memoryCache.Cache.Remove(key);
+                base.cache.Remove(key);
 
             return NoContent();
         }

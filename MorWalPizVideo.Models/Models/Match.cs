@@ -22,6 +22,5 @@ namespace MorWalPizVideo.Server.Models
         public Match(string thumbnailUrl, bool isLink, string category) : this(thumbnailUrl, string.Empty, string.Empty, string.Empty, [], category, isLink)
         {
         }
-
     }
 }

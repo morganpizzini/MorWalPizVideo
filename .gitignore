@@ -230,3 +230,6 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
+
+MorWalPizVideo.BackOffice/credentials.json
+MorWalPizVideo.Server/credentials.json

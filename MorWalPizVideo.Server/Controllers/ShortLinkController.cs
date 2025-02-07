@@ -6,7 +6,7 @@ namespace MorWalPizVideo.Server.Controllers
     [Route("sl")]
     public class ShortLinkController : ApplicationController
     {
-        public ShortLinkController(DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache) 
+        public ShortLinkController(DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) 
                                     : base(_dataService, _extDataService, _memoryCache)
         {
         }

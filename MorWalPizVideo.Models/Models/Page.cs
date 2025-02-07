@@ -26,6 +26,6 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("shortReelIds")]
         public IList<string> ShortReelIds { get; set; } = new List<string>();
         [BsonIgnore]
-        public string ShortContent => Content.Substring(0,20);
+        public string ShortContent => !string.IsNullOrEmpty(Content) ? Content.Substring(0,20) : string.Empty;
     }
 }

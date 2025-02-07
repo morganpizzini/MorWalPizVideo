@@ -82,7 +82,7 @@ if(translatorSettings == null)
     throw new Exception("Cannot read configuration for Translator");
 
 
-builder.Services.AddScoped<TranslatorService>((c) => { return new TranslatorService(translatorSettings.SubscriptionKey, translatorSettings.Endpoint, translatorSettings.Region); });
+builder.Services.AddScoped<ITranslatorService>((c) => { return new TranslatorService(translatorSettings.SubscriptionKey, translatorSettings.Endpoint, translatorSettings.Region); });
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();

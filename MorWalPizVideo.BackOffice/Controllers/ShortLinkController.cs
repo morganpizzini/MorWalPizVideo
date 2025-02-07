@@ -15,8 +15,7 @@ public class ShortLinkRequest
     public string QueryString { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
 }
-
-public class ShortLinkController : ApplicationController
+    public class ShortLinkController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;

@@ -13,7 +13,7 @@ namespace MorWalPizVideo.Server.Controllers
     {
         private readonly BlobStorageOptions blobOptions;
         public PagesController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _extDataService, _memoryCache)
+            DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _extDataService, _memoryCache)
         {
             blobOptions = _blobOptions.Value;
         }
@@ -21,15 +21,9 @@ namespace MorWalPizVideo.Server.Controllers
         [HttpGet("{url}")]
         [OutputCache(Tags = [CacheKeys.Pages], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url) {
-            if (!memoryCache.Cache.TryGetValue(CacheKeys.Pages, out IList<Page>? entities))
-            {
-                entities = await dataService.GetPages();
 
-                memoryCache.Cache.Set(CacheKeys.Pages, entities.OrderByDescending(x => x.CreationDateTime), new MemoryCacheEntryOptions
-                {
-                    Size = 1
-                });
-            }
+            var entities = await cache.GetOrCreateAsync(CacheKeys.Pages, dataService.GetPages);
+
             var page = entities?.FirstOrDefault(x => x.Url == url);
             if(page == null)
                 return NotFound();

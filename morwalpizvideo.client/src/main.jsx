@@ -10,6 +10,7 @@ import Pages from "./routes/pages";
 import Accessories from "./routes/accessories"
 import Sponsors from "./routes/sponsors"
 import Calendar from "./routes/calendar"
+import SponsorVideo from "./routes/sponsors-video";
 import Index from "./routes/index";
 import bioLoader from "./routes/bio.loader"
 import matchLoader from "./routes/matches.loader";
@@ -73,6 +74,10 @@ const router = createBrowserRouter([
                 element: <Sponsors />,
             },
             {
+                path: "sponsors-video",
+                element: <SponsorVideo />,
+            },
+            {
                 path: "calendar",
                 loader: calendarLoader,
                 element: <Calendar />,
@@ -110,7 +115,7 @@ createRoot(document.getElementById('root')).render(
         {/*https://www.freecodecamp.org/news/react-helmet-examples/*/}
         <HelmetProvider>
             <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
-                <RouterProvider router={router}/>
+                <RouterProvider router={router} />
             </GoogleReCaptchaProvider>
         </HelmetProvider>
         <BuyMeWidget />

@@ -10,7 +10,7 @@ namespace MorWalPizVideo.Server.Controllers
     public class ProductsController : ApplicationController
     {
         public ProductsController(
-            DataService _dataService, IExternalDataService _extDataService, MyMemoryCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+            DataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
         {
         }
 
@@ -18,13 +18,7 @@ namespace MorWalPizVideo.Server.Controllers
         [OutputCache(Tags = [CacheKeys.Products])]
         public async Task<IActionResult> Index()
         {
-            if (memoryCache.Cache.TryGetValue(CacheKeys.Products, out IList<Product>? entities))
-                return Ok(entities);
-            entities = await dataService.GetProducts();
-            memoryCache.Cache.Set(CacheKeys.Products, entities, new MemoryCacheEntryOptions
-            {
-                Size = 1
-            });
+            var entities = await cache.GetOrCreateAsync(CacheKeys.Products, dataService.GetProducts);
             return Ok(entities);
         }
     }

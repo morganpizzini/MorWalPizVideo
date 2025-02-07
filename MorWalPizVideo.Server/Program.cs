@@ -1,13 +1,24 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.FeatureManagement;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.Server.Utils;
 using System.Security.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
+var featureFlags = builder.Configuration.GetSection("FeatureManagement");
+builder.Services.AddFeatureManagement()
+    .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
+
+var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
+var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
+var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 
 builder.AddServiceDefaults();
 var config = builder.Configuration["Config"];
@@ -18,13 +29,12 @@ builder.Services.AddOutputCache(options =>
         builder.Expire(TimeSpan.FromMinutes(10)));
 });
 
-builder.Services.AddOpenApi();
+if(enableSwagger)
+    builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<DataService>();
-// Read configuration from appsettings.json
-builder.Services.Configure<BlobStorageOptions>(
-    builder.Configuration.GetSection("BlobStorage"));
-if (config == "dev")
+
+if (enableMock)
 {
     builder.Services.AddScoped<IExternalDataService, ExternalDataMockService>();
     builder.Services.AddScoped<IMatchRepository, MatchMockRepository>();
@@ -37,7 +47,6 @@ if (config == "dev")
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<IYTService, YTServiceMock>();
-
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
 else
@@ -53,8 +62,10 @@ else
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
+    builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
-
+    builder.Services.Configure<BlobStorageOptions>(
+        builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
 
     MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
@@ -83,11 +94,35 @@ else
     });
 }
 
-builder.Services.AddSingleton<MyMemoryCache>();
+if (enableCache)
+{
+    builder.Services.AddDistributedMemoryCache();
+    builder.Services.AddScoped<IMorWalPizCache, MorWalPizMemoryCache>();
+}
+else
+{
+    builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
+}
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+if (enableDev)
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(options =>
+    {
+        options.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsync("Something went wrong.");
+        });
+    });
+}
 
 app.MapDefaultEndpoints();
 
@@ -95,14 +130,19 @@ app.UseDefaultFiles();
 app.MapStaticAssets();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (enableSwagger)
 {
     app.MapOpenApi();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "MorWalPiz API"));
 }
+if(!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
-if(!app.Environment.IsDevelopment())
+
+if(enableOutputCache)
     app.UseOutputCache();
 
 app.MapControllers();

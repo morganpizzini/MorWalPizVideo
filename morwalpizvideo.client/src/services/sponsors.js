@@ -9,7 +9,7 @@ export function getSponsors() {
 }
 
 export function askForSponsor(name, email, description, token) {
-    return fetch("/api/sponsor", {
+    return fetch("/api/sponsors", {
         method: "POST",
         body: JSON.stringify({ name: name, email: email, description: description, token: token }),
         headers: {

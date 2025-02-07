@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.Server.Models
 {
@@ -16,6 +17,7 @@ namespace MorWalPizVideo.Server.Models
 
     [BsonIgnoreExtraElements]
     [DataContract]
+    [method: JsonConstructor]
     public record CalendarEvent(
         [property: DataMember][property: BsonElement("title")] string Title,
         [property: DataMember][property: BsonElement("description")] string Description,
