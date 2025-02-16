@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Sezione di input -->
+    <div id="input-section">
+        <textarea id="text-input" placeholder="Inserisci il testo..."></textarea>
+        <button id="start-btn">Avvia Teleprompter</button>
+    </div>
+
+    <!-- Sezione di controllo -->
+    <div id="controls" class="hidden">
+        <label for="font-size">Dimensione Testo:</label>
+        <select id="font-size">
+            <option value="24px">Piccolo</option>
+            <option value="48px">Medio</option>
+            <option value="96px">Grande</option>
+        </select>
+
+        <label for="scroll-speed">Velocità Scorrimento:</label>
+        <input type="range" id="scroll-speed" min="1" max="10" value="5">
+
+        <label for="wpm">WPM:</label>
+        <input type="range" id="wpm" min="50" max="300" value="150">
+        
+        <button id="startpause-btn">Start/Pause</button>
+        <button id="reset-btn">Reset</button>
+        <button id="stop-btn">Ferma</button>
+    </div>
+
+    <!-- Area di visualizzazione -->
+    <div id="teleprompter" class="hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
