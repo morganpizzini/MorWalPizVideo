@@ -75,7 +75,6 @@ builder.Services.AddHttpClient(HttpClientNames.Telegram, httpClient =>
         new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
-
 var translatorSettings = builder.Configuration.GetSection("TranslatorSettings").Get<TranslatorSettings>();
 
 if(translatorSettings == null)
@@ -89,6 +88,8 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
 builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
 builder.Services.AddScoped<IPageRepository, PageRepository>();
+builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
+builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
 builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
 builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
 builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
@@ -130,7 +131,6 @@ builder.Services.AddHangfire(config =>
 
 // Add Hangfire Server (Background Worker)
 builder.Services.AddHangfireServer();
-
 
 var app = builder.Build();
 

@@ -14,6 +14,8 @@ namespace MorWalPizVideo.Models.Constraints
         public const string BioLinks = "bioLinks";
         public const string CalendarEvents = "calendarEvents";
         public const string Channels = "ytChannels";
+        public const string QueryLinks = "queryLinks";
+        public const string PublishSchedules = "publishSchedules";
         
         public const string Matches = "matches";
         public const string Pages = "pages";

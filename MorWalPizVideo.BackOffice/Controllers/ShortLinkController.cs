@@ -118,4 +118,32 @@ public class ShortLinkRequest
             }
         }
     }
+
+    [HttpPut("{shortLinkCode}")]
+    public async Task<IActionResult> UpdateShortLink(string shortLinkCode, ShortLinkRequest request)
+    {
+        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
+
+        var existingShortLink = await shortLinkCollection.Find(x => x.Code == shortLinkCode).FirstOrDefaultAsync();
+        if (existingShortLink == null)
+        {
+            return NotFound("Short link not found");
+        }
+
+        existingShortLink.VideoId = request.VideoId;
+        existingShortLink.QueryString = request.QueryString ?? string.Empty;
+
+        var updateDefinition = Builders<ShortLink>.Update
+            .Set(sl => sl.VideoId, existingShortLink.VideoId)
+            .Set(sl => sl.QueryString, existingShortLink.QueryString);
+
+        await shortLinkCollection.UpdateOneAsync(x => x.Code == shortLinkCode, updateDefinition);
+
+        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
+        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
+
+        var siteUrl = configuration.GetValue<string>("SiteUrl");
+
+        return Ok($"{siteUrl}sl/{existingShortLink.Code}");
+    }
 }
