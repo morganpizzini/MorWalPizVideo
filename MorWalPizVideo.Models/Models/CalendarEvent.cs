@@ -6,24 +6,13 @@ namespace MorWalPizVideo.Server.Models
 {
     [BsonIgnoreExtraElements]
     [DataContract]
-    public record YTChannel(
-        [property: DataMember][property: BsonElement("channelId")] string ChannelId,
-        [property: DataMember][property: BsonElement("channelName")] string ChannelName) : BaseEntity
-    {
-        [DataMember]
-        [BsonElement("ytChannelId")]
-        public string YTChannelId => ChannelId;
-    }
-
-    [BsonIgnoreExtraElements]
-    [DataContract]
     [method: JsonConstructor]
     public record CalendarEvent(
-        [property: DataMember][property: BsonElement("title")] string Title,
-        [property: DataMember][property: BsonElement("description")] string Description,
-        [property: DataMember][property: BsonElement("date")] DateOnly Date,
-        [property: DataMember][property: BsonElement("category")] string Category,
-        [property: DataMember][property: BsonElement("matchId")] string MatchId = "") : BaseEntity
+    [property: DataMember][property: BsonElement("title")] string Title,
+    [property: DataMember][property: BsonElement("description")] string Description,
+    [property: DataMember][property: BsonElement("date")] DateOnly Date,
+    [property: DataMember][property: BsonElement("category")] string Category,
+    [property: DataMember][property: BsonElement("matchId")] string MatchId = "") : BaseEntity
     {
         [DataMember]
         [BsonElement("calendarEventId")]

@@ -7,6 +7,7 @@ import ErrorPageRoot from "./error-page-root";
 import Bio from "./routes/bio"
 import Matches from "./routes/matches";
 import Pages from "./routes/pages";
+import Links from "./routes/links";
 import Accessories from "./routes/accessories"
 import Sponsors from "./routes/sponsors"
 import Calendar from "./routes/calendar"
@@ -28,7 +29,6 @@ import { RouterProvider } from "react-router/dom";
 import { HelmetProvider } from 'react-helmet-async';
 import ReactGA from 'react-ga4';
 import BuyMeWidget from "@utils/buy-me-widget";
-
 import {
     GoogleReCaptchaProvider
 } from 'react-google-recaptcha-v3';
@@ -76,7 +76,11 @@ const router = createBrowserRouter([
             {
                 path: "sponsors-video",
                 element: <SponsorVideo />,
-            },
+                },
+                {
+                    path: "links",
+                    element: <Links />,
+                },
             {
                 path: "calendar",
                 loader: calendarLoader,

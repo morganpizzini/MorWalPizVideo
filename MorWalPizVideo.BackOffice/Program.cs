@@ -124,8 +124,8 @@ if (enableMock)
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
     
     builder.Services.AddScoped<ITranslatorService>((c) => { 
-        return new AzureOpenAITranslatorService("Dymfpk2ts3wrF0MpPlE8gB9pmVw8ovIRzGDjQL44h86jyhRFWOo3JQQJ99BBACi0881XJ3w3AAAAACOGYmLh", 
-                                                "https://morga-m7nyr20i-japaneast.openai.azure.com"); });
+        return new AzureOpenAITranslatorService("<translator-key>",
+            "<translator-endpoint>"); });
 
 }
 else

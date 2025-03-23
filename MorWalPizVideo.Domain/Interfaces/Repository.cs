@@ -10,6 +10,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public class QueryLinkRepository : BaseRepository<QueryLink>, IQueryLinkRepository
+    {
+        public QueryLinkRepository(IMongoDatabase database) : base(database, DbCollections.QueryLinks)
+        {
+        }
+    }
+    public class PublishScheduleRepository : BaseRepository<PublishSchedule>, IPublishScheduleRepository
+    {
+        public PublishScheduleRepository(IMongoDatabase database) : base(database, DbCollections.PublishSchedules)
+        {
+        }
+    }
     public class PageRepository : BaseRepository<Page>, IPageRepository
     {
         public PageRepository(IMongoDatabase database) : base(database, DbCollections.Pages)

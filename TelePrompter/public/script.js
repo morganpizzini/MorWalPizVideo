@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const stopBtn = document.getElementById("stop-btn");
     const startpauseBtn = document.getElementById("startpause-btn");
     const fontSizeSelect = document.getElementById("font-size");
-    const scrollSpeed = document.getElementById("scroll-speed");
     const wpmSlider = document.getElementById("wpm");
     const teleprompter = document.getElementById("teleprompter");
     const inputSection = document.getElementById("input-section");
@@ -15,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const fixedStopBtn = document.getElementById("fixed-stop-btn");
 
     const fontSizeLabel = document.getElementById("font-size-label");
-    const scrollSpeedLabel = document.getElementById("scroll-speed-label");
+
     const wpmLabel = document.getElementById("wpm-label");
     const arrowControls = document.getElementById("arrow-controls");
     const arrowUp = document.getElementById("arrow-up");
@@ -103,7 +102,6 @@ document.addEventListener("DOMContentLoaded", function () {
         teleprompter.classList.remove("hidden");
         arrowControls.classList.remove("hidden");
 
-        // startScrolling();
         // startVoiceRecognition();
     });
 
@@ -157,7 +155,6 @@ document.addEventListener("DOMContentLoaded", function () {
         
         highlightWords();
         startVoiceRecognition();
-        startScrolling();
         running = true;
     }
 
@@ -168,12 +165,15 @@ document.addEventListener("DOMContentLoaded", function () {
         fontSizeLabel.textContent = fontSizeSelect.value;
     });
 
-    // Funzione per lo scorrimento automatico
-    function startScrolling() {
-        clearInterval(scrolling);
-        scrolling = setInterval(() => {
-            document.documentElement.scrollTop += parseInt(scrollSpeed.value);
-        }, 100);
+    function scrollToActiveWord() {
+        const activeWords = document.querySelectorAll(".word.active");
+        const lastActiveWord = activeWords[activeWords.length - 1];
+        if (lastActiveWord) {
+            const topPos = lastActiveWord.getBoundingClientRect().top + window.scrollY;
+            const windowHeight = window.innerHeight;
+            const offset = windowHeight / 4;
+            window.scrollTo({ top: topPos - offset, behavior: 'smooth' });
+        }
     }
 
     // Cambia colore in base a WPM
@@ -188,6 +188,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     word.classList.toggle("active", i <= currentWordIndex);
                 });
                 currentWordIndex++;
+scrollToActiveWord(); // Scroll to the active word
             }
         }, interval);
     }
@@ -199,19 +200,10 @@ document.addEventListener("DOMContentLoaded", function () {
         fontSizeLabel.textContent = fontSizeSelect.value; // Update label
         fontSizeSelect.dispatchEvent(new Event('change')); // Trigger change event
     }
-    if (localStorage.getItem('scrollSpeed')) {
-        scrollSpeed.value = localStorage.getItem('scrollSpeed');
-        scrollSpeedLabel.textContent = scrollSpeed.value; // Update label
-    }
     if (localStorage.getItem('wpm')) {
         wpmSlider.value = localStorage.getItem('wpm');
         wpmLabel.textContent = wpmSlider.value; // Update label
     }
-
-    scrollSpeed.addEventListener('input', () => {
-        localStorage.setItem('scrollSpeed', scrollSpeed.value);
-        scrollSpeedLabel.textContent = scrollSpeed.value;
-    });
 
     wpmSlider.addEventListener('input', () => {
         localStorage.setItem('wpm', wpmSlider.value);
