@@ -1,4 +1,5 @@
-﻿using MorWalPizVideo.Server.Models;
+﻿using Google.Apis.YouTube.v3.Data;
+using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Server.Services
@@ -30,7 +31,22 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
         public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
-        public Task<IList<Match>> GetItems() => _matchRepository.GetItemsAsync();
+        public Task<IList<Match>> GetMatches() => _matchRepository.GetItemsAsync();
+        public async Task<Match?> FindMatch(string matchId) => (await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == matchId)).FirstOrDefault();
+        public async Task SaveMatch(Match entity)
+        {
+            var check = await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == entity.MatchId);
+            if (check.Count > 0)
+                return;
+            await _matchRepository.AddItemAsync(entity);
+        }
+        public async Task UpdateMatch(Match entity)
+        {
+            var check = await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == entity.MatchId);
+            if (check.Count == 0)
+                return;
+            await _matchRepository.UpdateItemAsync(entity);
+        }
         public Task<IList<YTChannel>> GetChannels() => _ytChannelRepository.GetItemsAsync();
         public async Task<YTChannel?> GetChannel(string channelName) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelName == channelName)).FirstOrDefault();
         public async Task SaveChannel(YTChannel entity)

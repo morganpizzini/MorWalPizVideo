@@ -21,6 +21,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    
     public class SponsorMockRepository : BaseMockRepository<Sponsor>, ISponsorRepository
     {
         public SponsorMockRepository(IHostEnvironment environment) : base(environment, "sponsors")

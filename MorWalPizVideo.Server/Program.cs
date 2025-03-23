@@ -15,7 +15,7 @@ builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
 
 var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
-var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);

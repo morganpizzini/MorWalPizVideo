@@ -17,7 +17,7 @@ namespace MorWalPizVideo.Server.Services
 
         public Task<IList<Match>> FetchMatches()
         {
-            return _dataService.GetItems();
+            return _dataService.GetMatches();
         }
     }
 
@@ -36,7 +36,7 @@ namespace MorWalPizVideo.Server.Services
 
         public async Task<IList<Match>> FetchMatches()
         {
-            IList<Match> matches = await _dataService.GetItems();
+            IList<Match> matches = await _dataService.GetMatches();
 
             var videoIds = matches.Where(x => x.IsLink && string.IsNullOrEmpty(x.Title)).Select(x => x.ThumbnailUrl)
                 .Concat(

@@ -1,9 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using MongoDB.Driver;
+using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class VideoImportRequest
@@ -44,29 +50,90 @@ public class SubVideoCrationRequest
     [Required]
     public string Category { get; set; } = string.Empty;
 }
+
+
+public class ReviewDetails
+{
+    [Required]
+    [Description("Italian version, at the end add one or more related icon and apply hashtag strategy related to the title context")]
+    public string TitleItalian { get; set; } = string.Empty;
+
+    [Required]
+    [Description("English version, at the end add one or more related icon and apply hashtag strategy related to the title context")]
+    public string TitleEnglish { get; set; } = string.Empty;
+}
+
+public class ChatController : ApplicationController
+{
+    private Kernel _kernel;
+
+    public ChatController(Kernel kernel)
+    {
+        _kernel = kernel;
+    }
+
+    [HttpPost]
+    public async Task<ReviewDetails> GetReviewDetails([FromBody] string reviewText)
+    {
+        //This is an example of workload:
+        //    `prova armi ipsc test sicurezza fattore`
+        //    when asked for Italian, you should answer: 'Test Armi IPSC: Sicurezza e Fattore da Non Sottovalutare! 🔥🔫 #IPSC #Sicurezza #ArmiSportive'
+        //    when asked for English, you should answer: 'IPSC Gun Test: Safety & Power Factor Matter! ⚡🔫 #IPSC #GunTest #SafetyFirst'
+        //    This is another example            
+        //    `non tutto e oro mirare importante`
+        //    when asked for Italian, you should answer: 'Non Tutto è Oro! 🎯 Mirare Bene è Più Importante! #TiroDinamico #Precisione #IPSC'
+        //    when asked for English, you should answer: 'Not Everything That Glitters is Gold! 🎯 Accuracy is Key! #ShootingSports #IPSC #Accuracy'
+        string prompt = string.Format(
+            @"You are an expert Youtube shorts title creator about guns IPSC Dynamic shooting world.
+                You will be prompted with a series of keywords in Italian.
+                You have to elaborate them following the provided JSON schema.
+                As general rule do not translate 'No shoot, A zone, Double Alpha, Charlie, Double Charlie'.
+                this is the dictionary: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio
+            This are the words to working with:
+            `{0}`", reviewText);
+
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        var executionSettings = new AzureOpenAIPromptExecutionSettings()
+        {
+            ResponseFormat = typeof(ReviewDetails),
+        };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+
+        var result = await _kernel.InvokePromptAsync(reviewText, new KernelArguments(executionSettings));
+
+        Console.WriteLine(result.ToString());
+
+        var review = JsonSerializer.Deserialize<ReviewDetails>(result.ToString());
+
+        return review;
+
+    }
+}
+
 public class VideoController : ApplicationController
 {
-    private readonly IMongoDatabase database;
+    private readonly DataService dataService;
     private readonly IHttpClientFactory client;
     private readonly IYTService yTService;
-    public VideoController(IMongoDatabase _database, IHttpClientFactory _clientFactory,
+    public VideoController(DataService _dataService, IHttpClientFactory _clientFactory,
         IYTService _yTService)
     {
-        database = _database;
+        dataService = _dataService;
         client = _clientFactory;
         yTService = _yTService;
     }
     [HttpPost("Translate")]
-    public async Task TranslateShort(IList<string> videoIds,string from = "it", string to = "en")
+    public async Task TranslateShort(IList<string> videoIds)
     {
-        await yTService.TranslateYoutubeVideo(videoIds, from, to);
+        await yTService.TranslateYoutubeVideo(videoIds);
     }
     [HttpPost("ImportVideo")]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+        var matchCollection = await dataService.GetMatches();
 
-        matchCollection.InsertOne(new Match(request.VideoId, true, request.Category.ToLower()));
+        await dataService.SaveMatch(new Match(request.VideoId, true, request.Category.ToLower()));
 
         using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
 
@@ -78,8 +145,7 @@ public class VideoController : ApplicationController
     [HttpPost("ConvertIntoRoot")]
     public async Task<IActionResult> ConvertIntoRoot(RootCreationRequest request)
     {
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
-        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.VideoId).FirstOrDefault();
+        var existingMatch = await dataService.FindMatch(request.VideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -90,7 +156,7 @@ public class VideoController : ApplicationController
         }
         existingMatch = existingMatch with { Title = request.Title, Description = request.Description, Url = request.Url, Videos = new[] { new Video(existingMatch.ThumbnailUrl, existingMatch.Category) }, Category = request.Category, IsLink = false };
 
-        await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+        await dataService.UpdateMatch(existingMatch);
 
         return NoContent();
     }
@@ -98,8 +164,7 @@ public class VideoController : ApplicationController
     [HttpPost("SwapThumbnailId")]
     public async Task<IActionResult> SwapThumbnailUrl(SwapRootThumbnailRequest request)
     {
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
-        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.CurrentVideoId).FirstOrDefault();
+        var existingMatch = await dataService.FindMatch(request.CurrentVideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -109,29 +174,29 @@ public class VideoController : ApplicationController
             return BadRequest("Match is not a root match");
         }
         existingMatch = existingMatch with { ThumbnailUrl = request.NewVideoId };
-        await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+
+        await dataService.UpdateMatch(existingMatch);
         return NoContent();
     }
 
     [HttpPost("RootCreation")]
-    public IActionResult RootCreation(RootCreationRequest request)
+    public async Task<IActionResult> RootCreation(RootCreationRequest request)
     {
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
-        matchCollection.InsertOne(new Match(request.VideoId, request.Title, request.Description, request.Url, [], request.Category.ToLower()));
+        var matchCollection = await dataService.GetMatches();
+        await dataService.SaveMatch(new Match(request.VideoId, request.Title, request.Description, request.Url, [], request.Category.ToLower()));
         return NoContent();
     }
     [HttpPost("ImportSubCreation")]
     public async Task<IActionResult> SubVideoCreation(SubVideoCrationRequest request)
     {
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
-        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.MatchId).FirstOrDefault();
+        var existingMatch = await dataService.FindMatch(request.MatchId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
         }
         existingMatch = existingMatch with { Videos = [.. existingMatch.Videos, new Video(request.VideoId, request.Category.ToLower())] };
 
-        await matchCollection.ReplaceOneAsync(Builders<Match>.Filter.Eq(e => e.Id, existingMatch.Id), existingMatch);
+        await dataService.UpdateMatch(existingMatch);
 
         using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
 

@@ -3,6 +3,13 @@ using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
+public class TelegramServiceMock : ITelegramService
+{
+    public Task<string> CreatePost(string shortLink, string message)
+    {
+        return Task.FromResult("");
+    }
+}
 public class TelegramService : ITelegramService,IDisposable
 {
     private readonly HttpClient client;

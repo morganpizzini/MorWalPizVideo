@@ -2,6 +2,13 @@
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
+public class DiscordServiceMock : IDiscordService
+{
+    public Task<string> CreatePost(string shortLink, string message)
+    {
+        return Task.FromResult("");
+    }
+}
 public class DiscordService : IDiscordService, IDisposable
 {
     private readonly HttpClient client;

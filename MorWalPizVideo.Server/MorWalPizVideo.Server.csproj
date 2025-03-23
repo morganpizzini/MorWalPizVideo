@@ -29,6 +29,7 @@
     </ProjectReference>
     <ProjectReference Include="..\MorWalPizVideo.Domain\MorWalPizVideo.Domain.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.MvcHelpers\MorWalPizVideo.MvcHelpers.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.ServiceDefaults\MorWalPizVideo.ServiceDefaults.csproj" />
   </ItemGroup>
 

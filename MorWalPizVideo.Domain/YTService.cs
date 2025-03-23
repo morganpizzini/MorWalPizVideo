@@ -18,7 +18,7 @@ namespace MorWalPizVideo.Server.Services
 {
     public interface IYTService : IDisposable
     {
-        Task TranslateYoutubeVideo(IList<string> videoIds, string sourceLanguage, string targetLanguage);
+        Task TranslateYoutubeVideo(IList<string> videoIds);
         Task<IList<Video>> FetchFromYoutube(IList<string> videoIds);
         Task<string> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true);
         Task<string> GetChannelId(string channelName);
@@ -29,7 +29,7 @@ namespace MorWalPizVideo.Server.Services
         public void Dispose()
         {
         }
-        public Task TranslateYoutubeVideo(IList<string> videoIds, string sourceLanguage, string targetLanguage) => Task.CompletedTask;
+        public Task TranslateYoutubeVideo(IList<string> videoIds) => Task.CompletedTask;
         public Task<IList<Video>> FetchFromYoutube(IList<string> videoIds) => Task.FromResult<IList<Video>>(new List<Video>());
         public Task<string> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo= true) => Task.FromResult("");
         public Task<string> GetChannelId(string channelName) => Task.FromResult(string.Empty);
@@ -38,7 +38,7 @@ namespace MorWalPizVideo.Server.Services
     public class YTService : IYTService
     {
         private readonly HttpClient _client;
-        //private readonly YouTubeService _youtubeService;
+        private readonly YouTubeService _youtubeService;
         private readonly YouTubeService _youtubeAuthService;
         private readonly ITranslatorService _translatorService;
         private readonly string _apiKey;
@@ -79,8 +79,10 @@ namespace MorWalPizVideo.Server.Services
             var response = await request.ExecuteAsync();
             return response.Items;
         }
-        public async Task TranslateYoutubeVideo(IList<string> videoIds,string sourceLanguage, string targetLanguage)
+        public async Task TranslateYoutubeVideo(IList<string> videoIds)
         {
+            var targetLanguage = "en-us";
+            var sourceLanguage = "it";
             var videos = await GetYouTubeVideo(videoIds, "snippet,localizations,contentDetails");
             // works only for shorts
             foreach (var video in videos.Where(video =>
@@ -97,7 +99,7 @@ namespace MorWalPizVideo.Server.Services
                 }
                 var stringToTranslate = $"{localizedLang.Title} | {localizedLang.Description}";
                 // Traduci titolo e descrizione
-                string[] translatedStrings = (await _translatorService.TranslateTextWithHashtags(stringToTranslate, sourceLanguage, targetLanguage))
+                string[] translatedStrings = (await _translatorService.TranslateTextWithHashtags(stringToTranslate))
                                             .Split(" | ");
                 // Aggiungi la traduzione
                 AddTranslationToVideo(video, translatedStrings[0], translatedStrings[1], targetLanguage);
