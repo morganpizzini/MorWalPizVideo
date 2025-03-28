@@ -33,7 +33,7 @@ public class ShortLinkRequest
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetShortLink()
+    public async Task<IActionResult> GetShortLinks()
     {
         var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
 

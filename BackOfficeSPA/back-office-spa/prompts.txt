@@ -1,0 +1,10 @@
+#codebase ho l'entità querylink con queste proprietà
+
+- title
+- description
+
+queryLinkId nella cartella src/routes/queryLinks crea queste pagine, che comunicano con delle API per popolare le informazioni all'interno
+querylinks: pagina con una tabella che elenca tutte le entità disponibili a database. Le informaizoni mostrate sono title e description, nell'ultima colonna inserire link per pagina di dettaglio, di modifica e un bottone per l'eliminazione, che mostrerà in una modale i dettagli dell'entità da eliminare con una richiesta di conferma.
+pagina di dettaglio: che mostra tutte le proprietà
+pagina di modifica: che permette di modificare le proprietà title e description. Prima della chiamata API di modifica mostra in una modale i dettagli della modifica per conferma prima di procedere
+pagina di creazione: permette di creare una nuova entità, fornendo title e description. Prima di procedere mostrare i dati in una modale per conferma

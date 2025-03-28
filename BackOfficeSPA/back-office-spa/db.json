@@ -1,0 +1,60 @@
+{
+  "querylinks": [
+    {
+      "id": "123",
+      "queryLinkId": "123",
+      "title": "aaaa22",
+      "description": "iut"
+    },
+    {
+      "id": "4a25",
+      "queryLinkId": "4a25",
+      "title": "test",
+      "description": "asssdd"
+    },
+    {
+      "id": "7ecf",
+      "queryLinkId": "7ecf",
+      "title": "qwer",
+      "description": "qwerwwww"
+    }
+  ],
+  "shortlinks": [
+    {
+      "id": "abc123",
+      "shortLinkId": "abc123",
+      "videoId": "video1",
+      "queryString": "?param=value",
+      "message": "Short link message 1",
+      "clicksCount": 10
+    },
+    {
+      "id": "def456",
+      "shortLinkId": "def456",
+      "videoId": "video2",
+      "queryString": "?param2=value2",
+      "message": "Short link message 2",
+      "clicksCount": 20
+    }
+  ],
+  "channels": [
+    {
+      "id": "ch001",
+      "channelId": "ch001",
+      "channelName": "Tech Tutorials",
+      "yTChannelId": "UC123456789"
+    },
+    {
+      "id": "ch002",
+      "channelId": "ch002",
+      "channelName": "Gaming Central",
+      "yTChannelId": "UC987654321"
+    },
+    {
+      "id": "ch003",
+      "channelId": "ch003",
+      "channelName": "Cooking Adventures",
+      "yTChannelId": "UC567891234"
+    }
+  ]
+}
