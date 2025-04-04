@@ -1,5 +1,4 @@
-﻿
-namespace MorWalPizVideo.Models.Constraints
+﻿namespace MorWalPizVideo.Models.Constraints
 {
     public static class HttpClientNames {
 
@@ -23,5 +22,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Products = "products";
         public const string ShortLinks = "shortLinks";
         public const string SponsorApplies = "sponsorApplies";
+        public const string Categories = "categories";
     }
 }

@@ -57,4 +57,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
+    {
+        public CategoryMockRepository(IHostEnvironment environment) : base(environment, "categories")
+        {
+        }
+    }
 }

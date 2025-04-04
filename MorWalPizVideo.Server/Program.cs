@@ -46,6 +46,7 @@ if (enableMock)
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
+    builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
@@ -61,6 +62,7 @@ else
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
+    builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 

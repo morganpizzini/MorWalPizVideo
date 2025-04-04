@@ -1,0 +1,148 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.FileDetailPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        mc:Ignorable="d"
+        Title="Dettaglio File"
+        Height="500"
+        Width="700"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize">
+  <Grid Margin="15">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Nome file originale -->
+    <StackPanel Grid.Row="0"
+        Margin="0,0,0,10">
+      <Label Content="Nome file originale:"
+          FontWeight="Bold"/>
+      <TextBox x:Name="OriginalFileNameTextBox"
+          IsReadOnly="True"
+          Margin="0,5,0,0"/>
+    </StackPanel>
+
+    <!-- Nome file pulito -->
+    <StackPanel Grid.Row="1"
+        Margin="0,0,0,10">
+      <Label Content="Nome file pulito:"
+          FontWeight="Bold"/>
+      <TextBox x:Name="CleanFileNameTextBox"
+          IsReadOnly="False"
+          Margin="0,5,0,0"
+          TextChanged="CleanFileNameTextBox_TextChanged"/>
+    </StackPanel>
+
+    <!-- Data e ora di pubblicazione -->
+    <GroupBox Grid.Row="2"
+        Header="Data e ora di pubblicazione"
+        Margin="0,0,0,10"
+        Padding="10">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Data di pubblicazione -->
+        <StackPanel Grid.Column="0"
+            Margin="0,0,10,0">
+          <Label Content="Data:"
+              FontWeight="Bold"/>
+          <DatePicker x:Name="PublishDatePicker"
+              Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Ora di pubblicazione -->
+        <StackPanel Grid.Column="1"
+            Margin="10,0,0,0">
+          <Label Content="Ora:"
+              FontWeight="Bold"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBox x:Name="HourTextBox"
+                Width="30"
+                Margin="0,5,0,0"
+                PreviewTextInput="NumericTextBox_PreviewTextInput"/>
+            <Label Content=":"
+                VerticalAlignment="Center"/>
+            <TextBox x:Name="MinuteTextBox"
+                Width="30"
+                Margin="0,5,0,0"
+                PreviewTextInput="NumericTextBox_PreviewTextInput"/>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </GroupBox>
+
+    <!-- Checkbox per necessità traduzione -->
+    <CheckBox x:Name="NeedTranslationCheckBox"
+              Grid.Row="3"
+              Content="Necessita traduzione"
+              IsChecked="True"
+              Margin="0,0,0,15"/>
+
+    <!-- Traduzioni per le lingue secondarie -->
+    <GroupBox Grid.Row="4"
+        Header="Traduzioni"
+        Margin="0,0,0,10"
+        Padding="10"
+        x:Name="TranslationsGroupBox">
+      <ItemsControl x:Name="SecondaryLanguagesItemsControl">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Grid Margin="0,5,0,5">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <Label Grid.Column="0"
+                  Content="{Binding Name}"
+                  VerticalAlignment="Center"/>
+              <TextBox Grid.Column="1"
+                  Margin="10,0,10,0"
+                  x:Name="TranslationTextBox"
+                  Tag="{Binding Id}"/>
+              <Button Grid.Column="2"
+                  Content="Traduci"
+                  Click="TranslateButton_Click"
+                  Tag="{Binding Id}"
+                  Width="80"/>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </GroupBox>
+
+    <!-- Pulsanti di azione -->
+    <StackPanel Grid.Row="6"
+        Orientation="Horizontal"
+        HorizontalAlignment="Right">
+      <Button x:Name="ResetButton"
+              Content="Reset Nome"
+              Width="100"
+              Margin="0,0,10,0"
+              Click="ResetButton_Click"/>
+      <Button x:Name="SaveButton"
+              Content="Salva"
+              Width="80"
+              Margin="0,0,10,0"
+              Click="SaveButton_Click"/>
+      <Button x:Name="CancelButton"
+              Content="Annulla"
+              Width="80"
+              Click="CancelButton_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>

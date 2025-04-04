@@ -123,6 +123,14 @@ public class VideoController : ApplicationController
         client = _clientFactory;
         yTService = _yTService;
     }
+    
+    [HttpGet()]
+    public async Task<IActionResult> GetAllVideos()
+    {
+        var matches = await dataService.GetMatches();
+        return Ok(matches);
+    }
+    
     [HttpPost("Translate")]
     public async Task TranslateShort(IList<string> videoIds)
     {

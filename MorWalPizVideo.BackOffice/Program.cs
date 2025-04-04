@@ -116,6 +116,7 @@ if (enableMock)
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
+    builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();

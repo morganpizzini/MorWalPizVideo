@@ -36,9 +36,11 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
 
   // Define default labels for known routes
   const defaultLabels: Record<string, string> = {
+    categories: 'Categories',
     querylinks: 'Query Links',
     shortlinks: 'Short Links',
     channels: 'Channels',
+    videos: 'Videos',
     create: 'Create',
     edit: 'Edit',
   };
@@ -50,21 +52,12 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
   const getEntityName = (segment: string, type: string): string => {
     if (!entity) return segment;
 
-    if (type === 'querylinks' && entity.title) {
+    if ((type === 'querylinks' || type === 'categories') && entity.title) {
       return entity.title;
     } else if (type === 'shortlinks' && entity.videoId) {
       return entity.videoId;
     } else if (type === 'channels' && entity.channelName) {
       return entity.channelName;
-    }
-
-    // If there's no name property, try to use the ID
-    if (type === 'querylinks' && entity.queryLinkId) {
-      return entity.queryLinkId;
-    } else if (type === 'shortlinks' && entity.shortLinkId) {
-      return entity.shortLinkId;
-    } else if (type === 'channels' && entity.channelId) {
-      return entity.channelId;
     }
 
     return segment;

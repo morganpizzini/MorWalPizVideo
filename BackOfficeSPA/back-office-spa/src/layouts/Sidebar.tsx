@@ -19,6 +19,62 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
+    id: 'videos',
+    title: 'Video Management',
+    path: '',
+    icon: '🎬',
+    children: [
+      {
+        id: 'videos-list',
+        title: 'Dashboard Video',
+        path: '/videos',
+        icon: '📋',
+      },
+      {
+        id: 'videos-import',
+        title: 'Importa Video',
+        path: '/videos/import',
+        icon: '📥',
+      },
+      {
+        id: 'videos-translate',
+        title: 'Traduci Video',
+        path: '/videos/translate',
+        icon: '🔄',
+      },
+      {
+        id: 'videos-create-root',
+        title: 'Crea Root Video',
+        path: '/videos/create-root',
+        icon: '➕',
+      },
+      {
+        id: 'videos-create-sub',
+        title: 'Crea Sub-Video',
+        path: '/videos/create-sub-video',
+        icon: '📎',
+      },
+      {
+        id: 'videos-convert',
+        title: 'Converti in Root',
+        path: '/videos/convert-to-root',
+        icon: '🔄',
+      },
+      {
+        id: 'videos-swap',
+        title: 'Cambia Thumbnail',
+        path: '/videos/swap-thumbnail',
+        icon: '🖼️',
+      },
+      {
+        id: 'videos-review',
+        title: 'Genera Titoli',
+        path: '/videos/review-details',
+        icon: '✒️',
+      },
+    ],
+  },
+  {
     id: 'channels',
     title: 'Channels',
     path: '', // Removed path since this item has children
@@ -34,6 +90,26 @@ const menuItems: MenuItem[] = [
         id: 'channels-create',
         title: 'Add Channel',
         path: '/channels/create',
+        icon: '➕',
+      },
+    ],
+  },
+  {
+    id: 'categories',
+    title: 'Categories',
+    path: '',
+    icon: '📂',
+    children: [
+      {
+        id: 'categories-list',
+        title: 'List Categories',
+        path: '/categories',
+        icon: '📋',
+      },
+      {
+        id: 'categories-create',
+        title: 'Add Category',
+        path: '/categories/create',
         icon: '➕',
       },
     ],
@@ -77,7 +153,7 @@ const menuItems: MenuItem[] = [
         icon: '➕',
       },
     ],
-  },
+  }
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ show, handleClose }) => {

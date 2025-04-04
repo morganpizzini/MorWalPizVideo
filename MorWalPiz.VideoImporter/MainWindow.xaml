@@ -1,0 +1,159 @@
+﻿<Window x:Class="MorWalPiz.VideoImporter.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter"
+        mc:Ignorable="d"
+        Title="Video Importer"
+        Height="600"
+        Width="900">
+    <DockPanel>
+        <!-- Menu principale -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="Esci"
+                          Click="ExitMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="Edit">
+                <MenuItem Header="Settings"
+                          Click="SettingsMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="Entità">
+                <MenuItem Header="Lingue"
+                          Click="LanguagesMenuItem_Click"/>
+                <MenuItem Header="Disclaimer"
+                          Click="DisclaimerMenuItem_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Contenuto principale -->
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Two-column layout for selecting files and folders -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left column - Folder selection -->
+                <GroupBox Grid.Column="0"
+                          Header="Seleziona Cartelle"
+                          Margin="0,0,5,0"
+                          Padding="10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBox x:Name="FolderPathTextBox"
+                                 Grid.Row="0"
+                                 IsReadOnly="True"
+                                 Margin="0,0,0,5"/>
+                        <Button x:Name="BrowseFolderButton"
+                                Grid.Row="1"
+                                Content="Sfoglia Cartelle"
+                                Click="BrowseFolderButton_Click"
+                                HorizontalAlignment="Right"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Right column - File selection -->
+                <GroupBox Grid.Column="1"
+                          Header="Seleziona File MP4"
+                          Margin="5,0,0,0"
+                          Padding="10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBox x:Name="FilePathTextBox"
+                                 Grid.Row="0"
+                                 IsReadOnly="True"
+                                 Margin="0,0,0,5"/>
+                        <Button x:Name="BrowseFilesButton"
+                                Grid.Row="1"
+                                Content="Sfoglia File"
+                                Click="BrowseFilesButton_Click"
+                                HorizontalAlignment="Right"/>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+
+            <!-- Process button -->
+            <Button x:Name="ProcessButton"
+                    Content="Elabora"
+                    Grid.Row="1"
+                    Margin="0,10"
+                    Padding="10,5"
+                    HorizontalAlignment="Center"
+                    Click="ProcessButton_Click"/>
+
+            <!-- File list with checkboxes -->
+            <GroupBox Grid.Row="2"
+                      Header="File MP4 Trovati"
+                      Margin="0,0,0,10"
+                      Padding="5">
+                <ListView x:Name="FileListView"
+                          MouseDoubleClick="FileListView_MouseDoubleClick">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Width="30">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Nome Pulito"
+                                            Width="200">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding EditedCleanFileName, TargetNullValue={Binding CleanFileName}}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Da tradurre"
+                                            Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding NeedTranslation}"
+                                                  IsHitTestVisible="False"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Path"
+                                            DisplayMemberBinding="{Binding FilePath}"
+                                            Width="280"/>
+                            <GridViewColumn Header="Azioni"
+                                            Width="80">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Dettagli"
+                                                Click="FileDetailButton_Click"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </GroupBox>
+
+            <!-- Delete button -->
+            <Button x:Name="DeleteButton"
+                    Content="Elimina Selezionati"
+                    Grid.Row="3"
+                    Padding="10,5"
+                    HorizontalAlignment="Right"
+                    Click="DeleteButton_Click"/>
+        </Grid>
+    </DockPanel>
+</Window>

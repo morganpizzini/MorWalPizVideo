@@ -19,6 +19,46 @@
       "description": "qwerwwww"
     }
   ],
+  "categories": [
+    {
+      "id": "123",
+      "categoryId": "123",
+      "title": "aaaa22",
+      "description": "iut"
+    },
+    {
+      "id": "4a25",
+      "categoryId": "4a25",
+      "title": "test",
+      "description": "asssdd"
+    },
+    {
+      "id": "7ecf",
+      "categoryId": "7ecf",
+      "title": "qwer",
+      "description": "qwerwwww"
+    }
+  ],
+  "videos": [
+    {
+      "id": "123",
+      "videoId": "123",
+      "title": "video 1",
+      "description": "descrizione video 1"
+    },
+    {
+      "id": "4a25",
+      "videoId": "4a25",
+      "title": "video 2",
+      "description": "descrizione video 2"
+    },
+    {
+      "id": "7ecf",
+      "videoId": "7ecf",
+      "title": "video 3",
+      "description": "descrizione video 3"
+    }
+  ],
   "shortlinks": [
     {
       "id": "abc123",

@@ -15,7 +15,19 @@ namespace MorWalPizVideo.Server.Services
         private readonly IBioLinkRepository _bioLinkRepository;
         private readonly IShortLinkRepository _shortLinkRepository;
         private readonly IYTChannelRepository _ytChannelRepository;
-        public DataService(IMatchRepository matchRepository, ISponsorApplyRepository sponsorApplyRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, IPageRepository pageRepository, ICalendarEventRepository calendarEventRepository, IBioLinkRepository bioLinkRepository, IShortLinkRepository shortLinkRepository, IYTChannelRepository ytChannelRepository)
+        private readonly ICategoryRepository _categoryRepository;
+        
+        public DataService(
+            IMatchRepository matchRepository, 
+            ISponsorApplyRepository sponsorApplyRepository, 
+            IProductRepository productRepository, 
+            ISponsorRepository sponsorRepository, 
+            IPageRepository pageRepository, 
+            ICalendarEventRepository calendarEventRepository, 
+            IBioLinkRepository bioLinkRepository, 
+            IShortLinkRepository shortLinkRepository, 
+            IYTChannelRepository ytChannelRepository,
+            ICategoryRepository categoryRepository)
         {
             _matchRepository = matchRepository;
             _productRepository = productRepository;
@@ -26,6 +38,7 @@ namespace MorWalPizVideo.Server.Services
             _shortLinkRepository = shortLinkRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
             _ytChannelRepository = ytChannelRepository;
+            _categoryRepository = categoryRepository;
         }
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
@@ -95,5 +108,41 @@ namespace MorWalPizVideo.Server.Services
         }
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
         public async Task<IList<BioLink>> GetBioLinks() => [.. (await _bioLinkRepository.GetItemsAsync(x => x.Enable)).OrderBy(x => x.Order)];
+        
+        // Category methods
+        public Task<IList<Category>> GetCategories() => _categoryRepository.GetItemsAsync();
+        
+        public async Task<Category?> GetCategory(string title) => 
+            (await _categoryRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
+        
+        public async Task<Category?> GetCategoryById(string id) =>
+            await _categoryRepository.GetItemAsync(id);
+        
+        public async Task SaveCategory(Category entity)
+        {
+            var existingCategory = await _categoryRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            if (existingCategory.Count > 0)
+                return;
+            
+            await _categoryRepository.AddItemAsync(entity);
+        }
+        
+        public async Task UpdateCategory(Category entity)
+        {
+            var existingCategory = await _categoryRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingCategory.Count == 0)
+                return;
+                
+            await _categoryRepository.UpdateItemAsync(entity);
+        }
+        
+        public async Task DeleteCategory(string categoryId)
+        {
+            var category = (await _categoryRepository.GetItemsAsync(x => x.Id == categoryId)).FirstOrDefault();
+            if (category == null)
+                return;
+                
+            await _categoryRepository.DeleteItemAsync(category.Id);
+        }
     }
 }

@@ -8,3 +8,31 @@ querylinks: pagina con una tabella che elenca tutte le entità disponibili a dat
 pagina di dettaglio: che mostra tutte le proprietà
 pagina di modifica: che permette di modificare le proprietà title e description. Prima della chiamata API di modifica mostra in una modale i dettagli della modifica per conferma prima di procedere
 pagina di creazione: permette di creare una nuova entità, fornendo title e description. Prima di procedere mostrare i dati in una modale per conferma
+
+
+--------------
+
+sponsorApplies = estendere con rimozione e bool stato "gestito"
+scraperController
+pubblicazione automatica video su youtube se in import fornisco il messaggio (come accade con telegram e discord)
+
+Client side app che fornendo cartella o file (in due sezioni separate) va a pescare i video.
+- database per salvare le lingue di default, disclaimer, tag, ora di pubblicazione di default
+mostri la lista dei file analizzati, con possibilità di selezione. una volta selezionate posso scegliere se pubblicarli o eliminarli
+la textbox del titolo ha uno stato, che permette di capire se il titolo è stato modificato e quindi non è necessario toccarlo al caricamento. è presente un bottone che permette di resettare lo stato, per lavorare sul nuovo testo, e un bottone che resetta sia lo stato che il contenuto della textbox al suo valore originale
+lingua di partenza del nome del file e posibilità di aggiungere varie lingue. aggiungere una modale di dettaglio per video singolo che mostra N select per il numero di lingue da tradurre, possibilità di aggiungere la propria traduzione, oppure avere un bottone che esegue una traduzione istantanea e la inserisce nella textbox.
+per ogni elemento posso impostare la data e l'ora di pubblicazione, l'ora sarà presa di default, la data sarà sempre il giorno corrente.
+ogni riga, che rappresenta un file, posso scegliere se impostare la monetizzazione ridotta su armi o lasciare quella generica. Se contiene armi inserire inserire in descrizione il disclaimer
+impostare di default "contenuti non modificati con AI"
+Al submit traduce tutte le stringhe che non sono state toccate
+
+
+li carichi su youtube, imposti la monetizzazione
+
+imageUploadController
+pageController, aggiungere possibilità di modifica della pagina
+calendar events
+
+Copilot
+uniformare i contratti che ha creato in video/*/action|loader
+trovare un modo per impostare l'ultimo elemento delle breadcrumbs dal componente, es in '/videos/create-sub-video' scrive 'create-sub-video'

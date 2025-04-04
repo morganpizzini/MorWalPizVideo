@@ -11,7 +11,7 @@ const Home: React.FC = () => {
       <h3>Gestione youtube</h3>
       <Container>
         <Row>
-          <Col md={4}>
+          <Col md={4} className="g-4">
             <Card
               title="Querylinks Page"
               subtitle="Navigate to the querylinks page"
@@ -20,7 +20,16 @@ const Home: React.FC = () => {
               buttonText="Go to Querylinks"
             />
           </Col>
-          <Col md={4}>
+          <Col md={4} className="g-4">
+            <Card
+              title="Categories Page"
+              subtitle="Navigate to the categories page"
+              content="Click the button below to go to the categories page."
+              link="/categories"
+              buttonText="Go to Categories"
+            />
+          </Col>
+          <Col md={4} className="g-4">
             <Card
               title="Shortlinks Page"
               subtitle="Navigate to the shortlinks page"
@@ -29,13 +38,22 @@ const Home: React.FC = () => {
               buttonText="Go to Shortlinks"
             />
           </Col>
-          <Col md={4}>
+          <Col md={4} className="g-4">
             <Card
               title="Channel Page"
               subtitle="Navigate to the channel page"
               content="Click the button below to go to the channel page."
               link="/channels"
               buttonText="Go to Channel"
+            />
+          </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Videos Page"
+              subtitle="Gestione dei Video"
+              content="Crea, importa o converti i tuoi video YouTube con facilità."
+              link="/videos"
+              buttonText="Gestisci Video"
             />
           </Col>
         </Row>

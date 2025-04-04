@@ -72,4 +72,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
+    {
+        public CategoryRepository(IMongoDatabase database) : base(database, DbCollections.Categories)
+        {
+        }
+    }
 }

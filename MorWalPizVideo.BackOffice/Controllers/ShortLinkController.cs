@@ -129,10 +129,8 @@ public class ShortLinkRequest
         {
             return NotFound("Short link not found");
         }
-
-        existingShortLink.VideoId = request.VideoId;
-        existingShortLink.QueryString = request.QueryString ?? string.Empty;
-
+        existingShortLink = existingShortLink with { VideoId = request.VideoId, QueryString = request.QueryString ?? string.Empty };
+        
         var updateDefinition = Builders<ShortLink>.Update
             .Set(sl => sl.VideoId, existingShortLink.VideoId)
             .Set(sl => sl.QueryString, existingShortLink.QueryString);

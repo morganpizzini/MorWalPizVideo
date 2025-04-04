@@ -26,7 +26,7 @@ public class QueryLinksController : ApplicationController
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetShortLink()
+    public async Task<IActionResult> GetQueryLink()
     {
         var collection = database.GetCollection<QueryLink>(DbCollections.QueryLinks);
 

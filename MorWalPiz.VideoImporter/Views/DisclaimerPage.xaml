@@ -1,0 +1,58 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.DisclaimerPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        mc:Ignorable="d"
+        Title="Gestione Disclaimer"
+    Height="500"
+    Width="700">
+  <Grid Margin="15">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Selector per scegliere la lingua -->
+    <StackPanel Grid.Row="0"
+        Orientation="Horizontal"
+        Margin="0,0,0,15">
+      <Label Content="Seleziona lingua:"
+          VerticalAlignment="Center"/>
+      <ComboBox x:Name="LanguageSelector"
+          Width="200"
+          Margin="10,0,0,0"
+                DisplayMemberPath="Name"
+          SelectedValuePath="Id"
+                SelectionChanged="LanguageSelector_SelectionChanged"/>
+    </StackPanel>
+
+    <!-- Editor per il testo del disclaimer -->
+    <GroupBox Grid.Row="1"
+        Header="Testo del disclaimer"
+        Margin="0,0,0,15"
+        Padding="10">
+      <TextBox x:Name="DisclaimerTextBox"
+          AcceptsReturn="True"
+          TextWrapping="Wrap"
+               VerticalScrollBarVisibility="Auto"/>
+    </GroupBox>
+
+    <!-- Pulsanti di azione -->
+    <StackPanel Grid.Row="2"
+        Orientation="Horizontal"
+        HorizontalAlignment="Right">
+      <Button x:Name="SaveButton"
+          Content="Salva"
+          Width="80"
+          Margin="0,0,10,0"
+          Click="SaveButton_Click"/>
+      <Button x:Name="CancelButton"
+          Content="Annulla"
+          Width="80"
+          Click="CancelButton_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>
