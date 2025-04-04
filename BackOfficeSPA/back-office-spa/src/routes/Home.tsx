@@ -56,6 +56,15 @@ const Home: React.FC = () => {
               buttonText="Gestisci Video"
             />
           </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Images Page"
+              subtitle="Gestione delle Immagini"
+              content="Carica e gestisci le immagini per i tuoi contenuti con facilità."
+              link="/images"
+              buttonText="Gestisci Immagini"
+            />
+          </Col>
         </Row>
       </Container>
     </>

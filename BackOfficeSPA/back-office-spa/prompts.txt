@@ -10,6 +10,11 @@ pagina di modifica: che permette di modificare le proprietà title e description
 pagina di creazione: permette di creare una nuova entità, fornendo title e description. Prima di procedere mostrare i dati in una modale per conferma
 
 
+
+copy da controller
+#codebase partendo dal controller 'MorWalPizVideo.BackOffice\Controllers\ImageUploadController.cs' mi generi le pagine nell'applicazione react 'BackOfficeSPA\back-office-spa'. Per il design ispirati a quanto fatto per i componenti presenti in 'BackOfficeSPA\back-office-spa\src\routes\videos' e sottocartelle.  Per gestire le varie action presenti. Le pagine dovranno usare il loader per caricare eventuali dati necessari. Prima di effetture la submit dovra essere mostrata una modale di recap delle operazioni fatte in pagina, utilizzare il fetcher per le submit e avere il file action adeguato a gestire la submit, all'interno della form deve anche esserci la gestione dell'errore e il componente per mostrare l'errore generico. la pagina di index che reindirizza alle sotto-pagine deve utilizzare il componente card 'BackOfficeSPA\back-office-spa\src\components\Card.tsx' inserisci degli esempi di entità in 'BackOfficeSPA\back-office-spa\db.default.json'. Aggiungi le route per accedere alla pagina e la card in homepage. 
+
+
 --------------
 
 sponsorApplies = estendere con rimozione e bool stato "gestito"

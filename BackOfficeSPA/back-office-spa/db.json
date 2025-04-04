@@ -96,5 +96,51 @@
       "channelName": "Cooking Adventures",
       "yTChannelId": "UC567891234"
     }
+  ],
+  "matches": [
+    {
+      "id": "m001",
+      "title": "Juventus vs Inter",
+      "url": "juventus-inter-2023",
+      "date": "2023-04-20",
+      "description": "Serie A match between Juventus and Inter Milan"
+    },
+    {
+      "id": "m002",
+      "title": "Milan vs Napoli",
+      "url": "milan-napoli-2023",
+      "date": "2023-04-25",
+      "description": "Serie A match between AC Milan and Napoli"
+    },
+    {
+      "id": "m003",
+      "title": "Roma vs Lazio",
+      "url": "roma-lazio-2023",
+      "date": "2023-05-02",
+      "description": "Derby della Capitale between Roma and Lazio"
+    },
+    {
+      "id": "m004",
+      "title": "Atalanta vs Fiorentina",
+      "url": "atalanta-fiorentina-2023",
+      "date": "2023-05-10",
+      "description": "Serie A match between Atalanta and Fiorentina"
+    }
+  ],
+  "images": [
+    {
+      "id": "img001",
+      "folderName": "juventus-inter-2023",
+      "fileName": "goal-celebration.jpg",
+      "uploadDate": "2023-04-21",
+      "description": "Goal celebration image from Juventus vs Inter match"
+    },
+    {
+      "id": "img002",
+      "folderName": "milan-napoli-2023",
+      "fileName": "team-lineup.jpg",
+      "uploadDate": "2023-04-26",
+      "description": "Team lineup image from Milan vs Napoli match"
+    }
   ]
 }

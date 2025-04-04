@@ -26,6 +26,10 @@ import CreateSubVideo from './routes/videos/create-sub-video';
 import SwapThumbnail from './routes/videos/swap-thumbnail';
 import ConvertToRoot from './routes/videos/convert-to-root';
 import ErrorBoundary from './components/ErrorBoundary';
+// Import the new image components
+import ImagesHome from './routes/images/index';
+import ImageUpload from './routes/images/upload';
+import MultipleImageUpload from './routes/images/upload-multiple';
 
 export default createBrowserRouter([
   {
@@ -156,14 +160,36 @@ export default createBrowserRouter([
           { path: 'translate', Component: TranslateVideo.Component, action: TranslateVideo.Action },
           { path: 'create-root', Component: CreateRoot.Component, loader: CreateRoot.loader, action: CreateRoot.action },
           { path: 'create-sub-video', Component: CreateSubVideo.Component, loader: CreateSubVideo.loader, action: CreateSubVideo.action },
-          { path: 'swap-thumbnail', Component: SwapThumbnail.Component, action: SwapThumbnail.Action,
+          {
+            path: 'swap-thumbnail', Component: SwapThumbnail.Component, action: SwapThumbnail.Action,
             loader: SwapThumbnail.Loader
-           },
+          },
           {
             path: 'convert-to-root',
             action: ConvertToRoot.Action,
             loader: ConvertToRoot.Loader,
             Component: ConvertToRoot.Component,
+          },
+        ],
+      },
+      // Add new images routes
+      {
+        path: 'images',
+        Component: Outlet,
+        errorElement: React.createElement(ErrorBoundary),
+        children: [
+          { index: true, path: '', Component: ImagesHome.Component },
+          {
+            path: 'upload',
+            Component: ImageUpload.Component,
+            loader: ImageUpload.loader,
+            action: ImageUpload.action
+          },
+          {
+            path: 'upload-multiple',
+            Component: MultipleImageUpload.Component,
+            loader: MultipleImageUpload.loader,
+            action: MultipleImageUpload.action
           },
         ],
       },
