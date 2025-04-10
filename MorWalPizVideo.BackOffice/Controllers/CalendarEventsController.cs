@@ -1,69 +1,98 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
-using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
-using System.Globalization;
+using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
-public class AddChannelRequest
-{
-    public string ChannelName { get; set; } = string.Empty;
 
-}
-public class AddCalendarRequest
+public class CreateCalendarEventRequest
 {
     public string Title { get; set; } = string.Empty;
-    public string Date { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string MatchId { get; set; } = string.Empty;
-}
-public class UpdateCalendarRequest
-{
+    public DateOnly Date { get; set; }
+    public string Category { get; set; } = string.Empty;
     public string MatchId { get; set; } = string.Empty;
 }
 
-    public class CalendarEventsController : ApplicationController
+public class UpdateCalendarEventRequest
 {
-    private readonly IMongoDatabase database;
-    private readonly IHttpClientFactory client;
-    public CalendarEventsController(IMongoDatabase _database, IHttpClientFactory _clientFactory)
+    public string Title { get; set; } = string.Empty;
+    public string NewTitle { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateOnly Date { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string MatchId { get; set; } = string.Empty;
+}
+
+public class CalendarEventsController : ApplicationController
+{
+    private readonly DataService _dataService;
+
+    public CalendarEventsController(DataService dataService)
     {
-        database = _database;
-        client = _clientFactory;
+        _dataService = dataService;
     }
-    [HttpPost]
-    public async Task<IActionResult> AddCalendar(AddCalendarRequest request)
+
+    [HttpGet]
+    public async Task<IActionResult> GetCalendarEvents()
     {
-        var collection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
+        return Ok(await _dataService.GetCalendarEvents());
+    }
 
-        collection.InsertOne(new CalendarEvent(request.Title, request.Description, DateOnly.ParseExact(request.Date, "yy-MM-dd", CultureInfo.InvariantCulture), request.Category, request.Category));
+    [HttpGet("{title}")]
+    public async Task<IActionResult> GetCalendarEventByTitle(string title)
+    {
+        var entity = (await _dataService.GetCalendarEventByTitle(title));
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.CalendarEvents}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.CalendarEvents}");
+        if (entity == null)
+            return NotFound("Calendar event not found");
+
+        return Ok(entity);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateCalendarEvent(CreateCalendarEventRequest request)
+    {
+        var calendarEvent = new CalendarEvent(
+            request.Title,
+            request.Description,
+            request.Date,
+            request.Category,
+            request.MatchId);
+
+        await _dataService.SaveCalendarEvent(calendarEvent);
 
         return NoContent();
     }
-    [HttpPut("{title}")]
-    public async Task<IActionResult> AttachMatchId(string title,[FromBody]UpdateCalendarRequest request)
+
+    [HttpPut]
+    public async Task<IActionResult> UpdateCalendarEvent(UpdateCalendarEventRequest request)
     {
-        var collection = database.GetCollection<CalendarEvent>(DbCollections.CalendarEvents);
-        
-        var existing = collection.Find(x => x.Title == title).FirstOrDefault();
+        var entity = await _dataService.GetCalendarEventByTitle(request.Title);
+        if (entity == null)
+            return BadRequest("Calendar event not found");
 
-        if (existing == null)
+        var updatedEvent = entity with
         {
-            return BadRequest("Calendar event do not exists");
-        }
+            Title = request.NewTitle,
+            Description = request.Description,
+            Date = request.Date,
+            Category = request.Category,
+            MatchId = request.MatchId
+        };
 
-        existing = existing with { MatchId = request.MatchId };
+        await _dataService.UpdateCalendarEvent(updatedEvent);
 
-        await collection.ReplaceOneAsync(Builders<CalendarEvent>.Filter.Eq(e => e.Id, existing.Id), existing);
+        return NoContent();
+    }
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.CalendarEvents}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.CalendarEvents}");
+    [HttpDelete("{title}")]
+    public async Task<IActionResult> DeleteCalendarEvent(string title)
+    {
+        var entity = await _dataService.GetCalendarEventByTitle(title);
+        if (entity == null)
+            return BadRequest("Calendar event not found");
+
+        await _dataService.DeleteCalendarEvent(entity.Id);
 
         return NoContent();
     }

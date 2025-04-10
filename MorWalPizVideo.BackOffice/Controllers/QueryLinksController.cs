@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
-using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class CreateQueryLinkRequest
@@ -19,60 +18,50 @@ public class UpdateQueryLinkRequest
 
 public class QueryLinksController : ApplicationController
 {
-    private readonly IMongoDatabase database;
-    public QueryLinksController(IMongoDatabase _database)
+    private readonly DataService _dataService;
+
+    public QueryLinksController(DataService dataService)
     {
-        database = _database;
+        _dataService = dataService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetQueryLink()
     {
-        var collection = database.GetCollection<QueryLink>(DbCollections.QueryLinks);
-
-        var entities = (await collection.FindAsync(x => true)).ToList();
-
+        var entities = await _dataService.GetQueryLinks();
         return Ok(entities);
     }
 
     [HttpPost]
-    public IActionResult CreateQueryLink(CreateQueryLinkRequest request)
+    public async Task<IActionResult> CreateQueryLink(CreateQueryLinkRequest request)
     {
-        var collection = database.GetCollection<QueryLink>(DbCollections.QueryLinks);
-
-        collection.InsertOne(new QueryLink(request.Title, request.Value));
-
+        await _dataService.SaveQueryLink(new QueryLink(request.Title, request.Value));
         return NoContent();
     }
 
     [HttpPut]
     public async Task<IActionResult> UpdateQueryLink(UpdateQueryLinkRequest request)
     {
-        var collection = database.GetCollection<QueryLink>(DbCollections.QueryLinks);
-
-        var entity = collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefault();
+        var entity = await _dataService.GetQueryLinkByTitle(request.Title);
         if (entity == null)
             return BadRequest("Query link has not found");
 
-        entity = entity with { Title = request.NewTitle, Value = request.Value };
-
-        await collection.ReplaceOneAsync(Builders<QueryLink>.Filter.Eq(e => e.Id, entity.Id), entity);
+        var updatedLink = entity with { Title = request.NewTitle, Value = request.Value };
+        await _dataService.UpdateQueryLink(updatedLink);
 
         return NoContent();
     }
 
     [HttpDelete("{title}")]
-    public IActionResult DeleteQueryLink(string title)
+    public async Task<IActionResult> DeleteQueryLink(string title)
     {
-        var collection = database.GetCollection<QueryLink>(DbCollections.QueryLinks);
-
-        var entity = collection.Find(x => x.Title.ToLower() == title).FirstOrDefault();
+        var entity = await _dataService.GetQueryLinkByTitle(title);
         if (entity == null)
         {
             return BadRequest("Query link has not found");
         }
-        collection.DeleteOne(Builders<QueryLink>.Filter.Eq(e => e.Id, entity.Id));
 
+        await _dataService.DeleteQueryLink(entity.Id);
         return NoContent();
     }
 }
