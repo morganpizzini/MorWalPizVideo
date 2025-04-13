@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using MongoDB.Driver;
-using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -52,16 +49,47 @@ public class SubVideoCrationRequest
 }
 
 
+public class Review
+{
+    [Required]
+    [Description("Lista delle degli elementi elaborati sulla base dei nomi dei file forniti")]
+    public IList<ReviewDetails> TitleItalian { get; set; } = new List<ReviewDetails>();
+}
+
 public class ReviewDetails
 {
     [Required]
-    [Description("Italian version, at the end add one or more related icon and apply hashtag strategy related to the title context")]
+    [Description("Il nome del file originale")]
+    public string Name { get; set; } = string.Empty;
+    [Required]
+    [Description("Titolo del video in italiano")]
+    //[Description(@"Il nome del file rappresenta una linea guida generale sul contenuto del video. Crea un titolo accattivante e ottimizzato per il SEO in italiano, adatto alla pubblicazione su YouTube. Il titolo deve:
+    //                – Riflettere chiaramente l'argomento del video,
+    //                – Includere parole chiave rilevanti per il pubblico di riferimento,
+    //                – Incoraggiare il clic (essere coinvolgente ma non clickbait),
+    //                – Non superare i 100 caratteri.")]
     public string TitleItalian { get; set; } = string.Empty;
+    [Required]
+    [Description("Descrizione del video in italiano")]
+    public string DescriptionItalian { get; set; } = string.Empty;
 
     [Required]
-    [Description("English version, at the end add one or more related icon and apply hashtag strategy related to the title context")]
+    [Description("Descrizione del video in inglese")]
     public string TitleEnglish { get; set; } = string.Empty;
+    [Required]
+    [Description("Descrizione del video in inglese")]
+    public string DescriptionEnglish { get; set; } = string.Empty;
 }
+
+
+public class ReviewRequest
+{
+    [Required]
+    public IList<string> Names { get; set; } = new List<string>();
+
+    public string Context { get; set; } = string.Empty;
+}
+
 
 public class ChatController : ApplicationController
 {
@@ -73,41 +101,48 @@ public class ChatController : ApplicationController
     }
 
     [HttpPost]
-    public async Task<ReviewDetails> GetReviewDetails([FromBody] string reviewText)
+    public async Task<IActionResult> GetReviewDetails([FromBody] ReviewRequest reviewRequest)
     {
-        //This is an example of workload:
-        //    `prova armi ipsc test sicurezza fattore`
-        //    when asked for Italian, you should answer: 'Test Armi IPSC: Sicurezza e Fattore da Non Sottovalutare! 🔥🔫 #IPSC #Sicurezza #ArmiSportive'
-        //    when asked for English, you should answer: 'IPSC Gun Test: Safety & Power Factor Matter! ⚡🔫 #IPSC #GunTest #SafetyFirst'
-        //    This is another example            
-        //    `non tutto e oro mirare importante`
-        //    when asked for Italian, you should answer: 'Non Tutto è Oro! 🎯 Mirare Bene è Più Importante! #TiroDinamico #Precisione #IPSC'
-        //    when asked for English, you should answer: 'Not Everything That Glitters is Gold! 🎯 Accuracy is Key! #ShootingSports #IPSC #Accuracy'
-        string prompt = string.Format(
-            @"You are an expert Youtube shorts title creator about guns IPSC Dynamic shooting world.
-                You will be prompted with a series of keywords in Italian.
-                You have to elaborate them following the provided JSON schema.
-                As general rule do not translate 'No shoot, A zone, Double Alpha, Charlie, Double Charlie'.
-                this is the dictionary: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio
-            This are the words to working with:
-            `{0}`", reviewText);
+        var fileNames = string.Join("\n", reviewRequest.Names);
+
+        var prompt = @$"Sei un esperto creatore di titoli per cortometraggi su YouTube sul mondo delle armi, del tiro dinamico, IPSC e IDPA.
+                    {reviewRequest.Context}
+                    La lista seguente è il nome dei file che sto caricando. 
+                    Il nome del file rappresenta una linea guida generale sul contenuto del video. 
+                    Crea un titolo e una descrizione accattivante e ottimizzato per il SEO in italiano, adatto alla pubblicazione su YouTube. 
+                    Il titolo deve:
+                    – Riflettere chiaramente l'argomento del video
+                    – Includere parole chiave rilevanti per il pubblico di riferimento
+                    – Incoraggiare il clic (essere coinvolgente ma non clickbait)
+                    – Non superare i 120 caratteri.
+                    La descrizione deve essere ottimizzata per il SEO e deve:
+                    – Spiegare chiaramente di cosa parla il video
+                    – Includere parole chiave rilevanti per il pubblico e l'algoritmo di ricerca, evidenziarle utilizzando hashtag
+                    – Includere se possibile un breve riassunto dei punti principali trattati
+                    - Se alcune parole chiave non sono incluse nella descrizione, aggiungerle a fine della descrizione
+                    – Avere una lunghezza compresa tra 200 e 800 caratteri.
+                    Forniscimi anche la traduzione in inglese.
+                    Elabora le informazioni e dammi un risultato seguento il JSON schema fornito.
+                    Come regola generale, non tradurre: No Shoot, A Zone, Double Alpha, Charlie, Double Charlie.
+                    Questo è il dizionario per alcuni termini: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio.
+                    Ecco l'elenco dei nomi:
+                    {fileNames}
+                    ";
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings()
+        var executionSettings1 = new AzureOpenAIPromptExecutionSettings()
         {
-            ResponseFormat = typeof(ReviewDetails),
+            ResponseFormat = typeof(Review1),
         };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
+        var result = await _kernel.InvokePromptAsync(prompt, new KernelArguments(executionSettings1));
 
-        var result = await _kernel.InvokePromptAsync(reviewText, new KernelArguments(executionSettings));
+        var resultString = result.ToString();
+        Console.WriteLine(resultString);
 
-        Console.WriteLine(result.ToString());
-
-        var review = JsonSerializer.Deserialize<ReviewDetails>(result.ToString());
-
-        return review;
-
+        var review1 = JsonSerializer.Deserialize<Review1>(resultString);
+        return Ok(review1);
     }
 }
 
@@ -123,14 +158,14 @@ public class VideoController : ApplicationController
         client = _clientFactory;
         yTService = _yTService;
     }
-    
+
     [HttpGet()]
     public async Task<IActionResult> GetAllVideos()
     {
         var matches = await dataService.GetMatches();
         return Ok(matches);
     }
-    
+
     [HttpPost("Translate")]
     public async Task TranslateShort(IList<string> videoIds)
     {
@@ -162,7 +197,7 @@ public class VideoController : ApplicationController
         {
             return BadRequest("Match is already a root");
         }
-        existingMatch = existingMatch with { Title = request.Title, Description = request.Description, Url = request.Url, Videos = new[] { new Video(existingMatch.ThumbnailUrl, existingMatch.Category) }, Category = request.Category, IsLink = false };
+        existingMatch = existingMatch with { Title = request.Title, Description = request.Description, Url = request.Url, Videos = new[] { new Server.Models.Video(existingMatch.ThumbnailUrl, existingMatch.Category) }, Category = request.Category, IsLink = false };
 
         await dataService.UpdateMatch(existingMatch);
 
@@ -202,7 +237,7 @@ public class VideoController : ApplicationController
         {
             return BadRequest("Match do not exists");
         }
-        existingMatch = existingMatch with { Videos = [.. existingMatch.Videos, new Video(request.VideoId, request.Category.ToLower())] };
+        existingMatch = existingMatch with { Videos = [.. existingMatch.Videos, new Server.Models.Video(request.VideoId, request.Category.ToLower())] };
 
         await dataService.UpdateMatch(existingMatch);
 

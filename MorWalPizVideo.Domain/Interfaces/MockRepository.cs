@@ -64,4 +64,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public class QueryLinkMockRepository : BaseMockRepository<QueryLink>, IQueryLinkRepository
+    {
+        public QueryLinkMockRepository(IHostEnvironment environment) : base(environment, "queryLinks")
+        {
+        }
+    }
 }

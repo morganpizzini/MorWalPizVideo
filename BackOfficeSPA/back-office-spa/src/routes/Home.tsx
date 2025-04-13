@@ -65,6 +65,15 @@ const Home: React.FC = () => {
               buttonText="Gestisci Immagini"
             />
           </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Calendar events"
+              subtitle="Gestione degli eventi a calendario"
+              content="Carica e gestisci gli eventi a calendario"
+              link="/calendarEvents"
+              buttonText="Gestisci Eventi"
+            />
+          </Col>
         </Row>
       </Container>
     </>

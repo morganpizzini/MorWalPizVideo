@@ -30,6 +30,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ImagesHome from './routes/images/index';
 import ImageUpload from './routes/images/upload';
 import MultipleImageUpload from './routes/images/upload-multiple';
+import CalendarEventDetail from './routes/calendarEvents/detail';
+import CalendarEventEdit from './routes/calendarEvents/edit';
+import CalendarEventCreate from './routes/calendarEvents/create';
+import CalendarEvents from './routes/calendarEvents/index';
 
 export default createBrowserRouter([
   {
@@ -37,6 +41,64 @@ export default createBrowserRouter([
     Component: PrimaryLayout,
     children: [
       { index: true, path: '', Component: Home, errorElement: React.createElement(ErrorBoundary) },
+      {
+        path: 'calendarevents',
+        Component: Outlet,
+        action: CalendarEvents.Action,
+        errorElement: React.createElement(ErrorBoundary),
+        children: [
+          { index: true, path: '', loader: CalendarEvents.Loader, Component: CalendarEvents.Component },
+          { path: 'create', Component: CalendarEventCreate.Component, action: CalendarEventCreate.Action },
+          {
+            path: ':id',
+            Component: Outlet,
+
+            children: [
+              {
+                index: true,
+                path: '',
+                loader: CalendarEventDetail.Loader,
+                Component: CalendarEventDetail.Component,
+              },
+              {
+                path: 'edit',
+                loader: CalendarEventDetail.Loader,
+                action: CalendarEventEdit.Action,
+                Component: CalendarEventEdit.Component,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'querylinks',
+        Component: Outlet,
+        action: QueryLinks.Action,
+        errorElement: React.createElement(ErrorBoundary),
+        children: [
+          { index: true, path: '', loader: QueryLinks.Loader, Component: QueryLinks.Component },
+          { path: 'create', Component: QueryLinkCreate.Component, action: QueryLinkCreate.Action },
+          {
+            path: ':id',
+            Component: Outlet,
+
+            children: [
+              {
+                index: true,
+                path: '',
+                loader: QueryLinkDetail.Loader,
+                Component: QueryLinkDetail.Component,
+              },
+              {
+                path: 'edit',
+                loader: QueryLinkDetail.Loader,
+                action: QueryLinkEdit.Action,
+                Component: QueryLinkEdit.Component,
+              },
+            ],
+          },
+        ],
+      },
       {
         path: 'querylinks',
         Component: Outlet,

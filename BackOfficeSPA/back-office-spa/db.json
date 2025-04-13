@@ -97,6 +97,53 @@
       "yTChannelId": "UC567891234"
     }
   ],
+  "calendarEvents": [
+    {
+      "id": "ce001",
+      "title": "FIFA Tournament",
+      "description": "Annual FIFA gaming tournament with prizes",
+      "date": "2025-05-15",
+      "category": "Gaming",
+      "matchId": "m001",
+      "calendarEventId": "FIFA Tournament"
+    },
+    {
+      "id": "ce002",
+      "title": "Cooking Masterclass",
+      "description": "Italian cuisine masterclass with Chef Mario",
+      "date": "2025-06-20",
+      "category": "Cooking",
+      "matchId": "m002",
+      "calendarEventId": "Cooking Masterclass"
+    },
+    {
+      "id": "ce003",
+      "title": "Web Development Workshop",
+      "description": "Learn React and TypeScript fundamentals",
+      "date": "2025-07-10",
+      "category": "Education",
+      "matchId": "",
+      "calendarEventId": "Web Development Workshop"
+    },
+    {
+      "id": "ce004",
+      "title": "Charity Stream",
+      "description": "24-hour charity livestream for children's hospital",
+      "date": "2025-08-01",
+      "category": "Charity",
+      "matchId": "m003",
+      "calendarEventId": "Charity Stream"
+    },
+    {
+      "id": "ce005",
+      "title": "Season Finale",
+      "description": "Final episode of our gaming series",
+      "date": "2025-09-15",
+      "category": "Gaming",
+      "matchId": "m004",
+      "calendarEventId": "Season Finale"
+    }
+  ],
   "matches": [
     {
       "id": "m001",

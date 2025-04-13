@@ -117,6 +117,7 @@ if (enableMock)
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
+    builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
@@ -153,6 +154,10 @@ else
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
+    builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+    builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
+
+    builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
     // services
     builder.Services.AddScoped<IDiscordService, DiscordService>();

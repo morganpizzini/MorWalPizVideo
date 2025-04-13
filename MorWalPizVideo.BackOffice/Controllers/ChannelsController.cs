@@ -1,8 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+public class AddChannelRequest
+{
+    [Required]
+    public string ChannelName { get; set; } = string.Empty;
+}
 
 public class ChannelsController : ApplicationController
 {
