@@ -132,7 +132,7 @@ public class ChatController : ApplicationController
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings1 = new AzureOpenAIPromptExecutionSettings()
         {
-            ResponseFormat = typeof(Review1),
+            ResponseFormat = typeof(Review),
         };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
@@ -141,7 +141,7 @@ public class ChatController : ApplicationController
         var resultString = result.ToString();
         Console.WriteLine(resultString);
 
-        var review1 = JsonSerializer.Deserialize<Review1>(resultString);
+        var review1 = JsonSerializer.Deserialize<Review>(resultString);
         return Ok(review1);
     }
 }
