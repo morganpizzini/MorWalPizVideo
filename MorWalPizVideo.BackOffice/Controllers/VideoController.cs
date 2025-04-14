@@ -63,11 +63,6 @@ public class ReviewDetails
     public string Name { get; set; } = string.Empty;
     [Required]
     [Description("Titolo del video in italiano")]
-    //[Description(@"Il nome del file rappresenta una linea guida generale sul contenuto del video. Crea un titolo accattivante e ottimizzato per il SEO in italiano, adatto alla pubblicazione su YouTube. Il titolo deve:
-    //                – Riflettere chiaramente l'argomento del video,
-    //                – Includere parole chiave rilevanti per il pubblico di riferimento,
-    //                – Incoraggiare il clic (essere coinvolgente ma non clickbait),
-    //                – Non superare i 100 caratteri.")]
     public string TitleItalian { get; set; } = string.Empty;
     [Required]
     [Description("Descrizione del video in italiano")]
@@ -103,36 +98,45 @@ public class ChatController : ApplicationController
     [HttpPost]
     public async Task<IActionResult> GetReviewDetails([FromBody] ReviewRequest reviewRequest)
     {
-        var fileNames = string.Join("\n", reviewRequest.Names);
+        var fileNames = string.Join("\n", reviewRequest.Names).OrderBy(x=>x).ToList();
 
-        var prompt = @$"Sei un esperto creatore di titoli per cortometraggi su YouTube sul mondo delle armi, del tiro dinamico, IPSC e IDPA.
-                    {reviewRequest.Context}
-                    La lista seguente è il nome dei file che sto caricando. 
-                    Il nome del file rappresenta una linea guida generale sul contenuto del video. 
-                    Crea un titolo e una descrizione accattivante e ottimizzato per il SEO in italiano, adatto alla pubblicazione su YouTube. 
+        if(reviewRequest.Context == null)
+        {
+            reviewRequest.Context = string.Empty;
+        }
+        else
+        {
+            reviewRequest.Context = "Nel dettaglio: " + reviewRequest.Context.Trim();
+        }
+
+        var prompt = @$"Sei un esperto di armi, del tiro dinamico, IPSC e IDPA.
+                        {reviewRequest.Context}
+                        Ti fornirò una lista, ogni elemento è una serie di parole chiavi. Il tuo compito è quello di
+                        elaborare una frase di senso compiuto esaustiva del concetto espresso da quelle parole chiavi.
+                        Ecco l'elenco dei nomi:
+                        {fileNames}
+                        Un volta ottenuto il risultato, e conoscendo le meccaniche di engagement di Youtube,
+                        il funzionamento del suo algoritmo e le regole SEO,elabora un titolo e una descrizione per ogni elemento seguendo anche le istruzioni seguenti. 
                     Il titolo deve:
                     – Riflettere chiaramente l'argomento del video
+                    – Non superare i 100 caratteri.
                     – Includere parole chiave rilevanti per il pubblico di riferimento
                     – Incoraggiare il clic (essere coinvolgente ma non clickbait)
-                    – Non superare i 120 caratteri.
-                    La descrizione deve essere ottimizzata per il SEO e deve:
+                    La descrizione deve:
                     – Spiegare chiaramente di cosa parla il video
                     – Includere parole chiave rilevanti per il pubblico e l'algoritmo di ricerca, evidenziarle utilizzando hashtag
                     – Includere se possibile un breve riassunto dei punti principali trattati
                     - Se alcune parole chiave non sono incluse nella descrizione, aggiungerle a fine della descrizione
                     – Avere una lunghezza compresa tra 200 e 800 caratteri.
                     Forniscimi anche la traduzione in inglese.
-                    Elabora le informazioni e dammi un risultato seguento il JSON schema fornito.
-                    Come regola generale, non tradurre: No Shoot, A Zone, Double Alpha, Charlie, Double Charlie.
-                    Questo è il dizionario per alcuni termini: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio.
-                    Ecco l'elenco dei nomi:
-                    {fileNames}
-                    ";
+                    Come regola generale per le traduzioni, non tradurre: No Shoot, A Zone, Double Alpha, Charlie, Double Charlie.
+                    Questo è il dizionario di traduzione per alcuni termini specifici: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio.
+                    Elabora le informazioni e dammi un risultato seguento il JSON schema fornito.";
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings1 = new AzureOpenAIPromptExecutionSettings()
         {
-            ResponseFormat = typeof(Review1),
+            ResponseFormat = typeof(Review),
         };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
@@ -141,7 +145,7 @@ public class ChatController : ApplicationController
         var resultString = result.ToString();
         Console.WriteLine(resultString);
 
-        var review1 = JsonSerializer.Deserialize<Review1>(resultString);
+        var review1 = JsonSerializer.Deserialize<Review>(resultString);
         return Ok(review1);
     }
 }
