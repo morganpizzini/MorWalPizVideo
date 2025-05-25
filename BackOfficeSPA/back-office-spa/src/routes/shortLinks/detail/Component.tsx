@@ -4,6 +4,7 @@ import { Button, Modal } from 'react-bootstrap';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
+import { LinkType } from '@models';
 
 const ShortLinkDetail: React.FC = () => {
   const entity = useLoaderData();
@@ -57,10 +58,12 @@ const ShortLinkDetail: React.FC = () => {
         title="Short Link Detail"
         editLink={`/shortlinks/${entity.shortLinkId}/edit`}
         deleteCallback={handleDelete}
-      />
-      <DetailPanel title="Dettagli dell'entità">
+      />      <DetailPanel title="Dettagli dell'entità">
         <p>
-          <strong>Video ID:</strong> {entity.videoId}
+          <strong>Link Type:</strong> {LinkType[entity.linkType]}
+        </p>
+        <p>
+          <strong>Target:</strong> {entity.target}
         </p>
         <p>
           <strong>Query String:</strong> {entity.queryString}
@@ -77,7 +80,10 @@ const ShortLinkDetail: React.FC = () => {
         <Modal.Body>
           <p>Are you sure you want to delete the following short link?</p>
           <p>
-            <strong>Video ID:</strong> {entity.videoId}
+            <strong>Link Type:</strong> {LinkType[entity.linkType]}
+          </p>
+          <p>
+            <strong>Target:</strong> {entity.target}
           </p>
           <p>
             <strong>Query String:</strong> {entity.queryString}

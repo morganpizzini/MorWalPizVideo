@@ -1,0 +1,83 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.VideoContextDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        mc:Ignorable="d"
+        Title="Contesto Video"
+        Height="450"
+        Width="600"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+  <Grid Margin="15">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Intestazione -->
+    <TextBlock Grid.Row="0"
+               Text="File selezionati"
+               FontWeight="Bold"
+               Margin="0,0,0,5"/>
+
+    <!-- Lista file selezionati -->
+    <ListBox Grid.Row="1"
+             x:Name="SelectedFilesListBox"
+             ItemsSource="{Binding SelectedFiles}"
+             Margin="0,0,0,10"/>
+
+    <!-- Intestazione textarea -->
+    <TextBlock Grid.Row="2"
+               Text="Contesto video"
+               FontWeight="Bold"
+               Margin="0,0,0,5"/>
+
+    <!-- Textarea per il contesto -->
+    <TextBox Grid.Row="3"
+             x:Name="VideoContextTextBox"
+             TextWrapping="Wrap"
+             AcceptsReturn="True"
+             Margin="0,0,0,10"
+             VerticalScrollBarVisibility="Auto"/>
+
+    <!-- Pulsanti di azione -->
+    <Grid Grid.Row="4">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Indicatore di caricamento -->
+      <StackPanel Grid.Column="0"
+                  Orientation="Horizontal"
+                  Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <TextBlock Text="Elaborazione in corso..."
+                   VerticalAlignment="Center"
+                   Margin="0,0,10,0"/>
+        <ProgressBar IsIndeterminate="True"
+                     Width="100"
+                     Height="15"
+                     VerticalAlignment="Center"/>
+      </StackPanel>
+
+      <Button Grid.Column="1"
+              Content="Annulla"
+              Padding="10,5"
+              Margin="0,0,10,0"
+              Click="CancelButton_Click"/>
+
+      <Button Grid.Column="2"
+              x:Name="ConfirmButton"
+              Content="Invia"
+              Padding="10,5"
+              Click="ConfirmButton_Click"
+              IsDefault="True"/>
+    </Grid>
+  </Grid>
+</Window>

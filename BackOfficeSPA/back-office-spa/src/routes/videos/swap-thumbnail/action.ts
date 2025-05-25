@@ -23,9 +23,8 @@ export default async function action({ request }: ActionFunctionArgs) {
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
-
-  // API request
-  return fetch(`${API_CONFIG.BASE_URL}/videos/swap-thumbnail`, {
+  // API request - updated for new Match structure using WithThumbnail method
+  return fetch(`${API_CONFIG.BASE_URL}/videos/SwapThumbnailId`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

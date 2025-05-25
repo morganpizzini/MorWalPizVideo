@@ -2,28 +2,61 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Forms;
-using System.Windows.Media;
+// Aggiungi using per AppDbContext e Disclaimer
+using MorWalPiz.VideoImporter.Data;
+using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Views;
+using MorWalPiz.VideoImporter.Services;
+using System.Windows.Input;
+using CheckBox = System.Windows.Controls.CheckBox;
+using MessageBox = System.Windows.MessageBox;
+using Cursors = System.Windows.Input.Cursors;
+
 
 namespace MorWalPiz.VideoImporter
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    /// </summary>    
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         public ObservableCollection<VideoFile> VideoFiles { get; set; } = new ObservableCollection<VideoFile>();
         private List<string> selectedFolders = new List<string>();
         private List<string> selectedFiles = new List<string>();
 
+        private DateTime _selectedPublishDate = DateTime.Today;
+
+        public DateTime SelectedPublishDate
+        {
+            get => _selectedPublishDate;
+            set
+            {
+                if (_selectedPublishDate != value)
+                {
+                    _selectedPublishDate = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         public MainWindow()
         {
             InitializeComponent();
             FileListView.ItemsSource = VideoFiles;
+            DataContext = this;
         }
 
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -35,14 +68,9 @@ namespace MorWalPiz.VideoImporter
                 if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     selectedFolders.Add(folderDialog.SelectedPath);
-                    UpdateFolderPathTextBox();
                 }
+                ProcessFiles();
             }
-        }
-
-        private void UpdateFolderPathTextBox()
-        {
-            FolderPathTextBox.Text = string.Join("; ", selectedFolders);
         }
 
         private void BrowseFilesButton_Click(object sender, RoutedEventArgs e)
@@ -60,27 +88,26 @@ namespace MorWalPiz.VideoImporter
                 {
                     selectedFiles.Add(file);
                 }
-                UpdateFilePathTextBox();
+                ProcessFiles();
             }
         }
 
-        private void UpdateFilePathTextBox()
-        {
-            FilePathTextBox.Text = $"{selectedFiles.Count} file selezionati";
-        }
 
-        private void ProcessButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessFiles()
         {
             VideoFiles.Clear();
 
             // Ottieni l'ora di pubblicazione predefinita dai settings
             TimeSpan defaultPublishTime;
-            using (var context = App.DatabaseService.GetContext())
+            string defaultLanguage;
+            using (var context = App.DatabaseService.CreateContext())
             {
                 var settings = context.Settings.FirstOrDefault();
                 defaultPublishTime = settings?.DefaultPublishTime ?? new TimeSpan(12, 0, 0); // Default 12:00 se non ci sono settings
+                defaultLanguage = context.Languages.FirstOrDefault(l => l.IsDefault)?.Code ?? "it";
             }
-
+            var tmpPubDate = DateTime.Today;
+            var orderIndex = 1;
             // Process selected individual files
             foreach (var filePath in selectedFiles)
             {
@@ -91,10 +118,13 @@ namespace MorWalPiz.VideoImporter
                         FileName = Path.GetFileName(filePath),
                         FilePath = filePath,
                         IsSelected = false,
-                        NeedTranslation = true,
-                        PublishDate = DateTime.Today,
-                        PublishTime = defaultPublishTime
+                        PublishDate = tmpPubDate,
+                        PublishTime = defaultPublishTime,
+                        OrderIndex = orderIndex,
+                        DefaultLanguage = defaultLanguage,
                     });
+                    tmpPubDate = tmpPubDate.AddDays(1);
+                    orderIndex++;
                 }
             }
 
@@ -111,10 +141,13 @@ namespace MorWalPiz.VideoImporter
                             FileName = Path.GetFileName(filePath),
                             FilePath = filePath,
                             IsSelected = false,
-                            NeedTranslation = true,
-                            PublishDate = DateTime.Today,
-                            PublishTime = defaultPublishTime
+                            PublishDate = tmpPubDate,
+                            PublishTime = defaultPublishTime,
+                            OrderIndex = orderIndex,
+                            DefaultLanguage = defaultLanguage
                         });
+                        tmpPubDate = tmpPubDate.AddDays(1);
+                        orderIndex++;
                     }
                 }
             }
@@ -204,20 +237,443 @@ namespace MorWalPiz.VideoImporter
                 FileListView.Items.Refresh();
             }
         }
+
+        private void ContextButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Verifica se ci sono file selezionati
+            var selectedItems = VideoFiles.Where(f => f.IsSelected).ToList();
+            if (selectedItems.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Nessun file selezionato!", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Estrai i nomi puliti dei file selezionati
+            var selectedFileNames = selectedItems.Select(f => !string.IsNullOrEmpty(f.EditedCleanFileName)
+                                                ? f.EditedCleanFileName
+                                                : f.CleanFileName).ToList();
+
+            // Apri la finestra di dialogo per il contesto video
+            var contextDialog = new Views.VideoContextDialog(selectedFileNames, App.ApiSettings.ApiEndpoint);
+            contextDialog.Owner = this;
+
+            // Mostra la finestra di dialogo
+            var result = contextDialog.ShowDialog();
+            if (result == true)
+            {
+                // Ottieni i risultati della traduzione
+                var translations = contextDialog.ProcessingResult;
+
+                // Aggiorna i file video con le traduzioni ricevute
+                foreach (var item in selectedItems)
+                {
+                    var current = translations.Videos.FirstOrDefault(t => t.Name == item.CleanFileName);
+                    if (current == null)
+                        continue;
+
+                    // defailt language
+
+                    item.Title = current.TitleItalian;
+                    item.Description = current.DescriptionItalian;
+
+                    var englishKey = 2;
+                    if (!item.Translations.TryGetValue(englishKey, out var value))
+                    {
+                        value = new TranslationItem();
+                        item.Translations.Add(englishKey, value);
+                    }
+
+                    value.Title = current.TitleEnglish;
+                    value.Description = current.DescriptionEnglish;
+
+                }
+
+                // Aggiorna la visualizzazione
+                FileListView.Items.Refresh();
+            }
+        }
+
+        private async void UploadToYouTubeButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Verifica se ci sono file selezionati
+            var selectedVideos = VideoFiles.Where(f => f.IsSelected).ToList();
+            if (selectedVideos.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Nessun file selezionato!", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Carica i disclaimer dal database
+            Dictionary<int, string> disclaimers;
+            int defaultLanguageId;
+            using (var context = App.DatabaseService.CreateContext())
+            {
+                disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
+                defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
+            }
+
+            // Prepara i video per l'upload, aggiungendo i disclaimer se necessario
+            foreach (var video in selectedVideos)
+            {
+                if (video.containsWeapon)
+                {
+                    // Aggiungi disclaimer alla descrizione principale (lingua predefinita)
+                    if (defaultLanguageId != 0 && disclaimers.TryGetValue(defaultLanguageId, out var defaultDisclaimer) && !string.IsNullOrEmpty(defaultDisclaimer))
+                    {
+                        video.Description = $"{video.Description}\n\n{defaultDisclaimer}".Trim();
+                    }
+
+                    // Aggiungi disclaimer alle traduzioni
+                    foreach (var langId in video.Translations.Keys.ToList()) // Usa ToList per evitare problemi di modifica durante l'iterazione
+                    {
+                        if (disclaimers.TryGetValue(langId, out var translatedDisclaimer) && !string.IsNullOrEmpty(translatedDisclaimer))
+                        {
+                            var translationItem = video.Translations[langId];
+                            translationItem.Description = $"{translationItem.Description}\n\n{translatedDisclaimer}".Trim();
+                        }
+                    }
+                }
+            }
+
+
+            var result = System.Windows.MessageBox.Show(
+                $"Sei sicuro di voler caricare {selectedVideos.Count} video su YouTube?\n\n" +
+                "Assicurati che tutti i video abbiano titolo e descrizione corretti.",
+                "Conferma Caricamento",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    // Mostra indicatore di caricamento in corso
+                    Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+
+                    // Esegui il caricamento in modo asincrono
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos);
+
+                    // Mostra un riepilogo dei risultati
+                    int successCount = uploadResults.Count(r => r.Success);
+                    int failCount = uploadResults.Count(r => !r.Success);
+
+                    var resultMessage = $"Caricamento completato.\n\n" +
+                        $"- Video caricati con successo: {successCount}\n" +
+                        $"- Video falliti: {failCount}";
+
+                    if (failCount > 0)
+                    {
+                        resultMessage += "\n\nDettagli errori:";
+                        foreach (var failedUpload in uploadResults.Where(r => !r.Success))
+                        {
+                            resultMessage += $"\n- {failedUpload.FileName}: {failedUpload.ErrorMessage}";
+                        }
+                    }
+
+                    System.Windows.MessageBox.Show(resultMessage, "Risultato Caricamento",
+                        MessageBoxButton.OK,
+                        failCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Errore durante il caricamento: {ex.Message}",
+                        "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    // Ripristina il cursore
+                    Mouse.OverrideCursor = null;
+                }
+            }
+            else
+            {
+                // Se l'utente annulla, ricarica i dati originali per rimuovere i disclaimer aggiunti temporaneamente
+                // (Questo potrebbe richiedere di ricaricare i dati o clonare gli oggetti prima della modifica)
+                // Per semplicità, qui potremmo semplicemente informare l'utente che le modifiche ai disclaimer non sono state salvate permanentemente.
+                // Oppure, si potrebbe clonare 'selectedVideos' prima di aggiungere i disclaimer e passare il clone al servizio di upload.
+                ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
+                MessageBox.Show("Caricamento annullato. Le descrizioni sono state ripristinate.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        /// <summary>
+        /// Gestisce la pulizia delle credenziali YouTube
+        /// </summary>
+        private void ClearYouTubeCredentials_Click(object sender, RoutedEventArgs e)
+        {
+            // Mostra un messaggio di conferma prima di procedere
+            var result = MessageBox.Show(
+                "Questa operazione eliminerà le credenziali YouTube memorizzate.\n" +
+                "Al prossimo utilizzo sarà necessario autenticarsi nuovamente.\n\n" +
+                "Vuoi continuare?",
+                "Conferma pulizia credenziali",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    bool success = App.YouTubeUploadService.ClearStoredCredentials();
+
+                    if (success)
+                    {
+                        MessageBox.Show(
+                            "Credenziali YouTube eliminate con successo.",
+                            "Operazione completata",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Si è verificato un errore durante la pulizia delle credenziali:\n{ex.Message}",
+                        "Errore",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
+            }
+        }
+
+        private void UpdateOrderIndexes()
+        {
+            // Aggiorna gli indici di ordinamento per tutti gli elementi nella lista
+            for (int i = 0; i < VideoFiles.Count; i++)
+            {
+                VideoFiles[i].OrderIndex = i + 1; // Indice 1-based per migliore leggibilità
+            }
+            // Aggiorna la visualizzazione
+            FileListView.Items.Refresh();
+        }
+
+        private void ApplyDateButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Ottieni la data selezionata nel DatePicker
+            if (PublishDatePicker.SelectedDate != null)
+            {
+                DateTime baseDate = PublishDatePicker.SelectedDate.Value;
+
+                // Applica la data a tutti gli elementi selezionati, incrementando di un giorno ogni volta
+                for (int i = 0; i < VideoFiles.Count; i++)
+                {
+                    VideoFiles[i].PublishDate = baseDate.AddDays(i);
+                }
+
+                // Aggiorna la visualizzazione
+                FileListView.Items.Refresh();
+
+                MessageBox.Show($"Data di pubblicazione aggiornata per {VideoFiles.Count} elementi.", "Operazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void MoveItemUpButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Ottiene l'elemento direttamente dal DataContext del bottone cliccato
+            if (sender is FrameworkElement element && element.DataContext is VideoFile itemToMove)
+            {
+                int currentIndex = VideoFiles.IndexOf(itemToMove);
+
+                // Verifica che non sia già il primo elemento
+                if (currentIndex > 0)
+                {
+                    // Sposta l'elemento in alto
+                    VideoFiles.Move(currentIndex, currentIndex - 1);
+
+                    // Aggiorna gli indici di ordinamento
+                    UpdateOrderIndexes();
+
+                    // Imposta la selezione sull'elemento spostato per facilitare operazioni multiple
+                    FileListView.SelectedItem = itemToMove;
+                    FileListView.ScrollIntoView(itemToMove);
+                }
+            }
+        }
+
+        private void MoveItemDownButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Ottiene l'elemento direttamente dal DataContext del bottone cliccato
+            if (sender is FrameworkElement element && element.DataContext is VideoFile itemToMove)
+            {
+                int currentIndex = VideoFiles.IndexOf(itemToMove);
+
+                // Verifica che non sia già l'ultimo elemento
+                if (currentIndex < VideoFiles.Count - 1)
+                {
+                    // Sposta l'elemento in basso
+                    VideoFiles.Move(currentIndex, currentIndex + 1);
+
+                    // Aggiorna gli indici di ordinamento
+                    UpdateOrderIndexes();
+
+                    // Imposta la selezione sull'elemento spostato per facilitare operazioni multiple
+                    FileListView.SelectedItem = itemToMove;
+                    FileListView.ScrollIntoView(itemToMove);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gestisce la validazione dell'input per garantire che siano inseriti solo numeri
+        /// </summary>
+        private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // Verifica che l'input sia numerico
+            if (!int.TryParse(e.Text, out _))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Controlla se l'input è per ora o minuti e valida il valore risultante
+            if (sender is System.Windows.Controls.TextBox textBox)
+            {
+                string currentText = textBox.Text;
+                string newText = currentText.Substring(0, textBox.SelectionStart) + e.Text + currentText.Substring(textBox.SelectionStart + textBox.SelectionLength);
+
+                if (int.TryParse(newText, out int value))
+                {
+                    // Validazione basata sul tipo di campo (ora o minuti)
+                    if (textBox.Tag?.ToString() == "Hour" && (value < 0 || value > 23))
+                    {
+                        e.Handled = true;
+                    }
+                    else if (textBox.Tag?.ToString() == "Minute" && (value < 0 || value > 59))
+                    {
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+
+        private void SelectAllCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            var isChecked = (sender as CheckBox)?.IsChecked ?? false;
+
+            foreach (var item in VideoFiles)
+            {
+                item.IsSelected = isChecked;
+            }
+            FileListView.Items.Refresh();
+
+        }
     }
 
-    public class VideoFile
+    // Classe per contenere i dati di traduzione con titolo e descrizione
+    public class TranslationItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+    public class VideoFile : INotifyPropertyChanged
     {
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
         public bool IsSelected { get; set; }
-        public bool NeedTranslation { get; set; } = true;
         public string EditedCleanFileName { get; set; } = string.Empty;
-        public DateTime PublishDate { get; set; } = DateTime.Today;
-        public TimeSpan PublishTime { get; set; } = TimeSpan.FromHours(0);
-        public Dictionary<int, string> TranslatedTitles { get; set; } = new Dictionary<int, string>();
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string DefaultLanguage { get; set; } = string.Empty;
 
-        // Clean filename property - replaces non-alphanumeric chars with spaces
+        private bool _containsWeapon;
+        public bool containsWeapon
+        {
+            get => _containsWeapon;
+            set
+            {
+                if (_containsWeapon != value)
+                {
+                    _containsWeapon = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private DateTime _publishDate = DateTime.Today;
+        public DateTime PublishDate
+        {
+            get => _publishDate;
+            set
+            {
+                if (_publishDate != value)
+                {
+                    _publishDate = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private TimeSpan _publishTime = TimeSpan.FromHours(0);
+        public TimeSpan PublishTime
+        {
+            get => _publishTime;
+            set
+            {
+                if (_publishTime != value)
+                {
+                    _publishTime = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(PublishTimeHour));
+                    OnPropertyChanged(nameof(PublishTimeMinute));
+                }
+            }
+        }
+
+        public string PublishTimeHour
+        {
+            get => PublishTime.Hours.ToString("00");
+            set
+            {
+                if (int.TryParse(value, out int hours) && hours >= 0 && hours <= 23)
+                {
+                    PublishTime = new TimeSpan(hours, PublishTime.Minutes, 0);
+                }
+            }
+        }
+
+        public string PublishTimeMinute
+        {
+            get => PublishTime.Minutes.ToString("00");
+            set
+            {
+                if (int.TryParse(value, out int minutes) && minutes >= 0 && minutes <= 59)
+                {
+                    PublishTime = new TimeSpan(PublishTime.Hours, minutes, 0);
+                }
+            }
+        }
+
+        public int OrderIndex { get; set; }
+        public Dictionary<int, TranslationItem> Translations { get; set; } = new Dictionary<int, TranslationItem>();
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // Mantenuto per retrocompatibilità
+        public Dictionary<int, string> TranslatedTitles
+        {
+            get
+            {
+                var result = new Dictionary<int, string>();
+                foreach (var kvp in Translations)
+                {
+                    result[kvp.Key] = kvp.Value.Title;
+                }
+                return result;
+            }
+        }
+
+        // Clean filename property - replaces non-alphanumeric chars with spaces and removes extension
         public string CleanFileName
         {
             get
@@ -225,7 +681,14 @@ namespace MorWalPiz.VideoImporter
                 if (string.IsNullOrEmpty(FileName))
                     return string.Empty;
 
-                return System.Text.RegularExpressions.Regex.Replace(FileName, @"[^a-zA-Z0-9]", " ");
+                if (!string.IsNullOrEmpty(EditedCleanFileName))
+                    return EditedCleanFileName;
+
+                // Rimuove l'estensione
+                string nameWithoutExtension = Path.GetFileNameWithoutExtension(FileName);
+
+                // Sostituisce caratteri non alfanumerici con spazi
+                return System.Text.RegularExpressions.Regex.Replace(nameWithoutExtension, @"[^a-zA-Z0-9]", " ").Trim();
             }
         }
     }

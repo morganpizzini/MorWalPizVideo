@@ -1,0 +1,32 @@
+﻿[
+  {
+    "key": "StreamUrl",
+    "value": "https://stream.morwalpiz.com/",
+    "type": "string",
+    "description": "Stream url"
+  },
+  {
+    "key": "StreamVideoPath",
+    "value": "embed/video/",
+    "type": "string",
+    "description": "Stream video path"
+  },
+  {
+    "key": "StreamChatPath",
+    "value": "chat/readwrite/",
+    "type": "string",
+    "description": "Stream chat path"
+  },
+  {
+    "key": "StreamEnable",
+    "value": true,
+    "type": "bool",
+    "description": "Stream enable"
+  },
+  {
+    "key": "StreamImagePlaceholder",
+    "value": "image.png",
+    "type": "string",
+    "description": "Stream Image Placeholder"
+  }
+]

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.FeatureManagement;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
@@ -29,7 +30,7 @@ builder.Services.AddOutputCache(options =>
         builder.Expire(TimeSpan.FromMinutes(10)));
 });
 
-if(enableSwagger)
+if (enableSwagger)
     builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<DataService>();
@@ -47,11 +48,16 @@ if (enableMock)
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
+    builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
+    builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
+    builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>();
+
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
 else
 {
+    BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
     builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
     builder.Services.AddScoped<IMatchRepository, MatchRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -63,7 +69,10 @@ else
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+    builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
+    builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
+    builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(
@@ -137,19 +146,21 @@ if (enableSwagger)
     app.MapOpenApi();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "MorWalPiz API"));
 }
-if(!app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 
-if(enableOutputCache)
+if (enableOutputCache)
     app.UseOutputCache();
 
 app.MapControllers();
 
+
 app.MapFallbackToFile("/index.html");
+
 
 app.Run();
 

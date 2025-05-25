@@ -20,8 +20,11 @@ import accessoryLoader from "./routes/accessories.loader";
 import sponsorsLoader from "./routes/sponsors.loader";
 import sponsorsAction from "./routes/sponsors.action";
 import calendarLoader from "./routes/calendar.loader";
+import streamLoader from "./routes/stream.loader";
 import indexLoader from "./routes/index.loader";
 import CookiePolicy from "./routes/cookie-policy";
+import Bluetooth from "./routes/bluetooth";
+import Stream from "./routes/stream";
 import {
     createBrowserRouter,
 } from "react-router";
@@ -63,6 +66,11 @@ const router = createBrowserRouter([
                 element: <Pages />,
             },
             {
+                path: "bluetooth",
+                    
+                element: <Bluetooth />,
+            },
+            {
                 path: "attrezzatura",
                 loader: accessoryLoader,
                 element: <Accessories />,
@@ -76,11 +84,11 @@ const router = createBrowserRouter([
             {
                 path: "sponsors-video",
                 element: <SponsorVideo />,
-                },
-                {
-                    path: "links",
-                    element: <Links />,
-                },
+            },
+            {
+                path: "links",
+                element: <Links />,
+            },
             {
                 path: "calendar",
                 loader: calendarLoader,
@@ -89,6 +97,11 @@ const router = createBrowserRouter([
             {
                 path: "cookie-policy",
                 element: <CookiePolicy />,
+            },
+            {
+                path: "stream",
+                loader: streamLoader,
+                element: <Stream />,
             }]
         }],
     }
@@ -98,14 +111,14 @@ const router = createBrowserRouter([
 const updateSW = registerSW({
     onNeedRefresh() {
         const userConsent = window.confirm(
-            "Una nuova versione è disponibile. Vuoi aggiornare l'applicazione?"
+            "Una nuova versione ï¿½ disponibile. Vuoi aggiornare l'applicazione?"
         );
         if (userConsent) {
             updateSW();
         }
     },
     onOfflineReady() {
-        //alert("L'app è pronta per funzionare offline.");
+        //alert("L'app ï¿½ pronta per funzionare offline.");
     },
 });
 

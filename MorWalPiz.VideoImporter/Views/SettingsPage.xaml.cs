@@ -26,7 +26,7 @@ namespace MorWalPiz.VideoImporter.Views
 
         private void LoadSettings()
         {
-            using (var context = _databaseService.GetContext())
+            using (var context = _databaseService.CreateContext())
             {
                 _currentSettings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
@@ -36,6 +36,9 @@ namespace MorWalPiz.VideoImporter.Views
                 // Popola i campi per l'ora
                 HourTextBox.Text = _currentSettings.DefaultPublishTime.Hours.ToString("00");
                 MinuteTextBox.Text = _currentSettings.DefaultPublishTime.Minutes.ToString("00");
+
+                // Popola il campo API Endpoint
+                ApiEndpointTextBox.Text = _currentSettings.ApiEndpoint;
             }
         }
 
@@ -56,13 +59,22 @@ namespace MorWalPiz.VideoImporter.Views
                     return;
                 }
 
+                // Validazione dell'endpoint API
+                if (string.IsNullOrWhiteSpace(ApiEndpointTextBox.Text))
+                {
+                    System.Windows.MessageBox.Show("L'endpoint API non può essere vuoto.", "Errore di validazione", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var apiEndpoint = ApiEndpointTextBox.Text.Trim();
                 // Salvataggio delle impostazioni
-                using (var context = _databaseService.GetContext())
+                using (var context = _databaseService.CreateContext())
                 {
                     var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
                     settings.DefaultHashtags = HashtagsTextBox.Text.Trim();
                     settings.DefaultPublishTime = new TimeSpan(hour, minute, 0);
+                    settings.ApiEndpoint = apiEndpoint;
 
                     if (settings.Id == 0)
                     {
@@ -75,6 +87,9 @@ namespace MorWalPiz.VideoImporter.Views
 
                     context.SaveChanges();
                 }
+
+                //refresh app settings
+                App.ApiSettings.ApiEndpoint = apiEndpoint;
 
                 System.Windows.MessageBox.Show("Impostazioni salvate con successo!", "Informazione", MessageBoxButton.OK, MessageBoxImage.Information);
                 DialogResult = true;

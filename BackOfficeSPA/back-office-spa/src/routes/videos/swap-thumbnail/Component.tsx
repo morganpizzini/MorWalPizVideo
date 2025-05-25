@@ -58,10 +58,9 @@ const SwapThumbnail: React.FC = () => {
             ID Video esistente <span className="text-danger">*</span>
           </Form.Label>
           <Form.Select value={currentVideoId} onChange={e => setCurrentVideoId(e.target.value)}>
-            <option value="">Select a video</option>
-            {videos.map(video => (
+            <option value="">Select a video</option>            {videos.map(video => (
               <option key={video.id} value={video.id}>
-                {video.title}
+                {video.title || video.id || video.thumbnailVideoId}
               </option>
             ))}
           </Form.Select>

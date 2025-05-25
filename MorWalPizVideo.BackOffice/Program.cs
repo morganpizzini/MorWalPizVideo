@@ -3,7 +3,7 @@ using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.Domain;
+using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Models.Configuration;
 using Hangfire.MemoryStorage;
 using System.Net.Http.Headers;
@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel;
+using MongoDB.Bson.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
@@ -29,6 +30,21 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 
 builder.AddServiceDefaults();
+
+// Enable CORS for all in development
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    });
+}
+
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
 
@@ -118,20 +134,25 @@ if (enableMock)
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
+    builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
+    builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
-    
-    builder.Services.AddScoped<ITranslatorService>((c) => { 
+
+    builder.Services.AddScoped<ITranslatorService>((c) =>
+    {
         return new AzureOpenAITranslatorService("<translator-key>",
-            "<translator-endpoint>"); });
+            "<translator-endpoint>");
+    });
 
 }
 else
 {
+    BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
     var dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
     if (dbConfig == null)
@@ -156,6 +177,8 @@ else
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
+    builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
+    builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
@@ -215,6 +238,12 @@ if (enableHangFire)
         "0 18 * * 0"              // Cron expression: Sunday at 18:00
     );
 }
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors();
+}
+
 
 app.MapDefaultEndpoints();
 

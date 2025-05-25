@@ -5,15 +5,19 @@ import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
+import { LinkType } from '@models';
+import { fetchMatches, Match } from '@/services/matchesService';
 
 const CreateShortLink: React.FC = () => {
-  const [videoId, setVideoId] = useState('');
+  const [target, setTarget] = useState('');
   const [queryString, setQueryString] = useState('');
   const [message, setMessage] = useState('');
+  const [linkType, setLinkType] = useState<LinkType>(LinkType.YouTubeVideo);
   const [showModal, setShowModal] = useState(false);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
-
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
@@ -22,6 +26,20 @@ const CreateShortLink: React.FC = () => {
     (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
+
+  // Load matches when component mounts or when linkType changes to YouTubeVideo
+  useEffect(() => {
+    if (linkType === LinkType.YouTubeVideo) {
+      setLoading(true);
+      fetchMatches()
+        .then(data => {
+          setMatches(data);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [linkType]);
 
   useEffect(() => {
     if (!result) return;
@@ -32,8 +50,7 @@ const CreateShortLink: React.FC = () => {
       navigate('..');
     }
   }, [result, navigate, toast]);
-
-  const isDisabled = () => videoId.length === 0 || busy;
+  const isDisabled = () => target.length === 0 || busy;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -43,7 +60,8 @@ const CreateShortLink: React.FC = () => {
   const confirmCreate = () => {
     fetcher.submit(
       {
-        videoId,
+        target,
+        linkType,
         queryString,
         message,
       },
@@ -53,44 +71,129 @@ const CreateShortLink: React.FC = () => {
       }
     );
   };
+  
+  // Get label text based on link type
+  const getTargetFieldLabel = () => {
+    switch (linkType) {
+      case LinkType.YouTubeVideo:
+        return 'YouTube Video ID';
+      case LinkType.YouTubeChannel:
+        return 'YouTube Channel Handle (e.g. @channelname)';
+      case LinkType.YouTubePlaylist:
+        return 'YouTube Playlist ID';
+      case LinkType.Instagram:
+        return 'Instagram Post ID or Username';
+      case LinkType.Facebook:
+        return 'Facebook Post ID or Username';
+      case LinkType.CustomUrl:
+        return 'Custom URL';
+      default:
+        return 'Target';
+    }
+  };
 
   return (
     <>
       <PageHeader title="Create Short Link" />
-      <GenericErrorList errors={errors?.generics} />
-      <Form onSubmit={handleSubmit}>
-        <Form.Group controlId="formVideoId">
+      <GenericErrorList errors={errors?.generics} />      <Form onSubmit={handleSubmit}>
+        <Form.Group controlId="formLinkType" className="mb-3">
           <Form.Label>
-            Video ID <span className="text-danger">*</span>
+            Link Type <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Control type="text" value={videoId} onChange={e => setVideoId(e.target.value)} />
-          <FieldError error={errors?.videoId} />
+          <Form.Select 
+            value={linkType} 
+            onChange={e => setLinkType(parseInt(e.target.value))}
+          >
+            <option value={LinkType.YouTubeVideo}>YouTube Video</option>
+            <option value={LinkType.YouTubeChannel}>YouTube Channel</option>
+            <option value={LinkType.YouTubePlaylist}>YouTube Playlist</option>
+            <option value={LinkType.Instagram}>Instagram</option>
+            <option value={LinkType.Facebook}>Facebook</option>
+            <option value={LinkType.CustomUrl}>Custom URL</option>
+          </Form.Select>
         </Form.Group>
-        <Form.Group controlId="formQueryString">
+          <Form.Group controlId="formTarget" className="mb-3">
+          <Form.Label>
+            {getTargetFieldLabel()} <span className="text-danger">*</span>
+          </Form.Label>
+          
+          {linkType === LinkType.YouTubeVideo && matches.length > 0 ? (
+            <>
+              <Form.Select 
+                value={target} 
+                onChange={e => setTarget(e.target.value)}
+                disabled={loading}
+              >
+                <option value="">Select a video</option>
+                {matches.map(match => (
+                  <React.Fragment key={match.matchId}>
+                    {/* If it's a direct video link */}
+                    {match.isLink && (
+                      <option value={match.thumbnailUrl}>
+                        {match.title || match.thumbnailUrl}
+                      </option>
+                    )}
+                    {/* If it's a collection with multiple videos */}
+                    {!match.isLink && match.videos?.map(video => (
+                      <option key={video.youtubeId} value={video.youtubeId}>
+                        {video.title || video.youtubeId}
+                      </option>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </Form.Select>
+              {loading && <div className="text-muted mt-1">Loading videos...</div>}
+            </>
+          ) : (
+            <Form.Control type="text" value={target} onChange={e => setTarget(e.target.value)} />
+          )}
+          
+          <FieldError error={errors?.target} />
+          <Form.Text className="text-muted">
+            {linkType === LinkType.CustomUrl && "Enter the full URL including http:// or https://"}
+            {linkType === LinkType.YouTubeVideo && !matches.length && "Loading available videos..."}
+          </Form.Text>
+        </Form.Group>
+        
+        <Form.Group controlId="formQueryString" className="mb-3">
           <Form.Label>Query String</Form.Label>
           <Form.Control
             type="text"
             value={queryString}
             onChange={e => setQueryString(e.target.value)}
           />
+          <Form.Text className="text-muted">
+            Additional parameters to append to the URL (without the ? or & prefix)
+          </Form.Text>
         </Form.Group>
-        <Form.Group controlId="formMessage">
+        
+        <Form.Group controlId="formMessage" className="mb-3">
           <Form.Label>Message</Form.Label>
-          <Form.Control type="text" value={message} onChange={e => setMessage(e.target.value)} />
+          <Form.Control 
+            as="textarea" 
+            rows={3} 
+            value={message} 
+            onChange={e => setMessage(e.target.value)} 
+          />
+          <Form.Text className="text-muted">
+            Optional message to be sent with the link when shared
+          </Form.Text>
         </Form.Group>
+        
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Create
         </Button>
-      </Form>
-
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      </Form>      <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Create</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <p>Are you sure you want to create the following short link?</p>
           <p>
-            <strong>Video ID:</strong> {videoId}
+            <strong>Link Type:</strong> {LinkType[linkType]}
+          </p>
+          <p>
+            <strong>Target:</strong> {target}
           </p>
           {queryString && (
             <p>

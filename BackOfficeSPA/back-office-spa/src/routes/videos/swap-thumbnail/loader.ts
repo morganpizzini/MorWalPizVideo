@@ -5,8 +5,12 @@ import { API_CONFIG } from '@config/api';
  */
 export interface Video {
   id: string;
+  matchId: string;
   title: string;
   description?: string;
+  thumbnailVideoId: string;
+  isLink: boolean; // For backward compatibility
+  matchType?: number; // MatchType enum value
 }
 
 /**

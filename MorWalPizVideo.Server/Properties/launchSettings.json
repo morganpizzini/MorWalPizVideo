@@ -10,6 +10,16 @@
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:53089;http://localhost:53090"
+    },
+    "aspire": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:53089;http://localhost:53090"
     }
   }
 }

@@ -40,12 +40,11 @@ const ConvertToRoot: React.FC = () => {
       setCategories([]);
     }
   }, [result, toast]);
-
   // Find the selected video and populate title and other fields when a video is selected
   useEffect(() => {
     if (!videoId) return;
 
-    const selectedVideo = videos.find(video => video.id === videoId);
+    const selectedVideo = videos.find(video => video.id === videoId || video.thumbnailVideoId === videoId);
     if (selectedVideo) {
       setTitle(selectedVideo.title || '');
       if (selectedVideo.description) {
@@ -93,10 +92,9 @@ const ConvertToRoot: React.FC = () => {
             Video <span className="text-danger">*</span>
           </Form.Label>
           <Form.Select value={videoId} onChange={e => setVideoId(e.target.value)}>
-            <option value="">Select a video</option>
-            {videos.map(video => (
-              <option key={video.id} value={video.id}>
-                {video.title}
+            <option value="">Select a video</option>            {videos.map(video => (
+              <option key={video.id} value={video.isLink ? video.thumbnailVideoId : video.id}>
+                {video.title || video.id}
               </option>
             ))}
           </Form.Select>

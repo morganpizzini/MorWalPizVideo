@@ -1,0 +1,36 @@
+.jumbotron-container {
+  position: relative;
+  /* Mantiene il posizionamento relativo */
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Centra il contenuto */
+  margin-bottom: 1rem;
+  overflow: hidden;
+  /* Nasconde parti dello pseudo-elemento che potrebbero eccedere */
+}
+
+.jumbotron-container::before {
+  content: '';
+  /* Necessario per visualizzare lo pseudo-elemento */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Applica l'immagine di sfondo usando la variabile CSS */
+  background-image: var(--jumbotron-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.5;
+  /* Imposta l'opacità desiderata */
+  z-index: 0;
+  /* Posiziona lo pseudo-elemento dietro il contenuto */
+}
+
+.jumbotron-content {
+  position: relative;
+  z-index: 1;
+}

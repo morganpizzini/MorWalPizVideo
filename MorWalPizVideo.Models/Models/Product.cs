@@ -1,9 +1,12 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson.Serialization;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Serializers;
 using System.Runtime.Serialization;
+using System.Text.Json;
 
 namespace MorWalPizVideo.Server.Models
-{
-    [BsonIgnoreExtraElements]
+{    [BsonIgnoreExtraElements]
     [DataContract]
     public record Product(
         [property: DataMember][property: BsonElement("title")] string Title,
@@ -14,5 +17,4 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("productId")]
         public string ProductId => Title;
-    }
-}
+    }}

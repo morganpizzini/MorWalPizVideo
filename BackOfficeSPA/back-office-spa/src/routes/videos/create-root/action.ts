@@ -41,12 +41,20 @@ export default async function action({ request }: ActionFunctionArgs) {
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
-
-  // API request
+  // Prepare request with single category
+  const category = values.categories.length > 0 ? values.categories[0] : '';
+  
+  // API request - updated for new Match structure using CreateCollection
   return fetch(`${API_CONFIG.BASE_URL}/videos/RootCreation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
+    body: JSON.stringify({
+      videoId: values.videoId,
+      title: values.title,
+      description: values.description,
+      url: values.url,
+      category: category
+    }),
   })
     .then(async response => {
       if (!response.ok) {

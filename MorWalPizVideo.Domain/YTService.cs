@@ -1,5 +1,4 @@
-﻿
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
@@ -20,10 +19,11 @@ namespace MorWalPizVideo.Server.Services
     {
         Task TranslateYoutubeVideo(IList<string> videoIds);
         Task<IList<Video>> FetchFromYoutube(IList<string> videoIds);
-        Task<string> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true);
+        Task<ChannelCommentsResult> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true);
+        Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null);
         Task<string> GetChannelId(string channelName);
+        Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true);
     }
-
     public class YTServiceMock : IYTService
     {
         public void Dispose()
@@ -31,8 +31,13 @@ namespace MorWalPizVideo.Server.Services
         }
         public Task TranslateYoutubeVideo(IList<string> videoIds) => Task.CompletedTask;
         public Task<IList<Video>> FetchFromYoutube(IList<string> videoIds) => Task.FromResult<IList<Video>>(new List<Video>());
-        public Task<string> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo= true) => Task.FromResult("");
+        public Task<ChannelCommentsResult> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true)
+            => Task.FromResult(new ChannelCommentsResult());
+        public Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null)
+            => Task.FromResult(new CommentThreadListResponse());
         public Task<string> GetChannelId(string channelName) => Task.FromResult(string.Empty);
+        public Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true)
+            => Task.FromResult<IList<SearchResult>>(new List<SearchResult>());
     }
 
     public class YTService : IYTService
@@ -40,11 +45,11 @@ namespace MorWalPizVideo.Server.Services
         private readonly HttpClient _client;
         private readonly YouTubeService _youtubeService;
         private readonly YouTubeService _youtubeAuthService;
-        private readonly ITranslatorService _translatorService;
+        //private readonly ITranslatorService _translatorService;
         private readonly string _apiKey;
-        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ITranslatorService translatorService)
+        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory)//, ITranslatorService translatorService)
         {
-            _translatorService = translatorService;
+            //_translatorService = translatorService;
             _apiKey = configuration["YTApiKey"] ?? string.Empty;
             _client = httpClientFactory.CreateClient(HttpClientNames.YouTube);
             //_youtubeService = new YouTubeService(new BaseClientService.Initializer
@@ -65,13 +70,13 @@ namespace MorWalPizVideo.Server.Services
             //    CancellationToken.None
             //).Result;
 
-            _youtubeAuthService =  new YouTubeService(new BaseClientService.Initializer
+            _youtubeAuthService = new YouTubeService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = credential,
                 ApplicationName = "MorWalPizVideo"
             });
         }
-        private async Task<IList<Google.Apis.YouTube.v3.Data.Video>> GetYouTubeVideo(IList<string> videoIds,string parameters = "snippet,contentDetails")
+        private async Task<IList<Google.Apis.YouTube.v3.Data.Video>> GetYouTubeVideo(IList<string> videoIds, string parameters = "snippet,contentDetails")
         {
             var request = _youtubeAuthService.Videos.List(parameters);
             request.Id = string.Join(",", videoIds);
@@ -88,19 +93,18 @@ namespace MorWalPizVideo.Server.Services
             foreach (var video in videos.Where(video =>
                                             XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120))
             {
-                if(video.Localizations != null && video.Localizations.ContainsKey(targetLanguage))
+                if (video.Localizations != null && video.Localizations.ContainsKey(targetLanguage))
                 {
                     continue;
                 }
                 var localizedLang = video.Localizations?[sourceLanguage];
-                if(localizedLang == null)
+                if (localizedLang == null)
                 {
                     throw new Exception($"lang {sourceLanguage} not found for video {video.Id} [{video.Snippet.Title}]");
                 }
                 var stringToTranslate = $"{localizedLang.Title} | {localizedLang.Description}";
                 // Traduci titolo e descrizione
-                string[] translatedStrings = (await _translatorService.TranslateTextWithHashtags(stringToTranslate))
-                                            .Split(" | ");
+                string[] translatedStrings = []; //(await _translatorService.TranslateTextWithHashtags(stringToTranslate)).Split(" | ");
                 // Aggiungi la traduzione
                 AddTranslationToVideo(video, translatedStrings[0], translatedStrings[1], targetLanguage);
             }
@@ -126,7 +130,7 @@ namespace MorWalPizVideo.Server.Services
             {
                 updateRequest.Execute();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new Exception("Errore durante l'aggiornamento del video.", ex);
             }
@@ -163,8 +167,7 @@ namespace MorWalPizVideo.Server.Services
 
             return youtubeResponse.Items.Select(ContractUtils.Convert).ToList();
         }
-
-        private async Task<IList<SearchResult>> FetchVideos(string channelId,int count)
+        private async Task<IList<SearchResult>> FetchVideos(string channelId, int count)
         {
             var searchRequest = _youtubeAuthService.Search.List("snippet");
             searchRequest.ChannelId = channelId;
@@ -175,50 +178,91 @@ namespace MorWalPizVideo.Server.Services
             var searchResponse = await searchRequest.ExecuteAsync();
             return searchResponse.Items;
         }
-        public async Task<string> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true)
+
+        public async Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true)
         {
             // Recupera gli ultimi video del canale
-            
-            var videos= await FetchVideos(channelId,100);
-
+            var videos = await FetchVideos(channelId, 100);
             var videoIds = videos.Select(item => item.Id.VideoId).ToList();
-
             var items = await GetYouTubeVideo(videoIds, "contentDetails");
-            
+
             // Filtra i video normali e gli shorts
             var resultVideoIds = items.Where(video =>
                 showVideo ?
                     XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds >= 120 :
                     XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120)
-                .Take(videoCount)
+                .Take(count)
                 .Select(x => x.Id)
                 .ToList();
 
-            var commentsBuilder = new StringBuilder();
-            foreach (var searchResult in videos.Where(x =>
-                                            x.Id.Kind == "youtube#video" && resultVideoIds.Contains(x.Id.VideoId)))
+            return videos.Where(x => x.Id.Kind == "youtube#video" && resultVideoIds.Contains(x.Id.VideoId)).ToList();
+        }
+
+        public async Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null)
+        {
+            var commentRequest = _youtubeAuthService.CommentThreads.List("snippet");
+            commentRequest.VideoId = videoId;
+            commentRequest.MaxResults = commentCount;
+
+            if (!string.IsNullOrEmpty(pageToken))
+            {
+                commentRequest.PageToken = pageToken;
+            }
+
+            return await commentRequest.ExecuteAsync();
+        }
+
+        public async Task<ChannelCommentsResult> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true)
+        {
+            var result = new ChannelCommentsResult();
+
+            // Recupera gli ultimi video del canale
+            var videos = await FetchVideos(channelId, videoCount, showVideo);
+
+            foreach (var searchResult in videos)
             {
                 string videoId = searchResult.Id.VideoId;
-                commentsBuilder.AppendLine($"Video: {searchResult.Snippet.Title} (ID: {videoId})");
-                commentsBuilder.AppendLine("Comments:");
+                string videoTitle = searchResult.Snippet.Title;
 
-                // Recupera i commenti del video
-                var commentRequest = _youtubeAuthService.CommentThreads.List("snippet");
-                commentRequest.VideoId = videoId;
-                commentRequest.MaxResults = commentCount;
-
-                var commentResponse = await commentRequest.ExecuteAsync();
-                foreach (var comment in commentResponse.Items)
+                var videoWithComments = new VideoWithComments
                 {
-                    var topLevelComment = comment.Snippet.TopLevelComment;
-                    var author = topLevelComment.Snippet.AuthorDisplayName;
-                    var text = topLevelComment.Snippet.TextDisplay;
+                    VideoId = videoId,
+                    Title = videoTitle,
+                    Comments = new List<CommentInfo>()
+                };
 
-                    commentsBuilder.AppendLine($"- {author}: {text.ParseHTMLString()}");
+                // Recupera tutti i commenti del video paginando
+                string? pageToken = null;
+                bool hasMoreComments = true;
+
+                while (hasMoreComments)
+                {
+                    var commentResponse = await GetVideoComments(videoId, commentCount, pageToken);
+
+                    foreach (var comment in commentResponse.Items)
+                    {
+                        var topLevelComment = comment.Snippet.TopLevelComment;
+                        var author = topLevelComment.Snippet.AuthorDisplayName;
+                        var text = topLevelComment.Snippet.TextDisplay;
+                        var publishedAt = topLevelComment.Snippet.PublishedAt.GetValueOrDefault();
+
+                        videoWithComments.Comments.Add(new CommentInfo
+                        {
+                            Author = author,
+                            Text = text.ParseHTMLString(),
+                            PublishedAt = publishedAt
+                        });
+                    }
+
+                    // Controlla se ci sono altri commenti da recuperare
+                    pageToken = commentResponse.NextPageToken;
+                    hasMoreComments = !string.IsNullOrEmpty(pageToken);
                 }
-                commentsBuilder.AppendLine();
+
+                result.Videos.Add(videoWithComments);
             }
-            return commentsBuilder.ToString();
+
+            return result;
         }
 
         public async Task<string> GetChannelId(string channelName)

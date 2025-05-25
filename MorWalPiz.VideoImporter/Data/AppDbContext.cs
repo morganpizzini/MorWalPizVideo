@@ -45,7 +45,7 @@ namespace MorWalPiz.VideoImporter.Data
 
       // Configurazione per Settings
       modelBuilder.Entity<Settings>().HasData(
-          new Settings { Id = 1, DefaultHashtags = "#video #hashtag", DefaultPublishTime = new System.TimeSpan(12, 0, 0) }
+          new Settings { Id = 1, DefaultHashtags = "#video #hashtag", ApiEndpoint = "https://localhost:7221" , DefaultPublishTime = new System.TimeSpan(12, 0, 0) }
       );
     }
   }

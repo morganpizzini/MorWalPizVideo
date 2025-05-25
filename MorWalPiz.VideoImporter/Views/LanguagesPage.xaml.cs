@@ -18,7 +18,7 @@ namespace MorWalPiz.VideoImporter.Views
     public LanguagesPage()
     {
       InitializeComponent();
-      _context = App.DatabaseService.GetContext();
+      _context = App.DatabaseService.CreateContext();
       LoadLanguages();
     }
 

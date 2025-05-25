@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher } from 'react-router';
-import { ShortLink } from '@models';
+import { ShortLink, LinkType } from '@models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
@@ -51,14 +51,20 @@ const ShortLinks: React.FC = () => {
       }
     );
   };
-
   // Definizione delle colonne
   const columns = useMemo<ColumnDef<ShortLink>[]>(
     () => [
       {
-        accessorKey: 'videoId',
-        header: 'Video ID',
+        accessorKey: 'target',
+        header: 'Target',
         cell: info => info.getValue(),
+      },      {
+        accessorKey: 'linkType',
+        header: 'Type',
+        cell: info => {
+          const linkTypeValue = info.getValue() as number;
+          return LinkType[linkTypeValue];
+        },
       },
       {
         accessorKey: 'queryString',
@@ -110,11 +116,13 @@ const ShortLinks: React.FC = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Delete</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
+        </Modal.Header>        <Modal.Body>
           <p>Are you sure you want to delete the following short link?</p>
           <p>
-            <strong>Video ID:</strong> {selectedLink?.videoId}
+            <strong>Link Type:</strong> {selectedLink ? LinkType[selectedLink.linkType] : ''}
+          </p>
+          <p>
+            <strong>Target:</strong> {selectedLink?.target}
           </p>
           <p>
             <strong>Query String:</strong> {selectedLink?.queryString}

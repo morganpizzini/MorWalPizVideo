@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MatchType = MorWalPizVideo.Server.Models.MatchType;
 
 namespace MorWalPizVideo.Server.Controllers
 {
@@ -21,12 +22,10 @@ namespace MorWalPizVideo.Server.Controllers
             return Ok(await cache.GetOrCreateAsync(CacheKeys.BioLinks, async () => {
                 var elements = (await dataService.GetCalendarEvents()).OrderBy(x => x.Date).ToList();
 
-                var matches = await FetchMatches();
-
-                return elements.Select(entity =>
+                var matches = await FetchMatches();                return elements.Select(entity =>
                 {
                     var match = matches.FirstOrDefault(x => x.MatchId == entity.MatchId);
-                    return match == null ? entity : entity with { MatchUrl = match.IsLink ? match.ThumbnailUrl : match.Url };
+                    return match == null ? entity : entity with { MatchUrl = match.MatchType == MatchType.SingleVideo ? match.ThumbnailVideoId : match.Url };
                 }).Where(x => !string.IsNullOrEmpty(x.MatchUrl)).ToList();
             }));
         }

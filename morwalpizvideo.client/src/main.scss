@@ -1,6 +1,7 @@
 @import "~bootstrap/scss/bootstrap.scss";
 
-html, body {
+html,
+body {
     min-height: 100vh;
     margin: 0;
     padding: 0;
@@ -8,7 +9,7 @@ html, body {
 }
 
 body {
-    font-family: 'Roboto',Arial, sans-serif;
+    font-family: 'Roboto', Arial, sans-serif;
     background-image: url('/images/logo-800.jpg');
     background-size: cover;
     background-position: center;
@@ -22,8 +23,10 @@ body::before {
     top: 0;
     left: 0;
     width: 100%;
-    min-height: 100%; /* Minimum height to fill the viewport */
-    height: auto; /* Allows it to expand with content */
+    min-height: 100%;
+    /* Minimum height to fill the viewport */
+    height: auto;
+    /* Allows it to expand with content */
     background-color: rgba(255, 255, 255, 0.7);
     z-index: 1;
 }
@@ -31,14 +34,16 @@ body::before {
 #root {
     height: 100%;
     position: relative;
-    z-index: 2; /* Metti il contenuto sopra l'overlay */
+    z-index: 2;
+    /* Metti il contenuto sopra l'overlay */
 }
 
 .grecaptcha-badge {
     visibility: hidden;
 }
 
-.btn, .pop-up {
+.btn,
+.pop-up {
     transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
 
     &:hover {
@@ -46,26 +51,30 @@ body::before {
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
     }
 }
+
 #root {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     min-height: 100vh;
 }
-.lh-1{
-    line-height:1
+
+.lh-1 {
+    line-height: 1
 }
-.fs-08{
+
+.fs-08 {
     font-size: 0.8em;
 }
 
-.fs-125{
+.fs-125 {
     font-size: 1.25rem;
 }
 
 .fa-1_5x {
     font-size: 1.5em
 }
+
 .fa-1_8x {
     font-size: 1.8em
 }

@@ -18,13 +18,14 @@
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <!-- Hashtags -->
     <Label Grid.Row="0"
-        Content="Hashtag predefiniti:"
-        FontWeight="Bold"
-        Margin="0,0,0,5"/>
+           Content="Hashtag predefiniti:"
+           FontWeight="Bold"
+           Margin="0,0,0,5"/>
     <TextBlock Grid.Row="1"
                Text="Inserisci gli hashtag separati da spazi (esempio: #video #social)"
                Margin="0,0,0,5"
@@ -35,37 +36,53 @@
              TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto"
              Margin="0,0,0,15"/>
-
     <!-- Time Picker -->
     <StackPanel Grid.Row="3"
-        Orientation="Horizontal"
-        Margin="0,0,0,20">
+                Orientation="Horizontal"
+                Margin="0,0,0,20">
       <Label Content="Ora di pubblicazione predefinita:"
-          FontWeight="Bold"
-          VerticalAlignment="Center"/>
+             FontWeight="Bold"
+             VerticalAlignment="Center"/>
       <TextBox x:Name="HourTextBox"
-          Width="30"
-          Margin="10,0,0,0"/>
+               Width="30"
+               Margin="10,0,0,0"
+               PreviewTextInput="NumericTextBox_PreviewTextInput"/>
       <Label Content=":"
-          VerticalAlignment="Center"/>
+             VerticalAlignment="Center"/>
       <TextBox x:Name="MinuteTextBox"
-          Width="30"
-          Margin="0,0,10,0"/>
+               Width="30"
+               Margin="0,0,10,0"
+               PreviewTextInput="NumericTextBox_PreviewTextInput"/>
     </StackPanel>
 
+    <!-- API Endpoint -->
+    <Grid Grid.Row="4"
+        Margin="0,0,0,20">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <Label Grid.Column="0"
+             Content="API Endpoint:"
+             FontWeight="Bold"
+             VerticalAlignment="Center"/>
+      <TextBox Grid.Column="1"
+               x:Name="ApiEndpointTextBox"
+               Margin="10,0,0,0"/>
+    </Grid>
     <!-- Buttons -->
-    <StackPanel Grid.Row="4"
-        Orientation="Horizontal"
-        HorizontalAlignment="Right">
+    <StackPanel Grid.Row="5"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
       <Button x:Name="SaveButton"
-          Content="Salva"
-          Width="80"
-          Margin="0,0,10,0"
-          Click="SaveButton_Click"/>
+              Content="Salva"
+              Width="80"
+              Margin="0,0,10,0"
+              Click="SaveButton_Click"/>
       <Button x:Name="CancelButton"
-          Content="Annulla"
-          Width="80"
-          Click="CancelButton_Click"/>
+              Content="Annulla"
+              Width="80"
+              Click="CancelButton_Click"/>
     </StackPanel>
   </Grid>
 </Window>

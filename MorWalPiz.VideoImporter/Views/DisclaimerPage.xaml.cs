@@ -19,7 +19,7 @@ namespace MorWalPiz.VideoImporter.Views
         public DisclaimerPage()
         {
             InitializeComponent();
-            _context = App.DatabaseService.GetContext();
+            _context = App.DatabaseService.CreateContext();
             LoadData();
         }
 

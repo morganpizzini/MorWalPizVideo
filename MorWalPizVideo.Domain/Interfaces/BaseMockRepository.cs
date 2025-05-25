@@ -35,7 +35,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
 
         public Task<IList<T>> GetItemsAsync() =>
-
                 Task.FromResult(ReadJson<T>(_fileName));
 
         public Task<IList<T>> GetItemsAsync(Expression<Func<T, bool>> predicate)
@@ -49,10 +48,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
             return Task.CompletedTask;
         }
-
         private IList<K> ReadJson<K>(string jsonFileName) where K : T
         {
             var filePath = Path.Combine(_environment.ContentRootPath, "Data", $"{jsonFileName}.json");
+
+            if (!File.Exists(filePath))
+            {
+                return new List<K>();
+            }
+
             var jsonString = File.ReadAllText(filePath);
             var options = new JsonSerializerOptions
             {

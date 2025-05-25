@@ -27,6 +27,17 @@ public class ChannelsController : ApplicationController
         return Ok(await dataService.GetChannels());
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetChannel(string id)
+    {
+        var existing = await dataService.GetChannelById(id);
+        if(existing == null)
+        {
+            return NotFound();
+        }
+        return Ok(existing);
+    }
+
     [HttpPost]
     public async Task<IActionResult> AddChannel(AddChannelRequest request)
     {

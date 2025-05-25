@@ -64,14 +64,22 @@ const Home: React.FC = () => {
               link="/images"
               buttonText="Gestisci Immagini"
             />
-          </Col>
-          <Col md={4} className="g-4">
+          </Col>          <Col md={4} className="g-4">
             <Card
               title="Calendar events"
               subtitle="Gestione degli eventi a calendario"
               content="Carica e gestisci gli eventi a calendario"
               link="/calendarEvents"
               buttonText="Gestisci Eventi"
+            />
+          </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Configurations"
+              subtitle="Gestione delle configurazioni"
+              content="Gestisci le configurazioni di sistema e dell'applicazione"
+              link="/morwalpizconfigurations"
+              buttonText="Gestisci Configurazioni"
             />
           </Col>
         </Row>

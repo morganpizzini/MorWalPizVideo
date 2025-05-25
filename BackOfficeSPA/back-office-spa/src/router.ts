@@ -34,6 +34,11 @@ import CalendarEventDetail from './routes/calendarEvents/detail';
 import CalendarEventEdit from './routes/calendarEvents/edit';
 import CalendarEventCreate from './routes/calendarEvents/create';
 import CalendarEvents from './routes/calendarEvents/index';
+// Import MorWalPizConfiguration components
+import MorWalPizConfigurations from './routes/morwalpizconfigurations/index';
+import MorWalPizConfigurationDetail from './routes/morwalpizconfigurations/detail';
+import MorWalPizConfigurationEdit from './routes/morwalpizconfigurations/edit';
+import MorWalPizConfigurationCreate from './routes/morwalpizconfigurations/create';
 
 export default createBrowserRouter([
   {
@@ -252,6 +257,35 @@ export default createBrowserRouter([
             Component: MultipleImageUpload.Component,
             loader: MultipleImageUpload.loader,
             action: MultipleImageUpload.action
+          },
+        ],
+      },
+      // Add MorWalPizConfiguration routes
+      {
+        path: 'morwalpizconfigurations',
+        Component: Outlet,
+        action: MorWalPizConfigurations.Action,
+        errorElement: React.createElement(ErrorBoundary),
+        children: [
+          { index: true, path: '', loader: MorWalPizConfigurations.Loader, Component: MorWalPizConfigurations.Component },
+          { path: 'create', Component: MorWalPizConfigurationCreate.Component, action: MorWalPizConfigurationCreate.Action },
+          {
+            path: ':id',
+            Component: Outlet,
+            children: [
+              {
+                index: true,
+                path: '',
+                loader: MorWalPizConfigurationDetail.Loader,
+                Component: MorWalPizConfigurationDetail.Component,
+              },
+              {
+                path: 'edit',
+                loader: MorWalPizConfigurationDetail.Loader,
+                action: MorWalPizConfigurationEdit.Action,
+                Component: MorWalPizConfigurationEdit.Component,
+              },
+            ],
           },
         ],
       },

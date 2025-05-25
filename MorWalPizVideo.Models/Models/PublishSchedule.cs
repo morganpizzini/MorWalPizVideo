@@ -6,13 +6,37 @@ namespace MorWalPizVideo.Server.Models
 {
     [BsonIgnoreExtraElements]
     [DataContract]
-    [method: JsonConstructor]
-    public record PublishSchedule(
-        [property: DataMember][property: BsonElement("videoId")] string VideoId,
-        [property: DataMember][property: BsonElement("queryStringIds")] string[] QueryStringIds,
-        [property: DataMember][property: BsonElement("message")] string Message,
-        [property: DataMember][property: BsonElement("date")] DateTime Date) : BaseEntity
+    public record PublishSchedule : BaseEntity
     {
+        [JsonConstructor]
+        public PublishSchedule(
+            string videoId,
+            string[] queryStringIds,
+            string message,
+            DateTime date)
+        {
+            VideoId = videoId;
+            QueryStringIds = queryStringIds;
+            Message = message;
+            Date = date;
+        }
+
+        [DataMember]
+        [BsonElement("videoId")]
+        public string VideoId { get; init; }
+
+        [DataMember]
+        [BsonElement("queryStringIds")]
+        public string[] QueryStringIds { get; init; }
+
+        [DataMember]
+        [BsonElement("message")]
+        public string Message { get; init; }
+
+        [DataMember]
+        [BsonElement("date")]
+        public DateTime Date { get; init; }
+
         [DataMember]
         [BsonElement("publishScheduleId")]
         public string PublishScheduleId => Id;

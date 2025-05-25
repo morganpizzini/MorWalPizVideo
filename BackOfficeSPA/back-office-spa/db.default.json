@@ -62,18 +62,20 @@
   "shortlinks": [
     {
       "id": "abc123",
+      "code": "abc123",
       "shortLinkId": "abc123",
-      "videoId": "video1",
+      "target": "video1",
+      "linkType": 1,
       "queryString": "?param=value",
-      "message": "Short link message 1",
       "clicksCount": 10
     },
     {
       "id": "def456",
+      "code": "def456",
       "shortLinkId": "def456",
-      "videoId": "video2",
+      "target": "video2",
+      "linkType": 2,
       "queryString": "?param2=value2",
-      "message": "Short link message 2",
       "clicksCount": 20
     }
   ],

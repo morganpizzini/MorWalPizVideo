@@ -1,21 +1,24 @@
 The application is a react application written in typescript and use vite as build server.
 The routing library is react-router "^7.4.0" which uses 'loaders' and 'actions'
 
-All component in this directory #file:../../BackOfficeSPA/back-office-spa/src/routes/ tries to follow the same rules:
+component with the same functionalities can be found in this directory #file:../../BackOfficeSPA/back-office-spa/src/routes/
 
-## Key Components to Implement if controller do crud ops
-- EntityList - List view with search and pagination
-- EntityDetail - Shows details with edit and delete options
-- CreateEntity - Form for creating entities
-- EditEntity - Form for editing entities
+The component directory should be created in the same directory as the other components in #file:../../BackOfficeSPA/back-office-spa/src/routes/. Named as the entity name in plural form.
 
-- each CRUD operation or controller action should be a sub directory with
+## There should be 4 pages to Implement if controller contains crud ops
+- index page for with List view, search and pagination
+- detail page that Shows details with delete button and a redirect to edit page
+- edit page with Form
+
+- each page should be organized in a separate directory with the following structure:
   - Component.tsx - React component defining the UI
   - action.ts - Handles form submissions and API calls
   - loader.ts - Fetches data before rendering components
   - index.ts - Exports the component, action, and loader
 
 - create DTOs for create and update operations
+
+if you need a reference for component's structure, you can check the following directory #file:../../BackOfficeSPA/back-office-spa/src/routes/categories which contains example for create/detail/edit/index pages
 
 ## Implementation Guidelines:
 - all operation that requires a unique identifier, like get action or delete action should work with entity id property

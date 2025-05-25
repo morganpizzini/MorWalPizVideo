@@ -31,12 +31,18 @@ export default async function action({ request }: ActionFunctionArgs) {
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
-
-  // API request
+  // Prepare request with single category
+  const category = values.categories.length > 0 ? values.categories[0] : '';
+  
+  // API request - updated for new Match structure using AddVideo method
   return fetch(`${API_CONFIG.BASE_URL}/videos/ImportSubCreation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
+    body: JSON.stringify({
+      matchId: values.matchId,
+      videoId: values.videoId,
+      category: category
+    }),
   })
     .then(async response => {
       if (!response.ok) {

@@ -1,17 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using MorWalPiz.VideoImporter.Models;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace MorWalPiz.VideoImporter.Views
 {
@@ -37,7 +31,13 @@ namespace MorWalPiz.VideoImporter.Views
                                 ? file.EditedCleanFileName
                                 : file.CleanFileName;
 
-      NeedTranslationCheckBox.IsChecked = file.NeedTranslation;
+      // Imposta la descrizione
+      TitleTextBox.Text = file.Title;
+      DescriptionTextBox.Text = file.Description;
+
+      // Imposta il CheckBox ContainsWeapon (Assicurati che esista un CheckBox con x:Name="ContainsWeaponCheckBox" nel XAML)
+      ContainsWeaponCheckBox.IsChecked = file.containsWeapon;
+
 
       // Imposta data e ora di pubblicazione
       PublishDatePicker.SelectedDate = file.PublishDate;
@@ -50,7 +50,8 @@ namespace MorWalPiz.VideoImporter.Views
 
     private void LoadSecondaryLanguages()
     {
-      using (var context = App.DatabaseService.GetContext())
+      // Utilizza il metodo CreateContext per ottenere un nuovo contesto isolato
+      using (var context = App.DatabaseService.CreateContext())
       {
         // Carica solo le lingue secondarie selezionate
         _secondaryLanguages = context.Languages
@@ -73,21 +74,56 @@ namespace MorWalPiz.VideoImporter.Views
         // Aggiorniamo le TextBox con le traduzioni esistenti
         foreach (var language in _secondaryLanguages)
         {
-          if (_currentFile.TranslatedTitles.TryGetValue(language.Id, out string translation))
+          // Verifica se esistono traduzioni sia nel vecchio formato che nel nuovo
+          string titleTranslation = null;
+          string descriptionTranslation = null;
+
+          // Controlla prima il nuovo formato (Translations dictionary)
+          if (_currentFile.Translations.TryGetValue(language.Id, out TranslationItem translationItem))
           {
-            // Trova la TextBox corrispondente a questa lingua
-            // Non possiamo farlo direttamente, quindi cerchiamo dopo il rendering completo
+            titleTranslation = translationItem.Title;
+            descriptionTranslation = translationItem.Description;
+          }
+          // Controlla anche il vecchio formato per retrocompatibilità
+          else if (_currentFile.TranslatedTitles.TryGetValue(language.Id, out string legacyTranslation))
+          {
+            titleTranslation = legacyTranslation;
+          }
+
+          // Aggiorna l'UI con le traduzioni trovate
+          if (titleTranslation != null || descriptionTranslation != null)
+          {
+            // Non possiamo aggiornare direttamente le TextBox, quindi usiamo il dispatcher
             Dispatcher.InvokeAsync(() =>
             {
+              // Itera sugli elementi per trovare i controlli corrispondenti alla lingua corrente
               foreach (var item in SecondaryLanguagesItemsControl.Items)
               {
                 var container = SecondaryLanguagesItemsControl.ItemContainerGenerator.ContainerFromItem(item);
                 if (container != null)
                 {
-                  var textBox = FindVisualChild<System.Windows.Controls.TextBox>(container);
-                  if (textBox != null && textBox.Tag != null && textBox.Tag.ToString() == language.Id.ToString())
+                  var grid = VisualTreeHelper.GetChild(container, 0) as Grid;
+                  if (grid != null)
                   {
-                    textBox.Text = translation;
+                    // Cerca e aggiorna la TextBox del titolo
+                    if (titleTranslation != null)
+                    {
+                      var titleTextBox = FindTitleTextBox(grid);
+                      if (titleTextBox != null && titleTextBox.Tag.ToString() == language.Id.ToString())
+                      {
+                        titleTextBox.Text = titleTranslation;
+                      }
+                    }
+
+                    // Cerca e aggiorna la TextBox della descrizione
+                    if (descriptionTranslation != null)
+                    {
+                      var descriptionTextBox = FindDescriptionTextBox(grid);
+                      if (descriptionTextBox != null && descriptionTextBox.Tag.ToString() == language.Id.ToString())
+                      {
+                        descriptionTextBox.Text = descriptionTranslation;
+                      }
+                    }
                   }
                 }
               }
@@ -128,73 +164,41 @@ namespace MorWalPiz.VideoImporter.Views
       return int.TryParse(text, out _);
     }
 
-    private async void TranslateButton_Click(object sender, RoutedEventArgs e)
+    // Metodo di utilità per trovare il grid padre di un elemento
+    private Grid FindParentGrid(FrameworkElement element)
     {
-      // Otteniamo l'ID della lingua dal Tag del bottone
-      if (sender is System.Windows.Controls.Button button && button.Tag != null && int.TryParse(button.Tag.ToString(), out int languageId))
+      DependencyObject parent = VisualTreeHelper.GetParent(element);
+      while (parent != null && !(parent is Grid))
       {
-        try
+        parent = VisualTreeHelper.GetParent(parent);
+      }
+      return parent as Grid;
+    }
+
+    // Trova la TextBox per il titolo nel Grid
+    private TextBox FindTitleTextBox(Grid grid)
+    {
+      foreach (var child in grid.Children)
+      {
+        if (child is TextBox textBox && textBox.Name == "TitleTranslationTextBox")
         {
-          // Trova la TextBox corrispondente a questa lingua
-          var grid = button.Parent as Grid;
-          if (grid != null)
-          {
-            var textBox = grid.Children.OfType<System.Windows.Controls.TextBox>().FirstOrDefault();
-            if (textBox != null)
-            {
-              button.IsEnabled = false;
-              button.Content = "Traduco...";
-
-              // Utilizziamo il nome pulito per la traduzione
-              string titleToTranslate = !string.IsNullOrEmpty(_currentFile.EditedCleanFileName)
-                                      ? _currentFile.EditedCleanFileName
-                                      : _currentFile.CleanFileName;
-
-              // Prepara il corpo della chiamata API
-              var requestBody = new { title = titleToTranslate };
-
-              // Effettua la chiamata API
-              try
-              {
-                var response = await _httpClient.PostAsJsonAsync("https://localhost:5000/api/pippo", requestBody);
-
-                if (response.IsSuccessStatusCode)
-                {
-                  var result = await response.Content.ReadFromJsonAsync<TranslationResponse>();
-                  if (result != null && !string.IsNullOrEmpty(result.TranslatedTitle))
-                  {
-                    textBox.Text = result.TranslatedTitle;
-
-                    // Memorizza la traduzione nell'oggetto VideoFile
-                    _currentFile.TranslatedTitles[languageId] = result.TranslatedTitle;
-                  }
-                  else
-                  {
-                    System.Windows.MessageBox.Show("Risposta API non valida.", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
-                  }
-                }
-                else
-                {
-                  System.Windows.MessageBox.Show($"Errore API: {response.StatusCode}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-              }
-              catch (Exception ex)
-              {
-                System.Windows.MessageBox.Show($"Errore di connessione: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
-              }
-              finally
-              {
-                button.IsEnabled = true;
-                button.Content = "Traduci";
-              }
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          System.Windows.MessageBox.Show($"Errore durante la traduzione: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+          return textBox;
         }
       }
+      return grid.Children.OfType<TextBox>().FirstOrDefault(tb => tb.Name == "TitleTranslationTextBox");
+    }
+
+    // Trova la TextBox per la descrizione nel Grid
+    private TextBox FindDescriptionTextBox(Grid grid)
+    {
+      foreach (var child in grid.Children)
+      {
+        if (child is TextBox textBox && textBox.Name == "DescriptionTranslationTextBox")
+        {
+          return textBox;
+        }
+      }
+      return grid.Children.OfType<TextBox>().FirstOrDefault(tb => tb.Name == "DescriptionTranslationTextBox");
     }
 
     private void ResetButton_Click(object sender, RoutedEventArgs e)
@@ -221,29 +225,57 @@ namespace MorWalPiz.VideoImporter.Views
         }
 
         // Salva le proprietà
-        _currentFile.NeedTranslation = NeedTranslationCheckBox.IsChecked ?? true;
         _currentFile.EditedCleanFileName = CleanFileNameTextBox.Text;
+        _currentFile.Title = TitleTextBox.Text;
+        _currentFile.Description = DescriptionTextBox.Text;
+        // Salva lo stato del CheckBox ContainsWeapon
+        _currentFile.containsWeapon = ContainsWeaponCheckBox.IsChecked ?? false;
 
         // Salva data e ora di pubblicazione
         _currentFile.PublishDate = PublishDatePicker.SelectedDate ?? DateTime.Today;
         _currentFile.PublishTime = new TimeSpan(hour, minute, 0);
 
         // Salva le traduzioni delle lingue secondarie
-        foreach (var item in SecondaryLanguagesItemsControl.Items)
+        foreach (var language in _secondaryLanguages)
         {
-          var container = SecondaryLanguagesItemsControl.ItemContainerGenerator.ContainerFromItem(item);
-          if (container != null)
+          int languageId = language.Id;
+
+          // Inizializza o recupera l'oggetto TranslationItem per questa lingua
+          if (!_currentFile.Translations.ContainsKey(languageId))
           {
+            _currentFile.Translations[languageId] = new TranslationItem();
+          }
+
+          // Cerca gli elementi nell'interfaccia utente per ogni lingua
+          foreach (var item in SecondaryLanguagesItemsControl.Items)
+          {
+            var container = SecondaryLanguagesItemsControl.ItemContainerGenerator.ContainerFromItem(item);
+            if (container == null) continue;
+
             var grid = VisualTreeHelper.GetChild(container, 0) as Grid;
-            if (grid != null)
+            if (grid == null) continue;
+
+            // Trova e salva il titolo tradotto
+            var titleTextBoxes = grid.Children.OfType<TextBox>().Where(tb => tb.Name == "TitleTranslationTextBox" &&
+                                                                      tb.Tag != null &&
+                                                                      tb.Tag.ToString() == languageId.ToString());
+            foreach (var textBox in titleTextBoxes)
             {
-              var textBox = grid.Children.OfType<System.Windows.Controls.TextBox>().FirstOrDefault();
-              if (textBox != null && textBox.Tag != null && int.TryParse(textBox.Tag.ToString(), out int languageId))
+              if (!string.IsNullOrWhiteSpace(textBox.Text))
               {
-                if (!string.IsNullOrWhiteSpace(textBox.Text))
-                {
-                  _currentFile.TranslatedTitles[languageId] = textBox.Text;
-                }
+                _currentFile.Translations[languageId].Title = textBox.Text;
+              }
+            }
+
+            // Trova e salva la descrizione tradotta
+            var descTextBoxes = grid.Children.OfType<TextBox>().Where(tb => tb.Name == "DescriptionTranslationTextBox" &&
+                                                                     tb.Tag != null &&
+                                                                     tb.Tag.ToString() == languageId.ToString());
+            foreach (var textBox in descTextBoxes)
+            {
+              if (!string.IsNullOrWhiteSpace(textBox.Text))
+              {
+                _currentFile.Translations[languageId].Description = textBox.Text;
               }
             }
           }
@@ -266,10 +298,10 @@ namespace MorWalPiz.VideoImporter.Views
       Close();
     }
   }
-
   // Classe per la deserializzazione della risposta API
   class TranslationResponse
   {
     public string TranslatedTitle { get; set; }
+    public string TranslatedDescription { get; set; }
   }
 }

@@ -32,31 +32,43 @@ namespace MorWalPizVideo.Server.Services
             _dataService = dataService;
             _matchRepository = matchRepository;
             _youtubeService = youtubeService;
-        }
-
-        public async Task<IList<Match>> FetchMatches()
+        }        public async Task<IList<Match>> FetchMatches()
         {
             IList<Match> matches = await _dataService.GetMatches();
-
-            var videoIds = matches.Where(x => x.IsLink && string.IsNullOrEmpty(x.Title)).Select(x => x.ThumbnailUrl)
+            
+            // Get all videoIds that need to be populated with details
+            // For single videos, use the ThumbnailVideoId
+            // For collections, get all videoIds from the VideoRefs
+            var videoIds = matches
+                .Where(x => x.IsLink && string.IsNullOrEmpty(x.Title))
+                .Select(x => x.ThumbnailVideoId)
                 .Concat(
-                    matches.Where(x => x.Videos != null && x.Videos.Length != 0).SelectMany(x => x.Videos).Where(x => string.IsNullOrEmpty(x.Title)).Select(x => x.YoutubeId).ToList()
-                ).ToList();
+                    matches
+                        .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
+                        .SelectMany(x => x.VideoRefs)
+                        .Select(x => x.YoutubeId)
+                )
+                .Distinct()
+                .ToList();
 
             if (videoIds.Count > 0)
             {
                 var videos = await _youtubeService.FetchFromYoutube(videoIds);
                 matches = ParseMatches(matches, videos);
-
-                var linkVideos = matches.Where(x => x.IsLink && videoIds.Contains(x.ThumbnailUrl))
+                
+                // Identify matches that need to be updated in the repository
+                var matchesToUpdate = matches
+                    .Where(x => x.IsLink && videoIds.Contains(x.ThumbnailVideoId))
                     .Concat(
-                        matches.Where(x => x.Videos != null && x.Videos.Length != 0)
-                                .Where(x => x.Videos.Any(v => videoIds.Contains(v.YoutubeId)))
-                    ).ToList();
+                        matches
+                            .Where(x => !x.IsLink && x.VideoRefs != null)
+                            .Where(x => x.VideoRefs.Any(v => videoIds.Contains(v.YoutubeId)))
+                    )
+                    .ToList();
 
-                foreach (var linkVideo in linkVideos)
+                foreach (var match in matchesToUpdate)
                 {
-                    await _matchRepository.UpdateItemAsync(linkVideo);
+                    await _matchRepository.UpdateItemAsync(match);
                 }
             }
 
@@ -65,31 +77,63 @@ namespace MorWalPizVideo.Server.Services
 
         private IList<Match> ParseMatches(IList<Match> matches, IList<Video> videos)
         {
-            // update video entities based on id
-            foreach (var video in videos)
+            // Create a dictionary for quick video lookup
+            var videoDict = videos.ToDictionary(v => v.YoutubeId, v => v);
+            var updatedMatches = new List<Match>(matches.Count);
+            
+            foreach (var match in matches)
             {
-                var match = matches.FirstOrDefault(x => x.Videos != null && x.Videos.Any(v => v.YoutubeId == video.YoutubeId));
-                if (match != null)
+                if (match.IsLink && videoDict.TryGetValue(match.ThumbnailVideoId, out var singleVideo))
                 {
-                    var index = Array.FindIndex(match.Videos, x => x.YoutubeId == video.YoutubeId);
-                    match.Videos[index] = video with { Category = match.Videos[index].Category };
+                    // For single video matches, update title, description, etc. from the video
+                    var updatedMatch = match with { 
+                        Title = singleVideo.Title, 
+                        Description = singleVideo.Description, 
+                        CreationDateTime = singleVideo.PublishedAt.ToDateTime(TimeOnly.MinValue)
+                    };
+                    
+                    // Set the Videos property for compatibility
+                    updatedMatch.Videos = new[] { singleVideo with { Category = match.Category } };
+                    
+                    updatedMatches.Add(updatedMatch);
+                }
+                else if (!match.IsLink && match.VideoRefs?.Length > 0)
+                {
+                    // For collection matches, load video details for all the refs
+                    var videosList = new List<Video>();
+                    foreach (var videoRef in match.VideoRefs)
+                    {
+                        if (videoDict.TryGetValue(videoRef.YoutubeId, out var video))
+                        {
+                            // Set the category from the ref
+                            videosList.Add(video with { Category = videoRef.Category });
+                        }
+                    }
+                    
+                    // Set the Videos property for compatibility
+                    var updatedMatch = match;
+                    updatedMatch.Videos = videosList.ToArray();
+                    
+                    // Update creation date time based on oldest video
+                    if (videosList.Count > 0 && videosList.Any(v => v.PublishedAt != DateOnly.MinValue))
+                    {
+                        updatedMatch = updatedMatch with {
+                            CreationDateTime = videosList
+                                .Where(v => v.PublishedAt != DateOnly.MinValue)
+                                .Min(v => v.PublishedAt.ToDateTime(TimeOnly.MinValue))
+                        };
+                    }
+                    
+                    updatedMatches.Add(updatedMatch);
                 }
                 else
                 {
-                    var element = matches.FirstOrDefault(x => x.ThumbnailUrl == video.YoutubeId);
-                    if (element == null)
-                        continue;
-                    var index = matches.IndexOf(element);
-
-                    matches[index] = element with { Title = video.Title, Description = video.Description, CreationDateTime = video.PublishedAt.ToDateTime(TimeOnly.MinValue), Url = video.YoutubeId };
+                    // No changes needed
+                    updatedMatches.Add(match);
                 }
             }
 
-            return matches.Select(match =>
-                    match.Videos?.Length > 0
-                        ? match with { CreationDateTime = match.Videos.Min(x => x.PublishedAt).ToDateTime(TimeOnly.MinValue) }
-                        : match
-                ).ToList();
+            return updatedMatches;
         }
 
     }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using MorWalPiz.Contracts;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
@@ -11,18 +12,26 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 public class ShortLinkRequest
 {
     [Required]
-    public string VideoId { get; set; } = string.Empty;
+    public string Target { get; set; } = string.Empty;
+    public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
     public string QueryString { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    
+    // Per retrocompatibilità
+    public string VideoId 
+    { 
+        get => Target;
+        set => Target = value; 
+    }
 }
-    public class ShortLinkController : ApplicationController
+    public class ShortLinksController : ApplicationController
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
     private readonly IConfiguration configuration;
     private readonly IDiscordService discordService;
     private readonly ITelegramService telegramService;
-    public ShortLinkController(IMongoDatabase _database, ITelegramService _telegramService, IHttpClientFactory _clientFactory, IConfiguration _configuration,
+    public ShortLinksController(IMongoDatabase _database, ITelegramService _telegramService, IHttpClientFactory _clientFactory, IConfiguration _configuration,
         IDiscordService _discordService)
     {
         database = _database;
@@ -40,7 +49,7 @@ public class ShortLinkRequest
         var shortlinks = (await shortLinkCollection.FindAsync(x => true)).ToList();
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(item => $"{siteUrl}sl/{item.Code}   Counts: {item.ClicksCount}   VideoId: {item.VideoId}   QueryString: {item.QueryString}"));
+        return Ok(shortlinks.Select(x=>ContractUtils.Convert(x,$"{siteUrl}sl")).ToList());
     }
 
     [HttpGet("{videoId}")]
@@ -48,14 +57,14 @@ public class ShortLinkRequest
     {
         var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
 
-        var shortlinks = (await shortLinkCollection.FindAsync(x => x.VideoId == videoId)).ToList();
+        var shortlink = (await shortLinkCollection.FindAsync(x => x.Code == videoId)).FirstOrDefault();
 
-        if (shortlinks.Count == 0)
+        if (shortlink== null)
         {
-            return BadRequest("No shortlink found for this video");
+            return NotFound("No shortlink found for this video");
         }
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(item => $"{siteUrl}sl/{item.Code}   QueryString: {item.QueryString}"));
+        return Ok(ContractUtils.Convert(shortlink, $"{siteUrl}sl"));
     }
     [HttpPost]
     public async Task<IActionResult> CreateShortLink(ShortLinkRequest request)
@@ -129,7 +138,7 @@ public class ShortLinkRequest
         {
             return NotFound("Short link not found");
         }
-        existingShortLink = existingShortLink with { VideoId = request.VideoId, QueryString = request.QueryString ?? string.Empty };
+        existingShortLink = existingShortLink with { Target = request.VideoId, QueryString = request.QueryString ?? string.Empty };
         
         var updateDefinition = Builders<ShortLink>.Update
             .Set(sl => sl.VideoId, existingShortLink.VideoId)

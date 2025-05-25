@@ -21,7 +21,14 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
-    
+
+    public class ConfigurationMockRepository : BaseMockRepository<MorWalPizConfiguration>, IConfigurationRepository
+    {
+        public ConfigurationMockRepository(IHostEnvironment environment) : base(environment, "configurations")
+        {
+        }
+    }
+
     public class SponsorMockRepository : BaseMockRepository<Sponsor>, ISponsorRepository
     {
         public SponsorMockRepository(IHostEnvironment environment) : base(environment, "sponsors")
@@ -67,6 +74,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class QueryLinkMockRepository : BaseMockRepository<QueryLink>, IQueryLinkRepository
     {
         public QueryLinkMockRepository(IHostEnvironment environment) : base(environment, "queryLinks")
+        {
+        }
+    }
+    public class PublishScheduleMockRepository : BaseMockRepository<PublishSchedule>, IPublishScheduleRepository
+    {
+        public PublishScheduleMockRepository(IHostEnvironment environment) : base(environment, "publishSchedules")
         {
         }
     }

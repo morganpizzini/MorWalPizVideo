@@ -18,6 +18,8 @@
             <MenuItem Header="Edit">
                 <MenuItem Header="Settings"
                           Click="SettingsMenuItem_Click"/>
+                <MenuItem Header="Pulisci credenziali YouTube"
+                          Click="ClearYouTubeCredentials_Click"/>
             </MenuItem>
             <MenuItem Header="Entità">
                 <MenuItem Header="Lingue"
@@ -35,67 +37,53 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            <!-- File and folder selection buttons -->
+            <StackPanel Orientation="Horizontal"
+                        Grid.Row="0">
+                <!-- Left column - Folder selection -->
+                <Button x:Name="BrowseFolderButton"
+                        Grid.Column="0"
+                        Content="Sfoglia Cartelle"
+                        Margin="10,10,5,10"
+                        Padding="10,5"
+                        Click="BrowseFolderButton_Click"
+                        HorizontalAlignment="Center"/>
+                <!-- Right column - File selection -->
+                <Button x:Name="BrowseFilesButton"
+                        Grid.Column="1"
+                        Content="Sfoglia File"
+                        Margin="5,10,10,10"
+                        Padding="10,5"
+                        Click="BrowseFilesButton_Click"
+                        HorizontalAlignment="Center"/>
+            </StackPanel>
 
-            <!-- Two-column layout for selecting files and folders -->
-            <Grid Grid.Row="0">
+            <!-- Empty row to maintain spacing -->
+            <Grid Grid.Row="1"
+                  Margin="0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left column - Folder selection -->
-                <GroupBox Grid.Column="0"
-                          Header="Seleziona Cartelle"
-                          Margin="0,0,5,0"
-                          Padding="10">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBox x:Name="FolderPathTextBox"
-                                 Grid.Row="0"
-                                 IsReadOnly="True"
-                                 Margin="0,0,0,5"/>
-                        <Button x:Name="BrowseFolderButton"
-                                Grid.Row="1"
-                                Content="Sfoglia Cartelle"
-                                Click="BrowseFolderButton_Click"
-                                HorizontalAlignment="Right"/>
-                    </Grid>
-                </GroupBox>
-
-                <!-- Right column - File selection -->
-                <GroupBox Grid.Column="1"
-                          Header="Seleziona File MP4"
-                          Margin="5,0,0,0"
-                          Padding="10">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBox x:Name="FilePathTextBox"
-                                 Grid.Row="0"
-                                 IsReadOnly="True"
-                                 Margin="0,0,0,5"/>
-                        <Button x:Name="BrowseFilesButton"
-                                Grid.Row="1"
-                                Content="Sfoglia File"
-                                Click="BrowseFilesButton_Click"
-                                HorizontalAlignment="Right"/>
-                    </Grid>
-                </GroupBox>
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Left">
+                    <TextBlock Text="Data pubblicazione:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <DatePicker x:Name="PublishDatePicker"
+                                Width="200"
+                                SelectedDate="{Binding SelectedPublishDate, Mode=TwoWay}"/>
+                    <Button x:Name="ApplyDateButton"
+                            Content="Applica"
+                            Padding="10,0"
+                            Margin="10,0,0,0"
+                            Click="ApplyDateButton_Click"/>
+                </StackPanel>
+                <!-- Rimozione dei bottoni di riordinamento dalla barra superiore poiché ora sono presenti per ogni riga -->
             </Grid>
-
-            <!-- Process button -->
-            <Button x:Name="ProcessButton"
-                    Content="Elabora"
-                    Grid.Row="1"
-                    Margin="0,10"
-                    Padding="10,5"
-                    HorizontalAlignment="Center"
-                    Click="ProcessButton_Click"/>
 
             <!-- File list with checkboxes -->
             <GroupBox Grid.Row="2"
@@ -107,9 +95,43 @@
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Width="30">
+                                <GridViewColumn.Header>
+                                    <CheckBox x:Name="SelectAllCheckBox"
+                                              Click="SelectAllCheckBox_Checked"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              ToolTip="Seleziona/Deseleziona tutti"/>
+                                </GridViewColumn.Header>
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding IsSelected}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="#"
+                                            Width="50">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button ToolTip="Ordine elemento"
+                                                IsEnabled="False"
+                                                Width="25"
+                                                Margin="5,0,0,0">
+                                            <Button.Content>
+                                                <TextBlock Text="{Binding OrderIndex}"
+                                                           FontWeight="Bold"/>
+                                            </Button.Content>
+                                        </Button>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <!-- New Column for 'containsWeapon' -->
+                            <GridViewColumn Header="Arma?"
+                                            Width="50">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding containsWeapon, Mode=TwoWay}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
@@ -117,24 +139,52 @@
                                             Width="200">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding EditedCleanFileName, TargetNullValue={Binding CleanFileName}}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Da tradurre"
-                                            Width="120">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <CheckBox IsChecked="{Binding NeedTranslation}"
-                                                  IsHitTestVisible="False"/>
+                                        <TextBlock Text="{Binding CleanFileName}"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <GridViewColumn Header="Path"
-                                            DisplayMemberBinding="{Binding FilePath}"
-                                            Width="280"/>
+                                            Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FilePath}"
+                                                   TextAlignment="Right"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding FilePath}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Data di Pubblicazione"
+                                            Width="220">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Vertical">
+                                            <DatePicker SelectedDate="{Binding PublishDate, Mode=TwoWay}"
+                                                        Width="160"
+                                                        Margin="0,0,0,2"/>
+                                            <StackPanel Orientation="Horizontal"
+                                                        HorizontalAlignment="Center">
+                                                <TextBlock Text="Ora: "
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,5,0"/>
+                                                <TextBox Width="30"
+                                                         Text="{Binding PublishTimeHour, Mode=TwoWay}"
+                                                         Tag="Hour"
+                                                         PreviewTextInput="NumericTextBox_PreviewTextInput"/>
+                                                <TextBlock Text=":"
+                                                           VerticalAlignment="Center"
+                                                           Margin="2,0"/>
+                                                <TextBox Width="30"
+                                                         Text="{Binding PublishTimeMinute, Mode=TwoWay}"
+                                                         Tag="Minute"
+                                                         PreviewTextInput="NumericTextBox_PreviewTextInput"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn Header="Azioni"
-                                            Width="80">
+                                            Width="120">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="Dettagli"
@@ -142,18 +192,63 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
+                            <GridViewColumn Header="Riordina"
+                                            Width="100">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="↑"
+                                                    Width="40"
+                                                    Margin="0,0,5,0"
+                                                    ToolTip="Sposta su"
+                                                    Click="MoveItemUpButton_Click"/>
+                                            <Button Content="↓"
+                                                    Width="40"
+                                                    ToolTip="Sposta giù"
+                                                    Click="MoveItemDownButton_Click"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                         </GridView>
                     </ListView.View>
                 </ListView>
             </GroupBox>
+            <!-- Bottoni di azione -->
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Delete button -->
-            <Button x:Name="DeleteButton"
-                    Content="Elimina Selezionati"
-                    Grid.Row="3"
-                    Padding="10,5"
-                    HorizontalAlignment="Right"
-                    Click="DeleteButton_Click"/>
+                <!-- Aggiungi contesto button (spostato a sinistra) -->
+                <Button x:Name="ContextButton"
+                        Content="Aggiungi Traduzioni"
+                        Grid.Column="0"
+                        Padding="10,5"
+                        Margin="0,0,10,0"
+                        HorizontalAlignment="Left"
+                        Click="ContextButton_Click"/>
+
+                <!-- Delete button -->
+                <Button x:Name="DeleteButton"
+                        Content="Elimina Selezionati"
+                        Grid.Column="2"
+                        Padding="10,5"
+                        Margin="0,0,10,0"
+                        HorizontalAlignment="Right"
+                        Click="DeleteButton_Click"/>
+
+                <!-- Upload to YouTube button (spostato dopo Elimina Selezionati) -->
+                <Button x:Name="UploadToYouTubeButton"
+                        Content="Carica su YouTube"
+                        Margin="0,0,0,0"
+                        Grid.Column="3"
+                        HorizontalAlignment="Right"
+                        Click="DeleteButton_Click"/>
+            </Grid>
         </Grid>
     </DockPanel>
 </Window>

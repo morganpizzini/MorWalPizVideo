@@ -17,7 +17,8 @@ namespace MorWalPizVideo.Server.Services
         private readonly IYTChannelRepository _ytChannelRepository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IQueryLinkRepository _queryLinkRepository;
-
+        private readonly IPublishScheduleRepository _publishScheduleRepository;
+        private readonly IConfigurationRepository _configurationRepository;
         public DataService(
             IMatchRepository matchRepository,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -29,7 +30,9 @@ namespace MorWalPizVideo.Server.Services
             IShortLinkRepository shortLinkRepository,
             IYTChannelRepository ytChannelRepository,
             ICategoryRepository categoryRepository,
-            IQueryLinkRepository queryLinkRepository)
+            IQueryLinkRepository queryLinkRepository,
+            IPublishScheduleRepository publishScheduleRepository,
+            IConfigurationRepository configurationRepository)
         {
             _matchRepository = matchRepository;
             _productRepository = productRepository;
@@ -42,35 +45,62 @@ namespace MorWalPizVideo.Server.Services
             _ytChannelRepository = ytChannelRepository;
             _categoryRepository = categoryRepository;
             _queryLinkRepository = queryLinkRepository;
+            _publishScheduleRepository = publishScheduleRepository;
+            _configurationRepository = configurationRepository;
         }
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
         public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
-        public Task<IList<Match>> GetMatches() => _matchRepository.GetItemsAsync();
-        public async Task<Match?> FindMatch(string matchId) => (await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == matchId)).FirstOrDefault();
+        public Task<IList<Match>> GetMatches() => _matchRepository.GetItemsAsync();        public async Task<Match?> FindMatch(string matchId) => 
+            // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
+            (await _matchRepository.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
+            // Then try to find by Id (for collections)
+            (await _matchRepository.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault();
+            
         public async Task SaveMatch(Match entity)
         {
-            var check = await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == entity.MatchId);
+            // Check if a match with the same ID or ThumbnailVideoId already exists
+            var check = await _matchRepository.GetItemsAsync(x => 
+                x.Id == entity.Id || 
+                x.ThumbnailVideoId == entity.ThumbnailVideoId);
+                
             if (check.Count > 0)
                 return;
+                
             await _matchRepository.AddItemAsync(entity);
         }
+        
         public async Task UpdateMatch(Match entity)
         {
-            var check = await _matchRepository.GetItemsAsync(x => x.ThumbnailUrl == entity.MatchId);
+            // Check if a match with the same ID exists
+            var check = await _matchRepository.GetItemsAsync(x => x.Id == entity.Id);
+            
+            if (check.Count == 0)
+                // Try fallback to ThumbnailVideoId for backward compatibility
+                check = await _matchRepository.GetItemsAsync(x => x.ThumbnailVideoId == entity.ThumbnailVideoId);
+                
             if (check.Count == 0)
                 return;
+                
             await _matchRepository.UpdateItemAsync(entity);
         }
         public Task<IList<YTChannel>> GetChannels() => _ytChannelRepository.GetItemsAsync();
         public async Task<YTChannel?> GetChannel(string channelName) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelName == channelName)).FirstOrDefault();
+        public async Task<YTChannel?> GetChannelById(string channelId) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelId == channelId)).FirstOrDefault();
         public async Task SaveChannel(YTChannel entity)
         {
             var checkSponsors = await _ytChannelRepository.GetItemsAsync(x => x.ChannelId == entity.ChannelId);
             if (checkSponsors.Count > 0)
                 return;
             await _ytChannelRepository.AddItemAsync(entity);
+        }
+        public async Task UpdateChannel(YTChannel entity)
+        {
+            var check = await _ytChannelRepository.GetItemsAsync(x => x.ChannelId == entity.ChannelId);
+            if (check.Count == 0)
+                return;
+            await _ytChannelRepository.UpdateItemAsync(entity);
         }
         public async Task RemoveChannel(string channelName)
         {
@@ -111,6 +141,85 @@ namespace MorWalPizVideo.Server.Services
         }
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
         public async Task<IList<BioLink>> GetBioLinks() => [.. (await _bioLinkRepository.GetItemsAsync(x => x.Enable)).OrderBy(x => x.Order)];
+
+        #region Configuration
+        public Task<IList<MorWalPizConfiguration>> GetConfigurations() =>
+            _configurationRepository.GetItemsAsync();
+
+        public async Task<MorWalPizConfiguration?> GetConfigurationById(string id) =>
+            await _configurationRepository.GetItemAsync(id);
+        public Task<IList<MorWalPizConfiguration>> FetchConfigurationByKeys(IList<string> keys)
+        {
+            var k = keys.Select(x=>x.ToLower());
+            return _configurationRepository.GetItemsAsync(x => k.Contains(x.Key.ToLower()));
+        }
+
+        public async Task<MorWalPizConfiguration?> GetConfigurationByKey(string key) =>
+            (await _configurationRepository.GetItemsAsync(x => x.Key.ToLower() == key.ToLower())).FirstOrDefault();
+
+
+        public async Task SaveConfiguration(MorWalPizConfiguration configuration)
+        {
+            var existingConfig = await _configurationRepository.GetItemsAsync(x => x.Key.ToLower() == configuration.Key.ToLower());
+            if (existingConfig.Count > 0)
+                return;
+            await _configurationRepository.AddItemAsync(configuration);
+        }
+
+        public async Task UpdateConfiguration(MorWalPizConfiguration configuration)
+        {
+            var existingConfig = await _configurationRepository.GetItemsAsync(x => x.Id == configuration.Id);
+            if (existingConfig.Count == 0)
+                return;
+            await _configurationRepository.UpdateItemAsync(configuration);
+        }
+
+        public async Task DeleteConfiguration(string id)
+        {
+            var config = await _configurationRepository.GetItemAsync(id);
+            if (config == null)
+                return;
+            await _configurationRepository.DeleteItemAsync(id);
+        }
+        #endregion
+
+        // publishSchedule methods
+
+        public Task<IList<PublishSchedule>> GetPublishSchedules() => _publishScheduleRepository.GetItemsAsync();
+
+        public async Task<PublishSchedule?> GetPublishScheduleByVideoId(string videoId) =>
+            (await _publishScheduleRepository.GetItemsAsync(x => x.VideoId.ToLower() == videoId.ToLower())).FirstOrDefault();
+
+        public async Task<PublishSchedule?> GetPublishScheduleById(string id) =>
+            await _publishScheduleRepository.GetItemAsync(id);
+
+        public async Task SavePublishSchedule(PublishSchedule entity)
+        {
+            var existingPublishSchedule = await _publishScheduleRepository.GetItemsAsync(x => x.VideoId.ToLower() == entity.VideoId.ToLower());
+            if (existingPublishSchedule.Count > 0)
+                return;
+
+            await _publishScheduleRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdatePublishSchedule(PublishSchedule entity)
+        {
+            var existingPublishSchedule = await _publishScheduleRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingPublishSchedule.Count == 0)
+                return;
+
+            await _publishScheduleRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeletePublishSchedule(string publishScheduleId)
+        {
+            var publishSchedule = (await _publishScheduleRepository.GetItemsAsync(x => x.Id == publishScheduleId)).FirstOrDefault();
+            if (publishSchedule == null)
+                return;
+
+            await _publishScheduleRepository.DeleteItemAsync(publishSchedule.Id);
+        }
+
 
         // Category methods
         public Task<IList<Category>> GetCategories() => _categoryRepository.GetItemsAsync();
