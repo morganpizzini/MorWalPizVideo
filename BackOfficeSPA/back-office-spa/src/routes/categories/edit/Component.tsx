@@ -29,14 +29,14 @@ const EditCategory: React.FC = () => {
   }, [entity]);
 
   useEffect(() => {
-    if (!result) return;
+    if (!result || busy) return;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'Category updated successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate, busy]);
 
   const isDisabled = () =>
     !model ||
@@ -75,12 +75,9 @@ const EditCategory: React.FC = () => {
           <Form.Label>
             Title <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Control
-            type="text"
-            value={model.title}
-            onChange={e => setModel({ ...model, title: e.target.value })}
-          />
-          <Form.Control type="text" value={model.title}
+                  <Form.Control type="text"
+                      autoComplete="off"
+                      value={model.title}
             onChange={e => setModel({ ...model, title: e.target.value })}
           />
           <FieldError error={errors?.title} />
@@ -90,7 +87,8 @@ const EditCategory: React.FC = () => {
             Description <span className="text-danger">*</span>
           </Form.Label>
           <Form.Control
-            type="text"
+                      type="text"
+                      autoComplete="off"
             value={model.description}
             onChange={e => setModel({ ...model, description: e.target.value })}
           />

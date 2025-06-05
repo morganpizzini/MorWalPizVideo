@@ -4,6 +4,17 @@ using System.Runtime.Serialization;
 namespace MorWalPiz.Contracts.Contracts
 {
     [DataContract]
+    public class CategoryContract
+    {
+        [DataMember]
+        public string CategoryId { get; set; } = string.Empty;
+        [DataMember]
+        public string Title { get; set; } = string.Empty;
+        [DataMember]
+        public string Description { get; set; } = string.Empty;
+    }
+
+    [DataContract]
     public class ShortLinkContract
     {
         [DataMember]

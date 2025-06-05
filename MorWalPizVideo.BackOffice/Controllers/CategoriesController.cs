@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -6,20 +7,20 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 public class CreateCategoryRequest
 {
     public string Title { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 }
 
 public class UpdateCategoryRequest
 {
     public string Title { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 }
 
-public class CategoryController : ApplicationController
+public class CategoriesController : ApplicationController
 {
     private readonly DataService _dataService;
     
-    public CategoryController(DataService dataService)
+    public CategoriesController(DataService dataService)
     {
         _dataService = dataService;
     }
@@ -28,23 +29,23 @@ public class CategoryController : ApplicationController
     public async Task<IActionResult> GetCategories()
     {
         var categories = await _dataService.GetCategories();
-        return Ok(categories);
+        return Ok(categories.Select(ContractUtils.Convert));
     }
 
-    [HttpGet("{title}")]
-    public async Task<IActionResult> GetCategory(string title)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetCategory(string id)
     {
-        var category = await _dataService.GetCategory(title);
+        var category = await _dataService.GetCategoryById(id);
         if (category == null)
             return NotFound("Category not found");
 
-        return Ok(category);
+        return Ok(ContractUtils.Convert(category));
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateCategory(CreateCategoryRequest request)
     {
-        var category = new Category(request.Title, request.Value);
+        var category = new Category(request.Title, request.Description);
         await _dataService.SaveCategory(category);
         return NoContent();
     }
@@ -56,7 +57,7 @@ public class CategoryController : ApplicationController
         if (entity == null)
             return BadRequest("Category not found");
 
-        entity = entity with { Title = request.Title, Value = request.Value };
+        entity = entity with { Title = request.Title, Description = request.Description };
         await _dataService.UpdateCategory(entity);
 
         return NoContent();

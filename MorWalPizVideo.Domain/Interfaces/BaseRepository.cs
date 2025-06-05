@@ -2,6 +2,7 @@
 using MongoDB.Driver.Linq;
 using MorWalPizVideo.Server.Models;
 using System.Linq.Expressions;
+using MongoDB.Bson;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
@@ -21,11 +22,27 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task DeleteItemAsync(string id)
         {
-            await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", id));
+            // Try to parse the string ID as ObjectId first
+            if (ObjectId.TryParse(id, out var objectId))
+            {
+                await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", objectId));
+            }
+            else
+            {
+                // Fallback to string ID if not a valid ObjectId
+                await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", id));
+            }
         }
 
         public async Task<T> GetItemAsync(string id)
         {
+            // Try to parse the string ID as ObjectId first
+            if (ObjectId.TryParse(id, out var objectId))
+            {
+                return await _collection.Find(Builders<T>.Filter.Eq("_id", objectId)).FirstOrDefaultAsync();
+            }
+
+            // Fallback to string ID if not a valid ObjectId
             return await _collection.Find(Builders<T>.Filter.Eq("_id", id)).FirstOrDefaultAsync();
         }
 
@@ -41,7 +58,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task UpdateItemAsync(T item)
         {
-            await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq(e => e.Id, item.Id), item);
+            // If item.Id is a string representation of an ObjectId, convert it
+            if (ObjectId.TryParse(item.Id, out var objectId))
+            {
+                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", objectId), item);
+            }
+            else
+            {
+                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", item.Id), item);
+            }
         }
     }
 }

@@ -50,7 +50,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
 
   // Function to get entity name
   const getEntityName = (segment: string, type: string): string => {
-    if (!entity) return segment;
+      if (!entity) return segment;
 
     if ((type === 'querylinks' || type === 'categories') && entity.title) {
       return entity.title;

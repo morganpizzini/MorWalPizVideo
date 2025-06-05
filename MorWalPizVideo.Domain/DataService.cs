@@ -224,9 +224,7 @@ namespace MorWalPizVideo.Server.Services
         // Category methods
         public Task<IList<Category>> GetCategories() => _categoryRepository.GetItemsAsync();
 
-        public async Task<Category?> GetCategory(string title) =>
-            (await _categoryRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
-
+        
         public async Task<Category?> GetCategoryById(string id) =>
             await _categoryRepository.GetItemAsync(id);
 

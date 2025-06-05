@@ -58,6 +58,10 @@ namespace MorWalPizVideo.Server.Models
         public MatchType MatchType { get; init; } = MatchType.Collection;
 
         [DataMember]
+        [BsonElement("youtubeVideoLinks")]
+        public YouTubeVideoLink[] YouTubeVideoLinks { get; init; } = Array.Empty<YouTubeVideoLink>();
+
+        [DataMember]
         [BsonElement("matchId")]
         public string MatchId => Id;
 

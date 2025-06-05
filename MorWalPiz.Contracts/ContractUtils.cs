@@ -10,18 +10,28 @@ namespace MorWalPiz.Contracts
 {
     public static class ContractUtils
     {
-        public static ShortLinkContract Convert(ShortLink shortLink,string endpointBasePath)
+
+        public static CategoryContract Convert(Category entity)
+        {
+            return new CategoryContract
+            {
+                CategoryId = entity.Id,
+                Title = entity.Title,
+                Description = entity.Description,
+            };
+        }
+        public static ShortLinkContract Convert(ShortLink entity, string endpointBasePath)
         {
             return new ShortLinkContract
             {
-                Code = shortLink.Code,
-                Endpoint = $"{endpointBasePath}/{shortLink.Code}?{shortLink.QueryString}",
-                Target = shortLink.Target,
-                QueryString = shortLink.QueryString,
-                ShortLinkId = shortLink.ShortLinkId,
-                ClicksCount = shortLink.ClicksCount,
-                LinkType = shortLink.LinkType,
-                VideoId = shortLink.VideoId
+                Code = entity.Code,
+                Endpoint = $"{endpointBasePath}/{entity.Code}?{entity.QueryString}",
+                Target = entity.Target,
+                QueryString = entity.QueryString,
+                ShortLinkId = entity.ShortLinkId,
+                ClicksCount = entity.ClicksCount,
+                LinkType = entity.LinkType,
+                VideoId = entity.VideoId
             };
         }
     }

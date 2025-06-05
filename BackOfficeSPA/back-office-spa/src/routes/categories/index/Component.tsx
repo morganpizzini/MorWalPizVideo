@@ -25,13 +25,13 @@ const Categories: React.FC = () => {
       : null;
 
   useEffect(() => {
-    if (!result) return;
+    if (!result || busy) return;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'Category deleted successfully', { variant: 'success' });
     }
-  }, [result, toast]);
+  }, [result, busy]);
 
   const handleDelete = (category: Category) => {
     setSelectedCategory(category);
