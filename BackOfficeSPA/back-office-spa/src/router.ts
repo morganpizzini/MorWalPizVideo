@@ -25,6 +25,8 @@ import CreateRoot from './routes/videos/create-root';
 import CreateSubVideo from './routes/videos/create-sub-video';
 import SwapThumbnail from './routes/videos/swap-thumbnail';
 import ConvertToRoot from './routes/videos/convert-to-root';
+import YouTubeLinksComponent from './routes/videos/youtube-links/Component';
+import youTubeLinksLoader from './routes/videos/youtube-links/loader';
 import ErrorBoundary from './components/ErrorBoundary';
 // Import the new image components
 import ImagesHome from './routes/images/index';
@@ -236,6 +238,11 @@ export default createBrowserRouter([
             action: ConvertToRoot.Action,
             loader: ConvertToRoot.Loader,
             Component: ConvertToRoot.Component,
+          },
+          {
+            path: 'youtube-links',
+            loader: youTubeLinksLoader,
+            Component: YouTubeLinksComponent,
           },
         ],
       },

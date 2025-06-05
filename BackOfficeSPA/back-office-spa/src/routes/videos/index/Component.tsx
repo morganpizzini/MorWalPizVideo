@@ -46,6 +46,13 @@ const Component: React.FC = () => {
       path: '/videos/swap-thumbnail',
       icon: '🖼️',
       description: 'Sostituisci la thumbnail di un video root con quella di un altro video',
+    },
+    {
+      id: 'youtube-links',
+      title: 'YouTube Video Links',
+      path: '/videos/youtube-links',
+      icon: '🔗',
+      description: 'Gestisci i link video YouTube per creare linktree dei match',
     }
   ];
 

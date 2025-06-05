@@ -141,6 +141,7 @@ if (enableMock)
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
+    builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.AddScoped<ITranslatorService>((c) =>
@@ -188,6 +189,7 @@ else
     builder.Services.Configure<BlobStorageOptions>(
        builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
+    builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
 
     var translatorSettings = builder.Configuration.GetSection("TranslatorSettings").Get<TranslatorSettings>();
 

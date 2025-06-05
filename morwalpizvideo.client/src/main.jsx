@@ -22,9 +22,11 @@ import sponsorsAction from "./routes/sponsors.action";
 import calendarLoader from "./routes/calendar.loader";
 import streamLoader from "./routes/stream.loader";
 import indexLoader from "./routes/index.loader";
+import linktreeLoader from "./routes/linktree.loader";
 import CookiePolicy from "./routes/cookie-policy";
 import Bluetooth from "./routes/bluetooth";
 import Stream from "./routes/stream";
+import Linktree from "./routes/linktree";
 import {
     createBrowserRouter,
 } from "react-router";
@@ -102,6 +104,11 @@ const router = createBrowserRouter([
                 path: "stream",
                 loader: streamLoader,
                 element: <Stream />,
+            },
+            {
+                path: "linktree/:matchId",
+                loader: linktreeLoader,
+                element: <Linktree />,
             }]
         }],
     }

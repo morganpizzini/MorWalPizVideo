@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Linktree Demo - YouTube Video Links</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .linktree-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .match-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .match-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+        
+        .video-link {
+            display: block;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .video-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        
+        .creator-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .creator-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .creator-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .video-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .youtube-icon {
+            color: #ff0000;
+            margin-right: 5px;
+        }
+        
+        .short-link {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .linktree-container {
+                margin: 10px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="linktree-container">
+        <div class="match-title">CS:GO World Championship</div>
+        <div class="match-description">
+            Watch highlights and reactions from different content creators covering this epic match between Team Liquid and Astralis.
+        </div>
+        
+        <!-- Example YouTube Video Links -->
+        <a href="#" class="video-link" onclick="openVideo('dQw4w9WgXcQ', 'PewDiePie')">
+            <div class="creator-info">
+                <div>
+                    <div class="creator-name">PewDiePie</div>
+                    <div class="video-info">
+                        <span class="youtube-icon">📺</span>
+                        Match Highlights & Reaction
+                    </div>
+                </div>
+                <div class="creator-image">PD</div>
+            </div>
+            <div class="video-info">
+                <span class="short-link">morwal.tv/sl/AbC123X</span>
+            </div>
+        </a>
+        
+        <a href="#" class="video-link" onclick="openVideo('dQw4w9WgXcQ', 'Shroud')">
+            <div class="creator-info">
+                <div>
+                    <div class="creator-name">Shroud</div>
+                    <div class="video-info">
+                        <span class="youtube-icon">📺</span>
+                        Pro Player Analysis
+                    </div>
+                </div>
+                <div class="creator-image">SH</div>
+            </div>
+            <div class="video-info">
+                <span class="short-link">morwal.tv/sl/DeF456Y</span>
+            </div>
+        </a>
+        
+        <a href="#" class="video-link" onclick="openVideo('dQw4w9WgXcQ', 'HLTV')">
+            <div class="creator-info">
+                <div>
+                    <div class="creator-name">HLTV</div>
+                    <div class="video-info">
+                        <span class="youtube-icon">📺</span>
+                        Official Match Coverage
+                    </div>
+                </div>
+                <div class="creator-image">HV</div>
+            </div>
+            <div class="video-info">
+                <span class="short-link">morwal.tv/sl/GhI789Z</span>
+            </div>
+        </a>
+        
+        <a href="#" class="video-link" onclick="openVideo('dQw4w9WgXcQ', 'WarOwl')">
+            <div class="creator-info">
+                <div>
+                    <div class="creator-name">WarOwl</div>
+                    <div class="video-info">
+                        <span class="youtube-icon">📺</span>
+                        Tactical Breakdown
+                    </div>
+                </div>
+                <div class="creator-image">WO</div>
+            </div>
+            <div class="video-info">
+                <span class="short-link">morwal.tv/sl/JkL012A</span>
+            </div>
+        </a>
+    </div>
+
+    <script>
+        function openVideo(videoId, creatorName) {
+            // This would normally redirect to the short link URL
+            // For demo purposes, we'll show an alert
+            alert(`Opening ${creatorName}'s video: https://youtube.com/watch?v=${videoId}`);
+            
+            // In real implementation, this would be:
+            // window.open(`https://morwal.tv/sl/${shortLinkCode}`, '_blank');
+        }
+        
+        // Simulate dynamic loading of video links from API
+        function loadVideoLinks(matchId) {
+            // This would make an API call to:
+            // GET /api/YouTubeVideoLinks/{matchId}/links
+            console.log(`Loading video links for match: ${matchId}`);
+        }
+        
+        // Example of how to create a new video link
+        function createVideoLink() {
+            const linkData = {
+                matchId: "match123",
+                contentCreatorName: "Example Creator",
+                youTubeVideoId: "dQw4w9WgXcQ",
+                fontStyle: "Arial",
+                fontSize: 48,
+                textColor: "#FFFFFF",
+                outlineColor: "#000000",
+                outlineThickness: 2
+            };
+            
+            // This would make an API call to:
+            // POST /api/YouTubeVideoLinks/create
+            console.log("Creating video link:", linkData);
+        }
+    </script>
+</body>
+</html>

@@ -17,7 +17,8 @@ namespace MorWalPizVideo.Server.Models
             string thumbnailVideoId, 
             VideoRef[] videoRefs, 
             string category = "", 
-            MatchType matchType = MatchType.Collection)
+            MatchType matchType = MatchType.Collection,
+            YouTubeVideoLink[]? youtubeVideoLinks = null)
         {
             Id = id;
             Title = title;
@@ -27,6 +28,7 @@ namespace MorWalPizVideo.Server.Models
             VideoRefs = videoRefs;
             Category = category;
             MatchType = matchType;
+            YouTubeVideoLinks = youtubeVideoLinks ?? Array.Empty<YouTubeVideoLink>();
         }
 
         [DataMember]
@@ -136,6 +138,28 @@ namespace MorWalPizVideo.Server.Models
         public Match WithThumbnail(string newThumbnailVideoId)
         {
             return this with { ThumbnailVideoId = newThumbnailVideoId };
+        }
+        
+        // Add a YouTube video link to the collection
+        public Match AddYouTubeVideoLink(YouTubeVideoLink videoLink)
+        {
+            var newVideoLinks = YouTubeVideoLinks.Append(videoLink).ToArray();
+            return this with { YouTubeVideoLinks = newVideoLinks };
+        }
+        
+        // Remove a YouTube video link from the collection
+        public Match RemoveYouTubeVideoLink(string youtubeVideoId)
+        {
+            var newVideoLinks = YouTubeVideoLinks.Where(v => v.YouTubeVideoId != youtubeVideoId).ToArray();
+            return this with { YouTubeVideoLinks = newVideoLinks };
+        }
+        
+        // Update a YouTube video link in the collection
+        public Match UpdateYouTubeVideoLink(string youtubeVideoId, YouTubeVideoLink updatedVideoLink)
+        {
+            var newVideoLinks = YouTubeVideoLinks.Select(v => 
+                v.YouTubeVideoId == youtubeVideoId ? updatedVideoLink : v).ToArray();
+            return this with { YouTubeVideoLinks = newVideoLinks };
         }
         
         // Convert Match to VideoDisplayItem for UI
