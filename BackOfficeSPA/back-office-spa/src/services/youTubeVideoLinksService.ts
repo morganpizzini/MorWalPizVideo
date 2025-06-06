@@ -9,7 +9,7 @@ export class YouTubeVideoLinksService {
    * Get all YouTube video links for a specific match
    */
   static async getVideoLinks(matchId: string): Promise<YouTubeVideoLinkResponse[]> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/YouTubeVideoLinks/${matchId}/links`);
+    const response = await fetch(`/api/YouTubeVideoLinks/${matchId}/links`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch video links: ${response.statusText}`);
@@ -22,7 +22,7 @@ export class YouTubeVideoLinksService {
    * Create a new YouTube video link for a match
    */
   static async createVideoLink(request: CreateYouTubeVideoLinkRequest): Promise<YouTubeVideoLinkResponse> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/YouTubeVideoLinks/create`, {
+    const response = await fetch(`/api/YouTubeVideoLinks/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -24,7 +24,7 @@ namespace MorWalPizVideo.Server.Controllers
 
                 var matches = await FetchMatches();                return elements.Select(entity =>
                 {
-                    var match = matches.FirstOrDefault(x => x.MatchId == entity.MatchId);
+                    var match = matches.FirstOrDefault(x => x.Id == entity.MatchId);
                     return match == null ? entity : entity with { MatchUrl = match.MatchType == MatchType.SingleVideo ? match.ThumbnailVideoId : match.Url };
                 }).Where(x => !string.IsNullOrEmpty(x.MatchUrl)).ToList();
             }));

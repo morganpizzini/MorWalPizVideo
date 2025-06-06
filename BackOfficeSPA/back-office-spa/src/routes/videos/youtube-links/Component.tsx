@@ -4,7 +4,9 @@ import { Container, Row, Col, Card, Button, Form, Table, Alert, Modal, Badge } f
 import PageHeader from '../../../components/PageHeader';
 import { Match } from '../../../services/matchesService';
 import { YouTubeVideoLinksService } from '../../../services/youTubeVideoLinksService';
+import { UtilityService } from '../../../services/utilityService';
 import { CreateYouTubeVideoLinkRequest, YouTubeVideoLinkResponse } from '../../../models/youTubeVideoLink';
+import { FontListResponse } from '../../../models/font';
 
 interface LoaderData {
   matches: Match[];
@@ -17,6 +19,8 @@ const Component: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [fonts, setFonts] = useState<FontListResponse>({ categories: [] });
+  const [fontsLoading, setFontsLoading] = useState(false);
   const [createForm, setCreateForm] = useState<Omit<CreateYouTubeVideoLinkRequest, 'matchId'>>({
     contentCreatorName: '',
     youTubeVideoId: '',
@@ -33,6 +37,32 @@ const Component: React.FC = () => {
       loadVideoLinks(selectedMatch.id);
     }
   }, [selectedMatch]);
+
+  // Load fonts when modal is opened
+  useEffect(() => {
+    if (showCreateModal && fonts.categories.length === 0) {
+      loadFonts();
+    }
+  }, [showCreateModal]);
+
+  const loadFonts = async () => {
+    setFontsLoading(true);
+    try {
+      const fontData = await UtilityService.getFonts();
+      setFonts(fontData);
+    } catch (err) {
+      console.error('Failed to load fonts:', err);
+      // Set a fallback if fonts fail to load
+      setFonts({
+        categories: [{
+          categoryName: 'Default',
+          fontFiles: ['Arial.ttf', 'Times New Roman.ttf', 'Helvetica.ttf']
+        }]
+      });
+    } finally {
+      setFontsLoading(false);
+    }
+  };
 
   const loadVideoLinks = async (matchId: string) => {
     setLoading(true);
@@ -277,11 +307,33 @@ const Component: React.FC = () => {
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Font Style</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={createForm.fontStyle}
-                    onChange={(e) => setCreateForm({...createForm, fontStyle: e.target.value})}
-                  />
+                  {fontsLoading ? (
+                    <Form.Control
+                      type="text"
+                      value="Caricamento fonts..."
+                      disabled
+                    />
+                  ) : (
+                    <Form.Select
+                      value={createForm.fontStyle}
+                      onChange={(e) => setCreateForm({...createForm, fontStyle: e.target.value})}
+                    >
+                      <option value="">-- Seleziona un font --</option>
+                      {fonts.categories.map((category) => (
+                        <optgroup key={category.categoryName} label={category.categoryName}>
+                          {category.fontFiles.map((fontFile) => {
+                            // Remove .ttf extension for display and use as value
+                            const fontName = fontFile.replace('.ttf', '');
+                            return (
+                                <option key={fontFile} value={`${category.categoryName}/${fontName}`}>
+                                {fontName}
+                              </option>
+                            );
+                          })}
+                        </optgroup>
+                      ))}
+                    </Form.Select>
+                  )}
                 </Form.Group>
               </Col>
               <Col md={6}>

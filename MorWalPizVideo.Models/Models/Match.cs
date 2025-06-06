@@ -61,7 +61,7 @@ namespace MorWalPizVideo.Server.Models
 
         [DataMember]
         [BsonElement("youtubeVideoLinks")]
-        public YouTubeVideoLink[] YouTubeVideoLinks { get; init; } = Array.Empty<YouTubeVideoLink>();
+        public YouTubeVideoLink[]? YouTubeVideoLinks { get; init; } = Array.Empty<YouTubeVideoLink>();
 
         [DataMember]
         [BsonElement("matchId")]
@@ -140,24 +140,23 @@ namespace MorWalPizVideo.Server.Models
             return this with { ThumbnailVideoId = newThumbnailVideoId };
         }
         
-        // Add a YouTube video link to the collection
         public Match AddYouTubeVideoLink(YouTubeVideoLink videoLink)
         {
-            var newVideoLinks = YouTubeVideoLinks.Append(videoLink).ToArray();
+            var newVideoLinks = (YouTubeVideoLinks ?? Array.Empty<YouTubeVideoLink>()).Append(videoLink).ToArray();
             return this with { YouTubeVideoLinks = newVideoLinks };
         }
         
         // Remove a YouTube video link from the collection
         public Match RemoveYouTubeVideoLink(string youtubeVideoId)
         {
-            var newVideoLinks = YouTubeVideoLinks.Where(v => v.YouTubeVideoId != youtubeVideoId).ToArray();
+            var newVideoLinks = (YouTubeVideoLinks ?? Array.Empty<YouTubeVideoLink>()).Where(v => v.YouTubeVideoId != youtubeVideoId).ToArray();
             return this with { YouTubeVideoLinks = newVideoLinks };
         }
         
         // Update a YouTube video link in the collection
         public Match UpdateYouTubeVideoLink(string youtubeVideoId, YouTubeVideoLink updatedVideoLink)
         {
-            var newVideoLinks = YouTubeVideoLinks.Select(v => 
+            var newVideoLinks = (YouTubeVideoLinks ?? Array.Empty<YouTubeVideoLink>()).Select(v => 
                 v.YouTubeVideoId == youtubeVideoId ? updatedVideoLink : v).ToArray();
             return this with { YouTubeVideoLinks = newVideoLinks };
         }

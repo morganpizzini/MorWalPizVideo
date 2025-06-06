@@ -56,7 +56,7 @@ export interface Match {
  * @returns Promise with the list of matches
  */
 export const fetchMatches = async (): Promise<Match[]> => {
-  return fetch(`${API_CONFIG.BASE_URL}/videos`)
+  return fetch(`/api/videos`)
     .then(response => {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);

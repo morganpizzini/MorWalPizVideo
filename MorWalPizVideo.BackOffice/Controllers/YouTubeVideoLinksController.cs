@@ -38,7 +38,7 @@ public class YouTubeVideoLinksController : ApplicationController
             }
 
             // Check if video link already exists for this match
-            var existingLink = match.YouTubeVideoLinks.FirstOrDefault(x => x.YouTubeVideoId == request.YouTubeVideoId);
+            var existingLink = match.YouTubeVideoLinks?.FirstOrDefault(x => x.YouTubeVideoId == request.YouTubeVideoId);
             if (existingLink != null)
             {
                 return BadRequest($"YouTube video link for video {request.YouTubeVideoId} already exists in this match");
@@ -93,7 +93,7 @@ public class YouTubeVideoLinksController : ApplicationController
     }
 
     [HttpGet("{matchId}/links")]
-    public async Task<IActionResult> GetYouTubeVideoLinks(string matchId)
+    public async Task<IActionResult> GetYouTubeVideoLinks([FromRoute]string matchId)
     {
         try
         {
@@ -103,14 +103,14 @@ public class YouTubeVideoLinksController : ApplicationController
                 return NotFound($"Match with ID {matchId} not found");
             }
 
-            var response = match.YouTubeVideoLinks.Select(link => new YouTubeVideoLinkResponse
+            var response = match.YouTubeVideoLinks?.Select(link => new YouTubeVideoLinkResponse
             {
                 ContentCreatorName = link.ContentCreatorName,
                 YouTubeVideoId = link.YouTubeVideoId,
                 ImageName = link.ImageName,
                 ShortLinkCode = link.ShortLink?.Code,
                 ShortLinkTarget = link.ShortLink?.Target
-            }).ToList();
+            }).ToList() ?? new List<YouTubeVideoLinkResponse>();
 
             return Ok(response);
         }
