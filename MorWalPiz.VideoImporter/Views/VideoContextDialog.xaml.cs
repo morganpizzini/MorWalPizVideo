@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
+using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
 using MorWalPizVideo.BackOffice.DTOs;
 
@@ -53,12 +54,19 @@ namespace MorWalPiz.VideoImporter.Views
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
             string context = VideoContextTextBox.Text;
+            IList<Language> languagues;
+            using (var dbContext = App.DatabaseService.CreateContext())
+            {
+                languagues = dbContext.Languages
+                                            .Where(l => !l.IsDefault && l.IsSelected)
+                                            .ToList();
+            }
 
             IsLoading = true;
 
             try
             {
-                var translations = await _apiService.SendVideosContextAsync(SelectedFiles, context);
+                var translations = await _apiService.SendVideosContextAsync(SelectedFiles, context, languagues);
                 ProcessingResult = translations; // Assign the result here
 
                 System.Windows.MessageBox.Show("Dati ricevuti! Controllare traduzioni", "Successo", MessageBoxButton.OK, MessageBoxImage.Information);

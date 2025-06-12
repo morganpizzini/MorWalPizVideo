@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -35,7 +35,7 @@ export default async function action({ request }: ActionFunctionArgs) {
   apiFormData.append('loadInMatchFolder', loadInMatchFolder.toString());
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/ImageUpload/upload-multiple`, {
+  return fetch(`/api/ImageUpload/upload-multiple`, {
     method: 'POST',
     body: apiFormData,
   })

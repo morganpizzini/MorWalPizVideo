@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { CreateChannelDTO } from '@/models/channel';
 
 export default async function action({ request }: { request: Request }) {
@@ -21,7 +21,7 @@ export default async function action({ request }: { request: Request }) {
   }
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/channels`, {
+  return fetch(`/api/channels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

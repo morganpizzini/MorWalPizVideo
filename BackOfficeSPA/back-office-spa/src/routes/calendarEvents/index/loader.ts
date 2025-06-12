@@ -1,8 +1,7 @@
 import { CalendarEvent } from '@models/CalendarEvent';
-import { API_CONFIG } from '@config/api';
 export default async function loader() {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/calendarEvents`);
+    const response = await fetch(`/api/calendarEvents`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);

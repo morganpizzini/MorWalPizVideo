@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -21,7 +21,7 @@ export default async function action({ request }: ActionFunctionArgs) {
   const cleanVideoIds = videoIds.filter(id => id && id.trim().length > 0);
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/videos/translate`, {
+  return fetch(`/api/videos/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cleanVideoIds),

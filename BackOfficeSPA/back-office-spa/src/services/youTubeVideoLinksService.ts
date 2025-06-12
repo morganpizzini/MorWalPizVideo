@@ -1,4 +1,4 @@
-import { API_CONFIG } from '@config/api';
+
 import { CreateYouTubeVideoLinkRequest, YouTubeVideoLinkResponse } from '@models/youTubeVideoLink';
 
 /**
@@ -42,7 +42,7 @@ export class YouTubeVideoLinksService {
    * Remove a YouTube video link from a match
    */
   static async removeVideoLink(matchId: string, youtubeVideoId: string): Promise<void> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/YouTubeVideoLinks/${matchId}/links/${youtubeVideoId}`, {
+    const response = await fetch(`/api/YouTubeVideoLinks/${matchId}/links/${youtubeVideoId}`, {
       method: 'DELETE',
     });
 
@@ -56,6 +56,6 @@ export class YouTubeVideoLinksService {
    * Get the URL for a creator image
    */
   static getCreatorImageUrl(imageName: string): string {
-    return `${API_CONFIG.BASE_URL}/YouTubeVideoLinks/image/${imageName}`;
+    return `/api/YouTubeVideoLinks/image/${imageName}`;
   }
 }

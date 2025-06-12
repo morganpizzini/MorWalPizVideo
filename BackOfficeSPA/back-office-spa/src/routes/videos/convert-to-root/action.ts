@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 interface ConvertToRootValues {
   videoId: string;
@@ -60,7 +60,7 @@ export default async function action({ request }: ActionFunctionArgs) {
   const category = values.categories.length > 0 ? values.categories[0] : '';
   
   // API request - updated for new Match structure
-  return fetch(`${API_CONFIG.BASE_URL}/videos/ConvertIntoRoot`, {
+  return fetch(`/api/videos/ConvertIntoRoot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -27,14 +27,15 @@ namespace MorWalPiz.VideoImporter.Services
       _httpClient = new HttpClient() { BaseAddress = new Uri(apiEndpoint)};
     }
 
-    public async Task<Review> SendVideosContextAsync(IEnumerable<string> videoNames, string context)
+    public async Task<Review> SendVideosContextAsync(IEnumerable<string> videoNames, string context, IList<Language> languagues)
     {
       try
       {
-        var requestData = new VideoContextRequest
+        var requestData = new ReviewRequest
         {
-          Videos = [.. videoNames],
-          Context = context
+          Names = [.. videoNames],
+          Context = context,
+          Languages = languagues.Select(l => l.Name).ToList()
         };
 
         var response = await _httpClient.PostAsJsonAsync("api/chat", requestData);
@@ -49,10 +50,4 @@ namespace MorWalPiz.VideoImporter.Services
     }
   }
 
-  public class VideoContextRequest
-  {
-    [JsonPropertyName("names")]
-    public List<string> Videos { get; set; } = new List<string>();
-    public string Context { get; set; } = string.Empty;
-  }
 }

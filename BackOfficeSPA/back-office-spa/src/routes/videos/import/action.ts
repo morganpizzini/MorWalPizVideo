@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -30,7 +30,7 @@ export default async function action({ request }: ActionFunctionArgs) {
   const category = values.categories.length > 0 ? values.categories[0] : '';
   
   // API request - updated for new Match structure using CreateSingleVideo
-  return fetch(`${API_CONFIG.BASE_URL}/videos/ImportVideo`, {
+  return fetch(`/api/videos/ImportVideo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

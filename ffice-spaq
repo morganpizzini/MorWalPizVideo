@@ -1,0 +1,44 @@
+diff.astextplain.textconv=astextplain
+filter.lfs.clean=git-lfs clean -- %f
+filter.lfs.smudge=git-lfs smudge -- %f
+filter.lfs.process=git-lfs filter-process
+filter.lfs.required=true
+http.sslbackend=openssl
+http.sslcainfo=D:/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt
+core.autocrlf=true
+core.fscache=true
+core.symlinks=false
+pull.rebase=false
+credential.helper=manager-core
+credential.https://dev.azure.com.usehttppath=true
+init.defaultbranch=main
+user.email=morgan.pizzini@hotmail.com
+user.name=Morgan Pizzini
+alias.alias=! git config --get-regexp ^alias\. | sed -e s/^alias\.// -e s/\ /\ =\ /
+alias.cmp=!f() { git add -A && git commit -m "$1" && git push; }; f
+alias.lg=log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+alias.amend=!f() { git add -A && git commit --amend --no-edit && git push -f; }; f
+alias.start=!f() { git reset --hard && git checkout main && git pull && git checkout -b $1 && git push -u origin $1; }; f
+alias.co=checkout
+alias.br=branch
+alias.st=status
+alias.what=for-each-ref --sort=-committerdate refs/heads/ --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset)) %(color:blue)<%(authorname)>%(color:reset)'
+alias.newb=!f() { git reset --hard && git checkout -b sample && git branch -D main && git fetch && git checkout main && git branch -D sample && git checkout -b $1 && git push -u origin $1; }; f
+alias.squash=!f() { git reset --soft HEAD~$1 && git commit -m "$2"; }; f
+core.commitgraph=true
+gc.writecommitgraph=true
+fetch.writecommitgraph=true
+difftool.sourcetree.cmd='' 
+mergetool.sourcetree.cmd='' 
+mergetool.sourcetree.trustexitcode=true
+core.repositoryformatversion=0
+core.filemode=false
+core.bare=false
+core.logallrefupdates=true
+core.symlinks=false
+core.ignorecase=true
+remote.origin.url=https://github.com/morganpizzini/MorWalPizVideo.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
+branch.main.vscode-merge-base=origin/main

@@ -1,4 +1,4 @@
-import { API_CONFIG } from '@config/api';
+
 
 /**
  * Interface representing a video in the system
@@ -26,7 +26,7 @@ export interface LoaderData {
  */
 export default async function loader(): Promise<LoaderData> {
   // Fetch videos
-  const videos = await fetch(`${API_CONFIG.BASE_URL}/videos`)
+  const videos = await fetch(`/api/videos`)
     .then(response => response.json())
     .catch(error => {
       console.error('Error loading videos:', error);

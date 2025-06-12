@@ -1,4 +1,4 @@
-import { API_CONFIG } from '@config/api';
+
 
 /**
  * Interface representing a match in the system
@@ -22,7 +22,7 @@ export interface LoaderData {
  */
 export default async function loader(): Promise<LoaderData> {
   // Fetch matches
-  const matchesPromise = fetch(`${API_CONFIG.BASE_URL}/matches`)
+  const matchesPromise = fetch(`/api/matches`)
     .then(response => response.json())
     .catch(error => {
       console.error('Error loading matches:', error);

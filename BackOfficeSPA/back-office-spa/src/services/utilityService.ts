@@ -1,4 +1,4 @@
-import { API_CONFIG } from '@config/api';
+
 import { FontListResponse } from '@models/font';
 
 /**

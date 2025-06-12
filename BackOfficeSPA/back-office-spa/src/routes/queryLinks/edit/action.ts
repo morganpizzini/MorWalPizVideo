@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { UpdateQueryLinkDTO } from '@/models';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
@@ -21,7 +21,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/querylinks/${params.id}`, {
+  return fetch(`/api/querylinks/${params.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

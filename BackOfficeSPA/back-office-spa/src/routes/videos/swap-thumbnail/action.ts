@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -24,7 +24,7 @@ export default async function action({ request }: ActionFunctionArgs) {
     return data({ success: false, errors }, { status: 400 });
   }
   // API request - updated for new Match structure using WithThumbnail method
-  return fetch(`${API_CONFIG.BASE_URL}/videos/SwapThumbnailId`, {
+  return fetch(`/api/videos/SwapThumbnailId`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

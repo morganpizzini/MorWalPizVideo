@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { CreateConfigurationDTO } from '@/models/configuration';
 
 export default async function action({ request }: { request: Request }) {
@@ -29,7 +29,7 @@ export default async function action({ request }: { request: Request }) {
   }
 
   // If no errors, execute API request
-  return fetch(`${API_CONFIG.BASE_URL}/configurations`, {
+  return fetch(`/api/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

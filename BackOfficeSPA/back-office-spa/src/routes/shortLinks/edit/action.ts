@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 
 import { ActionFunctionArgs } from 'react-router';
 import { UpdateShortLinkDTO } from '@/models';
@@ -19,7 +19,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/shortlinks/${params.id}`, {
+  return fetch(`/api/shortlinks/${params.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

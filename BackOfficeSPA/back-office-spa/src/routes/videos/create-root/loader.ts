@@ -1,4 +1,4 @@
-import { API_CONFIG } from '@config/api';
+
 
 /**
  * Interface representing a category in the system
@@ -21,7 +21,7 @@ export interface LoaderData {
  */
 export default async function loader(): Promise<LoaderData> {
   // Fetch categories
-  const categoriesPromise = fetch(`${API_CONFIG.BASE_URL}/categories`)
+  const categoriesPromise = fetch(`/api/categories`)
     .then(response => response.json())
     .catch(error => {
       console.error('Error loading categories:', error);

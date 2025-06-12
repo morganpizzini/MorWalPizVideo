@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { CreateShortLinkDTO, LinkType } from '@models';
 
 export default async function action({ request }: { request: Request }) {
@@ -28,7 +28,7 @@ export default async function action({ request }: { request: Request }) {
   }
 
   // If no errors, proceed with API request
-  return fetch(`${API_CONFIG.BASE_URL}/shortlinks`, {
+  return fetch(`/api/shortlinks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

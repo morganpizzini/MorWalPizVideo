@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { CreateQueryLinkDTO } from '@/models';
 
 export default async function action({ request }: { request: Request }) {
@@ -21,7 +21,7 @@ export default async function action({ request }: { request: Request }) {
   }
 
   // Se non ci sono errori, esegui la richiesta API
-  return fetch(`${API_CONFIG.BASE_URL}/querylinks`, {
+  return fetch(`/api/querylinks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

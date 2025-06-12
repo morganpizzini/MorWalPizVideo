@@ -1,5 +1,5 @@
 import { data } from 'react-router';
-import { API_CONFIG } from '@config/api';
+
 import { UpdateChannelDTO } from '@/models/channel';
 
 export default async function action({
@@ -22,7 +22,7 @@ export default async function action({
   }
 
   // API request
-  return fetch(`${API_CONFIG.BASE_URL}/channels/${params.id}`, {
+  return fetch(`/api/channels/${params.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(values),

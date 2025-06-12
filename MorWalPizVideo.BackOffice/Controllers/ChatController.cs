@@ -51,12 +51,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     – Avere una lunghezza compresa tra 200 e 800 caratteri.
                     Traduci anche in Inglese.Non tradurre: No Shoot, A Zone, Double Alpha, Charlie, Double Charlie.
                     Dizionario per termini specifici: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio, Topolino > Mickey mouse, Consizione 1/2/3 > Condition 1/2/3,mano forte/debole > strong/weak hand
+                    Utilizzando la traduzione inglese, crea le traduzioni anche per queste lingue: {string.Join(", ", reviewRequest.Languages)}.
                     Elabora le informazioni e dammi un risultato seguento il JSON schema fornito.";
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
       var executionSettings = new AzureOpenAIPromptExecutionSettings()
       {
-        ResponseFormat = typeof(Review),
+        ResponseFormat = typeof(Review)
       };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
