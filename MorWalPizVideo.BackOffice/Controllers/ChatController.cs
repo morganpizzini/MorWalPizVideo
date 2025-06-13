@@ -33,6 +33,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                         {reviewRequest.Context}
                         Ti fornirò una lista, ogni elemento è una serie di parole chiavi. Il tuo compito è quello di
                         elaborare una frase di senso compiuto esaustiva del concetto espresso da quelle parole chiavi.
+                        Dai più priorità alle parole chiave rispetto al contesto, ma non ignorarlo.
                         Ecco l'elenco:
                         {fileNames}
                         Un volta ottenuto il risultato, e conoscendo le meccaniche di engagement di Youtube,
