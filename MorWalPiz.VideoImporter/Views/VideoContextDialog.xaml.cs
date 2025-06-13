@@ -38,11 +38,10 @@ namespace MorWalPiz.VideoImporter.Views
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public VideoContextDialog(IEnumerable<string> selectedFileNames, string apiEndpoint)
+        public VideoContextDialog(IEnumerable<string> selectedFileNames,  string apiEndpoint)
         {
             InitializeComponent();
             DataContext = this;
-
             foreach (var fileName in selectedFileNames)
             {
                 SelectedFiles.Add(fileName);

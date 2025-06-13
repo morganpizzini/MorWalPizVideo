@@ -39,11 +39,11 @@ namespace MorWalPiz.VideoImporter.Services
         };
 
         var response = await _httpClient.PostAsJsonAsync("api/chat", requestData);
-                if(!response.IsSuccessStatusCode)
-                    return new();
+        if(!response.IsSuccessStatusCode)
+            return new();
         return (await response.Content.ReadFromJsonAsync<Review>())?? new();
       }
-      catch (Exception ex)
+      catch (Exception)
       {
         return new();
       }

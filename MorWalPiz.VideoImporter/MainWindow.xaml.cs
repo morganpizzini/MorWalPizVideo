@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 // Aggiungi using per AppDbContext e Disclaimer
 using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
@@ -267,25 +268,50 @@ namespace MorWalPiz.VideoImporter
                 // Aggiorna i file video con le traduzioni ricevute
                 foreach (var item in selectedItems)
                 {
-                    var current = translations.Videos.FirstOrDefault(t => t.Name == item.CleanFileName);
+                    var cleanFileName = !string.IsNullOrEmpty(item.EditedCleanFileName)
+                        ? item.EditedCleanFileName
+                        : item.CleanFileName;
+
+                    var current = translations.Videos.FirstOrDefault(t => t.Name == cleanFileName);
                     if (current == null)
                         continue;
 
-                    // defailt language
+                    // Ottieni la lingua predefinita dal database
+                    using var dbContext = App.DatabaseService.CreateContext();
+                    var defaultLanguage = dbContext.Languages.FirstOrDefault(l => l.IsDefault);
+                    var allLanguages = dbContext.Languages.ToList();
 
-                    item.Title = current.TitleItalian;
-                    item.Description = current.DescriptionItalian;
+                    // Trova la traduzione per la lingua predefinita (italiano)
+                    var defaultTranslation = current.Translations.FirstOrDefault(t =>
+                        string.Equals(t.Language, defaultLanguage?.Name, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(t.Language, "Italian", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(t.Language, "Italiano", StringComparison.OrdinalIgnoreCase));
 
-                    var englishKey = 2;
-                    if (!item.Translations.TryGetValue(englishKey, out var value))
+                    if (defaultTranslation != null)
                     {
-                        value = new TranslationItem();
-                        item.Translations.Add(englishKey, value);
+                        item.Title = defaultTranslation.Title;
+                        item.Description = defaultTranslation.Description;
                     }
 
-                    value.Title = current.TitleEnglish;
-                    value.Description = current.DescriptionEnglish;
+                    // Aggiungi le altre traduzioni
+                    foreach (var translation in current.Translations)
+                    {
+                        // Trova la lingua corrispondente nel database
+                        var language = allLanguages.FirstOrDefault(l =>
+                            string.Equals(l.Name, translation.Language, StringComparison.OrdinalIgnoreCase));
 
+                        if (language != null && !language.IsDefault)
+                        {
+                            if (!item.Translations.TryGetValue(language.Id, out var translationItem))
+                            {
+                                translationItem = new TranslationItem();
+                                item.Translations.Add(language.Id, translationItem);
+                            }
+
+                            translationItem.Title = translation.Title;
+                            translationItem.Description = translation.Description;
+                        }
+                    }
                 }
 
                 // Aggiorna la visualizzazione
