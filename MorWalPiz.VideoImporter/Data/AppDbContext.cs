@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MorWalPiz.VideoImporter.Models;
+using System;
 using System.IO;
+using System.Xml.Linq;
 
 namespace MorWalPiz.VideoImporter.Data
 {
@@ -57,6 +59,15 @@ namespace MorWalPiz.VideoImporter.Data
               Name = "Giorni feriali", 
               DaysOfWeek = 31, // Monday(1) + Tuesday(2) + Wednesday(4) + Thursday(8) + Friday(16) = 31
               PublishTime = new System.TimeSpan(19, 0, 0), // 19:00
+              IsActive = true,
+              CreatedDate = new System.DateTime(2025, 1, 1)
+          },
+          new PublishSchedule
+          {
+              Id = 3, 
+              Name = "Giorni feriali 1", 
+              DaysOfWeek = 31, // Monday(1) + Tuesday(2) + Wednesday(4) + Thursday(8) + Friday(16) = 31
+              PublishTime = new System.TimeSpan(12, 0, 0), // 19:00
               IsActive = true,
               CreatedDate = new System.DateTime(2025, 1, 1)
           },
