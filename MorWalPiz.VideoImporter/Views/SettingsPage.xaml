@@ -11,60 +11,75 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         ResizeMode="NoResize">
-  <Grid Margin="20">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-    <!-- Hashtags -->
-    <Label Grid.Row="0"
-           Content="Hashtag predefiniti:"
-           FontWeight="Bold"
-           Margin="0,0,0,5"/>
-    <TextBlock Grid.Row="1"
-               Text="Inserisci gli hashtag separati da spazi (esempio: #video #social)"
-               Margin="0,0,0,5"
-               TextWrapping="Wrap"/>
-    <TextBox Grid.Row="2"
+        <!-- Hashtags -->
+        <StackPanel Grid.Row="0">
+            <Label 
+                   Content="Hashtag predefiniti:"
+                   FontWeight="Bold"
+                   Margin="0,0,0,5"/>
+            <TextBlock Grid.Row="1"
+                       Text="Inserisci gli hashtag separati da virgola (esempio: video, social)"
+                       Margin="0,0,0,5"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+        <TextBox Grid.Row="1"
              x:Name="HashtagsTextBox"
              AcceptsReturn="True"
              TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto"
              Margin="0,0,0,15"/>
 
-    <!-- API Endpoint -->
-    <Grid Grid.Row="4"
-        Margin="0,0,0,20">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="*"/>
-      </Grid.ColumnDefinitions>
-      <Label Grid.Column="0"
+        <!-- API Endpoint -->
+        <StackPanel Grid.Row="2">
+            <Grid 
+                Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0"
              Content="API Endpoint:"
              FontWeight="Bold"
              VerticalAlignment="Center"/>
-      <TextBox Grid.Column="1"
+                <TextBox Grid.Column="1"
                x:Name="ApiEndpointTextBox"
                Margin="10,0,0,0"/>
-    </Grid>
-    <!-- Buttons -->
-    <StackPanel Grid.Row="5"
+            </Grid>
+            <Grid 
+                Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0"
+             Content="Application name:"
+             FontWeight="Bold"
+             VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+               x:Name="ApplicationNameTextBox"
+               Margin="10,0,0,0"/>
+            </Grid>
+            <!-- Buttons -->
+            <StackPanel
                 Orientation="Horizontal"
                 HorizontalAlignment="Right">
-      <Button x:Name="SaveButton"
-              Content="Salva"
-              Width="80"
-              Margin="0,0,10,0"
-              Click="SaveButton_Click"/>
-      <Button x:Name="CancelButton"
-              Content="Annulla"
-              Width="80"
-              Click="CancelButton_Click"/>
-    </StackPanel>
-  </Grid>
+                <Button x:Name="SaveButton"
+                  Content="Salva"
+                  Width="80"
+                  Margin="0,0,10,0"
+                  Click="SaveButton_Click"/>
+                <Button x:Name="CancelButton"
+                  Content="Annulla"
+                  Width="80"
+                  Click="CancelButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
 </Window>

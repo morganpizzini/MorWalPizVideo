@@ -14,7 +14,4 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("url")] string Url,
         [property: DataMember][property: BsonElement("category")] string Category,
         [property: DataMember][property: BsonElement("category2")] string? Category2) : BaseEntity {
-        [DataMember]
-        [BsonElement("productId")]
-        public string ProductId => Title;
     }}

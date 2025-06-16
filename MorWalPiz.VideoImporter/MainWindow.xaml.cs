@@ -78,6 +78,9 @@ namespace MorWalPiz.VideoImporter
             
             // Initialize button states
             UpdateButtonStates();
+            
+            // Initialize tenant dropdown
+            LoadTenants();
         }
 
         private void VideoFiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -122,6 +125,7 @@ namespace MorWalPiz.VideoImporter
 
                 if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    selectedFolders.Clear();
                     selectedFolders.Add(folderDialog.SelectedPath);
                 }
                 ProcessFiles();
@@ -139,6 +143,7 @@ namespace MorWalPiz.VideoImporter
 
             if (fileDialog.ShowDialog() == true)
             {
+                selectedFiles.Clear();
                 foreach (var file in fileDialog.FileNames)
                 {
                     selectedFiles.Add(file);
@@ -463,8 +468,12 @@ namespace MorWalPiz.VideoImporter
 
                     var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
-                    // Esegui il caricamento in modo asincrono
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries));
+                    // Show progress panel
+                    ProgressPanel.Visibility = Visibility.Visible;
+                    UploadToYouTubeButton.IsEnabled = false;
+
+                    // Esegui il caricamento in modo asincrono con progress callback
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries), OnUploadProgress);
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -494,6 +503,9 @@ namespace MorWalPiz.VideoImporter
                 }
                 finally
                 {
+                    // Hide progress panel and re-enable button
+                    ProgressPanel.Visibility = Visibility.Collapsed;
+                    UploadToYouTubeButton.IsEnabled = true;
                     // Ripristina il cursore
                     Mouse.OverrideCursor = null;
                 }
@@ -510,9 +522,23 @@ namespace MorWalPiz.VideoImporter
         }
 
         /// <summary>
+        /// Handles upload progress updates and updates the UI accordingly
+        /// </summary>
+        private void OnUploadProgress(UploadProgressInfo progressInfo)
+        {
+            // Ensure UI updates happen on the UI thread
+            Dispatcher.Invoke(() =>
+            {
+                ProgressStatusText.Text = $"Video {progressInfo.CurrentVideoNumber} di {progressInfo.TotalVideos}: {progressInfo.Status}";
+                CurrentFileText.Text = progressInfo.CurrentFileName;
+                UploadProgressBar.Value = progressInfo.OverallProgress;
+            });
+        }
+
+        /// <summary>
         /// Gestisce la pulizia delle credenziali YouTube
         /// </summary>
-        private void ClearYouTubeCredentials_Click(object sender, RoutedEventArgs e)
+        private async void ClearYouTubeCredentials_Click(object sender, RoutedEventArgs e)
         {
             // Mostra un messaggio di conferma prima di procedere
             var result = MessageBox.Show(
@@ -533,11 +559,50 @@ namespace MorWalPiz.VideoImporter
 
                     if (success)
                     {
-                        MessageBox.Show(
-                            "Credenziali YouTube eliminate con successo.",
-                            "Operazione completata",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                        Mouse.OverrideCursor = null;
+                        
+                        // Chiedi all'utente se vuole effettuare subito il login con le nuove credenziali
+                        var loginResult = MessageBox.Show(
+                            "Credenziali YouTube eliminate con successo.\n\n" +
+                            "Vuoi effettuare subito il login per ottenere un nuovo token di accesso?",
+                            "Login YouTube",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+
+                        if (loginResult == MessageBoxResult.Yes)
+                        {
+                            Mouse.OverrideCursor = Cursors.Wait;
+                            
+                            // Forza una nuova autenticazione
+                            bool loginSuccess = await App.YouTubeUploadService.ForceReauthenticationAsync();
+                            
+                            if (loginSuccess)
+                            {
+                                MessageBox.Show(
+                                    "Login YouTube completato con successo.\n" +
+                                    "Il servizio è ora pronto per l'utilizzo.",
+                                    "Login completato",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show(
+                                    "Errore durante il login YouTube.\n" +
+                                    "Riprova più tardi o verifica le credenziali.",
+                                    "Errore login",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Credenziali eliminate. Il login sarà richiesto al primo utilizzo del servizio YouTube.",
+                                "Operazione completata",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -674,7 +739,77 @@ namespace MorWalPiz.VideoImporter
                 item.IsSelected = isChecked;
             }
             FileListView.Items.Refresh();
+        }
 
+        // Tenant-related methods
+        private async void LoadTenants()
+        {
+            try
+            {
+                var tenants = await App.TenantService.GetActiveTenantsAsync();
+                TenantComboBox.ItemsSource = tenants;
+                
+                // Set the current tenant
+                var currentTenant = tenants.FirstOrDefault(t => t.Id == App.TenantContext.CurrentTenantId);
+                if (currentTenant != null)
+                {
+                    TenantComboBox.SelectedItem = currentTenant;
+                }
+                else if (tenants.Any())
+                {
+                    // Select the first tenant if current is not found
+                    TenantComboBox.SelectedItem = tenants.First();
+                    App.TenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nel caricamento dei tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void TenantComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (TenantComboBox.SelectedItem is Tenant selectedTenant)
+            {
+                App.TenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                
+                // Clear current data and reload for the new tenant
+                VideoFiles.Clear();
+                selectedFolders.Clear();
+                selectedFiles.Clear();
+                
+                // Update title to show current tenant
+                Title = $"Video Importer - {selectedTenant.Name}";
+            }
+        }
+
+        private void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var tenantManagementPage = new TenantManagementPage(App.TenantService, App.TenantContext);
+                var dialog = new Window
+                {
+                    Content = tenantManagementPage,
+                    Title = "Gestione Tenant",
+                    Width = 800,
+                    Height = 600,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = this
+                };
+                
+                dialog.ShowDialog();
+                
+                // Reload tenants after the dialog closes
+                LoadTenants();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nell'apertura della gestione tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 

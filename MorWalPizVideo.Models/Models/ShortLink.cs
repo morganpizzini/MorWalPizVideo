@@ -32,9 +32,6 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("target")] string Target,
         [property: DataMember][property: BsonElement("queryString")] string QueryString) : BaseEntity
     {
-        [DataMember]
-        [BsonElement("shortLinkId")]
-        public string ShortLinkId => Code;
 
         [DataMember]
         [BsonElement("clicksCount")]

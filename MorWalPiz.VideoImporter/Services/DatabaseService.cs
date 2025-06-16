@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MorWalPiz.VideoImporter.Data;
 using System.IO;
 
@@ -6,10 +7,12 @@ namespace MorWalPiz.VideoImporter.Services
     public class DatabaseService
     {
         private readonly string _dbPath;
+        private readonly ITenantContext _tenantContext;
 
-        public DatabaseService()
+        public DatabaseService(ITenantContext tenantContext)
         {
             _dbPath = Path.Combine(Directory.GetCurrentDirectory(), "VideoImporter.db");
+            _tenantContext = tenantContext;
         }
 
         public void InitializeDatabase()
@@ -17,16 +20,17 @@ namespace MorWalPiz.VideoImporter.Services
             // Opzionalmente, elimina il database se esiste già
             // Questo assicura che tutte le nuove entità vengano aggiunte
             // Nota: rimuovi queste righe in produzione per evitare la perdita di dati
-            if (File.Exists(_dbPath))
-            {
-                File.Delete(_dbPath);
-            }
+            //if (File.Exists(_dbPath))
+            //{
+            //    File.Delete(_dbPath);
+            //}
 
             // Crea un contesto temporaneo per inizializzare il database
-            using (var context = new AppDbContext())
+            using (var context = new AppDbContext(_tenantContext))
             {
                 // Assicura che il database esista e che sia aggiornato allo schema più recente
-                context.Database.EnsureCreated();
+                // Migrate() creerà il database se non esiste e applicherà tutte le migrazioni pendenti
+                context.Database.Migrate();
             }
         }
 
@@ -36,7 +40,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// </summary>
         public AppDbContext CreateContext()
         {
-            return new AppDbContext();
+            return new AppDbContext(_tenantContext);
         }
     }
 }

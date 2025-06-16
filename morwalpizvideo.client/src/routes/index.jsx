@@ -14,10 +14,12 @@ export default function Index() {
     const [selectedCategories, setSelectedCategories] = useState([]);
 
     let firstMatchId = matches[0];
-    if (firstMatchId.videos?.length > 0) {
-        firstMatchId = firstMatchId.videos[firstMatchId.videos.length - 1].id;
-    } else {
-        firstMatchId = firstMatchId.url
+    if (firstMatchId) {
+        if (firstMatchId.videos?.length > 0) {
+            firstMatchId = firstMatchId.videos[firstMatchId.videos.length - 1].id;
+        } else {
+            firstMatchId = firstMatchId.url
+        }
     }
 
     const toggleCategory = (category) => {
@@ -65,7 +67,7 @@ export default function Index() {
             <SEO
                 title={"MorWalPiz"}
                 description={"MorWalPiz"}
-                imageUrl={`https://img.youtube.com/vi/${matches[0].thumbnailUrl}/hqdefault.jpg`}
+                imageUrl={matches.length > 0 ? `https://img.youtube.com/vi/${matches[0].thumbnailUrl}/hqdefault.jpg` : ''}
                 type='website' />
             {configuration[configKeys.STREAM_ENABLE] &&
                 <>
@@ -81,12 +83,16 @@ export default function Index() {
                 </>
             }
             <div className="row align-items-center">
-                <div className="d-none d-md-block col-md-3">
-                    {RenderMatchCard(matches[0], -1)}
-                </div>
-                <div className="col-12 col-md-9">
-                    <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
-                </div>
+                {matches.length > 0 &&
+                    <>
+                        <div className="d-none d-md-block col-md-3">
+                            {RenderMatchCard(matches[0], -1)}
+                        </div>
+                        <div className="col-12 col-md-9">
+                            <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                        </div>
+                    </>
+                }
             </div>
             <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
                 {allCategories.map((category) => {
@@ -238,7 +244,7 @@ function GoToShortsCard() {
         <>
             <div className="card position-relative">
                 <div className="px-2" style={{ "heigth": "200px" }}>
-                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
+                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" style={{ objectFit: "contain", "width": "100%" }} />
                 </div>
                 <div className="card-body">
                     <p className="text-muted mb-1 text-uppercase">CONSIGLI</p>

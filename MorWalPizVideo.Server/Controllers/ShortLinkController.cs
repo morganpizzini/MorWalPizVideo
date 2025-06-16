@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
-using MatchType = MorWalPizVideo.Server.Models.MatchType;
+using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 
 namespace MorWalPizVideo.Server.Controllers
 {
@@ -52,7 +52,7 @@ namespace MorWalPizVideo.Server.Controllers
                 if (lastMatch == null)
                     return BadRequest("last match cannot found");
 
-                string videoId;                if (lastMatch.MatchType == MatchType.SingleVideo)
+                string videoId;                if (lastMatch.ContentType == YoutubeContentType.SingleVideo)
                 {
                     videoId = lastMatch.ThumbnailVideoId;
                 }
@@ -186,14 +186,14 @@ namespace MorWalPizVideo.Server.Controllers
                 case LinkType.YouTubeVideo:
                 default:                    // For YouTube videos, we need to look up the actual video data
                     var existingMatch = (await FetchMatches()).FirstOrDefault(x => 
-                        (x.MatchType == MatchType.SingleVideo && x.ThumbnailVideoId == shortLink.Target) || 
+                        (x.ContentType == YoutubeContentType.SingleVideo && x.ThumbnailVideoId == shortLink.Target) || 
                         (x.Videos != null && x.Videos.Any(v => v.YoutubeId == shortLink.Target)));
                     
                     if (existingMatch == null)
                         return BadRequest("Video not found");
 
                     string videoId = string.Empty;
-                    if (existingMatch.MatchType == MatchType.SingleVideo)
+                    if (existingMatch.ContentType == YoutubeContentType.SingleVideo)
                     {
                         videoId = existingMatch.ThumbnailVideoId;
                     }

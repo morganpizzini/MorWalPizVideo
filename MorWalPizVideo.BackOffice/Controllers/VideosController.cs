@@ -36,7 +36,7 @@ public class VideosController : ApplicationController
     {
         var matchCollection = await dataService.GetMatches();
 
-        await dataService.SaveMatch(Match.CreateSingleVideo(request.VideoId, request.Category.ToLower()));
+        await dataService.SaveMatch(YouTubeContent.CreateSingleVideo(request.VideoId, request.Category.ToLower()));
 
         using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
 
@@ -58,7 +58,7 @@ public class VideosController : ApplicationController
             return BadRequest("Match is already a root");
         }
 
-        var newMatch = Match.CreateCollection(
+        var newMatch = YouTubeContent.CreateCollection(
             existingMatch.Id,
             request.Title,
             request.Description,
@@ -96,7 +96,7 @@ public class VideosController : ApplicationController
     {
         var matchCollection = await dataService.GetMatches();
 
-        await dataService.SaveMatch(Match.CreateCollection(
+        await dataService.SaveMatch(YouTubeContent.CreateCollection(
             request.VideoId,
             request.Title,
             request.Description,

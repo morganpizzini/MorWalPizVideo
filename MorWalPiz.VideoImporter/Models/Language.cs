@@ -21,6 +21,9 @@ namespace MorWalPiz.VideoImporter.Models
 
     public bool IsSelected { get; set; }
 
+    // Multi-tenant support
+    public int TenantId { get; set; }
+
     // Relazione con i disclaimer
     public ICollection<Disclaimer> Disclaimers { get; set; }
   }

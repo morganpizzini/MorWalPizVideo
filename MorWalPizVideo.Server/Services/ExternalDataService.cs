@@ -5,7 +5,7 @@ namespace MorWalPizVideo.Server.Services
 {
     public interface IExternalDataService
     {
-        Task<IList<Match>> FetchMatches();
+        Task<IList<YouTubeContent>> FetchMatches();
     }
     public class ExternalDataMockService : IExternalDataService
     {
@@ -15,7 +15,7 @@ namespace MorWalPizVideo.Server.Services
             _dataService = dataService;
         }
 
-        public Task<IList<Match>> FetchMatches()
+        public Task<IList<YouTubeContent>> FetchMatches()
         {
             return _dataService.GetMatches();
         }
@@ -25,16 +25,16 @@ namespace MorWalPizVideo.Server.Services
     public class ExternalDataService : IExternalDataService
     {
         private readonly DataService _dataService;
-        private readonly IMatchRepository _matchRepository;
+        private readonly IYouTubeContentRepository _matchRepository;
         private readonly IYTService _youtubeService;
-        public ExternalDataService(DataService dataService, IYTService youtubeService, IMatchRepository matchRepository)
+        public ExternalDataService(DataService dataService, IYTService youtubeService, IYouTubeContentRepository matchRepository)
         {
             _dataService = dataService;
             _matchRepository = matchRepository;
             _youtubeService = youtubeService;
-        }        public async Task<IList<Match>> FetchMatches()
+        }        public async Task<IList<YouTubeContent>> FetchMatches()
         {
-            IList<Match> matches = await _dataService.GetMatches();
+            IList<YouTubeContent> matches = await _dataService.GetMatches();
             
             // Get all videoIds that need to be populated with details
             // For single videos, use the ThumbnailVideoId
@@ -75,11 +75,11 @@ namespace MorWalPizVideo.Server.Services
             return matches.OrderByDescending(x => x.CreationDateTime).ToList();
         }
 
-        private IList<Match> ParseMatches(IList<Match> matches, IList<Video> videos)
+        private IList<YouTubeContent> ParseMatches(IList<YouTubeContent> matches, IList<Video> videos)
         {
             // Create a dictionary for quick video lookup
             var videoDict = videos.ToDictionary(v => v.YoutubeId, v => v);
-            var updatedMatches = new List<Match>(matches.Count);
+            var updatedMatches = new List<YouTubeContent>(matches.Count);
             
             foreach (var match in matches)
             {

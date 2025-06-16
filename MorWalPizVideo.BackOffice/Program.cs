@@ -123,7 +123,7 @@ if (enableMock)
     builder.Services.AddScoped<IYTService, YTService>();
 
 
-    builder.Services.AddScoped<IMatchRepository, MatchMockRepository>();
+    builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
@@ -167,7 +167,7 @@ else
     builder.Services.AddScoped(s =>
         new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
 
-    builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+    builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();

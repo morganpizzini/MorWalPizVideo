@@ -9,6 +9,7 @@ using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Security.Authentication;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
@@ -20,6 +21,32 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
+var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+
+// Configure Azure KeyVault if enabled
+if (enableKeyVault)
+{
+    var keyVaultUrl = builder.Configuration["KeyVaultUrl"];
+    if (!string.IsNullOrEmpty(keyVaultUrl))
+    {
+        try
+        {
+            builder.Configuration.AddAzureKeyVault(
+                new Uri(keyVaultUrl),
+                new DefaultAzureCredential());
+        }
+        catch (Exception ex)
+        {
+            // Log the exception and continue without KeyVault
+            // This allows the application to start even if KeyVault is unavailable
+            Console.WriteLine($"Warning: Could not connect to KeyVault at {keyVaultUrl}: {ex.Message}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("Warning: EnableKeyVault is true but KeyVaultUrl is not configured");
+    }
+}
 
 builder.AddServiceDefaults();
 var config = builder.Configuration["Config"];
@@ -38,7 +65,7 @@ builder.Services.AddScoped<DataService>();
 if (enableMock)
 {
     builder.Services.AddScoped<IExternalDataService, ExternalDataMockService>();
-    builder.Services.AddScoped<IMatchRepository, MatchMockRepository>();
+    builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
@@ -59,7 +86,7 @@ else
 {
     BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
     builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
-    builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+    builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
@@ -117,6 +144,9 @@ else
 
 builder.Services.AddControllers();
 
+// Add health checks
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 if (enableDev)
@@ -136,6 +166,9 @@ else
 }
 
 app.MapDefaultEndpoints();
+
+// Map health check endpoint
+app.MapHealthChecks("/health");
 
 app.UseDefaultFiles();
 app.MapStaticAssets();
@@ -163,4 +196,3 @@ app.MapFallbackToFile("/index.html");
 
 
 app.Run();
-

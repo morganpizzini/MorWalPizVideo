@@ -22,15 +22,15 @@ namespace MorWalPizVideo.Server.Controllers
         }
         protected async Task<int> CountMatches()
         {
-            var entities = cache.Get<IList<Match>>(CacheKeys.Matches);
+            var entities = cache.Get<IList<YouTubeContent>>(CacheKeys.Matches);
             if (entities!= null)
                 return entities?.Count ?? 0;
 
             return (await this.FetchMatches()).Count;
         }
-        protected async Task<IList<Match>> FetchMatches(int skip = 0, int take = int.MaxValue)
+        protected async Task<IList<YouTubeContent>> FetchMatches(int skip = 0, int take = int.MaxValue)
         {
-            return (await cache.GetOrCreateAsync<IList<Match>>(CacheKeys.Matches, async () =>
+            return (await cache.GetOrCreateAsync<IList<YouTubeContent>>(CacheKeys.Matches, async () =>
             {
                 return (await externalDataService.FetchMatches())
                             .OrderByDescending(x => x.CreationDateTime)

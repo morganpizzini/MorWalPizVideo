@@ -20,10 +20,13 @@ namespace MorWalPizVideo.BackOffice.DTOs
   public class ReviewDetails
   {
     [Required]
-    [Description("Il nome del file originale")]
+    [Description("Parole chiavi originali")]
     public string Name { get; set; } = string.Empty;
-
     [Required]
+    [Description("Elemento elaborato")]
+    public string ProcessElement { get; set; } = string.Empty;
+
+        [Required]
     [Description("Lista delle traduzioni effettuate")]
     public IList<ReviewTranslationDetail> Translations { get; set; } = new List<ReviewTranslationDetail>();
     }

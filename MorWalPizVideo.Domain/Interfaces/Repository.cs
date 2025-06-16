@@ -4,9 +4,9 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
-    public class MatchRepository : BaseRepository<Match>, IMatchRepository
+    public class YouTubeContentRepository : BaseRepository<YouTubeContent>, IYouTubeContentRepository
     {
-        public MatchRepository(IMongoDatabase database) : base(database, DbCollections.Matches)
+        public YouTubeContentRepository(IMongoDatabase database) : base(database, DbCollections.YouTubeContent)
         {
         }
     }

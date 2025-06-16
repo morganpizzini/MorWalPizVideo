@@ -26,7 +26,7 @@ public class ImageUploadController : ApplicationController
             return BadRequest("File non valido.");
         }
 
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+        var matchCollection = database.GetCollection<YouTubeContent>(DbCollections.YouTubeContent);
         var existingMatch = matchCollection.Find(x => x.Url == folderName).FirstOrDefault();
 
         if (existingMatch == null)

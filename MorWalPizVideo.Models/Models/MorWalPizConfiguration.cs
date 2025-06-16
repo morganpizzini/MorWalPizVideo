@@ -15,8 +15,5 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("description")] string Description // Nome leggibile della configurazione
     ) : BaseEntity
     {
-        [DataMember]
-        [BsonElement("configurationId")]
-        public string ConfigurationId => Key;
     }
 }

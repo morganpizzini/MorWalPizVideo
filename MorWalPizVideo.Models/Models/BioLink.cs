@@ -14,9 +14,5 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("enable")]
         public bool Enable { get; set; } = true;
-
-        [DataMember]
-        [BsonElement("bioLinkId")]
-        public string BioLinkId => Title;
     }
 }

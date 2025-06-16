@@ -3,7 +3,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
-    public class MatchMockRepository : BaseMockRepository<Match>, IMatchRepository
+    public class MatchMockRepository : BaseMockRepository<YouTubeContent>, IYouTubeContentRepository
     {
         public MatchMockRepository(IHostEnvironment environment) : base(environment, "matches")
         {

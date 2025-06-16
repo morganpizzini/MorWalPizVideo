@@ -20,21 +20,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// </summary>
         public (DateTime date, TimeSpan time) GetNextPublishDateTime(DateTime startDate)
         {
-            using var context = _databaseService.CreateContext();
-            var activeSchedules = context.PublishSchedules
-                .Where(s => s.IsActive)
-                .ToList()
-                .OrderBy(s => s.DaysOfWeek)
-                .ThenBy(s => s.PublishTime)
-                .ToList();
-
-            if (!activeSchedules.Any())
-            {
-                // Fallback to default behavior if no schedules exist
-                return (startDate, new TimeSpan(12, 0, 0));
-            }
-
-            return FindNextPublishSlot(startDate, activeSchedules);
+            return FindNextPublishSlot(startDate);
         }
 
         /// <summary>
@@ -43,47 +29,77 @@ namespace MorWalPiz.VideoImporter.Services
         public List<(DateTime date, TimeSpan time)> GetPublishDateTimesForVideos(DateTime startDate, int videoCount)
         {
             var results = new List<(DateTime date, TimeSpan time)>();
-            var currentDate = startDate;
+            var currentDateTime = startDate;
+            var usedSlots = new HashSet<(DateTime date, TimeSpan time)>();
 
             for (int i = 0; i < videoCount; i++)
             {
-                var (date, time) = GetNextPublishDateTime(currentDate);
+                var (date, time) = FindNextPublishSlot(currentDateTime, usedSlots);
                 results.Add((date, time));
+                usedSlots.Add((date, time));
                 
-                // Move to next day for the next video
-                currentDate = date.AddDays(1);
+                // Move to the next available slot (could be same day or next day)
+                currentDateTime = date.Add(time).AddMinutes(1);
             }
 
             return results;
         }
 
-        private (DateTime date, TimeSpan time) FindNextPublishSlot(DateTime startDate, List<PublishSchedule> schedules)
+        private (DateTime date, TimeSpan time) FindNextPublishSlot(DateTime startDateTime, HashSet<(DateTime date, TimeSpan time)> usedSlots = null)
         {
-            var searchDate = startDate;
+            using var context = _databaseService.CreateContext();
+            var activeSchedules = context.PublishSchedules
+                .Where(s => s.IsActive)
+                .ToList()
+                .OrderBy(s => s.PublishTime)
+                .ToList();
+
+            if (!activeSchedules.Any())
+            {
+                // Fallback to default behavior if no schedules exist
+                return (startDateTime.Date, new TimeSpan(12, 0, 0));
+            }
+
+            var searchDate = startDateTime.Date;
+            var searchTime = startDateTime.TimeOfDay;
             var maxSearchDays = 14; // Prevent infinite loops
             var searchDays = 0;
+            
+            usedSlots ??= new HashSet<(DateTime date, TimeSpan time)>();
 
             while (searchDays < maxSearchDays)
             {
                 var dayOfWeek = searchDate.DayOfWeek;
 
-                // Find the first schedule that matches this day
-                var matchingSchedule = schedules
+                // Find all schedules that match this day, ordered by time
+                var matchingSchedules = activeSchedules
                     .Where(s => WeekdayHelper.HasDay(s.DaysOfWeek, dayOfWeek))
-                    .FirstOrDefault();
+                    .OrderBy(s => s.PublishTime)
+                    .ToList();
 
-                if (matchingSchedule != null)
+                foreach (var schedule in matchingSchedules)
                 {
-                    return (searchDate, matchingSchedule.PublishTime);
+                    // For the start date, only consider times that haven't passed yet
+                    if (searchDate == startDateTime.Date && schedule.PublishTime <= searchTime)
+                        continue;
+
+                    var slot = (searchDate, schedule.PublishTime);
+                    
+                    // Check if this slot is already used
+                    if (!usedSlots.Contains(slot))
+                    {
+                        return slot;
+                    }
                 }
 
-                // Move to next day
+                // Move to next day and reset time constraint
                 searchDate = searchDate.AddDays(1);
+                searchTime = TimeSpan.Zero;
                 searchDays++;
             }
 
             // Fallback if no matching schedule found
-            return (startDate, new TimeSpan(12, 0, 0));
+            return (startDateTime.Date, new TimeSpan(12, 0, 0));
         }
 
         /// <summary>

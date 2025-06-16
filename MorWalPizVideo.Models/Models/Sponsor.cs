@@ -9,8 +9,5 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("url")] string Url,
         [property: DataMember][property: BsonElement("imgSrc")] string ImgSrc) : BaseEntity
     {
-        [DataMember]
-        [BsonElement("sponsorId")]
-        public string SponsorId => Title;
     }
 }

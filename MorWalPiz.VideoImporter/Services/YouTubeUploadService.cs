@@ -3,71 +3,99 @@ using Google.Apis.Services;
 using Google.Apis.Upload;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using MorWalPizVideo.Server.Models;
 using System.IO;
 using System.Windows;
 
 namespace MorWalPiz.VideoImporter.Services
-{  /// <summary>
-   /// Implementazione del servizio di upload video su YouTube
-   /// </summary>
+{  
+    /// <summary>
+    /// Implementazione del servizio di upload video su YouTube
+    /// </summary>
     public class YouTubeUploadService : IYouTubeUploadService
     {
         private YouTubeService _youtubeService;
         private YouTubeService _youtubeUpdateService;
-        private readonly string _credentialFilePath;
+        private string _credentialsJson;
+        private string _currentTenantName;
         private const string AuthStoreName = "YouTube.Upload.Auth.Store";
 
         /// <summary>
         /// Costruttore del servizio
         /// </summary>
-        /// <param name="credentialFilePath">Percorso del file JSON delle credenziali OAuth</param>
-        public YouTubeUploadService(string credentialFilePath)
+        /// <param name="keyVaultService">Servizio per l'accesso ad Azure Key Vault</param>
+        /// <param name="tenantName">Nome del tenant iniziale</param>
+        public YouTubeUploadService(string credentialsJson, string tenantName)
         {
-            _credentialFilePath = credentialFilePath;
-            InitializeYouTubeService();
+            _credentialsJson = credentialsJson;
+            _currentTenantName = tenantName ?? throw new ArgumentNullException(nameof(tenantName));
+            InitializeYouTubeServiceAsync().GetAwaiter().GetResult();
         }
 
         /// <summary>
-        /// Inizializza il servizio YouTube con le credenziali OAuth
+        /// Reinizializza il servizio YouTube con nuove credenziali per un tenant
         /// </summary>
-        private void InitializeYouTubeService()
+        /// <param name="tenantName">Nome del tenant per cui recuperare le credenziali</param>
+        public async Task ReinitializeWithNewCredentialsAsync(string credentials, string tenantName)
         {
+            _credentialsJson = credentials ?? throw new ArgumentNullException(nameof(credentials));
+            _currentTenantName = tenantName ?? throw new ArgumentNullException(nameof(tenantName));
+            
+            // Dispose existing services
+            _youtubeService?.Dispose();
+            _youtubeUpdateService?.Dispose();
+            
+            // Reinitialize with new credentials
+            await InitializeYouTubeServiceAsync();
+        }
+
+        /// <summary>
+        /// Inizializza il servizio YouTube con le credenziali OAuth da Key Vault
+        /// </summary>
+        private async Task InitializeYouTubeServiceAsync()
+        {
+            using var context = App.DatabaseService.CreateContext();
+            var settings = context.Settings.FirstOrDefault();
+            if(settings == null)
+            {
+                System.Windows.MessageBox.Show("Impostazioni non valide. Assicurati di aver configurato l'applicazione correttamente.",
+                    "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             try
             {
-                // Utilizzo di UserCredential invece di GoogleCredential per supportare l'autenticazione OAuth
-                using (var stream = new FileStream(_credentialFilePath, FileMode.Open, FileAccess.Read))
+                // Utilizza UserCredential invece di GoogleCredential per supportare l'autenticazione OAuth
+                using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_credentialsJson)))
                 {
                     var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
-                    // Ottiene la UserCredential dal file JSON delle credenziali OAuth
-                    var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    // Ottiene la UserCredential dal JSON delle credenziali OAuth
+                    var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         new[] { YouTubeService.Scope.YoutubeUpload, YouTubeService.Scope.YoutubeForceSsl },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName)).Result;
+                        new Google.Apis.Util.Store.FileDataStore($"{AuthStoreName}-{_currentTenantName}"));
 
                     _youtubeService = new YouTubeService(new BaseClientService.Initializer
                     {
                         HttpClientInitializer = credential,
-                        ApplicationName = "MorWalPiz Site"
+                        ApplicationName = settings.ApplicationName
                     });
 
-                    // Ottiene la UserCredential dal file JSON delle credenziali OAuth
-                    var credentialUpdate = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    // Ottiene la UserCredential dal JSON delle credenziali OAuth per il servizio di aggiornamento
+                    var credentialUpdate = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         // Aggiunti gli scope necessari per la gestione delle localizzazioni
                         new[] {
-                YouTubeService.Scope.YoutubeForceSsl
+                            YouTubeService.Scope.YoutubeForceSsl
                         },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName + ".Update")).Result;
+                        new Google.Apis.Util.Store.FileDataStore($"{AuthStoreName}-{_currentTenantName}.Update"));
 
                     _youtubeUpdateService = new YouTubeService(new BaseClientService.Initializer
                     {
                         HttpClientInitializer = credentialUpdate,
-                        ApplicationName = "MorWalPiz Site upload"
+                        ApplicationName = $"{settings.ApplicationName} upload"
                     });
                 }
             }
@@ -83,17 +111,33 @@ namespace MorWalPiz.VideoImporter.Services
         /// Carica i video selezionati su YouTube
         /// </summary>
         /// <param name="videos">Lista dei video da caricare</param>
+        /// <param name="tags">Lista dei tag da applicare</param>
+        /// <param name="progressCallback">Callback per il progresso (opzionale)</param>
         /// <returns>Risultati delle operazioni di upload</returns>
-        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos,IList<string> tags)
+        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null)
         {
             var results = new List<UploadResult>();
+            var videoList = videos.ToList();
+            var totalVideos = videoList.Count;
+            var currentVideoNumber = 1;
 
-            foreach (var video in videos)
+            foreach (var video in videoList)
             {
                 var result = new UploadResult
                 {
                     FileName = video.FileName
                 };
+
+                // Report progress: starting new video
+                progressCallback?.Invoke(new UploadProgressInfo
+                {
+                    CurrentFileName = video.FileName,
+                    CurrentVideoNumber = currentVideoNumber,
+                    TotalVideos = totalVideos,
+                    CurrentVideoProgress = 0,
+                    OverallProgress = ((currentVideoNumber - 1) * 100) / totalVideos,
+                    Status = $"Iniziando caricamento di {video.FileName}..."
+                });
 
                 try
                 {
@@ -103,8 +147,22 @@ namespace MorWalPiz.VideoImporter.Services
                         result.Success = false;
                         result.ErrorMessage = "Il file non esiste";
                         results.Add(result);
+                        
+                        progressCallback?.Invoke(new UploadProgressInfo
+                        {
+                            CurrentFileName = video.FileName,
+                            CurrentVideoNumber = currentVideoNumber,
+                            TotalVideos = totalVideos,
+                            CurrentVideoProgress = 100,
+                            OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                            Status = $"Errore: {result.ErrorMessage}"
+                        });
+                        
+                        currentVideoNumber++;
                         continue;
-                    }                    // Crea l'oggetto video con i metadati richiesti
+                    }
+
+                    // Crea l'oggetto video con i metadati richiesti
                     var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video
                     {
                         // Titolo dal CleanFileName (originale o modificato)
@@ -121,7 +179,7 @@ namespace MorWalPiz.VideoImporter.Services
                             DefaultLanguage = video.DefaultLanguage,
                             DefaultAudioLanguage = video.DefaultLanguage,
                             // Aggiungi tag personalizzati
-                            Tags = new List<string> { "mio"}// tags
+                            Tags = tags
                         },
                         Status = new VideoStatus
                         {
@@ -142,6 +200,7 @@ namespace MorWalPiz.VideoImporter.Services
                             RecordingDateDateTimeOffset = DateTime.Now,
                         }
                     };
+
                     // Caricamento del video
                     using (var fileStream = new FileStream(video.FilePath, FileMode.Open))
                     {
@@ -156,13 +215,46 @@ namespace MorWalPiz.VideoImporter.Services
                         // Eventi di progresso per operazioni di lunga durata
                         videosInsertRequest.ProgressChanged += progress =>
                         {
+                            var currentVideoProgress = 0;
                             switch (progress.Status)
                             {
+                                case UploadStatus.Starting:
+                                    currentVideoProgress = 5;
+                                    progressCallback?.Invoke(new UploadProgressInfo
+                                    {
+                                        CurrentFileName = video.FileName,
+                                        CurrentVideoNumber = currentVideoNumber,
+                                        TotalVideos = totalVideos,
+                                        CurrentVideoProgress = currentVideoProgress,
+                                        OverallProgress = ((currentVideoNumber - 1) * 100 + currentVideoProgress) / totalVideos,
+                                        Status = "Iniziando upload..."
+                                    });
+                                    break;
                                 case UploadStatus.Uploading:
-                                    Console.WriteLine($"{progress.BytesSent} bytes inviati.");
+                                    if (fileStream.Length > 0)
+                                    {
+                                        currentVideoProgress = (int)((progress.BytesSent * 90) / fileStream.Length) + 5; // 5-95%
+                                        progressCallback?.Invoke(new UploadProgressInfo
+                                        {
+                                            CurrentFileName = video.FileName,
+                                            CurrentVideoNumber = currentVideoNumber,
+                                            TotalVideos = totalVideos,
+                                            CurrentVideoProgress = currentVideoProgress,
+                                            OverallProgress = ((currentVideoNumber - 1) * 100 + currentVideoProgress) / totalVideos,
+                                            Status = $"Caricamento: {progress.BytesSent:N0} bytes inviati"
+                                        });
+                                    }
                                     break;
                                 case UploadStatus.Failed:
-                                    Console.WriteLine($"Upload fallito: {progress.Exception}");
+                                    progressCallback?.Invoke(new UploadProgressInfo
+                                    {
+                                        CurrentFileName = video.FileName,
+                                        CurrentVideoNumber = currentVideoNumber,
+                                        TotalVideos = totalVideos,
+                                        CurrentVideoProgress = 100,
+                                        OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                                        Status = $"Upload fallito: {progress.Exception?.Message}"
+                                    });
                                     break;
                             }
                         };
@@ -171,13 +263,34 @@ namespace MorWalPiz.VideoImporter.Services
                         var uploadResponse = await videosInsertRequest.UploadAsync();
                         result.YouTubeId = videosInsertRequest.ResponseBody?.Id;
                         result.Success = uploadResponse.Status == UploadStatus.Completed;
+                        
                         if (!result.Success)
                         {
                             result.Success = false;
-                            result.ErrorMessage = uploadResponse.Exception.Message;
+                            result.ErrorMessage = uploadResponse.Exception?.Message ?? "Upload fallito";
+                            progressCallback?.Invoke(new UploadProgressInfo
+                            {
+                                CurrentFileName = video.FileName,
+                                CurrentVideoNumber = currentVideoNumber,
+                                TotalVideos = totalVideos,
+                                CurrentVideoProgress = 100,
+                                OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                                Status = $"Errore: {result.ErrorMessage}"
+                            });
                         }
                         else
                         {
+                            // Report progress: processing translations
+                            progressCallback?.Invoke(new UploadProgressInfo
+                            {
+                                CurrentFileName = video.FileName,
+                                CurrentVideoNumber = currentVideoNumber,
+                                TotalVideos = totalVideos,
+                                CurrentVideoProgress = 95,
+                                OverallProgress = ((currentVideoNumber - 1) * 100 + 95) / totalVideos,
+                                Status = "Elaborazione traduzioni..."
+                            });
+
                             try
                             {
                                 // Utilizziamo il servizio con autorizzazioni dedicate per l'aggiornamento
@@ -190,6 +303,17 @@ namespace MorWalPiz.VideoImporter.Services
 
                                 var updateRequest = _youtubeUpdateService.Videos.Update(uploadedVideo, "snippet,localizations");
                                 await updateRequest.ExecuteAsync();
+
+                                // Report completion
+                                progressCallback?.Invoke(new UploadProgressInfo
+                                {
+                                    CurrentFileName = video.FileName,
+                                    CurrentVideoNumber = currentVideoNumber,
+                                    TotalVideos = totalVideos,
+                                    CurrentVideoProgress = 100,
+                                    OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                                    Status = "Completato con successo"
+                                });
                             }
                             catch (Exception ex)
                             {
@@ -197,6 +321,16 @@ namespace MorWalPiz.VideoImporter.Services
                                 Console.WriteLine($"Errore nell'aggiornamento delle traduzioni: {ex.Message}");
                                 // Imposta un warning nel risultato ma mantieni il successo dell'upload
                                 result.WarningMessage = $"Video caricato con successo ma errore nell'aggiornamento delle traduzioni: {ex.Message}";
+                                
+                                progressCallback?.Invoke(new UploadProgressInfo
+                                {
+                                    CurrentFileName = video.FileName,
+                                    CurrentVideoNumber = currentVideoNumber,
+                                    TotalVideos = totalVideos,
+                                    CurrentVideoProgress = 100,
+                                    OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                                    Status = "Completato con avvisi"
+                                });
                             }
                         }
                     }
@@ -205,9 +339,20 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     result.Success = false;
                     result.ErrorMessage = ex.Message;
+                    
+                    progressCallback?.Invoke(new UploadProgressInfo
+                    {
+                        CurrentFileName = video.FileName,
+                        CurrentVideoNumber = currentVideoNumber,
+                        TotalVideos = totalVideos,
+                        CurrentVideoProgress = 100,
+                        OverallProgress = (currentVideoNumber * 100) / totalVideos,
+                        Status = $"Errore: {ex.Message}"
+                    });
                 }
 
                 results.Add(result);
+                currentVideoNumber++;
             }
 
             return results;
@@ -240,7 +385,6 @@ namespace MorWalPiz.VideoImporter.Services
 
             // Inizializza le localizzazioni se non esistono
             var localizations = new Dictionary<string, VideoLocalization>();
-
 
             // Aggiungi traduzioni per ogni lingua disponibile
             foreach (var translation in translations)
@@ -289,7 +433,7 @@ namespace MorWalPiz.VideoImporter.Services
                 }
 
                 // Reinizializza il servizio dopo la pulizia
-                InitializeYouTubeService();
+                InitializeYouTubeServiceAsync().GetAwaiter().GetResult();
                 return true;
             }
             catch (Exception ex)
@@ -300,5 +444,109 @@ namespace MorWalPiz.VideoImporter.Services
             }
         }
 
+        /// <summary>
+        /// Forza una nuova autenticazione YouTube
+        /// </summary>
+        /// <returns>True se l'autenticazione è riuscita</returns>
+        public async Task<bool> ForceReauthenticationAsync()
+        {
+            try
+            {
+                using var context = App.DatabaseService.CreateContext();
+                var settings = context.Settings.FirstOrDefault();
+                if (settings == null)
+                {
+                    return false;
+                }
+
+                // Dispose existing services
+                _youtubeService?.Dispose();
+                _youtubeUpdateService?.Dispose();
+
+                using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_credentialsJson)))
+                {
+                    var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
+                    
+                    // Force new authentication by using a new FileDataStore path
+                    var tempAuthStoreName = $"{AuthStoreName}-{_currentTenantName}-{DateTime.Now:yyyyMMddHHmmss}";
+                    
+                    // Ottiene la UserCredential dal JSON delle credenziali OAuth
+                    var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        secrets,
+                        new[] { YouTubeService.Scope.YoutubeUpload, YouTubeService.Scope.YoutubeForceSsl },
+                        "user",
+                        System.Threading.CancellationToken.None,
+                        new Google.Apis.Util.Store.FileDataStore(tempAuthStoreName));
+
+                    _youtubeService = new YouTubeService(new BaseClientService.Initializer
+                    {
+                        HttpClientInitializer = credential,
+                        ApplicationName = settings.ApplicationName
+                    });
+
+                    // Ottiene la UserCredential dal JSON delle credenziali OAuth per il servizio di aggiornamento
+                    var credentialUpdate = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        secrets,
+                        new[] { YouTubeService.Scope.YoutubeForceSsl },
+                        "user",
+                        System.Threading.CancellationToken.None,
+                        new Google.Apis.Util.Store.FileDataStore($"{tempAuthStoreName}.Update"));
+
+                    _youtubeUpdateService = new YouTubeService(new BaseClientService.Initializer
+                    {
+                        HttpClientInitializer = credentialUpdate,
+                        ApplicationName = $"{settings.ApplicationName} upload"
+                    });
+
+                    // Test the authentication by making a simple API call
+                    var channelsRequest = _youtubeService.Channels.List("snippet");
+                    channelsRequest.Mine = true;
+                    var channelsResponse = await channelsRequest.ExecuteAsync();
+
+                    // If we get here without exception, authentication was successful
+                    // Now move the temp credentials to the permanent location
+                    string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                    string credentialDirPath = Path.Combine(userProfile, ".credentials");
+                    
+                    string tempMainPath = Path.Combine(credentialDirPath, tempAuthStoreName);
+                    string tempUpdatePath = Path.Combine(credentialDirPath, $"{tempAuthStoreName}.Update");
+                    
+                    string mainCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}");
+                    string updateCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}.Update");
+
+                    // Remove old credentials if they exist
+                    if (Directory.Exists(mainCredentialsPath))
+                        Directory.Delete(mainCredentialsPath, true);
+                    if (Directory.Exists(updateCredentialsPath))
+                        Directory.Delete(updateCredentialsPath, true);
+
+                    // Move temp credentials to permanent location
+                    if (Directory.Exists(tempMainPath))
+                        Directory.Move(tempMainPath, mainCredentialsPath);
+                    if (Directory.Exists(tempUpdatePath))
+                        Directory.Move(tempUpdatePath, updateCredentialsPath);
+
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                // Clean up any temp credentials on failure
+                try
+                {
+                    string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                    string credentialDirPath = Path.Combine(userProfile, ".credentials");
+                    
+                    var tempDirs = Directory.GetDirectories(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}-*");
+                    foreach (var tempDir in tempDirs)
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                }
+                catch { /* Ignore cleanup errors */ }
+
+                return false;
+            }
+        }
     }
 }

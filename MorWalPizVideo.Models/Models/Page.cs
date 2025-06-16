@@ -17,9 +17,6 @@ namespace MorWalPizVideo.Server.Models
     [property: BsonElement("videoUrl")]string VideoId) : BaseEntity {
 
         [DataMember]
-        [BsonElement("pageId")]
-        public string PageId => Title;
-        [DataMember]
         [BsonElement("videoReelIds")]
         public IList<string> VideoReelIds { get; set; } = new List<string>();
         [DataMember]

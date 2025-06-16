@@ -25,7 +25,7 @@ namespace MorWalPizVideo.Server.Controllers
             var count = await CountMatches();
             var entities = await FetchMatches(skip, take);
             var next = skip > 0 ? take * skip : take;
-            return Ok(new BaseResponse<IList<Match>>(entities,count,$"skip={next}&take={take}"));
+            return Ok(new BaseResponse<IList<YouTubeContent>>(entities,count,$"skip={next}&take={take}"));
         }
 
         [HttpGet("{url}")]
@@ -48,6 +48,6 @@ namespace MorWalPizVideo.Server.Controllers
             return Ok(images);
         }
 
-        private async Task<Match?> FindMatch(string url) => (await FetchMatches())?.FirstOrDefault(x => x.Url == url);
+        private async Task<YouTubeContent?> FindMatch(string url) => (await FetchMatches())?.FirstOrDefault(x => x.Url == url);
     }
 }

@@ -16,7 +16,7 @@
         public const string QueryLinks = "queryLinks";
         public const string PublishSchedules = "publishSchedules";
         
-        public const string Matches = "matches";
+        public const string YouTubeContent = "youtubeContent";
         public const string Pages = "pages";
         public const string Sponsors = "sponsors";
         public const string Products = "products";

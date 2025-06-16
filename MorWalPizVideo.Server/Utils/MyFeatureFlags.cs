@@ -7,5 +7,6 @@
         public const string EnableOutputCache = nameof(EnableOutputCache);
         public const string EnableMock = nameof(EnableMock);
         public const string EnableCache = nameof(EnableCache);
+        public const string EnableKeyVault = nameof(EnableKeyVault);
     }
 }

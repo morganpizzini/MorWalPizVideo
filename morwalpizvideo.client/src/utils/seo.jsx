@@ -7,12 +7,16 @@ export default function SEO({ title, description, imageUrl,type }) {
             <meta name='title' content={title} />
             <meta name='description' content={description} />
             <meta name='keywords' content="morwalpiz, yt, youtube, morgan walker pizzini, morgan pizzini" />
-            <link rel="image_src" href={`${location.protocol + '//' + location.host}${imageUrl}`} />
+            {imageUrl?.length > 0 &&
+                <link rel="image_src" href={`${location.protocol + '//' + location.host}${imageUrl}`} />
+            }
 
             <meta property="og:type" content={type} />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
-            <meta property="og:image" content={imageUrl} />
+            {imageUrl?.length > 0 &&
+                <meta property="og:image" content={imageUrl} />
+            }
             <meta property="og:url" content={window.location.href} />
         </Helmet>
     )
