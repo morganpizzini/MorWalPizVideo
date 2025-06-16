@@ -4,10 +4,15 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        xmlns:converters="clr-namespace:MorWalPiz.VideoImporter.Converters"
         mc:Ignorable="d"
         Title="Gestione Lingue"
-    Height="450"
-    Width="600">
+    Height="550"
+    Width="700">
+    <Window.Resources>
+        <converters:BoolToYesNoConverter x:Key="BoolToYesNoConverter"/>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+    </Window.Resources>
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -38,19 +43,26 @@
             </Grid>
         </GroupBox>
 
-        <!-- Sezione lingue secondarie -->
+        <!-- Sezione gestione lingue -->
         <GroupBox Grid.Row="1"
-        Header="Lingue Secondarie"
+        Header="Gestione Lingue"
         Margin="0,0,0,15"
         Padding="10">
-            <StackPanel>
-            <TextBlock Text="Seleziona le lingue secondarie che desideri utilizzare:"
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Gestisci le lingue disponibili. Puoi aggiungere, modificare o eliminare lingue."
           Margin="0,0,0,10"/>
 
-            <!-- Lista delle lingue secondarie disponibili -->
-            <ListView x:Name="SecondaryLanguagesListView"
-        Grid.Row="2"
-        Margin="0,0,0,15">
+            <!-- Lista delle lingue -->
+            <ListView x:Name="LanguagesListView"
+        Grid.Row="1"
+        Margin="0,0,0,15"
+        SelectionMode="Single">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Width="30">
@@ -70,7 +82,32 @@
                     </GridView>
                 </ListView.View>
             </ListView>
-            </StackPanel>
+
+                <!-- Pulsanti gestione lingue -->
+                <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Left">
+                    <Button x:Name="AddLanguageButton"
+                  Content="Aggiungi"
+                  Width="80"
+                  Height="30"
+                  Margin="0,0,10,0"
+                  Click="AddLanguageButton_Click"/>
+                    <Button x:Name="EditLanguageButton"
+                  Content="Modifica"
+                  Width="80"
+                  Height="30"
+                  Margin="0,0,10,0"
+                  Click="EditLanguageButton_Click"
+                  IsEnabled="{Binding ElementName=LanguagesListView, Path=SelectedItem, Converter={StaticResource NullToBooleanConverter}}"/>
+                    <Button x:Name="DeleteLanguageButton"
+                  Content="Elimina"
+                  Width="80"
+                  Height="30"
+                  Click="DeleteLanguageButton_Click"
+                  IsEnabled="{Binding ElementName=LanguagesListView, Path=SelectedItem, Converter={StaticResource NullToBooleanConverter}}"/>
+                </StackPanel>
+            </Grid>
         </GroupBox>
 
         <!-- Pulsanti di azione -->
