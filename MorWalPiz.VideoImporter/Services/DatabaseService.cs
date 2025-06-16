@@ -7,10 +7,12 @@ namespace MorWalPiz.VideoImporter.Services
     public class DatabaseService
     {
         private readonly string _dbPath;
+        private readonly ITenantContext _tenantContext;
 
-        public DatabaseService()
+        public DatabaseService(ITenantContext tenantContext)
         {
             _dbPath = Path.Combine(Directory.GetCurrentDirectory(), "VideoImporter.db");
+            _tenantContext = tenantContext;
         }
 
         public void InitializeDatabase()
@@ -24,7 +26,7 @@ namespace MorWalPiz.VideoImporter.Services
             //}
 
             // Crea un contesto temporaneo per inizializzare il database
-            using (var context = new AppDbContext())
+            using (var context = new AppDbContext(_tenantContext))
             {
                 // Assicura che il database esista e che sia aggiornato allo schema più recente
                 context.Database.EnsureCreated();
@@ -37,7 +39,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// </summary>
         public AppDbContext CreateContext()
         {
-            return new AppDbContext();
+            return new AppDbContext(_tenantContext);
         }
     }
 }

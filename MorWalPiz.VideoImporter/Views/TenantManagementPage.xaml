@@ -1,0 +1,122 @@
+<Page x:Class="MorWalPiz.VideoImporter.Views.TenantManagementPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="800"
+      Title="Gestione Tenant">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Titolo -->
+        <TextBlock Grid.Row="0" 
+                   Text="Gestione Tenant" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
+
+        <!-- Controlli per nuovo tenant -->
+        <GroupBox Grid.Row="1" 
+                  Header="Nuovo Tenant" 
+                  Margin="0,0,0,20">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" 
+                           Text="Nome:" 
+                           VerticalAlignment="Center" 
+                           Margin="0,0,10,0"/>
+                
+                <TextBox x:Name="NewTenantNameTextBox" 
+                         Grid.Column="1" 
+                         Height="25" 
+                         VerticalAlignment="Center"
+                         MaxLength="100"
+                         KeyDown="NewTenantNameTextBox_KeyDown"/>
+                
+                <Button x:Name="AddTenantButton" 
+                        Grid.Column="2" 
+                        Content="Aggiungi" 
+                        Padding="15,5" 
+                        Margin="10,0,0,0"
+                        Click="AddTenantButton_Click"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Lista tenant esistenti -->
+        <GroupBox Grid.Row="2" 
+                  Header="Tenant Esistenti">
+            <DataGrid x:Name="TenantsDataGrid" 
+                      AutoGenerateColumns="False" 
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      SelectionMode="Single"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      Margin="10">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nome" 
+                                        Binding="{Binding Name}" 
+                                        Width="*" 
+                                        IsReadOnly="True"/>
+                    
+                    <DataGridTextColumn Header="Data Creazione" 
+                                        Binding="{Binding CreatedDate, StringFormat='{}{0:dd/MM/yyyy}'}" 
+                                        Width="120" 
+                                        IsReadOnly="True"/>
+                    
+                    <DataGridCheckBoxColumn Header="Attivo" 
+                                            Binding="{Binding IsActive}" 
+                                            Width="80"/>
+                    
+                    <DataGridTemplateColumn Header="Azioni" 
+                                            Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Modifica" 
+                                            Padding="10,2" 
+                                            Margin="0,0,5,0"
+                                            Click="EditTenantButton_Click"
+                                            Tag="{Binding}"/>
+                                    <Button Content="Elimina" 
+                                            Padding="10,2"
+                                            Click="DeleteTenantButton_Click"
+                                            Tag="{Binding}"
+                                            Background="LightCoral"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+
+        <!-- Bottoni di controllo -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,20,0,0">
+            <Button x:Name="RefreshButton" 
+                    Content="Aggiorna" 
+                    Padding="15,5" 
+                    Margin="0,0,10,0"
+                    Click="RefreshButton_Click"/>
+            <Button x:Name="CloseButton" 
+                    Content="Chiudi" 
+                    Padding="15,5"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Page>

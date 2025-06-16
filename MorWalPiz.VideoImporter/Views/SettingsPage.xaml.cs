@@ -16,11 +16,14 @@ namespace MorWalPiz.VideoImporter.Views
     {
         private readonly DatabaseService _databaseService;
         private Settings _currentSettings;
+        public static ITenantContext TenantContext { get; private set; }
 
         public SettingsPage()
         {
             InitializeComponent();
-            _databaseService = new DatabaseService();
+            // Inizializza il contesto tenant
+            TenantContext = new TenantContext();
+            _databaseService = new DatabaseService(TenantContext);
             LoadSettings();
         }
 

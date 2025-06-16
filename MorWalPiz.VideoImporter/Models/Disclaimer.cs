@@ -17,5 +17,8 @@ namespace MorWalPiz.VideoImporter.Models
 
     [ForeignKey("LanguageId")]
     public Language Language { get; set; }
+
+    // Multi-tenant support
+    public int TenantId { get; set; }
   }
 }

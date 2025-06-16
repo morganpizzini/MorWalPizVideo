@@ -78,6 +78,9 @@ namespace MorWalPiz.VideoImporter
             
             // Initialize button states
             UpdateButtonStates();
+            
+            // Initialize tenant dropdown
+            LoadTenants();
         }
 
         private void VideoFiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -674,7 +677,77 @@ namespace MorWalPiz.VideoImporter
                 item.IsSelected = isChecked;
             }
             FileListView.Items.Refresh();
+        }
 
+        // Tenant-related methods
+        private async void LoadTenants()
+        {
+            try
+            {
+                var tenants = await App.TenantService.GetActiveTenantsAsync();
+                TenantComboBox.ItemsSource = tenants;
+                
+                // Set the current tenant
+                var currentTenant = tenants.FirstOrDefault(t => t.Id == App.TenantContext.CurrentTenantId);
+                if (currentTenant != null)
+                {
+                    TenantComboBox.SelectedItem = currentTenant;
+                }
+                else if (tenants.Any())
+                {
+                    // Select the first tenant if current is not found
+                    TenantComboBox.SelectedItem = tenants.First();
+                    App.TenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nel caricamento dei tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void TenantComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (TenantComboBox.SelectedItem is Tenant selectedTenant)
+            {
+                App.TenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                
+                // Clear current data and reload for the new tenant
+                VideoFiles.Clear();
+                selectedFolders.Clear();
+                selectedFiles.Clear();
+                
+                // Update title to show current tenant
+                Title = $"Video Importer - {selectedTenant.Name}";
+            }
+        }
+
+        private void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var tenantManagementPage = new TenantManagementPage(App.TenantService, App.TenantContext);
+                var dialog = new Window
+                {
+                    Content = tenantManagementPage,
+                    Title = "Gestione Tenant",
+                    Width = 800,
+                    Height = 600,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = this
+                };
+                
+                dialog.ShowDialog();
+                
+                // Reload tenants after the dialog closes
+                LoadTenants();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nell'apertura della gestione tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 

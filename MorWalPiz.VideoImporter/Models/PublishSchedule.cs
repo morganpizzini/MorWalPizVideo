@@ -30,5 +30,8 @@ namespace MorWalPiz.VideoImporter.Models
         /// Created date for tracking
         /// </summary>
         public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        // Multi-tenant support
+        public int TenantId { get; set; }
     }
 }
