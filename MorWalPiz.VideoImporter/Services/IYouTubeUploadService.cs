@@ -14,7 +14,18 @@ namespace MorWalPiz.VideoImporter.Services
     /// <param name="videos">Lista dei video da caricare</param>
     /// <returns>Task che rappresenta l'operazione asincrona</returns>
     Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags);
-        bool ClearStoredCredentials();
+        
+    /// <summary>
+    /// Pulisce le credenziali memorizzate
+    /// </summary>
+    /// <returns>True se l'operazione è riuscita</returns>
+    bool ClearStoredCredentials();
+        
+    /// <summary>
+    /// Reinizializza il servizio YouTube con un nuovo percorso delle credenziali
+    /// </summary>
+    /// <param name="credentialFilePath">Nuovo percorso del file JSON delle credenziali OAuth</param>
+    void ReinitializeWithNewCredentials(string credentialFilePath);
   }
 
   /// <summary>

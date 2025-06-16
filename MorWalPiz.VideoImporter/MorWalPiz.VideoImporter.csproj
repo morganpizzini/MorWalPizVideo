@@ -22,4 +22,10 @@
     <ProjectReference Include="..\MorWalPiz.Contracts\MorWalPiz.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="credentials-morwalpiz.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

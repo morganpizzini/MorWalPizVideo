@@ -8,7 +8,7 @@ namespace MorWalPiz.VideoImporter.Services
     {
         private const string SETTINGS_FILE = "tenant-settings.json";
         private int _currentTenantId = 1; // Default tenant ID
-        private string _currentTenantName = "Default";
+        private string _currentTenantName = "MorWalPiz";
 
         public int CurrentTenantId => _currentTenantId;
         public string CurrentTenantName => _currentTenantName;
@@ -42,7 +42,7 @@ namespace MorWalPiz.VideoImporter.Services
                     if (settings != null)
                     {
                         _currentTenantId = settings.CurrentTenantId;
-                        _currentTenantName = settings.CurrentTenantName ?? "Default";
+                        _currentTenantName = settings.CurrentTenantName ?? "MorWalPiz";
                     }
                 }
             }

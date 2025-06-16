@@ -15,7 +15,7 @@ namespace MorWalPiz.VideoImporter.Services
     {
         private YouTubeService _youtubeService;
         private YouTubeService _youtubeUpdateService;
-        private readonly string _credentialFilePath;
+        private string _credentialFilePath;
         private const string AuthStoreName = "YouTube.Upload.Auth.Store";
 
         /// <summary>
@@ -25,6 +25,22 @@ namespace MorWalPiz.VideoImporter.Services
         public YouTubeUploadService(string credentialFilePath)
         {
             _credentialFilePath = credentialFilePath;
+            InitializeYouTubeService();
+        }
+
+        /// <summary>
+        /// Reinizializza il servizio YouTube con un nuovo percorso delle credenziali
+        /// </summary>
+        /// <param name="credentialFilePath">Nuovo percorso del file JSON delle credenziali OAuth</param>
+        public void ReinitializeWithNewCredentials(string credentialFilePath)
+        {
+            _credentialFilePath = credentialFilePath;
+            
+            // Dispose existing services
+            _youtubeService?.Dispose();
+            _youtubeUpdateService?.Dispose();
+            
+            // Reinitialize with new credentials
             InitializeYouTubeService();
         }
 

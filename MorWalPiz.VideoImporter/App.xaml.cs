@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using System;
+using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -48,8 +49,31 @@ namespace MorWalPiz.VideoImporter
             }
 
             // Inizializza il servizio di upload YouTube
-            string credentialsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "credentials.json");
-            //YouTubeUploadService = new YouTubeUploadService(credentialsPath);
+            string credentialsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"credentials-{TenantContext.CurrentTenantName.ToLower()}.json");
+            YouTubeUploadService = new YouTubeUploadService(credentialsPath);
+
+            // Sottoscrivi al cambio di tenant per reinizializzare YouTube service
+            TenantContext.TenantChanged += OnTenantChanged;
+        }
+
+        /// <summary>
+        /// Gestisce il cambio di tenant reinizializzando il servizio YouTube con le nuove credenziali
+        /// </summary>
+        private void OnTenantChanged(object sender, TenantChangedEventArgs e)
+        {
+            try
+            {
+                // Costruisci il nuovo percorso delle credenziali basato sul nome del tenant
+                string newCredentialsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"credentials-{e.TenantName.ToLower()}.json");
+                
+                // Reinizializza il servizio YouTube con le nuove credenziali
+                YouTubeUploadService.ReinitializeWithNewCredentials(newCredentialsPath);
+            }
+            catch (Exception ex)
+            {
+                // Log dell'errore ma non interrompere l'applicazione
+                System.Diagnostics.Debug.WriteLine($"Errore nella reinizializzazione del servizio YouTube per il tenant {e.TenantName}: {ex.Message}");
+            }
         }
     }
 }

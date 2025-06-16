@@ -36,7 +36,6 @@ namespace MorWalPiz.VideoImporter.Views
             {
                 CodeTextBox.Text = _language.Code;
                 NameTextBox.Text = _language.Name;
-                IsDefaultCheckBox.IsChecked = _language.IsDefault;
                 IsSelectedCheckBox.IsChecked = _language.IsSelected;
             }
             else
@@ -56,7 +55,6 @@ namespace MorWalPiz.VideoImporter.Views
                 {
                     _language.Code = CodeTextBox.Text.Trim();
                     _language.Name = NameTextBox.Text.Trim();
-                    _language.IsDefault = IsDefaultCheckBox.IsChecked ?? false;
                     _language.IsSelected = IsSelectedCheckBox.IsChecked ?? false;
 
                     if (!_isEditMode)
