@@ -13,7 +13,7 @@ namespace MorWalPiz.VideoImporter.Services
     /// </summary>
     /// <param name="videos">Lista dei video da caricare</param>
     /// <returns>Task che rappresenta l'operazione asincrona</returns>
-    Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos);
+    Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags);
         bool ClearStoredCredentials();
   }
 

@@ -107,7 +107,7 @@ namespace MorWalPiz.VideoImporter
                 defaultPublishTime = settings?.DefaultPublishTime ?? new TimeSpan(12, 0, 0); // Default 12:00 se non ci sono settings
                 defaultLanguage = context.Languages.FirstOrDefault(l => l.IsDefault)?.Code ?? "it";
             }
-            var tmpPubDate = DateTime.Today;
+            var tmpPubDate = SelectedPublishDate;
             var orderIndex = 1;
             // Process selected individual files
             foreach (var filePath in selectedFiles)
@@ -332,11 +332,11 @@ namespace MorWalPiz.VideoImporter
             // Carica i disclaimer dal database
             Dictionary<int, string> disclaimers;
             int defaultLanguageId;
-            using (var context = App.DatabaseService.CreateContext())
-            {
-                disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
-                defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
-            }
+            var context = App.DatabaseService.CreateContext();
+
+            disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
+            defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
+
 
             // Prepara i video per l'upload, aggiungendo i disclaimer se necessario
             foreach (var video in selectedVideos)
@@ -376,8 +376,10 @@ namespace MorWalPiz.VideoImporter
                     // Mostra indicatore di caricamento in corso
                     Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
+                    var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
+
                     // Esegui il caricamento in modo asincrono
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos);
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries));
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -417,7 +419,7 @@ namespace MorWalPiz.VideoImporter
                 // (Questo potrebbe richiedere di ricaricare i dati o clonare gli oggetti prima della modifica)
                 // Per semplicità, qui potremmo semplicemente informare l'utente che le modifiche ai disclaimer non sono state salvate permanentemente.
                 // Oppure, si potrebbe clonare 'selectedVideos' prima di aggiungere i disclaimer e passare il clone al servizio di upload.
-                ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
+                // ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
                 MessageBox.Show("Caricamento annullato. Le descrizioni sono state ripristinate.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }

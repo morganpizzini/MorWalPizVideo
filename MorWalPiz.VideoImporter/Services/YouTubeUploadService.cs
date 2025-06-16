@@ -3,6 +3,7 @@ using Google.Apis.Services;
 using Google.Apis.Upload;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
+using MorWalPizVideo.Server.Models;
 using System.IO;
 using System.Windows;
 
@@ -83,7 +84,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// </summary>
         /// <param name="videos">Lista dei video da caricare</param>
         /// <returns>Risultati delle operazioni di upload</returns>
-        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos)
+        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos,IList<string> tags)
         {
             var results = new List<UploadResult>();
 
@@ -104,7 +105,7 @@ namespace MorWalPiz.VideoImporter.Services
                         results.Add(result);
                         continue;
                     }                    // Crea l'oggetto video con i metadati richiesti
-                    var youtubeVideo = new Video
+                    var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video
                     {
                         // Titolo dal CleanFileName (originale o modificato)
                         Snippet = new VideoSnippet
@@ -120,7 +121,7 @@ namespace MorWalPiz.VideoImporter.Services
                             DefaultLanguage = video.DefaultLanguage,
                             DefaultAudioLanguage = video.DefaultLanguage,
                             // Aggiungi tag personalizzati
-                            Tags = new List<string> { "custom" }
+                            Tags = tags
                         },
                         Status = new VideoStatus
                         {
@@ -225,16 +226,16 @@ namespace MorWalPiz.VideoImporter.Services
         /// </summary>
         private Dictionary<string, VideoLocalization> TransformLocalizations(Dictionary<int, TranslationItem> translations)
         {
+
+            
             // Dizionario delle lingue disponibili (codice lingua -> nome lingua)
             var languageCodes = new Dictionary<int, string>
                 {
-                    { 1, "en" },     // Inglese
-                    { 2, "es" },     // Spagnolo
+                    { 1, "it" },     // Inglese
+                    { 2, "en" },     // Inglese
                     { 3, "fr" },     // Francese
                     { 4, "de" },     // Tedesco
-                    { 5, "pt-PT" },  // Portoghese
-                    { 6, "ru" },     // Russo
-                    // Aggiungi altre lingue se necessario
+                    { 5, "es" },     // Spagnolo
                 };
 
             // Inizializza le localizzazioni se non esistono
