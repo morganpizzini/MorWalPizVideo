@@ -121,7 +121,7 @@ namespace MorWalPiz.VideoImporter.Services
                             DefaultLanguage = video.DefaultLanguage,
                             DefaultAudioLanguage = video.DefaultLanguage,
                             // Aggiungi tag personalizzati
-                            Tags = tags
+                            Tags = new List<string> { "mio"}// tags
                         },
                         Status = new VideoStatus
                         {

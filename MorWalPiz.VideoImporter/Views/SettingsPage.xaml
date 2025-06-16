@@ -36,24 +36,6 @@
              TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto"
              Margin="0,0,0,15"/>
-    <!-- Time Picker -->
-    <StackPanel Grid.Row="3"
-                Orientation="Horizontal"
-                Margin="0,0,0,20">
-      <Label Content="Ora di pubblicazione predefinita:"
-             FontWeight="Bold"
-             VerticalAlignment="Center"/>
-      <TextBox x:Name="HourTextBox"
-               Width="30"
-               Margin="10,0,0,0"
-               PreviewTextInput="NumericTextBox_PreviewTextInput"/>
-      <Label Content=":"
-             VerticalAlignment="Center"/>
-      <TextBox x:Name="MinuteTextBox"
-               Width="30"
-               Margin="0,0,10,0"
-               PreviewTextInput="NumericTextBox_PreviewTextInput"/>
-    </StackPanel>
 
     <!-- API Endpoint -->
     <Grid Grid.Row="4"

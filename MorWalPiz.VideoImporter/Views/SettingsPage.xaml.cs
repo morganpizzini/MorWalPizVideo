@@ -33,10 +33,6 @@ namespace MorWalPiz.VideoImporter.Views
                 // Popola la TextBox degli hashtag
                 HashtagsTextBox.Text = _currentSettings.DefaultHashtags;
 
-                // Popola i campi per l'ora
-                HourTextBox.Text = _currentSettings.DefaultPublishTime.Hours.ToString("00");
-                MinuteTextBox.Text = _currentSettings.DefaultPublishTime.Minutes.ToString("00");
-
                 // Popola il campo API Endpoint
                 ApiEndpointTextBox.Text = _currentSettings.ApiEndpoint;
             }
@@ -46,19 +42,6 @@ namespace MorWalPiz.VideoImporter.Views
         {
             try
             {
-                // Validazione dell'input dell'ora
-                if (!int.TryParse(HourTextBox.Text, out int hour) || hour < 0 || hour > 23)
-                {
-                    System.Windows.MessageBox.Show("L'ora deve essere un numero tra 0 e 23.", "Errore di validazione", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                if (!int.TryParse(MinuteTextBox.Text, out int minute) || minute < 0 || minute > 59)
-                {
-                    System.Windows.MessageBox.Show("I minuti devono essere un numero tra 0 e 59.", "Errore di validazione", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
                 // Validazione dell'endpoint API
                 if (string.IsNullOrWhiteSpace(ApiEndpointTextBox.Text))
                 {
@@ -73,7 +56,6 @@ namespace MorWalPiz.VideoImporter.Views
                     var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
                     settings.DefaultHashtags = HashtagsTextBox.Text.Trim();
-                    settings.DefaultPublishTime = new TimeSpan(hour, minute, 0);
                     settings.ApiEndpoint = apiEndpoint;
 
                     if (settings.Id == 0)

@@ -46,6 +46,20 @@ namespace MorWalPiz.VideoImporter
             }
         }
 
+        private bool _hasSelectedItems;
+        public bool HasSelectedItems
+        {
+            get => _hasSelectedItems;
+            set
+            {
+                if (_hasSelectedItems != value)
+                {
+                    _hasSelectedItems = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -58,6 +72,46 @@ namespace MorWalPiz.VideoImporter
             InitializeComponent();
             FileListView.ItemsSource = VideoFiles;
             DataContext = this;
+            
+            // Subscribe to collection changes
+            VideoFiles.CollectionChanged += VideoFiles_CollectionChanged;
+            
+            // Initialize button states
+            UpdateButtonStates();
+        }
+
+        private void VideoFiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (VideoFile item in e.OldItems)
+                {
+                    item.PropertyChanged -= VideoFile_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (VideoFile item in e.NewItems)
+                {
+                    item.PropertyChanged += VideoFile_PropertyChanged;
+                }
+            }
+
+            UpdateButtonStates();
+        }
+
+        private void VideoFile_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(VideoFile.IsSelected))
+            {
+                UpdateButtonStates();
+            }
+        }
+
+        private void UpdateButtonStates()
+        {
+            HasSelectedItems = VideoFiles.Any(f => f.IsSelected);
         }
 
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -98,33 +152,53 @@ namespace MorWalPiz.VideoImporter
         {
             VideoFiles.Clear();
 
-            // Ottieni l'ora di pubblicazione predefinita dai settings
-            TimeSpan defaultPublishTime;
+            // Ottieni la lingua predefinita dai settings
             string defaultLanguage;
             using (var context = App.DatabaseService.CreateContext())
             {
-                var settings = context.Settings.FirstOrDefault();
-                defaultPublishTime = settings?.DefaultPublishTime ?? new TimeSpan(12, 0, 0); // Default 12:00 se non ci sono settings
                 defaultLanguage = context.Languages.FirstOrDefault(l => l.IsDefault)?.Code ?? "it";
             }
-            var tmpPubDate = SelectedPublishDate;
+
+            // Conta il numero totale di file per calcolare le date di pubblicazione
+            var allFiles = new List<string>();
+            allFiles.AddRange(selectedFiles.Where(f => File.Exists(f) && Path.GetExtension(f).ToLower() == ".mp4"));
+            
+            foreach (var folderPath in selectedFolders)
+            {
+                if (Directory.Exists(folderPath))
+                {
+                    var mp4Files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories);
+                    allFiles.AddRange(mp4Files);
+                }
+            }
+
+            // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
+            var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+            var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(SelectedPublishDate, allFiles.Count);
+
             var orderIndex = 1;
+            var dateTimeIndex = 0;
+
             // Process selected individual files
             foreach (var filePath in selectedFiles)
             {
                 if (File.Exists(filePath) && Path.GetExtension(filePath).ToLower() == ".mp4")
                 {
+                    var (publishDate, publishTime) = dateTimeIndex < publishDateTimes.Count 
+                        ? publishDateTimes[dateTimeIndex] 
+                        : (SelectedPublishDate.AddDays(dateTimeIndex), new TimeSpan(12, 0, 0));
+
                     VideoFiles.Add(new VideoFile
                     {
                         FileName = Path.GetFileName(filePath),
                         FilePath = filePath,
                         IsSelected = false,
-                        PublishDate = tmpPubDate,
-                        PublishTime = defaultPublishTime,
+                        PublishDate = publishDate,
+                        PublishTime = publishTime,
                         OrderIndex = orderIndex,
                         DefaultLanguage = defaultLanguage,
                     });
-                    tmpPubDate = tmpPubDate.AddDays(1);
+                    dateTimeIndex++;
                     orderIndex++;
                 }
             }
@@ -137,17 +211,21 @@ namespace MorWalPiz.VideoImporter
                     var mp4Files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories);
                     foreach (var filePath in mp4Files)
                     {
+                        var (publishDate, publishTime) = dateTimeIndex < publishDateTimes.Count 
+                            ? publishDateTimes[dateTimeIndex] 
+                            : (SelectedPublishDate.AddDays(dateTimeIndex), new TimeSpan(12, 0, 0));
+
                         VideoFiles.Add(new VideoFile
                         {
                             FileName = Path.GetFileName(filePath),
                             FilePath = filePath,
                             IsSelected = false,
-                            PublishDate = tmpPubDate,
-                            PublishTime = defaultPublishTime,
+                            PublishDate = publishDate,
+                            PublishTime = publishTime,
                             OrderIndex = orderIndex,
                             DefaultLanguage = defaultLanguage
                         });
-                        tmpPubDate = tmpPubDate.AddDays(1);
+                        dateTimeIndex++;
                         orderIndex++;
                     }
                 }
@@ -203,6 +281,13 @@ namespace MorWalPiz.VideoImporter
             var settingsPage = new SettingsPage();
             settingsPage.Owner = this;
             settingsPage.ShowDialog();
+        }
+
+        private void PublishSchedulesMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var publishSchedulesPage = new Views.PublishSchedulesPage();
+            publishSchedulesPage.Owner = this;
+            publishSchedulesPage.ShowDialog();
         }
 
         private void FileDetailButton_Click(object sender, RoutedEventArgs e)
@@ -603,7 +688,21 @@ namespace MorWalPiz.VideoImporter
     {
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
-        public bool IsSelected { get; set; }
+        
+        private bool _isSelected;
+        public bool IsSelected 
+        { 
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        
         public string EditedCleanFileName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

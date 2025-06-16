@@ -9,6 +9,7 @@ namespace MorWalPiz.VideoImporter.Data
     public DbSet<Language> Languages { get; set; }
     public DbSet<Disclaimer> Disclaimers { get; set; }
     public DbSet<Settings> Settings { get; set; }
+    public DbSet<PublishSchedule> PublishSchedules { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -45,7 +46,29 @@ namespace MorWalPiz.VideoImporter.Data
 
       // Configurazione per Settings
       modelBuilder.Entity<Settings>().HasData(
-          new Settings { Id = 1, DefaultHashtags = "#video #hashtag", ApiEndpoint = "https://localhost:7221" , DefaultPublishTime = new System.TimeSpan(12, 0, 0) }
+          new Settings { Id = 1, DefaultHashtags = "#video #hashtag", ApiEndpoint = "https://localhost:7221" }
+      );
+
+      // Configurazione per PublishSchedules - Pianificazioni predefinite
+      modelBuilder.Entity<PublishSchedule>().HasData(
+          new PublishSchedule 
+          { 
+              Id = 1, 
+              Name = "Giorni feriali", 
+              DaysOfWeek = 31, // Monday(1) + Tuesday(2) + Wednesday(4) + Thursday(8) + Friday(16) = 31
+              PublishTime = new System.TimeSpan(19, 0, 0), // 19:00
+              IsActive = true,
+              CreatedDate = new System.DateTime(2025, 1, 1)
+          },
+          new PublishSchedule 
+          { 
+              Id = 2, 
+              Name = "Weekend", 
+              DaysOfWeek = 96, // Saturday(32) + Sunday(64) = 96
+              PublishTime = new System.TimeSpan(13, 0, 0), // 13:00
+              IsActive = true,
+              CreatedDate = new System.DateTime(2025, 1, 1)
+          }
       );
     }
   }

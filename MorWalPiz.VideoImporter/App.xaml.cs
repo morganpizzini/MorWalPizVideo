@@ -40,7 +40,7 @@ namespace MorWalPiz.VideoImporter
 
             // Inizializza il servizio di upload YouTube
             string credentialsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "credentials.json");
-            YouTubeUploadService = new YouTubeUploadService(credentialsPath);
+            //YouTubeUploadService = new YouTubeUploadService(credentialsPath);
         }
     }
 }
