@@ -57,7 +57,7 @@ namespace MorWalPiz.VideoImporter.Views
             using (var dbContext = App.DatabaseService.CreateContext())
             {
                 languagues = dbContext.Languages
-                                            .Where(l => !l.IsDefault && l.IsSelected)
+                                            .Where(l => l.IsDefault || l.IsSelected)
                                             .ToList();
             }
 

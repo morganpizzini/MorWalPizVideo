@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace MorWalPiz.VideoImporter.Services
 {
   /// <summary>
@@ -12,8 +9,10 @@ namespace MorWalPiz.VideoImporter.Services
     /// Carica i video selezionati su YouTube
     /// </summary>
     /// <param name="videos">Lista dei video da caricare</param>
+    /// <param name="tags">Lista dei tag da applicare</param>
+    /// <param name="progressCallback">Callback per il progresso (opzionale)</param>
     /// <returns>Task che rappresenta l'operazione asincrona</returns>
-    Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags);
+    Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null);
         
     /// <summary>
     /// Pulisce le credenziali memorizzate
@@ -21,11 +20,47 @@ namespace MorWalPiz.VideoImporter.Services
     /// <returns>True se l'operazione è riuscita</returns>
     bool ClearStoredCredentials();
         
+        /// <summary>
+        /// Reinizializza il servizio YouTube con nuove credenziali per un tenant
+        /// </summary>
+        /// <param name="tenantName">Nome del tenant per cui recuperare le credenziali</param>
+        Task ReinitializeWithNewCredentialsAsync(string credentials, string tenantName);
+  }
+
+  /// <summary>
+  /// Informazioni sul progresso dell'upload
+  /// </summary>
+  public class UploadProgressInfo
+  {
     /// <summary>
-    /// Reinizializza il servizio YouTube con un nuovo percorso delle credenziali
+    /// Nome del file corrente in upload
     /// </summary>
-    /// <param name="credentialFilePath">Nuovo percorso del file JSON delle credenziali OAuth</param>
-    void ReinitializeWithNewCredentials(string credentialFilePath);
+    public string CurrentFileName { get; set; }
+
+    /// <summary>
+    /// Numero del video corrente (1-based)
+    /// </summary>
+    public int CurrentVideoNumber { get; set; }
+
+    /// <summary>
+    /// Numero totale di video da caricare
+    /// </summary>
+    public int TotalVideos { get; set; }
+
+    /// <summary>
+    /// Percentuale di completamento del video corrente (0-100)
+    /// </summary>
+    public int CurrentVideoProgress { get; set; }
+
+    /// <summary>
+    /// Percentuale di completamento totale (0-100)
+    /// </summary>
+    public int OverallProgress { get; set; }
+
+    /// <summary>
+    /// Stato corrente dell'operazione
+    /// </summary>
+    public string Status { get; set; }
   }
 
   /// <summary>

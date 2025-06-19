@@ -4,10 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter"
+        xmlns:converters="clr-namespace:MorWalPiz.VideoImporter.Converters"
         mc:Ignorable="d"
         Title="Video Importer"
         Height="600"
         Width="900">
+    <Window.Resources>
+        <converters:VideoCompletionStatusToColorConverter x:Key="VideoCompletionStatusToColorConverter"/>
+    </Window.Resources>
     <DockPanel>
         <!-- Menu principale e tenant selector -->
         <DockPanel DockPanel.Dock="Top">
@@ -138,9 +142,11 @@
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button ToolTip="Ordine elemento"
-                                                IsEnabled="False"
+                                                
                                                 Width="25"
-                                                Margin="5,0,0,0">
+                                                Margin="5,0,0,0"
+                                                Background="{Binding Converter={StaticResource VideoCompletionStatusToColorConverter}}"
+                                                >
                                             <Button.Content>
                                                 <TextBlock Text="{Binding OrderIndex}"
                                                            FontWeight="Bold"/>
@@ -276,6 +282,41 @@
                         HorizontalAlignment="Right"
                         IsEnabled="{Binding HasSelectedItems}"
                         Click="UploadToYouTubeButton_Click"/>
+            </Grid>
+            
+            <!-- Progress Panel (initially hidden) -->
+            <Grid x:Name="ProgressPanel"
+                  Grid.Row="3"
+                  Background="#F0F0F0"
+                  Margin="0,5,0,0"
+                  Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock x:Name="ProgressStatusText"
+                           Grid.Row="0"
+                           Text="Caricamento in corso..."
+                           FontWeight="Bold"
+                           Margin="10,10,10,5"
+                           HorizontalAlignment="Center"/>
+                
+                <TextBlock x:Name="CurrentFileText"
+                           Grid.Row="1"
+                           Text=""
+                           Margin="10,0,10,5"
+                           HorizontalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                
+                <ProgressBar x:Name="UploadProgressBar"
+                             Grid.Row="2"
+                             Height="20"
+                             Margin="10,0,10,10"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="0"/>
             </Grid>
         </Grid>
     </DockPanel>

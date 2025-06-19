@@ -125,6 +125,7 @@ namespace MorWalPiz.VideoImporter
 
                 if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    selectedFolders.Clear();
                     selectedFolders.Add(folderDialog.SelectedPath);
                 }
                 ProcessFiles();
@@ -142,6 +143,7 @@ namespace MorWalPiz.VideoImporter
 
             if (fileDialog.ShowDialog() == true)
             {
+                selectedFiles.Clear();
                 foreach (var file in fileDialog.FileNames)
                 {
                     selectedFiles.Add(file);
@@ -466,8 +468,12 @@ namespace MorWalPiz.VideoImporter
 
                     var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
-                    // Esegui il caricamento in modo asincrono
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries));
+                    // Show progress panel
+                    ProgressPanel.Visibility = Visibility.Visible;
+                    UploadToYouTubeButton.IsEnabled = false;
+
+                    // Esegui il caricamento in modo asincrono con progress callback
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries), OnUploadProgress);
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -497,6 +503,9 @@ namespace MorWalPiz.VideoImporter
                 }
                 finally
                 {
+                    // Hide progress panel and re-enable button
+                    ProgressPanel.Visibility = Visibility.Collapsed;
+                    UploadToYouTubeButton.IsEnabled = true;
                     // Ripristina il cursore
                     Mouse.OverrideCursor = null;
                 }
@@ -510,6 +519,20 @@ namespace MorWalPiz.VideoImporter
                 // ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
                 MessageBox.Show("Caricamento annullato. Le descrizioni sono state ripristinate.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        /// <summary>
+        /// Handles upload progress updates and updates the UI accordingly
+        /// </summary>
+        private void OnUploadProgress(UploadProgressInfo progressInfo)
+        {
+            // Ensure UI updates happen on the UI thread
+            Dispatcher.Invoke(() =>
+            {
+                ProgressStatusText.Text = $"Video {progressInfo.CurrentVideoNumber} di {progressInfo.TotalVideos}: {progressInfo.Status}";
+                CurrentFileText.Text = progressInfo.CurrentFileName;
+                UploadProgressBar.Value = progressInfo.OverallProgress;
+            });
         }
 
         /// <summary>

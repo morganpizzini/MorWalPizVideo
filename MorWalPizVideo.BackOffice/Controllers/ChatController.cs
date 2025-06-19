@@ -14,26 +14,23 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             _kernel = kernel;
         }
-
     [HttpPost]
-    public async Task<IActionResult> GetReviewDetails([FromBody] ReviewRequest reviewRequest)
+        public async Task<IActionResult> GetReviewDetails([FromBody] ReviewRequest reviewRequest)
     {
         var allResults = await ProcessFileNamesRecursively(reviewRequest.Names, 
-            reviewRequest.Context == null ? string.Empty : $"Il contesto più specifico sarà: {reviewRequest.Context.Trim()}.",
+            reviewRequest.Context == null ? string.Empty : $"Il contesto più specifico è: {reviewRequest.Context.Trim()}.",
             string.Join(", ", reviewRequest.Languages)
             );
         
-        var aggregatedReview = new Review
+        return Ok(new Review
         {
             Videos = allResults.SelectMany(r => r.Videos).ToList()
-        };
-
-        return Ok(aggregatedReview);
+        });
     }
 
     private async Task<List<Review>> ProcessFileNamesRecursively(IList<string> fileNames, string context, string languages)
     {
-        const int chunkSize = 3;
+        const int chunkSize = 5;
         var results = new List<Review>();
 
         if (!fileNames.Any())
@@ -59,17 +56,15 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
     private async Task<Review> ProcessFileNamesChunk(List<string> fileNames, string context,string languages)
     {
-        var fileNamesString = string.Join("\n -", fileNames);
+        var fileNamesString = $"- {string.Join("\n - ", fileNames)}";
 
         var prompt = @$"Sei un esperto di armi, del tiro dinamico, IPSC e IDPA.
                     {context}
-                    Ti fornirò una lista, ogni elemento è una serie di parole chiavi. Il tuo compito è quello di
-                    elaborare una frase di senso compiuto esaustiva del concetto espresso da quelle parole chiavi.
-                    Dai più priorità alle parole chiave rispetto al contesto, ma non ignorarlo.
-                    Ecco l'elenco:
+                    Ti fornirò una lista, ogni elemento è una serie di parole chiavi. Il tuo compito è quello di elaborare una frase di senso compiuto esaustiva del concetto espresso da quelle parole chiavi. Dai più priorità alle parole chiave rispetto al contesto, ma non ignorarlo.
+                    Ecco la lista:
                     {fileNamesString}
-                    Un volta ottenuto il risultato, e conoscendo le meccaniche di engagement di Youtube,
-                    il funzionamento del suo algoritmo e le regole SEO,elabora un titolo e una descrizione per ogni elemento seguendo anche le istruzioni seguenti. 
+
+                    Un volta ottenuto il risultato, e conoscendo le meccaniche di engagement di Youtube, il funzionamento del suo algoritmo e le regole SEO, elabora un titolo e una descrizione per ogni elemento seguendo anche le istruzioni seguenti. 
                 Il titolo deve:
                 – Riflettere chiaramente l'argomento del video
                 – Non superare i 100 caratteri.
@@ -86,18 +81,29 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Dizionario per termini specifici: Hit factor > Fattore, match > gara, Failure to engage > Mancato ingaggio, Topolino > Mickey mouse, Consizione 1/2/3 > Condition 1/2/3,mano forte/debole > strong/weak hand
                 Utilizzando la traduzione inglese, crea le traduzioni anche per queste lingue: {languages}.
                 Elabora le informazioni e dammi un risultato seguento il JSON schema fornito.";
+            
+            // Dividi il testo in righe
+            string[] rows = prompt.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // Rimuovi gli spazi all'inizio di ogni riga
+            for (int i = 0; i < rows.Length; i++)
+            {
+                rows[i] = rows[i].TrimStart();
+            }
+
+            // Riassembla le righe in una nuova stringa
+            string trimmedPrompt = string.Join(Environment.NewLine, rows);
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings()
+            var executionSettings = new AzureOpenAIPromptExecutionSettings()
         {
             ResponseFormat = typeof(Review)
         };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        var result = await _kernel.InvokePromptAsync(prompt, new KernelArguments(executionSettings));
+        var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
 
-        var review = JsonSerializer.Deserialize<Review>(result.ToString());
-        return review ?? new Review();
+        return JsonSerializer.Deserialize<Review>(result.ToString()) ?? new Review();
     }
     }
 }

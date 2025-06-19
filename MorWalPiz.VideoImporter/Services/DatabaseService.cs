@@ -29,7 +29,8 @@ namespace MorWalPiz.VideoImporter.Services
             using (var context = new AppDbContext(_tenantContext))
             {
                 // Assicura che il database esista e che sia aggiornato allo schema più recente
-                context.Database.EnsureCreated();
+                // Migrate() creerà il database se non esiste e applicherà tutte le migrazioni pendenti
+                context.Database.Migrate();
             }
         }
 

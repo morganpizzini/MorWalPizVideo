@@ -71,7 +71,8 @@ namespace MorWalPiz.VideoImporter.Data
 
       // Dati predefiniti per i tenant
       modelBuilder.Entity<Tenant>().HasData(
-          new Tenant { Id = 1, Name = "MorWalPiz", CreatedDate = new DateTime(2025, 1, 1), IsActive = true }
+          new Tenant { Id = 1, Name = "MorWalPiz", CreatedDate = new DateTime(2025, 1, 1), IsActive = true },
+          new Tenant { Id = 2, Name = "ShootingIta", CreatedDate = new DateTime(2025, 1, 1), IsActive = true }
       );
 
       // Dati predefiniti per le lingue (con TenantId = 1)
@@ -85,7 +86,8 @@ namespace MorWalPiz.VideoImporter.Data
 
       // Configurazione per Settings (con TenantId = 1)
       modelBuilder.Entity<Settings>().HasData(
-          new Settings { Id = 1, DefaultHashtags = "#video #hashtag", ApiEndpoint = "https://localhost:7221", TenantId = 1 }
+          new Settings { Id = 1, DefaultHashtags = "video, hashtag", ApplicationName = "MorWalPiz Site", ApiEndpoint = "https://localhost:7221", TenantId = 1 },
+          new Settings { Id = 2, DefaultHashtags = "video, hashtag", ApplicationName = "ShootingITA Site", ApiEndpoint = "https://localhost:7221", TenantId = 2 }
       );
 
       // Configurazione per PublishSchedules - Pianificazioni predefinite (con TenantId = 1)
