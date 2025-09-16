@@ -40,7 +40,15 @@ namespace MorWalPiz.VideoImporter
 
             // Inizializza il servizio di upload YouTube
             string credentialsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "credentials.json");
-            //YouTubeUploadService = new YouTubeUploadService(credentialsPath);
+            if (File.Exists(credentialsPath))
+            {
+                YouTubeUploadService = new YouTubeUploadService(credentialsPath);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("File delle credenziali YouTube non trovato. Alcune funzionalità potrebbero non essere disponibili.",
+                    "Avviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
     }
 }

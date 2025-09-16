@@ -29,6 +29,7 @@ namespace MorWalPizVideo.Server.Models
             Category = category;
             MatchType = matchType;
             YouTubeVideoLinks = youtubeVideoLinks ?? Array.Empty<YouTubeVideoLink>();
+            MatchId = id; // MatchId is the same as Id for consistency, can be used for single video matches
         }
 
         [DataMember]
@@ -65,7 +66,7 @@ namespace MorWalPizVideo.Server.Models
 
         [DataMember]
         [BsonElement("matchId")]
-        public string MatchId => Id;
+        public string MatchId { get; init; }
 
         // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]

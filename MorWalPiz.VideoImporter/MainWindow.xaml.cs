@@ -78,6 +78,89 @@ namespace MorWalPiz.VideoImporter
             
             // Initialize button states
             UpdateButtonStates();
+            
+            // Validate YouTube credentials on startup
+            _ = ValidateYouTubeCredentialsOnStartup();
+        }
+
+        /// <summary>
+        /// Valida le credenziali YouTube all'avvio dell'applicazione
+        /// </summary>
+        private async Task ValidateYouTubeCredentialsOnStartup()
+        {
+            if (App.YouTubeUploadService == null)
+            {
+                return; // Servizio non disponibile
+            }
+
+            try
+            {
+                bool isValid = await App.YouTubeUploadService.ValidateCredentialsAsync();
+                
+                if (!isValid)
+                {
+                    // Le credenziali non sono valide, mostra un avviso
+                    var result = MessageBox.Show(
+                        "Le credenziali YouTube sono scadute o non valide.\n" +
+                        "Vuoi autenticarti nuovamente ora?",
+                        "Credenziali YouTube",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await ReinitializeYouTubeService();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Errore durante la validazione, probabilmente le credenziali non esistono
+                System.Diagnostics.Debug.WriteLine($"Errore durante la validazione delle credenziali YouTube: {ex.Message}");
+                // Non mostrare errore all'utente per non essere troppo invasivi all'avvio
+            }
+        }
+
+        /// <summary>
+        /// Reinizializza il servizio YouTube
+        /// </summary>
+        private async Task ReinitializeYouTubeService()
+        {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+                
+                bool success = await App.YouTubeUploadService.ReinitializeServiceAsync();
+                
+                if (success)
+                {
+                    MessageBox.Show(
+                        "Autenticazione YouTube completata con successo.",
+                        "Successo",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Errore durante l'autenticazione YouTube.",
+                        "Errore",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Errore durante la reinizializzazione: {ex.Message}",
+                    "Errore",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void VideoFiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -290,6 +373,13 @@ namespace MorWalPiz.VideoImporter
             publishSchedulesPage.ShowDialog();
         }
 
+        private void TranslateVideoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var translationDialog = new Views.VideoTranslationDialog();
+            translationDialog.Owner = this;
+            translationDialog.ShowDialog();
+        }
+
         private void FileDetailButton_Click(object sender, RoutedEventArgs e)
         {
             // Get the video file associated with the clicked button
@@ -422,29 +512,9 @@ namespace MorWalPiz.VideoImporter
             disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
             defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
 
-
-            // Prepara i video per l'upload, aggiungendo i disclaimer se necessario
-            foreach (var video in selectedVideos)
-            {
-                if (video.containsWeapon)
-                {
-                    // Aggiungi disclaimer alla descrizione principale (lingua predefinita)
-                    if (defaultLanguageId != 0 && disclaimers.TryGetValue(defaultLanguageId, out var defaultDisclaimer) && !string.IsNullOrEmpty(defaultDisclaimer))
-                    {
-                        video.Description = $"{video.Description}\n\n{defaultDisclaimer}".Trim();
-                    }
-
-                    // Aggiungi disclaimer alle traduzioni
-                    foreach (var langId in video.Translations.Keys.ToList()) // Usa ToList per evitare problemi di modifica durante l'iterazione
-                    {
-                        if (disclaimers.TryGetValue(langId, out var translatedDisclaimer) && !string.IsNullOrEmpty(translatedDisclaimer))
-                        {
-                            var translationItem = video.Translations[langId];
-                            translationItem.Description = $"{translationItem.Description}\n\n{translatedDisclaimer}".Trim();
-                        }
-                    }
-                }
-            }
+            // Crea copie temporanee dei video con i disclaimer aggiunti solo per l'upload
+            var videosForUpload = selectedVideos.Select(video => 
+                CreateVideoFileWithDisclaimers(video, disclaimers, defaultLanguageId)).ToList();
 
 
             var result = System.Windows.MessageBox.Show(
@@ -463,8 +533,8 @@ namespace MorWalPiz.VideoImporter
 
                     var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
 
-                    // Esegui il caricamento in modo asincrono
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries));
+                    // Esegui il caricamento in modo asincrono usando le copie temporanee con disclaimers
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(videosForUpload, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries));
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -500,19 +570,16 @@ namespace MorWalPiz.VideoImporter
             }
             else
             {
-                // Se l'utente annulla, ricarica i dati originali per rimuovere i disclaimer aggiunti temporaneamente
-                // (Questo potrebbe richiedere di ricaricare i dati o clonare gli oggetti prima della modifica)
-                // Per semplicità, qui potremmo semplicemente informare l'utente che le modifiche ai disclaimer non sono state salvate permanentemente.
-                // Oppure, si potrebbe clonare 'selectedVideos' prima di aggiungere i disclaimer e passare il clone al servizio di upload.
-                // ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
-                MessageBox.Show("Caricamento annullato. Le descrizioni sono state ripristinate.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
+                // L'utente ha annullato l'upload - nessuna modifica necessaria perché i disclaimer
+                // erano aggiunti solo alle copie temporanee, non ai video originali
+                MessageBox.Show("Caricamento annullato.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
         /// <summary>
         /// Gestisce la pulizia delle credenziali YouTube
         /// </summary>
-        private void ClearYouTubeCredentials_Click(object sender, RoutedEventArgs e)
+        private async void ClearYouTubeCredentials_Click(object sender, RoutedEventArgs e)
         {
             // Mostra un messaggio di conferma prima di procedere
             var result = MessageBox.Show(
@@ -534,7 +601,8 @@ namespace MorWalPiz.VideoImporter
                     if (success)
                     {
                         MessageBox.Show(
-                            "Credenziali YouTube eliminate con successo.",
+                            "Credenziali YouTube eliminate con successo.\n" +
+                            "La nuova autenticazione verrà richiesta al prossimo utilizzo.",
                             "Operazione completata",
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
@@ -573,16 +641,29 @@ namespace MorWalPiz.VideoImporter
             {
                 DateTime baseDate = PublishDatePicker.SelectedDate.Value;
 
-                // Applica la data a tutti gli elementi selezionati, incrementando di un giorno ogni volta
-                for (int i = 0; i < VideoFiles.Count; i++)
+                // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
+                var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+                var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(baseDate, VideoFiles.Count);
+
+                // Applica le date e orari calcolati in base alle pianificazioni attive
+                for (int i = 0; i < VideoFiles.Count && i < publishDateTimes.Count; i++)
+                {
+                    var (publishDate, publishTime) = publishDateTimes[i];
+                    VideoFiles[i].PublishDate = publishDate;
+                    VideoFiles[i].PublishTime = publishTime;
+                }
+
+                // Se ci sono più video che date calcolate, usa il fallback per i rimanenti
+                for (int i = publishDateTimes.Count; i < VideoFiles.Count; i++)
                 {
                     VideoFiles[i].PublishDate = baseDate.AddDays(i);
+                    VideoFiles[i].PublishTime = new TimeSpan(12, 0, 0); // Default time
                 }
 
                 // Aggiorna la visualizzazione
                 FileListView.Items.Refresh();
 
-                MessageBox.Show($"Data di pubblicazione aggiornata per {VideoFiles.Count} elementi.", "Operazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Data e orario di pubblicazione aggiornati per {VideoFiles.Count} elementi in base alle pianificazioni attive.", "Operazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -674,7 +755,69 @@ namespace MorWalPiz.VideoImporter
                 item.IsSelected = isChecked;
             }
             FileListView.Items.Refresh();
+        }
 
+        private void SelectAllWeaponCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            var isChecked = (sender as CheckBox)?.IsChecked ?? false;
+
+            foreach (var item in VideoFiles)
+            {
+                item.containsWeapon = isChecked;
+            }
+            FileListView.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Crea una copia temporanea del VideoFile con disclaimers aggiunti solo per l'upload
+        /// </summary>
+        private VideoFile CreateVideoFileWithDisclaimers(VideoFile original, Dictionary<int, string> disclaimers, int defaultLanguageId)
+        {
+            var tempVideo = new VideoFile
+            {
+                FileName = original.FileName,
+                FilePath = original.FilePath,
+                IsSelected = original.IsSelected,
+                EditedCleanFileName = original.EditedCleanFileName,
+                Title = original.Title,
+                Description = original.Description,
+                DefaultLanguage = original.DefaultLanguage,
+                containsWeapon = original.containsWeapon,
+                PublishDate = original.PublishDate,
+                PublishTime = original.PublishTime,
+                OrderIndex = original.OrderIndex
+            };
+
+            // Copia le traduzioni
+            foreach (var translation in original.Translations)
+            {
+                tempVideo.Translations[translation.Key] = new TranslationItem
+                {
+                    Title = translation.Value.Title,
+                    Description = translation.Value.Description
+                };
+            }
+
+            // Aggiungi disclaimers solo se il video contiene armi
+            if (original.containsWeapon)
+            {
+                // Aggiungi disclaimer alla descrizione principale (lingua predefinita)
+                if (defaultLanguageId != 0 && disclaimers.TryGetValue(defaultLanguageId, out var defaultDisclaimer) && !string.IsNullOrEmpty(defaultDisclaimer))
+                {
+                    tempVideo.Description = $"{tempVideo.Description}\n\n{defaultDisclaimer}".Trim();
+                }
+
+                // Aggiungi disclaimer alle traduzioni
+                foreach (var langId in tempVideo.Translations.Keys.ToList())
+                {
+                    if (disclaimers.TryGetValue(langId, out var translatedDisclaimer) && !string.IsNullOrEmpty(translatedDisclaimer))
+                    {
+                        tempVideo.Translations[langId].Description = $"{tempVideo.Translations[langId].Description}\n\n{translatedDisclaimer}".Trim();
+                    }
+                }
+            }
+
+            return tempVideo;
         }
     }
 

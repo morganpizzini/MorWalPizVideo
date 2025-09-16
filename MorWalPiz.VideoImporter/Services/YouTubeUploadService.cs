@@ -31,7 +31,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// <summary>
         /// Inizializza il servizio YouTube con le credenziali OAuth
         /// </summary>
-        private void InitializeYouTubeService()
+        private async Task InitializeYouTubeServiceAsync()
         {
             try
             {
@@ -40,12 +40,12 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
                     // Ottiene la UserCredential dal file JSON delle credenziali OAuth
-                    var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         new[] { YouTubeService.Scope.YoutubeUpload, YouTubeService.Scope.YoutubeForceSsl },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName)).Result;
+                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName));
 
                     _youtubeService = new YouTubeService(new BaseClientService.Initializer
                     {
@@ -54,7 +54,7 @@ namespace MorWalPiz.VideoImporter.Services
                     });
 
                     // Ottiene la UserCredential dal file JSON delle credenziali OAuth
-                    var credentialUpdate = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    var credentialUpdate = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         // Aggiunti gli scope necessari per la gestione delle localizzazioni
                         new[] {
@@ -62,7 +62,7 @@ namespace MorWalPiz.VideoImporter.Services
                         },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName + ".Update")).Result;
+                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName + ".Update"));
 
                     _youtubeUpdateService = new YouTubeService(new BaseClientService.Initializer
                     {
@@ -77,6 +77,41 @@ namespace MorWalPiz.VideoImporter.Services
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Verifica se le credenziali sono valide
+        /// </summary>
+        public async Task<bool> ValidateCredentialsAsync()
+        {
+            try
+            {
+                if (_youtubeService == null)
+                {
+                    return false;
+                }
+
+                // Prova una semplice chiamata API per verificare se le credenziali sono valide
+                var channelsRequest = _youtubeService.Channels.List("snippet");
+                channelsRequest.Mine = true;
+                var response = await channelsRequest.ExecuteAsync();
+                
+                return response.Items?.Count > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Inizializza il servizio in modo sincrono (per compatibilità con il costruttore esistente)
+        /// </summary>
+        private void InitializeYouTubeService()
+        {
+            // Per compatibilità, manteniamo questo metodo ma lo facciamo chiamare la versione async
+            // Nota: questo può ancora causare problemi se chiamato dal thread UI
+            Task.Run(async () => await InitializeYouTubeServiceAsync()).Wait();
         }
 
         /// <summary>
@@ -288,13 +323,33 @@ namespace MorWalPiz.VideoImporter.Services
                     Directory.Delete(updateCredentialsPath, true);
                 }
 
-                // Reinizializza il servizio dopo la pulizia
-                InitializeYouTubeService();
+                // Reset dei servizi senza reinizializzazione immediata
+                _youtubeService = null;
+                _youtubeUpdateService = null;
+                
                 return true;
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Errore nella pulizia delle credenziali: {ex.Message}",
+                    "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reinizializza il servizio YouTube in modo asincrono dopo la pulizia delle credenziali
+        /// </summary>
+        public async Task<bool> ReinitializeServiceAsync()
+        {
+            try
+            {
+                await InitializeYouTubeServiceAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Errore nella reinizializzazione del servizio YouTube: {ex.Message}",
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
