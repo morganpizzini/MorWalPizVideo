@@ -41,7 +41,7 @@ namespace MorWalPizVideo.Server.Services
             // For collections, get all videoIds from the VideoRefs
             var videoIds = matches
                 .Where(x => x.IsLink && string.IsNullOrEmpty(x.Title))
-                .Select(x => x.ThumbnailVideoId)
+                .Select(x => x.MatchId)
                 .Concat(
                     matches
                         .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
@@ -58,7 +58,7 @@ namespace MorWalPizVideo.Server.Services
                 
                 // Identify matches that need to be updated in the repository
                 var matchesToUpdate = matches
-                    .Where(x => x.IsLink && videoIds.Contains(x.ThumbnailVideoId))
+                    .Where(x => x.IsLink && videoIds.Contains(x.MatchId))
                     .Concat(
                         matches
                             .Where(x => !x.IsLink && x.VideoRefs != null)
@@ -83,7 +83,7 @@ namespace MorWalPizVideo.Server.Services
             
             foreach (var match in matches)
             {
-                if (match.IsLink && videoDict.TryGetValue(match.ThumbnailVideoId, out var singleVideo))
+                if (match.IsLink && videoDict.TryGetValue(match.MatchId, out var singleVideo))
                 {
                     // For single video matches, update title, description, etc. from the video
                     var updatedMatch = match with { 

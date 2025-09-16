@@ -26,6 +26,41 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 Videos = allResults.SelectMany(r => r.Videos).ToList()
             });
+    }
+
+    [HttpPost("translate")]
+    public async Task<IActionResult> TranslateVideoContent([FromBody] VideoTranslationRequest translationRequest)
+    {
+        var translations = await ProcessVideoTranslation(
+            translationRequest.Title,
+            translationRequest.Description,
+            translationRequest.Languages
+        );
+
+        return Ok(translations);
+    }
+
+    private async Task<List<Review>> ProcessFileNamesRecursively(IList<string> fileNames, string context, string languages)
+    {
+        const int chunkSize = 3;
+        var results = new List<Review>();
+
+        if (!fileNames.Any())
+            return results;
+
+        // Take the first chunk of files (up to 3)
+        var currentChunk = fileNames.Take(chunkSize).ToList();
+        var remainingFiles = fileNames.Skip(chunkSize).ToList();
+
+        // Process current chunk
+        var chunkResult = await ProcessFileNamesChunk(currentChunk, context,languages);
+        results.Add(chunkResult);
+
+        // Recursively process remaining files
+        if (remainingFiles.Any())
+        {
+            var remainingResults = await ProcessFileNamesRecursively(remainingFiles, context,languages);
+            results.AddRange(remainingResults);
         }
 
         private async Task<List<Review>> ProcessFileNamesRecursively(IList<string> fileNames, string context, string languages)
@@ -127,5 +162,42 @@ Infine, assembla tutte le informazioni generate seguendo scrupolosamente lo sche
 
             return JsonSerializer.Deserialize<Review>(result.ToString()) ?? new Review();
         }
+        
+    private async Task<List<VideoTranslationResponse>> ProcessVideoTranslation(string title, string description, List<string> languages)
+    {
+        var languagesString = string.Join(", ", languages);
+
+        // Placeholder prompt - user mentioned they will edit this later
+        var prompt = @$"You are a professional translator specializing in YouTube content translation.
+                    
+                    Please translate the following YouTube video content:
+                    
+                    Title: {title}
+                    Description: {description}
+                    
+                    Translate both the title and description into each of these languages: {languagesString}
+                    
+                    For each language, provide:
+                    - The language code (e.g., 'en' for English, 'es' for Spanish, 'fr' for French)
+                    - The translated title
+                    - The translated description
+                    
+                    Ensure translations are natural, culturally appropriate, and optimized for YouTube SEO in each target language.
+                    Maintain the original tone and style while adapting to each language's conventions.
+                    
+                    Return the result as a JSON array following the specified schema.";
+
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        var executionSettings = new AzureOpenAIPromptExecutionSettings()
+        {
+            ResponseFormat = typeof(List<VideoTranslationResponse>)
+        };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+        var result = await _kernel.InvokePromptAsync(prompt, new KernelArguments(executionSettings));
+
+        var translations = JsonSerializer.Deserialize<List<VideoTranslationResponse>>(result.ToString());
+        return translations ?? new List<VideoTranslationResponse>();
+    }
     }
 }

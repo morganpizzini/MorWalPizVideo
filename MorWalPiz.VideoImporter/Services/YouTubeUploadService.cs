@@ -34,8 +34,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// <summary>
         /// Reinizializza il servizio YouTube con nuove credenziali per un tenant
         /// </summary>
-        /// <param name="tenantName">Nome del tenant per cui recuperare le credenziali</param>
-        public async Task ReinitializeWithNewCredentialsAsync(string credentials, string tenantName)
+        private async Task InitializeYouTubeServiceAsync()
         {
             _credentialsJson = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _currentTenantName = tenantName ?? throw new ArgumentNullException(nameof(tenantName));
@@ -67,13 +66,13 @@ namespace MorWalPiz.VideoImporter.Services
                 using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_credentialsJson)))
                 {
                     var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
-                    // Ottiene la UserCredential dal JSON delle credenziali OAuth
+                    // Ottiene la UserCredential dal file JSON delle credenziali OAuth
                     var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         new[] { YouTubeService.Scope.YoutubeUpload, YouTubeService.Scope.YoutubeForceSsl },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore($"{AuthStoreName}-{_currentTenantName}"));
+                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName));
 
                     _youtubeService = new YouTubeService(new BaseClientService.Initializer
                     {
@@ -81,7 +80,7 @@ namespace MorWalPiz.VideoImporter.Services
                         ApplicationName = settings.ApplicationName
                     });
 
-                    // Ottiene la UserCredential dal JSON delle credenziali OAuth per il servizio di aggiornamento
+                    // Ottiene la UserCredential dal file JSON delle credenziali OAuth
                     var credentialUpdate = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
                         // Aggiunti gli scope necessari per la gestione delle localizzazioni
@@ -90,7 +89,7 @@ namespace MorWalPiz.VideoImporter.Services
                         },
                         "user",
                         System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore($"{AuthStoreName}-{_currentTenantName}.Update"));
+                        new Google.Apis.Util.Store.FileDataStore(AuthStoreName + ".Update"));
 
                     _youtubeUpdateService = new YouTubeService(new BaseClientService.Initializer
                     {
@@ -105,6 +104,41 @@ namespace MorWalPiz.VideoImporter.Services
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Verifica se le credenziali sono valide
+        /// </summary>
+        public async Task<bool> ValidateCredentialsAsync()
+        {
+            try
+            {
+                if (_youtubeService == null)
+                {
+                    return false;
+                }
+
+                // Prova una semplice chiamata API per verificare se le credenziali sono valide
+                var channelsRequest = _youtubeService.Channels.List("snippet");
+                channelsRequest.Mine = true;
+                var response = await channelsRequest.ExecuteAsync();
+                
+                return response.Items?.Count > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Inizializza il servizio in modo sincrono (per compatibilità con il costruttore esistente)
+        /// </summary>
+        private void InitializeYouTubeService()
+        {
+            // Per compatibilità, manteniamo questo metodo ma lo facciamo chiamare la versione async
+            // Nota: questo può ancora causare problemi se chiamato dal thread UI
+            Task.Run(async () => await InitializeYouTubeServiceAsync()).Wait();
         }
 
         /// <summary>
@@ -432,8 +466,10 @@ namespace MorWalPiz.VideoImporter.Services
                     Directory.Delete(updateCredentialsPath, true);
                 }
 
-                // Reinizializza il servizio dopo la pulizia
-                InitializeYouTubeServiceAsync().GetAwaiter().GetResult();
+                // Reset dei servizi senza reinizializzazione immediata
+                _youtubeService = null;
+                _youtubeUpdateService = null;
+                
                 return true;
             }
             catch (Exception ex)
@@ -445,108 +481,22 @@ namespace MorWalPiz.VideoImporter.Services
         }
 
         /// <summary>
-        /// Forza una nuova autenticazione YouTube
+        /// Reinizializza il servizio YouTube in modo asincrono dopo la pulizia delle credenziali
         /// </summary>
-        /// <returns>True se l'autenticazione � riuscita</returns>
-        public async Task<bool> ForceReauthenticationAsync()
+        public async Task<bool> ReinitializeServiceAsync()
         {
             try
             {
-                using var context = App.DatabaseService.CreateContext();
-                var settings = context.Settings.FirstOrDefault();
-                if (settings == null)
-                {
-                    return false;
-                }
-
-                // Dispose existing services
-                _youtubeService?.Dispose();
-                _youtubeUpdateService?.Dispose();
-
-                using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_credentialsJson)))
-                {
-                    var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
-                    
-                    // Force new authentication by using a new FileDataStore path
-                    var tempAuthStoreName = $"{AuthStoreName}-{_currentTenantName}-{DateTime.Now:yyyyMMddHHmmss}";
-                    
-                    // Ottiene la UserCredential dal JSON delle credenziali OAuth
-                    var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                        secrets,
-                        new[] { YouTubeService.Scope.YoutubeUpload, YouTubeService.Scope.YoutubeForceSsl },
-                        "user",
-                        System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore(tempAuthStoreName));
-
-                    _youtubeService = new YouTubeService(new BaseClientService.Initializer
-                    {
-                        HttpClientInitializer = credential,
-                        ApplicationName = settings.ApplicationName
-                    });
-
-                    // Ottiene la UserCredential dal JSON delle credenziali OAuth per il servizio di aggiornamento
-                    var credentialUpdate = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                        secrets,
-                        new[] { YouTubeService.Scope.YoutubeForceSsl },
-                        "user",
-                        System.Threading.CancellationToken.None,
-                        new Google.Apis.Util.Store.FileDataStore($"{tempAuthStoreName}.Update"));
-
-                    _youtubeUpdateService = new YouTubeService(new BaseClientService.Initializer
-                    {
-                        HttpClientInitializer = credentialUpdate,
-                        ApplicationName = $"{settings.ApplicationName} upload"
-                    });
-
-                    // Test the authentication by making a simple API call
-                    var channelsRequest = _youtubeService.Channels.List("snippet");
-                    channelsRequest.Mine = true;
-                    var channelsResponse = await channelsRequest.ExecuteAsync();
-
-                    // If we get here without exception, authentication was successful
-                    // Now move the temp credentials to the permanent location
-                    string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                    string credentialDirPath = Path.Combine(userProfile, ".credentials");
-                    
-                    string tempMainPath = Path.Combine(credentialDirPath, tempAuthStoreName);
-                    string tempUpdatePath = Path.Combine(credentialDirPath, $"{tempAuthStoreName}.Update");
-                    
-                    string mainCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}");
-                    string updateCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}.Update");
-
-                    // Remove old credentials if they exist
-                    if (Directory.Exists(mainCredentialsPath))
-                        Directory.Delete(mainCredentialsPath, true);
-                    if (Directory.Exists(updateCredentialsPath))
-                        Directory.Delete(updateCredentialsPath, true);
-
-                    // Move temp credentials to permanent location
-                    if (Directory.Exists(tempMainPath))
-                        Directory.Move(tempMainPath, mainCredentialsPath);
-                    if (Directory.Exists(tempUpdatePath))
-                        Directory.Move(tempUpdatePath, updateCredentialsPath);
-
-                    return true;
-                }
+                await InitializeYouTubeServiceAsync();
+                return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Clean up any temp credentials on failure
-                try
-                {
-                    string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                    string credentialDirPath = Path.Combine(userProfile, ".credentials");
-                    
-                    var tempDirs = Directory.GetDirectories(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}-*");
-                    foreach (var tempDir in tempDirs)
-                    {
-                        Directory.Delete(tempDir, true);
-                    }
-                }
-                catch { /* Ignore cleanup errors */ }
-
+                System.Windows.MessageBox.Show($"Errore nella reinizializzazione del servizio YouTube: {ex.Message}",
+                    "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
+
     }
 }
