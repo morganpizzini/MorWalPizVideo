@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPizVideo.BackOffice.DTOs;
+using BackOfficeDTOs = MorWalPizVideo.BackOffice.DTOs;
 
 namespace MorWalPiz.VideoImporter.Services
 {
@@ -52,9 +47,32 @@ namespace MorWalPiz.VideoImporter.Services
             }
             catch
             {
-                throw;
+                return new();
             }
         }
+
+        public async Task<List<BackOfficeDTOs.VideoTranslationResponse>> TranslateVideoContentAsync(string title, string description, IList<Language> languages)
+        {
+            try
+            {
+                var requestData = new BackOfficeDTOs.VideoTranslationRequest
+                {
+                    Title = title,
+                    Description = description,
+                    Languages = languages.Select(l => l.Code).ToList()
+                };
+
+                var response = await _httpClient.PostAsJsonAsync("api/chat/translate", requestData);
+                if (!response.IsSuccessStatusCode)
+                    return new List<BackOfficeDTOs.VideoTranslationResponse>();
+                return (await response.Content.ReadFromJsonAsync<List<BackOfficeDTOs.VideoTranslationResponse>>()) ?? new List<BackOfficeDTOs.VideoTranslationResponse>();
+            }
+            catch (Exception)
+            {
+                return new List<BackOfficeDTOs.VideoTranslationResponse>();
+            }
+        }
+
     }
 
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MorWalPiz.VideoImporter.Data;
 
@@ -10,9 +11,11 @@ using MorWalPiz.VideoImporter.Data;
 namespace MorWalPiz.VideoImporter.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015200952_languageUpdate")]
+    partial class languageUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -166,7 +169,7 @@ namespace MorWalPiz.VideoImporter.Migrations
                             Id = 3,
                             CreatedDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             DaysOfWeek = 31,
-                            IsActive = false,
+                            IsActive = true,
                             Name = "Giorni feriali 1",
                             PublishTime = new TimeSpan(0, 12, 0, 0, 0),
                             TenantId = 1

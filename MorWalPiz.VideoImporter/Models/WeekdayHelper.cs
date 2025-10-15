@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace MorWalPiz.VideoImporter.Models
 {
+
     public static class WeekdayHelper
     {
         /// <summary>

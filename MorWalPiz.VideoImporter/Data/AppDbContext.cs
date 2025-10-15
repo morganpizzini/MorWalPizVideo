@@ -1,12 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
-using System;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace MorWalPiz.VideoImporter.Data
 {
@@ -79,9 +74,10 @@ namespace MorWalPiz.VideoImporter.Data
       modelBuilder.Entity<Language>().HasData(
           new Language { Id = 1, Code = "it", Name = "Italiano", IsDefault = true, IsSelected = true, TenantId = 1 },
           new Language { Id = 2, Code = "en", Name = "English", IsDefault = false, IsSelected = true, TenantId = 1 },
-          new Language { Id = 3, Code = "fr", Name = "Français", IsDefault = false, IsSelected = false, TenantId = 1 },
-          new Language { Id = 4, Code = "de", Name = "Deutsch", IsDefault = false, IsSelected = false, TenantId = 1 },
-          new Language { Id = 5, Code = "es", Name = "Español", IsDefault = false, IsSelected = true, TenantId = 1 }
+          new Language { Id = 3, Code = "fr", Name = "Français", IsDefault = false, IsSelected = true, TenantId = 1 },
+          new Language { Id = 4, Code = "de", Name = "Deutsch", IsDefault = false, IsSelected = true, TenantId = 1 },
+          new Language { Id = 5, Code = "es", Name = "Español", IsDefault = false, IsSelected = true, TenantId = 1 },
+          new Language { Id = 6, Code = "pt", Name = "Português", IsDefault = false, IsSelected = true, TenantId = 1 }
       );
 
       // Configurazione per Settings (con TenantId = 1)
@@ -108,7 +104,7 @@ namespace MorWalPiz.VideoImporter.Data
               Name = "Giorni feriali 1", 
               DaysOfWeek = 31, // Monday(1) + Tuesday(2) + Wednesday(4) + Thursday(8) + Friday(16) = 31
               PublishTime = new System.TimeSpan(12, 0, 0), // 12:00
-              IsActive = true,
+              IsActive = false,
               CreatedDate = new System.DateTime(2025, 1, 1),
               TenantId = 1
           },

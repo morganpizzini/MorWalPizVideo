@@ -49,6 +49,31 @@ namespace MorWalPiz.VideoImporter.Services
         }
 
         /// <summary>
+        /// Verifica se le credenziali sono valide
+        /// </summary>
+        public async Task<bool> ValidateCredentialsAsync()
+        {
+            try
+            {
+                if (_youtubeService == null)
+                {
+                    return false;
+                }
+
+                // Prova una semplice chiamata API per verificare se le credenziali sono valide
+                var channelsRequest = _youtubeService.Channels.List("snippet");
+                channelsRequest.Mine = true;
+                var response = await channelsRequest.ExecuteAsync();
+
+                return response.Items?.Count > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Inizializza il servizio YouTube con le credenziali OAuth da Key Vault
         /// </summary>
         private async Task InitializeYouTubeServiceAsync()
@@ -545,6 +570,24 @@ namespace MorWalPiz.VideoImporter.Services
                 }
                 catch { /* Ignore cleanup errors */ }
 
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reinizializza il servizio YouTube in modo asincrono dopo la pulizia delle credenziali
+        /// </summary>
+        public async Task<bool> ReinitializeServiceAsync()
+        {
+            try
+            {
+                await InitializeYouTubeServiceAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Errore nella reinizializzazione del servizio YouTube: {ex.Message}",
+                    "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
