@@ -1,4 +1,6 @@
+using Azure.Identity;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FeatureManagement;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -9,7 +11,6 @@ using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Security.Authentication;
-using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
@@ -102,25 +103,17 @@ else
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
-    builder.Services.Configure<BlobStorageOptions>(
-        builder.Configuration.GetSection("BlobStorage"));
+    builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
 
-    MorWalPizDatabaseSettings? dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
-
-    if (dbConfig == null)
-    {
-        throw new Exception("Cannot read configuration for MongoDB");
-    }
-
-    MongoClientSettings settings = MongoClientSettings.FromUrl(
-        new MongoUrl(dbConfig.ConnectionString)
-    );
-    settings.SslSettings =
-    new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
-
-    builder.Services.AddScoped(s =>
-        new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
+    // Configure MongoDB using Options pattern with lazy loading
+    // This ensures Azure Key Vault configuration is fully loaded before accessing database settings
+    builder.Services.Configure<MorWalPizDatabaseSettings>(
+        builder.Configuration.GetSection("MorWalPizDatabase"));
+    
+    builder.Services.AddScoped<IMongoDbService, MongoDbService>();
+    builder.Services.AddScoped<IMongoDatabase>(provider => 
+        provider.GetRequiredService<IMongoDbService>().GetDatabase());
 
     builder.Services.AddHttpClient(HttpClientNames.Recaptcha, httpClient =>
     {

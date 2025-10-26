@@ -406,6 +406,7 @@ namespace MorWalPiz.VideoImporter.Services
                     { 3, "fr" },     // Francese
                     { 4, "de" },     // Tedesco
                     { 5, "es" },     // Spagnolo
+                    { 6, "pt" },     // Portoghese
                 };
 
             // Inizializza le localizzazioni se non esistono

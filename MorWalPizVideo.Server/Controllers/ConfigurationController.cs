@@ -17,22 +17,46 @@ namespace MorWalPizVideo.Server.Controllers
         [OutputCache(Tags = [CacheKeys.ConfigurationStream])]
         public async Task<IActionResult> FetchConfiguration()
         {
-            var configuration = (await dataService.FetchConfigurationByKeys([
-                ConfigurationKeys.StreamUrl, 
-                ConfigurationKeys.StreamVideoPath, 
-                ConfigurationKeys.StreamChatPath,
-                ConfigurationKeys.StreamEnable,
-                ConfigurationKeys.StreamImagePlaceholder])).ToDictionary(x=>x.Key,x=>x.Value);
-
-            var streamUri = new Uri(configuration[ConfigurationKeys.StreamUrl].ToString() ?? string.Empty);
-            if (!string.IsNullOrEmpty(streamUri.ToString()))
+            try
             {
-                configuration[ConfigurationKeys.StreamVideoPath] = new Uri(streamUri, configuration[ConfigurationKeys.StreamVideoPath].ToString()).ToString();
-                configuration[ConfigurationKeys.StreamChatPath] = new Uri(streamUri, configuration[ConfigurationKeys.StreamChatPath].ToString()).ToString();
+                var configurationList = await dataService.FetchConfigurationByKeys([
+                    ConfigurationKeys.StreamUrl,
+                    ConfigurationKeys.StreamVideoPath,
+                    ConfigurationKeys.StreamChatPath,
+                    ConfigurationKeys.StreamEnable,
+                    ConfigurationKeys.StreamImagePlaceholder]);
+
+                var configuration = configurationList.ToDictionary(x => x.Key, x => x.Value);
+
+                // Check if StreamUrl exists before accessing it
+                if (configuration.TryGetValue(ConfigurationKeys.StreamUrl, out var streamUrlValue) && 
+                    !string.IsNullOrEmpty(streamUrlValue?.ToString()))
+                {
+                    var streamUri = new Uri(streamUrlValue.ToString()!);
+                    
+                    // Safely update video path if it exists
+                    if (configuration.TryGetValue(ConfigurationKeys.StreamVideoPath, out var videoPathValue) && 
+                        !string.IsNullOrEmpty(videoPathValue?.ToString()))
+                    {
+                        configuration[ConfigurationKeys.StreamVideoPath] = new Uri(streamUri, videoPathValue.ToString()).ToString();
+                    }
+                    
+                    // Safely update chat path if it exists
+                    if (configuration.TryGetValue(ConfigurationKeys.StreamChatPath, out var chatPathValue) && 
+                        !string.IsNullOrEmpty(chatPathValue?.ToString()))
+                    {
+                        configuration[ConfigurationKeys.StreamChatPath] = new Uri(streamUri, chatPathValue.ToString()).ToString();
+                    }
+                }
+
+                return Ok(configuration);
             }
-
-
-            return Ok(configuration);
+            catch (Exception ex)
+            {
+                // Log the error for debugging
+                // You may want to inject ILogger<ConfigurationController> for proper logging
+                return StatusCode(500, new { error = "Failed to fetch stream configuration", message = ex.Message });
+            }
         }
     }
 }

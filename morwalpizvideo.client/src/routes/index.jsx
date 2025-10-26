@@ -82,44 +82,53 @@ export default function Index() {
                     </div>
                 </>
             }
-            <div className="row align-items-center">
-                {matches.length > 0 &&
-                    <>
+            {matches.length == 0 &&
+                <>
+                    <div className="alert alert-info my-3 text-center" role="alert">
+                        <i className="fa fa-circle-info me-2"></i>
+                        Al momento non ci sono video disponibili. Torna più tardi!
+                    </div>
+                </>
+            }
+            {matches.length > 0 &&
+                <>
+                    <div className="row align-items-center">
                         <div className="d-none d-md-block col-md-3">
                             {RenderMatchCard(matches[0], -1)}
                         </div>
                         <div className="col-12 col-md-9">
                             <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
                         </div>
-                    </>
-                }
-            </div>
-            <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
-                {allCategories.map((category) => {
-                    const includeCategory = availableCategories.includes(category);
-                    return (
-                        <button
-                            key={category}
-                            className={`btn ${selectedCategories.includes(category)
-                                ? "btn-success"
-                                : "btn-outline-secondary"}`}
-                            onClick={() => toggleCategory(category)}
-                            style={{
-                                opacity: includeCategory ? 1 : 0.5,
-                                marginRight: "10px",
-                                cursor: includeCategory
-                                    ? "pointer"
-                                    : "not-allowed",
-                            }}
-                            disabled={!includeCategory}
-                        >
-                            {category}
-                        </button>
-                    )
-                })}
-            </div>
+                    </div>
+                    <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
+                        {allCategories.map((category) => {
+                            const includeCategory = availableCategories.includes(category);
+                            return (
+                                <button
+                                    key={category}
+                                    className={`btn ${selectedCategories.includes(category)
+                                        ? "btn-success"
+                                        : "btn-outline-secondary"}`}
+                                    onClick={() => toggleCategory(category)}
+                                    style={{
+                                        opacity: includeCategory ? 1 : 0.5,
+                                        marginRight: "10px",
+                                        cursor: includeCategory
+                                            ? "pointer"
+                                            : "not-allowed",
+                                    }}
+                                    disabled={!includeCategory}
+                                >
+                                    {category}
+                                </button>
+                            )
+                        })}
+                    </div>
 
-            {renderContentWithBanners(filteredItems, selectedCategories)}
+                    {renderContentWithBanners(filteredItems, selectedCategories)}
+                </>
+            }
+
         </>
     );
 }
