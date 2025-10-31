@@ -70,14 +70,6 @@ namespace MorWalPizVideo.Server.Models
         [BsonIgnore]
         public bool IsLink => ContentType == YoutubeContentType.SingleVideo;
         
-        // Backward compatibility property - the thumbnail URL is stored as a video ID
-        [BsonIgnore]
-        public string ThumbnailUrl => ThumbnailVideoId;
-        
-        // Backward compatibility property - provides access to videos
-        [BsonIgnore]
-        public Video[] Videos { get; set; } = Array.Empty<Video>();
-        
         // Constructor for a single video match
         public static YouTubeContent CreateSingleVideo(string videoId, string category)
         {

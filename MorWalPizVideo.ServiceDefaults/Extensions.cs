@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -99,14 +100,39 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
+        // Configure comprehensive health check endpoints for all environments
+        // Production deployments should secure these endpoints appropriately
+        
+        // Liveness probe - basic application responsiveness
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = WriteHealthCheckResponse
+        });
+
+        // Readiness probe - external dependencies ready
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("ready"),
+            ResponseWriter = WriteHealthCheckResponse
+        });
+
+        // Startup probe - critical startup dependencies
+        app.MapHealthChecks("/health/startup", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("startup"),
+            ResponseWriter = WriteHealthCheckResponse
+        });
+
+        // General health endpoint - all checks
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            ResponseWriter = WriteHealthCheckResponse
+        });
+
+        // Legacy endpoint for backward compatibility (development only)
         if (app.Environment.IsDevelopment())
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
-
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
             app.MapHealthChecks("/alive", new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
@@ -114,5 +140,32 @@ public static class Extensions
         }
 
         return app;
+    }
+
+    private static async Task WriteHealthCheckResponse(HttpContext context, HealthReport result)
+    {
+        context.Response.ContentType = "application/json; charset=utf-8";
+
+        var response = new
+        {
+            status = result.Status.ToString(),
+            totalDuration = result.TotalDuration.TotalMilliseconds,
+            checks = result.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                duration = entry.Value.Duration.TotalMilliseconds,
+                tags = entry.Value.Tags,
+                data = entry.Value.Data.Count > 0 ? entry.Value.Data : null,
+                exception = entry.Value.Exception?.Message
+            })
+        };
+
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        }));
     }
 }

@@ -3,6 +3,8 @@ using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.BackOffice.Services.Configuration;
+using MorWalPizVideo.BackOffice.Services.Factories;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Models.Configuration;
 using Hangfire.MemoryStorage;
@@ -19,7 +21,6 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel;
 using MongoDB.Bson.Serialization;
-
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
 builder.Services.AddFeatureManagement()
@@ -30,6 +31,9 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 
 builder.AddServiceDefaults();
+
+// Configure comprehensive health checks
+builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 // Enable CORS for all in development
 if (builder.Environment.IsDevelopment())
@@ -64,15 +68,17 @@ builder.Services.AddControllers();
 
 if (!enableMock)
 {
-    var telegramSettings = builder.Configuration.GetSection("TelegramSettings").Get<TelegramSettings>();
-
-    if (telegramSettings == null)
-        throw new Exception("Cannot read configuration for Telegram");
-
-    var discordSettings = builder.Configuration.GetSection("DiscordSettings").Get<TelegramSettings>();
-
-    if (discordSettings == null)
-        throw new Exception("Cannot read configuration for Discord");
+    // Configure options for lazy loading
+    //builder.Services.Configure<TelegramSettings>("TelegramSettings", builder.Configuration.GetSection("TelegramSettings"));
+    //builder.Services.Configure<TelegramSettings>("DiscordSettings", builder.Configuration.GetSection("DiscordSettings"));
+    
+    // Register configuration services for lazy loading
+    builder.Services.AddScoped<IDiscordConfigurationService, DiscordConfigurationService>();
+    builder.Services.AddScoped<ITelegramConfigurationService, TelegramConfigurationService>();
+    
+    // Register HttpClient factories
+    builder.Services.AddScoped<IDiscordHttpClientFactory, DiscordHttpClientFactory>();
+    builder.Services.AddScoped<ITelegramHttpClientFactory, TelegramHttpClientFactory>();
 
 
     var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
@@ -85,26 +91,12 @@ if (!enableMock)
             new MediaTypeWithQualityHeaderValue("application/json"));
     });
 
-    // Aggiungi HttpClient
-    builder.Services.AddHttpClient(HttpClientNames.Discord, client =>
-    {
-        client.BaseAddress = new Uri("https://discord.com/api/");
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bot", discordSettings.Token);
-    });
-
     builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
     {
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
     });
 
-    builder.Services.AddHttpClient(HttpClientNames.Telegram, httpClient =>
-    {
-        httpClient.BaseAddress = new Uri($"https://api.telegram.org/bot{telegramSettings.Token}/sendMessage");
-        httpClient.DefaultRequestHeaders.Accept.Clear();
-        httpClient.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/json"));
-    });
+    // Note: Discord and Telegram HttpClients will be created via factories when needed
 }
 
 
