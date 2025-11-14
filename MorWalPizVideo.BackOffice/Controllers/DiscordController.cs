@@ -2,7 +2,7 @@
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class DiscordController : ApplicationController
+public class DiscordController : ApplicationControllerBase
 {
     private readonly IDiscordService discordService;
     public DiscordController(IDiscordService _discordService)

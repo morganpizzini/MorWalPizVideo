@@ -20,7 +20,7 @@ public class UpdatePublishScheduleRequest
   public DateTime Date { get; set; }
 }
 
-public class PublishScheduleController : ApplicationController
+public class PublishScheduleController : ApplicationControllerBase
 {
   private readonly DataService _dataService;
 

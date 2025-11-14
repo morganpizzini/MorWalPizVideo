@@ -14,10 +14,12 @@ export default function Index() {
     const [selectedCategories, setSelectedCategories] = useState([]);
 
     let firstMatchId = matches[0];
-    if (firstMatchId.videos?.length > 0) {
-        firstMatchId = firstMatchId.videos[firstMatchId.videos.length - 1].id;
-    } else {
-        firstMatchId = firstMatchId.url
+    if (firstMatchId) {
+        if (firstMatchId.videos?.length > 0) {
+            firstMatchId = firstMatchId.videos[firstMatchId.videos.length - 1].youtubeId;
+        } else {
+            firstMatchId = firstMatchId.contentId
+        }
     }
 
     const toggleCategory = (category) => {
@@ -60,12 +62,13 @@ export default function Index() {
         );
         return [...new Set(all)];
     }, [matches]);
+    console.log(matches);
     return (
         <>
             <SEO
                 title={"MorWalPiz"}
                 description={"MorWalPiz"}
-                imageUrl={`https://img.youtube.com/vi/${matches[0].thumbnailUrl}/hqdefault.jpg`}
+                imageUrl={matches.length > 0 ? `https://img.youtube.com/vi/${matches[0].contentId}/hqdefault.jpg` : ''}
                 type='website' />
             {configuration[configKeys.STREAM_ENABLE] &&
                 <>
@@ -80,40 +83,53 @@ export default function Index() {
                     </div>
                 </>
             }
-            <div className="row align-items-center">
-                <div className="d-none d-md-block col-md-3">
-                    {RenderMatchCard(matches[0], -1)}
-                </div>
-                <div className="col-12 col-md-9">
-                    <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
-                </div>
-            </div>
-            <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
-                {allCategories.map((category) => {
-                    const includeCategory = availableCategories.includes(category);
-                    return (
-                        <button
-                            key={category}
-                            className={`btn ${selectedCategories.includes(category)
-                                ? "btn-success"
-                                : "btn-outline-secondary"}`}
-                            onClick={() => toggleCategory(category)}
-                            style={{
-                                opacity: includeCategory ? 1 : 0.5,
-                                marginRight: "10px",
-                                cursor: includeCategory
-                                    ? "pointer"
-                                    : "not-allowed",
-                            }}
-                            disabled={!includeCategory}
-                        >
-                            {category}
-                        </button>
-                    )
-                })}
-            </div>
+            {matches.length == 0 &&
+                <>
+                    <div className="alert alert-info my-3 text-center" role="alert">
+                        <i className="fa fa-circle-info me-2"></i>
+                        Al momento non ci sono video disponibili. Torna più tardi!
+                    </div>
+                </>
+            }
+            {matches.length > 0 &&
+                <>
+                    <div className="row align-items-center">
+                        <div className="d-none d-md-block col-md-3">
+                            {RenderMatchCard(matches[0], -1)}
+                        </div>
+                        <div className="col-12 col-md-9">
+                            <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                        </div>
+                    </div>
+                    <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
+                        {allCategories.map((category) => {
+                            const includeCategory = availableCategories.includes(category);
+                            return (
+                                <button
+                                    key={category}
+                                    className={`btn ${selectedCategories.includes(category)
+                                        ? "btn-success"
+                                        : "btn-outline-secondary"}`}
+                                    onClick={() => toggleCategory(category)}
+                                    style={{
+                                        opacity: includeCategory ? 1 : 0.5,
+                                        marginRight: "10px",
+                                        cursor: includeCategory
+                                            ? "pointer"
+                                            : "not-allowed",
+                                    }}
+                                    disabled={!includeCategory}
+                                >
+                                    {category}
+                                </button>
+                            )
+                        })}
+                    </div>
 
-            {renderContentWithBanners(filteredItems, selectedCategories)}
+                    {renderContentWithBanners(filteredItems, selectedCategories)}
+                </>
+            }
+
         </>
     );
 }
@@ -238,7 +254,7 @@ function GoToShortsCard() {
         <>
             <div className="card position-relative">
                 <div className="px-2" style={{ "heigth": "200px" }}>
-                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
+                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" style={{ objectFit: "contain", "width": "100%" }} />
                 </div>
                 <div className="card-body">
                     <p className="text-muted mb-1 text-uppercase">CONSIGLI</p>
@@ -253,10 +269,10 @@ function GoToShortsCard() {
 }
 function RenderMatchCard(match, i) {
     const className = i == 0 ? "card position-relative d-md-none w-100" : "card position-relative w-100";
-    const isLink = (match.videos == null && match.videoRefs == null);
+    const isLink = (match.videos == null && (match.videoRefs == null || match.videoRefs.length<2));
     return (
         <div className={className} style={{ width: '100%' }}>
-            <img src={`https://img.youtube.com/vi/${match.url}/hqdefault.jpg`} className="card-img-top" alt="Video Thumbnail" />
+            <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} className="card-img-top" alt="Video Thumbnail" />
             <div className="card-body">
                 {isLink &&
                     <p className="text-muted mb-1 text-uppercase">{match.category}</p>
@@ -269,14 +285,14 @@ function RenderMatchCard(match, i) {
                 <div className="d-flex justify-content-between align-items-center">
                     {isLink &&
                         <div className="d-flex justify-content-start align-items-center">
-                            <Link to={`https://youtu.be/${match.url}`} target="_blank" rel="noopener noreferrer" className="me-1 pt-1">
+                            <Link to={`https://youtu.be/${match.contentId}`} target="_blank" rel="noopener noreferrer" className="me-1 pt-1">
                                 <i className="fa-1_8x text-danger fab fa-youtube"></i>
                             </Link>
-                            <FacebookShareButton url={`https://youtu.be/${match.url}`} className="Demo__some-network__share-button me-1">
+                            <FacebookShareButton url={`https://youtu.be/${match.contentId}`} className="Demo__some-network__share-button me-1">
                                 <FacebookIcon size={26} round />
                             </FacebookShareButton>
                             <WhatsappShareButton
-                                url={`https://youtu.be/${match.url}`}
+                                url={`https://youtu.be/${match.contentId}`}
                                 title={match.title}
                                 separator=":: "
                                 className="Demo__some-network__share-button"
@@ -291,7 +307,7 @@ function RenderMatchCard(match, i) {
                 </div>
             </div>
             {!isLink &&
-                <Link to={`/matches/${match.url}`} className="stretched-link"></Link>
+                <Link to={`/matches/${match.contentId}`} className="stretched-link"></Link>
             }
         </div>
     )

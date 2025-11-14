@@ -2,8 +2,6 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.EntityFrameworkCore;
-using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
 
@@ -16,11 +14,14 @@ namespace MorWalPiz.VideoImporter.Views
     {
         private readonly DatabaseService _databaseService;
         private Settings _currentSettings;
+        public static ITenantContext TenantContext { get; private set; }
 
         public SettingsPage()
         {
             InitializeComponent();
-            _databaseService = new DatabaseService();
+            // Inizializza il contesto tenant
+            TenantContext = new TenantContext();
+            _databaseService = new DatabaseService(TenantContext);
             LoadSettings();
         }
 
@@ -28,17 +29,14 @@ namespace MorWalPiz.VideoImporter.Views
         {
             using (var context = _databaseService.CreateContext())
             {
-                _currentSettings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
+                _currentSettings = context.Settings.FirstOrDefault() ?? new Settings();
 
                 // Popola la TextBox degli hashtag
                 HashtagsTextBox.Text = _currentSettings.DefaultHashtags;
 
-                // Popola i campi per l'ora
-                HourTextBox.Text = _currentSettings.DefaultPublishTime.Hours.ToString("00");
-                MinuteTextBox.Text = _currentSettings.DefaultPublishTime.Minutes.ToString("00");
-
                 // Popola il campo API Endpoint
                 ApiEndpointTextBox.Text = _currentSettings.ApiEndpoint;
+                ApplicationNameTextBox.Text = _currentSettings.ApplicationName;
             }
         }
 
@@ -46,19 +44,6 @@ namespace MorWalPiz.VideoImporter.Views
         {
             try
             {
-                // Validazione dell'input dell'ora
-                if (!int.TryParse(HourTextBox.Text, out int hour) || hour < 0 || hour > 23)
-                {
-                    System.Windows.MessageBox.Show("L'ora deve essere un numero tra 0 e 23.", "Errore di validazione", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                if (!int.TryParse(MinuteTextBox.Text, out int minute) || minute < 0 || minute > 59)
-                {
-                    System.Windows.MessageBox.Show("I minuti devono essere un numero tra 0 e 59.", "Errore di validazione", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
                 // Validazione dell'endpoint API
                 if (string.IsNullOrWhiteSpace(ApiEndpointTextBox.Text))
                 {
@@ -67,14 +52,15 @@ namespace MorWalPiz.VideoImporter.Views
                 }
 
                 var apiEndpoint = ApiEndpointTextBox.Text.Trim();
+                var applicationName = ApplicationNameTextBox.Text.Trim();
                 // Salvataggio delle impostazioni
                 using (var context = _databaseService.CreateContext())
                 {
-                    var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
+                    var settings = context.Settings.FirstOrDefault() ?? new Settings();
 
                     settings.DefaultHashtags = HashtagsTextBox.Text.Trim();
-                    settings.DefaultPublishTime = new TimeSpan(hour, minute, 0);
                     settings.ApiEndpoint = apiEndpoint;
+                    settings.ApplicationName = applicationName;
 
                     if (settings.Id == 0)
                     {

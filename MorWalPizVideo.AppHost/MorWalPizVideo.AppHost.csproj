@@ -18,6 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="..\MorWalPizVideo.BackOffice\MorWalPizVideo.BackOffice.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.Server\MorWalPizVideo.Server.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.ServerAPI\MorWalPizVideo.ServerAPI.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.ShortLinks\MorWalPizVideo.ShortLinks.csproj" />
   </ItemGroup>
 
 </Project>

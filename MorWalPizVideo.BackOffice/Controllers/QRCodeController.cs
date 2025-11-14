@@ -5,7 +5,7 @@ using System.Drawing.Imaging;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class QRCodeController : ApplicationController
+public class QRCodeController : ApplicationControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> GenerateQRCode(IFormFile logoFile, string data)

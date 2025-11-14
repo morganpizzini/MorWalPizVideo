@@ -19,6 +19,8 @@ import CategoryDetail from './routes/categories/detail';
 import CategoryEdit from './routes/categories/edit';
 import CategoryCreate from './routes/categories/create';
 import Videos from './routes/videos/index';
+import VideoDetail from './routes/videos/detail';
+import VideoEdit from './routes/videos/edit';
 import ImportVideo from './routes/videos/import';
 import TranslateVideo from './routes/videos/translate';
 import CreateRoot from './routes/videos/create-root';
@@ -224,7 +226,7 @@ export default createBrowserRouter([
         Component: Outlet,
         errorElement: React.createElement(ErrorBoundary),
         children: [
-          { index: true, path: '', Component: Videos.Component },
+          { index: true, path: '', loader: Videos.loader, Component: Videos.Component },
           { path: 'import', Component: ImportVideo.Component, loader: ImportVideo.loader, action: ImportVideo.Action },
           { path: 'translate', Component: TranslateVideo.Component, action: TranslateVideo.Action },
           { path: 'create-root', Component: CreateRoot.Component, loader: CreateRoot.loader, action: CreateRoot.action },
@@ -243,6 +245,24 @@ export default createBrowserRouter([
             path: 'youtube-links',
             loader: youTubeLinksLoader,
             Component: YouTubeLinksComponent,
+          },
+          {
+            path: ':id',
+            Component: Outlet,
+            children: [
+              {
+                index: true,
+                path: '',
+                loader: VideoDetail.loader,
+                Component: VideoDetail.Component,
+              },
+              {
+                path: 'edit',
+                loader: VideoEdit.loader,
+                action: VideoEdit.action,
+                Component: VideoEdit.Component,
+              },
+            ],
           },
         ],
       },

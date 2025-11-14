@@ -4,30 +4,44 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter"
+        xmlns:converters="clr-namespace:MorWalPiz.VideoImporter.Converters"
         mc:Ignorable="d"
         Title="Video Importer"
         Height="600"
         Width="900">
+    <Window.Resources>
+        <converters:VideoCompletionStatusToColorConverter x:Key="VideoCompletionStatusToColorConverter"/>
+    </Window.Resources>
     <DockPanel>
-        <!-- Menu principale -->
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="File">
-                <MenuItem Header="Esci"
-                          Click="ExitMenuItem_Click"/>
-            </MenuItem>
-            <MenuItem Header="Edit">
-                <MenuItem Header="Settings"
-                          Click="SettingsMenuItem_Click"/>
-                <MenuItem Header="Pulisci credenziali YouTube"
-                          Click="ClearYouTubeCredentials_Click"/>
-            </MenuItem>
-            <MenuItem Header="Entità">
-                <MenuItem Header="Lingue"
-                          Click="LanguagesMenuItem_Click"/>
-                <MenuItem Header="Disclaimer"
-                          Click="DisclaimerMenuItem_Click"/>
-            </MenuItem>
-        </Menu>
+        <!-- Menu principale e tenant selector -->
+        <DockPanel DockPanel.Dock="Top">
+            <Menu DockPanel.Dock="Left">
+                <MenuItem Header="File">
+                    <MenuItem Header="Esci"
+                              Click="ExitMenuItem_Click"/>
+                </MenuItem>
+                <MenuItem Header="Edit">
+                    <MenuItem Header="Settings"
+                              Click="SettingsMenuItem_Click"/>
+                    <MenuItem Header="Pianificazioni Pubblicazione"
+                              Click="PublishSchedulesMenuItem_Click"/>
+                    <MenuItem Header="Gestione Tenant"
+                              Click="TenantManagementMenuItem_Click"/>
+                    <MenuItem Header="Pulisci credenziali YouTube"
+                              Click="ClearYouTubeCredentials_Click"/>
+                </MenuItem>
+                <MenuItem Header="Entità">
+                    <MenuItem Header="Lingue"
+                              Click="LanguagesMenuItem_Click"/>
+                    <MenuItem Header="Disclaimer"
+                              Click="DisclaimerMenuItem_Click"/>
+                </MenuItem>
+                <MenuItem Header="Funzioni">
+                    <MenuItem Header="Lingue"
+              Click="TranslateVideoMenuItem_Click"/>
+                </MenuItem>
+            </Menu>
+        </DockPanel>
 
         <!-- Contenuto principale -->
         <Grid Margin="10">
@@ -37,27 +51,46 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <!-- File and folder selection buttons -->
-            <StackPanel Orientation="Horizontal"
-                        Grid.Row="0">
-                <!-- Left column - Folder selection -->
-                <Button x:Name="BrowseFolderButton"
-                        Grid.Column="0"
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- File and folder selection buttons -->
+                <StackPanel Orientation="Horizontal">
+                    <!-- Left column - Folder selection -->
+                    <Button x:Name="BrowseFolderButton"
                         Content="Sfoglia Cartelle"
                         Margin="10,10,5,10"
                         Padding="10,5"
                         Click="BrowseFolderButton_Click"
                         HorizontalAlignment="Center"/>
-                <!-- Right column - File selection -->
-                <Button x:Name="BrowseFilesButton"
+                    <!-- Right column - File selection -->
+                    <Button x:Name="BrowseFilesButton"
                         Grid.Column="1"
                         Content="Sfoglia File"
                         Margin="5,10,10,10"
                         Padding="10,5"
                         Click="BrowseFilesButton_Click"
                         HorizontalAlignment="Center"/>
-            </StackPanel>
+                </StackPanel>
 
+                <StackPanel
+                    HorizontalAlignment="Right"
+                    Grid.Column="1"
+                         Orientation="Horizontal" 
+                         VerticalAlignment="Center" 
+                         Margin="0,5,10,5">
+                    <TextBlock Text="Tenant:" 
+                                VerticalAlignment="Center" 
+                                Margin="0,0,10,0"/>
+                    <ComboBox x:Name="TenantComboBox" 
+                               Width="150" 
+                               DisplayMemberPath="Name" 
+                               SelectedValuePath="Id"
+                               SelectionChanged="TenantComboBox_SelectionChanged"/> 
+                </StackPanel>
+            </Grid>
             <!-- Empty row to maintain spacing -->
             <Grid Grid.Row="1"
                   Margin="0,10">
@@ -113,9 +146,11 @@
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button ToolTip="Ordine elemento"
-                                                IsEnabled="False"
+                                                
                                                 Width="25"
-                                                Margin="5,0,0,0">
+                                                Margin="5,0,0,0"
+                                                Background="{Binding Converter={StaticResource VideoCompletionStatusToColorConverter}}"
+                                                >
                                             <Button.Content>
                                                 <TextBlock Text="{Binding OrderIndex}"
                                                            FontWeight="Bold"/>
@@ -125,8 +160,20 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <!-- New Column for 'containsWeapon' -->
-                            <GridViewColumn Header="Arma?"
-                                            Width="50">
+                            <GridViewColumn Width="50">
+                                <GridViewColumn.Header>
+                                    <StackPanel Orientation="Vertical"
+                                                HorizontalAlignment="Center">
+                                        <TextBlock Text="Arma?"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,0,0,2"/>
+                                        <CheckBox x:Name="SelectAllWeaponCheckBox"
+                                                  Click="SelectAllWeaponCheckBox_Checked"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Center"
+                                                  ToolTip="Seleziona/Deseleziona tutti per arma"/>
+                                    </StackPanel>
+                                </GridViewColumn.Header>
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding containsWeapon, Mode=TwoWay}"
@@ -230,6 +277,7 @@
                         Padding="10,5"
                         Margin="0,0,10,0"
                         HorizontalAlignment="Left"
+                        IsEnabled="{Binding HasSelectedItems}"
                         Click="ContextButton_Click"/>
 
                 <!-- Delete button -->
@@ -239,6 +287,7 @@
                         Padding="10,5"
                         Margin="0,0,10,0"
                         HorizontalAlignment="Right"
+                        IsEnabled="{Binding HasSelectedItems}"
                         Click="DeleteButton_Click"/>
 
                 <!-- Upload to YouTube button (spostato dopo Elimina Selezionati) -->
@@ -247,7 +296,43 @@
                         Margin="0,0,0,0"
                         Grid.Column="3"
                         HorizontalAlignment="Right"
-                        Click="DeleteButton_Click"/>
+                        IsEnabled="{Binding HasSelectedItems}"
+                        Click="UploadToYouTubeButton_Click"/>
+            </Grid>
+            
+            <!-- Progress Panel (initially hidden) -->
+            <Grid x:Name="ProgressPanel"
+                  Grid.Row="3"
+                  Background="#F0F0F0"
+                  Margin="0,5,0,0"
+                  Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock x:Name="ProgressStatusText"
+                           Grid.Row="0"
+                           Text="Caricamento in corso..."
+                           FontWeight="Bold"
+                           Margin="10,10,10,5"
+                           HorizontalAlignment="Center"/>
+                
+                <TextBlock x:Name="CurrentFileText"
+                           Grid.Row="1"
+                           Text=""
+                           Margin="10,0,10,5"
+                           HorizontalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                
+                <ProgressBar x:Name="UploadProgressBar"
+                             Grid.Row="2"
+                             Height="20"
+                             Margin="10,0,10,10"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="0"/>
             </Grid>
         </Grid>
     </DockPanel>

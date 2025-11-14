@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
-  public class ConfigurationController : ApplicationController
+  public class ConfigurationController : ApplicationControllerBase
   {
     private readonly DataService _dataService;
 

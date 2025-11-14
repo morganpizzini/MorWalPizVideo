@@ -10,7 +10,7 @@ public class AddChannelRequest
     public string ChannelName { get; set; } = string.Empty;
 }
 
-public class ChannelsController : ApplicationController
+public class ChannelsController : ApplicationControllerBase
 {
     private readonly DataService dataService;
     private readonly IYTService ytService;

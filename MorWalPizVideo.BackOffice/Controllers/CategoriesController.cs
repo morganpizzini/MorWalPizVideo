@@ -16,7 +16,7 @@ public class UpdateCategoryRequest
     public string Description { get; set; } = string.Empty;
 }
 
-public class CategoriesController : ApplicationController
+public class CategoriesController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
     

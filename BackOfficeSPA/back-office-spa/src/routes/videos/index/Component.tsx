@@ -1,9 +1,13 @@
 import React from 'react';
+import { useLoaderData } from 'react-router';
 import Card from '@components/Card';
 import PageHeader from '@components/PageHeader';
+import VideoList from '@components/VideoList';
 import { Row, Col } from 'react-bootstrap';
+import { Match } from '@models/video/types';
 
 const Component: React.FC = () => {
+  const { matches } = useLoaderData() as { matches: Match[] };
   const features = [
     {
       id: 'import',
@@ -77,6 +81,8 @@ const Component: React.FC = () => {
           </Col>
         ))}
       </Row>
+
+      <VideoList matches={matches} />
     </>
   );
 };

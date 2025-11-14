@@ -26,7 +26,7 @@ public class UpdateBioLinkRequest
     public int Order { get; set; }
 }
 
-public class BioLinksController : ApplicationController
+public class BioLinksController : ApplicationControllerBase
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;

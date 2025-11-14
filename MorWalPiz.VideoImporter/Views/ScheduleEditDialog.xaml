@@ -1,0 +1,59 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.ScheduleEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        mc:Ignorable="d"
+        Title="Modifica Pianificazione"
+        Height="450"
+        Width="500"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Name -->
+        <Label Grid.Row="0" Content="Nome pianificazione:" FontWeight="Bold" Margin="0,0,0,5"/>
+        <TextBox Grid.Row="1" x:Name="NameTextBox" Margin="0,0,0,15"/>
+
+        <!-- Time -->
+        <Label Grid.Row="2" Content="Orario di pubblicazione:" FontWeight="Bold" Margin="0,0,0,5"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBox x:Name="HourTextBox" Width="40" Margin="0,0,5,0" 
+                     PreviewTextInput="NumericTextBox_PreviewTextInput"
+                     MaxLength="2"/>
+            <Label Content=":" VerticalAlignment="Center"/>
+            <TextBox x:Name="MinuteTextBox" Width="40" Margin="5,0,0,0" 
+                     PreviewTextInput="NumericTextBox_PreviewTextInput"
+                     MaxLength="2"/>
+        </StackPanel>
+
+        <!-- Days of week -->
+        <GroupBox Grid.Row="4" Header="Giorni della settimana" Padding="10" Margin="0,0,0,15">
+            <StackPanel>
+                <CheckBox x:Name="MondayCheckBox" Content="Lunedì" Margin="0,2"/>
+                <CheckBox x:Name="TuesdayCheckBox" Content="Martedì" Margin="0,2"/>
+                <CheckBox x:Name="WednesdayCheckBox" Content="Mercoledì" Margin="0,2"/>
+                <CheckBox x:Name="ThursdayCheckBox" Content="Giovedì" Margin="0,2"/>
+                <CheckBox x:Name="FridayCheckBox" Content="Venerdì" Margin="0,2"/>
+                <CheckBox x:Name="SaturdayCheckBox" Content="Sabato" Margin="0,2"/>
+                <CheckBox x:Name="SundayCheckBox" Content="Domenica" Margin="0,2"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="SaveButton" Content="Salva" Width="80" Margin="0,0,10,0" Click="SaveButton_Click"/>
+            <Button x:Name="CancelButton" Content="Annulla" Width="80" Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

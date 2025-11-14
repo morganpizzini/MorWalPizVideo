@@ -8,5 +8,9 @@
   <ItemGroup>
 	  <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" Version="4.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MorWalPizVideo.Domain\MorWalPizVideo.Domain.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
+  </ItemGroup>
 
 </Project>

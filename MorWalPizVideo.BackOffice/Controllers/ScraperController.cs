@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class ScraperController : ApplicationController
+public class ScraperController : ApplicationControllerBase
 {
     private readonly DataService dataService;
     private readonly IYTService ytService;

@@ -25,7 +25,12 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("category")]
         public string Category { get; init; } = "";
+
+        [DataMember]
+        [BsonElement("creationDateTime")]
+        public DateTime CreationDateTime { get; init; } = DateTime.Now;
         
+
         // Convert VideoRef to VideoDisplayItem for display in UI
         public VideoDisplayItem ToDisplayItem()
         {

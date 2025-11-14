@@ -12,7 +12,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
-    public interface IMatchRepository : IRepository<Match> { }
+    public interface IYouTubeContentRepository : IRepository<YouTubeContent> { }
     public interface IProductRepository : IRepository<Product> { }
     public interface IYTChannelRepository : IRepository<YTChannel> { }
     public interface ISponsorRepository : IRepository<Sponsor> { }

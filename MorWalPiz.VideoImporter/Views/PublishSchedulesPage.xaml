@@ -1,0 +1,116 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.PublishSchedulesPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
+        mc:Ignorable="d"
+        Title="Pianificazioni di Pubblicazione"
+        Height="600"
+        Width="800"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="CanResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header and Add Button -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" 
+                       Text="Gestisci le pianificazioni di pubblicazione per i tuoi video"
+                       FontSize="14"
+                       VerticalAlignment="Center"/>
+            
+            <Button Grid.Column="1"
+                    x:Name="AddScheduleButton"
+                    Content="Aggiungi Pianificazione"
+                    Padding="10,5"
+                    Click="AddScheduleButton_Click"/>
+        </Grid>
+
+        <!-- Schedules List -->
+        <GroupBox Grid.Row="1" Header="Pianificazioni Attive" Padding="5">
+            <ListView x:Name="SchedulesListView">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Nome" Width="200">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        
+                        <GridViewColumn Header="Giorni" Width="150">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DaysDisplay}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        
+                        <GridViewColumn Header="Orario" Width="100">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding PublishTimeDisplay}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        
+                        <GridViewColumn Header="Attivo" Width="60">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsActive, Mode=TwoWay}" 
+                                              HorizontalAlignment="Center"
+                                              Checked="ActiveCheckBox_Changed"
+                                              Unchecked="ActiveCheckBox_Changed"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        
+                        <GridViewColumn Header="Azioni" Width="120">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Modifica" 
+                                                Width="60"
+                                                Margin="0,0,5,0"
+                                                Click="EditScheduleButton_Click"/>
+                                        <Button Content="Elimina" 
+                                                Width="60"
+                                                Click="DeleteScheduleButton_Click"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </GroupBox>
+
+        <!-- Bottom Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button x:Name="RefreshButton"
+                    Content="Aggiorna"
+                    Width="80"
+                    Margin="0,0,10,0"
+                    Click="RefreshButton_Click"/>
+            <Button x:Name="CloseButton"
+                    Content="Chiudi"
+                    Width="80"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

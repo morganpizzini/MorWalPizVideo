@@ -4,9 +4,16 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Server.Services
 {
-    public class DataService
+    public interface IGenericDataService
     {
-        private readonly IMatchRepository _matchRepository;
+        public Task<ShortLink?> GetShortLink(string shortLink);
+        public Task UpdateShortlink(ShortLink entity);
+        public Task<IList<YouTubeContent>> GetMatches();
+    }
+
+    public class DataService: IGenericDataService
+    {
+        private readonly IYouTubeContentRepository _matchRepository;
         private readonly IProductRepository _productRepository;
         private readonly ISponsorRepository _sponsorRepository;
         private readonly ISponsorApplyRepository _sponsorApplyRepository;
@@ -20,7 +27,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly IPublishScheduleRepository _publishScheduleRepository;
         private readonly IConfigurationRepository _configurationRepository;
         public DataService(
-            IMatchRepository matchRepository,
+            IYouTubeContentRepository matchRepository,
             ISponsorApplyRepository sponsorApplyRepository,
             IProductRepository productRepository,
             ISponsorRepository sponsorRepository,
@@ -52,13 +59,14 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
         public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
-        public Task<IList<Match>> GetMatches() => _matchRepository.GetItemsAsync();        public async Task<Match?> FindMatch(string matchId) => 
+        public Task<IList<YouTubeContent>> GetMatches() => _matchRepository.GetItemsAsync();        
+        public async Task<YouTubeContent?> FindMatch(string matchId) => 
             // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
             (await _matchRepository.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
             // Then try to find by Id (for collections)
             (await _matchRepository.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault();
             
-        public async Task SaveMatch(Match entity)
+        public async Task SaveMatch(YouTubeContent entity)
         {
             // Check if a match with the same ID or ThumbnailVideoId already exists
             var check = await _matchRepository.GetItemsAsync(x => 
@@ -71,7 +79,7 @@ namespace MorWalPizVideo.Server.Services
             await _matchRepository.AddItemAsync(entity);
         }
         
-        public async Task UpdateMatch(Match entity)
+        public async Task UpdateMatch(YouTubeContent entity)
         {
             // Check if a match with the same ID exists
             var check = await _matchRepository.GetItemsAsync(x => x.Id == entity.Id);

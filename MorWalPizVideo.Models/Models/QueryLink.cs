@@ -9,8 +9,5 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("title")] string Title,
         [property: DataMember][property: BsonElement("description")] string Value) : BaseEntity
     {
-        [DataMember]
-        [BsonElement("queryLinkId")]
-        public string QueryLinkId => Title;
     }
 }

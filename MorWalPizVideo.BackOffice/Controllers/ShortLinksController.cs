@@ -24,7 +24,7 @@ public class ShortLinkRequest
         set => Target = value; 
     }
 }
-    public class ShortLinksController : ApplicationController
+    public class ShortLinksController : ApplicationControllerBase
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
@@ -70,9 +70,9 @@ public class ShortLinkRequest
     public async Task<IActionResult> CreateShortLink(ShortLinkRequest request)
     {
         var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
-        var matchCollection = database.GetCollection<Match>(DbCollections.Matches);
+        var matchCollection = database.GetCollection<YouTubeContent>(DbCollections.YouTubeContent);
 
-        var existingMatch = matchCollection.Find(x => x.ThumbnailUrl == request.VideoId || x.Videos.Any(v => v.YoutubeId == request.VideoId)).FirstOrDefault();
+        var existingMatch = matchCollection.Find(x => x.ContentId == request.VideoId || x.VideoRefs.Any(v => v.YoutubeId == request.VideoId)).FirstOrDefault();
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");

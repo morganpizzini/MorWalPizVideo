@@ -16,7 +16,7 @@ public class UpdateQueryLinkRequest
     public string Value { get; set; } = string.Empty;
 }
 
-public class QueryLinksController : ApplicationController
+public class QueryLinksController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
 

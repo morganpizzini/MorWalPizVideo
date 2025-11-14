@@ -36,9 +36,5 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("date")]
         public DateTime Date { get; init; }
-
-        [DataMember]
-        [BsonElement("publishScheduleId")]
-        public string PublishScheduleId => Id;
     }
 }

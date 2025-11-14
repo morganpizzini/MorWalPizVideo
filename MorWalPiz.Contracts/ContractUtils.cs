@@ -28,7 +28,7 @@ namespace MorWalPiz.Contracts
                 Endpoint = $"{endpointBasePath}/{entity.Code}?{entity.QueryString}",
                 Target = entity.Target,
                 QueryString = entity.QueryString,
-                ShortLinkId = entity.ShortLinkId,
+                ShortLinkId = entity.Id,
                 ClicksCount = entity.ClicksCount,
                 LinkType = entity.LinkType,
                 VideoId = entity.VideoId

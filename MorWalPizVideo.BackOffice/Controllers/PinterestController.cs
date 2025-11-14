@@ -15,7 +15,7 @@ public class CreatePinterestPinRequest
     public string ImageUrl { get; set; } = string.Empty;
 }
 
-public class PinterestController : ApplicationController
+public class PinterestController : ApplicationControllerBase
 {
     private readonly IHttpClientFactory client;
     private readonly string channelName;

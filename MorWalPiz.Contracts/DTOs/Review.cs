@@ -6,7 +6,7 @@ namespace MorWalPizVideo.BackOffice.DTOs
   public class Review
   {
     [Required]
-    [Description("Lista delle degli elementi elaborati sulla base dei nomi dei file forniti")]
+    [Description("Lista delle degli elementi elaborati")]
     public IList<ReviewDetails> Videos { get; set; } = new List<ReviewDetails>();
   }
 }

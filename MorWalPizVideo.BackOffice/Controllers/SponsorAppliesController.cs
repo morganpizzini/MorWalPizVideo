@@ -2,7 +2,7 @@
 using MorWalPizVideo.Server.Services;
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class SponsorAppliesController : ApplicationController
+public class SponsorAppliesController : ApplicationControllerBase
 {
     private readonly DataService dataService;
     public SponsorAppliesController(DataService _dataService)

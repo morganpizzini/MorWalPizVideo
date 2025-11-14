@@ -11,7 +11,7 @@ public class AddPageRequest
     public string Url { get; set; } = string.Empty;
     public string VideoId { get; set; } = string.Empty;
 }
-public class PagesController : ApplicationController
+public class PagesController : ApplicationControllerBase
 {
     private readonly DataService dataService;
     public PagesController(DataService _dataService)

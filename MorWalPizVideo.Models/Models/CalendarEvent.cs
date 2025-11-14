@@ -43,10 +43,6 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("matchId")]
         public string MatchId { get; init; } = "";
 
-        [DataMember]
-        [BsonElement("calendarEventId")]
-        public string CalendarEventId => Title;
-
         [BsonIgnore]
         public string MatchUrl { get; set; } = string.Empty;
 

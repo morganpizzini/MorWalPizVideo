@@ -6,7 +6,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class YouTubeVideoLinksController : ApplicationController
+public class YouTubeVideoLinksController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
     private readonly IImageGenerationService _imageGenerationService;

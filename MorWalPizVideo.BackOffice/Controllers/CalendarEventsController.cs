@@ -23,7 +23,7 @@ public class UpdateCalendarEventRequest
     public string MatchId { get; set; } = string.Empty;
 }
 
-public class CalendarEventsController : ApplicationController
+public class CalendarEventsController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
 

@@ -2,7 +2,7 @@
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-public class TelegramController : ApplicationController
+public class TelegramController : ApplicationControllerBase
 {
     private readonly ITelegramService telegramService;
     public TelegramController(ITelegramService _telegramService, IConfiguration _configuration)

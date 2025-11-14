@@ -46,6 +46,20 @@ namespace MorWalPiz.VideoImporter
             }
         }
 
+        private bool _hasSelectedItems;
+        public bool HasSelectedItems
+        {
+            get => _hasSelectedItems;
+            set
+            {
+                if (_hasSelectedItems != value)
+                {
+                    _hasSelectedItems = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -58,6 +72,132 @@ namespace MorWalPiz.VideoImporter
             InitializeComponent();
             FileListView.ItemsSource = VideoFiles;
             DataContext = this;
+            
+            // Subscribe to collection changes
+            VideoFiles.CollectionChanged += VideoFiles_CollectionChanged;
+            
+            // Initialize button states
+            UpdateButtonStates();
+            
+            // Initialize tenant dropdown
+            LoadTenants();
+
+            // Validate YouTube credentials on startup
+            _ = ValidateYouTubeCredentialsOnStartup();
+        }
+
+        /// <summary>
+        /// Valida le credenziali YouTube all'avvio dell'applicazione
+        /// </summary>
+        private async Task ValidateYouTubeCredentialsOnStartup()
+        {
+            if (App.YouTubeUploadService == null)
+            {
+                return; // Servizio non disponibile
+            }
+
+            try
+            {
+                bool isValid = await App.YouTubeUploadService.ValidateCredentialsAsync();
+
+                if (!isValid)
+                {
+                    // Le credenziali non sono valide, mostra un avviso
+                    var result = MessageBox.Show(
+                        "Le credenziali YouTube sono scadute o non valide.\n" +
+                        "Vuoi autenticarti nuovamente ora?",
+                        "Credenziali YouTube",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await ReinitializeYouTubeService();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Errore durante la validazione, probabilmente le credenziali non esistono
+                System.Diagnostics.Debug.WriteLine($"Errore durante la validazione delle credenziali YouTube: {ex.Message}");
+                // Non mostrare errore all'utente per non essere troppo invasivi all'avvio
+            }
+        }
+
+        /// <summary>
+        /// Reinizializza il servizio YouTube
+        /// </summary>
+        private async Task ReinitializeYouTubeService()
+        {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                bool success = await App.YouTubeUploadService.ReinitializeServiceAsync();
+
+                if (success)
+                {
+                    MessageBox.Show(
+                        "Autenticazione YouTube completata con successo.",
+                        "Successo",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Errore durante l'autenticazione YouTube.",
+                        "Errore",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Errore durante la reinizializzazione: {ex.Message}",
+                    "Errore",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void VideoFiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (VideoFile item in e.OldItems)
+                {
+                    item.PropertyChanged -= VideoFile_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (VideoFile item in e.NewItems)
+                {
+                    item.PropertyChanged += VideoFile_PropertyChanged;
+                }
+            }
+
+            UpdateButtonStates();
+        }
+
+        private void VideoFile_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(VideoFile.IsSelected))
+            {
+                UpdateButtonStates();
+            }
+        }
+
+        private void UpdateButtonStates()
+        {
+            HasSelectedItems = VideoFiles.Any(f => f.IsSelected);
         }
 
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -68,6 +208,7 @@ namespace MorWalPiz.VideoImporter
 
                 if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    selectedFolders.Clear();
                     selectedFolders.Add(folderDialog.SelectedPath);
                 }
                 ProcessFiles();
@@ -85,6 +226,7 @@ namespace MorWalPiz.VideoImporter
 
             if (fileDialog.ShowDialog() == true)
             {
+                selectedFiles.Clear();
                 foreach (var file in fileDialog.FileNames)
                 {
                     selectedFiles.Add(file);
@@ -98,33 +240,53 @@ namespace MorWalPiz.VideoImporter
         {
             VideoFiles.Clear();
 
-            // Ottieni l'ora di pubblicazione predefinita dai settings
-            TimeSpan defaultPublishTime;
+            // Ottieni la lingua predefinita dai settings
             string defaultLanguage;
             using (var context = App.DatabaseService.CreateContext())
             {
-                var settings = context.Settings.FirstOrDefault();
-                defaultPublishTime = settings?.DefaultPublishTime ?? new TimeSpan(12, 0, 0); // Default 12:00 se non ci sono settings
                 defaultLanguage = context.Languages.FirstOrDefault(l => l.IsDefault)?.Code ?? "it";
             }
-            var tmpPubDate = DateTime.Today;
+
+            // Conta il numero totale di file per calcolare le date di pubblicazione
+            var allFiles = new List<string>();
+            allFiles.AddRange(selectedFiles.Where(f => File.Exists(f) && Path.GetExtension(f).ToLower() == ".mp4"));
+            
+            foreach (var folderPath in selectedFolders)
+            {
+                if (Directory.Exists(folderPath))
+                {
+                    var mp4Files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories);
+                    allFiles.AddRange(mp4Files);
+                }
+            }
+
+            // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
+            var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+            var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(SelectedPublishDate, allFiles.Count);
+
             var orderIndex = 1;
+            var dateTimeIndex = 0;
+
             // Process selected individual files
             foreach (var filePath in selectedFiles)
             {
                 if (File.Exists(filePath) && Path.GetExtension(filePath).ToLower() == ".mp4")
                 {
+                    var (publishDate, publishTime) = dateTimeIndex < publishDateTimes.Count 
+                        ? publishDateTimes[dateTimeIndex] 
+                        : (SelectedPublishDate.AddDays(dateTimeIndex), new TimeSpan(12, 0, 0));
+
                     VideoFiles.Add(new VideoFile
                     {
                         FileName = Path.GetFileName(filePath),
                         FilePath = filePath,
                         IsSelected = false,
-                        PublishDate = tmpPubDate,
-                        PublishTime = defaultPublishTime,
+                        PublishDate = publishDate,
+                        PublishTime = publishTime,
                         OrderIndex = orderIndex,
                         DefaultLanguage = defaultLanguage,
                     });
-                    tmpPubDate = tmpPubDate.AddDays(1);
+                    dateTimeIndex++;
                     orderIndex++;
                 }
             }
@@ -137,17 +299,21 @@ namespace MorWalPiz.VideoImporter
                     var mp4Files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories);
                     foreach (var filePath in mp4Files)
                     {
+                        var (publishDate, publishTime) = dateTimeIndex < publishDateTimes.Count 
+                            ? publishDateTimes[dateTimeIndex] 
+                            : (SelectedPublishDate.AddDays(dateTimeIndex), new TimeSpan(12, 0, 0));
+
                         VideoFiles.Add(new VideoFile
                         {
                             FileName = Path.GetFileName(filePath),
                             FilePath = filePath,
                             IsSelected = false,
-                            PublishDate = tmpPubDate,
-                            PublishTime = defaultPublishTime,
+                            PublishDate = publishDate,
+                            PublishTime = publishTime,
                             OrderIndex = orderIndex,
                             DefaultLanguage = defaultLanguage
                         });
-                        tmpPubDate = tmpPubDate.AddDays(1);
+                        dateTimeIndex++;
                         orderIndex++;
                     }
                 }
@@ -203,6 +369,20 @@ namespace MorWalPiz.VideoImporter
             var settingsPage = new SettingsPage();
             settingsPage.Owner = this;
             settingsPage.ShowDialog();
+        }
+
+        private void PublishSchedulesMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var publishSchedulesPage = new Views.PublishSchedulesPage();
+            publishSchedulesPage.Owner = this;
+            publishSchedulesPage.ShowDialog();
+        }
+
+        private void TranslateVideoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var translationDialog = new Views.VideoTranslationDialog();
+            translationDialog.Owner = this;
+            translationDialog.ShowDialog();
         }
 
         private void FileDetailButton_Click(object sender, RoutedEventArgs e)
@@ -332,35 +512,15 @@ namespace MorWalPiz.VideoImporter
             // Carica i disclaimer dal database
             Dictionary<int, string> disclaimers;
             int defaultLanguageId;
-            using (var context = App.DatabaseService.CreateContext())
-            {
-                disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
-                defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
-            }
+            var context = App.DatabaseService.CreateContext();
 
-            // Prepara i video per l'upload, aggiungendo i disclaimer se necessario
-            foreach (var video in selectedVideos)
-            {
-                if (video.containsWeapon)
-                {
-                    // Aggiungi disclaimer alla descrizione principale (lingua predefinita)
-                    if (defaultLanguageId != 0 && disclaimers.TryGetValue(defaultLanguageId, out var defaultDisclaimer) && !string.IsNullOrEmpty(defaultDisclaimer))
-                    {
-                        video.Description = $"{video.Description}\n\n{defaultDisclaimer}".Trim();
-                    }
+            disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
+            defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
 
-                    // Aggiungi disclaimer alle traduzioni
-                    foreach (var langId in video.Translations.Keys.ToList()) // Usa ToList per evitare problemi di modifica durante l'iterazione
-                    {
-                        if (disclaimers.TryGetValue(langId, out var translatedDisclaimer) && !string.IsNullOrEmpty(translatedDisclaimer))
-                        {
-                            var translationItem = video.Translations[langId];
-                            translationItem.Description = $"{translationItem.Description}\n\n{translatedDisclaimer}".Trim();
-                        }
-                    }
-                }
-            }
 
+            // Crea copie temporanee dei video con i disclaimer aggiunti solo per l'upload
+            var videosForUpload = selectedVideos.Select(video =>
+                CreateVideoFileWithDisclaimers(video, disclaimers, defaultLanguageId)).ToList();
 
             var result = System.Windows.MessageBox.Show(
                 $"Sei sicuro di voler caricare {selectedVideos.Count} video su YouTube?\n\n" +
@@ -376,8 +536,14 @@ namespace MorWalPiz.VideoImporter
                     // Mostra indicatore di caricamento in corso
                     Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
-                    // Esegui il caricamento in modo asincrono
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(selectedVideos);
+                    var settings = context.Settings.FirstOrDefault() ?? new Settings { Id = 1 };
+
+                    // Show progress panel
+                    ProgressPanel.Visibility = Visibility.Visible;
+                    UploadToYouTubeButton.IsEnabled = false;
+
+                    // Esegui il caricamento in modo asincrono con progress callback
+                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(videosForUpload, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries), OnUploadProgress);
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -407,6 +573,9 @@ namespace MorWalPiz.VideoImporter
                 }
                 finally
                 {
+                    // Hide progress panel and re-enable button
+                    ProgressPanel.Visibility = Visibility.Collapsed;
+                    UploadToYouTubeButton.IsEnabled = true;
                     // Ripristina il cursore
                     Mouse.OverrideCursor = null;
                 }
@@ -417,9 +586,23 @@ namespace MorWalPiz.VideoImporter
                 // (Questo potrebbe richiedere di ricaricare i dati o clonare gli oggetti prima della modifica)
                 // Per semplicità, qui potremmo semplicemente informare l'utente che le modifiche ai disclaimer non sono state salvate permanentemente.
                 // Oppure, si potrebbe clonare 'selectedVideos' prima di aggiungere i disclaimer e passare il clone al servizio di upload.
-                ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
-                MessageBox.Show("Caricamento annullato. Le descrizioni sono state ripristinate.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
+                // ProcessFiles(); // Ricarica i file per resettare le descrizioni modificate
+                MessageBox.Show("Caricamento annullato.", "Annullato", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        /// <summary>
+        /// Handles upload progress updates and updates the UI accordingly
+        /// </summary>
+        private void OnUploadProgress(UploadProgressInfo progressInfo)
+        {
+            // Ensure UI updates happen on the UI thread
+            Dispatcher.Invoke(() =>
+            {
+                ProgressStatusText.Text = $"Video {progressInfo.CurrentVideoNumber} di {progressInfo.TotalVideos}: {progressInfo.Status}";
+                CurrentFileText.Text = progressInfo.CurrentFileName;
+                UploadProgressBar.Value = progressInfo.OverallProgress;
+            });
         }
 
         /// <summary>
@@ -446,11 +629,50 @@ namespace MorWalPiz.VideoImporter
 
                     if (success)
                     {
-                        MessageBox.Show(
-                            "Credenziali YouTube eliminate con successo.",
-                            "Operazione completata",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                        Mouse.OverrideCursor = null;
+                        
+                        // Chiedi all'utente se vuole effettuare subito il login con le nuove credenziali
+                        var loginResult = MessageBox.Show(
+                            "Credenziali YouTube eliminate con successo.\n\n" +
+                            "Vuoi effettuare subito il login per ottenere un nuovo token di accesso?",
+                            "Login YouTube",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+
+                        if (loginResult == MessageBoxResult.Yes)
+                        {
+                            Mouse.OverrideCursor = Cursors.Wait;
+                            
+                            // Forza una nuova autenticazione
+                            bool loginSuccess = App.YouTubeUploadService.ForceReauthenticationAsync().GetAwaiter().GetResult();
+                            
+                            if (loginSuccess)
+                            {
+                                MessageBox.Show(
+                                    "Login YouTube completato con successo.\n" +
+                                    "Il servizio è ora pronto per l'utilizzo.",
+                                    "Login completato",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show(
+                                    "Errore durante il login YouTube.\n" +
+                                    "Riprova più tardi o verifica le credenziali.",
+                                    "Errore login",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Credenziali eliminate. Il login sarà richiesto al primo utilizzo del servizio YouTube.",
+                                "Operazione completata",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -482,20 +704,34 @@ namespace MorWalPiz.VideoImporter
         private void ApplyDateButton_Click(object sender, RoutedEventArgs e)
         {
             // Ottieni la data selezionata nel DatePicker
+            // Ottieni la data selezionata nel DatePicker
             if (PublishDatePicker.SelectedDate != null)
             {
                 DateTime baseDate = PublishDatePicker.SelectedDate.Value;
 
-                // Applica la data a tutti gli elementi selezionati, incrementando di un giorno ogni volta
-                for (int i = 0; i < VideoFiles.Count; i++)
+                // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
+                var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+                var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(baseDate, VideoFiles.Count);
+
+                // Applica le date e orari calcolati in base alle pianificazioni attive
+                for (int i = 0; i < VideoFiles.Count && i < publishDateTimes.Count; i++)
+                {
+                    var (publishDate, publishTime) = publishDateTimes[i];
+                    VideoFiles[i].PublishDate = publishDate;
+                    VideoFiles[i].PublishTime = publishTime;
+                }
+
+                // Se ci sono più video che date calcolate, usa il fallback per i rimanenti
+                for (int i = publishDateTimes.Count; i < VideoFiles.Count; i++)
                 {
                     VideoFiles[i].PublishDate = baseDate.AddDays(i);
+                    VideoFiles[i].PublishTime = new TimeSpan(12, 0, 0); // Default time
                 }
 
                 // Aggiorna la visualizzazione
                 FileListView.Items.Refresh();
 
-                MessageBox.Show($"Data di pubblicazione aggiornata per {VideoFiles.Count} elementi.", "Operazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Data e orario di pubblicazione aggiornati per {VideoFiles.Count} elementi in base alle pianificazioni attive.", "Operazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -587,7 +823,140 @@ namespace MorWalPiz.VideoImporter
                 item.IsSelected = isChecked;
             }
             FileListView.Items.Refresh();
+        }
 
+        private void SelectAllWeaponCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            var isChecked = (sender as CheckBox)?.IsChecked ?? false;
+
+            foreach (var item in VideoFiles)
+            {
+                item.containsWeapon = isChecked;
+            }
+            FileListView.Items.Refresh();
+        }
+
+        // Tenant-related methods
+        private async void LoadTenants()
+        {
+            try
+            {
+                var tenants = await App.TenantService.GetActiveTenantsAsync();
+                TenantComboBox.ItemsSource = tenants;
+                
+                // Set the current tenant
+                var currentTenant = tenants.FirstOrDefault(t => t.Id == App.TenantContext.CurrentTenantId);
+                if (currentTenant != null)
+                {
+                    TenantComboBox.SelectedItem = currentTenant;
+                }
+                else if (tenants.Any())
+                {
+                    // Select the first tenant if current is not found
+                    TenantComboBox.SelectedItem = tenants.First();
+                    App.TenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nel caricamento dei tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void TenantComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (TenantComboBox.SelectedItem is Tenant selectedTenant)
+            {
+                App.TenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                
+                // Clear current data and reload for the new tenant
+                VideoFiles.Clear();
+                selectedFolders.Clear();
+                selectedFiles.Clear();
+                
+                // Update title to show current tenant
+                Title = $"Video Importer - {selectedTenant.Name}";
+            }
+        }
+
+        private void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var tenantManagementPage = new TenantManagementPage(App.TenantService, App.TenantContext);
+                var dialog = new Window
+                {
+                    Content = tenantManagementPage,
+                    Title = "Gestione Tenant",
+                    Width = 800,
+                    Height = 600,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = this
+                };
+                
+                dialog.ShowDialog();
+                
+                // Reload tenants after the dialog closes
+                LoadTenants();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nell'apertura della gestione tenant: {ex.Message}", "Errore", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Crea una copia temporanea del VideoFile con disclaimers aggiunti solo per l'upload
+        /// </summary>
+        private VideoFile CreateVideoFileWithDisclaimers(VideoFile original, Dictionary<int, string> disclaimers, int defaultLanguageId)
+        {
+            var tempVideo = new VideoFile
+            {
+                FileName = original.FileName,
+                FilePath = original.FilePath,
+                IsSelected = original.IsSelected,
+                EditedCleanFileName = original.EditedCleanFileName,
+                Title = original.Title,
+                Description = original.Description,
+                DefaultLanguage = original.DefaultLanguage,
+                containsWeapon = original.containsWeapon,
+                PublishDate = original.PublishDate,
+                PublishTime = original.PublishTime,
+                OrderIndex = original.OrderIndex
+            };
+
+            // Copia le traduzioni
+            foreach (var translation in original.Translations)
+            {
+                tempVideo.Translations[translation.Key] = new TranslationItem
+                {
+                    Title = translation.Value.Title,
+                    Description = translation.Value.Description
+                };
+            }
+
+            // Aggiungi disclaimers solo se il video contiene armi
+            if (original.containsWeapon)
+            {
+                // Aggiungi disclaimer alla descrizione principale (lingua predefinita)
+                if (defaultLanguageId != 0 && disclaimers.TryGetValue(defaultLanguageId, out var defaultDisclaimer) && !string.IsNullOrEmpty(defaultDisclaimer))
+                {
+                    tempVideo.Description = $"{tempVideo.Description}\n\n{defaultDisclaimer}".Trim();
+                }
+
+                // Aggiungi disclaimer alle traduzioni
+                foreach (var langId in tempVideo.Translations.Keys.ToList())
+                {
+                    if (disclaimers.TryGetValue(langId, out var translatedDisclaimer) && !string.IsNullOrEmpty(translatedDisclaimer))
+                    {
+                        tempVideo.Translations[langId].Description = $"{tempVideo.Translations[langId].Description}\n\n{translatedDisclaimer}".Trim();
+                    }
+                }
+            }
+
+            return tempVideo;
         }
     }
 
@@ -601,7 +970,21 @@ namespace MorWalPiz.VideoImporter
     {
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
-        public bool IsSelected { get; set; }
+        
+        private bool _isSelected;
+        public bool IsSelected 
+        { 
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        
         public string EditedCleanFileName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

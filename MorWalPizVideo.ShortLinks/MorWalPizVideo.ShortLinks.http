@@ -1,0 +1,6 @@
+@MorWalPizVideo.ShortLinks_HostAddress = http://localhost:5009
+
+GET {{MorWalPizVideo.ShortLinks_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

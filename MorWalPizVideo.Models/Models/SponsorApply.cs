@@ -9,8 +9,5 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("email")] string Email,
         [property: DataMember][property: BsonElement("description")] string Description) : BaseEntity
     {
-        [DataMember]
-        [BsonElement("sponsorApplyId")]
-        public string sponsorApplyId => Email;
     }
 }
