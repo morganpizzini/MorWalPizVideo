@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -12,7 +14,6 @@ public class CreateQueryLinkRequest
 public class UpdateQueryLinkRequest
 {
     public string Title { get; set; } = string.Empty;
-    public string NewTitle { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
 }
 
@@ -28,8 +29,17 @@ public class QueryLinksController : ApplicationControllerBase
     [HttpGet]
     public async Task<IActionResult> GetQueryLink()
     {
-        var entities = await _dataService.GetQueryLinks();
-        return Ok(entities);
+        var entities = await _dataService.FetchQueryLinks();
+        return Ok(entities.Select(ContractUtils.Convert));
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetQueryLink(string id)
+    {
+        var entities = await _dataService.GetQueryLink(id);
+        if (entities == null)
+            return NotFound();
+        return Ok(ContractUtils.Convert(entities));
     }
 
     [HttpPost]
@@ -39,23 +49,23 @@ public class QueryLinksController : ApplicationControllerBase
         return NoContent();
     }
 
-    [HttpPut]
-    public async Task<IActionResult> UpdateQueryLink(UpdateQueryLinkRequest request)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateQueryLink(BaseRequestId<UpdateQueryLinkRequest> request)
     {
-        var entity = await _dataService.GetQueryLinkByTitle(request.Title);
+        var entity = await _dataService.GetQueryLink(request.Id);
         if (entity == null)
             return BadRequest("Query link has not found");
 
-        var updatedLink = entity with { Title = request.NewTitle, Value = request.Value };
+        var updatedLink = entity with { Title = request.Body.Title, Value = request.Body.Value };
         await _dataService.UpdateQueryLink(updatedLink);
 
         return NoContent();
     }
 
-    [HttpDelete("{title}")]
-    public async Task<IActionResult> DeleteQueryLink(string title)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteQueryLink(BaseRequestId request)
     {
-        var entity = await _dataService.GetQueryLinkByTitle(title);
+        var entity = await _dataService.GetQueryLink(request.Id);
         if (entity == null)
         {
             return BadRequest("Query link has not found");

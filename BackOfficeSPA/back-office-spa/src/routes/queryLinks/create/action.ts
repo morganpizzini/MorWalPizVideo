@@ -11,8 +11,8 @@ export default async function action({ request }: { request: Request }) {
     errors['title'] = 'Title cannot be empty';
   }
 
-  if (!values.description || values.description.trim().length === 0) {
-    errors['description'] = 'Description cannot be empty';
+  if (!values.value || values.value.trim().length === 0) {
+    errors['value'] = 'Value cannot be empty';
   }
 
   // Verifica se ci sono errori

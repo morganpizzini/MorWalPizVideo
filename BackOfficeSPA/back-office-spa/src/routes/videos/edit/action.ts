@@ -4,7 +4,7 @@ import { ActionFunctionArgs, redirect } from 'react-router';
  * Action function for the video edit route
  * Handles form submission for updating video information
  */
-export const action = async ({ request, params }: ActionFunctionArgs) => {
+export default async function({ request, params }: ActionFunctionArgs)  {
   const { id } = params;
   
   if (!id) {

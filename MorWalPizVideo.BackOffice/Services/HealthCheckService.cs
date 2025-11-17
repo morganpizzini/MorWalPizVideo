@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MorWalPizVideo.Server.Utils;
+using MongoDB.Driver;
+using System.Security.Authentication;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
@@ -22,7 +24,11 @@ public static class HealthCheckService
             if (dbConfig != null)
             {
                 healthChecksBuilder.AddMongoDb(
-                    mongodbConnectionString: dbConfig.ConnectionString,
+                    clientFactory: sp => {
+                        MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(dbConfig.ConnectionString));
+                        settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+                        return new MongoClient(settings);
+                    },
                     name: "mongodb",
                     failureStatus: HealthStatus.Unhealthy,
                     tags: ["ready", "database"],

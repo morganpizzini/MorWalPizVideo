@@ -62,10 +62,10 @@ if (enableSwagger)
     builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IGenericDataService,DataService>();
+builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 
 if (enableMock)
 {
-    builder.Services.AddScoped<IExternalDataService, ExternalDataMockService>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
@@ -86,7 +86,6 @@ if (enableMock)
 else
 {
     BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
-    builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
@@ -101,7 +100,7 @@ else
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
-    builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
+    //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();

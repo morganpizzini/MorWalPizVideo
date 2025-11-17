@@ -1,25 +1,26 @@
+using Azure.Identity;
 using Hangfire;
+using Hangfire.MemoryStorage;
+using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
-using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.BackOffice.Services.Configuration;
 using MorWalPizVideo.BackOffice.Services.Factories;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Models.Configuration;
-using Hangfire.MemoryStorage;
-using System.Net.Http.Headers;
-using System.Security.Authentication;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
-using MorWalPizVideo.Models.Constraints;
-using Microsoft.FeatureManagement;
 using MorWalPizVideo.Server.Utils;
-using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel;
-using MongoDB.Bson.Serialization;
+using System.Net.Http.Headers;
+
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
 builder.Services.AddFeatureManagement()
@@ -28,6 +29,32 @@ builder.Services.AddFeatureManagement()
 var enableHangFire = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableHangFire);
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
+var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+
+// Configure Azure KeyVault if enabled
+if (enableKeyVault)
+{
+    var keyVaultUrl = builder.Configuration["KeyVaultUrl"];
+    if (!string.IsNullOrEmpty(keyVaultUrl))
+    {
+        try
+        {
+            builder.Configuration.AddAzureKeyVault(
+                new Uri(keyVaultUrl),
+                new DefaultAzureCredential());
+        }
+        catch (Exception ex)
+        {
+            // Log the exception and continue without KeyVault
+            // This allows the application to start even if KeyVault is unavailable
+            Console.WriteLine($"Warning: Could not connect to KeyVault at {keyVaultUrl}: {ex.Message}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("Warning: EnableKeyVault is true but KeyVaultUrl is not configured");
+    }
+}
 
 builder.AddServiceDefaults();
 
@@ -111,8 +138,7 @@ if (enableMock)
         httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
     });
-    builder.Services.AddScoped<IYTService, YTService>();
-
+    builder.Services.AddScoped<IYTService, YTServiceMock>();
 
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
@@ -133,30 +159,17 @@ if (enableMock)
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-    //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
-
-    builder.Services.AddScoped<ITranslatorService>((c) =>
-    {
-        return new AzureOpenAITranslatorService("<translator-key>",
-            "<translator-endpoint>");
-    });
-
 }
 else
 {
     BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
-    var dbConfig = builder.Configuration.GetSection("MorWalPizDatabase").Get<MorWalPizDatabaseSettings>();
 
-    if (dbConfig == null)
-        throw new Exception("Cannot read configuration for MongoDB");
-    MongoClientSettings settings = MongoClientSettings.FromUrl(
-        new MongoUrl(dbConfig.ConnectionString)
-    );
-    settings.SslSettings =
-        new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+    builder.Services.Configure<MorWalPizDatabaseSettings>(
+        builder.Configuration.GetSection("MorWalPizDatabase"));
 
-    builder.Services.AddScoped(s =>
-        new MongoClient(settings).GetDatabase(dbConfig.DatabaseName));
+    builder.Services.AddScoped<IMongoDbService, MongoDbService>();
+    builder.Services.AddScoped<IMongoDatabase>(provider =>
+        provider.GetRequiredService<IMongoDbService>().GetDatabase());
 
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -177,17 +190,9 @@ else
     // services
     builder.Services.AddScoped<IDiscordService, DiscordService>();
     builder.Services.AddScoped<ITelegramService, TelegramService>();
-    builder.Services.Configure<BlobStorageOptions>(
-       builder.Configuration.GetSection("BlobStorage"));
+    builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-
-    var translatorSettings = builder.Configuration.GetSection("TranslatorSettings").Get<TranslatorSettings>();
-
-    if (translatorSettings == null)
-        throw new Exception("Cannot read configuration for Translator");
-
-    //builder.Services.AddScoped<ITranslatorService>((c) => { return new TranslatorService(translatorSettings.SubscriptionKey, translatorSettings.Endpoint, translatorSettings.Region); });
 }
 
 if (enableSwagger)

@@ -5,7 +5,7 @@ import { fetchMatches } from '../../../services/matchesService';
  * Loader function for the video detail route
  * Fetches a specific match/video by ID
  */
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export default async function({ params }: LoaderFunctionArgs) {
   const { id } = params;
   
   if (!id) {

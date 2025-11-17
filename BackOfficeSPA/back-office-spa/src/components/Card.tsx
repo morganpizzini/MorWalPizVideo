@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router';
 import { Card as BootstrapCard, Button } from 'react-bootstrap';
 
 interface CardProps {
@@ -16,6 +17,7 @@ const Card: React.FC<CardProps> = ({
   link,
   buttonText = 'Go somewhere',
 }) => {
+    const navigate = useNavigate();
   return (
     <BootstrapCard style={{ width: '18rem' }}>
       <BootstrapCard.Body>
@@ -23,8 +25,8 @@ const Card: React.FC<CardProps> = ({
         {subtitle && (
           <BootstrapCard.Subtitle className="mb-2 text-muted">{subtitle}</BootstrapCard.Subtitle>
         )}
-        {content && <BootstrapCard.Text>{content}</BootstrapCard.Text>}
-        <Button variant="primary" href={link}>
+              {content && <BootstrapCard.Text>{content}</BootstrapCard.Text>}
+              <Button variant="primary" onClick={()=>navigate(link)}>
           {buttonText}
         </Button>
       </BootstrapCard.Body>

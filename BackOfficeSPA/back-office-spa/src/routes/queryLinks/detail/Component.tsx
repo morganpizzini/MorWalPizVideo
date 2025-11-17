@@ -61,7 +61,7 @@ const QueryLinkDetail: React.FC = () => {
           <strong>Title:</strong> {entity.title}
         </p>
         <p>
-          <strong>Description:</strong> {entity.description}
+          <strong>Value:</strong> {entity.value}
         </p>
       </DetailPanel>
 
@@ -75,7 +75,7 @@ const QueryLinkDetail: React.FC = () => {
             <strong>Title:</strong> {entity.title}
           </p>
           <p>
-            <strong>Description:</strong> {entity.description}
+            <strong>Value:</strong> {entity.value}
           </p>
         </Modal.Body>
         <Modal.Footer>

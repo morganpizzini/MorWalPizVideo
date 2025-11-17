@@ -16,15 +16,15 @@ public class ShortLinkRequest
     public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
     public string QueryString { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
-    
+
     // Per retrocompatibilità
-    public string VideoId 
-    { 
+    public string VideoId
+    {
         get => Target;
-        set => Target = value; 
+        set => Target = value;
     }
 }
-    public class ShortLinksController : ApplicationControllerBase
+public class ShortLinksController : ApplicationControllerBase
 {
     private readonly IMongoDatabase database;
     private readonly IHttpClientFactory client;
@@ -42,14 +42,14 @@ public class ShortLinkRequest
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetShortLinks()
+    public async Task<IActionResult> FetchShortLinks()
     {
         var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
 
         var shortlinks = (await shortLinkCollection.FindAsync(x => true)).ToList();
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(x=>ContractUtils.Convert(x,$"{siteUrl}sl")).ToList());
+        return Ok(shortlinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}sl")).ToList());
     }
 
     [HttpGet("{videoId}")]
@@ -59,7 +59,7 @@ public class ShortLinkRequest
 
         var shortlink = (await shortLinkCollection.FindAsync(x => x.Code == videoId)).FirstOrDefault();
 
-        if (shortlink== null)
+        if (shortlink == null)
         {
             return NotFound("No shortlink found for this video");
         }
@@ -139,7 +139,7 @@ public class ShortLinkRequest
             return NotFound("Short link not found");
         }
         existingShortLink = existingShortLink with { Target = request.VideoId, QueryString = request.QueryString ?? string.Empty };
-        
+
         var updateDefinition = Builders<ShortLink>.Update
             .Set(sl => sl.VideoId, existingShortLink.VideoId)
             .Set(sl => sl.QueryString, existingShortLink.QueryString);

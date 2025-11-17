@@ -34,5 +34,14 @@ namespace MorWalPiz.Contracts
                 VideoId = entity.VideoId
             };
         }
+        public static QueryLinkContract Convert (QueryLink entity)
+        {
+            return new QueryLinkContract
+            {
+                QueryLinkId = entity.Id,
+                Title =  entity.Title,
+                Value = entity.Value,
+            };
+        }
     }
 }

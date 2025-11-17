@@ -60,8 +60,8 @@ const QueryLinks: React.FC = () => {
         cell: info => info.getValue(),
       },
       {
-        accessorKey: 'description',
-        header: 'Description',
+        accessorKey: 'value',
+        header: 'Value',
         cell: info => info.getValue(),
       },
       {

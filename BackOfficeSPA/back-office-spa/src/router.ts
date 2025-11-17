@@ -258,7 +258,7 @@ export default createBrowserRouter([
               },
               {
                 path: 'edit',
-                loader: VideoEdit.loader,
+                loader: VideoDetail.loader,
                 action: VideoEdit.action,
                 Component: VideoEdit.Component,
               },

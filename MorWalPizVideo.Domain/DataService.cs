@@ -290,8 +290,12 @@ namespace MorWalPizVideo.Server.Services
         }
 
         // QueryLink methods
-        public Task<IList<QueryLink>> GetQueryLinks() => _queryLinkRepository.GetItemsAsync();
-
+        public Task<IList<QueryLink>> FetchQueryLinks() => _queryLinkRepository.GetItemsAsync();
+        public async Task<QueryLink?> GetQueryLink(string queryLinkId)
+        {
+            var queryLink = (await _queryLinkRepository.GetItemsAsync(x => x.Id == queryLinkId)).FirstOrDefault();
+            return queryLink;
+        }
         public async Task<QueryLink?> GetQueryLinkByTitle(string title) =>
             (await _queryLinkRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
 

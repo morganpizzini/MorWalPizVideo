@@ -12,7 +12,7 @@ export interface QueryLink {
   title: string;
 
   /** Description of the query link */
-  description: string;
+  value: string;
 }
 
 /**

@@ -1,2 +1,7 @@
-export { default as Component } from './Component';
-export { loader } from './loader';
+import Component from './Component';
+import loader from './loader';
+
+export default {
+    Component,
+    loader,
+};

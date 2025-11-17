@@ -4,17 +4,17 @@ using System.Text.RegularExpressions;
 
 namespace MorWalPizVideo.Domain
 {
-    public interface ITranslatorService
-    {
-        Task<string> TranslateTextWithHashtags(string text);
-    }
-    public class TranslatorServiceMock : ITranslatorService
-    {
-        public Task<string> TranslateTextWithHashtags(string text)
-        {
-            return Task.FromResult(text);
-        }
-    }
+    //public interface ITranslatorService
+    //{
+    //    Task<string> TranslateTextWithHashtags(string text);
+    //}
+    //public class TranslatorServiceMock : ITranslatorService
+    //{
+    //    public Task<string> TranslateTextWithHashtags(string text)
+    //    {
+    //        return Task.FromResult(text);
+    //    }
+    //}
     //public class TranslatorService : ITranslatorService
     //{
     //    private readonly string _subscriptionKey;
@@ -97,14 +97,14 @@ namespace MorWalPizVideo.Domain
     //}
 
     // Modello per deserializzare la risposta dell'API
-    public class TranslationResponse
-    {
-        public Translation[] Translations { get; set; }
-    }
+    //public class TranslationResponse
+    //{
+    //    public Translation[] Translations { get; set; }
+    //}
 
-    public class Translation
-    {
-        public string Text { get; set; }
-        public string To { get; set; }
-    }
+    //public class Translation
+    //{
+    //    public string Text { get; set; }
+    //    public string To { get; set; }
+    //}
 }

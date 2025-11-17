@@ -25,6 +25,7 @@ export default defineConfig({
       '@models': fileURLToPath(new URL('./src/models', import.meta.url)),
       '@components': fileURLToPath(new URL('./src/components', import.meta.url)),
       '@config': fileURLToPath(new URL('./src/config', import.meta.url)),
+      '@services': fileURLToPath(new URL('./src/services', import.meta.url))
     },
   },
   test: {

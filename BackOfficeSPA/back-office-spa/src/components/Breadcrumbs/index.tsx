@@ -49,19 +49,10 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
   const labels = { ...defaultLabels, ...customLabels };
 
   // Function to get entity name
-  const getEntityName = (segment: string, type: string): string => {
-      if (!entity) return segment;
-
-    if ((type === 'querylinks' || type === 'categories') && entity.title) {
-      return entity.title;
-    } else if (type === 'shortlinks' && entity.videoId) {
-      return entity.videoId;
-    } else if (type === 'channels' && entity.channelName) {
-      return entity.channelName;
-    }
-
-    return segment;
-  };
+  const getEntityName = (segment: string): string =>
+      entity?.breadcrumbIdentifier ? entity.breadcrumbIdentifier
+          : segment;
+ 
 
   return (
     <div className="d-flex align-items-center mt-3 mb-3">
@@ -89,11 +80,8 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
           // Determine if this is a dynamic segment (like an ID)
           const isId = segment !== 'create' && segment !== 'edit' && !labels[segment];
 
-          // Determine the previous segment type (for entity name lookup)
-          const parentType = index > 0 ? pathSegments[0] : '';
-
           // Get the appropriate label
-          const label = isId ? getEntityName(segment, parentType) : labels[segment] || segment;
+          const label = isId ? getEntityName(segment) : labels[segment] || segment;
 
           return (
             <Breadcrumb.Item

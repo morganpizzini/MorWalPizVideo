@@ -4,7 +4,7 @@ import { fetchMatches } from '../../../services/matchesService';
  * Loader function for the videos index route
  * Fetches all matches/videos from the API
  */
-export const loader = async () => {
+export default async function(){
   try {
     const matches = await fetchMatches();
     return { matches };
