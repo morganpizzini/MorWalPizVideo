@@ -58,7 +58,7 @@ public class YouTubeVideoLinksController : ApplicationControllerBase
             var shortLink = new ShortLink(
                 shortLinkCode,
                 request.YouTubeVideoId,
-                string.Empty)
+                new List<QueryLink>())
             {
                 LinkType = LinkType.YouTubeVideo
             };

@@ -1,87 +1,85 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using MorWalPiz.Contracts;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
-public class ShortLinkRequest
+public class CreateShortLinkRequest
 {
     [Required]
     public string Target { get; set; } = string.Empty;
     public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
-    public string QueryString { get; set; } = string.Empty;
+    public string[] QueryLinkIds { get; set; } = [];
     public string Message { get; set; } = string.Empty;
-
-    // Per retrocompatibilità
-    public string VideoId
-    {
-        get => Target;
-        set => Target = value;
-    }
+}
+public class UpdateShortLinkRequest
+{
+    [Required]
+    public string Target { get; set; } = string.Empty;
+    public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
+    public string[] QueryLinkIds { get; set; } = [];
 }
 public class ShortLinksController : ApplicationControllerBase
 {
-    private readonly IMongoDatabase database;
+    private readonly DataService _dataService;
     private readonly IHttpClientFactory client;
     private readonly IConfiguration configuration;
     private readonly IDiscordService discordService;
     private readonly ITelegramService telegramService;
-    public ShortLinksController(IMongoDatabase _database, ITelegramService _telegramService, IHttpClientFactory _clientFactory, IConfiguration _configuration,
-        IDiscordService _discordService)
+    public ShortLinksController(DataService dataService, ITelegramService telegramService, IHttpClientFactory clientFactory, IConfiguration configuration,
+        IDiscordService discordService)
     {
-        database = _database;
-        client = _clientFactory;
-        configuration = _configuration;
-        discordService = _discordService;
-        telegramService = _telegramService;
+        _dataService = dataService;
+        client = clientFactory;
+        this.configuration = configuration;
+        this.discordService = discordService;
+        this.telegramService = telegramService;
     }
 
     [HttpGet]
     public async Task<IActionResult> FetchShortLinks()
     {
-        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
-
-        var shortlinks = (await shortLinkCollection.FindAsync(x => true)).ToList();
+        var shortlinks = await _dataService.FetchShortLinks();
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}sl")).ToList());
+        return Ok(shortlinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
     }
 
     [HttpGet("{videoId}")]
     public async Task<IActionResult> GetShortLink(string videoId)
     {
-        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
-
-        var shortlink = (await shortLinkCollection.FindAsync(x => x.Code == videoId)).FirstOrDefault();
+        var shortlink = await _dataService.GetShortLinkByCode(videoId);
 
         if (shortlink == null)
         {
             return NotFound("No shortlink found for this video");
         }
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(ContractUtils.Convert(shortlink, $"{siteUrl}sl"));
+        return Ok(ContractUtils.Convert(shortlink, $"{siteUrl}"));
     }
     [HttpPost]
-    public async Task<IActionResult> CreateShortLink(ShortLinkRequest request)
+    public async Task<IActionResult> CreateShortLink(CreateShortLinkRequest request)
     {
-        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
-        var matchCollection = database.GetCollection<YouTubeContent>(DbCollections.YouTubeContent);
-
-        var existingMatch = matchCollection.Find(x => x.ContentId == request.VideoId || x.VideoRefs.Any(v => v.YoutubeId == request.VideoId)).FirstOrDefault();
+        var existingMatch = await _dataService.FindMatch(request.Target);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
         }
 
-        var shortLinkCode = await CalculateShortLink(shortLinkCollection);
-        var shortlink = new ShortLink(shortLinkCode, request.VideoId, request.QueryString ?? string.Empty);
+        var existingQueryLink =
+            await _dataService.FetchQueryLinks(request.QueryLinkIds);
 
-        await shortLinkCollection.InsertOneAsync(shortlink);
+        var shortLinkCode = await CalculateShortLink();
+        var shortlink = new ShortLink(shortLinkCode, request.Target,
+            existingQueryLink);
+
+        await _dataService.SaveShortLink(shortlink);
 
         using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
@@ -94,12 +92,11 @@ public class ShortLinksController : ApplicationControllerBase
             await telegramService.CreatePost(shortLinkCode, request.Message);
         }
 
-        return Ok($"{siteUrl}sl/{shortlink.Code}");
+        return Ok($"{siteUrl}{shortlink.Code}");
 
-        async Task<string> CalculateShortLink(IMongoCollection<ShortLink> shortLinkCollection)
+        async Task<string> CalculateShortLink()
         {
-            var shortlinks = (await shortLinkCollection.FindAsync(_ => true)).ToList();
-
+            var shortlinks = await _dataService.FetchShortLinks();
             var sl = shortlinks.Select(x => x.Code.ToLower()).ToList();
 
             return GetUniqueValue(sl);
@@ -128,29 +125,40 @@ public class ShortLinksController : ApplicationControllerBase
         }
     }
 
-    [HttpPut("{shortLinkCode}")]
-    public async Task<IActionResult> UpdateShortLink(string shortLinkCode, ShortLinkRequest request)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
-        var shortLinkCollection = database.GetCollection<ShortLink>(DbCollections.ShortLinks);
-
-        var existingShortLink = await shortLinkCollection.Find(x => x.Code == shortLinkCode).FirstOrDefaultAsync();
+        var existingShortLink = await _dataService.GetShortLink(request.Id);
         if (existingShortLink == null)
         {
             return NotFound("Short link not found");
         }
-        existingShortLink = existingShortLink with { Target = request.VideoId, QueryString = request.QueryString ?? string.Empty };
+        
+        var existingQueryLink = 
+            await _dataService.FetchQueryLinks(request.Body.QueryLinkIds);
+        
+        var updatedShortLink = existingShortLink with { Target = request.Body.Target, 
+            QueryLinks = existingQueryLink, 
+            LinkType = request.Body.LinkType };
 
-        var updateDefinition = Builders<ShortLink>.Update
-            .Set(sl => sl.VideoId, existingShortLink.VideoId)
-            .Set(sl => sl.QueryString, existingShortLink.QueryString);
-
-        await shortLinkCollection.UpdateOneAsync(x => x.Code == shortLinkCode, updateDefinition);
+        await _dataService.UpdateShortlink(updatedShortLink);
 
         using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
         var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
 
-        return Ok($"{siteUrl}sl/{existingShortLink.Code}");
+        return Ok($"{siteUrl}{updatedShortLink.Code}");
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteShortLink(string id)
+    {
+        var entity = await _dataService.GetShortLink(id);
+        if (entity == null)
+            return BadRequest("Shortlink not found");
+
+        await _dataService.DeleteShortLink(id);
+        return NoContent();
     }
 }

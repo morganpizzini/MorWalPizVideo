@@ -30,7 +30,7 @@ namespace MorWalPizVideo.Server.Models
     public record ShortLink(
         [property: DataMember][property: BsonElement("code")] string Code,
         [property: DataMember][property: BsonElement("target")] string Target,
-        [property: DataMember][property: BsonElement("queryString")] string QueryString) : BaseEntity
+        [property: DataMember][property: BsonElement("queryLinks")] IList<QueryLink> QueryLinks) : BaseEntity
     {
 
         [DataMember]
@@ -40,12 +40,8 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("linkType")]
         public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
-        
-        /// <summary>
-        /// Proprietà di retrocompatibilità con il vecchio modello
-        /// </summary>
-        [DataMember]
-        [BsonElement("videoId")]
-        public string VideoId => Target;
+
+        [BsonIgnore]
+        public string QueryString => string.Join("&", QueryLinks.Select(ql => ql.Value));
     }
 }

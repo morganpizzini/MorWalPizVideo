@@ -25,13 +25,12 @@ namespace MorWalPiz.Contracts
             return new ShortLinkContract
             {
                 Code = entity.Code,
-                Endpoint = $"{endpointBasePath}/{entity.Code}?{entity.QueryString}",
+                Endpoint = $"{endpointBasePath}/{entity.Code}",
                 Target = entity.Target,
                 QueryString = entity.QueryString,
                 ShortLinkId = entity.Id,
                 ClicksCount = entity.ClicksCount,
-                LinkType = entity.LinkType,
-                VideoId = entity.VideoId
+                LinkType = entity.LinkType
             };
         }
         public static QueryLinkContract Convert (QueryLink entity)

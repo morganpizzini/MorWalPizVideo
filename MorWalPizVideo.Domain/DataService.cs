@@ -6,9 +6,14 @@ namespace MorWalPizVideo.Server.Services
 {
     public interface IGenericDataService
     {
-        public Task<ShortLink?> GetShortLink(string shortLink);
+        public Task<ShortLink?> GetShortLinkByCode(string code);
+        public Task<ShortLink?> GetShortLink(string code);
         public Task UpdateShortlink(ShortLink entity);
+        public Task<IList<ShortLink>> FetchShortLinks();
+        public Task SaveShortLink(ShortLink entity);
+        public Task DeleteShortLink(string shortLinkId);
         public Task<IList<YouTubeContent>> GetMatches();
+        public Task<YouTubeContent?> FindMatch(string matchId);
     }
 
     public class DataService: IGenericDataService
@@ -57,8 +62,25 @@ namespace MorWalPizVideo.Server.Services
         }
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
-        public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
+        public async Task<ShortLink?> GetShortLinkByCode(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
+        public async Task<ShortLink?> GetShortLink(string id) => (await _shortLinkRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
+        
+        public async Task SaveShortLink(ShortLink entity)
+        {
+            var existingShortLink = await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == entity.Code.ToLower());
+            if (existingShortLink.Count > 0)
+                return;
+            await _shortLinkRepository.AddItemAsync(entity);
+        }
+
+        public async Task DeleteShortLink(string shortLinkId)
+        {
+            var shortLink = (await _shortLinkRepository.GetItemsAsync(x => x.Id == shortLinkId)).FirstOrDefault();
+            if (shortLink == null)
+                return;
+            await _shortLinkRepository.DeleteItemAsync(shortLink.Id);
+        }
         public Task<IList<YouTubeContent>> GetMatches() => _matchRepository.GetItemsAsync();        
         public async Task<YouTubeContent?> FindMatch(string matchId) => 
             // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
@@ -290,7 +312,7 @@ namespace MorWalPizVideo.Server.Services
         }
 
         // QueryLink methods
-        public Task<IList<QueryLink>> FetchQueryLinks() => _queryLinkRepository.GetItemsAsync();
+        public Task<IList<QueryLink>> FetchQueryLinks(IList<string>? ids=null) => _queryLinkRepository.GetItemsAsync(x=> ids!= null ? ids.Contains(x.Id) : true);
         public async Task<QueryLink?> GetQueryLink(string queryLinkId)
         {
             var queryLink = (await _queryLinkRepository.GetItemsAsync(x => x.Id == queryLinkId)).FirstOrDefault();
