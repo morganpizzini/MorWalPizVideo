@@ -31,6 +31,18 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 
+// Configure the CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
+
 // Configure Azure KeyVault if enabled
 if (enableKeyVault)
 {
@@ -97,11 +109,11 @@ if (!enableMock)
     // Configure options for lazy loading
     //builder.Services.Configure<TelegramSettings>("TelegramSettings", builder.Configuration.GetSection("TelegramSettings"));
     //builder.Services.Configure<TelegramSettings>("DiscordSettings", builder.Configuration.GetSection("DiscordSettings"));
-    
+
     // Register configuration services for lazy loading
     builder.Services.AddScoped<IDiscordConfigurationService, DiscordConfigurationService>();
     builder.Services.AddScoped<ITelegramConfigurationService, TelegramConfigurationService>();
-    
+
     // Register HttpClient factories
     builder.Services.AddScoped<IDiscordHttpClientFactory, DiscordHttpClientFactory>();
     builder.Services.AddScoped<ITelegramHttpClientFactory, TelegramHttpClientFactory>();
@@ -237,10 +249,8 @@ if (enableHangFire)
     );
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors();
-}
+// Enable the defined CORS policy globally
+app.UseCors("AllowAllOrigins");
 
 app.MapDefaultEndpoints();
 

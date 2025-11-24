@@ -22,7 +22,7 @@ public class VideosController : ApplicationControllerBase
     [HttpGet()]
     public async Task<IActionResult> GetAllVideos()
     {
-        var matches = await dataService.GetMatches();
+        var matches = await dataService.FetchMatches();
         return Ok(matches);
     }
 
@@ -34,7 +34,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("ImportVideo")]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
-        var matchCollection = await dataService.GetMatches();
+        var matchCollection = await dataService.FetchMatches();
 
         await dataService.SaveMatch(YouTubeContent.CreateSingleVideo(request.VideoId, request.Category.ToLower()));
 
@@ -94,7 +94,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("RootCreation")]
     public async Task<IActionResult> RootCreation(RootCreationRequest request)
     {
-        var matchCollection = await dataService.GetMatches();
+        var matchCollection = await dataService.FetchMatches();
 
         await dataService.SaveMatch(YouTubeContent.CreateCollection(
             request.VideoId,

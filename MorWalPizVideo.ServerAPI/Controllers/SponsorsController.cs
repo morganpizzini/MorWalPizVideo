@@ -18,8 +18,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         private readonly IConfiguration configuration;
         private readonly BlobStorageOptions blobOptions;
         public SponsorsController(
-            IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache,
-            IHttpClientFactory _httpClientFactory, IConfiguration _configuration, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_extDataService,_memoryCache)
+            IGenericDataService _dataService, IMorWalPizCache _memoryCache,
+            IHttpClientFactory _httpClientFactory, IConfiguration _configuration, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_memoryCache)
         {
             configuration = _configuration;
             httpClientFactory = _httpClientFactory;

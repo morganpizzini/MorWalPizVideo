@@ -50,15 +50,16 @@ builder.AddServiceDefaults();
 if (enableCache)
 {
     builder.Services.AddOutputCache(options =>
-{
-    options.AddBasePolicy(builder =>
-        builder.Expire(TimeSpan.FromMinutes(10)));
-});
+    {
+        options.AddBasePolicy(builder =>
+            builder.Expire(TimeSpan.FromMinutes(10)));
+    });
 }
+
 if (enableSwagger)
     builder.Services.AddOpenApi();
 
-builder.Services.AddScoped<IExternalDataService, ShortlinkDataService>();
+builder.Services.AddScoped<IShortLinkDataService, ShortlinkDataService>();
 if (enableMock)
 {
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();

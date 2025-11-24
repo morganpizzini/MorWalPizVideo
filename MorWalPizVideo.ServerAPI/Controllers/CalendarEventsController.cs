@@ -12,7 +12,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     public class CalendarEventsController : ApplicationController
     {
         public CalendarEventsController(
-            IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+            IGenericDataService _dataService, IMorWalPizCache _memoryCache) : base(_dataService, _memoryCache)
         {
         }
 

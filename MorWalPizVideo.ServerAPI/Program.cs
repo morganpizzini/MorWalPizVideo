@@ -62,7 +62,6 @@ if (enableSwagger)
     builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IGenericDataService,DataService>();
-builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 
 if (enableMock)
 {

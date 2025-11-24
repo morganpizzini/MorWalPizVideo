@@ -13,9 +13,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly IBlobService _blobService;
         public MatchesController(IGenericDataService _dataService,
-            IExternalDataService _extDataService,
             IMorWalPizCache _memoryCache,
-            IBlobService blobService) : base(_dataService, _extDataService, _memoryCache)
+            IBlobService blobService) : base(_dataService, _memoryCache)
         {
             _blobService = blobService;
         }

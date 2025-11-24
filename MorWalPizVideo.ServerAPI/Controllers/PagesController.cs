@@ -14,7 +14,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly BlobStorageOptions blobOptions;
         public PagesController(
-            IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _extDataService, _memoryCache)
+            IGenericDataService _dataService, IMorWalPizCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _memoryCache)
         {
             blobOptions = _blobOptions.Value;
         }

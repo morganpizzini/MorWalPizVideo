@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MorWalPizVideo.Server.Controllers;
+using MorWalPizVideo.BackOffice.Controllers;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
@@ -7,16 +8,15 @@ using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 namespace MorWalPizVideo.Shortlinks.Controllers
 {
     [Route("/")]
-    public class ShortLinkController : ApplicationExternalController
+    public class ShortLinkController : ApplicationControllerBase
     {
-        protected IShortLinkDataService? _shortlinkDataService;
+        private IShortLinkDataService _shortlinkDataService;
+        private readonly IMorWalPizCache cache;
 
-        public ShortLinkController(IExternalDataService extDataService, IMorWalPizCache memoryCache)
-            : base(extDataService, memoryCache)
+        public ShortLinkController(IShortLinkDataService shortlinkDataService, IMorWalPizCache memoryCache)
         {
-            _shortlinkDataService = extDataService as IShortLinkDataService;
-            if( _shortlinkDataService == null )
-                throw new ArgumentNullException("Cannot resolve IShortLinkDataService");
+            cache = memoryCache;
+            _shortlinkDataService = shortlinkDataService;
         }
 
         [HttpGet("{videoShortLink}")]
@@ -24,6 +24,12 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         {
             if (string.IsNullOrWhiteSpace(videoShortLink))
                 return BadRequest("Video ID is required.");
+
+            if (videoShortLink == "clear")
+            {
+                ClearCache();
+                return NoContent();
+            }
 
             if (videoShortLink.ToLower() == "shootingita")
             {
@@ -75,7 +81,8 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             }
 
             // Normal shortlink handling
-            var shortLink = await _shortlinkDataService.GetShortLink(videoShortLink);
+            var shortLinks = await this.FetchShortlinks();
+            var shortLink = shortLinks.FirstOrDefault(x=>x.Code == videoShortLink);
             if (shortLink == null)
                 return BadRequest("shortLink not found");
 
@@ -229,6 +236,30 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 return Redirect($"youtube://watch?v={videoId}{queryString}");
 
             return Redirect(webUrl);
+        }
+        private async Task<IList<YouTubeContent>> FetchMatches(int skip = 0, int take = int.MaxValue)
+        {
+            return (await cache.GetOrCreateAsync<IList<YouTubeContent>>(CacheKeys.Matches, async () =>
+            {
+                return (await _shortlinkDataService.FetchMatches())
+                            .OrderByDescending(x => x.CreationDateTime)
+                            .ToList();
+            })).Skip(skip).Take(take).ToList();
+        }
+
+        private async Task<IList<ShortLink>> FetchShortlinks()
+        {
+            return (await cache.GetOrCreateAsync<IList<ShortLink>>(CacheKeys.ShortLinks, async () =>
+            {
+                return (await _shortlinkDataService.FetchShortLink())
+                            .OrderByDescending(x => x.CreationDateTime)
+                            .ToList();
+            })).ToList();
+        }
+        private void ClearCache()
+        {
+            cache.Remove(CacheKeys.ShortLinks);
+            cache.Remove(CacheKeys.Matches);
         }
     }
 }

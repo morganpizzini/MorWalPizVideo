@@ -9,9 +9,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     public class CacheController : ApplicationController
     {
         private readonly IOutputCacheStore cache;
-        public CacheController(IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache,
+        public CacheController(IGenericDataService _dataService, IMorWalPizCache _memoryCache,
                                 IOutputCacheStore _cache)
-                                    : base(_dataService, _extDataService, _memoryCache)
+                                    : base(_dataService, _memoryCache)
         {
             cache = _cache;
         }

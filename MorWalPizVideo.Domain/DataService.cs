@@ -12,13 +12,14 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<ShortLink>> FetchShortLinks();
         public Task SaveShortLink(ShortLink entity);
         public Task DeleteShortLink(string shortLinkId);
-        public Task<IList<YouTubeContent>> GetMatches();
+        public Task<IList<YouTubeContent>> FetchMatches();
         public Task<YouTubeContent?> FindMatch(string matchId);
+        public Task UpdateMatch(YouTubeContent entity);
     }
 
     public class DataService: IGenericDataService
     {
-        private readonly IYouTubeContentRepository _matchRepository;
+        private readonly IYouTubeContentRepository _youTubeContent;
         private readonly IProductRepository _productRepository;
         private readonly ISponsorRepository _sponsorRepository;
         private readonly ISponsorApplyRepository _sponsorApplyRepository;
@@ -32,7 +33,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly IPublishScheduleRepository _publishScheduleRepository;
         private readonly IConfigurationRepository _configurationRepository;
         public DataService(
-            IYouTubeContentRepository matchRepository,
+            IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
             IProductRepository productRepository,
             ISponsorRepository sponsorRepository,
@@ -46,7 +47,7 @@ namespace MorWalPizVideo.Server.Services
             IPublishScheduleRepository publishScheduleRepository,
             IConfigurationRepository configurationRepository)
         {
-            _matchRepository = matchRepository;
+            _youTubeContent = youTubeContent;
             _productRepository = productRepository;
             _sponsorRepository = sponsorRepository;
             _pageRepository = pageRepository;
@@ -81,39 +82,39 @@ namespace MorWalPizVideo.Server.Services
                 return;
             await _shortLinkRepository.DeleteItemAsync(shortLink.Id);
         }
-        public Task<IList<YouTubeContent>> GetMatches() => _matchRepository.GetItemsAsync();        
+        public async Task<IList<YouTubeContent>> FetchMatches() => [.. (await _youTubeContent.GetItemsAsync()).OrderByDescending(x => x.CreationDateTime)];    
         public async Task<YouTubeContent?> FindMatch(string matchId) => 
             // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
-            (await _matchRepository.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
+            (await _youTubeContent.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
             // Then try to find by Id (for collections)
-            (await _matchRepository.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault();
+            (await _youTubeContent.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault();
             
         public async Task SaveMatch(YouTubeContent entity)
         {
             // Check if a match with the same ID or ThumbnailVideoId already exists
-            var check = await _matchRepository.GetItemsAsync(x => 
+            var check = await _youTubeContent.GetItemsAsync(x => 
                 x.Id == entity.Id || 
                 x.ThumbnailVideoId == entity.ThumbnailVideoId);
                 
             if (check.Count > 0)
                 return;
                 
-            await _matchRepository.AddItemAsync(entity);
+            await _youTubeContent.AddItemAsync(entity);
         }
         
         public async Task UpdateMatch(YouTubeContent entity)
         {
             // Check if a match with the same ID exists
-            var check = await _matchRepository.GetItemsAsync(x => x.Id == entity.Id);
+            var check = await _youTubeContent.GetItemsAsync(x => x.Id == entity.Id);
             
             if (check.Count == 0)
                 // Try fallback to ThumbnailVideoId for backward compatibility
-                check = await _matchRepository.GetItemsAsync(x => x.ThumbnailVideoId == entity.ThumbnailVideoId);
+                check = await _youTubeContent.GetItemsAsync(x => x.ThumbnailVideoId == entity.ThumbnailVideoId);
                 
             if (check.Count == 0)
                 return;
                 
-            await _matchRepository.UpdateItemAsync(entity);
+            await _youTubeContent.UpdateItemAsync(entity);
         }
         public Task<IList<YTChannel>> GetChannels() => _ytChannelRepository.GetItemsAsync();
         public async Task<YTChannel?> GetChannel(string channelName) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelName == channelName)).FirstOrDefault();

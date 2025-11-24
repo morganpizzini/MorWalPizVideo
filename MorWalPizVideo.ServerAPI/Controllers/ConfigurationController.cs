@@ -8,7 +8,7 @@ namespace MorWalPizVideo.Server.Controllers
     public class ConfigurationController : ApplicationController
     {
         public ConfigurationController(
-                IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+                IGenericDataService _dataService, IMorWalPizCache _memoryCache) : base(_dataService, _memoryCache)
         {
         }
 

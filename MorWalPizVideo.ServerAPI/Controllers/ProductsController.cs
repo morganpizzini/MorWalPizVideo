@@ -11,7 +11,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     public class ProductsController : ApplicationController
     {
         public ProductsController(
-            IGenericDataService _dataService, IExternalDataService _extDataService, IMorWalPizCache _memoryCache) : base(_dataService, _extDataService, _memoryCache)
+            IGenericDataService _dataService, IMorWalPizCache _memoryCache) : base(_dataService, _memoryCache)
         {
         }
 

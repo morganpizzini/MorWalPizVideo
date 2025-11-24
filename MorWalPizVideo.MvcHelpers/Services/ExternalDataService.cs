@@ -3,30 +3,32 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Server.Services
 {
-    public interface IExternalDataService : IDisposable
+    public interface IExternalDataService
     {
         Task<IList<YouTubeContent>> FetchMatches();
     }
   
     public class ExternalDataService : IExternalDataService
     {
-        private readonly IYouTubeContentRepository _matchRepository;
+        private readonly IGenericDataService _dataService;
         private readonly IYTService _youtubeService;
-        public ExternalDataService(IYTService youtubeService, IYouTubeContentRepository matchRepository)
+        public ExternalDataService(IGenericDataService dataService, IYTService youtubeService)
         {
-            _matchRepository = matchRepository;
+            _dataService = dataService;
             _youtubeService = youtubeService;
         }
         public async Task<IList<YouTubeContent>> FetchMatches()
         {
-            IList<YouTubeContent> matches = await _matchRepository.GetItemsAsync();
+            
+            IList<YouTubeContent> matches = await _dataService.FetchMatches();
 
             // Get all videoIds that need to be populated with details
             // For single videos, use the ThumbnailVideoId
             // For collections, get all videoIds from the VideoRefs
             var videoIds = matches
                 .Where(x => x.IsLink && string.IsNullOrEmpty(x.Title))
-                .Select(x => x.ThumbnailVideoId)
+                .Select(x
+                => x.ThumbnailVideoId)
                 .Concat(
                     matches
                         .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
@@ -53,8 +55,7 @@ namespace MorWalPizVideo.Server.Services
 
                 foreach (var match in matchesToUpdate)
                 {
-                    
-                    await _matchRepository.UpdateItemAsync(match);
+                    await _dataService.UpdateMatch(match);
                 }
             }
 
@@ -119,17 +120,17 @@ namespace MorWalPizVideo.Server.Services
 
             return updatedMatches;
         }
-        public void Dispose()
-        {
-            _youtubeService?.Dispose();
-        }
+        //public void Dispose()
+        //{
+        //    _youtubeService?.Dispose();
+        //}
     }
 
-    public interface IShortLinkDataService : IExternalDataService
+    public interface IShortLinkDataService
     {
-        public Task<ShortLink?> GetShortLink(string shortLink);
+        public Task<IList<ShortLink>> FetchShortLink();
         public Task UpdateShortlink(ShortLink entity);
-        
+        Task<IList<YouTubeContent>> FetchMatches();
     }
 
     public class ShortlinkDataService : IShortLinkDataService
@@ -144,7 +145,7 @@ namespace MorWalPizVideo.Server.Services
             _matchRepository = matchRepository;
             _shortLinkRepository = shortLinkRepository;
         }
-        public async Task<ShortLink?> GetShortLink(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
+        public Task<IList<ShortLink>> FetchShortLink() => _shortLinkRepository.GetItemsAsync();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
         public Task<IList<YouTubeContent>> FetchMatches() => _matchRepository.GetItemsAsync();
 
