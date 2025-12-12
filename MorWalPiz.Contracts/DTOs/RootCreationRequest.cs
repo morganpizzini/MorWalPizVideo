@@ -17,6 +17,6 @@ namespace MorWalPizVideo.BackOffice.DTOs
     public string Url { get; set; } = string.Empty;
 
     [Required]
-    public string Category { get; set; } = string.Empty;
+    public IList<string> Categories { get; set; } = [];
   }
 }

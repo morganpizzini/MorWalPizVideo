@@ -1,34 +1,47 @@
-export function post(url, obj, overrideHeaderEnv: string = '') {
+export function post(url: string, obj: any, overrideHeaderEnv: string = '') {
     return call(url, 'POST', obj, overrideHeaderEnv);
 }
 
-export function postFormData(url, formData: FormData, overrideHeaderEnv: string = '') {
+export function postFormData(url: string, formData: FormData, overrideHeaderEnv: string = '') {
     return call(url, 'POST', formData, overrideHeaderEnv, undefined, false, true);
 }
-export function put(url, obj, overrideHeaderEnv: string = '') {
+export function put(url: string, obj: any, overrideHeaderEnv: string = '') {
     return call(url, 'PUT', obj, overrideHeaderEnv);
 }
-export function patch(url, obj, overrideHeaderEnv: string = '') {
+export function patch(url: string, obj: any, overrideHeaderEnv: string = '') {
     return call(url, 'PATCH', obj, overrideHeaderEnv);
 }
-export function get(url: string, query?, overrideHeaderEnv: string = '') {
+export function get(url: string, query?: any, overrideHeaderEnv: string = '') {
     return call(url, 'GET', {}, overrideHeaderEnv, query);
 }
-export function getFile(url, query?, overrideHeaderEnv: string = '') {
+export function getFile(url: string, query?: any, overrideHeaderEnv: string = '') {
     return call(url, 'GET', {}, overrideHeaderEnv, query, true);
 }
-export function Delete(url, query?, overrideHeaderEnv: string = '') {
+export function Delete(url: string, query?: any, overrideHeaderEnv: string = '') {
     return call(url, 'DELETE', {}, overrideHeaderEnv, query);
 }
+
+import { authService } from './authService';
+import endpoints, { ComposeUrl } from './endpoints';
+import type { Product, CreateProductDTO, UpdateProductDTO } from '@models/product';
+import type { ProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@models/productCategory';
+import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@models/sponsor';
+
 /**
- * Attaches a given access token to a Microsoft Graph API call. Returns information about the user
+ * Makes API calls with automatic authentication header injection
  */
-export async function call(url, method, body, overrideHeaderEnv: string = '', query?, downloadFile = false, isFormData = false) {
+export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false) {
     const headers = new Headers();
 
     // Don't set Content-Type for FormData - let the browser set it with the boundary
     if (!isFormData) {
         headers.append("Content-Type", 'application/json');
+    }
+
+    // Add authorization header if user is authenticated
+    const token = authService.getToken();
+    if (token) {
+        headers.append("Authorization", `Bearer ${token}`);
     }
 
     if (query) {
@@ -97,3 +110,60 @@ export async function call(url, method, body, overrideHeaderEnv: string = '', qu
         .catch(error => { console.log("api error", error) });
 
 }
+
+// ==================== Product API Services ====================
+
+export const fetchProducts = (): Promise<Product[]> =>
+    get(endpoints.PRODUCTS);
+
+export const getProduct = (id: string): Promise<Product> =>
+    get(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
+
+export const createProduct = (data: CreateProductDTO) =>
+    post(endpoints.PRODUCTS, data);
+
+export const updateProduct = (id: string, data: UpdateProductDTO) =>
+    put(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }), data);
+
+export const deleteProduct = (id: string) =>
+    Delete(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
+
+// ==================== ProductCategory API Services ====================
+
+export const fetchProductCategories = (): Promise<ProductCategory[]> =>
+    get(endpoints.PRODUCTCATEGORIES);
+
+export const getProductCategory = (id: string): Promise<ProductCategory> =>
+    get(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
+
+export const createProductCategory = (data: CreateProductCategoryDTO) =>
+    post(endpoints.PRODUCTCATEGORIES, data);
+
+export const updateProductCategory = (id: string, data: UpdateProductCategoryDTO) =>
+    put(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }), data);
+
+export const deleteProductCategory = (id: string) =>
+    Delete(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
+
+// ==================== Sponsor API Services ====================
+
+export const fetchSponsors = (): Promise<Sponsor[]> =>
+    get(endpoints.SPONSORS);
+
+export const getSponsor = (id: string): Promise<Sponsor> =>
+    get(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));
+
+export const createSponsor = (data: CreateSponsorDTO) =>
+    post(endpoints.SPONSORS, data);
+
+export const createSponsorWithImage = (formData: FormData) =>
+    postFormData(endpoints.SPONSORS, formData);
+
+export const updateSponsor = (id: string, data: UpdateSponsorDTO) =>
+    put(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }), data);
+
+export const updateSponsorWithImage = (id: string, formData: FormData) =>
+    call(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }), 'PUT', formData, '', undefined, false, true);
+
+export const deleteSponsor = (id: string) =>
+    Delete(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));

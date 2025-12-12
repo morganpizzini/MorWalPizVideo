@@ -39,7 +39,7 @@ const CreateRootVideo: React.FC = () => {
       setUrl('');
       setCategories([]);
     }
-  }, [result, toast]);
+  }, [result]);
 
   // Handle category checkbox changes
   const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {

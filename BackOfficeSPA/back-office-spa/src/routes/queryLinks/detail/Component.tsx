@@ -28,7 +28,7 @@ const QueryLinkDetail: React.FC = () => {
       toast.show('Success', 'Query link deleted successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleDelete = () => {
     setShowModal(true);

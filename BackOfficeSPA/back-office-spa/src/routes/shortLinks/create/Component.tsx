@@ -5,17 +5,20 @@ import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
-import { LinkType } from '@models';
+import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
+import { LinkType, QueryLink } from '@models';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const CreateShortLink: React.FC = () => {
   const [target, setTarget] = useState('');
-  const [queryString, setQueryString] = useState('');
+  const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
+  const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
   const [message, setMessage] = useState('');
   const [linkType, setLinkType] = useState<LinkType>(LinkType.YouTubeVideo);
   const [showModal, setShowModal] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
+  const [queryLinksLoading, setQueryLinksLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const fetcher = useFetcher();
@@ -41,6 +44,22 @@ const CreateShortLink: React.FC = () => {
     }
   }, [linkType]);
 
+  // Load available query links when component mounts
+  useEffect(() => {
+    setQueryLinksLoading(true);
+    fetch('/api/querylinks')
+      .then(response => response.json())
+      .then((data: QueryLink[]) => {
+        setAvailableQueryLinks(data);
+      })
+      .catch(error => {
+        console.error('Failed to load query links:', error);
+      })
+      .finally(() => {
+        setQueryLinksLoading(false);
+      });
+  }, []);
+
   useEffect(() => {
     if (!result) return;
     setShowModal(false);
@@ -49,7 +68,7 @@ const CreateShortLink: React.FC = () => {
       toast.show('Success', 'Short link created successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
   const isDisabled = () => target.length === 0 || busy;
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -58,11 +77,12 @@ const CreateShortLink: React.FC = () => {
   };
 
   const confirmCreate = () => {
+    const queryLinkIds = selectedQueryLinks.map(ql => ql.queryLinkId);
     fetcher.submit(
       {
         target,
         linkType,
-        queryString,
+        queryLinkIds: JSON.stringify(queryLinkIds),
         message,
       },
       {
@@ -127,14 +147,8 @@ const CreateShortLink: React.FC = () => {
                 <option value="">Select a video</option>
                 {matches.map(match => (
                   <React.Fragment key={match.matchId}>
-                    {/* If it's a direct video link */}
-                    {match.isLink && (
-                      <option value={match.thumbnailUrl}>
-                        {match.title || match.thumbnailUrl}
-                      </option>
-                    )}
-                    {/* If it's a collection with multiple videos */}
-                    {!match.isLink && match.videos?.map(video => (
+                    
+                    {match.videoRefs?.map(video => (
                       <option key={video.youtubeId} value={video.youtubeId}>
                         {video.title || video.youtubeId}
                       </option>
@@ -155,17 +169,18 @@ const CreateShortLink: React.FC = () => {
           </Form.Text>
         </Form.Group>
         
-        <Form.Group controlId="formQueryString" className="mb-3">
-          <Form.Label>Query String</Form.Label>
-          <Form.Control
-            type="text"
-            value={queryString}
-            onChange={e => setQueryString(e.target.value)}
-          />
-          <Form.Text className="text-muted">
-            Additional parameters to append to the URL (without the ? or & prefix)
-          </Form.Text>
-        </Form.Group>
+        <MultiSelectWithBadges
+          items={availableQueryLinks}
+          selectedItems={selectedQueryLinks}
+          onSelectionChange={setSelectedQueryLinks}
+          getItemId={(item) => item.queryLinkId}
+          getItemDisplay={(item) => item.title}
+          label="Query Links"
+          placeholder="Select query links..."
+          helpText="Select query parameters to append to the URL"
+          disabled={queryLinksLoading}
+          error={errors?.queryLinkIds}
+        />
         
         <Form.Group controlId="formMessage" className="mb-3">
           <Form.Label>Message</Form.Label>
@@ -195,9 +210,9 @@ const CreateShortLink: React.FC = () => {
           <p>
             <strong>Target:</strong> {target}
           </p>
-          {queryString && (
+          {selectedQueryLinks.length > 0 && (
             <p>
-              <strong>Query String:</strong> {queryString}
+              <strong>Query Links:</strong> {selectedQueryLinks.map(ql => ql.title).join(', ')}
             </p>
           )}
           {message && (

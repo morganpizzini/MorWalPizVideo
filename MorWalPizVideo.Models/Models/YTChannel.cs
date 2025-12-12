@@ -12,6 +12,38 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("videos")]
         public List<YouTubeVideo> Videos { get; init; } = new List<YouTubeVideo>();
+
+        [DataMember]
+        [BsonElement("shortLinks")]
+        public ShortLink[] ShortLinks { get; init; } = Array.Empty<ShortLink>();
+        
+        // Add a shortlink to the collection
+        public YTChannel AddShortLink(ShortLink shortLink)
+        {
+            var newShortLinks = ShortLinks.Append(shortLink).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Remove a shortlink from the collection
+        public YTChannel RemoveShortLink(string code)
+        {
+            var newShortLinks = ShortLinks.Where(sl => sl.Code != code).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Update a shortlink in the collection
+        public YTChannel UpdateShortLink(string code, ShortLink updatedShortLink)
+        {
+            var newShortLinks = ShortLinks.Select(sl => 
+                sl.Code == code ? updatedShortLink : sl).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Get a shortlink by code
+        public ShortLink? GetShortLink(string code)
+        {
+            return ShortLinks.FirstOrDefault(sl => sl.Code == code);
+        }
     }
 
     [BsonIgnoreExtraElements]

@@ -63,11 +63,11 @@ namespace MorWalPizVideo.Server.Models
         public string ThumbnailUrl { get; init; } = string.Empty;
 
         /// <summary>
-        /// Main category of this item
+        /// Categories of this item
         /// </summary>
         [DataMember]
-        [BsonElement("category")]
-        public string Category { get; init; } = string.Empty;
+        [BsonElement("categories")]
+        public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
 
         /// <summary>
         /// For single videos, this is the ID of the video
@@ -87,7 +87,7 @@ namespace MorWalPizVideo.Server.Models
         /// <summary>
         /// Create a new single video display item
         /// </summary>
-        public static VideoDisplayItem CreateSingleVideo(string videoId, string title, string description, string thumbnailUrl, string category)
+        public static VideoDisplayItem CreateSingleVideo(string videoId, string title, string description, string thumbnailUrl, CategoryRef[] categories)
         {
             return new VideoDisplayItem
             {
@@ -96,7 +96,7 @@ namespace MorWalPizVideo.Server.Models
                 Title = title,
                 Description = description,
                 ThumbnailUrl = thumbnailUrl,
-                Category = category,
+                Categories = categories,
                 PrimaryVideoId = videoId,
                 VideoIds = Array.Empty<string>()
             };
@@ -105,7 +105,7 @@ namespace MorWalPizVideo.Server.Models
         /// <summary>
         /// Create a new playlist display item
         /// </summary>
-        public static VideoDisplayItem CreatePlaylist(string displayId, string title, string description, string thumbnailUrl, string category, string primaryVideoId, string[] videoIds)
+        public static VideoDisplayItem CreatePlaylist(string displayId, string title, string description, string thumbnailUrl, CategoryRef[] categories, string primaryVideoId, string[] videoIds)
         {
             return new VideoDisplayItem
             {
@@ -114,7 +114,7 @@ namespace MorWalPizVideo.Server.Models
                 Title = title,
                 Description = description,
                 ThumbnailUrl = thumbnailUrl,
-                Category = category,
+                Categories = categories,
                 PrimaryVideoId = primaryVideoId,
                 VideoIds = videoIds
             };
@@ -123,7 +123,7 @@ namespace MorWalPizVideo.Server.Models
         /// <summary>
         /// Create a basic single video display item with minimal information
         /// </summary>
-        public static VideoDisplayItem CreateBasicSingleVideo(string videoId, string category)
+        public static VideoDisplayItem CreateBasicSingleVideo(string videoId, CategoryRef[] categories)
         {
             return new VideoDisplayItem
             {
@@ -132,7 +132,7 @@ namespace MorWalPizVideo.Server.Models
                 Title = string.Empty,
                 Description = string.Empty,
                 ThumbnailUrl = videoId,
-                Category = category,
+                Categories = categories,
                 PrimaryVideoId = videoId,
                 VideoIds = Array.Empty<string>()
             };

@@ -3,9 +3,17 @@
 /**
  * Enum representing the type of match in the system
  */
-export enum MatchType {
+export enum ContentType {
   SingleVideo = 0,
   Collection = 1
+}
+
+/**
+ * Interface representing a category reference
+ */
+export interface CategoryRef {
+  id: string;
+  title: string;
 }
 
 /**
@@ -13,7 +21,7 @@ export enum MatchType {
  */
 export interface VideoRef {
   youtubeId: string;
-  category: string;
+  categories: CategoryRef[];
 }
 
 /**
@@ -29,7 +37,7 @@ export interface Video {
   likes?: number;
   comments?: number;
   publishedAt?: string;
-  category: string;
+  categories: CategoryRef[];
 }
 
 /**
@@ -43,8 +51,8 @@ export interface Match {
   url: string;
   thumbnailVideoId: string; // Previously referred to as thumbnailUrl
   videoRefs: VideoRef[];
-  category: string;
-  matchType: MatchType;
+  categories: CategoryRef[];
+  contentType: ContentType;
   // Backward compatibility
   isLink: boolean;
   videos?: Video[];
@@ -53,7 +61,7 @@ export interface Match {
 
 export interface VideoImportRequest {
   videoId: string;
-  category: string;
+  categories: string[];
 }
 
 export interface SwapRootThumbnailRequest {
@@ -66,13 +74,13 @@ export interface RootCreationRequest {
   title: string;
   description: string;
   url: string;
-  category: string;
+  categories: string[];
 }
 
 export interface SubVideoCrationRequest {
   matchId: string;
   videoId: string;
-  category: string;
+  categories: string[];
 }
 
 export interface VideoTranslateRequest {

@@ -1,0 +1,52 @@
+.selected-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.selected-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.badge-text {
+  margin-right: 0.5rem;
+}
+
+.badge-remove-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  margin-left: 0.25rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+}
+
+.badge-remove-btn:hover {
+  opacity: 0.7;
+  text-decoration: none;
+  color: inherit;
+}
+
+.badge-remove-btn:focus {
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.selected-badge .badge-remove-btn {
+  color: white;
+}

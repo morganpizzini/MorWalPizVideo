@@ -28,7 +28,7 @@ public class CategoriesController : ApplicationControllerBase
     [HttpGet]
     public async Task<IActionResult> GetCategories()
     {
-        var categories = await _dataService.GetCategories();
+        var categories = await _dataService.FetchCategories();
         return Ok(categories.Select(ContractUtils.Convert));
     }
 

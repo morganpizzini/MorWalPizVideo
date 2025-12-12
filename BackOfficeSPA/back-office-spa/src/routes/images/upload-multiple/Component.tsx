@@ -48,7 +48,7 @@ const MultipleImageUpload: React.FC = () => {
         fileInputRef.current.value = '';
       }
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {

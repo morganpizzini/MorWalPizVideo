@@ -98,10 +98,6 @@ export default defineConfig({
             '^/api': {
                 target,
                 secure: false
-            },
-            '^/sl': {
-                target,
-                secure: false
             }
         },
         https: {

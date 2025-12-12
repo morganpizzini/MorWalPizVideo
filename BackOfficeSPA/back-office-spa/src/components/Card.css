@@ -1,0 +1,102 @@
+.card {
+  --grad: red, blue;
+  padding: 2.5rem;
+  background-image: linear-gradient(to bottom left, #e0e4e5, #f2f6f9);
+  border-radius: 2rem;
+  gap: 1.5rem;
+  display: grid;
+  grid-template: 'title icon' 'content content' 'bar bar' / 1fr auto;
+  font-family: system-ui, sans-serif;
+  color: #444447;
+  box-shadow: 
+    inset -2px 2px hsl(0 0 100% / 1),
+    -20px 20px 40px hsl(0 0 0 / .25);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  min-height: 300px;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    inset -2px 2px hsl(0 0 100% / 1),
+    -25px 25px 50px hsl(0 0 0 / .35);
+}
+
+.card .title {
+  font-size: 1.5rem;
+  grid-area: title;
+  align-self: end;
+  text-transform: uppercase;
+  font-weight: 500;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.card .icon {
+  grid-area: icon;
+  font-size: 3rem;
+  align-self: end;
+}
+
+.card .icon svg {
+  width: 3rem;
+  height: 3rem;
+  stroke: url(#gradient);
+  stroke-width: 1.5;
+}
+
+.card .content {
+  grid-area: content;
+  margin-top: 1rem;
+}
+
+.card .content > *:first-child { 
+  margin-top: 0rem;
+}
+
+.card .content > *:last-child { 
+  margin-bottom: 0rem;
+}
+
+.card::after {
+  content: "";
+  grid-area: bar;
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--grad));
+}
+
+/* Gradient definitions for SVG icons */
+.gradient-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Small card variant */
+.card.card-small {
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+  gap: 1rem;
+  min-height: 200px;
+}
+
+.card.card-small .title {
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+.card.card-small .icon {
+  font-size: 2rem;
+}
+
+.card.card-small .icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.card.card-small .content {
+  margin-top: 0.5rem;
+}

@@ -15,7 +15,7 @@ export enum LinkType {
  * @property shortLinkId - Unique identifier for the short link
  * @property target - Target of the link (video ID, channel ID, Instagram post ID, etc.)
  * @property linkType - Type of link (YouTube video, channel, Instagram, etc.)
- * @property queryString - Query parameters for the link
+ * @property queryLinkIds - Array of query link IDs for the link
  * @property message - Optional message for the short link
  * @property clicksCount - Number of times the link has been clicked
  * @property videoId - Legacy property for backward compatibility
@@ -30,8 +30,8 @@ export interface ShortLink {
   /** Type of the link */
   linkType: LinkType;
 
-  /** Query parameters for the link */
-  queryString: string;
+  /** Array of query link IDs for the link */
+  queryLinkIds: string[];
 
   /** Optional message for the short link */
   message: string;

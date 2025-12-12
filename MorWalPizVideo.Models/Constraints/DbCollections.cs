@@ -20,9 +20,12 @@
         public const string Pages = "pages";
         public const string Sponsors = "sponsors";
         public const string Products = "products";
+        public const string ProductCategories = "productCategories";
         public const string ShortLinks = "shortLinks";
         public const string SponsorApplies = "sponsorApplies";
         public const string Categories = "categories";
         public const string Configurations = "configurations";
+        public const string Users = "users";
+        public const string LoginAttempts = "loginAttempts";
     }
 }

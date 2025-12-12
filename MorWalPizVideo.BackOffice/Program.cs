@@ -14,12 +14,16 @@ using MorWalPizVideo.BackOffice.Services.Configuration;
 using MorWalPizVideo.BackOffice.Services.Factories;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
+using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
@@ -138,7 +142,36 @@ if (!enableMock)
 }
 
 
+// Configure Authentication and JWT
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var key = Encoding.ASCII.GetBytes(jwtSettings["Secret"] ?? "your-super-secret-key-with-at-least-32-characters");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"] ?? "MorWalPizVideo.BackOffice",
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"] ?? "MorWalPizVideo.BackOffice",
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// Register authentication services
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IRateLimitingService, RateLimitingService>();
+builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection("SecuritySettings"));
+
 builder.Services.AddScoped<DataService>();
+builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
+
 if (enableMock)
 {
     var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
@@ -163,14 +196,20 @@ if (enableMock)
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
+    builder.Services.AddScoped<IUserRepository, UserMockRepository>();
+    builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptMockRepository>();
+    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>(); // Example for
+
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
+    builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    
 }
 else
 {
@@ -196,10 +235,14 @@ else
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
+    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>(); 
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
     // services
+    builder.Services.AddScoped<ICrossApiService, CrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordService>();
     builder.Services.AddScoped<ITelegramService, TelegramService>();
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
@@ -262,6 +305,7 @@ if (enableSwagger)
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

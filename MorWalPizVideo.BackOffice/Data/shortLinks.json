@@ -1,0 +1,25 @@
+[
+  {
+    "code": "e3b0c",
+    "target": "werfg",
+    "queryLinks": [
+      {
+        "title": "PL Progetto 2011 - Tisas",
+        "value": "list=PLS0u4VTR02qRqwBXw8vUPJnRLjk8ZKbpS",
+        "id": "691b4a6a656d853cbe02c6ef",
+        "creationDateTime": "2025-11-17T17:16:42.0052217+01:00"
+      },
+      {
+        "title": "PL IDPA",
+        "value": "list=PLS0u4VTR02qTLmPcohjO1THLZIEnMAJhw",
+        "id": "691b4a39656d853cbe02c6ed",
+        "creationDateTime": "2025-11-17T17:15:53.1088387+01:00"
+      }
+    ],
+    "clicksCount": 0,
+    "linkType": 0,
+    "queryString": "list=PLS0u4VTR02qRqwBXw8vUPJnRLjk8ZKbpS\u0026list=PLS0u4VTR02qTLmPcohjO1THLZIEnMAJhw",
+    "id": "6931ce82b957b17ac52a17ce",
+    "creationDateTime": "2025-12-04T19:10:10.9118216+01:00"
+  }
+]

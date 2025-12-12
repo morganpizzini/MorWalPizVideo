@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
+using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
@@ -18,6 +20,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class ProductMockRepository : BaseMockRepository<Product>, IProductRepository
     {
         public ProductMockRepository(IHostEnvironment environment) : base(environment, "products")
+        {
+        }
+    }
+
+    public class ProductCategoryMockRepository : BaseMockRepository<ProductCategory>, IProductCategoryRepository
+    {
+        public ProductCategoryMockRepository(IHostEnvironment environment) : base(environment, "productCategories")
         {
         }
     }
@@ -77,6 +86,86 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class UserMockRepository : BaseMockRepository<User>, IUserRepository
+    {
+        public UserMockRepository(IHostEnvironment environment) : base(environment, "users")
+        {
+        }
+
+        public async Task<User?> AuthenticateAsync(string username, string password)
+        {
+            return (await this.GetItemsAsync(x=> x.Username == username)).FirstOrDefault();
+        }
+    }
+    public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
+    {
+        public LoginAttemptMockRepository(IHostEnvironment environment) : base(environment, "loginAttempts")
+        {
+        }
+
+        public async Task<List<LoginAttempt>> GetRecentAttemptsByIpAsync(string ipAddress, TimeSpan timeWindow)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
+            var items = await GetItemsAsync();
+            return items.Where(a => a.IpAddress == ipAddress && a.AttemptTime >= cutoffTime)
+                       .OrderByDescending(a => a.AttemptTime)
+                       .ToList();
+        }
+
+        public async Task<List<LoginAttempt>> GetRecentAttemptsByUsernameAsync(string username, TimeSpan timeWindow)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
+            var items = await GetItemsAsync();
+            return items.Where(a => a.Username == username && a.AttemptTime >= cutoffTime)
+                       .OrderByDescending(a => a.AttemptTime)
+                       .ToList();
+        }
+
+        public async Task<int> GetFailedAttemptsCountByIpAsync(string ipAddress, TimeSpan timeWindow)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
+            var items = await GetItemsAsync();
+            return items.Count(a => a.IpAddress == ipAddress && !a.IsSuccessful && a.AttemptTime >= cutoffTime);
+        }
+
+        public async Task<int> GetFailedAttemptsCountByUsernameAsync(string username, TimeSpan timeWindow)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
+            var items = await GetItemsAsync();
+            return items.Count(a => a.Username == username && !a.IsSuccessful && a.AttemptTime >= cutoffTime);
+        }
+
+        public async Task<DateTime?> GetLastFailedAttemptTimeByIpAsync(string ipAddress)
+        {
+            var items = await GetItemsAsync();
+            var lastAttempt = items.Where(a => a.IpAddress == ipAddress && !a.IsSuccessful)
+                                  .OrderByDescending(a => a.AttemptTime)
+                                  .FirstOrDefault();
+            return lastAttempt?.AttemptTime;
+        }
+
+        public async Task<DateTime?> GetLastFailedAttemptTimeByUsernameAsync(string username)
+        {
+            var items = await GetItemsAsync();
+            var lastAttempt = items.Where(a => a.Username == username && !a.IsSuccessful)
+                                  .OrderByDescending(a => a.AttemptTime)
+                                  .FirstOrDefault();
+            return lastAttempt?.AttemptTime;
+        }
+
+        public async Task CleanupOldAttemptsAsync(TimeSpan olderThan)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(olderThan);
+            var items = await GetItemsAsync();
+            var itemsToRemove = items.Where(a => a.AttemptTime < cutoffTime).ToList();
+            foreach (var item in itemsToRemove)
+            {
+                await DeleteItemAsync(item.Id!);
+            }
+        }
+    }
+
     public class PublishScheduleMockRepository : BaseMockRepository<PublishSchedule>, IPublishScheduleRepository
     {
         public PublishScheduleMockRepository(IHostEnvironment environment) : base(environment, "publishSchedules")

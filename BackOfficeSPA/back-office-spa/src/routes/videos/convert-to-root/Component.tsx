@@ -39,7 +39,7 @@ const ConvertToRoot: React.FC = () => {
       setUrl('');
       setCategories([]);
     }
-  }, [result, toast]);
+  }, [result]);
   // Find the selected video and populate title and other fields when a video is selected
   useEffect(() => {
     if (!videoId) return;

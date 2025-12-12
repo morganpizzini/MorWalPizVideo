@@ -31,7 +31,7 @@ const SwapThumbnail: React.FC = () => {
       setCurrentVideoId('');
       setNewVideoId('');
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

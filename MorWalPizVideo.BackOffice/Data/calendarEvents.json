@@ -1,23 +1,46 @@
-﻿[
+[
+  {
+    "title": "#2 IPSC test match - Test",
+    "description": "queta \u00E8 una descrizione",
+    "date": "2025-11-19",
+    "category": "gara",
+    "matchId": "CtH9p9XNFKo",
+    "matchUrl": "",
+    "oldEvent": true,
+    "id": null,
+    "creationDateTime": "2025-12-04T23:04:13.4776171+01:00"
+  },
+  {
+    "title": "#1 IPSC Winter Championship MA1 - Test",
+    "description": "queta \u00E8 una descrizione",
+    "date": "2024-11-19",
+    "category": "gara",
+    "matchId": "s-R10WIwwF0",
+    "matchUrl": "",
+    "oldEvent": true,
+    "id": null,
+    "creationDateTime": "2025-12-04T23:04:13.4776138+01:00"
+  },
   {
     "title": "#3 IPSC Winter Championship MA1 - TPS Academy",
     "description": "",
     "date": "2024-11-20",
+    "category": "gara",
     "matchId": "CtH9p9XNFKo",
-    "category": "gara"
+    "matchUrl": "",
+    "oldEvent": true,
+    "id": null,
+    "creationDateTime": "2025-12-04T23:04:13.4776044+01:00"
   },
   {
-    "title": "#1 IPSC Winter Championship MA1 - Test",
-    "description": "queta è una descrizione",
-    "date": "2024-11-19",
-    "matchId": "s-R10WIwwF0",
-    "category": "gara"
-  },
-  {
-    "title": "#2 IPSC test match - Test",
-    "description": "queta è una descrizione",
-    "date": "2025-11-19",
-    "matchId": "CtH9p9XNFKo",
-    "category": "gara"
+    "title": "sdfgh",
+    "description": "asdf",
+    "date": "2025-12-17",
+    "category": "sdfg",
+    "matchId": "sfagdfg",
+    "matchUrl": "",
+    "oldEvent": false,
+    "id": "6932055d9168075cd9b23569",
+    "creationDateTime": "2025-12-04T23:04:13.4666035+01:00"
   }
 ]

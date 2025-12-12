@@ -19,7 +19,7 @@ const CreateCalendarEvent: React.FC = () => {
       toast.show('Success', 'Calendar event created successfully', { variant: 'success' });
       navigate('/calendarEvents');
     }
-  }, [success, navigate, toast]);
+  }, [success, navigate]);
 
   return (
     <>

@@ -1,0 +1,13 @@
+[
+  {
+    "username": "MorWalPiz",
+    "email": "morgan.pizzini@hotmail.com",
+    "passwordHash": "BLoFwFdRDWW6Hbr80DHgJ14cxrHvDtZCAADVpCp3inU=",
+    "salt": "hI4ZHf7NmKN7C3C5SBCIiDtkrpudoGktTgL2ED1H3s8=",
+    "lastLogin": "2025-12-06T15:51:16.0311384Z",
+    "isActive": true,
+    "role": "admin",
+    "id": "6924dd767e116daec9e74721",
+    "creationDateTime": "2025-11-24T23:34:29.3211611+01:00"
+  }
+]

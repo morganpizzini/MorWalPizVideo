@@ -1,17 +1,28 @@
-﻿using MongoDB.Bson.Serialization;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson.Serialization.Serializers;
 using System.Runtime.Serialization;
-using System.Text.Json;
 
 namespace MorWalPizVideo.Server.Models
-{    [BsonIgnoreExtraElements]
+{    
+    [BsonIgnoreExtraElements]
     [DataContract]
     public record Product(
         [property: DataMember][property: BsonElement("title")] string Title,
         [property: DataMember][property: BsonElement("description")] string Description,
         [property: DataMember][property: BsonElement("url")] string Url,
-        [property: DataMember][property: BsonElement("category")] string Category,
-        [property: DataMember][property: BsonElement("category2")] string? Category2) : BaseEntity {
-    }}
+        /// <summary> Categories associated with the product
+        /// refers to ProductCategory documents
+        /// </summary>
+         [property:DataMember]
+        [property: BsonElement("categories")]
+        CategoryRef[] Categories ) : BaseEntity
+{
+}
+
+[BsonIgnoreExtraElements]
+[DataContract]
+public record ProductCategory(
+   [property: DataMember][property: BsonElement("title")] string Title,
+   [property: DataMember][property: BsonElement("description")] string Description) : BaseEntity
+{
+}}

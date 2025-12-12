@@ -29,7 +29,7 @@ const CalendarEventDetail: React.FC = () => {
       toast.show('Success', 'Calendar event deleted successfully', { variant: 'success' });
       navigate('/calendarEvents');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleDelete = () => {
     setShowModal(true);

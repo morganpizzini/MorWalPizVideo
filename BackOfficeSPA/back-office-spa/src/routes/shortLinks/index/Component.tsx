@@ -31,7 +31,7 @@ const ShortLinks: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Short link deleted successfully', { variant: 'success' });
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleDelete = (link: ShortLink) => {
     setSelectedLink(link);

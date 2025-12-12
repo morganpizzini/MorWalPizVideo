@@ -30,7 +30,7 @@ const ShortLinkDetail: React.FC = () => {
       toast.show('Success', 'Short link deleted successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleDelete = () => {
     setShowModal(true);

@@ -1,19 +1,35 @@
 const baseEndpoint = 'api';
 
+const VIDEOS = `${baseEndpoint}/videos`;
+const VIDEOS_DETAIL = `${VIDEOS}/{videoId}`;
 const CATEGORIES = `${baseEndpoint}/categories`;
 const CATEGORIES_DETAIL = `${CATEGORIES}/{categoryId}`;
 const QUERYLINKS = `${baseEndpoint}/querylinks`;
 const QUERYLINKS_DETAIL = `${QUERYLINKS}/{querylinkId}`;
 const SHORTLINKS = `${baseEndpoint}/shortlinks`;
 const SHORTLINKS_DETAIL = `${SHORTLINKS}/{querylinkId}`;
+const PRODUCTS = `${baseEndpoint}/products`;
+const PRODUCTS_DETAIL = `${PRODUCTS}/{productId}`;
+const PRODUCTCATEGORIES = `${baseEndpoint}/productcategories`;
+const PRODUCTCATEGORIES_DETAIL = `${PRODUCTCATEGORIES}/{productCategoryId}`;
+const SPONSORS = `${baseEndpoint}/sponsors`;
+const SPONSORS_DETAIL = `${SPONSORS}/{sponsorId}`;
 
 export default {
+    VIDEOS,
+    VIDEOS_DETAIL,
     CATEGORIES,
     CATEGORIES_DETAIL,
     QUERYLINKS,
     QUERYLINKS_DETAIL,
     SHORTLINKS,
-    SHORTLINKS_DETAIL
+    SHORTLINKS_DETAIL,
+    PRODUCTS,
+    PRODUCTS_DETAIL,
+    PRODUCTCATEGORIES,
+    PRODUCTCATEGORIES_DETAIL,
+    SPONSORS,
+    SPONSORS_DETAIL
 }
 
 export function ComposeUrl(inputString, replacements, queryStringObj = undefined) {

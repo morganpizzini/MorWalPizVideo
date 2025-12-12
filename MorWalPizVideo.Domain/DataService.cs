@@ -1,4 +1,6 @@
 ﻿using Google.Apis.YouTube.v3.Data;
+using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 
@@ -15,12 +17,15 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<YouTubeContent>> FetchMatches();
         public Task<YouTubeContent?> FindMatch(string matchId);
         public Task UpdateMatch(YouTubeContent entity);
+        public Task<IList<YTChannel>> FetchChannels();
+        public Task UpdateChannel(YTChannel entity);
     }
 
     public class DataService: IGenericDataService
     {
         private readonly IYouTubeContentRepository _youTubeContent;
         private readonly IProductRepository _productRepository;
+        private readonly IProductCategoryRepository _productCategoryRepository;
         private readonly ISponsorRepository _sponsorRepository;
         private readonly ISponsorApplyRepository _sponsorApplyRepository;
         private readonly IPageRepository _pageRepository;
@@ -32,10 +37,12 @@ namespace MorWalPizVideo.Server.Services
         private readonly IQueryLinkRepository _queryLinkRepository;
         private readonly IPublishScheduleRepository _publishScheduleRepository;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IUserRepository _userRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
             IProductRepository productRepository,
+            IProductCategoryRepository productCategoryRepository,
             ISponsorRepository sponsorRepository,
             IPageRepository pageRepository,
             ICalendarEventRepository calendarEventRepository,
@@ -43,12 +50,14 @@ namespace MorWalPizVideo.Server.Services
             IShortLinkRepository shortLinkRepository,
             IYTChannelRepository ytChannelRepository,
             ICategoryRepository categoryRepository,
+            IUserRepository userRepository,
             IQueryLinkRepository queryLinkRepository,
             IPublishScheduleRepository publishScheduleRepository,
             IConfigurationRepository configurationRepository)
         {
             _youTubeContent = youTubeContent;
             _productRepository = productRepository;
+            _productCategoryRepository = productCategoryRepository;
             _sponsorRepository = sponsorRepository;
             _pageRepository = pageRepository;
             _calendarEventRepository = calendarEventRepository;
@@ -59,6 +68,7 @@ namespace MorWalPizVideo.Server.Services
             _categoryRepository = categoryRepository;
             _queryLinkRepository = queryLinkRepository;
             _publishScheduleRepository = publishScheduleRepository;
+            _userRepository = userRepository;
             _configurationRepository = configurationRepository;
         }
 
@@ -83,6 +93,7 @@ namespace MorWalPizVideo.Server.Services
             await _shortLinkRepository.DeleteItemAsync(shortLink.Id);
         }
         public async Task<IList<YouTubeContent>> FetchMatches() => [.. (await _youTubeContent.GetItemsAsync()).OrderByDescending(x => x.CreationDateTime)];    
+        public async Task<YouTubeContent?> GetMatch(string id) => (await _youTubeContent.GetItemsAsync(x => x.Id == id)).FirstOrDefault();    
         public async Task<YouTubeContent?> FindMatch(string matchId) => 
             // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
             (await _youTubeContent.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
@@ -116,6 +127,7 @@ namespace MorWalPizVideo.Server.Services
                 
             await _youTubeContent.UpdateItemAsync(entity);
         }
+        public Task<IList<YTChannel>> FetchChannels() => _ytChannelRepository.GetItemsAsync();
         public Task<IList<YTChannel>> GetChannels() => _ytChannelRepository.GetItemsAsync();
         public async Task<YTChannel?> GetChannel(string channelName) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelName == channelName)).FirstOrDefault();
         public async Task<YTChannel?> GetChannelById(string channelId) => (await _ytChannelRepository.GetItemsAsync(x => x.ChannelId == channelId)).FirstOrDefault();
@@ -143,8 +155,105 @@ namespace MorWalPizVideo.Server.Services
             await _ytChannelRepository.DeleteItemAsync(channel.Id);
         }
 
+        // Product methods
         public Task<IList<Product>> GetProducts() => _productRepository.GetItemsAsync();
+
+        public async Task<Product?> GetProductById(string id) =>
+            await _productRepository.GetItemAsync(id);
+
+        public async Task SaveProduct(Product entity)
+        {
+            var existingProduct = await _productRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            if (existingProduct.Count > 0)
+                return;
+
+            await _productRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateProduct(Product entity)
+        {
+            var existingProduct = await _productRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingProduct.Count == 0)
+                return;
+
+            await _productRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteProduct(string productId)
+        {
+            var product = (await _productRepository.GetItemsAsync(x => x.Id == productId)).FirstOrDefault();
+            if (product == null)
+                return;
+
+            await _productRepository.DeleteItemAsync(product.Id);
+        }
+
+        // ProductCategory methods
+        public Task<IList<ProductCategory>> FetchProductCategories(IList<string>? ids = null) => 
+            _productCategoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
+
+        public async Task<ProductCategory?> GetProductCategoryById(string id) =>
+            await _productCategoryRepository.GetItemAsync(id);
+
+        public async Task SaveProductCategory(ProductCategory entity)
+        {
+            var existingCategory = await _productCategoryRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            if (existingCategory.Count > 0)
+                return;
+
+            await _productCategoryRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateProductCategory(ProductCategory entity)
+        {
+            var existingCategory = await _productCategoryRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingCategory.Count == 0)
+                return;
+
+            await _productCategoryRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteProductCategory(string categoryId)
+        {
+            var category = (await _productCategoryRepository.GetItemsAsync(x => x.Id == categoryId)).FirstOrDefault();
+            if (category == null)
+                return;
+
+            await _productCategoryRepository.DeleteItemAsync(category.Id);
+        }
+
+        // Sponsor methods
         public Task<IList<Sponsor>> GetSponsors() => _sponsorRepository.GetItemsAsync();
+
+        public async Task<Sponsor?> GetSponsorById(string id) =>
+            await _sponsorRepository.GetItemAsync(id);
+
+        public async Task SaveSponsor(Sponsor entity)
+        {
+            var existingSponsor = await _sponsorRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            if (existingSponsor.Count > 0)
+                return;
+
+            await _sponsorRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateSponsor(Sponsor entity)
+        {
+            var existingSponsor = await _sponsorRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingSponsor.Count == 0)
+                return;
+
+            await _sponsorRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteSponsor(string sponsorId)
+        {
+            var sponsor = (await _sponsorRepository.GetItemsAsync(x => x.Id == sponsorId)).FirstOrDefault();
+            if (sponsor == null)
+                return;
+
+            await _sponsorRepository.DeleteItemAsync(sponsor.Id);
+        }
         public Task<IList<SponsorApply>> GetSponsorApplies() => _sponsorApplyRepository.GetItemsAsync();
         public async Task SaveSponsorApplies(SponsorApply entity)
         {
@@ -253,7 +362,7 @@ namespace MorWalPizVideo.Server.Services
 
 
         // Category methods
-        public Task<IList<Category>> GetCategories() => _categoryRepository.GetItemsAsync();
+        public Task<IList<Category>> FetchCategories(IList<string> ? ids = null) => _categoryRepository.GetItemsAsync(x=> ids!= null ? ids.Contains(x.Id) : true);
 
         
         public async Task<Category?> GetCategoryById(string id) =>
@@ -344,5 +453,27 @@ namespace MorWalPizVideo.Server.Services
         {
             await _queryLinkRepository.DeleteItemAsync(queryLinkId);
         }
+
+
+        public Task<IList<User>> FetchUsers() => _userRepository.GetItemsAsync();
+        public async Task<User?> GetUser(string id) => (await _userRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
+        public Task UpdateUser(User entity) => _userRepository.UpdateItemAsync(entity);
+
+        public async Task SaveUser(User entity)
+        {
+            var existingShortLink = await _userRepository.GetItemsAsync(x => x.Username.ToLower() == entity.Username.ToLower());
+            if (existingShortLink.Count > 0)
+                return;
+            await _userRepository.AddItemAsync(entity);
+        }
+
+        public async Task DeleteUser(string id)
+        {
+            var shortLink = (await _userRepository.GetItemsAsync(x => x.Id == id)).FirstOrDefault();
+            if (shortLink == null)
+                return;
+            await _userRepository.DeleteItemAsync(shortLink.Id);
+        }
+
     }
 }

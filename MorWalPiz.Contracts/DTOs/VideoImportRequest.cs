@@ -8,6 +8,7 @@ namespace MorWalPizVideo.BackOffice.DTOs
     public string VideoId { get; set; } = string.Empty;
 
     [Required]
-    public string Category { get; set; } = string.Empty;
+    [MinLength(1, ErrorMessage = "At least one category is required")]
+    public string[] Categories { get; set; } = Array.Empty<string>();
   }
 }

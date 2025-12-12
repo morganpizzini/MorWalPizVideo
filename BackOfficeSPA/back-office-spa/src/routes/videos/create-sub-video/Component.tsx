@@ -35,7 +35,7 @@ const CreateSubVideo: React.FC = () => {
       setVideoId('');
       setCategories([]);
     }
-  }, [result, toast]);
+  }, [result]);
 
   // Handle category checkbox changes
   const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {

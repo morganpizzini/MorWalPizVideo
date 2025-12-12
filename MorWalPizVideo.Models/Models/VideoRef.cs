@@ -12,10 +12,13 @@ namespace MorWalPizVideo.Server.Models
     public record VideoRef
     {
         [JsonConstructor]
-        public VideoRef(string youtubeId, string category = "")
+        public VideoRef(string youtubeId, CategoryRef[]? categories = null, string title = "", string description = "", DateOnly publishedAt = default)
         {
             YoutubeId = youtubeId;
-            Category = category;
+            Categories = categories ?? Array.Empty<CategoryRef>();
+            Title = title;
+            Description = description;
+            PublishedAt = publishedAt;
         }
 
         [DataMember]
@@ -23,8 +26,20 @@ namespace MorWalPizVideo.Server.Models
         public string YoutubeId { get; init; }
 
         [DataMember]
-        [BsonElement("category")]
-        public string Category { get; init; } = "";
+        [BsonElement("categories")]
+        public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
+
+        [DataMember]
+        [BsonElement("title")]
+        public string Title { get; init; } = "";
+
+        [DataMember]
+        [BsonElement("description")]
+        public string Description { get; init; } = "";
+
+        [DataMember]
+        [BsonElement("publishedAt")]
+        public DateOnly PublishedAt { get; init; } = DateOnly.MinValue;
 
         [DataMember]
         [BsonElement("creationDateTime")]
@@ -34,13 +49,13 @@ namespace MorWalPizVideo.Server.Models
         // Convert VideoRef to VideoDisplayItem for display in UI
         public VideoDisplayItem ToDisplayItem()
         {
-            return VideoDisplayItem.CreateBasicSingleVideo(YoutubeId, Category);
+            return VideoDisplayItem.CreateBasicSingleVideo(YoutubeId, Categories);
         }
         
         // Create VideoRef from VideoDisplayItem
         public static VideoRef FromDisplayItem(VideoDisplayItem displayItem)
         {
-            return new VideoRef(displayItem.PrimaryVideoId, displayItem.Category);
+            return new VideoRef(displayItem.PrimaryVideoId, displayItem.Categories);
         }
     }
 }

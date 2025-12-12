@@ -8,6 +8,7 @@ namespace MorWalPizVideo.Domain
     {
         public Task<List<string>> GetImagesInFolderAsync(string folderName);
         public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false);
+        public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName);
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false);
     }
     public class BlobServiceMock : IBlobService
@@ -17,6 +18,8 @@ namespace MorWalPizVideo.Domain
             Task.FromResult(new List<string> { "https://placehold.co/1920x1080", "https://placehold.co/1920x1080", "https://placehold.co/1920x1080" });
         
         public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false) => Task.CompletedTask;
+        
+        public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName) => Task.CompletedTask;
         
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false) => Task.FromResult<Stream?>(null);
     }
@@ -45,6 +48,15 @@ namespace MorWalPizVideo.Domain
         public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder= false)
         {
             var _blobContainerClient = new BlobContainerClient(_options.ConnectionString, loadInMatchFolder ? _options.ContainerName : _options.UploadContainerName);
+
+            var blobClient = _blobContainerClient.GetBlobClient(filePath);
+
+            return blobClient.UploadAsync(stream, overwrite: true);
+        }
+
+        public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName)
+        {
+            var _blobContainerClient = new BlobContainerClient(_options.ConnectionString, containerName);
 
             var blobClient = _blobContainerClient.GetBlobClient(filePath);
 

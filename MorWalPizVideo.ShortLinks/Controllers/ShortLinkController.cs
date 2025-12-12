@@ -19,6 +19,70 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             _shortlinkDataService = shortlinkDataService;
         }
 
+        private async Task<ShortLink?> FindShortLinkInContent(string code)
+        {
+            // First, try to find shortlink in YouTubeContent entities
+            var youtubeContents = await FetchMatches();
+            foreach (var content in youtubeContents)
+            {
+                var shortLink = content.GetShortLink(code);
+                if (shortLink != null)
+                {
+                    return shortLink;
+                }
+            }
+
+            // Second, try to find shortlink in YTChannel entities
+            var channels = await FetchChannels();
+            foreach (var channel in channels)
+            {
+                var shortLink = channel.GetShortLink(code);
+                if (shortLink != null)
+                {
+                    return shortLink;
+                }
+            }
+
+            // Finally, check standalone shortlinks (for non-YouTube content)
+            var standaloneShortlinks = await FetchShortlinks();
+            return standaloneShortlinks.FirstOrDefault(x => x.Code == code && 
+                x.LinkType != LinkType.YouTubeVideo && 
+                x.LinkType != LinkType.YouTubeChannel);
+        }
+
+        private async Task UpdateShortLinkClickCount(string code, ShortLink shortLink)
+        {
+            var updatedShortLink = shortLink with { ClicksCount = shortLink.ClicksCount + 1 };
+
+            // Find which entity contains this shortlink and update it
+            var youtubeContents = await FetchMatches();
+            foreach (var content in youtubeContents)
+            {
+                if (content.GetShortLink(code) != null)
+                {
+                    var updatedContent = content.UpdateShortLink(code, updatedShortLink);
+                    await _shortlinkDataService.UpdateYouTubeContent(updatedContent);
+                    ClearCache();
+                    return;
+                }
+            }
+
+            var channels = await FetchChannels();
+            foreach (var channel in channels)
+            {
+                if (channel.GetShortLink(code) != null)
+                {
+                    var updatedChannel = channel.UpdateShortLink(code, updatedShortLink);
+                    await _shortlinkDataService.UpdateYTChannel(updatedChannel);
+                    ClearCache();
+                    return;
+                }
+            }
+
+            // Update standalone shortlink
+            await _shortlinkDataService.UpdateShortlink(updatedShortLink);
+        }
+
         [HttpGet("{videoShortLink}")]
         public async Task<IActionResult> Index(string videoShortLink)
         {
@@ -80,14 +144,13 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 return RedirectYouTubeVideo(videoId, lastQueryString, isAndroid, isIOS);
             }
 
-            // Normal shortlink handling
-            var shortLinks = await this.FetchShortlinks();
-            var shortLink = shortLinks.FirstOrDefault(x=>x.Code == videoShortLink);
+            // Normal shortlink handling using the new embedded approach
+            var shortLink = await FindShortLinkInContent(videoShortLink);
             if (shortLink == null)
                 return BadRequest("shortLink not found");
 
             // Increment click count
-            await _shortlinkDataService.UpdateShortlink(shortLink with { ClicksCount = shortLink.ClicksCount + 1 });
+            await UpdateShortLinkClickCount(videoShortLink, shortLink);
 
             // Handle different link types
             string linkQuerystring = !string.IsNullOrEmpty(shortLink.QueryString) ? $"&{shortLink.QueryString}" : string.Empty;
@@ -256,10 +319,22 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                             .ToList();
             })).ToList();
         }
+
+        private async Task<IList<YTChannel>> FetchChannels()
+        {
+            return (await cache.GetOrCreateAsync<IList<YTChannel>>(CacheKeys.Channels, async () =>
+            {
+                return (await _shortlinkDataService.FetchChannels())
+                            .OrderByDescending(x => x.CreationDateTime)
+                            .ToList();
+            })).ToList();
+        }
+
         private void ClearCache()
         {
             cache.Remove(CacheKeys.ShortLinks);
             cache.Remove(CacheKeys.Matches);
+            cache.Remove(CacheKeys.Channels);
         }
     }
 }

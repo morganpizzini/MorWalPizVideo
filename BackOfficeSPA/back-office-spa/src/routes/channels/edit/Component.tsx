@@ -41,7 +41,7 @@ const EditChannel: React.FC = () => {
       toast.show('Success', 'Channel updated successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

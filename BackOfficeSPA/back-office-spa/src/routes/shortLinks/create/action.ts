@@ -10,7 +10,7 @@ export default async function action({ request }: { request: Request }) {
   const values: any = {
     target: String(formData.target || ''),
     linkType: Number(formData.linkType),
-    queryString: String(formData.queryString || ''),
+    queryLinkIds: formData.queryLinkIds ? JSON.parse(String(formData.queryLinkIds)) : [],
     message: String(formData.message || '')
   };
   
@@ -18,9 +18,6 @@ export default async function action({ request }: { request: Request }) {
   if (!values.target || values.target.trim().length === 0) {
     errors['target'] = 'Target cannot be empty';
   }
-  
-  // For backward compatibility with the API
-  values.videoId = values.target;
 
   // Check for errors
   if (Object.keys(errors).length > 0) {

@@ -3,6 +3,7 @@ using Microsoft.FeatureManagement;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
+using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
@@ -67,6 +68,7 @@ if (enableMock)
 {
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
+    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
@@ -78,7 +80,7 @@ if (enableMock)
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>();
-
+    builder.Services.AddScoped<IUserRepository, UserMockRepository>();
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
 }
@@ -87,6 +89,7 @@ else
     BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
+    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
     builder.Services.AddScoped<IPageRepository, PageRepository>();
@@ -97,6 +100,7 @@ else
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();

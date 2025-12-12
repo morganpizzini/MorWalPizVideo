@@ -4,7 +4,8 @@ import { Form, Button, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
-import { ShortLink, LinkType } from '@/models';
+import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
+import { ShortLink, LinkType, QueryLink } from '@/models';
 import PageHeader from '@components/PageHeader';
 import { fetchMatches, Match } from '@/services/matchesService';
 
@@ -13,12 +14,36 @@ const EditShortLink: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
+  const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
+  const [queryLinksLoading, setQueryLinksLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
 
   const entity = useLoaderData<ShortLink>();
   useEffect(() => {
     setModel(entity);
+  }, [entity]);
+
+  // Load available query links and set selected ones when component mounts
+  useEffect(() => {
+    setQueryLinksLoading(true);
+    fetch('/api/querylinks')
+      .then(response => response.json())
+      .then((data: QueryLink[]) => {
+        setAvailableQueryLinks(data);
+        // Set selected query links based on entity's queryLinkIds
+        if (entity && entity.queryLinkIds && entity.queryLinkIds.length > 0) {
+          const selected = data.filter(ql => entity.queryLinkIds.includes(ql.queryLinkId));
+          setSelectedQueryLinks(selected);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to load query links:', error);
+      })
+      .finally(() => {
+        setQueryLinksLoading(false);
+      });
   }, [entity]);
 
   // Load matches when component mounts or when model.linkType changes to YouTubeVideo
@@ -52,7 +77,7 @@ const EditShortLink: React.FC = () => {
       toast.show('Success', 'Short link updated successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -60,8 +85,12 @@ const EditShortLink: React.FC = () => {
   };
 
   const confirmEdit = () => {
+    const queryLinkIds = selectedQueryLinks.map(ql => ql.queryLinkId);
     fetcher.submit(
-      { ...model },
+      {
+        ...model,
+        queryLinkIds: JSON.stringify(queryLinkIds),
+      },
       {
         method: 'post',
         action: location.pathname,
@@ -162,18 +191,18 @@ const EditShortLink: React.FC = () => {
           </Form.Text>
         </Form.Group>
         
-        <Form.Group controlId="formQueryString" className="mb-3">
-          <Form.Label>Query String</Form.Label>
-          <Form.Control
-            type="text"
-            value={model.queryString}
-            onChange={e => setModel({ ...model, queryString: e.target.value })}
-          />
-          <Form.Text className="text-muted">
-            Additional parameters to append to the URL (without the ? or & prefix)
-          </Form.Text>
-          <FieldError error={errors?.queryString} />
-        </Form.Group>
+        <MultiSelectWithBadges
+          items={availableQueryLinks}
+          selectedItems={selectedQueryLinks}
+          onSelectionChange={setSelectedQueryLinks}
+          getItemId={(item) => item.queryLinkId}
+          getItemDisplay={(item) => item.title}
+          label="Query Links"
+          placeholder="Select query links..."
+          helpText="Select query parameters to append to the URL"
+          disabled={queryLinksLoading}
+          error={errors?.queryLinkIds}
+        />
         
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Save Changes
@@ -201,14 +230,11 @@ const EditShortLink: React.FC = () => {
               </>
             )}
           </p>
-          <p>
-            <strong>Query String:</strong> {model.queryString}{' '}
-            {model.queryString !== entity.queryString && (
-              <>
-                (<s>{entity.queryString}</s>)
-              </>
-            )}
-          </p>
+          {selectedQueryLinks.length > 0 && (
+            <p>
+              <strong>Query Links:</strong> {selectedQueryLinks.map(ql => ql.title).join(', ')}
+            </p>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)}>

@@ -29,7 +29,7 @@ const TranslateVideo: React.FC = () => {
       // Reset form
       setVideoIds(['']);
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

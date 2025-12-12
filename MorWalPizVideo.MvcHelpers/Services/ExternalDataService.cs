@@ -10,9 +10,9 @@ namespace MorWalPizVideo.Server.Services
   
     public class ExternalDataService : IExternalDataService
     {
-        private readonly IGenericDataService _dataService;
+        private readonly DataService _dataService;
         private readonly IYTService _youtubeService;
-        public ExternalDataService(IGenericDataService dataService, IYTService youtubeService)
+        public ExternalDataService(DataService dataService, IYTService youtubeService)
         {
             _dataService = dataService;
             _youtubeService = youtubeService;
@@ -23,20 +23,15 @@ namespace MorWalPizVideo.Server.Services
             IList<YouTubeContent> matches = await _dataService.FetchMatches();
 
             // Get all videoIds that need to be populated with details
-            // For single videos, use the ThumbnailVideoId
+            // For single videos, use the isLink
             // For collections, get all videoIds from the VideoRefs
-            var videoIds = matches
-                .Where(x => x.IsLink && string.IsNullOrEmpty(x.Title))
-                .Select(x
-                => x.ThumbnailVideoId)
-                .Concat(
+            var videoIds =
                     matches
                         .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
                         .SelectMany(x => x.VideoRefs)
-                        .Select(x => x.YoutubeId)
-                )
-                .Distinct()
-                .ToList();
+                        // Only fetch details for VideoRefs that don't have title populated yet
+                        .Where(a => string.IsNullOrEmpty(a.Title))
+                        .Select(x => x.YoutubeId).ToList();
 
             if (videoIds.Count > 0)
             {
@@ -86,17 +81,34 @@ namespace MorWalPizVideo.Server.Services
                 {
                     // For collection matches, load video details for all the refs
                     var videosList = new List<Video>();
+                    var updatedVideoRefs = new List<VideoRef>();
+                    
                     foreach (var videoRef in match.VideoRefs)
                     {
                         if (videoDict.TryGetValue(videoRef.YoutubeId, out var video))
                         {
                             // Set the category from the ref
-                            videosList.Add(video with { Category = videoRef.Category });
+                            videosList.Add(video with { Categories = videoRef.Categories });
+                            
+                            // Create updated VideoRef with metadata from fetched video
+                            var updatedVideoRef = new VideoRef(
+                                videoRef.YoutubeId,
+                                videoRef.Categories,
+                                video.Title,
+                                video.Description,
+                                video.PublishedAt
+                            );
+                            updatedVideoRefs.Add(updatedVideoRef);
+                        }
+                        else
+                        {
+                            // Keep original VideoRef if video data not found
+                            updatedVideoRefs.Add(videoRef);
                         }
                     }
 
-                    // Set the Videos property for compatibility
-                    var updatedMatch = match;
+                    // Update the match with the new VideoRefs containing metadata
+                    var updatedMatch = match with { VideoRefs = updatedVideoRefs.ToArray() };
                     
                     // Update creation date time based on oldest video
                     if (videosList.Count > 0 && videosList.Any(v => v.PublishedAt != DateOnly.MinValue))
@@ -131,23 +143,32 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<ShortLink>> FetchShortLink();
         public Task UpdateShortlink(ShortLink entity);
         Task<IList<YouTubeContent>> FetchMatches();
+        Task<IList<YTChannel>> FetchChannels();
+        Task UpdateYouTubeContent(YouTubeContent entity);
+        Task UpdateYTChannel(YTChannel entity);
     }
 
     public class ShortlinkDataService : IShortLinkDataService
     {
         private readonly IShortLinkRepository _shortLinkRepository;
         private readonly IYouTubeContentRepository _matchRepository;
+        private readonly IYTChannelRepository _channelRepository;
 
         public ShortlinkDataService(
             IYouTubeContentRepository matchRepository,
-            IShortLinkRepository shortLinkRepository)
+            IShortLinkRepository shortLinkRepository,
+            IYTChannelRepository channelRepository)
         {
             _matchRepository = matchRepository;
             _shortLinkRepository = shortLinkRepository;
+            _channelRepository = channelRepository;
         }
         public Task<IList<ShortLink>> FetchShortLink() => _shortLinkRepository.GetItemsAsync();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
         public Task<IList<YouTubeContent>> FetchMatches() => _matchRepository.GetItemsAsync();
+        public Task<IList<YTChannel>> FetchChannels() => _channelRepository.GetItemsAsync();
+        public Task UpdateYouTubeContent(YouTubeContent entity) => _matchRepository.UpdateItemAsync(entity);
+        public Task UpdateYTChannel(YTChannel entity) => _channelRepository.UpdateItemAsync(entity);
 
         public void Dispose() { }
 

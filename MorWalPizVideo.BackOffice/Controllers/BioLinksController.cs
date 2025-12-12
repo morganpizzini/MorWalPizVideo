@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
@@ -29,8 +30,8 @@ public class UpdateBioLinkRequest
 public class BioLinksController : ApplicationControllerBase
 {
     private readonly IMongoDatabase database;
-    private readonly IHttpClientFactory client;
-    public BioLinksController(IMongoDatabase _database, IHttpClientFactory _clientFactory)
+    private readonly ICrossApiService client;
+    public BioLinksController(IMongoDatabase _database, ICrossApiService _clientFactory)
     {
         database = _database;
         client = _clientFactory;
@@ -57,9 +58,8 @@ public class BioLinksController : ApplicationControllerBase
 
         await collection.BulkWriteAsync(updates);
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
+        var json = await client.ResetCache(CacheKeys.BioLinks);
+        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
     [HttpPut]
@@ -93,9 +93,8 @@ public class BioLinksController : ApplicationControllerBase
         var result = await collection.BulkWriteAsync(updates);
 
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
+        var json = await client.ResetCache(CacheKeys.BioLinks);
+        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -118,9 +117,8 @@ public class BioLinksController : ApplicationControllerBase
 
         var result = await collection.BulkWriteAsync(updates);
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
+        var json = await client.ResetCache(CacheKeys.BioLinks);
+        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -136,9 +134,8 @@ public class BioLinksController : ApplicationControllerBase
         }
         collection.DeleteOne(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.BioLinks}");
-        json = await client.GetStringAsync($"cache/purge?k={ApiTagCacheKeys.BioLinks}");
+        var json = await client.ResetCache(CacheKeys.BioLinks);
+        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 }

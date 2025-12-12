@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -28,11 +29,11 @@ public class UpdateShortLinkRequest
 public class ShortLinksController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
-    private readonly IHttpClientFactory client;
+    private readonly ICrossApiService client;
     private readonly IConfiguration configuration;
     private readonly IDiscordService discordService;
     private readonly ITelegramService telegramService;
-    public ShortLinksController(DataService dataService, ITelegramService telegramService, IHttpClientFactory clientFactory, IConfiguration configuration,
+    public ShortLinksController(DataService dataService, ITelegramService telegramService, ICrossApiService clientFactory, IConfiguration configuration,
         IDiscordService discordService)
     {
         _dataService = dataService;
@@ -81,8 +82,7 @@ public class ShortLinksController : ApplicationControllerBase
 
         await _dataService.SaveShortLink(shortlink);
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
+        var json = await client.ResetCache(CacheKeys.ShortLinks);
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
 
@@ -143,8 +143,7 @@ public class ShortLinksController : ApplicationControllerBase
 
         await _dataService.UpdateShortlink(updatedShortLink);
 
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        var json = await client.GetStringAsync($"cache/reset?k={CacheKeys.ShortLinks}");
+        var json = await client.ResetCache(CacheKeys.ShortLinks);
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
 

@@ -26,16 +26,14 @@ export default async function action({ request }: ActionFunctionArgs) {
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
-  // Prepare request with single category
-  const category = values.categories.length > 0 ? values.categories[0] : '';
   
-  // API request - updated for new Match structure using CreateSingleVideo
+  // API request - send all selected categories
   return fetch(`/api/videos/ImportVideo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       videoId: values.videoId,
-      category: category
+      categories: values.categories
     }),
   })
     .then(async response => {

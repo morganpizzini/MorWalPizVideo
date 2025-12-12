@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Categoria 3",
+    "description": "descrizione 3",
+    "id": "3",
+    "creationDateTime": "2025-11-15T15:13:02.579499+01:00"
+  },
+  {
+    "title": "Categoria 2",
+    "description": "descrizione 2",
+    "id": "2",
+    "creationDateTime": "2025-11-15T15:13:02.579479+01:00"
+  },
+  {
+    "title": "Categoria 1",
+    "description": "descrizione 1",
+    "id": "1",
+    "creationDateTime": "2025-11-15T15:13:02.5794189+01:00"
+  }
+]

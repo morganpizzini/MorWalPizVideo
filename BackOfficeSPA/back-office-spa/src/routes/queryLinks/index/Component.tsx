@@ -31,7 +31,7 @@ const QueryLinks: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Query link deleted successfully', { variant: 'success' });
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleDelete = (link: QueryLink) => {
     setSelectedLink(link);

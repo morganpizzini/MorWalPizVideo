@@ -1,110 +1,181 @@
-import React from 'react';
-import { Button } from 'react-bootstrap';
-import { Link } from 'react-router';
-import GenericTable from './Table/GenericTable';
-import { Match, Video } from '../models/video/types';
-import { ColumnDef } from '@tanstack/react-table';
+import React, { useState } from 'react';
+import { Button, Table, Form, InputGroup, Badge } from 'react-bootstrap';
+import { Match } from '../models/video/types';
 
 interface VideoListProps {
   matches: Match[];
 }
 
-const VideoList: React.FC<VideoListProps> = ({ matches }) => {
-  // Flatten matches to individual videos for the table
-  const videos = matches.flatMap((match) => 
-    match.videoRefs?.map((videoRef) => ({
-      id: `${match.id}-${videoRef.youtubeId}`,
-      matchId: match.id,
-      youtubeId: videoRef.youtubeId,
-      title: match.title,
-      description: match.description,
-      category: videoRef.category,
-      matchType: match.matchType,
-      url: match.url,
-      thumbnailVideoId: match.thumbnailVideoId
-    })) || []
-  );
+interface ExpandedState {
+  [key: string]: boolean;
+}
 
-  const columns: ColumnDef<any, any>[] = [
-    {
-      header: 'YouTube ID',
-      accessorKey: 'youtubeId',
-      cell: ({ getValue }) => (
-        <code className="text-primary">{getValue() as string}</code>
-      ),
-    },
-    {
-      header: 'Title',
-      accessorKey: 'title',
-      cell: ({ getValue }) => (
-        <div className="fw-semibold">{getValue() as string}</div>
-      ),
-    },
-    {
-      header: 'Category',
-      accessorKey: 'category',
-      cell: ({ getValue }) => (
-        <span className="badge bg-secondary">{getValue() as string}</span>
-      ),
-    },
-    {
-      header: 'Match Type',
-      accessorKey: 'matchType',
-      cell: ({ getValue }) => (
-        <span className="badge bg-info">
-          {getValue() === 0 ? 'Single Video' : 'Collection'}
-        </span>
-      ),
-    },
-    {
-      header: 'Actions',
-      id: 'actions',
-      cell: ({ row }) => (
-        <div className="d-flex gap-2">
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={() => window.location.href = `/videos/${row.original.matchId}`}
-          >
-            View
-          </Button>
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={() => window.location.href = `/videos/${row.original.matchId}/edit`}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="outline-danger"
-            size="sm"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this video?')) {
-                // TODO: Implement delete functionality
-                console.log('Delete video:', row.original.youtubeId);
-              }
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
-  ];
+const VideoList: React.FC<VideoListProps> = ({ matches }) => {
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const toggleExpand = (matchId: string) => {
+    setExpanded(prev => ({
+      ...prev,
+      [matchId]: !prev[matchId]
+    }));
+  };
+
+  // Filter matches based on search term
+  const filteredMatches = matches.filter(match => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      match.title?.toLowerCase().includes(term) ||
+      match.description?.toLowerCase().includes(term) ||
+      match.id?.toLowerCase().includes(term) ||
+      match.videoRefs?.some(ref => 
+        ref.youtubeId.toLowerCase().includes(term) ||
+        ref.categories?.some(cat => cat.title.toLowerCase().includes(term))
+      )
+    );
+  });
+
+  const handleDelete = (matchId: string) => {
+    if (window.confirm('Are you sure you want to delete this video content?')) {
+      // TODO: Implement delete functionality
+      console.log('Delete match:', matchId);
+    }
+  };
 
   return (
     <div className="mt-5">
       <h3>Existing Videos</h3>
       <p className="text-muted mb-3">
-        {videos.length} video(s) found across {matches.length} match(es)
+        {matches.length} YouTube content(s) with {matches.reduce((sum, m) => sum + (m.videoRefs?.length || 0), 0)} total video(s)
       </p>
-      <GenericTable
-        data={videos}
-        columns={columns}
-        searchPlaceholder="Search videos by ID, title, or category..."
-        emptyMessage="No videos found"
-        pageSize={15}
-      />
+
+      <div className="mb-3">
+        <InputGroup>
+          <Form.Control
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search by title, description, ID, or category..."
+          />
+        </InputGroup>
+      </div>
+
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th style={{ width: '40px' }}></th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>URL</th>
+            <th>Videos</th>
+            <th style={{ width: '200px' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredMatches.length > 0 ? (
+            filteredMatches.map(match => (
+              <React.Fragment key={match.id}>
+                {/* Main row - YouTubeContent */}
+                <tr>
+                  <td>
+                    {match.videoRefs && match.videoRefs.length > 0 && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0"
+                        onClick={() => toggleExpand(match.id)}
+                      >
+                        {expanded[match.id] ? '▼' : '▶'}
+                      </Button>
+                    )}
+                  </td>
+                  <td>
+                    <div className="fw-semibold">{match.title || <em>Untitled</em>}</div>
+                  </td>
+                  <td>
+                    <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                      {match.description || <em className="text-muted">No description</em>}
+                    </div>
+                  </td>
+                  <td>
+                    {match.url ? (
+                      <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-truncate d-block" style={{ maxWidth: '150px' }}>
+                        {match.url}
+                      </a>
+                    ) : (
+                      <em className="text-muted">No URL</em>
+                    )}
+                  </td>
+                  <td>
+                    <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>
+                  </td>
+                  <td>
+                    <div className="d-flex gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => window.location.href = `/videos/${match.id}`}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => window.location.href = `/videos/${match.id}/edit`}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDelete(match.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+                
+                {/* Sub-rows - VideoRefs */}
+                {expanded[match.id] && match.videoRefs && match.videoRefs.length > 0 && (
+                  match.videoRefs.map((videoRef) => (
+                    <tr key={`${match.id}-${videoRef.youtubeId}`} className="table-light">
+                      <td></td>
+                      <td colSpan={2} className="ps-5">
+                        <div className="d-flex align-items-center gap-2">
+                          <code className="text-primary">{videoRef.youtubeId}</code>
+                          {videoRef.youtubeId === match.thumbnailVideoId && (
+                            <Badge bg="success">Thumbnail</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td colSpan={3}>
+                        <div className="d-flex gap-1 flex-wrap">
+                          {videoRef.categories && videoRef.categories.length > 0 ? (
+                            videoRef.categories.map((cat, catIdx) => (
+                              <Badge key={catIdx} bg="secondary">
+                                {cat.title}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted">No categories</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </React.Fragment>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={6} className="text-center">
+                {searchTerm ? 'No matching videos found' : 'No videos found'}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
     </div>
   );
 };

@@ -1,25 +1,65 @@
-import React from 'react';
-import { useLoaderData, Link } from 'react-router';
+import React, { useState } from 'react';
+import { useLoaderData, Link, useRevalidator } from 'react-router';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, MatchType } from '@models/video/types';
+import { Match, ContentType, VideoRef } from '@models/video/types';
+import VideoRefEditModal from '@components/VideoRefEditModal';
+import * as apiService from '@services/apiService';
+
+interface Category {
+  categoryId: string;
+  title: string;
+}
+
+interface LoaderData {
+  match: Match;
+  categories: Category[];
+}
 
 const Component: React.FC = () => {
-  const { match } = useLoaderData() as { match: Match };
+  const { match, categories } = useLoaderData() as LoaderData;
+  const revalidator = useRevalidator();
+  const [showModal, setShowModal] = useState(false);
+  const [selectedVideoRef, setSelectedVideoRef] = useState<VideoRef | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleEditVideoRef = (videoRef: VideoRef) => {
+    setSelectedVideoRef(videoRef);
+    setShowModal(true);
+  };
+
+  const handleSaveVideoRef = async (updatedVideoRef: VideoRef) => {
+    setIsSaving(true);
+    try {
+      // Update the video ref via API
+      await apiService.patch(`api/videos/${match.id}/videorefs/${updatedVideoRef.youtubeId}`, {
+        categories: updatedVideoRef.categories
+      });
+      setShowModal(false);
+      setSelectedVideoRef(null);
+      // Revalidate to refresh the data
+      revalidator.revalidate();
+    } catch (error) {
+      console.error('Failed to update video ref:', error);
+      alert('Failed to update video reference. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <>
       <PageHeader title={`Video Details: ${match.title}`} />
-      
+
       <div className="mb-3">
-        <Button 
+        <Button
           variant="outline-secondary"
           onClick={() => window.location.href = '/videos'}
         >
           ← Back to Videos
         </Button>
-        <Button 
-          variant="primary" 
+        <Button
+          variant="primary"
           className="ms-2"
           onClick={() => window.location.href = `/videos/${match.id}/edit`}
         >
@@ -63,17 +103,25 @@ const Component: React.FC = () => {
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Category:</strong></Col>
+                <Col sm={3}><strong>Categories:</strong></Col>
                 <Col sm={9}>
-                  <Badge bg="secondary">{match.category}</Badge>
+                  <div className="d-flex gap-1 flex-wrap">
+                    {match.categories && match.categories.length > 0 ? (
+                      match.categories.map((cat, idx) => (
+                        <Badge key={idx} bg="secondary">{cat.title}</Badge>
+                      ))
+                    ) : (
+                      <em className="text-muted">No categories</em>
+                    )}
+                  </div>
                 </Col>
               </Row>
               <hr />
               <Row>
                 <Col sm={3}><strong>Match Type:</strong></Col>
                 <Col sm={9}>
-                  <Badge bg={match.matchType === MatchType.SingleVideo ? "info" : "warning"}>
-                    {match.matchType === MatchType.SingleVideo ? "Single Video" : "Collection"}
+                  <Badge bg={match.contentType === ContentType.SingleVideo ? "info" : "warning"}>
+                    {match.contentType === ContentType.SingleVideo ? "Single Video" : "Collection"}
                   </Badge>
                 </Col>
               </Row>
@@ -94,7 +142,7 @@ const Component: React.FC = () => {
             </Card.Body>
           </Card>
         </Col>
-        
+
         <Col md={4}>
           <Card>
             <Card.Header>
@@ -105,13 +153,30 @@ const Component: React.FC = () => {
                 <div className="d-flex flex-column gap-2">
                   {match.videoRefs.map((videoRef, index) => (
                     <div key={index} className="p-2 border rounded">
-                      <div><strong>YouTube ID:</strong></div>
-                      <code className="text-primary">{videoRef.youtubeId}</code>
-                      <div className="mt-1">
-                        <Badge bg="secondary" className="me-1">{videoRef.category}</Badge>
-                        {videoRef.youtubeId === match.thumbnailVideoId && (
-                          <Badge bg="success">Thumbnail</Badge>
-                        )}
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div className="flex-grow-1">
+                          <div><strong>YouTube ID:</strong></div>
+                          <code className="text-primary">{videoRef.youtubeId}</code>
+                          <div className="mt-1 d-flex gap-1 flex-wrap">
+                            {videoRef.categories && videoRef.categories.length > 0 ? (
+                              videoRef.categories.map((cat, catIdx) => (
+                                <Badge key={catIdx} bg="secondary">{cat.title}</Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted small">No categories</span>
+                            )}
+                            {videoRef.youtubeId === match.thumbnailVideoId && (
+                              <Badge bg="success">Thumbnail</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleEditVideoRef(videoRef)}
+                        >
+                          Edit
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -121,7 +186,7 @@ const Component: React.FC = () => {
               )}
             </Card.Body>
           </Card>
-          
+
           {match.videos && match.videos.length > 0 && (
             <Card className="mt-3">
               <Card.Header>
@@ -149,6 +214,14 @@ const Component: React.FC = () => {
           )}
         </Col>
       </Row>
+
+      <VideoRefEditModal
+        show={showModal}
+        videoRef={selectedVideoRef}
+        onHide={() => setShowModal(false)}
+        onSave={handleSaveVideoRef}
+        availableCategories={categories}
+      />
     </>
   );
 };

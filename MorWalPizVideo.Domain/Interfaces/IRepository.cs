@@ -14,6 +14,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent> { }
     public interface IProductRepository : IRepository<Product> { }
+    public interface IProductCategoryRepository : IRepository<ProductCategory> { }
     public interface IYTChannelRepository : IRepository<YTChannel> { }
     public interface ISponsorRepository : IRepository<Sponsor> { }
     public interface ISponsorApplyRepository : IRepository<SponsorApply> { }

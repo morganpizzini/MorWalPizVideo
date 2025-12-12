@@ -30,7 +30,7 @@ const ChannelDetail: React.FC = () => {
       toast.show('Success', 'Channel deleted successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const handleDelete = () => {
     setShowModal(true);

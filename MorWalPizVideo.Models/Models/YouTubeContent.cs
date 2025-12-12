@@ -16,7 +16,7 @@ namespace MorWalPizVideo.Server.Models
             string url, 
             string thumbnailVideoId, 
             VideoRef[] videoRefs, 
-            string category = "", 
+            CategoryRef[]? categories = null, 
             YoutubeContentType contentType = YoutubeContentType.Collection,
             YouTubeVideoLink[]? youtubeVideoLinks = null)
         {
@@ -26,7 +26,7 @@ namespace MorWalPizVideo.Server.Models
             Url = url;
             ThumbnailVideoId = thumbnailVideoId;
             VideoRefs = videoRefs;
-            Category = category;
+            Categories = categories ?? Array.Empty<CategoryRef>();
             ContentType = contentType;
             YouTubeVideoLinks = youtubeVideoLinks ?? Array.Empty<YouTubeVideoLink>();
         }
@@ -55,8 +55,8 @@ namespace MorWalPizVideo.Server.Models
         public VideoRef[] VideoRefs { get; init; }
 
         [DataMember]
-        [BsonElement("category")]
-        public string Category { get; init; } = "";
+        [BsonElement("categories")]
+        public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
 
         [DataMember]
         [BsonElement("contentType")]
@@ -66,26 +66,30 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("youtubeVideoLinks")]
         public YouTubeVideoLink[]? YouTubeVideoLinks { get; init; } = Array.Empty<YouTubeVideoLink>();
 
+        [DataMember]
+        [BsonElement("shortLinks")]
+        public ShortLink[] ShortLinks { get; init; } = Array.Empty<ShortLink>();
+
         // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]
         public bool IsLink => ContentType == YoutubeContentType.SingleVideo;
         
         // Constructor for a single video match
-        public static YouTubeContent CreateSingleVideo(string videoId, string category)
+        public static YouTubeContent CreateSingleVideo(string videoId, CategoryRef[] categories)
         {
             return new YouTubeContent(
                 videoId, // The Match ID is the video ID for single videos
-                string.Empty, 
+                string.Empty,
                 string.Empty, 
                 string.Empty, 
                 videoId, // The thumbnail video is the same as the video ID
-                new[] { new VideoRef(videoId, category) }, 
-                category,
+                new[] { new VideoRef(videoId, categories) }, 
+                categories,
                 YoutubeContentType.SingleVideo);
         }
         
         // Constructor for creating an empty collection that will hold multiple videos
-        public static YouTubeContent CreateCollection(string id, string title, string description, string url, string thumbnailVideoId, string category)
+        public static YouTubeContent CreateCollection(string id, string title, string description, string url, string thumbnailVideoId, CategoryRef[] categories)
         {
             return new YouTubeContent(
                 id,
@@ -94,27 +98,34 @@ namespace MorWalPizVideo.Server.Models
                 url,
                 thumbnailVideoId,
                 Array.Empty<VideoRef>(),
-                category,
+                categories,
                 YoutubeContentType.Collection);
         }
         
         // For backward compatibility with existing code
-        public YouTubeContent(string thumbnailUrl, bool isLink, string category) : this(
+        public YouTubeContent(string thumbnailUrl, bool isLink, CategoryRef[] categories) : this(
             thumbnailUrl, 
             string.Empty, 
             string.Empty, 
             string.Empty, 
             thumbnailUrl, 
-            isLink ? new[] { new VideoRef(thumbnailUrl, category) } : Array.Empty<VideoRef>(), 
-            category,
+            isLink ? new[] { new VideoRef(thumbnailUrl, categories) } : Array.Empty<VideoRef>(), 
+            categories,
             isLink ? YoutubeContentType.SingleVideo : YoutubeContentType.Collection)
         {
         }
         
         // Add a video to the collection
-        public YouTubeContent AddVideo(string videoId, string category)
+        public YouTubeContent AddVideo(string videoId, CategoryRef[] categories)
         {
-            var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, category)).ToArray();
+            var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, categories)).ToArray();
+            return this with { VideoRefs = newVideoRefs };
+        }
+        
+        // Add a video to the collection with metadata
+        public YouTubeContent AddVideo(string videoId, CategoryRef[] categories, string title, string description, DateOnly publishedAt)
+        {
+            var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, categories, title, description, publishedAt)).ToArray();
             return this with { VideoRefs = newVideoRefs };
         }
         
@@ -152,6 +163,34 @@ namespace MorWalPizVideo.Server.Models
             return this with { YouTubeVideoLinks = newVideoLinks };
         }
         
+        // Add a shortlink to the collection
+        public YouTubeContent AddShortLink(ShortLink shortLink)
+        {
+            var newShortLinks = ShortLinks.Append(shortLink).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Remove a shortlink from the collection
+        public YouTubeContent RemoveShortLink(string code)
+        {
+            var newShortLinks = ShortLinks.Where(sl => sl.Code != code).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Update a shortlink in the collection
+        public YouTubeContent UpdateShortLink(string code, ShortLink updatedShortLink)
+        {
+            var newShortLinks = ShortLinks.Select(sl => 
+                sl.Code == code ? updatedShortLink : sl).ToArray();
+            return this with { ShortLinks = newShortLinks };
+        }
+        
+        // Get a shortlink by code
+        public ShortLink? GetShortLink(string code)
+        {
+            return ShortLinks.FirstOrDefault(sl => sl.Code == code);
+        }
+        
         // Convert Match to VideoDisplayItem for UI
         public VideoDisplayItem ToDisplayItem()
         {
@@ -162,7 +201,7 @@ namespace MorWalPizVideo.Server.Models
                     Title, 
                     Description, 
                     ThumbnailVideoId, 
-                    Category);
+                    Categories);
             }
             else
             {
@@ -174,7 +213,7 @@ namespace MorWalPizVideo.Server.Models
                     Title,
                     Description,
                     ThumbnailVideoId,
-                    Category,
+                    Categories,
                     ThumbnailVideoId,
                     videoIds);
             }
@@ -185,7 +224,7 @@ namespace MorWalPizVideo.Server.Models
         {
             if (item.ContentType == Models.ContentType.SingleVideo)
             {
-                return CreateSingleVideo(item.PrimaryVideoId, item.Category);
+                return CreateSingleVideo(item.PrimaryVideoId, item.Categories);
             }
             else
             {
@@ -195,12 +234,12 @@ namespace MorWalPizVideo.Server.Models
                     item.Description,
                     string.Empty, // No URL in VideoDisplayItem
                     item.ThumbnailUrl,
-                    item.Category);
+                    item.Categories);
                 
                 // Add all videos from VideoIds
                 foreach (var videoId in item.VideoIds)
                 {
-                    content = content.AddVideo(videoId, item.Category);
+                    content = content.AddVideo(videoId, item.Categories);
                 }
                 
                 return content;

@@ -1,215 +1,255 @@
-﻿[
+[
   {
-    "title": "Telefono Pixel 8",
-    "description": "Per ogni mia registrazione fatta con il timer Shooter Go",
-    "url": "https://amzn.to/4ee8H2S",
-    "category": "registrazione",
-    "category2": "Ripresa"
-  },
-  {
-    "title": "Gorilla pod",
+    "title": "Conta colpi",
     "description": "",
-    "url": "https://amzn.to/48Ghrxw",
-    "category": "registrazione",
-    "category2": "Treppiedi"
-  },
-  {
-    "title": "Treppiede statico",
-    "description": "",
-    "url": "https://amzn.to/48CFixZ",
-    "category": "registrazione",
-    "category2": "Treppiedi"
-  },
-  {
-    "title": "Action cam Insta360 go 3",
-    "description": "",
-    "url": "https://amzn.to/40wu2Be",
-    "category": "registrazione",
-    "category2": "Ripresa"
-  },
-  {
-    "title": "Conversione 3piede per attacco arca swiss",
-    "description": "",
-    "url": "https://amzn.to/3ULNeav",
-    "category": "registrazione",
-    "category2": "Treppiedi"
-  },
-  {
-    "title": "Porta cellulare arca",
-    "description": "",
-    "url": "https://amzn.to/4fH3gL8",
-    "category": "registrazione",
-    "category2": "Treppiedi"
-  },
-  {
-    "title": "Adattamento treppiede ad arca",
-    "description": "",
-    "url": "https://amzn.to/3NZTVSE",
-    "category": "registrazione",
-    "category2": "Treppiedi"
-  },
-
-  {
-    "title": "Luce action cam",
-    "description": "",
-    "url": "https://amzn.to/48D4G76",
-    "category": "registrazione",
-    "category2": "Luci"
-  },
-  {
-    "title": "Luce video",
-    "description": "",
-    "url": "https://amzn.to/3ObUIjB",
-    "category": "registrazione",
-    "category2": "Luci"
-  },
-  {
-    "title": "Softbox",
-    "description": "",
-    "url": "https://amzn.to/3OgA6GI ",
-    "category": "registrazione",
-    "category2": "Luci"
-  },
-  {
-    "title": "Luce colorata video",
-    "description": "",
-    "url": "https://amzn.to/3YGyKtJ",
-    "category": "registrazione",
-    "category2": "Luci"
-  },
-
-  {
-    "title": "Power bank",
-    "description": "",
-    "url": "https://amzn.to/4eb7rxj",
-    "category": "registrazione",
-    "category2": "Altro"
-  },
-  {
-    "title": "Cavi usb",
-    "description": "",
-    "url": "https://amzn.to/3ClMD9d",
-    "category": "registrazione",
-    "category2": "Altro"
-  },
-  {
-    "title": "Cuffie",
-    "description": "",
-    "url": "https://amzn.to/3YOGGdL",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Magnesite",
-    "description": "",
-    "url": "https://amzn.to/48wniWh",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Scalda mani",
-    "description": "",
-    "url": "https://amzn.to/4f87V8M",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Tape",
-    "description": "",
-    "url": "https://amzn.to/3YOitnV",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Asciugamano",
-    "description": "",
-    "url": "https://amzn.to/40yHk0i",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Moschettone",
-    "description": "",
-    "url": "https://amzn.to/3O0GgL5",
-    "category": "attrezzatura",
-    "category2": "Tiro"
-  },
-  {
-    "title": "Scatola armi",
-    "description": "",
-    "url": "https://amzn.to/3YAQB59",
-    "category": "attrezzatura",
-    "category2": "Pulizia arma"
-  },
-  {
-    "title": "Bore cleaner",
-    "description": "",
-    "url": "https://amzn.to/4eoJsuX",
-    "category": "attrezzatura",
-    "category2": "Pulizia arma"
-  },
-  {
-    "title": "Set cacciaspine",
-    "description": "",
-    "url": "https://amzn.to/3AoidCR",
-    "category": "attrezzatura",
-    "category2": "Pulizia arma"
-  },
-  {
-    "title": "Frena filetto",
-    "description": "",
-    "url": "https://amzn.to/3OfuHQ9",
-    "category": "attrezzatura",
-    "category2": "Pulizia arma"
-  },
-  {
-    "title": "Calibro",
-    "description": "",
-    "url": "https://amzn.to/3AwymWM",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
-  },
-  {
-    "title": "Bilancia",
-    "description": "",
-    "url": "https://amzn.to/3UIra0y",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
-  },
-  {
-    "title": "Separatore rotante",
-    "description": "",
-    "url": "https://amzn.to/4enukxW",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
-  },
-  {
-    "title": "Separatore graniglia",
-    "description": "",
-    "url": "https://amzn.to/3UB30Fl",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
-  },
-  {
-    "title": "Graniglia",
-    "description": "",
-    "url": "https://amzn.to/3UDtG8p",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
+    "url": "https://amzn.to/3CmHn5m",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392437+01:00"
   },
   {
     "title": "Luce ricarica",
     "description": "",
     "url": "https://amzn.to/3UEaE1p",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392423+01:00"
   },
   {
-    "title": "Conta colpi",
+    "title": "Graniglia",
     "description": "",
-    "url": "https://amzn.to/3CmHn5m",
-    "category": "attrezzatura",
-    "category2": "Ricarica"
+    "url": "https://amzn.to/3UDtG8p",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392411+01:00"
+  },
+  {
+    "title": "Separatore graniglia",
+    "description": "",
+    "url": "https://amzn.to/3UB30Fl",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392399+01:00"
+  },
+  {
+    "title": "Separatore rotante",
+    "description": "",
+    "url": "https://amzn.to/4enukxW",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392385+01:00"
+  },
+  {
+    "title": "Bilancia",
+    "description": "",
+    "url": "https://amzn.to/3UIra0y",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.139237+01:00"
+  },
+  {
+    "title": "Calibro",
+    "description": "",
+    "url": "https://amzn.to/3AwymWM",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392355+01:00"
+  },
+  {
+    "title": "Frena filetto",
+    "description": "",
+    "url": "https://amzn.to/3OfuHQ9",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392245+01:00"
+  },
+  {
+    "title": "Set cacciaspine",
+    "description": "",
+    "url": "https://amzn.to/3AoidCR",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392226+01:00"
+  },
+  {
+    "title": "Bore cleaner",
+    "description": "",
+    "url": "https://amzn.to/4eoJsuX",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392208+01:00"
+  },
+  {
+    "title": "Scatola armi",
+    "description": "",
+    "url": "https://amzn.to/3YAQB59",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392191+01:00"
+  },
+  {
+    "title": "Moschettone",
+    "description": "",
+    "url": "https://amzn.to/3O0GgL5",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392171+01:00"
+  },
+  {
+    "title": "Asciugamano",
+    "description": "",
+    "url": "https://amzn.to/40yHk0i",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392153+01:00"
+  },
+  {
+    "title": "Tape",
+    "description": "",
+    "url": "https://amzn.to/3YOitnV",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392131+01:00"
+  },
+  {
+    "title": "Scalda mani",
+    "description": "",
+    "url": "https://amzn.to/4f87V8M",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392113+01:00"
+  },
+  {
+    "title": "Magnesite",
+    "description": "",
+    "url": "https://amzn.to/48wniWh",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392095+01:00"
+  },
+  {
+    "title": "Cuffie",
+    "description": "",
+    "url": "https://amzn.to/3YOGGdL",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392074+01:00"
+  },
+  {
+    "title": "Cavi usb",
+    "description": "",
+    "url": "https://amzn.to/3ClMD9d",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392056+01:00"
+  },
+  {
+    "title": "Power bank",
+    "description": "",
+    "url": "https://amzn.to/4eb7rxj",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392035+01:00"
+  },
+  {
+    "title": "Luce colorata video",
+    "description": "",
+    "url": "https://amzn.to/3YGyKtJ",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1392015+01:00"
+  },
+  {
+    "title": "Softbox",
+    "description": "",
+    "url": "https://amzn.to/3OgA6GI ",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391995+01:00"
+  },
+  {
+    "title": "Luce video",
+    "description": "",
+    "url": "https://amzn.to/3ObUIjB",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391971+01:00"
+  },
+  {
+    "title": "Luce action cam",
+    "description": "",
+    "url": "https://amzn.to/48D4G76",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391951+01:00"
+  },
+  {
+    "title": "Adattamento treppiede ad arca",
+    "description": "",
+    "url": "https://amzn.to/3NZTVSE",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391929+01:00"
+  },
+  {
+    "title": "Porta cellulare arca",
+    "description": "",
+    "url": "https://amzn.to/4fH3gL8",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391908+01:00"
+  },
+  {
+    "title": "Conversione 3piede per attacco arca swiss",
+    "description": "",
+    "url": "https://amzn.to/3ULNeav",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391881+01:00"
+  },
+  {
+    "title": "Action cam Insta360 go 3",
+    "description": "",
+    "url": "https://amzn.to/40wu2Be",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391859+01:00"
+  },
+  {
+    "title": "Treppiede statico",
+    "description": "",
+    "url": "https://amzn.to/48CFixZ",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391838+01:00"
+  },
+  {
+    "title": "Gorilla pod",
+    "description": "",
+    "url": "https://amzn.to/48Ghrxw",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391814+01:00"
+  },
+  {
+    "title": "Telefono Pixel 8",
+    "description": "Per ogni mia registrazione fatta con il timer Shooter Go",
+    "url": "https://amzn.to/4ee8H2S",
+    "categories": null,
+    "id": null,
+    "creationDateTime": "2025-12-06T16:59:14.1391738+01:00"
+  },
+  {
+    "title": "dfgbn",
+    "description": "asdf",
+    "url": "https://google.com",
+    "categories": [
+      {
+        "id": "3",
+        "title": "Categoria prodotto 3"
+      }
+    ],
+    "id": "693452d2f43b399ada007c2e",
+    "creationDateTime": "2025-12-06T16:59:14.1301054+01:00"
   }
 ]
-  

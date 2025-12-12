@@ -87,7 +87,7 @@ const CalendarEvents: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Calendar event deleted successfully', { variant: 'success' });
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleDelete = (event: CalendarEvent) => {
     setSelectedEvent(event);

@@ -1,5 +1,6 @@
 
-
+import { get } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 /**
  * Enum representing the type of match in the system
  */
@@ -12,7 +13,8 @@ export enum MatchType {
  * Interface representing a lightweight reference to a video
  */
 export interface VideoRef {
-  youtubeId: string;
+    youtubeId: string;
+    title: string;
   category: string;
 }
 
@@ -67,4 +69,11 @@ export const fetchMatches = async (): Promise<Match[]> => {
       console.error('Error fetching matches:', error);
       return [];
     });
+};
+
+export const getMatch = async (id: string): Promise<Match[]> => {
+    return get(ComposeUrl(endpoints.VIDEOS_DETAIL, { videoId: id })).then(response => ({
+        ...response,
+        breadcrumbIdentifier: response.title
+    }))
 };

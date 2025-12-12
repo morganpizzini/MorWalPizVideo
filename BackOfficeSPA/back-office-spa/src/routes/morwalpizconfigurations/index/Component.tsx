@@ -31,7 +31,7 @@ const ConfigurationsIndex: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Configuration deleted successfully', { variant: 'success' });
     }
-  }, [result, toast]);
+  }, [result]);
 
   const handleDelete = (configuration: MorWalPizConfiguration) => {
     setSelectedConfiguration(configuration);

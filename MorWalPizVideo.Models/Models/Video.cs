@@ -22,7 +22,7 @@ namespace MorWalPizVideo.Server.Models
             DateOnly publishedAt,
             string thumbnail,
             string duration,
-            string category = "")
+            CategoryRef[]? categories = null)
         {
             YoutubeId = youtubeId;
             Title = title;
@@ -33,7 +33,7 @@ namespace MorWalPizVideo.Server.Models
             PublishedAt = publishedAt;
             Thumbnail = thumbnail;
             Duration = duration;
-            Category = category;
+            Categories = categories ?? Array.Empty<CategoryRef>();
         }
 
         [DataMember]
@@ -73,16 +73,16 @@ namespace MorWalPizVideo.Server.Models
         public string Duration { get; init; }
         
         [DataMember]
-        [BsonElement("category")]
-        public string Category { get; init; } = "";
+        [BsonElement("categories")]
+        public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
         
         // Constructor to create minimal video from a video reference
-        public Video(string youtubeId, string category) 
-            : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateOnly.MinValue, string.Empty, string.Empty, category)
+        public Video(string youtubeId, CategoryRef[] categories) 
+            : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateOnly.MinValue, string.Empty, string.Empty, categories)
         {
         }
         
         // Convert to VideoRef for lightweight references
-        public VideoRef ToVideoRef() => new VideoRef(YoutubeId, Category);
+        public VideoRef ToVideoRef() => new VideoRef(YoutubeId, Categories, Title, Description, PublishedAt);
     }
 }

@@ -33,7 +33,7 @@ const CreateChannel: React.FC = () => {
       toast.show('Success', 'Channel created successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate, toast]);
+  }, [result, navigate]);
 
   const isDisabled = () =>
     !model.channelName ||
