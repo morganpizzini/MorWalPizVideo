@@ -6,7 +6,39 @@ As of the latest session, development is actively focused on implementing the Pr
 
 ## Recent Development Activity
 
-### Products and Sponsors Management System (Latest)
+### Docker Containerization Setup (Latest - December 19, 2025)
+- **Multi-Stage Dockerfile**: Created production-ready containerization for back-office-spa
+  - Stage 1: Node.js 20 Alpine for building with `@morwalpizvideo/models` dependency
+  - Stage 2: Nginx Alpine for serving (~50-80MB final image)
+- **Nginx Configuration**: Production web server setup
+  - SPA routing with fallback to index.html
+  - Static asset caching (1 year for immutable files)
+  - Security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
+  - Gzip compression enabled
+  - Health check endpoint at `/health`
+- **Runtime Environment Injection**: Dynamic API URL configuration
+  - `docker-entrypoint.sh` creates `env-config.js` at startup
+  - Supports VITE_API_BASE_URL, API_BASE_URL environment variables
+  - No rebuild required to change API endpoints
+- **Build Context Optimization**: `.dockerignore` for efficient builds
+- **Azure Deployment Documentation**: Complete guide for ACR, App Service, and ACI
+- **CI/CD Integration**: GitHub Actions example for automated builds and deployments
+- **Comprehensive Documentation**: `DOCKER.md` with build/run/deploy instructions
+
+### Shared Models Library Architecture (December 2025)
+- **Workspace Configuration**: Implemented npm workspaces for monorepo structure
+- **Shared Models Package**: Created `@morwalpizvideo/models` as centralized TypeScript models library
+- **Package Structure**: 
+  - `packages/models/` - Shared models with 14 model files
+  - TypeScript compilation to `dist/` directory
+  - Proper exports configuration for ES modules
+- **Model Migration**: Moved all models from `back-office-spa/src/models` to shared package
+- **Cross-Application Usage**: Both `back-office-spa` and `morwalpizvideo.client` now import from shared library
+- **Import Path Updates**: Changed from `@models` to `@morwalpizvideo/models` across both applications
+- **Export Configuration**: Fixed enum exports (ContentType, LinkType) to work as values, not just types
+- **Build System**: Configured TypeScript compilation for shared library with proper module resolution
+
+### Products and Sponsors Management System
 - **Products API**: Complete CRUD operations in `ProductsController.cs`
 - **Product Categories API**: Full management in `ProductCategoriesController.cs`
 - **Sponsors API**: Complete endpoints in `SponsorsController.cs`
@@ -43,6 +75,41 @@ As of the latest session, development is actively focused on implementing the Pr
 - **WPF Video Importer**: Active development of Windows desktop application
 - **Video Translation Dialog**: UI for bulk translation operations
 - **API Service Integration**: Connection between desktop app and web API
+
+## Deployment & Infrastructure
+
+### Docker Containerization
+**Current State**: Production-ready Docker setup for back-office-spa
+- Multi-stage Dockerfile with optimized layers
+- Nginx-based serving with SPA routing support
+- Runtime environment variable injection
+- Comprehensive deployment documentation
+
+**Key Files**:
+- `back-office-spa/Dockerfile` - Multi-stage build configuration
+- `back-office-spa/nginx.conf` - Production web server setup
+- `back-office-spa/.dockerignore` - Build context optimization
+- `back-office-spa/docker-entrypoint.sh` - Runtime configuration script
+- `back-office-spa/DOCKER.md` - Complete deployment guide
+
+**Azure Deployment Ready**:
+- Azure Container Registry (ACR) integration
+- Azure App Service deployment patterns
+- Azure Container Instances (ACI) support
+- Environment variable configuration at platform level
+
+**Build Command**:
+```bash
+# From monorepo root
+docker build -f back-office-spa/Dockerfile -t back-office-spa:latest .
+```
+
+**Run Command**:
+```bash
+docker run -d -p 8080:80 \
+  -e VITE_API_BASE_URL=https://api.example.com \
+  back-office-spa:latest
+```
 
 ## Key Working Areas
 

@@ -1,99 +1,222 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MorWalPizVideo.Server.Models;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Services;
 
-namespace MorWalPizVideo.BackOffice.Controllers;
-
-public class CreateCalendarEventRequest
+namespace MorWalPizVideo.BackOffice.Controllers
 {
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public DateOnly Date { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public string MatchId { get; set; } = string.Empty;
-}
-
-public class UpdateCalendarEventRequest
-{
-    public string Title { get; set; } = string.Empty;
-    public string NewTitle { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public DateOnly Date { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public string MatchId { get; set; } = string.Empty;
-}
-
-public class CalendarEventsController : ApplicationControllerBase
-{
-    private readonly DataService _dataService;
-
-    public CalendarEventsController(DataService dataService)
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class CalendarEventsController : ControllerBase
     {
-        _dataService = dataService;
-    }
+        private readonly IGenericDataService _dataService;
+        private readonly ILogger<CalendarEventsController> _logger;
 
-    [HttpGet]
-    public async Task<IActionResult> GetCalendarEvents()
-    {
-        return Ok(await _dataService.GetCalendarEvents());
-    }
-
-    [HttpGet("{title}")]
-    public async Task<IActionResult> GetCalendarEventByTitle(string title)
-    {
-        var entity = (await _dataService.GetCalendarEventByTitle(title));
-
-        if (entity == null)
-            return NotFound("Calendar event not found");
-
-        return Ok(entity);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> CreateCalendarEvent(CreateCalendarEventRequest request)
-    {
-        var calendarEvent = new CalendarEvent(
-            request.Title,
-            request.Description,
-            request.Date,
-            request.Category,
-            request.MatchId);
-
-        await _dataService.SaveCalendarEvent(calendarEvent);
-
-        return NoContent();
-    }
-
-    [HttpPut]
-    public async Task<IActionResult> UpdateCalendarEvent(UpdateCalendarEventRequest request)
-    {
-        var entity = await _dataService.GetCalendarEventByTitle(request.Title);
-        if (entity == null)
-            return BadRequest("Calendar event not found");
-
-        var updatedEvent = entity with
+        public CalendarEventsController(
+            IGenericDataService dataService,
+            ILogger<CalendarEventsController> logger)
         {
-            Title = request.NewTitle,
-            Description = request.Description,
-            Date = request.Date,
-            Category = request.Category,
-            MatchId = request.MatchId
-        };
+            _dataService = dataService;
+            _logger = logger;
+        }
 
-        await _dataService.UpdateCalendarEvent(updatedEvent);
+        /// <summary>
+        /// Get all calendar events
+        /// </summary>
+        [HttpGet]
+        public async Task<ActionResult<IList<CalendarEvent>>> GetAll()
+        {
+            try
+            {
+                var events = await _dataService.GetCalendarEvents();
+                return Ok(events);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching calendar events");
+                return StatusCode(500, "An error occurred while fetching calendar events");
+            }
+        }
 
-        return NoContent();
-    }
+        /// <summary>
+        /// Get calendar event by title
+        /// </summary>
+        [HttpGet("by-title/{title}")]
+        public async Task<ActionResult<CalendarEvent>> GetByTitle(string title)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    return BadRequest("Title cannot be empty");
+                }
 
-    [HttpDelete("{title}")]
-    public async Task<IActionResult> DeleteCalendarEvent(string title)
-    {
-        var entity = await _dataService.GetCalendarEventByTitle(title);
-        if (entity == null)
-            return BadRequest("Calendar event not found");
+                var calendarEvent = await _dataService.GetCalendarEventByTitle(title);
+                if (calendarEvent == null)
+                {
+                    return NotFound($"Calendar event with title '{title}' not found");
+                }
 
-        await _dataService.DeleteCalendarEvent(entity.Id);
+                return Ok(calendarEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching calendar event by title: {Title}", title);
+                return StatusCode(500, "An error occurred while fetching the calendar event");
+            }
+        }
 
-        return NoContent();
+        /// <summary>
+        /// Create a new calendar event
+        /// </summary>
+        [HttpPost]
+        public async Task<ActionResult<CalendarEvent>> Create([FromBody] CalendarEvent calendarEvent)
+        {
+            try
+            {
+                if (calendarEvent == null)
+                {
+                    return BadRequest("Calendar event data is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(calendarEvent.Title))
+                {
+                    return BadRequest("Title is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(calendarEvent.Description))
+                {
+                    return BadRequest("Description is required");
+                }
+
+                if (calendarEvent.StartDate == default)
+                {
+                    return BadRequest("Start date is required");
+                }
+
+                if (calendarEvent.EndDate == default)
+                {
+                    return BadRequest("End date is required");
+                }
+
+                if (calendarEvent.EndDate < calendarEvent.StartDate)
+                {
+                    return BadRequest("End date must be after start date");
+                }
+
+                // Check if event with same title already exists
+                var existingEvent = await _dataService.GetCalendarEventByTitle(calendarEvent.Title);
+                if (existingEvent != null)
+                {
+                    return Conflict($"Calendar event with title '{calendarEvent.Title}' already exists");
+                }
+
+                // Generate new ID if not provided
+                if (string.IsNullOrWhiteSpace(calendarEvent.Id))
+                {
+                    calendarEvent.Id = Guid.NewGuid().ToString();
+                }
+
+                await _dataService.SaveCalendarEvent(calendarEvent);
+                
+                _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
+                
+                return CreatedAtAction(nameof(GetByTitle), new { title = calendarEvent.Title }, calendarEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating calendar event");
+                return StatusCode(500, "An error occurred while creating the calendar event");
+            }
+        }
+
+        /// <summary>
+        /// Update an existing calendar event
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Update(string id, [FromBody] CalendarEvent calendarEvent)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return BadRequest("ID is required");
+                }
+
+                if (calendarEvent == null)
+                {
+                    return BadRequest("Calendar event data is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(calendarEvent.Title))
+                {
+                    return BadRequest("Title is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(calendarEvent.Description))
+                {
+                    return BadRequest("Description is required");
+                }
+
+                if (calendarEvent.StartDate == default)
+                {
+                    return BadRequest("Start date is required");
+                }
+
+                if (calendarEvent.EndDate == default)
+                {
+                    return BadRequest("End date is required");
+                }
+
+                if (calendarEvent.EndDate < calendarEvent.StartDate)
+                {
+                    return BadRequest("End date must be after start date");
+                }
+
+                // Ensure the ID in the URL matches the ID in the body
+                if (calendarEvent.Id != id)
+                {
+                    calendarEvent.Id = id;
+                }
+
+                await _dataService.UpdateCalendarEvent(calendarEvent);
+                
+                _logger.LogInformation("Calendar event updated: {Id} - {Title}", id, calendarEvent.Title);
+                
+                return Ok(calendarEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating calendar event with ID: {Id}", id);
+                return StatusCode(500, "An error occurred while updating the calendar event");
+            }
+        }
+
+        /// <summary>
+        /// Delete a calendar event
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return BadRequest("ID is required");
+                }
+
+                await _dataService.DeleteCalendarEvent(id);
+                
+                _logger.LogInformation("Calendar event deleted: {Id}", id);
+                
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting calendar event with ID: {Id}", id);
+                return StatusCode(500, "An error occurred while deleting the calendar event");
+            }
+        }
     }
 }

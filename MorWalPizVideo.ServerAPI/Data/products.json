@@ -217,9 +217,18 @@
   },
   {
     "title": "Treppiede statico",
-    "description": "",
+    "description": "descrizione",
     "url": "https://amzn.to/48CFixZ",
-    "categories": null,
+    "categories": [
+      {
+        "id": "1",
+        "title": "Categoria prodotto 1"
+      },
+      {
+        "id": "2",
+        "title": "Categoria prodotto 2"
+      }
+    ],
     "id": null,
     "creationDateTime": "2025-12-06T16:59:14.1391838+01:00"
   },
@@ -227,7 +236,16 @@
     "title": "Gorilla pod",
     "description": "",
     "url": "https://amzn.to/48Ghrxw",
-    "categories": null,
+    "categories": [
+      {
+        "id": "2",
+        "title": "Categoria prodotto 2"
+      },
+      {
+        "id": "3",
+        "title": "Categoria prodotto 3"
+      }
+    ],
     "id": null,
     "creationDateTime": "2025-12-06T16:59:14.1391814+01:00"
   },
@@ -235,13 +253,18 @@
     "title": "Telefono Pixel 8",
     "description": "Per ogni mia registrazione fatta con il timer Shooter Go",
     "url": "https://amzn.to/4ee8H2S",
-    "categories": null,
+    "categories": [
+      {
+        "id": "2",
+        "title": "Categoria prodotto 2"
+      }
+    ],
     "id": null,
     "creationDateTime": "2025-12-06T16:59:14.1391738+01:00"
   },
   {
-    "title": "dfgbn",
-    "description": "asdf",
+    "title": "Prodotto 1",
+    "description": "Descrizione 1",
     "url": "https://google.com",
     "categories": [
       {

@@ -13,13 +13,13 @@ namespace MorWalPizVideo.Server.Models
             string title,
             string description,
             DateOnly date,
-            string category,
+            CategoryRef[] categories,
             string matchId = "")
         {
             Title = title;
             Description = description;
             Date = date;
-            Category = category;
+            Categories = categories;
             MatchId = matchId;
         }
 
@@ -36,8 +36,8 @@ namespace MorWalPizVideo.Server.Models
         public DateOnly Date { get; init; }
 
         [DataMember]
-        [BsonElement("category")]
-        public string Category { get; init; }
+        [BsonElement("categories")]
+        public CategoryRef[] Categories { get; init; }
 
         [DataMember]
         [BsonElement("matchId")]

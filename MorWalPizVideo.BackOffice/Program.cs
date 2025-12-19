@@ -34,6 +34,7 @@ var enableHangFire = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enabl
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
 // Configure the CORS policy
 builder.Services.AddCors(options =>
@@ -45,6 +46,14 @@ builder.Services.AddCors(options =>
                    .AllowAnyMethod()
                    .AllowAnyHeader();
         });
+
+    options.AddPolicy("MorWalPizPolicy",
+        builder =>
+    {
+        builder.WithOrigins("https://morwalpiz.com")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
 });
 
 // Configure Azure KeyVault if enabled
@@ -209,7 +218,7 @@ if (enableMock)
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-    
+
 }
 else
 {
@@ -237,7 +246,7 @@ else
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
-    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>(); 
+    builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
@@ -292,8 +301,8 @@ if (enableHangFire)
     );
 }
 
-// Enable the defined CORS policy globally
-app.UseCors("AllowAllOrigins");
+app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
+
 
 app.MapDefaultEndpoints();
 

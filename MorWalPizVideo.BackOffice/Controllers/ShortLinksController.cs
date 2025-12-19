@@ -52,10 +52,10 @@ public class ShortLinksController : ApplicationControllerBase
         return Ok(shortlinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
     }
 
-    [HttpGet("{videoId}")]
-    public async Task<IActionResult> GetShortLink(string videoId)
+    [HttpGet("{code}")]
+    public async Task<IActionResult> GetShortLink(string code)
     {
-        var shortlink = await _dataService.GetShortLinkByCode(videoId);
+        var shortlink = await _dataService.GetShortLinkByCode(code);
 
         if (shortlink == null)
         {
@@ -67,24 +67,50 @@ public class ShortLinksController : ApplicationControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateShortLink(CreateShortLinkRequest request)
     {
-        var existingMatch = await _dataService.FindMatch(request.Target);
-        if (existingMatch == null)
-        {
-            return BadRequest("Match do not exists");
-        }
-
-        var existingQueryLink =
-            await _dataService.FetchQueryLinks(request.QueryLinkIds);
-
         var shortLinkCode = await CalculateShortLink();
-        var shortlink = new ShortLink(shortLinkCode, request.Target,
-            existingQueryLink);
-
-        await _dataService.SaveShortLink(shortlink);
-
-        var json = await client.ResetCache(CacheKeys.ShortLinks);
-
+        var existingQueryLink =
+                    await _dataService.FetchQueryLinks(request.QueryLinkIds);
+        var newShortLink = new ShortLink(shortLinkCode, request.Target, existingQueryLink);
         var siteUrl = configuration.GetValue<string>("SiteUrl");
+
+        switch (request.LinkType)
+        {
+            case LinkType.YouTubeVideo:
+                var existingMatch = await _dataService.FindMatch(request.Target);
+                if (existingMatch == null)
+                {
+                    return BadRequest("Match do not exists");
+                }
+                var existingContentShortLink = existingMatch.ShortLinks
+                    .FirstOrDefault(x => x.Target == newShortLink.Target 
+                                                    && x.QueryString == newShortLink.QueryString);
+                if (existingContentShortLink != null)
+                {
+                    return Ok($"{siteUrl}{existingContentShortLink.Code}");
+                }
+                existingMatch.AddShortLink(newShortLink);
+                await _dataService.UpdateMatch(existingMatch);
+                break;
+            case LinkType.YouTubeChannel:
+                var existingChannel = await _dataService.GetChannel(request.Target);
+                if (existingChannel == null)
+                {
+                    return BadRequest("Channel do not exists");
+                }
+                var exisintgShortLink = existingChannel.ShortLinks.FirstOrDefault(x => x.Target == newShortLink.Target
+                                                    && x.QueryString == newShortLink.QueryString);
+                if (exisintgShortLink != null)
+                {
+                    return Ok($"{siteUrl}{exisintgShortLink.Code}");
+                }
+                existingChannel.AddShortLink(newShortLink);
+                await _dataService.UpdateChannel(existingChannel);
+                break;
+            default:
+                await _dataService.SaveShortLink(newShortLink);
+                break;
+        }
+        var json = await client.ResetCache(CacheKeys.ShortLinks);
 
         if (!string.IsNullOrEmpty(request.Message))
         {
@@ -92,7 +118,7 @@ public class ShortLinksController : ApplicationControllerBase
             await telegramService.CreatePost(shortLinkCode, request.Message);
         }
 
-        return Ok($"{siteUrl}{shortlink.Code}");
+        return Ok($"{siteUrl}{newShortLink.Code}");
 
         async Task<string> CalculateShortLink()
         {
@@ -137,11 +163,36 @@ public class ShortLinksController : ApplicationControllerBase
         var existingQueryLink = 
             await _dataService.FetchQueryLinks(request.Body.QueryLinkIds);
         
-        var updatedShortLink = existingShortLink with { Target = request.Body.Target, 
+        var updatedShortLink = existingShortLink with { 
+            Target = request.Body.Target, 
             QueryLinks = existingQueryLink, 
-            LinkType = request.Body.LinkType };
+            LinkType = request.Body.LinkType 
+        };
 
-        await _dataService.UpdateShortlink(updatedShortLink);
+        switch (request.Body.LinkType)
+        {
+            case LinkType.YouTubeVideo:
+                var existingMatch = await _dataService.FindMatch(request.Body.Target);
+                if (existingMatch == null)
+                {
+                    return BadRequest("Match do not exists");
+                }
+                existingMatch = existingMatch.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                await _dataService.UpdateMatch(existingMatch);
+                break;
+            case LinkType.YouTubeChannel:
+                var existingChannel = await _dataService.GetChannel(request.Body.Target);
+                if (existingChannel == null)
+                {
+                    return BadRequest("Channel do not exists");
+                }
+                existingChannel = existingChannel.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                await _dataService.UpdateChannel(existingChannel);
+                break;
+            default:
+                await _dataService.UpdateShortlink(updatedShortLink);
+                break;
+        }
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
 
@@ -153,11 +204,37 @@ public class ShortLinksController : ApplicationControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteShortLink(string id)
     {
-        var entity = await _dataService.GetShortLink(id);
-        if (entity == null)
-            return BadRequest("Shortlink not found");
+        var existingShortLink = await _dataService.GetShortLink(id);
+        if (existingShortLink == null)
+            return NotFound("Short link not found");
 
-        await _dataService.DeleteShortLink(id);
+        switch (existingShortLink.LinkType)
+        {
+            case LinkType.YouTubeVideo:
+                var existingMatch = await _dataService.FindMatch(existingShortLink.Target);
+                if (existingMatch == null)
+                {
+                    return BadRequest("Match does not exist");
+                }
+                existingMatch = existingMatch.RemoveShortLink(existingShortLink.Code);
+                await _dataService.UpdateMatch(existingMatch);
+                break;
+            case LinkType.YouTubeChannel:
+                var existingChannel = await _dataService.GetChannel(existingShortLink.Target);
+                if (existingChannel == null)
+                {
+                    return BadRequest("Channel does not exist");
+                }
+                existingChannel = existingChannel.RemoveShortLink(existingShortLink.Code);
+                await _dataService.UpdateChannel(existingChannel);
+                break;
+            default:
+                await _dataService.DeleteShortLink(id);
+                break;
+        }
+
+        var json = await client.ResetCache(CacheKeys.ShortLinks);
+
         return NoContent();
     }
 }

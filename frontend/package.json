@@ -1,0 +1,20 @@
+{
+  "name": "morwalpizvideo-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MorWalPizVideo monorepo with shared models",
+  "workspaces": [
+    "packages/*",
+    "back-office-spa",
+    "morwalpizvideo.client"
+  ],
+  "scripts": {
+    "build:models": "cd packages/models && npm run build",
+    "clean:models": "cd packages/models && npm run clean",
+    "install:all": "npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

@@ -42,6 +42,6 @@ namespace MorWalPizVideo.Server.Models
         public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
 
         [BsonIgnore]
-        public string QueryString => string.Join("&", QueryLinks.Select(ql => ql.Value));
+        public string QueryString => QueryLinks != null ? string.Join("&", QueryLinks.Select(ql => ql.Value)) : string.Empty;
     }
 }

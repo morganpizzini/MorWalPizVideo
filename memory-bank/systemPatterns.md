@@ -98,13 +98,48 @@ Application Cache → Redis/Memory Cache → Database
 
 ## Frontend Architecture Patterns
 
+### Monorepo Structure with Shared Models
+```
+MorWalPizVideo/
+├── packages/
+│   └── models/              # Shared TypeScript models library
+│       ├── src/
+│       │   ├── CalendarEvent.ts
+│       │   ├── categories.ts
+│       │   ├── channel.ts
+│       │   ├── configuration.ts
+│       │   ├── font.ts
+│       │   ├── product.ts
+│       │   ├── productCategory.ts
+│       │   ├── queryLink.ts
+│       │   ├── shortLink.ts
+│       │   ├── sponsor.ts
+│       │   ├── youTubeVideoLink.ts
+│       │   ├── video/
+│       │   │   ├── types.ts
+│       │   │   └── service.ts
+│       │   └── index.ts     # Barrel exports
+│       ├── package.json
+│       └── tsconfig.json
+├── back-office-spa/         # Admin SPA application
+│   └── imports from @morwalpizvideo/models
+└── morwalpizvideo.client/   # Public client application
+    └── imports from @morwalpizvideo/models
+```
+
+### Shared Models Package Pattern
+- **Single Source of Truth**: All TypeScript models defined once in shared package
+- **Version Control**: Centralized model versioning across applications
+- **Type Safety**: Consistent types between backend contracts and frontend usage
+- **Build Output**: Compiled to `dist/` with ES module exports
+- **Import Pattern**: `import { Model } from '@morwalpizvideo/models'`
+
 ### React Application Structure
 ```
 BackOfficeSPA/
 ├── Components/ (Reusable UI components)
 ├── Routes/ (Page-level components with loaders/actions)
 ├── Services/ (API communication layer)
-├── Models/ (TypeScript type definitions)
 └── Layouts/ (Page layout components)
 ```
 
@@ -167,6 +202,82 @@ services.AddScoped<IExternalDataService, ExternalDataService>();
 - **Repository Mocking**: MockRepository for unit tests
 - **Integration Tests**: Full API testing with test databases
 - **Component Testing**: React Testing Library for frontend components
+
+## Deployment & Containerization Patterns
+
+### Docker Multi-Stage Build Pattern
+```dockerfile
+# Stage 1: Build Stage
+FROM node:20-alpine AS builder
+- Install dependencies
+- Build shared packages (@morwalpizvideo/models)
+- Build React SPA application
+- Output static files
+
+# Stage 2: Production Stage  
+FROM nginx:alpine
+- Copy built static files
+- Copy nginx configuration
+- Runtime environment injection
+- Minimal production footprint (~50-80MB)
+```
+
+### Containerization Strategy
+- **Multi-Stage Builds**: Separate build and runtime environments
+- **Alpine Linux**: Minimal base images for security and size
+- **Layer Caching**: Optimized Dockerfile for efficient rebuilds
+- **Build Context**: Monorepo-aware builds from repository root
+
+### Runtime Configuration Pattern
+```bash
+# Environment injection at container startup
+ENTRYPOINT creates env-config.js with:
+- VITE_API_BASE_URL
+- API_BASE_URL
+- Runtime-configurable API endpoints
+```
+
+### Nginx SPA Serving Pattern
+```nginx
+# SPA Routing: All routes fallback to index.html
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
+# Static Asset Caching: 1 year for immutable files
+location ~* \.(js|css|png|jpg|svg|woff|woff2)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# Security Headers: XSS protection, content type sniffing
+add_header X-Frame-Options "SAMEORIGIN";
+add_header X-Content-Type-Options "nosniff";
+```
+
+### Azure Deployment Pattern
+- **Container Registry (ACR)**: Centralized image storage
+- **App Service**: Managed container hosting with automatic scaling
+- **Container Instances (ACI)**: Lightweight container deployment
+- **Environment Variables**: Platform-level configuration injection
+
+### Health Check Pattern
+```nginx
+# Health endpoint for monitoring
+location /health {
+    return 200 "healthy\n";
+    access_log off;
+}
+```
+
+### CI/CD Integration Pattern
+```yaml
+# GitHub Actions workflow
+Build → Test → Push to ACR → Deploy to Azure
+- Automated builds on commits
+- Tagged versions for releases
+- Environment-specific deployments
+```
 
 ## Performance Patterns
 

@@ -61,9 +61,20 @@ MorWalPizVideo is built using modern Microsoft .NET technologies with React for 
 
 ### Package Management
 - **NuGet**: .NET package management
-- **npm/yarn**: Node.js package management
+- **npm**: Node.js package management with workspaces support
+- **npm Workspaces**: Monorepo package management for shared libraries
 - **MSBuild**: .NET build system
 - **dotnet CLI**: Command-line interface for .NET operations
+
+### Monorepo Structure
+- **Shared Models Package**: `@morwalpizvideo/models` - Centralized TypeScript models
+- **Workspace Configuration**: Root `package.json` manages multiple packages
+- **Package Organization**:
+  - `packages/models/` - Shared TypeScript type definitions
+  - `back-office-spa/` - Admin SPA application
+  - `morwalpizvideo.client/` - Public client application
+- **Build Pipeline**: TypeScript compilation to distributable ES modules
+- **Version Management**: Single source of truth for model versions
 
 ### Version Control
 - **Git**: Distributed version control

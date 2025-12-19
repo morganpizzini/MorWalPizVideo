@@ -23,24 +23,20 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         {
             // First, try to find shortlink in YouTubeContent entities
             var youtubeContents = await FetchMatches();
-            foreach (var content in youtubeContents)
+            var shortLink = youtubeContents.FirstOrDefault(x=>x.GetShortLink(code) != null)?.GetShortLink(code);
+            
+            if (shortLink != null)
             {
-                var shortLink = content.GetShortLink(code);
-                if (shortLink != null)
-                {
-                    return shortLink;
-                }
+                return shortLink;
             }
 
             // Second, try to find shortlink in YTChannel entities
             var channels = await FetchChannels();
-            foreach (var channel in channels)
+            shortLink = channels.FirstOrDefault(x=>x.GetShortLink(code) != null)?.GetShortLink(code);
+            
+            if (shortLink != null)
             {
-                var shortLink = channel.GetShortLink(code);
-                if (shortLink != null)
-                {
-                    return shortLink;
-                }
+                return shortLink;
             }
 
             // Finally, check standalone shortlinks (for non-YouTube content)

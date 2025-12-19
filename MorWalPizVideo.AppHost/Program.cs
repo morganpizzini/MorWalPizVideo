@@ -19,7 +19,7 @@ builder.AddNpmApp("morwalpizvideo", "../morwalpizvideo.client", "dev")
 var backoffice = builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoffice")
                     .InGroup(backendGroup);
 
-builder.AddNpmApp("back-office-spa", "../BackOfficeSPA/back-office-spa", "dev")
+builder.AddNpmApp("back-office-spa", "../back-office-spa", "dev")
     .WithReference(backoffice)
     .WaitFor(backoffice)
     .WithEnvironment("ASPNETCORE_URLS", backoffice.GetEndpoint("https"))

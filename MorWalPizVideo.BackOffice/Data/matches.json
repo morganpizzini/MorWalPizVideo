@@ -1,9 +1,9 @@
 [
   {
     "contentId": "wertyu",
-    "title": "",
-    "description": "",
-    "url": "",
+    "title": "sub page title",
+    "description": "sub page description",
+    "url": "sub-page-url",
     "thumbnailVideoId": "wertyu",
     "videoRefs": [
       {
@@ -18,8 +18,21 @@
             "title": "Categoria 2"
           }
         ],
-        "title": "",
-        "description": "",
+        "title": "first Video",
+        "description": "first description",
+        "publishedAt": "0001-01-01",
+        "creationDateTime": "2025-12-04T22:47:55.5585501+01:00"
+      },
+      {
+        "youtubeId": "abcdefg",
+        "categories": [
+          {
+            "id": "3",
+            "title": "Categoria 1"
+          }
+        ],
+        "title": "second",
+        "description": "second description",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-04T22:47:55.5585501+01:00"
       }
@@ -78,15 +91,27 @@
     ],
     "contentType": 0,
     "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "shortLinks": [
+      {
+        "id": "afdgs",
+        "code": "short1",
+        "target": "wqertwqteteyw",
+        "queryLinks": [
+          {
+            "title": "myPlaylist",
+            "value": "list=myplaylistId"
+          }
+        ]
+      }
+    ],
     "isLink": true,
     "id": "6931d87ae122fa7f27d528fd",
     "creationDateTime": "2025-12-04T19:52:42.7538404+01:00"
   },
   {
     "contentId": "wertrrr",
-    "title": "",
-    "description": "",
+    "title": "Titolo 1 ",
+    "description": "descrizione 1",
     "url": "",
     "thumbnailVideoId": "wertrrr",
     "videoRefs": [
@@ -106,8 +131,8 @@
             "title": "Categoria 3"
           }
         ],
-        "title": "",
-        "description": "",
+        "title": "titolo 1",
+        "description": "descrizione 1",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-04T19:45:53.4001558+01:00"
       }
@@ -135,8 +160,8 @@
   },
   {
     "contentId": "werh",
-    "title": "",
-    "description": "",
+    "title": "titolo 2",
+    "description": "descrizione 2",
     "url": "",
     "thumbnailVideoId": "werh",
     "videoRefs": [
@@ -152,8 +177,8 @@
             "title": "Categoria 3"
           }
         ],
-        "title": "",
-        "description": "",
+        "title": "titolo 2",
+        "description": "descrizione 2",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-04T19:45:25.2017733+01:00"
       }
@@ -177,8 +202,8 @@
   },
   {
     "contentId": "34tyuj",
-    "title": "",
-    "description": "",
+    "title": "titolo 3",
+    "description": "descrizione 3",
     "url": "",
     "thumbnailVideoId": "34tyuj",
     "videoRefs": [
@@ -190,8 +215,8 @@
             "title": "Categoria 3"
           }
         ],
-        "title": "",
-        "description": "",
+        "title": "titolo 3",
+        "description": "descrizione 3",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-04T19:32:44.2203184+01:00"
       }
@@ -211,8 +236,8 @@
   },
   {
     "contentId": "2345t",
-    "title": "",
-    "description": "",
+    "title": "titolo 4",
+    "description": "descrizione 4",
     "url": "",
     "thumbnailVideoId": "2345t",
     "videoRefs": [
@@ -224,8 +249,8 @@
             "title": "Categoria 3"
           }
         ],
-        "title": "",
-        "description": "",
+        "title": "titolo 4",
+        "description": "descrizione 4",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-04T19:32:10.7378883+01:00"
       }
@@ -245,16 +270,16 @@
   },
   {
     "contentId": "234567",
-    "title": "",
-    "description": "",
+    "title": "titolo 5",
+    "description": "descrizione 5",
     "url": "",
     "thumbnailVideoId": "234567",
     "videoRefs": [
       {
         "youtubeId": "234567",
         "categories": [],
-        "title": "",
-        "description": "",
+        "title": "titolo 5",
+        "description": "descrizione 5",
         "publishedAt": "0001-01-01",
         "creationDateTime": "2025-12-01T07:32:56.9812662+01:00"
       }

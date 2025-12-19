@@ -9,5 +9,6 @@
         public const string EnableCache = nameof(EnableCache);
         public const string EnableKeyVault = nameof(EnableKeyVault);
         public const string EnableHangFire = nameof(EnableHangFire);
+        public const string EnableCors = nameof(EnableCors);
     }
 }
