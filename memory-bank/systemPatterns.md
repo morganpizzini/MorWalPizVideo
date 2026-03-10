@@ -155,6 +155,134 @@ BackOfficeSPA/
 - **Form State**: React Router actions for mutations
 - **No Global State**: Avoiding complexity with simple local state
 
+## API Controller Patterns
+
+### Request Contract Pattern
+All BackOffice API controllers follow a contract-based approach that separates API contracts from domain models:
+
+```csharp
+// 1. Define Request Contracts (in controller file)
+public class CreateEntityRequest
+{
+    [Required]
+    public string Title { get; set; } = string.Empty;
+    
+    [Required]
+    public string Description { get; set; } = string.Empty;
+    
+    [Required]
+    [Url]
+    public string Url { get; set; } = string.Empty;
+    
+    public NestedContract[] Items { get; set; } = [];
+}
+
+public class UpdateEntityRequest
+{
+    [Required]
+    public string Title { get; set; } = string.Empty;
+    
+    [Required]
+    public string Description { get; set; } = string.Empty;
+    
+    [Required]
+    [Url]
+    public string Url { get; set; } = string.Empty;
+    
+    public NestedContract[] Items { get; set; } = [];
+}
+
+// 2. Controller Actions Using Contracts
+[HttpPost]
+public async Task<ActionResult> Create(BaseRequest<CreateEntityRequest> request)
+{
+    // Convert contract to domain model
+    var entity = new DomainEntity(
+        request.Body.Title,
+        request.Body.Description,
+        request.Body.Url,
+        ConvertItems(request.Items)
+    );
+    
+    await _dataService.SaveEntity(entity);
+    return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
+}
+
+[HttpPut("{id}")]
+public async Task<ActionResult> Update(BaseRequestId<UpdateEntityRequest> request)
+{
+    var existing = await _dataService.GetEntityById(request.Id);
+    if (existing == null)
+        return NotFound();
+    
+    var updated = existing with
+    {
+        Title = request.Body.Title,
+        Description = request.Body.Description,
+        Url = request.Body.Url,
+        Items = ConvertItems(request.Body.Items)
+    };
+    
+    await _dataService.UpdateEntity(updated);
+    return NoContent();
+}
+
+[HttpDelete("{id}")]
+public async Task<ActionResult> Delete(BaseRequestId request)
+{
+    var entity = await _dataService.GetEntityById(request.Id);
+    if (entity == null)
+        return NotFound();
+    
+    await _dataService.DeleteEntity(request.Id);
+    return NoContent();
+}
+```
+
+### BaseRequest Helper Classes
+Standard request wrappers for consistent parameter binding:
+
+```csharp
+// From MorWalPizVideo.MvcHelpers.Utils
+public class BaseRequest
+{
+    // Can include common headers like Environment
+}
+
+public class BaseRequest<T> : BaseRequest where T : class, new()
+{
+    [FromBody]
+    public T Body { get; set; }
+}
+
+public class BaseRequestId : BaseRequest
+{
+    [FromRoute]
+    [Required]
+    public string Id { get; set; } = string.Empty;
+}
+
+public class BaseRequestId<T> : BaseRequest<T> where T : class, new()
+{
+    [FromRoute]
+    [Required]
+    public string Id { get; set; } = string.Empty;
+}
+```
+
+### Benefits of Contract Pattern
+1. **Separation of Concerns**: API contracts separate from domain models
+2. **Automatic Validation**: Data annotations provide built-in validation
+3. **Type Safety**: Route parameters properly bound via BaseRequestId
+4. **Consistency**: All controllers follow the same pattern
+5. **Maintainability**: Easier to evolve API contracts independently of domain
+6. **No Breaking Changes**: Domain model changes don't automatically affect API
+
+### Examples
+- **ProductsController**: Uses CreateProductRequest, UpdateProductRequest, BaseRequestId
+- **CompilationsController**: Uses CreateCompilationRequest, UpdateCompilationRequest, VideoRefContract
+- **CalendarEventsController**: Similar pattern with event-specific contracts
+
 ## Security Patterns
 
 ### Authentication & Authorization
@@ -168,7 +296,7 @@ JWT Token → Middleware Validation → Role-based Access → Controller Actions
 
 ### API Security
 - **CORS Configuration**: Proper cross-origin request handling
-- **Input Validation**: Model binding and data annotation validation
+- **Input Validation**: Model binding and data annotation validation via request contracts
 - **Error Handling**: Consistent error responses without information leakage
 
 ## Service Communication Patterns

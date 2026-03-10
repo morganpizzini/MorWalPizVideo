@@ -1,5 +1,3 @@
-using System;
-
 namespace MorWalPiz.VideoImporter.Services
 {
     public interface ITenantContext

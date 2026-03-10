@@ -91,26 +91,6 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 return NoContent();
             }
 
-            if (videoShortLink.ToLower() == "shootingita")
-            {
-                // Get the User-Agent from the headers
-                var userAgent1 = HttpContext.Request.Headers["User-Agent"].ToString();
-
-                string videoId1 = "QnkTAMRF07A";
-                // Base fallback URL for web browsers
-                string webUrl1 = $"https://www.youtube.com/watch?v={videoId1}";
-
-                // Detect device and set appropriate redirect URL
-                if (userAgent1.Contains("Android", StringComparison.OrdinalIgnoreCase))
-                    return Redirect($"vnd.youtube://watch?v={videoId1}");
-                else if (userAgent1.Contains("iPhone", StringComparison.OrdinalIgnoreCase) ||
-                         userAgent1.Contains("iPad", StringComparison.OrdinalIgnoreCase))
-                    return Redirect($"youtube://watch?v={videoId1}");
-
-                // Fallback to YouTube web URL for unsupported platforms
-                return Redirect(webUrl1);
-            }
-
             // Get device information for later use
             var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
             bool isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);

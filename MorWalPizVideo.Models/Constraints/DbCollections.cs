@@ -13,6 +13,8 @@
         public const string BioLinks = "bioLinks";
         public const string CalendarEvents = "calendarEvents";
         public const string Channels = "ytChannels";
+        public const string Compilations = "compilations";
+        public const string CustomForms = "customForms";
         public const string QueryLinks = "queryLinks";
         public const string PublishSchedules = "publishSchedules";
         
@@ -27,5 +29,6 @@
         public const string Configurations = "configurations";
         public const string Users = "users";
         public const string LoginAttempts = "loginAttempts";
+        public const string ApiKeys = "apiKeys";
     }
 }

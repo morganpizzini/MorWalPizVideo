@@ -58,6 +58,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class CompilationRepository : BaseRepository<Compilation>, ICompilationRepository
+    {
+        public CompilationRepository(IMongoDatabase database) : base(database, DbCollections.Compilations)
+        {
+        }
+    }
+
     public class ShortLinkRepository : BaseRepository<ShortLink>, IShortLinkRepository
     {
         public ShortLinkRepository(IMongoDatabase database) : base(database, DbCollections.ShortLinks)
@@ -93,6 +100,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
     {
         public CategoryRepository(IMongoDatabase database) : base(database, DbCollections.Categories)
+        {
+        }
+    }
+
+    public class CustomFormRepository : BaseRepository<CustomForm>, ICustomFormRepository
+    {
+        public CustomFormRepository(IMongoDatabase database) : base(database, DbCollections.CustomForms)
         {
         }
     }

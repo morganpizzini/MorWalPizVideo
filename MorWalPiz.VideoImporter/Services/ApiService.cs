@@ -9,9 +9,9 @@ namespace MorWalPiz.VideoImporter.Services
     public class ApiService
     {
         private readonly HttpClient _httpClient;
+        private readonly string? _apiKey;
 
-
-        public ApiService(string apiEndpoint)
+        public ApiService(string apiEndpoint, string? apiKey = null)
         {
             var handler = new SocketsHttpHandler
             {
@@ -25,9 +25,17 @@ namespace MorWalPiz.VideoImporter.Services
                 BaseAddress = new Uri(apiEndpoint),
                 Timeout = TimeSpan.FromSeconds(300) // 5 minutes timeout
             };
+            
+            _apiKey = apiKey;
+            
+            // Add API Key to default headers if provided
+            if (!string.IsNullOrEmpty(_apiKey))
+            {
+                _httpClient.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
+            }
         }
 
-        public async Task<Review> SendVideosContextAsync(IEnumerable<string> videoNames, string context, IList<Language> languagues)
+        public async Task<IList<ReviewApiVideoResponse>> SendVideosContextAsync(IEnumerable<string> videoNames, string context, IList<Language> languagues)
         {
             try
             {
@@ -43,11 +51,11 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     throw new HttpRequestException($"Error: {response.StatusCode}, {await response.Content.ReadAsStringAsync()}");
                 }
-                return (await response.Content.ReadFromJsonAsync<Review>()) ?? new();
+                return (await response.Content.ReadFromJsonAsync<IList<ReviewApiVideoResponse>>()) ?? [];
             }
             catch
             {
-                return new();
+                return [];
             }
         }
 

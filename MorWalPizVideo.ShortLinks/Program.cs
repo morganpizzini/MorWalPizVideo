@@ -64,11 +64,14 @@ if (enableMock)
 {
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
+    builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
+    
 }
 else
 {
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
+    builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
 
     // Configure MongoDB using Options pattern with lazy loading
     // This ensures Azure Key Vault configuration is fully loaded before accessing database settings

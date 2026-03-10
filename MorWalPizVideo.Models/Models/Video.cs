@@ -19,7 +19,7 @@ namespace MorWalPizVideo.Server.Models
             int views,
             int likes,
             int comments,
-            DateOnly publishedAt,
+            DateTime publishedAt,
             string thumbnail,
             string duration,
             CategoryRef[]? categories = null)
@@ -62,7 +62,7 @@ namespace MorWalPizVideo.Server.Models
         
         [DataMember]
         [BsonElement("publishedAt")]
-        public DateOnly PublishedAt { get; init; }
+        public DateTime PublishedAt { get; init; }
         
         [DataMember]
         [BsonElement("thumbnail")]
@@ -78,7 +78,7 @@ namespace MorWalPizVideo.Server.Models
         
         // Constructor to create minimal video from a video reference
         public Video(string youtubeId, CategoryRef[] categories) 
-            : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateOnly.MinValue, string.Empty, string.Empty, categories)
+            : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateTime.MinValue, string.Empty, string.Empty, categories)
         {
         }
         

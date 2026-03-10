@@ -29,7 +29,13 @@ export default function Calendar() {
                                     {/* Left section: Date and Event Info */}
                                     <div className="d-flex align-items-start flex-grow-1">
                                         <div className="event-date-display me-3">
-                                            <DateDisplay className="text-muted" dateString={event.date} />
+                                            <DateDisplay className="text-muted" dateString={event.startDate} />
+                                            {event.startDate !== event.endDate && (
+                                                <>
+                                                    <div className="text-center my-1">-</div>
+                                                    <DateDisplay className="text-muted" dateString={event.endDate} />
+                                                </>
+                                            )}
                                         </div>
                                         <div className="event-details flex-grow-1">
                                             <h5 className={`event-title mb-2 ${isOldEvent ? 'text-muted' : ''}`}>

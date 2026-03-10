@@ -27,9 +27,29 @@ MorWalPizVideo is in **active development** with core functionality operational 
 - **✅ Repository Pattern**: Abstracted data access with mock/production implementations
 - **✅ Service Layer Architecture**: Clean separation of business logic
 - **✅ Dependency Injection**: Proper IoC container configuration
-- **✅ JWT Authentication**: Token-based security implementation
-- **✅ Rate Limiting**: Protection against API abuse
+- **✅ JWT Authentication**: Token-based security for user authentication
+- **✅ API Key Authentication**: Secure service-to-service communication (VideoImporter)
+- **✅ Rate Limiting**: Protection against API abuse with per-key limits
 - **✅ Health Checks**: Application monitoring and status endpoints
+
+### Security & Authentication (Latest - February 13, 2026)
+- **✅ API Key Authentication System**: Complete VideoImporter-to-BackOffice security
+  - SHA256 hashed key storage
+  - Rate limiting (60 req/min default, configurable)
+  - Optional IP whitelisting with proxy support
+  - API key expiration and activation states
+  - Full CRUD management API (JWT-protected)
+  - Comprehensive documentation
+- **✅ API Key Management UI**: Complete frontend interface in morwalpizvideo.client
+  - List view with status badges and quick actions
+  - Create/Edit form with validation
+  - Detail view with regenerate and toggle functionality
+  - One-time key display modal (security critical feature)
+  - Copy-to-clipboard functionality
+  - Confirmation dialogs for destructive operations
+  - 4 routes: /apikeys, /apikeys/create, /apikeys/:id, /apikeys/:id/edit
+- **✅ Dual Authentication**: JWT for users, API Keys for services
+- **✅ Client Integration**: VideoImporter includes API keys automatically
 
 ### Frontend Application
 - **✅ React 19 SPA**: Modern single-page application with TypeScript

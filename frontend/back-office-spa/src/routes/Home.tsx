@@ -9,7 +9,8 @@ import {
   Video,
   Image,
   Calendar,
-  Settings
+  Settings,
+  List
 } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -152,6 +153,30 @@ const Home: React.FC = () => {
               gradientColors={['#ffecd2', '#fcb69f']}
             />
           </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Compilations"
+              subtitle="Gestione delle raccolte video"
+              content="Crea e gestisci raccolte di video YouTube organizzate per tema"
+              link="/compilations"
+              buttonText="Gestisci Compilations"
+              icon={List}
+              isSmall={true}
+              gradientColors={['#a18cd1', '#fbc2eb']}
+            />
+                  </Col>
+                  <Col md={4} className="g-4">
+                      <Card
+                          title="Custom Forms"
+                          subtitle="Gestione delle forms"
+                          content="Crea e gestisci le domande e risposte anonime"
+                          link="/customforms"
+                          buttonText="Gestisci Forms"
+                          icon={List}
+                          isSmall={true}
+                          gradientColors={['#a18cd1', '#fbc2eb']}
+                      />
+                  </Col>
         </Row>
       </Container>
     </>

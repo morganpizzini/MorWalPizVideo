@@ -81,8 +81,10 @@ if (enableMock)
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>();
     builder.Services.AddScoped<IUserRepository, UserMockRepository>();
+    builder.Services.AddScoped<ICompilationRepository, CompilationMockRepository>();
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
+    builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
 }
 else
 {
@@ -101,8 +103,10 @@ else
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<ICompilationRepository, CompilationRepository>();
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
+    builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
@@ -137,7 +141,13 @@ else
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Add custom converters for polymorphic types
+        options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
+    });
 
 // Add health checks
 builder.Services.AddHealthChecks();

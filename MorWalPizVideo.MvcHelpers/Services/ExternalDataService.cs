@@ -72,7 +72,7 @@ namespace MorWalPizVideo.Server.Services
                     {
                         Title = singleVideo.Title,
                         Description = singleVideo.Description,
-                        CreationDateTime = singleVideo.PublishedAt.ToDateTime(TimeOnly.MinValue)
+                        CreationDateTime = singleVideo.PublishedAt
                     };
                     
                     updatedMatches.Add(updatedMatch);
@@ -111,13 +111,13 @@ namespace MorWalPizVideo.Server.Services
                     var updatedMatch = match with { VideoRefs = updatedVideoRefs.ToArray() };
                     
                     // Update creation date time based on oldest video
-                    if (videosList.Count > 0 && videosList.Any(v => v.PublishedAt != DateOnly.MinValue))
+                    if (videosList.Count > 0 && videosList.Any(v => v.PublishedAt != DateTime.MinValue))
                     {
                         updatedMatch = updatedMatch with
                         {
                             CreationDateTime = videosList
-                                .Where(v => v.PublishedAt != DateOnly.MinValue)
-                                .Min(v => v.PublishedAt.ToDateTime(TimeOnly.MinValue))
+                                .Where(v => v.PublishedAt != DateTime.MinValue)
+                                .Min(v => v.PublishedAt)
                         };
                     }
 

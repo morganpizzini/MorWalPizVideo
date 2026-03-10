@@ -39,8 +39,16 @@ const CalendarEvents: React.FC = () => {
         cell: info => info.getValue(),
       },
       {
-        accessorKey: 'date',
-        header: 'Date',
+        accessorKey: 'startDate',
+        header: 'Start Date',
+        cell: info => {
+          const dateValue = info.getValue() as string;
+          return new Date(dateValue).toLocaleDateString();
+        },
+      },
+      {
+        accessorKey: 'endDate',
+        header: 'End Date',
         cell: info => {
           const dateValue = info.getValue() as string;
           return new Date(dateValue).toLocaleDateString();

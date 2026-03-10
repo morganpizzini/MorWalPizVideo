@@ -8,6 +8,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Configuration;
@@ -115,7 +116,13 @@ builder.Services.AddSingleton<IChatCompletionService>(sp =>
 builder.Services.AddTransient<Kernel>();
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Add custom converters for polymorphic types
+        options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
+    });
 
 if (!enableMock)
 {
@@ -178,6 +185,14 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRateLimitingService, RateLimitingService>();
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection("SecuritySettings"));
 
+// Configure API Key Authentication
+builder.Services.Configure<ApiKeySettings>(builder.Configuration.GetSection("ApiKeySettings"));
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+builder.Services.AddSingleton<IApiKeyRateLimitingService, ApiKeyRateLimitingService>();
+
+builder.Services.AddAuthentication()
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>("ApiKey", options => { });
+
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 
@@ -200,6 +215,7 @@ if (enableMock)
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
+    builder.Services.AddScoped<ICompilationRepository, CompilationMockRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
@@ -211,6 +227,8 @@ if (enableMock)
 
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
+    builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
+    builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
@@ -237,6 +255,7 @@ else
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
     builder.Services.AddScoped<IPageRepository, PageRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
+    builder.Services.AddScoped<ICompilationRepository, CompilationRepository>();
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
@@ -247,6 +266,8 @@ else
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+    builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
+    builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
@@ -260,7 +281,9 @@ else
 }
 
 if (enableSwagger)
+{
     builder.Services.AddOpenApi();
+}
 
 if (enableHangFire)
 {

@@ -57,6 +57,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class CompilationMockRepository : BaseMockRepository<Compilation>, ICompilationRepository
+    {
+        public CompilationMockRepository(IHostEnvironment environment) : base(environment, "compilations")
+        {
+        }
+    }
+
     public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
     {
         public BioLinkMockRepository(IHostEnvironment environment) : base(environment, "bioLinks") { }
@@ -169,6 +176,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class PublishScheduleMockRepository : BaseMockRepository<PublishSchedule>, IPublishScheduleRepository
     {
         public PublishScheduleMockRepository(IHostEnvironment environment) : base(environment, "publishSchedules")
+        {
+        }
+    }
+
+    public class CustomFormMockRepository : BaseMockRepository<CustomForm>, ICustomFormRepository
+    {
+        public CustomFormMockRepository(IHostEnvironment environment) : base(environment, "customForms")
         {
         }
     }

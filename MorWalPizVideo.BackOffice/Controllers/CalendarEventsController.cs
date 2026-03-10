@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers
@@ -10,11 +11,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
     [Authorize]
     public class CalendarEventsController : ControllerBase
     {
-        private readonly IGenericDataService _dataService;
+        private readonly DataService _dataService;
         private readonly ILogger<CalendarEventsController> _logger;
 
         public CalendarEventsController(
-            IGenericDataService dataService,
+            DataService dataService,
             ILogger<CalendarEventsController> logger)
         {
             _dataService = dataService;
@@ -112,12 +113,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return Conflict($"Calendar event with title '{calendarEvent.Title}' already exists");
                 }
 
-                // Generate new ID if not provided
-                if (string.IsNullOrWhiteSpace(calendarEvent.Id))
-                {
-                    calendarEvent.Id = Guid.NewGuid().ToString();
-                }
-
                 await _dataService.SaveCalendarEvent(calendarEvent);
                 
                 _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
@@ -174,11 +169,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("End date must be after start date");
                 }
 
-                // Ensure the ID in the URL matches the ID in the body
-                if (calendarEvent.Id != id)
-                {
-                    calendarEvent.Id = id;
-                }
+                
 
                 await _dataService.UpdateCalendarEvent(calendarEvent);
                 

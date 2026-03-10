@@ -22,8 +22,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             return Ok(await cache.GetOrCreateAsync(CacheKeys.BioLinks, async () =>
             {
                 var elements = (await dataService.GetCalendarEvents())
-                .Where(x => x.Date >= DateOnly.FromDateTime(DateTime.Now.AddDays(-10)))
-                .OrderByDescending(x => x.Date).ToList();
+                .Where(x => x.CreationDateTime >= DateTime.Now.AddDays(-10))
+                .OrderByDescending(x => x.CreationDateTime).ToList();
 
                 var matches = await FetchMatches();
 

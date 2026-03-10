@@ -60,7 +60,7 @@ const EditCalendarEvent: React.FC = () => {
         <input type="hidden" name="title" value={calendarEvent.title} />
 
         <Row className="mb-3">
-          <Col md={6}>
+          <Col md={12}>
             <Form.Group controlId="newTitle">
               <Form.Label>Title*</Form.Label>
               <Form.Control
@@ -78,19 +78,39 @@ const EditCalendarEvent: React.FC = () => {
               )}
             </Form.Group>
           </Col>
+        </Row>
+
+        <Row className="mb-3">
           <Col md={6}>
-            <Form.Group controlId="date">
-              <Form.Label>Date*</Form.Label>
+            <Form.Group controlId="startDate">
+              <Form.Label>Start Date*</Form.Label>
               <Form.Control
                 type="date"
-                name="date"
-                defaultValue={formatDateForInput(calendarEvent.date)}
-                isInvalid={!!errors?.fields?.date}
+                name="startDate"
+                defaultValue={formatDateForInput(calendarEvent.startDate)}
+                isInvalid={!!errors?.fields?.startDate}
                 required
               />
-              {errors?.fields?.date && (
+              {errors?.fields?.startDate && (
                 <Form.Control.Feedback type="invalid">
-                  {errors.fields.date}
+                  {errors.fields.startDate}
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group controlId="endDate">
+              <Form.Label>End Date*</Form.Label>
+              <Form.Control
+                type="date"
+                name="endDate"
+                defaultValue={formatDateForInput(calendarEvent.endDate)}
+                isInvalid={!!errors?.fields?.endDate}
+                required
+              />
+              {errors?.fields?.endDate && (
+                <Form.Control.Feedback type="invalid">
+                  {errors.fields.endDate}
                 </Form.Control.Feedback>
               )}
             </Form.Group>

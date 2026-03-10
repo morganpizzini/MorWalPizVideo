@@ -64,6 +64,14 @@ import * as ProductDetail from '../../routes/products/detail';
 import * as ProductCreate from '../../routes/products/create';
 import * as ProductEdit from '../../routes/products/edit';
 
+import Compilations from '../../routes/compilations/index';
+import CompilationDetail from '../../routes/compilations/detail';
+import CompilationForm from '../../routes/compilations/form';
+
+import CustomForms from '../../routes/customForms/index';
+import CustomFormDetail from '../../routes/customForms/detail';
+import CustomFormForm from '../../routes/customForms/form';
+
 /**
  * Protected routes (require authentication)
  * These routes are rendered within the PrimaryLayout component
@@ -346,6 +354,60 @@ export const protectedRoutes: RouteConfig[] = [
             loader: ProductEdit.loader,
             action: ProductEdit.action,
             Component: ProductEdit.Component,
+          },
+        ],
+      },
+    ],
+  }),
+
+  // Compilations
+  createRouteGroup('compilations', {
+    action: Compilations.Action,
+    children: [
+      { index: true, path: '', loader: Compilations.Loader, Component: Compilations.Component },
+      { path: 'create', loader: CompilationForm.Loader, Component: CompilationForm.Component, action: CompilationForm.Action },
+      {
+        path: ':id',
+        Component: Outlet,
+        children: [
+          {
+            index: true,
+            path: '',
+            loader: CompilationDetail.Loader,
+            Component: CompilationDetail.Component,
+          },
+          {
+            path: 'edit',
+            loader: CompilationForm.Loader,
+            action: CompilationForm.Action,
+            Component: CompilationForm.Component,
+          },
+        ],
+      },
+    ],
+  }),
+
+  // Custom Forms
+  createRouteGroup('customforms', {
+    action: CustomForms.Action,
+    children: [
+      { index: true, path: '', loader: CustomForms.Loader, Component: CustomForms.Component },
+      { path: 'create', loader: CustomFormForm.Loader, Component: CustomFormForm.Component, action: CustomFormForm.Action },
+      {
+        path: ':id',
+        Component: Outlet,
+        children: [
+          {
+            index: true,
+            path: '',
+            loader: CustomFormDetail.Loader,
+            Component: CustomFormDetail.Component,
+          },
+          {
+            path: 'edit',
+            loader: CustomFormForm.Loader,
+            action: CustomFormForm.Action,
+            Component: CustomFormForm.Component,
           },
         ],
       },

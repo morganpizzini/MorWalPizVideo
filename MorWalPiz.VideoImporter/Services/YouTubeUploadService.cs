@@ -4,10 +4,12 @@ using Google.Apis.Upload;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 
 namespace MorWalPiz.VideoImporter.Services
-{  
+{
     /// <summary>
     /// Implementazione del servizio di upload video su YouTube
     /// </summary>
@@ -18,6 +20,13 @@ namespace MorWalPiz.VideoImporter.Services
         private string _credentialsJson;
         private string _currentTenantName;
         private const string AuthStoreName = "YouTube.Upload.Auth.Store";
+        private static readonly object _logLock = new object();
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
 
         /// <summary>
         /// Costruttore del servizio
@@ -39,11 +48,11 @@ namespace MorWalPiz.VideoImporter.Services
         {
             _credentialsJson = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _currentTenantName = tenantName ?? throw new ArgumentNullException(nameof(tenantName));
-            
+
             // Dispose existing services
             _youtubeService?.Dispose();
             _youtubeUpdateService?.Dispose();
-            
+
             // Reinitialize with new credentials
             await InitializeYouTubeServiceAsync();
         }
@@ -80,7 +89,7 @@ namespace MorWalPiz.VideoImporter.Services
         {
             using var context = App.DatabaseService.CreateContext();
             var settings = context.Settings.FirstOrDefault();
-            if(settings == null)
+            if (settings == null)
             {
                 System.Windows.MessageBox.Show("Impostazioni non valide. Assicurati di aver configurato l'applicazione correttamente.",
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -172,7 +181,7 @@ namespace MorWalPiz.VideoImporter.Services
                         result.Success = false;
                         result.ErrorMessage = "Il file non esiste";
                         results.Add(result);
-                        
+
                         progressCallback?.Invoke(new UploadProgressInfo
                         {
                             CurrentFileName = video.FileName,
@@ -182,7 +191,7 @@ namespace MorWalPiz.VideoImporter.Services
                             OverallProgress = (currentVideoNumber * 100) / totalVideos,
                             Status = $"Errore: {result.ErrorMessage}"
                         });
-                        
+
                         currentVideoNumber++;
                         continue;
                     }
@@ -204,7 +213,7 @@ namespace MorWalPiz.VideoImporter.Services
                             DefaultLanguage = video.DefaultLanguage,
                             DefaultAudioLanguage = video.DefaultLanguage,
                             // Aggiungi tag personalizzati
-                            Tags = tags
+                            Tags = tags.Concat(video.Tags.Length > 0 ? video.Tags.Split(",") : []).ToList()
                         },
                         Status = new VideoStatus
                         {
@@ -225,6 +234,9 @@ namespace MorWalPiz.VideoImporter.Services
                             RecordingDateDateTimeOffset = DateTime.Now,
                         }
                     };
+
+                    // Log the Video object before sending to API
+                    LogApiCall("VideoInsert", video.FileName, youtubeVideo, null, "About to upload video to YouTube");
 
                     // Caricamento del video
                     using (var fileStream = new FileStream(video.FilePath, FileMode.Open))
@@ -289,6 +301,14 @@ namespace MorWalPiz.VideoImporter.Services
                         result.YouTubeId = videosInsertRequest.ResponseBody?.Id;
                         result.Success = uploadResponse.Status == UploadStatus.Completed;
                         
+                        // Log the upload response
+                        LogApiCall("VideoInsert", video.FileName, null, new { 
+                            Success = result.Success, 
+                            YouTubeId = result.YouTubeId, 
+                            UploadStatus = uploadResponse.Status.ToString(),
+                            ResponseBody = videosInsertRequest.ResponseBody
+                        }, "Video upload completed");
+
                         if (!result.Success)
                         {
                             result.Success = false;
@@ -321,13 +341,23 @@ namespace MorWalPiz.VideoImporter.Services
                                 // Utilizziamo il servizio con autorizzazioni dedicate per l'aggiornamento
                                 var listRequest = _youtubeUpdateService.Videos.List("snippet");
                                 listRequest.Id = result.YouTubeId;
+                                
+                                // Log the list request
+                                LogApiCall("VideoList", video.FileName, new { VideoId = result.YouTubeId, Part = "snippet" }, null, "Fetching uploaded video for localization update");
+                                
                                 var listResponse = await listRequest.ExecuteAsync();
                                 var uploadedVideo = listResponse.Items.First();
 
                                 uploadedVideo.Localizations = TransformLocalizations(video.Translations);
 
+                                // Log the update request with localizations
+                                LogApiCall("VideoUpdate", video.FileName, uploadedVideo, null, "Updating video with localizations");
+                                
                                 var updateRequest = _youtubeUpdateService.Videos.Update(uploadedVideo, "snippet,localizations");
                                 await updateRequest.ExecuteAsync();
+                                
+                                // Log successful update response
+                                LogApiCall("VideoUpdate", video.FileName, null, new { Success = true, VideoId = result.YouTubeId }, "Video updated successfully with localizations");
 
                                 // Report completion
                                 progressCallback?.Invoke(new UploadProgressInfo
@@ -346,7 +376,7 @@ namespace MorWalPiz.VideoImporter.Services
                                 Console.WriteLine($"Errore nell'aggiornamento delle traduzioni: {ex.Message}");
                                 // Imposta un warning nel risultato ma mantieni il successo dell'upload
                                 result.WarningMessage = $"Video caricato con successo ma errore nell'aggiornamento delle traduzioni: {ex.Message}";
-                                
+
                                 progressCallback?.Invoke(new UploadProgressInfo
                                 {
                                     CurrentFileName = video.FileName,
@@ -364,7 +394,7 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     result.Success = false;
                     result.ErrorMessage = ex.Message;
-                    
+
                     progressCallback?.Invoke(new UploadProgressInfo
                     {
                         CurrentFileName = video.FileName,
@@ -384,6 +414,76 @@ namespace MorWalPiz.VideoImporter.Services
         }
 
         /// <summary>
+        /// Registra una chiamata API in un file di log JSON
+        /// </summary>
+        private void LogApiCall(string operation, string fileName, object apiObject, object response = null, string additionalInfo = null)
+        {
+            try
+            {
+                // Crea la directory dei log se non esiste
+                var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+                if (!Directory.Exists(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+
+                // Nome file log con data corrente
+                var logFileName = $"YouTube_API_Log_{_currentTenantName}_{DateTime.Now:yyyy-MM-dd}.json";
+                var logFilePath = Path.Combine(logDirectory, logFileName);
+
+                // Crea l'oggetto di log
+                var logEntry = new
+                {
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                    TenantName = _currentTenantName,
+                    FileName = fileName,
+                    Operation = operation,
+                    ApiObject = apiObject,
+                    Response = response,
+                    AdditionalInfo = additionalInfo
+                };
+
+                // Serializza in JSON
+                var logJson = JsonSerializer.Serialize(logEntry, _jsonOptions);
+
+                // Scrittura thread-safe nel file
+                lock (_logLock)
+                {
+                    // Se il file esiste, leggi il contenuto esistente come array
+                    List<object> logEntries = new List<object>();
+                    if (File.Exists(logFilePath))
+                    {
+                        try
+                        {
+                            var existingContent = File.ReadAllText(logFilePath);
+                            if (!string.IsNullOrWhiteSpace(existingContent))
+                            {
+                                logEntries = JsonSerializer.Deserialize<List<object>>(existingContent) ?? new List<object>();
+                            }
+                        }
+                        catch
+                        {
+                            // Se il file è corrotto, inizia un nuovo array
+                            logEntries = new List<object>();
+                        }
+                    }
+
+                    // Aggiungi la nuova entry
+                    logEntries.Add(logEntry);
+
+                    // Scrivi l'intero array nel file
+                    var fullJson = JsonSerializer.Serialize(logEntries, _jsonOptions);
+                    File.WriteAllText(logFilePath, fullJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error to console but don't interrupt the upload process
+                Console.WriteLine($"Errore durante il logging API: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Ottiene la data e l'ora di pubblicazione combinando la data e l'ora specificate
         /// </summary>
         private DateTime GetPublishDateTime(VideoFile video)
@@ -397,7 +497,7 @@ namespace MorWalPiz.VideoImporter.Services
         private Dictionary<string, VideoLocalization> TransformLocalizations(Dictionary<int, TranslationItem> translations)
         {
 
-            
+
             // Dizionario delle lingue disponibili (codice lingua -> nome lingua)
             var languageCodes = new Dictionary<int, string>
                 {
@@ -473,7 +573,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// <summary>
         /// Forza una nuova autenticazione YouTube
         /// </summary>
-        /// <returns>True se l'autenticazione � riuscita</returns>
+        /// <returns>True se l'autenticazione è riuscita</returns>
         public async Task<bool> ForceReauthenticationAsync()
         {
             try
@@ -492,10 +592,10 @@ namespace MorWalPiz.VideoImporter.Services
                 using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_credentialsJson)))
                 {
                     var secrets = GoogleClientSecrets.FromStream(stream).Secrets;
-                    
+
                     // Force new authentication by using a new FileDataStore path
                     var tempAuthStoreName = $"{AuthStoreName}-{_currentTenantName}-{DateTime.Now:yyyyMMddHHmmss}";
-                    
+
                     // Ottiene la UserCredential dal JSON delle credenziali OAuth
                     var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         secrets,
@@ -533,10 +633,10 @@ namespace MorWalPiz.VideoImporter.Services
                     // Now move the temp credentials to the permanent location
                     string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                     string credentialDirPath = Path.Combine(userProfile, ".credentials");
-                    
+
                     string tempMainPath = Path.Combine(credentialDirPath, tempAuthStoreName);
                     string tempUpdatePath = Path.Combine(credentialDirPath, $"{tempAuthStoreName}.Update");
-                    
+
                     string mainCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}");
                     string updateCredentialsPath = Path.Combine(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}.Update");
 
@@ -562,7 +662,7 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                     string credentialDirPath = Path.Combine(userProfile, ".credentials");
-                    
+
                     var tempDirs = Directory.GetDirectories(credentialDirPath, $"{AuthStoreName}-{_currentTenantName}-*");
                     foreach (var tempDir in tempDirs)
                     {

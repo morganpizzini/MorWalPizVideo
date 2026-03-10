@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
 
 namespace MorWalPiz.VideoImporter.Services

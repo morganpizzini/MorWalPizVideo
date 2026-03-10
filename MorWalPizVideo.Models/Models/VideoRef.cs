@@ -12,7 +12,7 @@ namespace MorWalPizVideo.Server.Models
     public record VideoRef
     {
         [JsonConstructor]
-        public VideoRef(string youtubeId, CategoryRef[]? categories = null, string title = "", string description = "", DateOnly publishedAt = default)
+        public VideoRef(string youtubeId, CategoryRef[]? categories = null, string title = "", string description = "", DateTime publishedAt = default)
         {
             YoutubeId = youtubeId;
             Categories = categories ?? Array.Empty<CategoryRef>();
@@ -39,7 +39,7 @@ namespace MorWalPizVideo.Server.Models
 
         [DataMember]
         [BsonElement("publishedAt")]
-        public DateOnly PublishedAt { get; init; } = DateOnly.MinValue;
+        public DateTime PublishedAt { get; init; } = DateTime.MinValue;
 
         [DataMember]
         [BsonElement("creationDateTime")]

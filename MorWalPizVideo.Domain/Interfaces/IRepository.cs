@@ -22,10 +22,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface IQueryLinkRepository : IRepository<QueryLink> { }
     public interface IPublishScheduleRepository : IRepository<PublishSchedule> { }
     public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
+    public interface ICompilationRepository : IRepository<Compilation> { }
     public interface IBioLinkRepository : IRepository<BioLink> { }
     public interface IShortLinkRepository : IRepository<ShortLink> { }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
     public interface ICategoryRepository : IRepository<Category>
     {
     }
+    public interface ICustomFormRepository : IRepository<CustomForm> { }
 }

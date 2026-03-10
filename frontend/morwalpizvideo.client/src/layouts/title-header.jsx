@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import "./title-header.scss"
 export default function TitleComponent(props) {
-    
+
     return (
         <div className={`container text-center ${props.dimensions}`}>
             <div className="title-container">
@@ -11,17 +11,21 @@ export default function TitleComponent(props) {
                     </h1>
                 </Link>
             </div>
-            <div className="social-buttons mt-3">
-                <a href="https://t.me/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-telegram">
-                    <i className="fab fa-telegram"></i> Aggiungi
-                </a>
-                <a href="https://www.youtube.com/@morwalpiz?sub_confirmation=1" target="_blank" rel="noopener noreferrer" className="btn btn-youtube">
-                    <i className="fab fa-youtube"></i> Iscriviti
-                </a>
-                <a href="https://www.instagram.com/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-instagram">
-                    <i className="fab fa-instagram"></i> Seguimi
-                </a>
-            </div>
+            {!props.hideLink &&
+                <>
+                    <div className="social-buttons mt-3">
+                        <a href="https://t.me/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-telegram">
+                            <i className="fab fa-telegram"></i> Aggiungi
+                        </a>
+                        <a href="https://www.youtube.com/@morwalpiz?sub_confirmation=1" target="_blank" rel="noopener noreferrer" className="btn btn-youtube">
+                            <i className="fab fa-youtube"></i> Iscriviti
+                        </a>
+                        <a href="https://www.instagram.com/morwalpiz" target="_blank" rel="noopener noreferrer" className="btn btn-instagram">
+                            <i className="fab fa-instagram"></i> Seguimi
+                        </a>
+                    </div>
+                </>}
+
         </div>
     );
 }

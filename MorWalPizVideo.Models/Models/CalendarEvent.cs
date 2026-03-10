@@ -12,13 +12,15 @@ namespace MorWalPizVideo.Server.Models
         public CalendarEvent(
             string title,
             string description,
-            DateOnly date,
+            DateTime startDate,
+            DateTime endDate,
             CategoryRef[] categories,
             string matchId = "")
         {
             Title = title;
             Description = description;
-            Date = date;
+            StartDate = startDate;
+            EndDate = endDate;
             Categories = categories;
             MatchId = matchId;
         }
@@ -32,8 +34,12 @@ namespace MorWalPizVideo.Server.Models
         public string Description { get; init; }
 
         [DataMember]
-        [BsonElement("date")]
-        public DateOnly Date { get; init; }
+        [BsonElement("startDate")]
+        public DateTime StartDate { get; init; }
+
+        [DataMember]
+        [BsonElement("endDate")]
+        public DateTime EndDate { get; init; }
 
         [DataMember]
         [BsonElement("categories")]
@@ -47,5 +53,6 @@ namespace MorWalPizVideo.Server.Models
         public string MatchUrl { get; set; } = string.Empty;
 
         [BsonIgnore]
-        public bool OldEvent => DateTime.Now.Date > Date.ToDateTime(new TimeOnly(0, 0));    }
+        public bool OldEvent => DateTime.Now.Date > EndDate.Date;
+    }
 }

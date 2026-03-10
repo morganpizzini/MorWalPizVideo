@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Windows;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
@@ -20,7 +17,7 @@ namespace MorWalPiz.VideoImporter.Views
         private readonly ApiService _apiService;
 
         public ObservableCollection<string> SelectedFiles { get; private set; } = new ObservableCollection<string>();
-        public Review ProcessingResult { get; private set; } // Add this property
+        public IList<ReviewApiVideoResponse> ProcessingResult { get; private set; } // Add this property
 
         public bool IsLoading
         {
@@ -65,8 +62,7 @@ namespace MorWalPiz.VideoImporter.Views
 
             try
             {
-                var translations = await _apiService.SendVideosContextAsync(SelectedFiles, context, languagues);
-                ProcessingResult = translations; // Assign the result here
+                ProcessingResult = await _apiService.SendVideosContextAsync(SelectedFiles, context, languagues);
 
                 System.Windows.MessageBox.Show("Dati ricevuti! Controllare traduzioni", "Successo", MessageBoxButton.OK, MessageBoxImage.Information);
                 DialogResult = true;

@@ -13,6 +13,8 @@ import Sponsors from "./routes/sponsors"
 import Calendar from "./routes/calendar"
 import SponsorVideo from "./routes/sponsors-video";
 import Index from "./routes/index";
+import Compilations from "./routes/compilations";
+import CustomForm from "./routes/customForm";
 import bioLoader from "./routes/bio.loader"
 import matchLoader from "./routes/matches.loader";
 import pageLoader from "./routes/pages.loader";
@@ -23,6 +25,14 @@ import calendarLoader from "./routes/calendar.loader";
 import streamLoader from "./routes/stream.loader";
 import indexLoader from "./routes/index.loader";
 import linktreeLoader from "./routes/linktree.loader";
+import compilationsLoader from "./routes/compilations.loader";
+import customFormLoader from "./routes/customForm.loader";
+import ApiKeys from "./routes/apiKeys";
+import apiKeysLoader from "./routes/apiKeys.loader";
+import ApiKeyForm from "./routes/apiKeyForm";
+import apiKeyFormLoader from "./routes/apiKeyForm.loader";
+import ApiKeyDetail from "./routes/apiKeyDetail";
+import apiKeyDetailLoader from "./routes/apiKeyDetail.loader";
 import CookiePolicy from "./routes/cookie-policy";
 import Bluetooth from "./routes/bluetooth";
 import Stream from "./routes/stream";
@@ -44,6 +54,18 @@ const router = createBrowserRouter([
         path: "bio",
         loader: bioLoader,
         element: <Bio />,
+        errorElement: <ErrorPageRoot />
+    },
+    {
+        path: "compilations/:compilationUrl",
+        loader: compilationsLoader,
+        element: <Compilations />,
+        errorElement: <ErrorPageRoot />
+    },
+    {
+        path: "forms/:formUrl",
+        loader: customFormLoader,
+        element: <CustomForm />,
         errorElement: <ErrorPageRoot />
     },
     {
@@ -109,6 +131,26 @@ const router = createBrowserRouter([
                 path: "linktree/:matchId",
                 loader: linktreeLoader,
                 element: <Linktree />,
+            },
+            {
+                path: "apikeys",
+                loader: apiKeysLoader,
+                element: <ApiKeys />,
+            },
+            {
+                path: "apikeys/create",
+                loader: apiKeyFormLoader,
+                element: <ApiKeyForm />,
+            },
+            {
+                path: "apikeys/:id",
+                loader: apiKeyDetailLoader,
+                element: <ApiKeyDetail />,
+            },
+            {
+                path: "apikeys/:id/edit",
+                loader: apiKeyFormLoader,
+                element: <ApiKeyForm />,
             }]
         }],
     }

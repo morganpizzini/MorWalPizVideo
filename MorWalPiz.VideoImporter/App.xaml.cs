@@ -1,16 +1,9 @@
-﻿using System;
-using System.Configuration;
-using System.Data;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Windows;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
-using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
-using System.Threading.Tasks;
 
 namespace MorWalPiz.VideoImporter
 {

@@ -23,20 +23,20 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 return;
 
             var items = ReadJson<T>(_fileName).ToList();
-            
+
             // If item doesn't have an ID, generate one
             if (string.IsNullOrEmpty(item.Id))
             {
                 // Generate a new ObjectId-like string for the item
                 item = item with { Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString() };
             }
-            
+
             // If CreationDateTime is default, set it to now
             if (item.CreationDateTime == default)
             {
                 item = item with { CreationDateTime = DateTime.Now };
             }
-            
+
             items.Add(item);
             await WriteJson(items, _fileName);
         }
@@ -48,7 +48,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             var items = ReadJson<T>(_fileName).ToList();
             var itemToRemove = items.FirstOrDefault(x => x.Id == id);
-            
+
             if (itemToRemove != null)
             {
                 items.Remove(itemToRemove);
@@ -79,14 +79,27 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             var items = ReadJson<T>(_fileName).ToList();
             var index = items.FindIndex(x => x.Id == item.Id);
-            
+
             if (index >= 0)
             {
                 items[index] = item;
                 await WriteJson(items, _fileName);
             }
         }
-        
+
+        private JsonSerializerOptions GetJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter(),
+                    new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter()
+                }
+            };
+        }
         private async Task WriteJson<K>(IList<K> items, string jsonFileName) where K : T
         {
             var directoryPath = Path.Combine(_environment.ContentRootPath, "Data");
@@ -95,14 +108,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             // Ensure directory exists
             Directory.CreateDirectory(directoryPath);
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true,
-                WriteIndented = true
-            };
-
-            var jsonString = JsonSerializer.Serialize(items.OrderByDescending(x => x.CreationDateTime), options);
+            var jsonString = JsonSerializer.Serialize(items.OrderByDescending(x => x.CreationDateTime), GetJsonOptions());
             await File.WriteAllTextAsync(filePath, jsonString);
         }
 
@@ -116,12 +122,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             }
 
             var jsonString = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-            return JsonSerializer.Deserialize<IList<K>>(jsonString, options)?.OrderByDescending(x => x.CreationDateTime).ToList() ?? new List<K>();
+
+            return JsonSerializer.Deserialize<IList<K>>(jsonString, GetJsonOptions())?.OrderByDescending(x => x.CreationDateTime).ToList() ?? new List<K>();
         }
     }
 }

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1",
+    "creationDateTime": "2025-11-15T15:13:02.579499+01:00",
+    "Title": "titolo",
+    "Description": "descrizione",
+    "Url": "mia-compilation",
+    "Videos": [
+      {
+        "youtubeId": "Ao2QTQFpCiE",
+        "categories": [
+          {
+            "id": "3",
+            "title": "Categoria 3"
+          }
+        ],
+        "title": "titolo 4",
+        "description": "descrizione 4",
+        "publishedAt": "0001-01-01",
+        "creationDateTime": "2025-12-04T19:32:10.7378883+01:00"
+      },
+      {
+        "youtubeId": "mqfOicKNNsM",
+        "categories": [
+          {
+            "id": "3",
+            "title": "Categoria 3"
+          }
+        ],
+        "title": "titolo 2",
+        "description": "descrizione 2",
+        "publishedAt": "0001-01-01",
+        "creationDateTime": "2025-12-04T19:32:10.7378883+01:00"
+      }
+    ]
+  }
+]

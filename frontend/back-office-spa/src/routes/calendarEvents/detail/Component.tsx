@@ -74,8 +74,11 @@ const CalendarEventDetail: React.FC = () => {
           </div>
 
           <dl className="row">
-            <dt className="col-sm-3">Date</dt>
-            <dd className="col-sm-9">{formatDate(calendarEvent.date)}</dd>
+            <dt className="col-sm-3">Start Date</dt>
+            <dd className="col-sm-9">{formatDate(calendarEvent.startDate)}</dd>
+
+            <dt className="col-sm-3">End Date</dt>
+            <dd className="col-sm-9">{formatDate(calendarEvent.endDate)}</dd>
 
             <dt className="col-sm-3">Description</dt>
             <dd className="col-sm-9">

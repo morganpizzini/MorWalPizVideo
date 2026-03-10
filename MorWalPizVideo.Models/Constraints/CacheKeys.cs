@@ -12,5 +12,7 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Sponsors = "sponsors";
         public const string Pages = "pages";
         public const string CalendarEvents = "calendarEvents";
+        public const string Compilations = "compilations";
+        public const string CustomForms = "customForms";
     }
 }

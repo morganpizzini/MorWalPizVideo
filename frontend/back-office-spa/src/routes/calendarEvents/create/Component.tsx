@@ -53,7 +53,7 @@ const CreateCalendarEvent: React.FC = () => {
 
       <fetcher.Form method="post" className="mb-3" onSubmit={handleSubmit}>
         <Row className="mb-3">
-          <Col md={6}>
+          <Col md={12}>
             <Form.Group controlId="title">
               <Form.Label>Title*</Form.Label>
               <Form.Control
@@ -70,18 +70,37 @@ const CreateCalendarEvent: React.FC = () => {
               )}
             </Form.Group>
           </Col>
+        </Row>
+
+        <Row className="mb-3">
           <Col md={6}>
-            <Form.Group controlId="date">
-              <Form.Label>Date*</Form.Label>
+            <Form.Group controlId="startDate">
+              <Form.Label>Start Date*</Form.Label>
               <Form.Control
                 type="date"
-                name="date"
-                isInvalid={!!errors?.fields?.date}
+                name="startDate"
+                isInvalid={!!errors?.fields?.startDate}
                 required
               />
-              {errors?.fields?.date && (
+              {errors?.fields?.startDate && (
                 <Form.Control.Feedback type="invalid">
-                  {errors.fields.date}
+                  {errors.fields.startDate}
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group controlId="endDate">
+              <Form.Label>End Date*</Form.Label>
+              <Form.Control
+                type="date"
+                name="endDate"
+                isInvalid={!!errors?.fields?.endDate}
+                required
+              />
+              {errors?.fields?.endDate && (
+                <Form.Control.Feedback type="invalid">
+                  {errors.fields.endDate}
                 </Form.Control.Feedback>
               )}
             </Form.Group>

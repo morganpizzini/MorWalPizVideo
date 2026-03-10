@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.EntityFrameworkCore;
 using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;

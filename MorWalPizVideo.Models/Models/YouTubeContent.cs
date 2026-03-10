@@ -123,7 +123,7 @@ namespace MorWalPizVideo.Server.Models
         }
         
         // Add a video to the collection with metadata
-        public YouTubeContent AddVideo(string videoId, CategoryRef[] categories, string title, string description, DateOnly publishedAt)
+        public YouTubeContent AddVideo(string videoId, CategoryRef[] categories, string title, string description, DateTime publishedAt)
         {
             var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, categories, title, description, publishedAt)).ToArray();
             return this with { VideoRefs = newVideoRefs };

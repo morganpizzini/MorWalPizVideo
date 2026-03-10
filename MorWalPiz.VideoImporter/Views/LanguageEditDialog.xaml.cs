@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Windows;
 using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;

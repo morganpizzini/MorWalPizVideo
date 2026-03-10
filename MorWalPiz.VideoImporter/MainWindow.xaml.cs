@@ -1,16 +1,9 @@
-﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Forms;
 // Aggiungi using per AppDbContext e Disclaimer
-using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Views;
 using MorWalPiz.VideoImporter.Services;
@@ -27,9 +20,9 @@ namespace MorWalPiz.VideoImporter
     /// </summary>    
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        public ObservableCollection<VideoFile> VideoFiles { get; set; } = new ObservableCollection<VideoFile>();
-        private List<string> selectedFolders = new List<string>();
-        private List<string> selectedFiles = new List<string>();
+        public ObservableCollection<VideoFile> VideoFiles { get; set; } = [];
+        private List<string> selectedFolders = [];
+        private List<string> selectedFiles = [];
 
         private DateTime _selectedPublishDate = DateTime.Today;
 
@@ -452,7 +445,7 @@ namespace MorWalPiz.VideoImporter
                         ? item.EditedCleanFileName
                         : item.CleanFileName;
 
-                    var current = translations.Videos.FirstOrDefault(t => t.Name == cleanFileName);
+                    var current = translations.FirstOrDefault(t => t.Name == cleanFileName);
                     if (current == null)
                         continue;
 
@@ -461,6 +454,7 @@ namespace MorWalPiz.VideoImporter
                     var defaultLanguage = dbContext.Languages.FirstOrDefault(l => l.IsDefault);
                     var allLanguages = dbContext.Languages.ToList();
 
+                    item.Tags = current.Tags;
                     // Trova la traduzione per la lingua predefinita (italiano)
                     var defaultTranslation = current.Translations.FirstOrDefault(t =>
                         string.Equals(t.Language, defaultLanguage?.Name, StringComparison.OrdinalIgnoreCase) ||
@@ -912,8 +906,10 @@ namespace MorWalPiz.VideoImporter
         /// </summary>
         private VideoFile CreateVideoFileWithDisclaimers(VideoFile original, Dictionary<int, string> disclaimers, int defaultLanguageId)
         {
+            
             var tempVideo = new VideoFile
             {
+                Tags = original.Tags,
                 FileName = original.FileName,
                 FilePath = original.FilePath,
                 IsSelected = original.IsSelected,
@@ -989,6 +985,8 @@ namespace MorWalPiz.VideoImporter
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string DefaultLanguage { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty;
+
 
         private bool _containsWeapon;
         public bool containsWeapon
@@ -1100,5 +1098,6 @@ namespace MorWalPiz.VideoImporter
                 return System.Text.RegularExpressions.Regex.Replace(nameWithoutExtension, @"[^a-zA-Z0-9]", " ").Trim();
             }
         }
+
     }
 }

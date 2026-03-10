@@ -1,0 +1,32 @@
+[
+  {
+    "title": "titoloaa",
+    "description": "descrizione",
+    "url": "mia-compilation",
+    "videos": [
+      {
+        "youtubeId": "wertrrr",
+        "categories": [
+          {
+            "id": "1",
+            "title": "Categoria 1"
+          },
+          {
+            "id": "2",
+            "title": "Categoria 2"
+          },
+          {
+            "id": "3",
+            "title": "Categoria 3"
+          }
+        ],
+        "title": "titolo 1",
+        "description": "descrizione 1",
+        "publishedAt": "0001-01-01",
+        "creationDateTime": "2025-12-04T19:45:53.4001558+01:00"
+      }
+    ],
+    "id": "1",
+    "creationDateTime": "2025-11-15T15:13:02.579499+01:00"
+  }
+]

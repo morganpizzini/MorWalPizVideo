@@ -9,7 +9,7 @@ import configKeys from "@utils/configKeys"
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
 export default function Index() {
     ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
-    const { matches, configuration } = useLoaderData();
+    const { matches, configuration, activeForms } = useLoaderData();
 
     const [selectedCategories, setSelectedCategories] = useState([]);
 
@@ -83,6 +83,17 @@ export default function Index() {
                     </div>
                 </>
             }
+            {activeForms && activeForms.length > 0 && activeForms.map((form) => (
+                <div key={form.id} className="alert alert-info my-3 d-flex align-items-center justify-content-between" role="alert">
+                    <div>
+                        <i className="fa fa-clipboard-question me-2"></i>
+                        <strong>NUOVO SONDAGGIO:</strong> {form.title}
+                    </div>
+                    <Link to={`/custom-forms/${form.url}`} className="btn btn-info ms-2">
+                        Rispondi ora <i className="fa fa-arrow-right ms-1"></i>
+                    </Link>
+                </div>
+            ))}
             {matches.length == 0 &&
                 <>
                     <div className="alert alert-info my-3 text-center" role="alert">

@@ -30,7 +30,7 @@ namespace MorWalPiz.VideoImporter.Services
             {
                 // Assicura che il database esista e che sia aggiornato allo schema più recente
                 // Migrate() creerà il database se non esiste e applicherà tutte le migrazioni pendenti
-                //context.Database.Migrate();
+                context.Database.Migrate();
             }
         }
 

@@ -19,6 +19,19 @@ namespace MorWalPizVideo.Server.Services
         public Task UpdateMatch(YouTubeContent entity);
         public Task<IList<YTChannel>> FetchChannels();
         public Task UpdateChannel(YTChannel entity);
+        public Task<IList<Compilation>> GetCompilations();
+        public Task<Compilation?> GetCompilationById(string id);
+        public Task SaveCompilation(Compilation entity);
+        public Task UpdateCompilation(Compilation entity);
+        public Task DeleteCompilation(string compilationId);
+        public Task<IList<CustomForm>> Fetch();
+        public Task<IList<CustomForm>> GetActiveForms();
+        public Task<CustomForm?> GetCustomFormById(string id);
+        public Task<CustomForm?> GetCustomFormByUrl(string url);
+        public Task SaveCustomForm(CustomForm entity);
+        public Task UpdateCustomForm(CustomForm entity);
+        public Task DeleteCustomForm(string customFormId);
+        public Task AddFormResponse(string formId, CustomFormResponse response);
     }
 
     public class DataService: IGenericDataService
@@ -30,6 +43,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly ISponsorApplyRepository _sponsorApplyRepository;
         private readonly IPageRepository _pageRepository;
         private readonly ICalendarEventRepository _calendarEventRepository;
+        private readonly ICompilationRepository _compilationRepository;
         private readonly IBioLinkRepository _bioLinkRepository;
         private readonly IShortLinkRepository _shortLinkRepository;
         private readonly IYTChannelRepository _ytChannelRepository;
@@ -38,6 +52,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly IPublishScheduleRepository _publishScheduleRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ICustomFormRepository _customFormRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -46,6 +61,7 @@ namespace MorWalPizVideo.Server.Services
             ISponsorRepository sponsorRepository,
             IPageRepository pageRepository,
             ICalendarEventRepository calendarEventRepository,
+            ICompilationRepository compilationRepository,
             IBioLinkRepository bioLinkRepository,
             IShortLinkRepository shortLinkRepository,
             IYTChannelRepository ytChannelRepository,
@@ -53,7 +69,8 @@ namespace MorWalPizVideo.Server.Services
             IUserRepository userRepository,
             IQueryLinkRepository queryLinkRepository,
             IPublishScheduleRepository publishScheduleRepository,
-            IConfigurationRepository configurationRepository)
+            IConfigurationRepository configurationRepository,
+            ICustomFormRepository customFormRepository)
         {
             _youTubeContent = youTubeContent;
             _productRepository = productRepository;
@@ -61,6 +78,7 @@ namespace MorWalPizVideo.Server.Services
             _sponsorRepository = sponsorRepository;
             _pageRepository = pageRepository;
             _calendarEventRepository = calendarEventRepository;
+            _compilationRepository = compilationRepository;
             _bioLinkRepository = bioLinkRepository;
             _shortLinkRepository = shortLinkRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
@@ -70,6 +88,7 @@ namespace MorWalPizVideo.Server.Services
             _publishScheduleRepository = publishScheduleRepository;
             _userRepository = userRepository;
             _configurationRepository = configurationRepository;
+            _customFormRepository = customFormRepository;
         }
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
@@ -421,6 +440,39 @@ namespace MorWalPizVideo.Server.Services
             await _calendarEventRepository.DeleteItemAsync(calendarEventId);
         }
 
+        // Compilation methods
+        public Task<IList<Compilation>> GetCompilations() => _compilationRepository.GetItemsAsync();
+
+        public async Task<Compilation?> GetCompilationById(string id) =>
+            await _compilationRepository.GetItemAsync(id);
+
+        public async Task SaveCompilation(Compilation entity)
+        {
+            var existingCompilation = await _compilationRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingCompilation.Count > 0)
+                return;
+
+            await _compilationRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateCompilation(Compilation entity)
+        {
+            var existingCompilation = await _compilationRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingCompilation.Count == 0)
+                return;
+
+            await _compilationRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteCompilation(string compilationId)
+        {
+            var compilation = (await _compilationRepository.GetItemsAsync(x => x.Id == compilationId)).FirstOrDefault();
+            if (compilation == null)
+                return;
+
+            await _compilationRepository.DeleteItemAsync(compilation.Id);
+        }
+
         // QueryLink methods
         public Task<IList<QueryLink>> FetchQueryLinks(IList<string>? ids=null) => _queryLinkRepository.GetItemsAsync(x=> ids!= null ? ids.Contains(x.Id) : true);
         public async Task<QueryLink?> GetQueryLink(string queryLinkId)
@@ -473,6 +525,55 @@ namespace MorWalPizVideo.Server.Services
             if (shortLink == null)
                 return;
             await _userRepository.DeleteItemAsync(shortLink.Id);
+        }
+
+        // CustomForm methods
+        public Task<IList<CustomForm>> Fetch() => _customFormRepository.GetItemsAsync();
+
+        public async Task<IList<CustomForm>> GetActiveForms() =>
+            await _customFormRepository.GetItemsAsync(x => x.Active);
+
+        public async Task<CustomForm?> GetCustomFormById(string id) =>
+            await _customFormRepository.GetItemAsync(id);
+
+        public async Task<CustomForm?> GetCustomFormByUrl(string url) =>
+            (await _customFormRepository.GetItemsAsync(x => x.Url.ToLower() == url.ToLower())).FirstOrDefault();
+
+        public async Task SaveCustomForm(CustomForm entity)
+        {
+            var existingForm = await _customFormRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            if (existingForm.Count > 0)
+                return;
+
+            await _customFormRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateCustomForm(CustomForm entity)
+        {
+            var existingForm = await _customFormRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingForm.Count == 0)
+                return;
+
+            await _customFormRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteCustomForm(string customFormId)
+        {
+            var customForm = (await _customFormRepository.GetItemsAsync(x => x.Id == customFormId)).FirstOrDefault();
+            if (customForm == null)
+                return;
+
+            await _customFormRepository.DeleteItemAsync(customForm.Id);
+        }
+
+        public async Task AddFormResponse(string formId, CustomFormResponse response)
+        {
+            var form = await GetCustomFormById(formId);
+            if (form == null)
+                return;
+
+            var updatedForm = form.AddResponse(response);
+            await _customFormRepository.UpdateItemAsync(updatedForm);
         }
 
     }

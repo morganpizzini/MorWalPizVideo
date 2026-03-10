@@ -9,7 +9,7 @@ namespace MorWalPizVideo.Server.Contracts
             return new Video(contract.Id,contract.Snippet.Title, contract.Snippet.Description.TrimDescription(), int.Parse(contract.Statistics.ViewCount),
                 int.Parse(contract.Statistics.LikeCount),
                 int.Parse(contract.Statistics.CommentCount),
-                DateOnly.FromDateTime(contract.Snippet.PublishedAt), contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration, Array.Empty<CategoryRef>());
+                contract.Snippet.PublishedAt, contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration, Array.Empty<CategoryRef>());
         }
     }
     public record SponsorRequest([Required]string Name, [Required][EmailAddress] string Email, [Required][MinLength(10)] string Description, [Required] string Token) { }
