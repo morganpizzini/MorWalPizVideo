@@ -70,14 +70,12 @@ public class ScraperController : ApplicationControllerBase
             var commentsToAnalyze = new List<(string Author, string Text, DateTime Date)>();
             DateTime newLastCommentDate = lastCommentDate;
             int totalCommentsRetrieved = 0;
-            bool foundOldComment = false;
 
             // Filtra i commenti già analizzati
             foreach (var comment in videoWithComments.Comments)
             {
                 if (comment.PublishedAt <= lastCommentDate)
                 {
-                    foundOldComment = true;
                     continue;
                 }
 
@@ -124,8 +122,10 @@ Se nessun commento contiene idee, restituisci un array vuoto [].
 ";
 
                     var result = await _kernel.InvokePromptAsync(batchPrompt);
-                    var ideasArray = JsonSerializer.Deserialize<List<BatchCommentAnalysis>>(result.GetValue<string>(),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<BatchCommentAnalysis>();
+                    var resultJson = result.GetValue<string>();
+                    var ideasArray = !string.IsNullOrEmpty(resultJson) 
+                        ? JsonSerializer.Deserialize<List<BatchCommentAnalysis>>(resultJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<BatchCommentAnalysis>()
+                        : new List<BatchCommentAnalysis>();
 
                     // Aggiungi le idee trovate
                     foreach (var idea in ideasArray)

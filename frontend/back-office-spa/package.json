@@ -4,15 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
     "build-uncheck": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
+    "dev": "vite",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "lint": "eslint .",
     "lint-format": "npm run lint && npm run format",
-    "prepare": "husky"
+    "package:azure": "npm run build-uncheck && bestzip azure-package.zip dist/*",
+    "prepare": "husky",
+    "preview": "vite preview"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -39,6 +40,7 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react-swc": "^3.8.0",
+    "bestzip": "^2.2.1",
     "concurrently": "^8.0.0",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.1",

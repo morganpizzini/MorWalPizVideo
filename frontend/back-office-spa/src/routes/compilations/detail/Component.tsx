@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Badge, Button } from 'react-bootstrap';
+import { Card, Badge } from 'react-bootstrap';
 import { Link, useLoaderData } from 'react-router';
 import { Compilation } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';

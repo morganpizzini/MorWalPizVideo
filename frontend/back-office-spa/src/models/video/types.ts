@@ -59,6 +59,13 @@ export interface Match {
   creationDateTime?: string;
 }
 
+export interface Compilation {
+    title: string;
+    description: string;
+    url: string;
+    videos: VideoRef[];
+}
+
 export interface VideoImportRequest {
   videoId: string;
   categories: string[];

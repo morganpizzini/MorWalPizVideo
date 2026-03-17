@@ -52,7 +52,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all compilations
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IList<Compilation>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             try
             {
@@ -70,7 +70,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get compilation by ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<Compilation>> GetById(string id)
+        public async Task<IActionResult> GetById(string id)
         {
             try
             {
@@ -98,7 +98,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new compilation
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<Compilation>> Create(BaseRequest<CreateCompilationRequest> request)
+        public async Task<IActionResult> Create(BaseRequest<CreateCompilationRequest> request)
         {
             try
             {
@@ -179,7 +179,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Update an existing compilation
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(BaseRequestId<UpdateCompilationRequest> request)
+        public async Task<IActionResult> Update(BaseRequestId<UpdateCompilationRequest> request)
         {
             try
             {
@@ -268,7 +268,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Delete a compilation
         /// </summary>
         [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(BaseRequestId request)
+        public async Task<IActionResult> Delete(BaseRequestId request)
         {
             try
             {

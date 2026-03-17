@@ -1,4 +1,6 @@
+using Azure.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
@@ -62,6 +64,43 @@ namespace MorWalPizVideo.BackOffice.Controllers
             };
 
             return Ok(userInfo);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("init/{username}")]
+        public async Task<IActionResult> InitUsers([FromRoute]string username)
+        {
+            var user = await _dataService.GetUserByUsername(username);
+            if (user != null)
+                return Ok();
+
+            var salt = GenerateSalt();
+            var passwordHash = HashPassword(username, salt);
+
+            user = new User
+            {
+                Username = username,
+                Email = $"{username}@email.it",
+                PasswordHash = passwordHash,
+                Salt = salt,
+                Role = "User",
+                IsActive = true
+            };
+
+            await _dataService.SaveUser(user);
+
+            var userInfo = new
+            {
+                user.Id,
+                user.Username,
+                user.Email,
+                user.Role,
+                user.IsActive,
+                user.LastLogin
+            };
+
+            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userInfo);
+        
         }
 
         [HttpPost]
@@ -176,11 +215,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
         private static string HashPassword(string password, string salt)
         {
             var saltBytes = Convert.FromBase64String(salt);
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000))
-            {
-                var hashBytes = pbkdf2.GetBytes(32);
-                return Convert.ToBase64String(hashBytes);
-            }
+            var hashBytes = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, 10000, HashAlgorithmName.SHA256, 32);
+            return Convert.ToBase64String(hashBytes);
         }
     }
 

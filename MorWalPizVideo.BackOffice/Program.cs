@@ -24,6 +24,7 @@ using MorWalPizVideo.Server.Utils;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -119,7 +120,6 @@ builder.Services.AddTransient<Kernel>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Add custom converters for polymorphic types
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
     });
@@ -282,7 +282,39 @@ else
 
 if (enableSwagger)
 {
-    builder.Services.AddOpenApi();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "MorWalPiz BackOffice API",
+            Version = "v1",
+            Description = "API for managing MorWalPizVideo content and resources"
+        });
+
+        // Define JWT Bearer security scheme
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "JWT Authorization header using the Bearer scheme. Enter your token in the text input below."
+        });
+
+        // Define API Key security scheme
+        options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+        {
+            Name = "X-API-Key",
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Description = "API Key for service-to-service authentication. Enter your API key in the text input below."
+        });
+
+        // Apply security requirements based on endpoint metadata
+        options.OperationFilter<SecurityRequirementsOperationFilter>();
+    });
 }
 
 if (enableHangFire)
@@ -331,8 +363,12 @@ app.MapDefaultEndpoints();
 
 if (enableSwagger)
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "MorWalPiz backoffice API"));
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MorWalPiz BackOffice API v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
 app.UseHttpsRedirection();

@@ -131,7 +131,7 @@ public class YouTubeVideoLinksController : ApplicationControllerBase
                 return NotFound($"Match with ID {matchId} not found");
             }
 
-            var existingLink = match.YouTubeVideoLinks.FirstOrDefault(x => x.YouTubeVideoId == youtubeVideoId);
+            var existingLink = match.YouTubeVideoLinks?.FirstOrDefault(x => x.YouTubeVideoId == youtubeVideoId);
             if (existingLink == null)
             {
                 return NotFound($"YouTube video link for video {youtubeVideoId} not found in this match");

@@ -1,3 +1,5 @@
+import { post } from "./apiService";
+
 interface UserInfo {
   id: string;
   username: string;
@@ -42,26 +44,15 @@ class AuthService {
 
   // Login method
   async login(username: string, password: string): Promise<LoginResponse> {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    const response = await post('/api/auth/login', { username, password });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Login failed');
-    }
+    console.log(response);
 
-    const data: LoginResponse = await response.json();
-    
     // Store token and user info
-    this.setToken(data.token);
-    this.setUser(data.user);
+    this.setToken(response.token);
+    this.setUser(response.user);
 
-    return data;
+    return response;
   }
 
   // Logout method
@@ -76,15 +67,9 @@ class AuthService {
     if (!token) return false;
 
     try {
-      const response = await fetch('/api/auth/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token }),
-      });
-
-      return response.ok;
+      const response = await post('/api/auth/validate', { token });
+      console.log("validate token:", response);
+      return true;
     } catch {
       return false;
     }

@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using QRCoder;
-using System.Drawing;
-using System.Drawing.Imaging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -15,35 +16,35 @@ public class QRCodeController : ApplicationControllerBase
             using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
             {
                 QRCodeData qrCodeData = qrGenerator.CreateQrCode(data, QRCodeGenerator.ECCLevel.Q);
-                using (var qrCode = new BitmapByteQRCode(qrCodeData))
+                using (var qrCode = new PngByteQRCode(qrCodeData))
                 {
                     byte[] qrCodeAsPngByteArr = qrCode.GetGraphic(20);
 
-                    using var ms = new MemoryStream(qrCodeAsPngByteArr);
-                    
-                    Bitmap qrCodeImage = new Bitmap(ms);
+                    using var qrCodeImage = Image.Load(qrCodeAsPngByteArr);
 
                     if (logoFile != null && logoFile.Length > 0)
                     {
-                        Bitmap logo = await ConvertIFormFileToBitmap(logoFile);
+                        using var logo = await LoadImageFromFormFile(logoFile);
                         if (logo != null)
                         {
                             int logoSize = qrCodeImage.Width / 5;
-                            Bitmap resizedLogo = new Bitmap(logo, new Size(logoSize, logoSize));
+                            
+                            // Resize logo to fit in the center of QR code
+                            logo.Mutate(x => x.Resize(logoSize, logoSize));
 
-                            using (Graphics graphics = Graphics.FromImage(qrCodeImage))
-                            {
-                                int centerX = (qrCodeImage.Width - logoSize) / 2;
-                                int centerY = (qrCodeImage.Height - logoSize) / 2;
-                                graphics.DrawImage(resizedLogo, new Point(centerX, centerY));
-                            }
+                            // Calculate center position
+                            int centerX = (qrCodeImage.Width - logoSize) / 2;
+                            int centerY = (qrCodeImage.Height - logoSize) / 2;
+
+                            // Draw logo on QR code
+                            qrCodeImage.Mutate(ctx => ctx.DrawImage(logo, new Point(centerX, centerY), 1f));
                         }
                     }
 
-                    using (MemoryStream ms1 = new MemoryStream())
+                    using (var outputStream = new MemoryStream())
                     {
-                        qrCodeImage.Save(ms1, ImageFormat.Png);
-                        return File(ms.ToArray(), "image/png", "qrcode.png");
+                        await qrCodeImage.SaveAsync(outputStream, new PngEncoder());
+                        return File(outputStream.ToArray(), "image/png", "qrcode.png");
                     }
                 }
             }
@@ -54,14 +55,15 @@ public class QRCodeController : ApplicationControllerBase
         }
     }
 
-    private async Task<Bitmap> ConvertIFormFileToBitmap(IFormFile file)
+    private async Task<Image?> LoadImageFromFormFile(IFormFile file)
     {
         try
         {
             using (var stream = new MemoryStream())
             {
                 await file.CopyToAsync(stream);
-                return new Bitmap(stream);
+                stream.Position = 0;
+                return await Image.LoadAsync(stream);
             }
         }
         catch

@@ -509,12 +509,13 @@ namespace MorWalPizVideo.Server.Services
 
         public Task<IList<User>> FetchUsers() => _userRepository.GetItemsAsync();
         public async Task<User?> GetUser(string id) => (await _userRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
+        public async Task<User?> GetUserByUsername(string userName) => (await _userRepository.GetItemsAsync(x => x.Username.ToLower() == userName.ToLower())).FirstOrDefault();
         public Task UpdateUser(User entity) => _userRepository.UpdateItemAsync(entity);
 
         public async Task SaveUser(User entity)
         {
-            var existingShortLink = await _userRepository.GetItemsAsync(x => x.Username.ToLower() == entity.Username.ToLower());
-            if (existingShortLink.Count > 0)
+            var existingUser = await _userRepository.GetItemsAsync(x => x.Username.ToLower() == entity.Username.ToLower());
+            if (existingUser.Count > 0)
                 return;
             await _userRepository.AddItemAsync(entity);
         }
