@@ -25,6 +25,27 @@ var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCa
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
+
+// Configure the CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+
+    options.AddPolicy("MorWalPizPolicy",
+        builder =>
+    {
+        builder.WithOrigins("https://morwalpiz-admin-spa.azurewebsites.net")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
 
 // Configure Azure KeyVault if enabled
 if (enableKeyVault)
@@ -178,6 +199,8 @@ else
         });
     });
 }
+
+app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
 
 app.MapDefaultEndpoints();
 
