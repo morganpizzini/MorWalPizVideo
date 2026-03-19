@@ -1,4 +1,6 @@
 using Azure.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -9,6 +11,8 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
@@ -57,7 +61,6 @@ if (enableCache)
             builder.Expire(TimeSpan.FromMinutes(10)));
     });
 }
-
 
 if (enableSwagger)
     builder.Services.AddOpenApi();
@@ -141,6 +144,12 @@ else
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
 
+// Add fake authentication for development (allows all routes to be open)
+builder.Services.AddAuthentication("FakeScheme")
+    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -191,13 +200,43 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (enableOutputCache)
     app.UseOutputCache();
 
 app.MapControllers();
 
-
 app.MapFallbackToFile("/index.html");
 
-
 app.Run();
+
+// Fake authentication handler that automatically authenticates all requests
+public class FakeAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    public FakeAuthenticationHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        : base(options, logger, encoder)
+    {
+    }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, "FakeUser"),
+            new Claim(ClaimTypes.NameIdentifier, "fake-user-id"),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+
+        var identity = new ClaimsIdentity(claims, "FakeScheme");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "FakeScheme");
+
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+}

@@ -52,7 +52,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MorWalPizPolicy",
         builder =>
     {
-        builder.WithOrigins("https://morwalpiz.com")
+        builder.WithOrigins("https://morwalpiz-admin-spa.azurewebsites.net")
                .AllowAnyMethod()
                .AllowAnyHeader();
     });

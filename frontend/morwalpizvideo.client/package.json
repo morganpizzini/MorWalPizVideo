@@ -4,37 +4,60 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "build": "tsc -b && vite build",
+    "build-uncheck": "vite build",
     "dev": "vite",
-    "build": "vite build",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "lint": "eslint .",
+    "lint-format": "npm run lint && npm run format",
+    "package:azure": "npm run build-uncheck && bestzip azure-package.zip dist/*",
+    "prepare": "husky",
     "preview": "vite preview"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,scss,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@morwalpizvideo/models": "file:../fe-packages/models",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
-    "react": "^18.3.1",
-    "react-bootstrap": "^2.10.5",
-    "react-dom": "^18.3.1",
+    "react": "19.2.4",
+    "react-bootstrap": "^2.10.9",
+    "react-dom": "19.2.4",
     "react-ga4": "^2.1.0",
     "react-google-recaptcha-v3": "^1.10.1",
-    "react-helmet-async": "^2.0.5",
+    "react-helmet-async": "^3.0.0",
     "react-responsive-masonry": "^2.7.1",
-    "react-router": "^7.0.2",
-    "react-share": "5.1.1"
+    "react-router": "^7.4.0",
+    "react-share": "^5.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.13.0",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.3",
-    "eslint": "^9.13.0",
-    "eslint-plugin-react": "^7.37.1",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.13",
-    "globals": "^15.11.0",
+    "@eslint/js": "^9.21.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "bestzip": "^2.2.1",
+    "concurrently": "^8.0.0",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3",
     "sass": "1.77.6",
-    "vite": "^5.4.9",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1",
+    "vite": "^6.2.0",
     "vite-plugin-pwa": "^0.21.0"
   }
 }

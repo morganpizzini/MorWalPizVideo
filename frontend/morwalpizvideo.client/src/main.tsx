@@ -91,7 +91,7 @@ const router = createBrowserRouter([
             },
             {
                 path: "bluetooth",
-                    
+
                 element: <Bluetooth />,
             },
             {
