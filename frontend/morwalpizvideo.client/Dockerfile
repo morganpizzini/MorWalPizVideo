@@ -24,6 +24,7 @@ RUN npm ci
 COPY morwalpizvideo.client/src ./src
 COPY morwalpizvideo.client/index.html ./
 COPY morwalpizvideo.client/vite.config.ts ./
+COPY morwalpizvideo.client/tsconfig*.json ./
 COPY morwalpizvideo.client/public ./public
 
 # Build the application
