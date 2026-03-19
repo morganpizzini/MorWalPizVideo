@@ -10,6 +10,10 @@ on:
       - '.github/workflows/deploy-back-office-spa.yml'
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read 
+
 env:
   IMAGE_NAME: back-office-spa
 
