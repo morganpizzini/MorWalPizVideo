@@ -5,7 +5,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy the local models package first
-COPY packages/models ./packages/models
+COPY fe-packages/models ./packages/models
 COPY package*.json ./
 
 # Install dependencies and build models package

@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../packages/models",
+    "@morwalpizvideo/models": "file:../fe-packages/models",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "react": "^18.3.1",

@@ -25,7 +25,7 @@
     ]
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../packages/models",
+    "@morwalpizvideo/models": "file:../fe-packages/models",
     "@tanstack/match-sorter-utils": "^8.19.4",
     "@tanstack/react-table": "^8.21.2",
     "bootstrap": "^5.3.3",
