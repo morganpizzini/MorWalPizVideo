@@ -4,13 +4,13 @@
   "private": true,
   "description": "MorWalPizVideo monorepo with shared models",
   "workspaces": [
-    "packages/*",
+    "fe-packages/*",
     "back-office-spa",
     "morwalpizvideo.client"
   ],
   "scripts": {
-    "build:models": "cd packages/models && npm run build",
-    "clean:models": "cd packages/models && npm run clean",
+    "build:models": "cd fe-packages/models && npm run build",
+    "clean:models": "cd fe-packages/models && npm run clean",
     "install:all": "npm install"
   },
   "engines": {
