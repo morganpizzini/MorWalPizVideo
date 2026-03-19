@@ -2,20 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import react from '@vitejs/plugin-react-swc';
-import fs from 'fs';
-import path from 'path';
-import child_process from 'child_process';
 import { env } from 'process';
-
-const baseFolder =
-  env.APPDATA !== undefined && env.APPDATA !== ''
-    ? `${env.APPDATA}/ASP.NET/https`
-    : `${env.HOME}/.aspnet/https`;
-
-const certificateName = 'morwalpizvideo.client';
-const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
-const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
-
 // you can copy the base structure of manifest object.
 const manifestForPlugIn = {
   registerType: 'autoUpdate' as const,
@@ -62,27 +49,6 @@ const manifestForPlugIn = {
   },
 };
 
-if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
-  if (
-    0 !==
-    child_process.spawnSync(
-      'dotnet',
-      [
-        'dev-certs',
-        'https',
-        '--export-path',
-        certFilePath,
-        '--format',
-        'Pem',
-        '--no-password',
-      ],
-      { stdio: 'inherit' }
-    ).status
-  ) {
-    throw new Error('Could not create certificate.');
-  }
-}
-
 const target = env.ASPNETCORE_HTTPS_PORT
   ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`
   : env.ASPNETCORE_URLS
@@ -110,10 +76,6 @@ export default defineConfig({
         target,
         secure: false,
       },
-    },
-    https: {
-      key: fs.readFileSync(keyFilePath),
-      cert: fs.readFileSync(certFilePath),
-    },
+    }
   },
 });
