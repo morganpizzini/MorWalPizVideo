@@ -4,6 +4,50 @@ import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvide
 import type { ProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
 
+/**
+ * Get the API base URL from runtime environment or build-time environment
+ * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
+ */
+function getApiBaseUrl(): string {
+    // Check runtime environment (injected by Docker entrypoint)
+    if (typeof window !== 'undefined' && (window as any).ENV?.VITE_API_BASE_URL) {
+        return (window as any).ENV.VITE_API_BASE_URL;
+    }
+    if (typeof window !== 'undefined' && (window as any).ENV?.API_BASE_URL) {
+        return (window as any).ENV.API_BASE_URL;
+    }
+    
+    // Check build-time environment (Vite)
+    if (import.meta.env.VITE_API_BASE_URL) {
+        return import.meta.env.VITE_API_BASE_URL;
+    }
+    
+    // Default to relative paths (for Vite dev proxy)
+    return '';
+}
+
+/**
+ * Normalize URL path and optionally prepend base URL
+ * Handles both '/api/...' and 'api/...' formats safely
+ */
+function buildFullUrl(path: string): string {
+    const baseUrl = getApiBaseUrl();
+    
+    // Normalize path to have single leading slash
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    
+    // If no base URL, return relative path (for Vite proxy)
+    if (!baseUrl) {
+        return normalizedPath;
+    }
+    
+    // Remove trailing slash from base URL
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    
+    // Combine base URL with path
+    return `${cleanBase}${normalizedPath}`;
+}
+
 export function post(url: string, obj: any, overrideHeaderEnv: string = '') {
     return call(url, 'POST', obj, overrideHeaderEnv);
 }
@@ -63,7 +107,7 @@ export async function call(url: string, method: string, body: any, overrideHeade
             options.body = JSON.stringify(body);
         }
     }
-    return fetch(`/${url}`, options)
+    return fetch(buildFullUrl(url), options)
         .then(async (response) => {
             if (response.ok) {
                 if (downloadFile) {
