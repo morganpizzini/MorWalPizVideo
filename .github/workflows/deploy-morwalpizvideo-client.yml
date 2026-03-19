@@ -9,6 +9,10 @@ on:
       - 'frontend/packages/**'
       - '.github/workflows/deploy-morwalpizvideo-client.yml'
   workflow_dispatch:
+  
+permissions:
+  id-token: write
+  contents: read 
 
 env:
   IMAGE_NAME: morwalpizvideo-client
