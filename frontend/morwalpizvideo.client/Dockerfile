@@ -23,7 +23,7 @@ RUN npm ci
 # Copy source files
 COPY morwalpizvideo.client/src ./src
 COPY morwalpizvideo.client/index.html ./
-COPY morwalpizvideo.client/vite.config.js ./
+COPY morwalpizvideo.client/vite.config.ts ./
 COPY morwalpizvideo.client/public ./public
 
 # Build the application
