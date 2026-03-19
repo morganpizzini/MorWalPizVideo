@@ -2,7 +2,55 @@
  * API Keys management service
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+/**
+ * Get the API base URL from runtime environment or build-time environment
+ * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
+ */
+function getApiBaseUrl(): string {
+  // Check runtime environment (injected by Docker entrypoint)
+  if (typeof window !== 'undefined' && window.ENV?.VITE_API_BASE_URL) {
+    return window.ENV.VITE_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && window.ENV?.API_BASE_URL) {
+    return window.ENV.API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && window.ENV?.REACT_APP_API_URL) {
+    return window.ENV.REACT_APP_API_URL;
+  }
+  
+  // Check build-time environment (Vite)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Default to empty string for relative paths
+  return '';
+}
+
+/**
+ * Build full API URL with proper normalization
+ * Handles both '/api/...' and 'api/...' formats safely
+ */
+function buildApiUrl(path: string): string {
+  const baseUrl = getApiBaseUrl();
+  
+  // Normalize path to have leading slash
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // If no base URL, return relative path
+  if (!baseUrl) {
+    return normalizedPath;
+  }
+  
+  // Remove trailing slash from base URL
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  
+  // Combine base URL with path
+  return `${cleanBase}${normalizedPath}`;
+}
 
 /**
  * Get authentication token from localStorage
@@ -29,7 +77,7 @@ function getAuthHeaders() {
  * @returns {Promise<Array>} Array of API keys
  */
 export async function getAllApiKeys() {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys`, {
+  const response = await fetch(buildApiUrl('/api/apikeys'), {
     headers: getAuthHeaders()
   });
   
@@ -46,7 +94,7 @@ export async function getAllApiKeys() {
  * @returns {Promise<Object>} API key details
  */
 export async function getApiKeyById(id) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys/${encodeURIComponent(id)}`, {
+  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
     headers: getAuthHeaders()
   });
   
@@ -71,7 +119,7 @@ export async function getApiKeyById(id) {
  * @returns {Promise<Object>} Created API key with unhashed key
  */
 export async function createApiKey(data) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys`, {
+  const response = await fetch(buildApiUrl('/api/apikeys'), {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)
@@ -97,7 +145,7 @@ export async function createApiKey(data) {
  * @returns {Promise<Object>} Response message
  */
 export async function updateApiKey(id, data) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys/${encodeURIComponent(id)}`, {
+  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)
@@ -117,7 +165,7 @@ export async function updateApiKey(id, data) {
  * @returns {Promise<Object>} Response with new status
  */
 export async function toggleApiKey(id) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys/${encodeURIComponent(id)}/toggle`, {
+  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}/toggle`), {
     method: 'POST',
     headers: getAuthHeaders()
   });
@@ -136,7 +184,7 @@ export async function toggleApiKey(id) {
  * @returns {Promise<Object>} Response with new unhashed key
  */
 export async function regenerateApiKey(id) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys/${encodeURIComponent(id)}/regenerate`, {
+  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}/regenerate`), {
     method: 'POST',
     headers: getAuthHeaders()
   });
@@ -155,7 +203,7 @@ export async function regenerateApiKey(id) {
  * @returns {Promise<Object>} Response message
  */
 export async function deleteApiKey(id) {
-  const response = await fetch(`${API_BASE_URL}/api/apikeys/${encodeURIComponent(id)}`, {
+  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
     method: 'DELETE',
     headers: getAuthHeaders()
   });
