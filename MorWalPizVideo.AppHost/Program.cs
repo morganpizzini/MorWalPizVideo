@@ -13,7 +13,7 @@ builder.AddNpmApp("morwalpizvideo", "../frontend/morwalpizvideo.client", "dev")
     .WaitFor(frontoffice)
     .WithEnvironment("ASPNETCORE_URLS", frontoffice.GetEndpoint("https"))
     .WithEnvironment("BROWSER", "none")
-    .WithHttpsEndpoint(port: 5174, env: "PORT",name: "https")
+    .WithHttpEndpoint(port: 5174, env: "PORT")
     .InGroup(frontendGroup);
 
 var backoffice = builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoffice")

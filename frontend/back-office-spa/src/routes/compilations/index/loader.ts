@@ -1,9 +1,6 @@
-import { Compilation } from '@morwalpizvideo/models';
+import { get } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
-export default async function loader(): Promise<Compilation[]> {
-  const response = await fetch('/api/compilations');
-  if (!response.ok) {
-    throw new Error('Failed to load compilations');
-  }
-  return response.json();
+export default async function loader() {
+  return get(endpoints.COMPILATIONS);
 }

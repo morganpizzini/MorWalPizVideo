@@ -1,4 +1,6 @@
 import { ActionFunctionArgs } from 'react-router';
+import { Delete } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -14,17 +16,12 @@ export default async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const response = await fetch(`/api/calendarEvents/${encodeURIComponent(title.toString())}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
+    const result = await Delete(ComposeUrl(endpoints.CALENDAREVENTS_DETAIL, { title: title.toString() }));
+    
+    if (result?.errors) {
       return {
         success: false,
-        errors: {
-          generics: [errorText || 'Failed to delete calendar event']
-        }
+        errors: result.errors
       };
     }
 

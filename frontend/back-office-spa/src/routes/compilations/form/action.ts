@@ -1,4 +1,6 @@
 import { data } from 'react-router';
+import { post, put } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
 export default async function action({ request, params }: { request: Request; params: any }) {
   const formData = Object.fromEntries(await request.formData());
@@ -42,27 +44,17 @@ export default async function action({ request, params }: { request: Request; pa
   }
 
   // Prepare API request
-  const apiUrl = isEditMode ? `/api/compilations/${params.id}` : '/api/compilations';
-  const method = isEditMode ? 'PUT' : 'POST';
-
-  // If editing, include the ID in the payload
-  if (isEditMode) {
-    values.id = params.id;
+  try {
+    if (isEditMode) {
+      values.id = params.id;
+      await put(ComposeUrl(endpoints.COMPILATIONS_DETAIL, { compilationId: params.id }), values);
+      return data({ success: true }, { status: 200 });
+    } else {
+      await post(endpoints.COMPILATIONS, values);
+      return data({ success: true }, { status: 201 });
+    }
+  } catch (error) {
+    errors['generics'] = ['API error found'];
+    return data({ success: false, errors }, { status: 500 });
   }
-
-  return fetch(apiUrl, {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
-      return data({ success: true }, { status: isEditMode ? 200 : 201 });
-    })
-    .catch(() => {
-      errors['generics'] = ['API error found'];
-      return data({ success: false, errors }, { status: 500 });
-    });
 }

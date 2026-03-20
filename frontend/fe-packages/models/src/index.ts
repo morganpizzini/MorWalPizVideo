@@ -85,6 +85,7 @@ export type {
   VideoRef,
   Video,
   Match,
+  Compilation,
   VideoImportRequest,
   SwapRootThumbnailRequest,
   RootCreationRequest,

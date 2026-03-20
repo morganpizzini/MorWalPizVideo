@@ -14,6 +14,24 @@ const PRODUCTCATEGORIES = `${baseEndpoint}/productcategories`;
 const PRODUCTCATEGORIES_DETAIL = `${PRODUCTCATEGORIES}/{productCategoryId}`;
 const SPONSORS = `${baseEndpoint}/sponsors`;
 const SPONSORS_DETAIL = `${SPONSORS}/{sponsorId}`;
+const COMPILATIONS = `${baseEndpoint}/compilations`;
+const COMPILATIONS_DETAIL = `${COMPILATIONS}/{compilationId}`;
+const CUSTOMFORMS = `${baseEndpoint}/customforms`;
+const CUSTOMFORMS_DETAIL = `${CUSTOMFORMS}/{customFormId}`;
+const CALENDAREVENTS = `${baseEndpoint}/calendarEvents`;
+const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/{title}`;
+const CHANNELS = `${baseEndpoint}/channels`;
+const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
+const CONFIGURATIONS = `${baseEndpoint}/configurations`;
+const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
+const VIDEOS_IMPORT = `${VIDEOS}/ImportVideo`;
+const VIDEOS_IMPORT_SUB = `${VIDEOS}/ImportSubCreation`;
+const VIDEOS_ROOT_CREATION = `${VIDEOS}/RootCreation`;
+const VIDEOS_CONVERT_TO_ROOT = `${VIDEOS}/ConvertIntoRoot`;
+const VIDEOS_SWAP_THUMBNAIL = `${VIDEOS}/SwapThumbnailId`;
+const VIDEOS_TRANSLATE = `${VIDEOS}/translate`;
+const IMAGE_UPLOAD = `${baseEndpoint}/ImageUpload/upload`;
+const IMAGE_UPLOAD_MULTIPLE = `${baseEndpoint}/ImageUpload/upload-multiple`;
 
 export default {
     VIDEOS,
@@ -29,10 +47,28 @@ export default {
     PRODUCTCATEGORIES,
     PRODUCTCATEGORIES_DETAIL,
     SPONSORS,
-    SPONSORS_DETAIL
+    SPONSORS_DETAIL,
+    COMPILATIONS,
+    COMPILATIONS_DETAIL,
+    CUSTOMFORMS,
+    CUSTOMFORMS_DETAIL,
+    CALENDAREVENTS,
+    CALENDAREVENTS_DETAIL,
+    CHANNELS,
+    CHANNELS_DETAIL,
+    CONFIGURATIONS,
+    CONFIGURATIONS_DETAIL,
+    VIDEOS_IMPORT,
+    VIDEOS_IMPORT_SUB,
+    VIDEOS_ROOT_CREATION,
+    VIDEOS_CONVERT_TO_ROOT,
+    VIDEOS_SWAP_THUMBNAIL,
+    VIDEOS_TRANSLATE,
+    IMAGE_UPLOAD,
+    IMAGE_UPLOAD_MULTIPLE
 }
 
-export function ComposeUrl(inputString, replacements, queryStringObj = undefined) {
+export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {
     if (!inputString) {
         console.error("Parameter inputString not provided in ComposeUrl function");
         return "";
@@ -41,7 +77,7 @@ export function ComposeUrl(inputString, replacements, queryStringObj = undefined
     const pattern = /\{(.*?)\}/g;
 
     // Function to replace placeholders using a callback function
-    function replacePlaceholder(match, placeholder) {
+    function replacePlaceholder(match: string, placeholder: string): string {
         return replacements[placeholder] || match;
     }
     let resultUrl = inputString.replace(pattern, replacePlaceholder);

@@ -1,14 +1,11 @@
 import { CalendarEvent } from '@morwalpizvideo/models';
+import { get } from '@services/apiService';
+import endpoints from '@services/endpoints';
+
 export default async function loader() {
   try {
-    const response = await fetch(`/api/calendarEvents`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    console.log(response)
-    const events: CalendarEvent[] = await response.json();
-    return events;
+    const events: CalendarEvent[] = await get(endpoints.CALENDAREVENTS);
+    return events || [];
   } catch (error) {
     console.error('Failed to load calendar events:', error);
     return [];

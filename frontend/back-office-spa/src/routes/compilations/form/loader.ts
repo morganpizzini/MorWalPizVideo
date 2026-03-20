@@ -1,3 +1,5 @@
+import { get } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 import { Compilation } from '@morwalpizvideo/models';
 
 export default async function loader({ params }: { params: any }): Promise<Compilation | null> {
@@ -7,9 +9,5 @@ export default async function loader({ params }: { params: any }): Promise<Compi
   }
 
   // Edit mode - fetch existing compilation
-  const response = await fetch(`/api/compilations/${params.id}`);
-  if (!response.ok) {
-    throw new Error('Failed to load compilation');
-  }
-  return response.json();
+  return get(ComposeUrl(endpoints.COMPILATIONS_DETAIL, { compilationId: params.id }));
 }

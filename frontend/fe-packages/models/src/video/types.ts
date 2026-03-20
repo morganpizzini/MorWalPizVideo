@@ -83,6 +83,14 @@ export interface SubVideoCrationRequest {
   categories: string[];
 }
 
+export interface Compilation {
+  id?: string;
+  title: string;
+  description: string;
+  url: string;
+  videos: VideoRef[];
+}
+
 export interface VideoTranslateRequest {
   videoIds: string[];
 }
