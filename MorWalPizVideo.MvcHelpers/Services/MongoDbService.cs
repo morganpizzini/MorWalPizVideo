@@ -22,7 +22,7 @@ namespace MorWalPizVideo.Server.Services
 
                 if (string.IsNullOrEmpty(settings.ConnectionString) || string.IsNullOrEmpty(settings.DatabaseName))
                 {
-                    throw new InvalidOperationException("MongoDB configuration is not properly set. Check your configuration sources including Azure Key Vault.");
+                    throw new InvalidOperationException($"MongoDB configuration is not properly set. Check your configuration sources including Azure Key Vault. Connection string {settings.ConnectionString} - databaseName {settings.DatabaseName}");
                 }
 
                 var mongoSettings = MongoClientSettings.FromUrl(new MongoUrl(settings.ConnectionString));
