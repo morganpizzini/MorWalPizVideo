@@ -6,10 +6,14 @@ WORKDIR /app
 
 # Copy the local models package first
 COPY fe-packages/models ./packages/models
+COPY fe-packages/services ./packages/services
 COPY package*.json ./
 
 # Install dependencies and build models package
 WORKDIR /app/packages/models
+RUN npm ci && npm run build
+
+WORKDIR /app/packages/services
 RUN npm ci && npm run build
 
 # Go back to app root and copy back-office-spa files
