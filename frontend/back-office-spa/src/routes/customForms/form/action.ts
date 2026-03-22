@@ -1,4 +1,6 @@
 import { ActionFunctionArgs, redirect } from 'react-router';
+import { post, put } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
@@ -60,36 +62,12 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   };
 
   try {
-    let response;
-    
     if (id) {
       // Update existing form
-      response = await fetch(`/api/customforms/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...payload, id }),
-      });
+      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), { ...payload, id });
     } else {
       // Create new form
-      response = await fetch('/api/customforms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        errors: {
-          generics: [errorText || `Failed to ${id ? 'update' : 'create'} custom form`]
-        }
-      };
+      await post(endpoints.CUSTOMFORMS, payload);
     }
 
     // Redirect to the list page on success

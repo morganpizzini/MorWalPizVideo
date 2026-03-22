@@ -1,26 +1,14 @@
-import { LoaderFunctionArgs } from 'react-router';
-import { CustomForm } from '@morwalpizvideo/models';
+import { get } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
-export default async function loader({ params }: LoaderFunctionArgs) {
-  const { id } = params;
-
-  // If no ID, this is create mode
-  if (!id) {
-    return null;
-  }
-
-  // Edit mode - load existing form
-  try {
-    const response = await fetch(`/api/customforms/${encodeURIComponent(id)}`);
-
-    if (!response.ok) {
-      throw new Response('Form not found', { status: response.status });
+export default async function loader({ params }: { params: { id?: string } }) {
+  if (params.id) {
+    try {
+      const response = await get(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: encodeURIComponent(params.id) }));
+      return response;
+    } catch (error) {
+      throw new Response('Custom form not found', { status: 404 });
     }
-
-    const form: CustomForm = await response.json();
-    return form;
-  } catch (error) {
-    console.error('Failed to load custom form:', error);
-    throw error;
   }
+  return null;
 }

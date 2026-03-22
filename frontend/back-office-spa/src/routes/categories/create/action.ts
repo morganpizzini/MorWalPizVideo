@@ -1,4 +1,6 @@
 import { data } from 'react-router';
+import { post } from '@services/apiService';
+import endpoints from '@services/endpoints';
 import { CreateCategoryDTO } from '@/models';
 
 export default async function action({ request }: { request: Request }) {
@@ -20,16 +22,11 @@ export default async function action({ request }: { request: Request }) {
   }
 
   // If no errors, execute API request
-    return fetch(`/api/categories`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  })
-    .then(() => {
-      return data({ success: true }, { status: 201 });
-    })
-    .catch(() => {
-      errors['generics'] = ['API error found'];
-      return data({ success: false, errors }, { status: 500 });
-    });
+  try {
+    await post(endpoints.CATEGORIES, values);
+    return data({ success: true }, { status: 201 });
+  } catch (error) {
+    errors['generics'] = ['API error found'];
+    return data({ success: false, errors }, { status: 500 });
+  }
 }

@@ -1,9 +1,6 @@
-export function getCompilationByUrl(url) {
-    return fetch(`/api/compilations/${url}`)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+import { get, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import type { Compilation } from '@morwalpizvideo/models';
+
+export function getCompilationByUrl(url: string): Promise<Compilation> {
+    return get(ComposeUrl(endpoints.COMPILATIONS_BY_URL, { url }));
 }

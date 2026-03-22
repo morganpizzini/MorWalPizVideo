@@ -1,36 +1,31 @@
 import { data } from 'react-router';
-
-import { CreateChannelDTO } from '@/models/channel';
+import { post } from '@services/apiService';
+import endpoints from '@services/endpoints';
+import { CreateChannelDTO } from '@/models';
 
 export default async function action({ request }: { request: Request }) {
   const values = Object.fromEntries(await request.formData()) as CreateChannelDTO;
-
   const errors: Record<string, string | string[]> = {};
 
-  if (!values.channelName || values.channelName.toString().trim().length === 0) {
-    errors['channelName'] = 'Channel Name cannot be empty';
+  // Validate fields
+  if (!values.title || values.title.trim().length === 0) {
+    errors['title'] = 'Title cannot be empty';
   }
 
-  if (!values.yTChannelId || values.yTChannelId.toString().trim().length === 0) {
-    errors['yTChannelId'] = 'YouTube Channel ID cannot be empty';
+  if (!values.url || values.url.trim().length === 0) {
+    errors['url'] = 'URL cannot be empty';
   }
 
-  // Return errors if any
+  // Check for errors
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
 
-  // API request
-  return fetch(`/api/channels`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  })
-    .then(() => {
-      return data({ success: true }, { status: 201 });
-    })
-    .catch(() => {
-      errors['generics'] = ['API error found'];
-      return data({ success: false, errors }, { status: 500 });
-    });
+  try {
+    await post(endpoints.CHANNELS, values);
+    return data({ success: true }, { status: 201 });
+  } catch (error) {
+    errors['generics'] = ['API error found'];
+    return data({ success: false, errors }, { status: 500 });
+  }
 }

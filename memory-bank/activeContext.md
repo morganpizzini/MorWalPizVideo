@@ -6,7 +6,32 @@ As of the latest session (February 13, 2026), development has successfully imple
 
 ## Recent Development Activity
 
-### API Key Management Frontend Interface (Latest - February 13, 2026)
+### Shared Services Package Migration (Latest - March 22, 2026)
+- **morwalpizvideo.client Services Refactoring**: Migrated public client service files to use shared @morwalpizvideo/services package
+  - **Eliminated Code Duplication**: Removed ~60 lines of duplicated URL construction logic (getApiBaseUrl, buildApiUrl functions)
+  - **Updated compilations.ts**: Reduced from 19 lines to 6 lines using shared services
+  - **Updated customForms.ts**: Reduced from 68 lines to 29 lines using shared services
+  - **Added Public Client Endpoints**: Extended shared endpoints with COMPILATIONS_BY_URL, CUSTOMFORMS_ACTIVE, CUSTOMFORMS_BY_URL, CUSTOMFORMS_RESPONSES
+  - **Fixed Barrel Exports**: Enhanced index.ts to properly export HTTP methods (get, post, put, etc.) and endpoints as named exports
+  - **Type Safety**: Full TypeScript support with proper imports from @morwalpizvideo/models
+  - **Centralized Management**: All API endpoints now defined in single shared location
+
+- **Key Technical Benefits**:
+  - Consistent API service pattern across both public client and authenticated back-office
+  - Single source of truth for endpoint URLs
+  - Easier maintenance - URL logic changes only need to be made once
+  - Better type safety with centralized TypeScript definitions
+  - Reduced bundle size by eliminating code duplication
+
+- **Package Structure**:
+  ```
+  @morwalpizvideo/services
+  ├── src/apiService.ts - Core HTTP methods and entity services
+  ├── src/endpoints.ts - Centralized endpoint constants
+  └── src/index.ts - Barrel exports with proper named exports
+  ```
+
+### API Key Management Frontend Interface (February 13, 2026)
 - **Complete Client Application UI**: Implemented comprehensive API key management interface in `morwalpizvideo.client`
   - **API Service Layer**: `services/apiKeys.js` with full CRUD operations and JWT authentication
   - **List View**: `routes/apiKeys.jsx` - Table display with status badges, quick actions, delete confirmation
@@ -86,18 +111,29 @@ As of the latest session (February 13, 2026), development has successfully imple
 - **CI/CD Integration**: GitHub Actions example for automated builds and deployments
 - **Comprehensive Documentation**: `DOCKER.md` with build/run/deploy instructions
 
-### Shared Models Library Architecture (December 2025)
+### Shared Packages Library Architecture (December 2025 - March 2026)
 - **Workspace Configuration**: Implemented npm workspaces for monorepo structure
 - **Shared Models Package**: Created `@morwalpizvideo/models` as centralized TypeScript models library
-- **Package Structure**: 
-  - `packages/models/` - Shared models with 14 model files
+  - `fe-packages/models/` - Shared models with 14+ model files
   - TypeScript compilation to `dist/` directory
-  - Proper exports configuration for ES modules
-- **Model Migration**: Moved all models from `back-office-spa/src/models` to shared package
-- **Cross-Application Usage**: Both `back-office-spa` and `morwalpizvideo.client` now import from shared library
-- **Import Path Updates**: Changed from `@models` to `@morwalpizvideo/models` across both applications
-- **Export Configuration**: Fixed enum exports (ContentType, LinkType) to work as values, not just types
-- **Build System**: Configured TypeScript compilation for shared library with proper module resolution
+  - Cross-application usage: Both `back-office-spa` and `morwalpizvideo.client` import from shared library
+  - Export configuration: Fixed enum exports (ContentType, LinkType) to work as values, not just types
+
+- **Shared Services Package**: Created `@morwalpizvideo/services` for centralized API communication (March 2026)
+  - `fe-packages/services/` - Unified API service layer
+  - Core HTTP methods: get, post, put, patch, Delete, postFormData, getFile, call
+  - Centralized endpoint constants with URL parameterization via ComposeUrl
+  - Authentication token injection via dependency injection pattern (setAuthTokenProvider)
+  - Environment-aware API base URL resolution (Docker runtime, Vite build-time, relative paths)
+  - Entity-specific service functions for Products, ProductCategories, Sponsors
+  - Full TypeScript support with proper barrel exports
+
+- **Package Benefits**:
+  - Single source of truth for models and API services
+  - Eliminated code duplication across frontend applications
+  - Consistent patterns for API communication
+  - Better maintainability and type safety
+  - Easier testing with centralized logic
 
 ### Products and Sponsors Management System
 - **Products API**: Complete CRUD operations in `ProductsController.cs`
@@ -332,6 +368,12 @@ User Login → JWT Generation → Token Storage → API Authorization → Protec
 - **Development Tools**: Visual Studio Code, Visual Studio 2022
 
 ### Recent File Changes
+- **Shared Services Migration** (March 22, 2026):
+  - Updated `fe-packages/services/src/index.ts` - Added named exports for HTTP methods and endpoints
+  - Updated `fe-packages/services/src/endpoints.ts` - Added COMPILATIONS_BY_URL, CUSTOMFORMS_ACTIVE, CUSTOMFORMS_BY_URL, CUSTOMFORMS_RESPONSES
+  - Migrated `morwalpizvideo.client/src/services/compilations.ts` - Now uses shared services (19 → 6 lines)
+  - Migrated `morwalpizvideo.client/src/services/customForms.ts` - Now uses shared services (68 → 29 lines)
+  - Rebuilt `fe-packages/services` package with updated TypeScript definitions
 - **API Key Management Frontend** (February 13, 2026):
   - Created `services/apiKeys.js` - API service layer
   - Created `routes/apiKeys.jsx` and `apiKeys.loader.js` - List view

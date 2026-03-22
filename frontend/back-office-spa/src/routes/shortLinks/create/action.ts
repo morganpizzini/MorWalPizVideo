@@ -1,40 +1,28 @@
 import { data } from 'react-router';
-
-import { CreateShortLinkDTO, LinkType } from '@morwalpizvideo/models';
+import { post } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
 export default async function action({ request }: { request: Request }) {
-  const formData = Object.fromEntries(await request.formData());
+  const values = Object.fromEntries(await request.formData());
   const errors: Record<string, string | string[]> = {};
-  
-  // Convert form values to proper types
-  const values: any = {
-    target: String(formData.target || ''),
-    linkType: Number(formData.linkType),
-    queryLinkIds: formData.queryLinkIds ? JSON.parse(String(formData.queryLinkIds)) : [],
-    message: String(formData.message || '')
-  };
-  
-  // Validation
-  if (!values.target || values.target.trim().length === 0) {
-    errors['target'] = 'Target cannot be empty';
+
+  if (!values.title || (values.title as string).trim().length === 0) {
+    errors['title'] = 'Title cannot be empty';
   }
 
-  // Check for errors
+  if (!values.longUrl || (values.longUrl as string).trim().length === 0) {
+    errors['longUrl'] = 'URL cannot be empty';
+  }
+
   if (Object.keys(errors).length > 0) {
     return data({ success: false, errors }, { status: 400 });
   }
 
-  // If no errors, proceed with API request
-  return fetch(`/api/shortlinks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  })
-    .then(() => {
-      return data({ success: true }, { status: 201 });
-    })
-    .catch(() => {
-      errors['generics'] = ['API error found'];
-      return data({ success: false, errors }, { status: 500 });
-    });
+  try {
+    await post(endpoints.SHORTLINKS, values);
+    return data({ success: true }, { status: 201 });
+  } catch (error) {
+    errors['generics'] = ['API error found'];
+    return data({ success: false, errors }, { status: 500 });
+  }
 }

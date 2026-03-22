@@ -1,52 +1,19 @@
-import { ActionFunctionArgs, redirect } from 'react-router';
+import { ActionFunctionArgs, data } from 'react-router';
+import { put } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
-/**
- * Action function for the video edit route
- * Handles form submission for updating video information
- */
-export default async function({ request, params }: ActionFunctionArgs)  {
-  const { id } = params;
-  
-  if (!id) {
-    throw new Response('Video ID is required', { status: 400 });
-  }
+export default async function action({ request, params }: ActionFunctionArgs) {
+  const values = Object.fromEntries(await request.formData());
 
   try {
-    const formData = await request.formData();
+    const response = await put(ComposeUrl(endpoints.VIDEOS_DETAIL, { videoId: params.id! }), values);
     
-    const updateData = {
-      id,
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      url: formData.get('url') as string,
-      category: formData.get('category') as string,
-      matchType: parseInt(formData.get('matchType') as string),
-      thumbnailVideoId: formData.get('thumbnailVideoId') as string,
-    };
-
-    // TODO: Implement actual API call to update the video
-    // For now, we'll just log the data and redirect
-    console.log('Update video data:', updateData);
-    
-    // Simulate API call
-    const response = await fetch(`/api/videos/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updateData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update video: ${response.statusText}`);
+    if (response?.errors) {
+      return data({ success: false, errors: response.errors }, { status: 400 });
     }
-
-    // Redirect to the detail page after successful update
-    return redirect(`/videos/${id}`);
     
+    return data({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Error updating video:', error);
-    // For now, return the error. In a real app, you'd want better error handling
-    throw new Response('Failed to update video', { status: 500 });
+    return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });
   }
-};
+}

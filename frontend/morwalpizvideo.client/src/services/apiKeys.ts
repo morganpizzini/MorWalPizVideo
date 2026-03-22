@@ -2,61 +2,13 @@
  * API Keys management service
  */
 
-/**
- * Get the API base URL from runtime environment or build-time environment
- * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
- */
-function getApiBaseUrl(): string {
-  // Check runtime environment (injected by Docker entrypoint)
-  if (typeof window !== 'undefined' && window.ENV?.VITE_API_BASE_URL) {
-    return window.ENV.VITE_API_BASE_URL;
-  }
-  if (typeof window !== 'undefined' && window.ENV?.API_BASE_URL) {
-    return window.ENV.API_BASE_URL;
-  }
-  if (typeof window !== 'undefined' && window.ENV?.REACT_APP_API_URL) {
-    return window.ENV.REACT_APP_API_URL;
-  }
-  
-  // Check build-time environment (Vite)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  
-  // Default to empty string for relative paths
-  return '';
-}
-
-/**
- * Build full API URL with proper normalization
- * Handles both '/api/...' and 'api/...' formats safely
- */
-function buildApiUrl(path: string): string {
-  const baseUrl = getApiBaseUrl();
-  
-  // Normalize path to have leading slash
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  
-  // If no base URL, return relative path
-  if (!baseUrl) {
-    return normalizedPath;
-  }
-  
-  // Remove trailing slash from base URL
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  
-  // Combine base URL with path
-  return `${cleanBase}${normalizedPath}`;
-}
+import { frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 /**
  * Get authentication token from localStorage
  * @returns {string|null} JWT token
  */
-function getAuthToken() {
+function getAuthToken(): string | null {
   return localStorage.getItem('authToken');
 }
 
@@ -64,7 +16,7 @@ function getAuthToken() {
  * Create headers with authentication
  * @returns {Object} Headers object
  */
-function getAuthHeaders() {
+function getAuthHeaders(): HeadersInit {
   const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
@@ -73,11 +25,19 @@ function getAuthHeaders() {
 }
 
 /**
+ * Helper to build full URL from endpoint using ComposeUrl
+ * ComposeUrl handles base URL resolution and environment variables
+ */
+function buildUrl(endpoint: string): string {
+  return ComposeUrl(endpoint, {});
+}
+
+/**
  * Get all API keys
  * @returns {Promise<Array>} Array of API keys
  */
-export async function getAllApiKeys() {
-  const response = await fetch(buildApiUrl('/api/apikeys'), {
+export async function getAllApiKeys(): Promise<any[]> {
+  const response = await fetch(buildUrl(frontendEndpoints.APIKEYS), {
     headers: getAuthHeaders()
   });
   
@@ -93,8 +53,8 @@ export async function getAllApiKeys() {
  * @param {string} id - API key ID
  * @returns {Promise<Object>} API key details
  */
-export async function getApiKeyById(id) {
-  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
+export async function getApiKeyById(id: string): Promise<any> {
+  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
     headers: getAuthHeaders()
   });
   
@@ -118,8 +78,14 @@ export async function getApiKeyById(id) {
  * @param {string} [data.expiresAt] - Expiration date (ISO string)
  * @returns {Promise<Object>} Created API key with unhashed key
  */
-export async function createApiKey(data) {
-  const response = await fetch(buildApiUrl('/api/apikeys'), {
+export async function createApiKey(data: {
+  name: string;
+  description?: string;
+  rateLimitPerMinute?: number;
+  allowedIpAddresses?: string[];
+  expiresAt?: string;
+}): Promise<any> {
+  const response = await fetch(buildUrl(frontendEndpoints.APIKEYS), {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)
@@ -144,8 +110,14 @@ export async function createApiKey(data) {
  * @param {string} [data.expiresAt] - Expiration date (ISO string)
  * @returns {Promise<Object>} Response message
  */
-export async function updateApiKey(id, data) {
-  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
+export async function updateApiKey(id: string, data: {
+  name?: string;
+  description?: string;
+  rateLimitPerMinute?: number;
+  allowedIpAddresses?: string[];
+  expiresAt?: string;
+}): Promise<any> {
+  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)
@@ -164,8 +136,8 @@ export async function updateApiKey(id, data) {
  * @param {string} id - API key ID
  * @returns {Promise<Object>} Response with new status
  */
-export async function toggleApiKey(id) {
-  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}/toggle`), {
+export async function toggleApiKey(id: string): Promise<any> {
+  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_TOGGLE, { id })), {
     method: 'POST',
     headers: getAuthHeaders()
   });
@@ -183,8 +155,8 @@ export async function toggleApiKey(id) {
  * @param {string} id - API key ID
  * @returns {Promise<Object>} Response with new unhashed key
  */
-export async function regenerateApiKey(id) {
-  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}/regenerate`), {
+export async function regenerateApiKey(id: string): Promise<any> {
+  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_REGENERATE, { id })), {
     method: 'POST',
     headers: getAuthHeaders()
   });
@@ -202,8 +174,8 @@ export async function regenerateApiKey(id) {
  * @param {string} id - API key ID
  * @returns {Promise<Object>} Response message
  */
-export async function deleteApiKey(id) {
-  const response = await fetch(buildApiUrl(`/api/apikeys/${encodeURIComponent(id)}`), {
+export async function deleteApiKey(id: string): Promise<any> {
+  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
     method: 'DELETE',
     headers: getAuthHeaders()
   });

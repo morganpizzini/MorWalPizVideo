@@ -1,24 +1,20 @@
+import { get, post, frontendEndpoints } from '@morwalpizvideo/services';
+
 export function getSponsors() {
-    return fetch('/api/sponsors')
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+    return get(frontendEndpoints.SPONSORS);
 }
 
-export function askForSponsor(name, email, description, token) {
-    return fetch("/api/sponsors", {
-        method: "POST",
-        body: JSON.stringify({ name: name, email: email, description: description, token: token }),
-        headers: {
-            "Content-type": "application/json; charset=UTF-8"
-        }
+export function askForSponsor(name: string, email: string, description: string, token: string) {
+    return post(frontendEndpoints.SPONSORS, { 
+        name, 
+        email, 
+        description, 
+        token 
     }).then((response) => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+        // Handle 204 No Content response
+        if (!response || Object.keys(response).length === 0) {
+            return true;
         }
-        return response.status == '204' ? true : response.json();
-    }); 
+        return response;
+    });
 }

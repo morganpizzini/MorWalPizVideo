@@ -1,89 +1,19 @@
-import { ActionFunctionArgs } from 'react-router';
-import { UpdateCalendarEventRequest } from '@morwalpizvideo/models';
+import { data } from 'react-router';
+import { put } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
-export default async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-
-  // Original title is used to identify the event
-  const title = formData.get('title')?.toString() || '';
-  const newTitle = formData.get('newTitle')?.toString() || '';
-  const description = formData.get('description')?.toString() || '';
-  const date = formData.get('date')?.toString() || '';
-  const categoryIdsJson = formData.get('categoryIds')?.toString() || '[]';
-  const matchId = formData.get('matchId')?.toString() || '';
-
-  // Validate required fields
-  const errors: Record<string, string> = {};
-
-  if (!title) {
-    errors.title = 'Original title is required';
-  }
-
-  if (!newTitle) {
-    errors.newTitle = 'Title is required';
-  }
-
-  if (!date) {
-    errors.date = 'Date is required';
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return {
-      success: false,
-      errors: {
-        fields: errors,
-        generics: ['Please correct the errors in the form']
-      }
-    };
-  }
-
-  // Parse categoryIds
-  let categoryIds: string[] = [];
-  try {
-    categoryIds = JSON.parse(categoryIdsJson);
-  } catch {
-    categoryIds = [];
-  }
-
-  // Create request payload
-  const updateRequest: UpdateCalendarEventRequest = {
-    title,
-    newTitle,
-    description,
-    date,
-    categoryIds,
-    matchId
-  };
+export default async function action({ request }: { request: Request }) {
+  const values = Object.fromEntries(await request.formData());
 
   try {
-    const response = await fetch('/api/calendarEvents', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updateRequest)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        errors: {
-          generics: [errorText || `Failed to update calendar event. Status: ${response.status}`]
-        }
-      };
+    const response = await put(endpoints.CALENDAREVENTS, values);
+    
+    if (response?.errors) {
+      return data({ success: false, errors: response.errors }, { status: 400 });
     }
-
-    return {
-      success: true,
-      updatedTitle: newTitle // Return the new title so we can navigate to it
-    };
+    
+    return data({ success: true }, { status: 200 });
   } catch (error) {
-    return {
-      success: false,
-      errors: {
-        generics: [(error as Error).message || 'An unexpected error occurred']
-      }
-    };
+    return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });
   }
 }

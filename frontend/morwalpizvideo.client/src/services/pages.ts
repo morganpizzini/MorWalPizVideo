@@ -1,9 +1,5 @@
-export function getPages(id) {
-    return fetch(`/api/pages/${id}`)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+import { get, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
+
+export function getPages(id: string) {
+    return get(ComposeUrl(frontendEndpoints.PAGES_DETAIL, { pageId: id }));
 }

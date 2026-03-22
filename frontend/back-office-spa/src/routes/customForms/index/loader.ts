@@ -1,17 +1,11 @@
-import { CustomForm } from '@morwalpizvideo/models';
+import { get } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
 export default async function loader() {
   try {
-    const response = await fetch(`/api/customforms`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const forms: CustomForm[] = await response.json();
-    return forms;
+    const response = await get(endpoints.CUSTOMFORMS);
+    return response;
   } catch (error) {
-    console.error('Failed to load custom forms:', error);
     return [];
   }
 }

@@ -1,6 +1,6 @@
+import { get } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
-import { QueryLink } from '@morwalpizvideo/models';
-
-export default async function loader(): Promise<QueryLink[]> {
-  return fetch(`/api/querylinks`).then(response => response.json());
+export default async function loader() {
+  return get(endpoints.QUERYLINKS);
 }

@@ -1,33 +1,12 @@
-import { LoaderFunctionArgs } from 'react-router';
-import { CalendarEvent } from '@morwalpizvideo/models';
-import { fetchProductCategories } from '@services/apiService';
+import { get } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
-export default async function loader({ params }: LoaderFunctionArgs) {
-  const { title } = params;
-
-  if (!title) {
-    throw new Response('Title is required', { status: 400 });
-  }
-
+export default async function loader({ params }: { params: { title: string } }) {
+  const title = decodeURIComponent(params.title);
   try {
-    const response = await fetch(`/api/calendarEvents/${encodeURIComponent(title)}`);
-
-    if (response.status === 404) {
-      throw new Response('Calendar event not found', { status: 404 });
-    }
-
-    if (!response.ok) {
-      throw new Response(`Failed to load calendar event. Status: ${response.status}`, { status: response.status });
-    }
-
-    const calendarEvent: CalendarEvent = await response.json();
-    const categories = await fetchProductCategories();
-    
-    return { calendarEvent, categories };
+    const response = await get(ComposeUrl(endpoints.CALENDAREVENTS_DETAIL, { title: encodeURIComponent(title) }));
+    return response;
   } catch (error) {
-    if (error instanceof Response) {
-      throw error;
-    }
-    throw new Response((error as Error).message || 'An unexpected error occurred', { status: 500 });
+    throw new Response('Calendar event not found', { status: 404 });
   }
 }

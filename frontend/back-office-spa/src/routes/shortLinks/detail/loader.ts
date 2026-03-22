@@ -1,6 +1,6 @@
+import { get } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 
-import { ShortLink } from '@morwalpizvideo/models';
-
-export default async function loader({ params }: { params: { id: string } }): Promise<ShortLink> {
-  return fetch(`/api/shortlinks/${params.id}`).then(response => response.json());
+export default async function loader({ params }: { params: { id: string } }) {
+  return get(ComposeUrl(endpoints.SHORTLINKS_DETAIL, { querylinkId: params.id }));
 }

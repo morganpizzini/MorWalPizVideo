@@ -1,5 +1,6 @@
-
+import { get } from '@services/apiService';
+import endpoints from '@services/endpoints';
 
 export default async function loader() {
-  return fetch(`/api/channels`).then(response => response.json());
+  return get(endpoints.CHANNELS);
 }

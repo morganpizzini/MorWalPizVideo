@@ -1,5 +1,6 @@
 import { ActionFunctionArgs, data } from 'react-router';
-
+import { put } from '@services/apiService';
+import endpoints, { ComposeUrl } from '@services/endpoints';
 import { UpdateCategoryDTO } from '@/models';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
@@ -21,16 +22,11 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   // If no errors, execute API request
-  return fetch(`/api/categories/${params.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  })
-    .then(() => {
-      return data({ success: true }, { status: 200 });
-    })
-    .catch(() => {
-      errors['generics'] = ['API error found'];
-      return data({ success: false, errors }, { status: 500 });
-    });
+  try {
+    await put(ComposeUrl(endpoints.CATEGORIES_DETAIL, { categoryId: params.id! }), values);
+    return data({ success: true }, { status: 200 });
+  } catch (error) {
+    errors['generics'] = ['API error found'];
+    return data({ success: false, errors }, { status: 500 });
+  }
 }
