@@ -14,7 +14,7 @@ WORKDIR /app/packages/models
 RUN npm ci && npm run build
 
 WORKDIR /app/packages/services
-RUN npm ci && npm run build
+RUN npm i && npm run build
 
 # Go back to app root and copy back-office-spa files
 WORKDIR /app
