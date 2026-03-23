@@ -4,34 +4,38 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy the local models package first
-COPY fe-packages/models ./packages/models
-COPY fe-packages/services ./packages/services
-COPY package*.json ./
+# Copy root package files and workspace manifests
+COPY package.json yarn.lock ./
+COPY fe-packages/models/package.json ./fe-packages/models/
+COPY fe-packages/services/package.json ./fe-packages/services/
+COPY back-office-spa/package.json ./back-office-spa/
 
-# Install dependencies and build models package
-WORKDIR /app/packages/models
-RUN npm ci && npm run build
+# Install all dependencies (workspaces)
+RUN yarn install --frozen-lockfile
 
-WORKDIR /app/packages/services
-RUN npm i && npm run build
+# Copy shared package sources and build them
+COPY fe-packages/models ./fe-packages/models
+COPY fe-packages/services ./fe-packages/services
 
-# Go back to app root and copy back-office-spa files
+WORKDIR /app/fe-packages/models
+RUN yarn build
+
+WORKDIR /app/fe-packages/services
+RUN yarn build
+
+# Refresh workspace links after building packages
 WORKDIR /app
-COPY back-office-spa/package*.json ./back-office-spa/
-COPY back-office-spa/tsconfig*.json ./back-office-spa/
-COPY back-office-spa/vite.config.ts ./back-office-spa/
+RUN yarn install --force --frozen-lockfile
 
-# Install dependencies for back-office-spa
+# Copy back-office-spa source files
 WORKDIR /app/back-office-spa
-RUN npm ci
-
-# Copy source files
+COPY back-office-spa/tsconfig*.json ./
+COPY back-office-spa/vite.config.ts ./
 COPY back-office-spa/src ./src
 COPY back-office-spa/index.html ./
 
 # Build the application
-RUN npm run build-uncheck
+RUN yarn build-uncheck
 
 # Stage 2: Production
 FROM nginx:alpine

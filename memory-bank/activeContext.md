@@ -2,9 +2,32 @@
 
 ## Current Development Focus
 
-As of the latest session (February 13, 2026), development has successfully implemented a comprehensive API Key authentication system to secure communication between the VideoImporter WinForms application and the BackOffice ChatController endpoints. This represents a significant security enhancement to the existing JWT-based authentication infrastructure.
+As of the latest session (March 22, 2026), the project has successfully resolved Docker build issues for the back-office-spa application after migrating to Yarn workspaces. The Docker containerization is now production-ready with proper workspace package resolution.
 
 ## Recent Development Activity
+
+### Docker Build Fix for Yarn Workspaces (March 22, 2026)
+- **Issue Resolved**: Fixed Docker build failure with workspace package resolution
+  - **Problem**: Vite couldn't resolve `@morwalpizvideo/models` and `@morwalpizvideo/services` during Docker build
+  - **Root Cause**: Yarn workspace symlinks created during initial install pointed to non-existent dist/ folders
+  - **Solution**: Added `yarn install --force --frozen-lockfile` after building workspace packages to refresh symlinks
+  - **Result**: Docker build now succeeds, creating 63MB production image
+
+- **Key Fix**: Modified Dockerfile build sequence:
+  1. Install all workspace dependencies (creates symlinks before packages are built)
+  2. Copy and build fe-packages/models
+  3. Copy and build fe-packages/services
+  4. **NEW**: Refresh workspace links with `yarn install --force --frozen-lockfile`
+  5. Build back-office-spa application
+
+- **Technical Details**:
+  - Local builds worked because packages were already built and linked
+  - Docker fresh builds failed because symlinks weren't refreshed after building packages
+  - The `--force` flag ensures Yarn re-evaluates workspace package links
+  - Build time: ~56 seconds for complete fresh build
+
+- **Files Modified**:
+  - `frontend/back-office-spa/Dockerfile` - Added workspace link refresh step
 
 ### Shared Services Package Migration (Latest - March 22, 2026)
 - **morwalpizvideo.client Services Refactoring**: Migrated public client service files to use shared @morwalpizvideo/services package

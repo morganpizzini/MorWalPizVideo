@@ -3,18 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "MorWalPizVideo monorepo with shared models",
+  "packageManager": "yarn@1.22.22",
   "workspaces": [
     "fe-packages/*",
     "back-office-spa",
     "morwalpizvideo.client"
   ],
   "scripts": {
-    "build:models": "cd fe-packages/models && npm run build",
-    "clean:models": "cd fe-packages/models && npm run clean",
-    "install:all": "npm install"
+    "build:models": "yarn workspace @morwalpizvideo/models build",
+    "clean:models": "yarn workspace @morwalpizvideo/models clean",
+    "install:all": "yarn install"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=18.0.0"
   }
 }
