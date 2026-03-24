@@ -1,4 +1,4 @@
-
+import { get } from '@morwalpizvideo/services';
 import { FontListResponse } from '@morwalpizvideo/models';
 
 /**
@@ -9,12 +9,6 @@ export class UtilityService {
    * Get all available fonts from the backend
    */
   static async getFonts(): Promise<FontListResponse> {
-    const response = await fetch(`/api/Utility/fonts`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch fonts: ${response.statusText}`);
-    }
-    
-    return response.json();
+    return get(`/api/Utility/fonts`);
   }
 }

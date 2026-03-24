@@ -3,10 +3,10 @@ import { post } from '@services/apiService';
 import endpoints from '@services/endpoints';
 
 export default async function action({ request }: { request: Request }) {
-  const values = Object.fromEntries(await request.formData());
-
+    const values = Object.fromEntries(await request.formData());
+    const categories = JSON.parse(values.categories);
   try {
-    await post(endpoints.VIDEOS_IMPORT, values);
+      await post(endpoints.VIDEOS_IMPORT, { ...values, categories });
     return data({ success: true }, { status: 201 });
   } catch (error) {
     return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });

@@ -1,5 +1,6 @@
 
 import { CreateYouTubeVideoLinkRequest, YouTubeVideoLinkResponse } from '@morwalpizvideo/models';
+import { get, post, Delete } from '@morwalpizvideo/services';
 
 /**
  * Service for managing YouTube video links associated with matches
@@ -9,47 +10,21 @@ export class YouTubeVideoLinksService {
    * Get all YouTube video links for a specific match
    */
   static async getVideoLinks(matchId: string): Promise<YouTubeVideoLinkResponse[]> {
-    const response = await fetch(`/api/YouTubeVideoLinks/${matchId}/links`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video links: ${response.statusText}`);
-    }
-    
-    return response.json();
+    return get(`/api/YouTubeVideoLinks/${matchId}/links`);
   }
 
   /**
    * Create a new YouTube video link for a match
    */
   static async createVideoLink(request: CreateYouTubeVideoLinkRequest): Promise<YouTubeVideoLinkResponse> {
-    const response = await fetch(`/api/YouTubeVideoLinks/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to create video link: ${errorText}`);
-    }
-
-    return response.json();
+    return post(`/api/YouTubeVideoLinks/create`, request);
   }
 
   /**
    * Remove a YouTube video link from a match
    */
   static async removeVideoLink(matchId: string, youtubeVideoId: string): Promise<void> {
-    const response = await fetch(`/api/YouTubeVideoLinks/${matchId}/links/${youtubeVideoId}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to remove video link: ${errorText}`);
-    }
+    await Delete(`/api/YouTubeVideoLinks/${matchId}/links/${youtubeVideoId}`);
   }
 
   /**

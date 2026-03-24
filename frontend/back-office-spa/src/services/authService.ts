@@ -1,4 +1,4 @@
-import { post } from "./apiService";
+import { post, setAuthTokenProvider } from '@morwalpizvideo/services';
 
 interface UserInfo {
   id: string;
@@ -15,6 +15,11 @@ interface LoginResponse {
 class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'auth_user';
+
+  constructor() {
+    // Register this service as the auth token provider for the shared services package
+    setAuthTokenProvider(() => this.getToken());
+  }
 
   // Store token in localStorage
   setToken(token: string): void {
