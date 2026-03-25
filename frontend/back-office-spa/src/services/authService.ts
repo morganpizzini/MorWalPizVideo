@@ -1,4 +1,4 @@
-import { post, setAuthTokenProvider } from '@morwalpizvideo/services';
+import { post, setAuthTokenProvider } from './apiService';
 
 interface UserInfo {
   id: string;

@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fe-packages", "fe-packages"
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "models", "frontend\fe-packages\models\models.esproj", "{61126EE2-B158-29D9-98D6-DFB7AC4882C3}"
 EndProject
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "services", "frontend\fe-packages\services\services.esproj", "{14841C2B-6B8F-05C0-A64F-DC571EC8712F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -95,12 +97,19 @@ Global
 		{61126EE2-B158-29D9-98D6-DFB7AC4882C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61126EE2-B158-29D9-98D6-DFB7AC4882C3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{61126EE2-B158-29D9-98D6-DFB7AC4882C3}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{61126EE2-B158-29D9-98D6-DFB7AC4882C3} = {099E2364-0F0F-4AA8-8F81-990DBF0BE1D2}
+		{14841C2B-6B8F-05C0-A64F-DC571EC8712F} = {099E2364-0F0F-4AA8-8F81-990DBF0BE1D2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2F7ABE24-1916-4DF7-9A4A-070F7C1CFC7B}

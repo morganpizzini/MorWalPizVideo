@@ -1,5 +1,4 @@
 import { get, endpoints, ComposeUrl } from '@morwalpizvideo/services';
-
 /**
  * Enum representing the type of match in the system
  */
