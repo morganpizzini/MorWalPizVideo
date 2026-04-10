@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher } from 'react-router';
-import type { ProductCategory } from '@morwalpizvideo/models';
+import type { VideoProductCategory } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
@@ -10,10 +10,10 @@ import { ColumnDef } from '@tanstack/react-table';
 
 const ProductCategories: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<VideoProductCategory | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<ProductCategory[]>();
+  const entities = useLoaderData<VideoProductCategory[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -33,7 +33,7 @@ const ProductCategories: React.FC = () => {
     }
   }, [result, busy]);
 
-  const handleDelete = (category: ProductCategory) => {
+  const handleDelete = (category: VideoProductCategory) => {
     setSelectedCategory(category);
     setShowModal(true);
   };
@@ -52,7 +52,7 @@ const ProductCategories: React.FC = () => {
   };
 
   // Column definitions
-  const columns = useMemo<ColumnDef<ProductCategory>[]>(
+  const columns = useMemo<ColumnDef<VideoProductCategory>[]>(
     () => [
       {
         accessorKey: 'title',

@@ -35,13 +35,12 @@ namespace MorWalPiz.VideoImporter.Views
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public VideoTranslationDialog()
+        public VideoTranslationDialog(string apiEndpoint, string? apiKey = null)
         {
             InitializeComponent();
             DataContext = this;
 
-            // Initialize API service with foobar endpoint
-            _apiService = new ApiService("https://api.foobar.com");
+            _apiService = new ApiService(apiEndpoint, apiKey);
         }
 
         private async void TranslateButton_Click(object sender, RoutedEventArgs e)
@@ -115,49 +114,24 @@ namespace MorWalPiz.VideoImporter.Views
 
         private async Task<List<TranslationResult>> TranslateVideoContentAsync(string title, string description, IList<Language> languages)
         {
-            try
+            var apiResponses = await _apiService.TranslateVideoContentAsync(title, description, languages);
+
+            var results = new List<TranslationResult>();
+
+            foreach (var apiResponse in apiResponses)
             {
-                // Call the real API service
-                var apiResponses = await _apiService.TranslateVideoContentAsync(title, description, languages);
+                var language = languages.FirstOrDefault(l => l.Code == apiResponse.LanguageCode);
 
-                var results = new List<TranslationResult>();
-
-                foreach (var apiResponse in apiResponses)
+                results.Add(new TranslationResult
                 {
-                    // Find the corresponding language from our database
-                    var language = languages.FirstOrDefault(l => l.Code == apiResponse.LanguageCode);
-
-                    results.Add(new TranslationResult
-                    {
-                        LanguageCode = apiResponse.LanguageCode,
-                        LanguageName = language?.Name ?? apiResponse.LanguageCode,
-                        TranslatedTitle = apiResponse.TranslatedTitle,
-                        TranslatedDescription = apiResponse.TranslatedDescription
-                    });
-                }
-
-                return results;
+                    LanguageCode = apiResponse.LanguageCode,
+                    LanguageName = language?.Name ?? apiResponse.LanguageCode,
+                    TranslatedTitle = apiResponse.TranslatedTitle,
+                    TranslatedDescription = apiResponse.TranslatedDescription
+                });
             }
-            catch (Exception)
-            {
-                // Fallback to mock data if API call fails
-                await Task.Delay(1000); // Brief delay to simulate processing
 
-                var results = new List<TranslationResult>();
-
-                foreach (var language in languages)
-                {
-                    results.Add(new TranslationResult
-                    {
-                        LanguageCode = language.Code,
-                        LanguageName = language.Name,
-                        TranslatedTitle = $"[DEMO-{language.Code}] {title}",
-                        TranslatedDescription = $"[DEMO-{language.Code}] {description}"
-                    });
-                }
-
-                return results;
-            }
+            return results;
         }
 
         private void CreateTranslationTabs(List<TranslationResult> translations, IList<Language> languages)

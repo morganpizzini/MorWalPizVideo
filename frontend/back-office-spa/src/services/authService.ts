@@ -1,4 +1,4 @@
-import { post, setAuthTokenProvider } from './apiService';
+import { post, setAuthTokenProvider } from '@morwalpizvideo/services';
 
 interface UserInfo {
   id: string;
@@ -33,13 +33,15 @@ class AuthService {
 
   // Store user info in localStorage
   setUser(user: UserInfo): void {
+    console.log('Storing user info:', user);
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
   }
 
   // Get user info from localStorage
   getUser(): UserInfo | null {
     const userStr = localStorage.getItem(this.USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+
+    return userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null;
   }
 
   // Check if user is authenticated
@@ -51,8 +53,6 @@ class AuthService {
   async login(username: string, password: string): Promise<LoginResponse> {
     const response = await post('/api/auth/login', { username, password });
 
-    console.log(response);
-
     // Store token and user info
     this.setToken(response.token);
     this.setUser(response.user);
@@ -61,9 +61,18 @@ class AuthService {
   }
 
   // Logout method
-  logout(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
+  async logout(): Promise<void> {
+    try {
+      // Call backend to clear cookie
+      await post('/api/auth/logout', {});
+    } catch (error) {
+      // Continue with local cleanup even if API call fails
+      console.error('Logout API call failed:', error);
+    } finally {
+      // Always clear local storage
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+    }
   }
 
   // Validate token with backend
@@ -72,8 +81,7 @@ class AuthService {
     if (!token) return false;
 
     try {
-      const response = await post('/api/auth/validate', { token });
-      console.log("validate token:", response);
+      await post('/api/auth/validate', { token });
       return true;
     } catch {
       return false;

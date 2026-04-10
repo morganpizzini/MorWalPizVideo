@@ -1,4 +1,4 @@
-import { createProduct } from '@services/apiService';
+import { createProduct } from '@morwalpizvideo/services';
 import type { CreateProductDTO } from '@morwalpizvideo/models';
 
 export default async function action({ request }: { request: Request }) {

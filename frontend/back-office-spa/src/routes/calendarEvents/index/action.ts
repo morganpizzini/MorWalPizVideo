@@ -1,6 +1,5 @@
 import { ActionFunctionArgs } from 'react-router';
-import { Delete } from '@services/apiService';
-import endpoints, { ComposeUrl } from '@services/endpoints';
+import { Delete, endpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 export default async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();

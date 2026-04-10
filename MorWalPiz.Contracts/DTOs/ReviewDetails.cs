@@ -18,7 +18,7 @@ namespace MorWalPizVideo.BackOffice.DTOs
         public string Description { get; set; } = string.Empty;
 
         [Required]
-        [Description("Descrizione del video")]
+        [Description("Tags del video")]
         public string Tags { get; set; } = string.Empty;
     }
     public class ReviewDetails

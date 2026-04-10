@@ -4,10 +4,10 @@ import { useLoaderData, useNavigate, useFetcher } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
-import type { ProductCategory } from '@morwalpizvideo/models';
+import type { VideoProductCategory } from '@morwalpizvideo/models';
 
 const EditProductCategory: React.FC = () => {
-  const { productCategory } = useLoaderData() as { productCategory: ProductCategory };
+  const { productCategory } = useLoaderData() as { productCategory: VideoProductCategory };
   const navigate = useNavigate();
   const toast = useToast();
   const fetcher = useFetcher();

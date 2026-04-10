@@ -1,5 +1,4 @@
-import { deleteSponsor } from '@services/apiService';
-
+import { deleteSponsor } from '@morwalpizvideo/services';
 export default async function action({ request }: { request: Request }) {
   const formData = await request.formData();
     const id = formData.get('sponsorId') as string;

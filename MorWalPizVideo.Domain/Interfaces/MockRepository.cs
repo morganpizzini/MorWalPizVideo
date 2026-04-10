@@ -102,7 +102,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
-            return (await this.GetItemsAsync(x=> x.Username == username)).FirstOrDefault();
+            var u = username.ToLower();
+            return (await this.GetItemsAsync(x=> x.Username.ToLower() == u || x.Email.ToLower() == u)).FirstOrDefault();
         }
     }
     public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
@@ -183,6 +184,55 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class CustomFormMockRepository : BaseMockRepository<CustomForm>, ICustomFormRepository
     {
         public CustomFormMockRepository(IHostEnvironment environment) : base(environment, "customForms")
+        {
+        }
+    }
+
+    public class DigitalProductMockRepository : BaseMockRepository<DigitalProduct>, IDigitalProductRepository
+    {
+        public DigitalProductMockRepository(IHostEnvironment environment) : base(environment, "digitalProducts")
+        {
+        }
+    }
+
+    public class DigitalProductCategoryMockRepository : BaseMockRepository<DigitalProductCategory>, IDigitalProductCategoryRepository
+    {
+        public DigitalProductCategoryMockRepository(IHostEnvironment environment) : base(environment, "digitalProductCategories")
+        {
+        }
+    }
+
+    public class CustomerMockRepository : BaseMockRepository<Customer>, ICustomerRepository
+    {
+        public CustomerMockRepository(IHostEnvironment environment) : base(environment, "customers")
+        {
+        }
+    }
+
+    public class CartMockRepository : BaseMockRepository<Cart>, ICartRepository
+    {
+        public CartMockRepository(IHostEnvironment environment) : base(environment, "carts")
+        {
+        }
+    }
+
+    public class InsightTopicMockRepository : BaseMockRepository<InsightTopic>, IInsightTopicRepository
+    {
+        public InsightTopicMockRepository(IHostEnvironment environment) : base(environment, "insightTopics")
+        {
+        }
+    }
+
+    public class InsightNewsItemMockRepository : BaseMockRepository<InsightNewsItem>, IInsightNewsItemRepository
+    {
+        public InsightNewsItemMockRepository(IHostEnvironment environment) : base(environment, "insightNewsItems")
+        {
+        }
+    }
+
+    public class InsightContentPlanMockRepository : BaseMockRepository<InsightContentPlan>, IInsightContentPlanRepository
+    {
+        public InsightContentPlanMockRepository(IHostEnvironment environment) : base(environment, "insightContentPlans")
         {
         }
     }

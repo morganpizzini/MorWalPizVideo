@@ -72,6 +72,12 @@ import CustomForms from '../../routes/customForms/index';
 import CustomFormDetail from '../../routes/customForms/detail';
 import CustomFormForm from '../../routes/customForms/form';
 
+import Insights from '../../routes/insights/index';
+import InsightDetail from '../../routes/insights/detail';
+import InsightForm from '../../routes/insights/form';
+import InsightNews from '../../routes/insights/news';
+import scanNewsAction from '../../routes/insights/scan-news/action';
+
 /**
  * Protected routes (require authentication)
  * These routes are rendered within the PrimaryLayout component
@@ -408,6 +414,43 @@ export const protectedRoutes: RouteConfig[] = [
             loader: CustomFormForm.Loader,
             action: CustomFormForm.Action,
             Component: CustomFormForm.Component,
+          },
+        ],
+      },
+    ],
+  }),
+
+  // Insights
+  createRouteGroup('insights', {
+    action: Insights.Action,
+    children: [
+      { index: true, path: '', loader: Insights.Loader, Component: Insights.Component },
+      { path: 'create', loader: InsightForm.Loader, Component: InsightForm.Component, action: InsightForm.Action },
+      {
+        path: 'news/:newsId',
+        loader: InsightNews.Loader,
+        action: InsightNews.Action,
+        Component: InsightNews.Component,
+      },
+      {
+        path: ':id',
+        Component: Outlet,
+        children: [
+          {
+            index: true,
+            path: '',
+            loader: InsightDetail.Loader,
+            Component: InsightDetail.Component,
+          },
+          {
+            path: 'edit',
+            loader: InsightForm.Loader,
+            action: InsightForm.Action,
+            Component: InsightForm.Component,
+          },
+          {
+            path: 'scan-news',
+            action: scanNewsAction,
           },
         ],
       },

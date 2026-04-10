@@ -8,17 +8,13 @@ namespace MorWalPizVideo.Server.Controllers
 {
     public abstract class ApplicationController : ApplicationControllerBase
     {   
-        protected readonly DataService dataService;
+        protected readonly IGenericDataService dataService;
         protected readonly IMorWalPizCache cache;
-
+        
         protected ApplicationController(IGenericDataService _dataService, IMorWalPizCache _memoryCache)
         {
             cache = _memoryCache;
-            var cast = _dataService as DataService;
-            if (cast != null)
-                dataService = cast;
-            else
-                throw new NullReferenceException($"DataService cannot be casted");
+            dataService = _dataService;
         }
         protected async Task<int> CountMatches()
         {

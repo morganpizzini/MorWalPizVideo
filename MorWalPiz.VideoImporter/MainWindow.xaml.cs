@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
 // Aggiungi using per AppDbContext e Disclaimer
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Views;
@@ -11,6 +12,8 @@ using System.Windows.Input;
 using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
 using Cursors = System.Windows.Input.Cursors;
+using Button = System.Windows.Controls.Button;
+using TextBox = System.Windows.Controls.TextBox;
 
 
 namespace MorWalPiz.VideoImporter
@@ -373,9 +376,121 @@ namespace MorWalPiz.VideoImporter
 
         private void TranslateVideoMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var translationDialog = new Views.VideoTranslationDialog();
+            var translationDialog = new Views.VideoTranslationDialog(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
             translationDialog.Owner = this;
             translationDialog.ShowDialog();
+        }
+
+        private async void AutoTranslateYouTubeVideoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // Prompt user for YouTube video ID
+            var inputDialog = new Window
+            {
+                Title = "Traduzione Automatica Video YouTube",
+                Width = 450,
+                Height = 150,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            var stackPanel = new StackPanel { Margin = new Thickness(20) };
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "Inserisci l'ID del video YouTube:",
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+
+            var videoIdTextBox = new System.Windows.Controls.TextBox
+            {
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            stackPanel.Children.Add(videoIdTextBox);
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 75,
+                Margin = new Thickness(0, 0, 10, 0),
+                IsDefault = true
+            };
+            okButton.Click += (s, args) =>
+            {
+                inputDialog.DialogResult = true;
+                inputDialog.Close();
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Annulla",
+                Width = 75,
+                IsCancel = true
+            };
+            cancelButton.Click += (s, args) =>
+            {
+                inputDialog.DialogResult = false;
+                inputDialog.Close();
+            };
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+            stackPanel.Children.Add(buttonPanel);
+
+            inputDialog.Content = stackPanel;
+
+            if (inputDialog.ShowDialog() == true)
+            {
+                var youtubeVideoId = videoIdTextBox.Text?.Trim();
+
+                if (string.IsNullOrWhiteSpace(youtubeVideoId))
+                {
+                    MessageBox.Show("L'ID del video non può essere vuoto.", "Errore",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                try
+                {
+                    Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+
+                    var result = await App.YouTubeUploadService.AutoTranslateVideoAsync(youtubeVideoId);
+
+                    Mouse.OverrideCursor = null;
+
+                    if (result.Success)
+                    {
+                        var message = $"Traduzione completata con successo!\n\n" +
+                                    $"Video ID: {result.YouTubeVideoId}\n" +
+                                    $"Titolo originale: {result.OriginalTitle}\n" +
+                                    $"Traduzioni create: {result.TranslationsCreated}";
+
+                        if (!string.IsNullOrWhiteSpace(result.WarningMessage))
+                        {
+                            message += $"\n\nAvviso: {result.WarningMessage}";
+                        }
+
+                        MessageBox.Show(message, "Successo",
+                            MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Errore durante la traduzione:\n{result.ErrorMessage}",
+                            "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Mouse.OverrideCursor = null;
+                    MessageBox.Show($"Errore imprevisto:\n{ex.Message}",
+                        "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void FileDetailButton_Click(object sender, RoutedEventArgs e)
@@ -428,7 +543,7 @@ namespace MorWalPiz.VideoImporter
                                                 : f.CleanFileName).ToList();
 
             // Apri la finestra di dialogo per il contesto video
-            var contextDialog = new Views.VideoContextDialog(selectedFileNames, App.ApiSettings.ApiEndpoint);
+            var contextDialog = new Views.VideoContextDialog(selectedFileNames, App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
             contextDialog.Owner = this;
 
             // Mostra la finestra di dialogo
@@ -899,6 +1014,13 @@ namespace MorWalPiz.VideoImporter
                 MessageBox.Show($"Errore nell'apertura della gestione tenant: {ex.Message}", "Errore", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void AnalyzeTranscriptMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new VideoTranscriptAnalysisDialog(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+            dialog.Owner = this;
+            dialog.ShowDialog();
         }
 
         /// <summary>

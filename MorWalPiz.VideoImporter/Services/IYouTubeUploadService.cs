@@ -15,6 +15,13 @@ namespace MorWalPiz.VideoImporter.Services
         Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null);
 
         /// <summary>
+        /// Traduce automaticamente un video YouTube esistente e aggiorna le localizzazioni
+        /// </summary>
+        /// <param name="youtubeVideoId">ID del video YouTube</param>
+        /// <returns>Risultato dell'operazione di traduzione e aggiornamento</returns>
+        Task<VideoLocalizationUpdateResult> AutoTranslateVideoAsync(string youtubeVideoId);
+
+        /// <summary>
         /// Pulisce le credenziali memorizzate
         /// </summary>
         /// <returns>True se l'operazione è riuscita</returns>
@@ -99,6 +106,47 @@ namespace MorWalPiz.VideoImporter.Services
 
         /// <summary>
         /// Messaggio di avviso per operazioni completate con successo ma con avvertimenti
+        /// </summary>
+        public string WarningMessage { get; set; }
+    }
+
+    /// <summary>
+    /// Risultato dell'operazione di traduzione e aggiornamento localizzazioni
+    /// </summary>
+    public class VideoLocalizationUpdateResult
+    {
+        /// <summary>
+        /// ID del video YouTube
+        /// </summary>
+        public string YouTubeVideoId { get; set; }
+
+        /// <summary>
+        /// Titolo originale del video
+        /// </summary>
+        public string OriginalTitle { get; set; }
+
+        /// <summary>
+        /// Descrizione originale del video
+        /// </summary>
+        public string OriginalDescription { get; set; }
+
+        /// <summary>
+        /// Numero di traduzioni create
+        /// </summary>
+        public int TranslationsCreated { get; set; }
+
+        /// <summary>
+        /// Esito dell'operazione
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// Messaggio di errore in caso di fallimento
+        /// </summary>
+        public string ErrorMessage { get; set; }
+
+        /// <summary>
+        /// Messaggio di avviso
         /// </summary>
         public string WarningMessage { get; set; }
     }

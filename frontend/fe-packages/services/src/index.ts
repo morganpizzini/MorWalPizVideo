@@ -32,3 +32,30 @@ export {
 export { default as endpoints } from './endpoints';
 export { default as frontendEndpoints } from './endpoints-frontend';
 export { ComposeUrl } from './endpoints';
+
+// Shop service exports
+export {
+    fetchShopProducts,
+    getShopProduct,
+    createShopProduct,
+    updateShopProduct,
+    deleteShopProduct,
+    fetchShopProductCategories,
+    shopLogin,
+    shopVerifyEmail,
+    getShopCart,
+    addToCart,
+    updateCartItem,
+    removeFromCart,
+    checkoutCart,
+    getLegalContent,
+    createLegalContent,
+    updateLegalContent
+} from './shopService';
+
+// Insights service exports
+export {
+    insightsTopicsApi,
+    insightsNewsApi,
+    insightsContentPlansApi
+} from './insightsService';

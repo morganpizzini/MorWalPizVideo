@@ -93,6 +93,25 @@ MorWalPizVideo is in **active development** with core functionality operational 
 - **✅ Product Categories**: Backend API for product categorization
 - **✅ Sponsors Management**: Complete backend API for sponsor CRUD operations
 
+### MorWalPiz Shop - Digital Products E-Commerce (Latest - March 25, 2026)
+- **✅ Shop Backend APIs**: Complete REST API implementation (MorWalPizVideo.ServerAPI)
+  - ShopCatalogController: Products and categories with filtering
+  - ShopAuthController: Email-based customer authentication
+  - ShopCartController: Full cart management and free checkout
+- **✅ Shop Data Models**: DigitalProduct, DigitalProductCategory, Customer, Cart, CartItem
+- **✅ Shop Repositories**: IRepository<T> pattern with mock and MongoDB implementations
+- **✅ Shop Frontend Application**: React 18 + TypeScript + Vite SPA (morwalpiz-shop.client)
+  - Catalog browsing with category filtering
+  - Product detail pages
+  - Shopping cart management
+  - Email authentication with terms acceptance
+  - Legal pages (Privacy, Cookie Policy, Terms)
+- **✅ Shop Deployment**: Complete Docker and CI/CD configuration
+  - Multi-stage Dockerfile (Node build + Nginx runtime)
+  - GitHub Actions workflow for Azure deployment
+  - Runtime environment variable injection
+  - Production-ready nginx with SPA routing and caching
+
 ### Deployment & DevOps
 - **✅ Docker Support**: Multi-stage Dockerfile for back-office-spa
 - **✅ Nginx Configuration**: Production-ready web server setup with SPA routing

@@ -82,8 +82,8 @@ namespace MorWalPiz.VideoImporter.Data
 
       // Configurazione per Settings (con TenantId = 1)
       modelBuilder.Entity<Settings>().HasData(
-          new Settings { Id = 1, DefaultHashtags = "video, hashtag", ApplicationName = "MorWalPiz Site", ApiEndpoint = "https://localhost:7221", TenantId = 1 },
-          new Settings { Id = 2, DefaultHashtags = "video, hashtag", ApplicationName = "ShootingITA Site", ApiEndpoint = "https://localhost:7221", TenantId = 2 }
+          new Settings { Id = 1, DefaultHashtags = "video, hashtag", ApplicationName = "MorWalPiz Site", ApiEndpoint = "https://localhost:7221", ApiKey= "w5pH-nVupIi6fqUXZC9Fa3IRQ1NGDuQkCSN77o6Y3nw", TenantId = 1 },
+          new Settings { Id = 2, DefaultHashtags = "video, hashtag", ApplicationName = "ShootingITA Site", ApiEndpoint = "https://localhost:7221", ApiKey = "w5pH-nVupIi6fqUXZC9Fa3IRQ1NGDuQkCSN77o6Y3nw", TenantId = 2 }
       );
 
       // Configurazione per PublishSchedules - Pianificazioni predefinite (con TenantId = 1)

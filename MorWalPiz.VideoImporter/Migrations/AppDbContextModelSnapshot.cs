@@ -37,7 +37,7 @@ namespace MorWalPiz.VideoImporter.Migrations
 
                     b.HasIndex("LanguageId");
 
-                    b.ToTable("Disclaimers", (string)null);
+                    b.ToTable("Disclaimers");
                 });
 
             modelBuilder.Entity("MorWalPiz.VideoImporter.Models.Language", b =>
@@ -71,7 +71,7 @@ namespace MorWalPiz.VideoImporter.Migrations
                         .IsUnique()
                         .HasFilter("[IsDefault] = 1");
 
-                    b.ToTable("Languages", (string)null);
+                    b.ToTable("Languages");
 
                     b.HasData(
                         new
@@ -148,7 +148,7 @@ namespace MorWalPiz.VideoImporter.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PublishSchedules", (string)null);
+                    b.ToTable("PublishSchedules");
 
                     b.HasData(
                         new
@@ -193,6 +193,9 @@ namespace MorWalPiz.VideoImporter.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApiKey")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ApplicationName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -206,13 +209,14 @@ namespace MorWalPiz.VideoImporter.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Settings", (string)null);
+                    b.ToTable("Settings");
 
                     b.HasData(
                         new
                         {
                             Id = 1,
                             ApiEndpoint = "https://localhost:7221",
+                            ApiKey = "OnhQfkZyZxdSTZhIMGQC9gK1xRwU/8vdaBhmXYUjr50=",
                             ApplicationName = "MorWalPiz Site",
                             DefaultHashtags = "video, hashtag",
                             TenantId = 1
@@ -221,6 +225,7 @@ namespace MorWalPiz.VideoImporter.Migrations
                         {
                             Id = 2,
                             ApiEndpoint = "https://localhost:7221",
+                            ApiKey = "OnhQfkZyZxdSTZhIMGQC9gK1xRwU/8vdaBhmXYUjr50=",
                             ApplicationName = "ShootingITA Site",
                             DefaultHashtags = "video, hashtag",
                             TenantId = 2
@@ -246,7 +251,7 @@ namespace MorWalPiz.VideoImporter.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants", (string)null);
+                    b.ToTable("Tenants");
 
                     b.HasData(
                         new

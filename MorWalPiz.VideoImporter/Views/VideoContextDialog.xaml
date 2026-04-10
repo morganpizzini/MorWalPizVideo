@@ -6,78 +6,99 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Contesto Video"
-        Height="450"
-        Width="600"
+        Height="550"
+        Width="650"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
-  <Grid Margin="15">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-    <!-- Intestazione -->
-    <TextBlock Grid.Row="0"
-               Text="File selezionati"
-               FontWeight="Bold"
-               Margin="0,0,0,5"/>
+        <!-- Selected Files Card -->
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+            <StackPanel>
+                <TextBlock Text="📁 File Selezionati"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,10"/>
+                
+                <ListBox x:Name="SelectedFilesListBox"
+                         ItemsSource="{Binding SelectedFiles}"
+                         Height="120"
+                         Background="White"
+                         BorderBrush="{StaticResource BorderBrush}"
+                         BorderThickness="1"/>
+            </StackPanel>
+        </Border>
 
-    <!-- Lista file selezionati -->
-    <ListBox Grid.Row="1"
-             x:Name="SelectedFilesListBox"
-             ItemsSource="{Binding SelectedFiles}"
-             Margin="0,0,0,10"/>
+        <!-- Video Context Card -->
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,15">
+            <StackPanel>
+                <TextBlock Text="📝 Contesto Video"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,5"/>
+                
+                <TextBlock Text="Inserisci il contesto o le informazioni aggiuntive per i video selezionati"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,0,0,10"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
-    <!-- Intestazione textarea -->
-    <TextBlock Grid.Row="2"
-               Text="Contesto video"
-               FontWeight="Bold"
-               Margin="0,0,0,5"/>
+        <!-- Context TextBox -->
+        <TextBox Grid.Row="2"
+                 x:Name="VideoContextTextBox"
+                 TextWrapping="Wrap"
+                 AcceptsReturn="True"
+                 VerticalScrollBarVisibility="Auto"
+                 Margin="0,0,0,15"
+                 FontFamily="Consolas"
+                 FontSize="12"/>
 
-    <!-- Textarea per il contesto -->
-    <TextBox Grid.Row="3"
-             x:Name="VideoContextTextBox"
-             TextWrapping="Wrap"
-             AcceptsReturn="True"
-             Margin="0,0,0,10"
-             VerticalScrollBarVisibility="Auto"/>
+        <!-- Action Area -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-    <!-- Pulsanti di azione -->
-    <Grid Grid.Row="4">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-      </Grid.ColumnDefinitions>
+            <!-- Loading Indicator -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="⏳ Elaborazione in corso..."
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Margin="0,0,10,0"/>
+                <ProgressBar IsIndeterminate="True"
+                             Width="100"
+                             Height="4"
+                             VerticalAlignment="Center"/>
+            </StackPanel>
 
-      <!-- Indicatore di caricamento -->
-      <StackPanel Grid.Column="0"
-                  Orientation="Horizontal"
-                  Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-        <TextBlock Text="Elaborazione in corso..."
-                   VerticalAlignment="Center"
-                   Margin="0,0,10,0"/>
-        <ProgressBar IsIndeterminate="True"
-                     Width="100"
-                     Height="15"
-                     VerticalAlignment="Center"/>
-      </StackPanel>
+            <!-- Buttons -->
+            <StackPanel Grid.Column="1"
+                        Style="{StaticResource DialogFooterStyle}">
+                <Button Content="Annulla"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Width="90"
+                        Click="CancelButton_Click"/>
 
-      <Button Grid.Column="1"
-              Content="Annulla"
-              Padding="10,5"
-              Margin="0,0,10,0"
-              Click="CancelButton_Click"/>
-
-      <Button Grid.Column="2"
-              x:Name="ConfirmButton"
-              Content="Invia"
-              Padding="10,5"
-              Click="ConfirmButton_Click"
-              IsDefault="True"/>
+                <Button x:Name="ConfirmButton"
+                        Content="✅ Invia"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Width="90"
+                        Margin="10,0,0,0"
+                        Click="ConfirmButton_Click"
+                        IsDefault="True"/>
+            </StackPanel>
+        </Grid>
     </Grid>
-  </Grid>
 </Window>

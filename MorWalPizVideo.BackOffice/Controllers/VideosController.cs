@@ -10,14 +10,14 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class VideosController : ApplicationControllerBase
 {
-    private readonly DataService dataService;
+    private readonly DataService _dataService;
     private readonly ICrossApiService client;
     private readonly IYTService yTService;
     private readonly IExternalDataService externalDataService;
-    public VideosController(DataService _dataService, ICrossApiService _clientFactory,
+    public VideosController(DataService dataService, ICrossApiService _clientFactory,
         IYTService _yTService, IExternalDataService _externalDataService)
     {
-        dataService = _dataService;
+        _dataService = dataService;
         client = _clientFactory;
         yTService = _yTService;
         externalDataService = _externalDataService;
@@ -26,14 +26,14 @@ public class VideosController : ApplicationControllerBase
     [HttpGet()]
     public async Task<IActionResult> Fetch()
     {
-        var matches = await dataService.FetchMatches();
+        var matches = await _dataService.FetchMatches();
         return Ok(matches);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(BaseRequestId request)
     {
-        var match = await dataService.GetMatch(request.Id);
+        var match = await _dataService.GetMatch(request.Id);
         if(match == null)
         {
             return NotFound();
@@ -49,14 +49,14 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("ImportVideo")]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
-        var matchCollection = await dataService.FetchMatches();
+        var matchCollection = await _dataService.FetchMatches();
 
         // Fetch categories and convert to CategoryRef objects
-        var categories = (await dataService.FetchCategories(request.Categories))
+        var categories = (await _dataService.FetchCategories(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
 
-        await dataService.SaveMatch(YouTubeContent.CreateSingleVideo(request.VideoId, categories));
+        await _dataService.SaveMatch(YouTubeContent.CreateSingleVideo(request.VideoId, categories));
 
         // Populate metadata by calling ExternalDataService.FetchMatches()
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
@@ -70,7 +70,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("ConvertIntoRoot")]
     public async Task<IActionResult> ConvertIntoRoot(RootCreationRequest request)
     {
-        var existingMatch = await dataService.FindMatch(request.VideoId);
+        var existingMatch = await _dataService.FindMatch(request.VideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -84,7 +84,7 @@ public class VideosController : ApplicationControllerBase
         var existingVideoRef = existingMatch.VideoRefs?.FirstOrDefault();
         
         // Fetch categories and convert to CategoryRef objects
-        var categories = (await dataService.FetchCategories(request.Categories))
+        var categories = (await _dataService.FetchCategories(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
 
@@ -114,7 +114,7 @@ public class VideosController : ApplicationControllerBase
             newMatch = newMatch.AddVideo(existingMatch.ThumbnailVideoId, existingMatch.Categories);
         }
 
-        await dataService.UpdateMatch(newMatch);
+        await _dataService.UpdateMatch(newMatch);
 
         // Populate any missing metadata by calling ExternalDataService.FetchMatches()
         await externalDataService.FetchMatches();
@@ -125,7 +125,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("SwapThumbnailId")]
     public async Task<IActionResult> SwapThumbnailUrl(SwapRootThumbnailRequest request)
     {
-        var existingMatch = await dataService.FindMatch(request.CurrentVideoId);
+        var existingMatch = await _dataService.FindMatch(request.CurrentVideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -137,21 +137,21 @@ public class VideosController : ApplicationControllerBase
 
         var updatedMatch = existingMatch.WithThumbnail(request.NewVideoId);
 
-        await dataService.UpdateMatch(updatedMatch);
+        await _dataService.UpdateMatch(updatedMatch);
         return NoContent();
     }
 
     [HttpPost("RootCreation")]
     public async Task<IActionResult> RootCreation(RootCreationRequest request)
     {
-        var matchCollection = await dataService.FetchMatches();
+        var matchCollection = await _dataService.FetchMatches();
 
         // Fetch categories and convert to CategoryRef objects
-        var categories = (await dataService.FetchCategories(request.Categories))
+        var categories = (await _dataService.FetchCategories(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
 
-        await dataService.SaveMatch(YouTubeContent.CreateCollection(
+        await _dataService.SaveMatch(YouTubeContent.CreateCollection(
             request.VideoId,
             request.Title,
             request.Description,
@@ -164,7 +164,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("ImportSubCreation")]
     public async Task<IActionResult> SubVideoCreation(SubVideoCrationRequest request)
     {
-        var existingMatch = await dataService.FindMatch(request.MatchId);
+        var existingMatch = await _dataService.FindMatch(request.MatchId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -178,14 +178,14 @@ public class VideosController : ApplicationControllerBase
         }
         else
         {
-            var categoryEntities = await dataService.FetchCategories(new[] { request.Category });
+            var categoryEntities = await _dataService.FetchCategories(new[] { request.Category });
             categories = categoryEntities
                 .Select(x => new CategoryRef(x.Id, x.Title))
                 .ToArray();
         }
 
         var updatedMatch = existingMatch.AddVideo(request.VideoId, categories);
-        await dataService.UpdateMatch(updatedMatch);
+        await _dataService.UpdateMatch(updatedMatch);
 
         // Populate metadata by calling ExternalDataService.FetchMatches()
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt

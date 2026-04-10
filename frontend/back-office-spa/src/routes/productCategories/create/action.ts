@@ -1,5 +1,4 @@
-import { redirect } from 'react-router';
-import { createProductCategory } from '@services/apiService';
+import { createProductCategory } from '@morwalpizvideo/services';
 import type { CreateProductCategoryDTO } from '@morwalpizvideo/models';
 
 export default async function action({ request }: { request: Request }) {

@@ -6,15 +6,14 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Modifica Pianificazione"
-        Height="450"
-        Width="500"
+        Height="500"
+        Width="550"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -22,38 +21,90 @@
         </Grid.RowDefinitions>
 
         <!-- Name -->
-        <Label Grid.Row="0" Content="Nome pianificazione:" FontWeight="Bold" Margin="0,0,0,5"/>
-        <TextBox Grid.Row="1" x:Name="NameTextBox" Margin="0,0,0,15"/>
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,15">
+            <StackPanel>
+                <TextBlock Text="📝 Nome pianificazione"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,8"/>
+                <TextBox x:Name="NameTextBox"/>
+            </StackPanel>
+        </Border>
 
         <!-- Time -->
-        <Label Grid.Row="2" Content="Orario di pubblicazione:" FontWeight="Bold" Margin="0,0,0,5"/>
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,15">
-            <TextBox x:Name="HourTextBox" Width="40" Margin="0,0,5,0" 
-                     PreviewTextInput="NumericTextBox_PreviewTextInput"
-                     MaxLength="2"/>
-            <Label Content=":" VerticalAlignment="Center"/>
-            <TextBox x:Name="MinuteTextBox" Width="40" Margin="5,0,0,0" 
-                     PreviewTextInput="NumericTextBox_PreviewTextInput"
-                     MaxLength="2"/>
-        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,15">
+            <StackPanel>
+                <TextBlock Text="⏰ Orario di pubblicazione (HH:MM)"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="HourTextBox" 
+                             Width="60"
+                             Margin="0,0,8,0" 
+                             PreviewTextInput="NumericTextBox_PreviewTextInput"
+                             MaxLength="2"/>
+                    <TextBlock Text=":" 
+                               VerticalAlignment="Center"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,0,8,0"/>
+                    <TextBox x:Name="MinuteTextBox" 
+                             Width="60"
+                             PreviewTextInput="NumericTextBox_PreviewTextInput"
+                             MaxLength="2"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Days of week -->
-        <GroupBox Grid.Row="4" Header="Giorni della settimana" Padding="10" Margin="0,0,0,15">
+        <GroupBox Grid.Row="2" Header="📅 Giorni della settimana" Margin="0,0,0,15">
             <StackPanel>
-                <CheckBox x:Name="MondayCheckBox" Content="Lunedì" Margin="0,2"/>
-                <CheckBox x:Name="TuesdayCheckBox" Content="Martedì" Margin="0,2"/>
-                <CheckBox x:Name="WednesdayCheckBox" Content="Mercoledì" Margin="0,2"/>
-                <CheckBox x:Name="ThursdayCheckBox" Content="Giovedì" Margin="0,2"/>
-                <CheckBox x:Name="FridayCheckBox" Content="Venerdì" Margin="0,2"/>
-                <CheckBox x:Name="SaturdayCheckBox" Content="Sabato" Margin="0,2"/>
-                <CheckBox x:Name="SundayCheckBox" Content="Domenica" Margin="0,2"/>
+                <CheckBox x:Name="MondayCheckBox" 
+                          Content="Lunedì" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="TuesdayCheckBox" 
+                          Content="Martedì" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="WednesdayCheckBox" 
+                          Content="Mercoledì" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="ThursdayCheckBox" 
+                          Content="Giovedì" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="FridayCheckBox" 
+                          Content="Venerdì" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="SaturdayCheckBox" 
+                          Content="Sabato" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
+                <CheckBox x:Name="SundayCheckBox" 
+                          Content="Domenica" 
+                          Margin="0,5"
+                          FontWeight="Medium"/>
             </StackPanel>
         </GroupBox>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveButton" Content="Salva" Width="80" Margin="0,0,10,0" Click="SaveButton_Click"/>
-            <Button x:Name="CancelButton" Content="Annulla" Width="80" Click="CancelButton_Click"/>
-        </StackPanel>
+        <Border Grid.Row="3" Style="{StaticResource Card}">
+            <StackPanel Style="{StaticResource DialogFooter}" Margin="0">
+                <Button x:Name="CancelButton" 
+                        Content="Annulla"
+                        Style="{StaticResource SecondaryButton}"
+                        Width="100" 
+                        Margin="0,0,10,0" 
+                        Click="CancelButton_Click"/>
+                <Button x:Name="SaveButton" 
+                        Content="Salva" 
+                        Width="100" 
+                        Click="SaveButton_Click"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

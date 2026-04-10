@@ -1,5 +1,4 @@
-import { redirect } from 'react-router';
-import { deleteProductCategory } from '@services/apiService';
+import { deleteProductCategory } from '@morwalpizvideo/services';
 
 export default async function action({ request }: { request: Request }) {
   const formData = await request.formData();

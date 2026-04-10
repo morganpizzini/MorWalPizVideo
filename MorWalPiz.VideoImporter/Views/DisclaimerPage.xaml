@@ -6,53 +6,55 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Gestione Disclaimer"
-    Height="500"
-    Width="700">
-  <Grid Margin="15">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+        Height="550"
+        Width="750"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-    <!-- Selector per scegliere la lingua -->
-    <StackPanel Grid.Row="0"
-        Orientation="Horizontal"
-        Margin="0,0,0,15">
-      <Label Content="Seleziona lingua:"
-          VerticalAlignment="Center"/>
-      <ComboBox x:Name="LanguageSelector"
-          Width="200"
-          Margin="10,0,0,0"
-                DisplayMemberPath="Name"
-          SelectedValuePath="Id"
-                SelectionChanged="LanguageSelector_SelectionChanged"/>
-    </StackPanel>
+        <!-- Language Selector Card -->
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,20">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="🌐 Seleziona lingua:" 
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Margin="0,0,15,0"/>
+                <ComboBox x:Name="LanguageSelector"
+                          Width="220"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          SelectionChanged="LanguageSelector_SelectionChanged"/>
+            </StackPanel>
+        </Border>
 
-    <!-- Editor per il testo del disclaimer -->
-    <GroupBox Grid.Row="1"
-        Header="Testo del disclaimer"
-        Margin="0,0,0,15"
-        Padding="10">
-      <TextBox x:Name="DisclaimerTextBox"
-          AcceptsReturn="True"
-          TextWrapping="Wrap"
-               VerticalScrollBarVisibility="Auto"/>
-    </GroupBox>
+        <!-- Disclaimer Editor -->
+        <GroupBox Grid.Row="1" Header="📝 Testo del disclaimer" Margin="0,0,0,20">
+            <TextBox x:Name="DisclaimerTextBox"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     FontFamily="Consolas"
+                     FontSize="12"/>
+        </GroupBox>
 
-    <!-- Pulsanti di azione -->
-    <StackPanel Grid.Row="2"
-        Orientation="Horizontal"
-        HorizontalAlignment="Right">
-      <Button x:Name="SaveButton"
-          Content="Salva"
-          Width="80"
-          Margin="0,0,10,0"
-          Click="SaveButton_Click"/>
-      <Button x:Name="CancelButton"
-          Content="Annulla"
-          Width="80"
-          Click="CancelButton_Click"/>
-    </StackPanel>
-  </Grid>
+        <!-- Action Buttons -->
+        <Border Grid.Row="2" Style="{StaticResource Card}">
+            <StackPanel Style="{StaticResource DialogFooter}">
+                <Button x:Name="CancelButton"
+                        Content="Annulla"
+                        Style="{StaticResource SecondaryButton}"
+                        Width="100"
+                        Margin="0,0,10,0"
+                        Click="CancelButton_Click"/>
+                <Button x:Name="SaveButton"
+                        Content="Salva"
+                        Width="100"
+                        Click="SaveButton_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

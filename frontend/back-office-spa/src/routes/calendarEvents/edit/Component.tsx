@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFetcher, useLoaderData, useNavigate } from 'react-router';
-import { CalendarEvent, ProductCategory } from '@morwalpizvideo/models';
+import { CalendarEvent, VideoProductCategory } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 
 const EditCalendarEvent: React.FC = () => {
-  const { calendarEvent, categories } = useLoaderData() as { calendarEvent: CalendarEvent; categories: ProductCategory[] };
+  const { calendarEvent, categories } = useLoaderData() as { calendarEvent: CalendarEvent; categories: VideoProductCategory[] };
   
-  const [selectedCategories, setSelectedCategories] = useState<ProductCategory[]>(
-    (calendarEvent.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as ProductCategory[]
+  const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>(
+    (calendarEvent.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as VideoProductCategory[]
   );
   
   const fetcher = useFetcher();

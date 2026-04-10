@@ -12,25 +12,25 @@ public class AddChannelRequest
 
 public class ChannelsController : ApplicationControllerBase
 {
-    private readonly DataService dataService;
+    private readonly DataService _dataService;
     private readonly IYTService ytService;
 
-    public ChannelsController(IYTService _ytService, DataService _dataService)
+    public ChannelsController(IYTService _ytService, DataService dataService)
     {
         ytService = _ytService;
-        dataService = _dataService;
+        _dataService = dataService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetChannels()
     {
-        return Ok(await dataService.GetChannels());
+        return Ok(await _dataService.GetChannels());
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetChannel(string id)
     {
-        var existing = await dataService.GetChannelById(id);
+        var existing = await _dataService.GetChannelById(id);
         if(existing == null)
         {
             return NotFound();
@@ -47,7 +47,7 @@ public class ChannelsController : ApplicationControllerBase
         {
             return BadRequest("Channel not found");
         }
-        await dataService.SaveChannel(new YTChannel(channelId, request.ChannelName));
+        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName));
         
         return NoContent();
     }
@@ -55,7 +55,7 @@ public class ChannelsController : ApplicationControllerBase
     [HttpDelete("{channelName}")]
     public async Task<IActionResult> RemoveChannel(string channelName)
     {
-        await dataService.RemoveChannel(channelName);
+        await _dataService.RemoveChannel(channelName);
         return NoContent();
     }
 }

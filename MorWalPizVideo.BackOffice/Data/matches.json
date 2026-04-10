@@ -20,7 +20,7 @@
         ],
         "title": "first Video",
         "description": "first description",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T22:47:55.5585501+01:00"
       },
       {
@@ -33,7 +33,7 @@
         ],
         "title": "second",
         "description": "second description",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T22:47:55.5585501+01:00"
       }
     ],
@@ -48,8 +48,21 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+      {
+        "code": "e7468",
+        "target": "6932018b742911f6196e2983",
+        "queryLinks": [
+        ],
+        "clicksCount": 0,
+        "linkType": 0,
+        "queryString": "",
+        "id": null,
+        "creationDateTime": "2026-04-04T23:28:40.1897741+02:00"
+      }
+    ],
     "isLink": true,
     "id": "6932018b742911f6196e2983",
     "creationDateTime": "2025-12-04T22:47:55.5585611+01:00"
@@ -75,7 +88,7 @@
         ],
         "title": "",
         "description": "",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T19:52:42.7538342+01:00"
       }
     ],
@@ -90,18 +103,19 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
+    "youTubeVideoLinks": [
+    ],
     "shortLinks": [
       {
-        "id": "afdgs",
-        "code": "short1",
-        "target": "wqertwqteteyw",
+        "code": "62211",
+        "target": "https://test-standalone.com",
         "queryLinks": [
-          {
-            "title": "myPlaylist",
-            "value": "list=myplaylistId"
-          }
-        ]
+        ],
+        "clicksCount": 0,
+        "linkType": 1,
+        "queryString": "",
+        "id": "70d033aade72a877197eff79",
+        "creationDateTime": "2026-04-03T23:39:54.0948884+02:00"
       }
     ],
     "isLink": true,
@@ -133,7 +147,7 @@
         ],
         "title": "titolo 1",
         "description": "descrizione 1",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T19:45:53.4001558+01:00"
       }
     ],
@@ -152,8 +166,10 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "6931d6e18445421d9c7c978f",
     "creationDateTime": "2025-12-04T19:45:53.4001583+01:00"
@@ -179,7 +195,7 @@
         ],
         "title": "titolo 2",
         "description": "descrizione 2",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T19:45:25.2017733+01:00"
       }
     ],
@@ -194,8 +210,10 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "6931d6c58445421d9c7c978e",
     "creationDateTime": "2025-12-04T19:45:25.2017972+01:00"
@@ -217,7 +235,7 @@
         ],
         "title": "titolo 3",
         "description": "descrizione 3",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T19:32:44.2203184+01:00"
       }
     ],
@@ -228,8 +246,10 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "6931d3cc0a69a344c33386b2",
     "creationDateTime": "2025-12-04T19:32:44.2203201+01:00"
@@ -251,7 +271,7 @@
         ],
         "title": "titolo 4",
         "description": "descrizione 4",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-04T19:32:10.7378883+01:00"
       }
     ],
@@ -262,8 +282,10 @@
       }
     ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "6931d3aa0a69a344c33386b1",
     "creationDateTime": "2025-12-04T19:32:10.7378997+01:00"
@@ -277,17 +299,21 @@
     "videoRefs": [
       {
         "youtubeId": "234567",
-        "categories": [],
+        "categories": [
+        ],
         "title": "titolo 5",
         "description": "descrizione 5",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-12-01T07:32:56.9812662+01:00"
       }
     ],
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "692d3698dd34c8e8cf595adc",
     "creationDateTime": "2025-12-01T07:32:56.9812712+01:00"
@@ -301,17 +327,21 @@
     "videoRefs": [
       {
         "youtubeId": "werfg",
-        "categories": [],
+        "categories": [
+        ],
         "title": "",
         "description": "",
-        "publishedAt": "0001-01-01",
+        "publishedAt": "0001-01-01T00:00:00",
         "creationDateTime": "2025-11-29T21:17:37.2888843+01:00"
       }
     ],
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 0,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": true,
     "id": "692b54e15239119dc03cac2a",
     "creationDateTime": "2025-11-29T21:17:37.2890178+01:00"
@@ -323,10 +353,13 @@
     "url": "bzDO4WBcY9s",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "9",
     "creationDateTime": "2024-11-26T00:00:00"
@@ -338,10 +371,13 @@
     "url": "s-R10WIwwF0",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "3",
     "creationDateTime": "2024-11-22T00:00:00"
@@ -353,10 +389,13 @@
     "url": "winter-2024-tps",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "1",
     "creationDateTime": "2024-11-17T00:00:00"
@@ -368,10 +407,13 @@
     "url": "Htu1X6yqsi0",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "4",
     "creationDateTime": "2024-11-14T00:00:00"
@@ -383,10 +425,13 @@
     "url": "GBpA2s7V0d0",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "5",
     "creationDateTime": "2024-11-11T00:00:00"
@@ -398,10 +443,13 @@
     "url": "winter-2024-uboldo",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "2",
     "creationDateTime": "2024-11-03T00:00:00"
@@ -413,10 +461,13 @@
     "url": "gUkZrpujbPE",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "6",
     "creationDateTime": "2024-10-31T00:00:00"
@@ -428,10 +479,13 @@
     "url": "WC2sEcEsti8",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "7",
     "creationDateTime": "2024-10-28T00:00:00"
@@ -443,10 +497,13 @@
     "url": "Hok-1LIORa4",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "8",
     "creationDateTime": "2024-10-23T00:00:00"
@@ -458,10 +515,13 @@
     "url": "italiano-2024",
     "thumbnailVideoId": null,
     "videoRefs": null,
-    "categories": [],
+    "categories": [
+    ],
     "contentType": 1,
-    "youTubeVideoLinks": [],
-    "shortLinks": [],
+    "youTubeVideoLinks": [
+    ],
+    "shortLinks": [
+    ],
     "isLink": false,
     "id": "10",
     "creationDateTime": "2024-10-14T00:00:00"

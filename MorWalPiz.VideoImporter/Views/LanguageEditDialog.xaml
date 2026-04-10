@@ -5,51 +5,77 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Gestione Lingua"
-        Height="300"
-        Width="400"
+        Height="380"
+        Width="500"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize">
-    <StackPanel Margin="20">
-        
-        
-            <Label Content="Codice Lingua:" FontWeight="Bold"/>
-            <TextBox x:Name="CodeTextBox" 
-                     MaxLength="10"
-                     Padding="5"/>
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
+        <StackPanel Grid.Row="0">
+            <!-- Language Code -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="🔤 Codice Lingua"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="CodeTextBox" 
+                             MaxLength="10"/>
+                </StackPanel>
+            </Border>
 
-            <Label Content="Nome Lingua:" FontWeight="Bold"/>
-            <TextBox x:Name="NameTextBox" 
-                     MaxLength="50"
-                     Padding="5"/>
+            <!-- Language Name -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="🌐 Nome Lingua"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="NameTextBox" 
+                             MaxLength="50"/>
+                </StackPanel>
+            </Border>
 
+            <!-- Options -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="⚙️ Opzioni"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <CheckBox x:Name="IsSelectedCheckBox" 
+                              Content="Lingua selezionata"
+                              FontWeight="Medium"/>
+                </StackPanel>
+            </Border>
 
-            <Label Content="Opzioni:" FontWeight="Bold"/>
-            <CheckBox x:Name="IsSelectedCheckBox" 
-                      Content="Lingua selezionata"/>
-
-        <!-- Messaggio di errore -->
-        <TextBlock x:Name="ErrorTextBlock" 
-                   Foreground="Red"
-                   TextWrapping="Wrap"
-                   Visibility="Collapsed"/>
-
-        <!-- Pulsanti -->
-        <StackPanel
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right"
-                    Margin="0,20,0,0">
-            <Button x:Name="SaveButton" 
-                    Content="Salva" 
-                    Width="80" 
-                    Height="30"
-                    Margin="0,0,10,0"
-                    Click="SaveButton_Click"/>
-            <Button x:Name="CancelButton" 
-                    Content="Annulla" 
-                    Width="80" 
-                    Height="30"
-                    Click="CancelButton_Click"/>
+            <!-- Error Message -->
+            <TextBlock x:Name="ErrorTextBlock" 
+                       Foreground="{StaticResource DangerBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed"
+                       Margin="0,0,0,15"/>
         </StackPanel>
-    </StackPanel>
+
+        <!-- Action Buttons -->
+        <Border Grid.Row="1" Style="{StaticResource Card}">
+            <StackPanel Style="{StaticResource DialogFooter}" Margin="0">
+                <Button x:Name="CancelButton" 
+                        Content="Annulla"
+                        Style="{StaticResource SecondaryButton}"
+                        Width="100" 
+                        Margin="0,0,10,0"
+                        Click="CancelButton_Click"/>
+                <Button x:Name="SaveButton" 
+                        Content="Salva" 
+                        Width="100"
+                        Click="SaveButton_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

@@ -7,127 +7,106 @@
         xmlns:converters="clr-namespace:MorWalPiz.VideoImporter.Converters"
         mc:Ignorable="d"
         Title="Video Importer"
-        Height="600"
-        Width="900">
+        Height="700"
+        Width="1100"
+        Background="{StaticResource BackgroundBrush}">
     <Window.Resources>
         <converters:VideoCompletionStatusToColorConverter x:Key="VideoCompletionStatusToColorConverter"/>
     </Window.Resources>
     <DockPanel>
-        <!-- Menu principale e tenant selector -->
-        <DockPanel DockPanel.Dock="Top">
-            <Menu DockPanel.Dock="Left">
-                <MenuItem Header="File">
-                    <MenuItem Header="Esci"
-                              Click="ExitMenuItem_Click"/>
-                </MenuItem>
-                <MenuItem Header="Edit">
-                    <MenuItem Header="Settings"
-                              Click="SettingsMenuItem_Click"/>
-                    <MenuItem Header="Pianificazioni Pubblicazione"
-                              Click="PublishSchedulesMenuItem_Click"/>
-                    <MenuItem Header="Gestione Tenant"
-                              Click="TenantManagementMenuItem_Click"/>
-                    <MenuItem Header="Pulisci credenziali YouTube"
-                              Click="ClearYouTubeCredentials_Click"/>
-                </MenuItem>
-                <MenuItem Header="Entità">
-                    <MenuItem Header="Lingue"
-                              Click="LanguagesMenuItem_Click"/>
-                    <MenuItem Header="Disclaimer"
-                              Click="DisclaimerMenuItem_Click"/>
-                </MenuItem>
-                <MenuItem Header="Funzioni">
-                    <MenuItem Header="Lingue"
-              Click="TranslateVideoMenuItem_Click"/>
-                </MenuItem>
-            </Menu>
-        </DockPanel>
+        <!-- Modern Menu Bar -->
+        <Menu DockPanel.Dock="Top" Padding="5">
+            <MenuItem Header="File">
+                <MenuItem Header="Esci" Click="ExitMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="Edit">
+                <MenuItem Header="Settings" Click="SettingsMenuItem_Click"/>
+                <MenuItem Header="Pianificazioni Pubblicazione" Click="PublishSchedulesMenuItem_Click"/>
+                <MenuItem Header="Gestione Tenant" Click="TenantManagementMenuItem_Click"/>
+                <MenuItem Header="Pulisci credenziali YouTube" Click="ClearYouTubeCredentials_Click"/>
+            </MenuItem>
+            <MenuItem Header="Entità">
+                <MenuItem Header="Lingue" Click="LanguagesMenuItem_Click"/>
+                <MenuItem Header="Disclaimer" Click="DisclaimerMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="Funzioni">
+                <MenuItem Header="Traduci Video (Manuale)" Click="TranslateVideoMenuItem_Click"/>
+                <MenuItem Header="Traduci Video YouTube (Auto)" Click="AutoTranslateYouTubeVideoMenuItem_Click"/>
+                <MenuItem Header="Analizza Trascrizione Video" Click="AnalyzeTranscriptMenuItem_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <!-- Contenuto principale -->
-        <Grid Margin="10">
+        <!-- Main Content Area -->
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <!-- File and folder selection buttons -->
+
+            <!-- Header Card with Actions and Tenant Selector -->
+            <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- File Selection Buttons -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button x:Name="BrowseFolderButton"
+                                Content="📁 Sfoglia Cartelle"
+                                Margin="0,0,10,0"
+                                Click="BrowseFolderButton_Click"/>
+                        <Button x:Name="BrowseFilesButton"
+                                Content="📄 Sfoglia File"
+                                Click="BrowseFilesButton_Click"/>
+                    </StackPanel>
+
+                    <!-- Tenant Selector -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Tenant:" 
+                                   VerticalAlignment="Center" 
+                                   Margin="0,0,10,0"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <ComboBox x:Name="TenantComboBox" 
+                                  Width="180" 
+                                  DisplayMemberPath="Name" 
+                                  SelectedValuePath="Id"
+                                  SelectionChanged="TenantComboBox_SelectionChanged"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Publish Date Card -->
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel Orientation="Horizontal">
-                    <!-- Left column - Folder selection -->
-                    <Button x:Name="BrowseFolderButton"
-                        Content="Sfoglia Cartelle"
-                        Margin="10,10,5,10"
-                        Padding="10,5"
-                        Click="BrowseFolderButton_Click"
-                        HorizontalAlignment="Center"/>
-                    <!-- Right column - File selection -->
-                    <Button x:Name="BrowseFilesButton"
-                        Grid.Column="1"
-                        Content="Sfoglia File"
-                        Margin="5,10,10,10"
-                        Padding="10,5"
-                        Click="BrowseFilesButton_Click"
-                        HorizontalAlignment="Center"/>
-                </StackPanel>
-
-                <StackPanel
-                    HorizontalAlignment="Right"
-                    Grid.Column="1"
-                         Orientation="Horizontal" 
-                         VerticalAlignment="Center" 
-                         Margin="0,5,10,5">
-                    <TextBlock Text="Tenant:" 
-                                VerticalAlignment="Center" 
-                                Margin="0,0,10,0"/>
-                    <ComboBox x:Name="TenantComboBox" 
-                               Width="150" 
-                               DisplayMemberPath="Name" 
-                               SelectedValuePath="Id"
-                               SelectionChanged="TenantComboBox_SelectionChanged"/> 
-                </StackPanel>
-            </Grid>
-            <!-- Empty row to maintain spacing -->
-            <Grid Grid.Row="1"
-                  Margin="0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Left">
-                    <TextBlock Text="Data pubblicazione:"
+                    <TextBlock Text="📅 Data pubblicazione:"
                                VerticalAlignment="Center"
-                               Margin="0,0,10,0"/>
+                               Margin="0,0,15,0"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
                     <DatePicker x:Name="PublishDatePicker"
                                 Width="200"
+                                Margin="0,0,10,0"
                                 SelectedDate="{Binding SelectedPublishDate, Mode=TwoWay}"/>
                     <Button x:Name="ApplyDateButton"
                             Content="Applica"
-                            Padding="10,0"
-                            Margin="10,0,0,0"
                             Click="ApplyDateButton_Click"/>
                 </StackPanel>
-                <!-- Rimozione dei bottoni di riordinamento dalla barra superiore poiché ora sono presenti per ogni riga -->
-            </Grid>
+            </Border>
 
-            <!-- File list with checkboxes -->
-            <GroupBox Grid.Row="2"
-                      Header="File MP4 Trovati"
-                      Margin="0,0,0,10"
-                      Padding="5">
+            <!-- File List Card -->
+            <GroupBox Grid.Row="2" Header="Video" Margin="0,0,0,20">
                 <ListView x:Name="FileListView"
-                          MouseDoubleClick="FileListView_MouseDoubleClick">
+                          MouseDoubleClick="FileListView_MouseDoubleClick"
+                          BorderThickness="0">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Width="30">
+                            <GridViewColumn Width="40">
                                 <GridViewColumn.Header>
                                     <CheckBox x:Name="SelectAllCheckBox"
                                               Click="SelectAllCheckBox_Checked"
@@ -137,91 +116,82 @@
                                 </GridViewColumn.Header>
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <CheckBox IsChecked="{Binding IsSelected}"/>
+                                        <CheckBox IsChecked="{Binding IsSelected}" 
+                                                  HorizontalAlignment="Center"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="#"
-                                            Width="50">
+                            
+                            <GridViewColumn Header="#" Width="60">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button ToolTip="Ordine elemento"
-                                                
-                                                Width="25"
-                                                Margin="5,0,0,0"
-                                                Background="{Binding Converter={StaticResource VideoCompletionStatusToColorConverter}}"
-                                                >
-                                            <Button.Content>
-                                                <TextBlock Text="{Binding OrderIndex}"
-                                                           FontWeight="Bold"/>
-                                            </Button.Content>
-                                        </Button>
+                                        <Border CornerRadius="4"
+                                                Padding="8,4"
+                                                Background="{Binding Converter={StaticResource VideoCompletionStatusToColorConverter}}">
+                                            <TextBlock Text="{Binding OrderIndex}"
+                                                       FontWeight="Bold"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <!-- New Column for 'containsWeapon' -->
-                            <GridViewColumn Width="50">
+                            
+                            <GridViewColumn Width="60">
                                 <GridViewColumn.Header>
-                                    <StackPanel Orientation="Vertical"
-                                                HorizontalAlignment="Center">
-                                        <TextBlock Text="Arma?"
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <TextBlock Text="Arma" 
                                                    HorizontalAlignment="Center"
-                                                   Margin="0,0,0,2"/>
+                                                   Margin="0,0,0,5"/>
                                         <CheckBox x:Name="SelectAllWeaponCheckBox"
                                                   Click="SelectAllWeaponCheckBox_Checked"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Center"
                                                   ToolTip="Seleziona/Deseleziona tutti per arma"/>
                                     </StackPanel>
                                 </GridViewColumn.Header>
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding containsWeapon, Mode=TwoWay}"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"/>
+                                                  HorizontalAlignment="Center"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Nome Pulito"
-                                            Width="200">
+                            
+                            <GridViewColumn Header="Nome Pulito" Width="220">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding CleanFileName}"/>
+                                        <TextBlock Text="{Binding CleanFileName}"
+                                                   FontWeight="Medium"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Path"
-                                            Width="150">
+                            
+                            <GridViewColumn Header="Path" Width="180">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding FilePath}"
-                                                   TextAlignment="Right"
                                                    TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                    ToolTip="{Binding FilePath}"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Data di Pubblicazione"
-                                            Width="220">
+                            
+                            <GridViewColumn Header="Data di Pubblicazione" Width="200">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Vertical">
+                                        <StackPanel>
                                             <DatePicker SelectedDate="{Binding PublishDate, Mode=TwoWay}"
-                                                        Width="160"
-                                                        Margin="0,0,0,2"/>
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Center">
-                                                <TextBlock Text="Ora: "
-                                                           VerticalAlignment="Center"
-                                                           Margin="0,0,5,0"/>
-                                                <TextBox Width="30"
+                                                        Width="180"
+                                                        Margin="0,0,0,5"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock Text="🕐 " VerticalAlignment="Center"/>
+                                                <TextBox Width="35"
                                                          Text="{Binding PublishTimeHour, Mode=TwoWay}"
                                                          Tag="Hour"
+                                                         Margin="0,0,3,0"
                                                          PreviewTextInput="NumericTextBox_PreviewTextInput"/>
-                                                <TextBlock Text=":"
-                                                           VerticalAlignment="Center"
-                                                           Margin="2,0"/>
-                                                <TextBox Width="30"
+                                                <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBox Width="35"
                                                          Text="{Binding PublishTimeMinute, Mode=TwoWay}"
                                                          Tag="Minute"
                                                          PreviewTextInput="NumericTextBox_PreviewTextInput"/>
@@ -230,27 +200,33 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Azioni"
-                                            Width="120">
+                            
+                            <GridViewColumn Header="Azioni" Width="100">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="Dettagli"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Padding="10,4"
                                                 Click="FileDetailButton_Click"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Riordina"
-                                            Width="100">
+                            
+                            <GridViewColumn Header="Riordina" Width="100">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="↑"
+                                                    Style="{StaticResource SecondaryButton}"
                                                     Width="40"
+                                                    Padding="5,2"
                                                     Margin="0,0,5,0"
                                                     ToolTip="Sposta su"
                                                     Click="MoveItemUpButton_Click"/>
                                             <Button Content="↓"
+                                                    Style="{StaticResource SecondaryButton}"
                                                     Width="40"
+                                                    Padding="5,2"
                                                     ToolTip="Sposta giù"
                                                     Click="MoveItemDownButton_Click"/>
                                         </StackPanel>
@@ -261,79 +237,70 @@
                     </ListView.View>
                 </ListView>
             </GroupBox>
-            <!-- Bottoni di azione -->
-            <Grid Grid.Row="3">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
 
-                <!-- Aggiungi contesto button (spostato a sinistra) -->
-                <Button x:Name="ContextButton"
-                        Content="Aggiungi Traduzioni"
-                        Grid.Column="0"
-                        Padding="10,5"
-                        Margin="0,0,10,0"
-                        HorizontalAlignment="Left"
-                        IsEnabled="{Binding HasSelectedItems}"
-                        Click="ContextButton_Click"/>
+            <!-- Action Buttons -->
+            <Border Grid.Row="3" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Delete button -->
-                <Button x:Name="DeleteButton"
-                        Content="Elimina Selezionati"
-                        Grid.Column="2"
-                        Padding="10,5"
-                        Margin="0,0,10,0"
-                        HorizontalAlignment="Right"
-                        IsEnabled="{Binding HasSelectedItems}"
-                        Click="DeleteButton_Click"/>
+                    <Button x:Name="ContextButton"
+                            Grid.Column="0"
+                            Content="🌍 Aggiungi Traduzioni"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="{Binding HasSelectedItems}"
+                            Click="ContextButton_Click"/>
 
-                <!-- Upload to YouTube button (spostato dopo Elimina Selezionati) -->
-                <Button x:Name="UploadToYouTubeButton"
-                        Content="Carica su YouTube"
-                        Margin="0,0,0,0"
-                        Grid.Column="3"
-                        HorizontalAlignment="Right"
-                        IsEnabled="{Binding HasSelectedItems}"
-                        Click="UploadToYouTubeButton_Click"/>
-            </Grid>
-            
-            <!-- Progress Panel (initially hidden) -->
-            <Grid x:Name="ProgressPanel"
-                  Grid.Row="3"
-                  Background="#F0F0F0"
-                  Margin="0,5,0,0"
-                  Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <TextBlock x:Name="ProgressStatusText"
-                           Grid.Row="0"
-                           Text="Caricamento in corso..."
-                           FontWeight="Bold"
-                           Margin="10,10,10,5"
-                           HorizontalAlignment="Center"/>
-                
-                <TextBlock x:Name="CurrentFileText"
-                           Grid.Row="1"
-                           Text=""
-                           Margin="10,0,10,5"
-                           HorizontalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
-                
-                <ProgressBar x:Name="UploadProgressBar"
-                             Grid.Row="2"
-                             Height="20"
-                             Margin="10,0,10,10"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="0"/>
-            </Grid>
+                    <Button x:Name="DeleteButton"
+                            Grid.Column="2"
+                            Content="🗑️ Elimina Selezionati"
+                            Style="{StaticResource DangerButton}"
+                            Margin="0,0,10,0"
+                            IsEnabled="{Binding HasSelectedItems}"
+                            Click="DeleteButton_Click"/>
+
+                    <Button x:Name="UploadToYouTubeButton"
+                            Grid.Column="3"
+                            Content="⬆️ Carica su YouTube"
+                            IsEnabled="{Binding HasSelectedItems}"
+                            Click="UploadToYouTubeButton_Click"/>
+                </Grid>
+            </Border>
+
+            <!-- Progress Panel -->
+            <Border x:Name="ProgressPanel"
+                    Grid.Row="3"
+                    Style="{StaticResource Card}"
+                    Background="{StaticResource SurfaceBrush}"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="ProgressStatusText"
+                               Text="Caricamento in corso..."
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               Margin="0,0,0,10"
+                               HorizontalAlignment="Center"/>
+                    
+                    <TextBlock x:Name="CurrentFileText"
+                               Text=""
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,10"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                    
+                    <ProgressBar x:Name="UploadProgressBar"
+                                 Height="8"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="0"
+                                 Background="{StaticResource BorderBrush}"
+                                 Foreground="{StaticResource SuccessBrush}"/>
+                </StackPanel>
+            </Border>
         </Grid>
     </DockPanel>
 </Window>

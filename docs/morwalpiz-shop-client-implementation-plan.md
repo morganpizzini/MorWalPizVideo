@@ -1536,17 +1536,21 @@ export default function CustomersList() {
 
 ## 12. Roadmap di Implementazione
 
-### Fase 1: Fondamenta (2 settimane)
+**STATO AGGIORNAMENTO**: 25 Marzo 2026, 10:58 AM
 
-#### Settimana 1: Package Layout
-- [ ] Creare struttura `frontend/fe-packages/layout/morwalpiz-layout`
-- [ ] Implementare componenti base (AppShell, SiteHeader, SiteFooter)
-- [ ] Definire interfacce TypeScript per configurazione
-- [ ] Implementare stili SCSS parametrici
-- [ ] Compilare e testare package
-- [ ] Aggiornare workspace root `package.json`
+### Fase 1: Fondamenta (2 settimane) ✅ **COMPLETATA**
 
-#### Settimana 2: App Scaffold
+#### Settimana 1: Package Layout ✅
+- [x] Creare struttura `frontend/fe-packages/layout/morwalpiz-layout`
+- [x] Implementare componenti base (AppShell, SiteHeader, SiteFooter)
+- [x] Definire interfacce TypeScript per configurazione
+- [x] Implementare stili SCSS parametrici
+- [x] Compilare e testare package
+- [x] Aggiornare workspace root `package.json`
+
+**Note**: Package completato con componenti Layout parametrici (AppShell, SiteHeader, SiteFooter), type definitions complete, e stili SCSS con supporto social media. Build TypeScript riuscita.
+
+#### Settimana 2: App Scaffold 🔄 **IN ATTESA**
 - [ ] Creare struttura `frontend/morwalpiz-shop.client`
 - [ ] Configurare Vite, TypeScript, ESLint, Prettier
 - [ ] Implementare `main.tsx` e routing base
@@ -1554,27 +1558,52 @@ export default function CustomersList() {
 - [ ] Implementare route pubbliche (home, login, error)
 - [ ] Configurare Docker e nginx
 
-### Fase 2: Modelli e Servizi (1 settimana)
+### Fase 2: Modelli e Servizi (1 settimana) ✅ **COMPLETATA**
 
-- [ ] Estendere `@morwalpizvideo/models` con nuovi tipi
-- [ ] Aggiungere export da `index.ts`
-- [ ] Rebuild package models
-- [ ] Estendere `@morwalpizvideo/services` con nuovi endpoint
-- [ ] Implementare service functions (catalog, auth, cart)
-- [ ] Rebuild package services
+- [x] Estendere `@morwalpizvideo/models` con nuovi tipi
+- [x] Aggiungere export da `index.ts`
+- [x] Rebuild package models
+- [x] Estendere `@morwalpizvideo/services` con nuovi endpoint
+- [x] Implementare service functions (catalog, auth, cart)
+- [x] Rebuild package services ✅ **Build riuscita senza errori**
+- [x] Fix TypeScript type parameter issues in shopService.ts
 - [ ] Testare integrazione nei due package consumer
 
-### Fase 3: Autenticazione (1 settimana)
+**Modelli Implementati**:
+- `digitalProduct.ts`: DigitalProduct, ProductCategory, Create/Update DTOs
+- `customer.ts`: Customer, EmailLoginRequest, EmailVerificationRequest, LoginResponse
+- `cart.ts`: Cart, CartItem, AddToCartRequest, UpdateCartItemRequest, CheckoutRequest/Response
+- `legal.ts`: LegalContent, LegalContentType, Create/Update DTOs
 
-- [ ] Implementare componente `LoginForm` con reCAPTCHA
-- [ ] Creare utility `auth-storage.ts` per local storage
-- [ ] Implementare validazione email frontend
-- [ ] Creare route `/login`
-- [ ] Implementare backend `AuthController` in ServerAPI
+**Servizi Implementati**:
+- `endpoints.ts`: Aggiunti endpoint shop (SHOP_PRODUCTS, SHOP_AUTH_LOGIN, SHOP_CART, SHOP_LEGAL, etc.)
+- `shopService.ts`: Service functions complete per digital products, auth, cart, legal content
+- Tutti i servizi esportati da `index.ts`
+
+**Stato Build** (Aggiornato 25/03/2026):
+- ✅ `@morwalpizvideo/models`: Build riuscita con tutti i nuovi types
+- ✅ `@morwalpiz/layout`: Build riuscita (TypeScript + SCSS compilation)
+- ✅ `@morwalpizvideo/services`: Build riuscita dopo fix type parameters
+
+### Fase 3: Autenticazione (1 settimana) 🔄 **IN CORSO**
+
+**Frontend** ✅ **Completato**:
+- [x] Creare utility `auth-storage.ts` per local storage
+- [x] Implementare validazione email frontend (`email-validator.ts`)
+- [x] Creare utility `recaptcha-helper.ts` per reCAPTCHA integration
+- [x] Creare `AuthContext.tsx` per React context
+- [x] Creare route `/login` (login.tsx)
+- [x] Implementare layout configuration (layout-config.ts)
+
+**Backend** ⏳ **Da Implementare**:
+- [ ] Implementare `AuthController` in ServerAPI
 - [ ] Implementare `CustomerService` in BackOffice
 - [ ] Implementare repository `CustomerRepository`
 - [ ] Aggiungere rate limiting
 - [ ] Testare flusso end-to-end
+
+**Componenti Mancanti**:
+- [ ] `LoginForm` component con validazione email e reCAPTCHA UI
 
 ### Fase 4: Catalogo Prodotti (2 settimane)
 

@@ -6,80 +6,78 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Impostazioni"
-        Height="400"
-        Width="500"
+        Height="550"
+        Width="550"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        ResizeMode="NoResize">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <!-- Hashtags Card -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="⚙️ Hashtag Predefiniti"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10"/>
+                    
+                    <TextBlock Text="Inserisci gli hashtag separati da virgola (esempio: video, social)"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Margin="0,0,0,10"
+                               TextWrapping="Wrap"/>
+                    
+                    <TextBox x:Name="HashtagsTextBox"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             Height="120"/>
+                </StackPanel>
+            </Border>
 
-        <!-- Hashtags -->
-        <StackPanel Grid.Row="0">
-            <Label 
-                   Content="Hashtag predefiniti:"
-                   FontWeight="Bold"
-                   Margin="0,0,0,5"/>
-            <TextBlock Grid.Row="1"
-                       Text="Inserisci gli hashtag separati da virgola (esempio: video, social)"
-                       Margin="0,0,0,5"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
-        <TextBox Grid.Row="1"
-             x:Name="HashtagsTextBox"
-             AcceptsReturn="True"
-             TextWrapping="Wrap"
-             VerticalScrollBarVisibility="Auto"
-             Margin="0,0,0,15"/>
+            <!-- API Configuration Card -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="🔗 Configurazione API"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,15"/>
+                    
+                    <!-- API Endpoint -->
+                    <TextBlock Text="API Endpoint"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    <TextBox x:Name="ApiEndpointTextBox"
+                             Margin="0,0,0,15"/>
+                    <!-- API Key -->
+                    <TextBlock Text="API Key"
+            FontWeight="SemiBold"
+            Margin="0,0,0,5"/>
+                    <TextBox x:Name="ApiKeyTextBox"
+          Margin="0,0,0,15"/>
 
-        <!-- API Endpoint -->
-        <StackPanel Grid.Row="2">
-            <Grid 
-                Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Label Grid.Column="0"
-             Content="API Endpoint:"
-             FontWeight="Bold"
-             VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1"
-               x:Name="ApiEndpointTextBox"
-               Margin="10,0,0,0"/>
-            </Grid>
-            <Grid 
-                Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Label Grid.Column="0"
-             Content="Application name:"
-             FontWeight="Bold"
-             VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1"
-               x:Name="ApplicationNameTextBox"
-               Margin="10,0,0,0"/>
-            </Grid>
-            <!-- Buttons -->
-            <StackPanel
-                Orientation="Horizontal"
-                HorizontalAlignment="Right">
+                    <!-- Application Name -->
+                    <TextBlock Text="Application Name"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    <TextBox x:Name="ApplicationNameTextBox"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackPanel Style="{StaticResource DialogFooterStyle}">
                 <Button x:Name="SaveButton"
-                  Content="Salva"
-                  Width="80"
-                  Margin="0,0,10,0"
-                  Click="SaveButton_Click"/>
+                        Content="💾 Salva"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Width="100"
+                        Click="SaveButton_Click"/>
                 <Button x:Name="CancelButton"
-                  Content="Annulla"
-                  Width="80"
-                  Click="CancelButton_Click"/>
+                        Content="Annulla"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Width="100"
+                        Margin="10,0,0,0"
+                        Click="CancelButton_Click"/>
             </StackPanel>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Window>

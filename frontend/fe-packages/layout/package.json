@@ -1,0 +1,34 @@
+{
+  "name": "@morwalpiz/layout",
+  "version": "1.0.0",
+  "description": "Reusable layout components for MorWalPiz applications",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles": "./dist/styles/index.css"
+  },
+  "scripts": {
+    "build": "tsc && npm run build:styles",
+    "build:styles": "sass src/styles:dist/styles",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-router": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "sass": "^1.77.6",
+    "@types/react": "^19.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

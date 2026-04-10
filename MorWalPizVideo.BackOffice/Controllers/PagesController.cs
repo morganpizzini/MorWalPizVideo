@@ -13,24 +13,24 @@ public class AddPageRequest
 }
 public class PagesController : ApplicationControllerBase
 {
-    private readonly DataService dataService;
-    public PagesController(DataService _dataService)
+    private readonly DataService _dataService;
+    public PagesController(DataService dataService)
     {
-        dataService = _dataService;
+        _dataService = dataService;
     }
     [HttpPost]
     public async Task<IActionResult> AddPage(AddPageRequest request)
     {
         Page page = new(request.Title, request.Content, request.Url, request.VideoId, request.ThumbnailUrl);
 
-        await dataService.SavePage(page);
+        await _dataService.SavePage(page);
 
         return NoContent();
     }
     [HttpDelete("{id}")]
     public async Task<IActionResult> RemovePage(string id)
     {
-        await dataService.RemovePage(id);
+        await _dataService.RemovePage(id);
         return NoContent();
     }
 }

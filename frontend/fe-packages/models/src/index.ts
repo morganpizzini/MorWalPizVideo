@@ -51,11 +51,11 @@ export type { FontCategoryResponse, FontListResponse } from './font';
 // Product exports
 export type { Product, CreateProductDTO, UpdateProductDTO } from './product';
 
-// Product Category exports
-export type {
-  ProductCategory,
-  CreateProductCategoryDTO,
-  UpdateProductCategoryDTO,
+// Product Category exports (for video content products)
+export type { 
+  ProductCategory as VideoProductCategory, 
+  CreateProductCategoryDTO, 
+  UpdateProductCategoryDTO 
 } from './productCategory';
 
 // Query Link exports
@@ -94,3 +94,54 @@ export type {
   ReviewDetails,
   VideoCategory,
 } from './video/types';
+
+// Shop - Digital Product exports
+export type {
+  DigitalProduct,
+  ProductCategory as DigitalProductCategory,
+  CreateDigitalProductRequest,
+  UpdateDigitalProductRequest,
+} from './digitalProduct';
+
+// Shop - Customer exports
+export type {
+  Customer,
+  EmailLoginRequest,
+  EmailVerificationRequest,
+  LoginResponse,
+} from './customer';
+
+// Shop - Cart exports
+export type {
+  Cart,
+  CartItem,
+  AddToCartRequest,
+  UpdateCartItemRequest,
+  CheckoutRequest,
+  CheckoutResponse,
+} from './cart';
+
+// Shop - Legal exports
+export type {
+  LegalContent,
+  LegalContentType,
+  CreateLegalContentRequest,
+  UpdateLegalContentRequest,
+} from './legal';
+
+// Insights exports
+export {
+  InsightNewsStatus,
+  ContentPlanType,
+} from './insights';
+
+export type {
+  InsightTopic,
+  InsightNewsItem,
+  InsightContentPlan,
+  CreateInsightTopicRequest,
+  UpdateInsightTopicRequest,
+  ReviewNewsItemRequest,
+  GenerateContentPlanRequest,
+  UpdateContentPlanRequest,
+} from './insights';

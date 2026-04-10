@@ -1,7 +1,5 @@
 import { ShortLink } from '@morwalpizvideo/models';
-import { get } from '@services/apiService';
-import endpoints from '@services/endpoints';
-
+import { get, endpoints } from '@morwalpizvideo/services';
 export default async function loader(): Promise<ShortLink[]> {
     return get(endpoints.SHORTLINKS)
 }

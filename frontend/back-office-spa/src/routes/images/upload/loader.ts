@@ -1,5 +1,4 @@
-import { get } from '@services/apiService';
-import endpoints from '@services/endpoints';
+import { get, endpoints } from '@morwalpizvideo/services';
 
 export default async function loader() {
   const matches = await get(endpoints.VIDEOS);

@@ -34,6 +34,7 @@ namespace MorWalPiz.VideoImporter.Views
 
                 // Popola il campo API Endpoint
                 ApiEndpointTextBox.Text = _currentSettings.ApiEndpoint;
+                ApiKeyTextBox.Text = _currentSettings.ApiKey;
                 ApplicationNameTextBox.Text = _currentSettings.ApplicationName;
             }
         }
@@ -50,6 +51,7 @@ namespace MorWalPiz.VideoImporter.Views
                 }
 
                 var apiEndpoint = ApiEndpointTextBox.Text.Trim();
+                var apiKey = ApiKeyTextBox.Text.Trim();
                 var applicationName = ApplicationNameTextBox.Text.Trim();
                 // Salvataggio delle impostazioni
                 using (var context = _databaseService.CreateContext())
@@ -58,6 +60,7 @@ namespace MorWalPiz.VideoImporter.Views
 
                     settings.DefaultHashtags = HashtagsTextBox.Text.Trim();
                     settings.ApiEndpoint = apiEndpoint;
+                    settings.ApiKey = apiKey;
                     settings.ApplicationName = applicationName;
 
                     if (settings.Id == 0)

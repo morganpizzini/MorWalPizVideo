@@ -1,4 +1,4 @@
-import { getProduct, fetchProductCategories } from '@services/apiService';
+import { getProduct, fetchProductCategories } from '@morwalpizvideo/services';
 
 export async function loader({ params }: { params: { productId: string } }) {
   const [product, categories] = await Promise.all([

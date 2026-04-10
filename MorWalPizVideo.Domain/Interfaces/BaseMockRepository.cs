@@ -17,10 +17,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             _fileName = fileName;
         }
 
-        public async Task AddItemAsync(T item)
+        public async Task<T> AddItemAsync(T item)
         {
             if (item == null)
-                return;
+                return item;
 
             var items = ReadJson<T>(_fileName).ToList();
 
@@ -39,6 +39,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             items.Add(item);
             await WriteJson(items, _fileName);
+            
+            return item;
         }
 
         public async Task DeleteItemAsync(string id)

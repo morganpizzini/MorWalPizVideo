@@ -37,99 +37,82 @@ export default function LoginComponent() {
   const isBlocked = retryCountdown > 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <div className="card shadow" style={{ width: '100%', maxWidth: '400px' }}>
+        <div className="card-body p-4">
+          <h2 className="text-center mb-3 h3">
             Sign in to BackOffice
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="text-center text-muted mb-4">
             Enter your credentials to access the administration panel
           </p>
-        </div>
-        <Form className="mt-8 space-y-6" method="post">
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username or Email"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
+        
+        <Form method="post">
+          <div className="mb-3">
+            <label htmlFor="username" className="form-label">
+              Username or Email
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              className="form-control"
+              placeholder="Enter your username or email"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="password" className="form-label">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              className="form-control"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
+            />
           </div>
 
           {/* Rate limit warning */}
           {isBlocked && (
-            <div className="rounded-md bg-yellow-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">
-                    Account Temporarily Locked
-                  </h3>
-                  <div className="mt-2 text-sm text-yellow-700">
-                    Please wait {retryCountdown} seconds before trying again.
-                  </div>
-                </div>
-              </div>
+            <div className="alert alert-warning" role="alert">
+              <h5 className="alert-heading mb-2">Account Temporarily Locked</h5>
+              <p className="mb-0">
+                Please wait {retryCountdown} second{retryCountdown !== 1 ? 's' : ''} before trying again.
+              </p>
             </div>
           )}
 
           {/* Login error message */}
           {actionData?.message && !isBlocked && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Login Failed
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    {actionData.message}
-                    {actionData.remainingAttempts !== undefined && actionData.remainingAttempts > 0 && (
-                      <div className="mt-1 text-xs text-red-600">
-                        {actionData.remainingAttempts} attempt{actionData.remainingAttempts !== 1 ? 's' : ''} remaining
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div className="alert alert-danger" role="alert">
+              <h5 className="alert-heading mb-2">Login Failed</h5>
+              <p className="mb-1">{actionData.message}</p>
+              {actionData.remainingAttempts !== undefined && actionData.remainingAttempts > 0 && (
+                <small className="d-block mt-1">
+                  {actionData.remainingAttempts} attempt{actionData.remainingAttempts !== 1 ? 's' : ''} remaining
+                </small>
+              )}
             </div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting || isBlocked}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Signing in...' : isBlocked ? `Blocked (${retryCountdown}s)` : 'Sign in'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting || isBlocked}
+            className="btn btn-primary w-100"
+          >
+            {isSubmitting ? 'Signing in...' : isBlocked ? `Blocked (${retryCountdown}s)` : 'Sign in'}
+          </button>
         </Form>
+        </div>
       </div>
     </div>
   );

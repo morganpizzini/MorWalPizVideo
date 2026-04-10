@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPizVideo.BackOffice.DTOs;
 using BackOfficeDTOs = MorWalPizVideo.BackOffice.DTOs;
+using MorWalPiz.Contracts.DTOs;
 
 namespace MorWalPiz.VideoImporter.Services
 {
@@ -78,6 +79,23 @@ namespace MorWalPiz.VideoImporter.Services
             catch (Exception)
             {
                 return new List<BackOfficeDTOs.VideoTranslationResponse>();
+            }
+        }
+
+        public async Task<TranscriptAnalysisResponse> AnalyzeTranscriptAsync(TranscriptAnalysisRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/chat/transcript-analysis", request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException($"Error: {response.StatusCode}, {await response.Content.ReadAsStringAsync()}");
+                }
+                return (await response.Content.ReadFromJsonAsync<TranscriptAnalysisResponse>()) ?? new TranscriptAnalysisResponse();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to analyze transcript: {ex.Message}", ex);
             }
         }
 

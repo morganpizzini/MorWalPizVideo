@@ -1,6 +1,6 @@
 import endpoints, { ComposeUrl } from './endpoints';
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvideo/models';
-import type { ProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
+import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
 
 /**
@@ -103,8 +103,8 @@ export function patch(url: string, obj: any, overrideHeaderEnv: string = '') {
     return call(url, 'PATCH', obj, overrideHeaderEnv);
 }
 
-export function get(url: string, query?: any, overrideHeaderEnv: string = '') {
-    return call(url, 'GET', {}, overrideHeaderEnv, query);
+export function get(url: string, query?: any, overrideHeaderEnv: string = '', returnFullRresponse: boolean = false) {
+    return call(url, 'GET', {}, overrideHeaderEnv, query, false, false, { returnFullResponse: returnFullRresponse });
 }
 
 export function getFile(url: string, query?: any, overrideHeaderEnv: string = '') {
@@ -116,9 +116,36 @@ export function Delete(url: string, query?: any, overrideHeaderEnv: string = '')
 }
 
 /**
- * Makes API calls with automatic authentication header injection
+ * Response options for the call method
  */
-export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false) {
+interface ResponseOptions {
+    /** If true, returns the full parsed response instead of extracting the 'data' property */
+    returnFullResponse?: boolean;
+}
+
+/**
+ * Makes API calls with automatic authentication header injection
+ * 
+ * @param url - The API endpoint URL
+ * @param method - HTTP method (GET, POST, PUT, etc.)
+ * @param body - Request body
+ * @param overrideHeaderEnv - Optional header environment override
+ * @param query - Optional query parameters
+ * @param downloadFile - If true, returns response as blob
+ * @param isFormData - If true, treats body as FormData
+ * @param responseOptions - Options for response handling
+ * @returns Parsed response data. By default returns response.data if present, otherwise full response.
+ *          Set responseOptions.returnFullResponse = true to always get the full response object.
+ * 
+ * @example
+ * // Default behavior - returns response.data if present
+ * const data = await call('/api/products', 'GET', {});
+ * 
+ * @example
+ * // Get full response envelope including metadata
+ * const fullResponse = await call('/api/products', 'GET', {}, '', undefined, false, false, { returnFullResponse: true });
+ */
+export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false, responseOptions?: ResponseOptions) {
     const headers = new Headers();
 
     // Don't set Content-Type for FormData - let the browser set it with the boundary
@@ -151,6 +178,9 @@ export async function call(url: string, method: string, body: any, overrideHeade
         }
     }
 
+    // Include credentials (cookies) in the request
+    options.credentials = 'include';
+    
     return fetch(buildFullUrl(url), options)
         .then(async (response) => {
             if (response.ok) {
@@ -161,9 +191,13 @@ export async function call(url: string, method: string, body: any, overrideHeade
                     return Promise.resolve({});
                 }
                 const parsedResponse = await response.json();
-                return Object.prototype.hasOwnProperty.call(parsedResponse, 'data')
-                    ? parsedResponse.data
-                    : parsedResponse;
+                
+                // If returnFullResponse is true, return the entire response object
+                if (responseOptions?.returnFullResponse || !Object.prototype.hasOwnProperty.call(parsedResponse, 'data'))
+                    return parsedResponse;
+                
+                // Default behavior: return data property if it exists, otherwise return full response
+                return parsedResponse.data;
             } else {
                 // error handling
                 const errorMessages = [];
@@ -217,10 +251,10 @@ export const deleteProduct = (id: string) =>
 
 // ==================== ProductCategory API Services ====================
 
-export const fetchProductCategories = (): Promise<ProductCategory[]> =>
+export const fetchProductCategories = (): Promise<VideoProductCategory[]> =>
     get(endpoints.PRODUCTCATEGORIES);
 
-export const getProductCategory = (id: string): Promise<ProductCategory> =>
+export const getProductCategory = (id: string): Promise<VideoProductCategory> =>
     get(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
 
 export const createProductCategory = (data: CreateProductCategoryDTO) =>

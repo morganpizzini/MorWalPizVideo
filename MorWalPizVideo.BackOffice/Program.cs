@@ -54,7 +54,8 @@ builder.Services.AddCors(options =>
     {
         builder.WithOrigins("https://morwalpiz-admin-spa.azurewebsites.net")
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               .AllowCredentials(); // Required for cookies
     });
 });
 
@@ -88,16 +89,17 @@ builder.AddServiceDefaults();
 // Configure comprehensive health checks
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
-// Enable CORS for all in development
+// Enable CORS for all in development with credentials support
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true) // Allow any origin in dev
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Required for cookies
         });
     });
 }
@@ -176,6 +178,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+        
+        // Check cookie for token if Authorization header is not present
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // Check if token is in cookie
+                if (string.IsNullOrEmpty(context.Token) && context.Request.Cookies.ContainsKey("auth_token"))
+                {
+                    context.Token = context.Request.Cookies["auth_token"];
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -229,6 +245,18 @@ if (enableMock)
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
+
+    // Shop repositories (Mock)
+    builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
+    builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
+    builder.Services.AddScoped<ICustomerRepository, CustomerMockRepository>();
+    builder.Services.AddScoped<ICartRepository, CartMockRepository>();
+
+    // Insight repositories (Mock)
+    builder.Services.AddScoped<IInsightTopicRepository, InsightTopicMockRepository>();
+    builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemMockRepository>();
+    builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanMockRepository>();
+
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
@@ -236,11 +264,22 @@ if (enableMock)
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-
+    
+    // Insight Agent Service (Mock)
+    builder.Services.AddScoped<IInsightAgentService, MockInsightAgentService>();
 }
 else
 {
-    BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
+    // Register MongoDB serializer with protection against re-registration (important for testing scenarios)
+    try
+    {
+        BsonSerializer.RegisterSerializer(typeof(object), new MorWalPizVideo.Server.Models.Serializers.ObjectWithJsonElementSerializer());
+    }
+    catch (Exception)
+    {
+        // Serializer already registered - this is expected in testing scenarios
+        // where multiple WebApplicationFactory instances are created
+    }
 
     builder.Services.Configure<MorWalPizDatabaseSettings>(
         builder.Configuration.GetSection("MorWalPizDatabase"));
@@ -269,6 +308,17 @@ else
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
 
+    // Shop repositories (Production)
+    builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
+    builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
+    builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+    builder.Services.AddScoped<ICartRepository, CartRepository>();
+
+    // Insight repositories (Production)
+    builder.Services.AddScoped<IInsightTopicRepository, InsightTopicRepository>();
+    builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemRepository>();
+    builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanRepository>();
+
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
     // services
@@ -278,6 +328,9 @@ else
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    
+    // Insight Agent Service (Production)
+    builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();
 }
 
 if (enableSwagger)
@@ -372,6 +425,12 @@ if (enableSwagger)
 }
 
 app.UseHttpsRedirection();
+
+// Add HSTS header for production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

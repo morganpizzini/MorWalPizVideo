@@ -1,4 +1,4 @@
-import { updateProduct } from '@services/apiService';
+import { updateProduct } from '@morwalpizvideo/services';
 import type { UpdateProductDTO } from '@morwalpizvideo/models';
 
 export default async function action({ request, params }: { request: Request; params: { productId: string } }) {

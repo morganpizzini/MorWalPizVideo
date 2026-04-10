@@ -111,6 +111,55 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class DigitalProductRepository : BaseRepository<DigitalProduct>, IDigitalProductRepository
+    {
+        public DigitalProductRepository(IMongoDatabase database) : base(database, DbCollections.DigitalProducts)
+        {
+        }
+    }
+
+    public class DigitalProductCategoryRepository : BaseRepository<DigitalProductCategory>, IDigitalProductCategoryRepository
+    {
+        public DigitalProductCategoryRepository(IMongoDatabase database) : base(database, DbCollections.DigitalProductCategories)
+        {
+        }
+    }
+
+    public class CustomerRepository : BaseRepository<Customer>, ICustomerRepository
+    {
+        public CustomerRepository(IMongoDatabase database) : base(database, DbCollections.Customers)
+        {
+        }
+    }
+
+    public class CartRepository : BaseRepository<Cart>, ICartRepository
+    {
+        public CartRepository(IMongoDatabase database) : base(database, DbCollections.Carts)
+        {
+        }
+    }
+
+    public class InsightTopicRepository : BaseRepository<InsightTopic>, IInsightTopicRepository
+    {
+        public InsightTopicRepository(IMongoDatabase database) : base(database, DbCollections.InsightTopics)
+        {
+        }
+    }
+
+    public class InsightNewsItemRepository : BaseRepository<InsightNewsItem>, IInsightNewsItemRepository
+    {
+        public InsightNewsItemRepository(IMongoDatabase database) : base(database, DbCollections.InsightNewsItems)
+        {
+        }
+    }
+
+    public class InsightContentPlanRepository : BaseRepository<InsightContentPlan>, IInsightContentPlanRepository
+    {
+        public InsightContentPlanRepository(IMongoDatabase database) : base(database, DbCollections.InsightContentPlans)
+        {
+        }
+    }
+
     public class UserRepository : BaseRepository<User>, IUserRepository
     {
         public UserRepository(IMongoDatabase database) : base(database, DbCollections.Users)
@@ -145,7 +194,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         private static bool VerifyPassword(string password, string hash, string salt)
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, Convert.FromBase64String(salt), 10000);
+            using var pbkdf2 = new Rfc2898DeriveBytes(password, Convert.FromBase64String(salt), 100000, HashAlgorithmName.SHA256);
             var testHash = Convert.ToBase64String(pbkdf2.GetBytes(256));
             return testHash == hash;
         }
@@ -157,7 +206,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             rng.GetBytes(saltBytes);
             salt = Convert.ToBase64String(saltBytes);
 
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000);
+            using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 100000, HashAlgorithmName.SHA256);
             return Convert.ToBase64String(pbkdf2.GetBytes(256));
         }
     }

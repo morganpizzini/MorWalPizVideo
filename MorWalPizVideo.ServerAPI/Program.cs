@@ -86,7 +86,7 @@ if (enableCache)
 if (enableSwagger)
     builder.Services.AddOpenApi();
 
-builder.Services.AddScoped<IGenericDataService,DataService>();
+builder.Services.AddScoped<IGenericDataService,MinimalDataService>();
 
 if (enableMock)
 {
@@ -109,6 +109,12 @@ if (enableMock)
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
+    
+    // Shop repositories (Mock)
+    builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
+    builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
+    builder.Services.AddScoped<ICustomerRepository, CustomerMockRepository>();
+    builder.Services.AddScoped<ICartRepository, CartMockRepository>();
 }
 else
 {
@@ -131,6 +137,13 @@ else
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
+    
+    // Shop repositories (Production)
+    builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
+    builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
+    builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+    builder.Services.AddScoped<ICartRepository, CartRepository>();
+    
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));

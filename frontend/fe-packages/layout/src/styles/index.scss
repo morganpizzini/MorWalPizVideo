@@ -1,0 +1,147 @@
+// Variables
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+
+// AppShell Styles
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+
+  main {
+    flex: 1;
+    
+    &.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}
+
+// Header Styles
+.site-header {
+  padding: 2rem 0;
+  
+  .title-container {
+    margin-bottom: 1rem;
+    
+    .title {
+      font-size: 3rem;
+      font-weight: bold;
+      text-decoration: none;
+      color: inherit;
+      
+      .big-letter {
+        font-size: 1.2em;
+        font-weight: 900;
+      }
+      
+      .small-letter {
+        font-size: 0.8em;
+        font-weight: 600;
+      }
+    }
+    
+    .brand-logo {
+      max-height: 100px;
+      width: auto;
+    }
+    
+    .tagline {
+      font-size: 1.2rem;
+      color: $secondary-color;
+      margin-top: 0.5rem;
+    }
+  }
+  
+  .social-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+    
+    .btn-telegram {
+      background-color: #0088cc;
+      color: white;
+      
+      &:hover {
+        background-color: #006699;
+      }
+    }
+    
+    .btn-youtube {
+      background-color: #ff0000;
+      color: white;
+      
+      &:hover {
+        background-color: #cc0000;
+      }
+    }
+    
+    .btn-instagram {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      color: white;
+      
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+    
+    .btn-facebook {
+      background-color: #1877f2;
+      color: white;
+      
+      &:hover {
+        background-color: #145dbf;
+      }
+    }
+    
+    .btn-twitter {
+      background-color: #1da1f2;
+      color: white;
+      
+      &:hover {
+        background-color: #1a8cd8;
+      }
+    }
+  }
+  
+  .main-navigation {
+    margin-top: 1.5rem;
+  }
+}
+
+// Footer Styles
+.site-footer {
+  background-color: #212529;
+  color: #fff;
+  
+  h5 {
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  
+  .nav-link {
+    color: #adb5bd;
+    
+    &:hover {
+      color: #fff;
+    }
+  }
+}

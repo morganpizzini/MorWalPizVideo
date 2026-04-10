@@ -1,5 +1,4 @@
-import { get } from '@services/apiService';
-import endpoints, { ComposeUrl } from '@services/endpoints';
+import { get, endpoints, ComposeUrl} from '@morwalpizvideo/services';
 
 export default async function loader({ params }: { params: { id: string } }) {
   const [video, categories] = await Promise.all([

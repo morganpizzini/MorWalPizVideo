@@ -13,6 +13,8 @@ export default function Index() {
 
     const [selectedCategories, setSelectedCategories] = useState([]);
 
+    if (matches == null)
+        return (<>Nothing to show</>)
     let firstMatchId = matches[0];
     if (firstMatchId) {
         if (firstMatchId.videos?.length > 0) {

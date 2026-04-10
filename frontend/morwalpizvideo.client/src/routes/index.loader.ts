@@ -3,7 +3,7 @@ import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
 
 export default async function loader() {
-    const responsePromise = getMatches();
+    const responsePromise = getMatches(true);
     const configurationPromise = getConfiguration();
     const activeFormsPromise = getActiveForms();
     
@@ -12,7 +12,7 @@ export default async function loader() {
         configurationPromise,
         activeFormsPromise
     ]);
-    
+    console.log(response);
     return { 
         matches: response.data, 
         total: response.count, 

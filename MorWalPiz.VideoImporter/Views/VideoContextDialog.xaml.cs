@@ -35,7 +35,7 @@ namespace MorWalPiz.VideoImporter.Views
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public VideoContextDialog(IEnumerable<string> selectedFileNames,  string apiEndpoint)
+        public VideoContextDialog(IEnumerable<string> selectedFileNames,  string apiEndpoint, string? apiKey = null)
         {
             InitializeComponent();
             DataContext = this;
@@ -44,7 +44,7 @@ namespace MorWalPiz.VideoImporter.Views
                 SelectedFiles.Add(fileName);
             }
 
-            _apiService = new ApiService(apiEndpoint);
+            _apiService = new ApiService(apiEndpoint,apiKey);
         }
 
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)

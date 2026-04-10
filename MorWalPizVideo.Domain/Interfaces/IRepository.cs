@@ -1,4 +1,5 @@
 ﻿using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Models.Models;
 using System.Linq.Expressions;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
@@ -8,7 +9,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<T> GetItemAsync(string id);
         Task<IList<T>> GetItemsAsync();
         Task<IList<T>> GetItemsAsync(Expression<Func<T, bool>> predicate);
-        Task AddItemAsync(T item);
+        Task<T> AddItemAsync(T item);
         Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
@@ -30,4 +31,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
     public interface ICustomFormRepository : IRepository<CustomForm> { }
+
+    // Insights repositories
+    public interface IInsightTopicRepository : IRepository<InsightTopic> { }
+    public interface IInsightNewsItemRepository : IRepository<InsightNewsItem> { }
+    public interface IInsightContentPlanRepository : IRepository<InsightContentPlan> { }
+
+    // Shop repositories
+    public interface IDigitalProductRepository : IRepository<DigitalProduct> { }
+    public interface IDigitalProductCategoryRepository : IRepository<DigitalProductCategory> { }
+    public interface ICustomerRepository : IRepository<Customer> { }
+    public interface ICartRepository : IRepository<Cart> { }
 }

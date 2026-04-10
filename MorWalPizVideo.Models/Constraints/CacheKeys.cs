@@ -14,5 +14,9 @@ namespace MorWalPizVideo.Models.Constraints
         public const string CalendarEvents = "calendarEvents";
         public const string Compilations = "compilations";
         public const string CustomForms = "customForms";
+        public const string DigitalProducts = "digitalProducts";
+        public const string DigitalProductCategories = "digitalProductCategories";
+        public const string Customers = "customers";
+        public const string Carts = "carts";
     }
 }

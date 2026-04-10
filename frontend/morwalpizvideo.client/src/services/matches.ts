@@ -1,7 +1,7 @@
 import { get, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
 
-export function getMatches() {
-    return get(frontendEndpoints.MATCHES);
+export function getMatches(returnFullRresponse: boolean = false) {
+    return get(frontendEndpoints.MATCHES, null, null, returnFullRresponse);
 }
 
 export function getMatch(id: string) {

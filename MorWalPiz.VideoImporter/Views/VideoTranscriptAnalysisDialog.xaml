@@ -1,0 +1,149 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.VideoTranscriptAnalysisDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Analizza Trascrizione Video" Height="700" Width="900"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Transcript Input -->
+        <GroupBox Grid.Row="0" Header="Trascrizione Video" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="200"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Margin="0,0,0,5" FontStyle="Italic" Foreground="Gray">
+                    Inserisci la trascrizione completa del video da analizzare
+                </TextBlock>
+                
+                <TextBox Grid.Row="1" 
+                         x:Name="TranscriptTextBox"
+                         TextWrapping="Wrap" 
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         FontSize="12"/>
+            </Grid>
+        </GroupBox>
+        <Button Grid.Row="1" 
+            x:Name="TrimTextButton"
+            Content="Pulisci Trascrizione"
+            Width="200"
+            Height="35"
+            HorizontalAlignment="Center"
+            Click="TrimTextBUtton_Click"
+            Margin="0,5,0,5"
+            FontSize="14"
+            FontWeight="Bold"/>
+        <!-- Context Input -->
+        <GroupBox Grid.Row="2" Header="Contesto (Opzionale)" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="60"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Margin="0,0,0,5" FontStyle="Italic" Foreground="Gray">
+                    Aggiungi informazioni aggiuntive sul contesto del video
+                </TextBlock>
+                
+                <TextBox Grid.Row="1" 
+                         x:Name="ContextTextBox"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         FontSize="12"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Analyze Button -->
+        <Button Grid.Row="3" 
+                x:Name="AnalyzeButton"
+                Content="Analizza Trascrizione"
+                Width="200"
+                Height="35"
+                HorizontalAlignment="Center"
+                Click="AnalyzeButton_Click"
+                Margin="0,0,0,10"
+                FontSize="14"
+                FontWeight="Bold"/>
+
+        <!-- Status -->
+        <TextBlock Grid.Row="4" 
+                   x:Name="StatusTextBlock"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"
+                   FontStyle="Italic"
+                   Foreground="DarkBlue"/>
+
+        <!-- Results -->
+        <ScrollViewer Grid.Row="5" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ResultsPanel" Visibility="Collapsed">
+                
+                <!-- SEO Description -->
+                <GroupBox Header="Descrizione SEO Ottimizzata" Margin="0,0,0,10">
+                    <TextBox x:Name="SeoDescriptionTextBox"
+                             TextWrapping="Wrap"
+                             IsReadOnly="True"
+                             Background="WhiteSmoke"
+                             FontSize="12"
+                             MinHeight="60"/>
+                </GroupBox>
+
+                <!-- Titles -->
+                <GroupBox Header="Titoli Suggeriti" Margin="0,0,0,10">
+                    <ListBox x:Name="TitlesListBox"
+                             MinHeight="100"
+                             MaxHeight="150"
+                             FontSize="12"/>
+                </GroupBox>
+
+                <!-- Descriptions -->
+                <GroupBox Header="Descrizioni Alternative" Margin="0,0,0,10">
+                    <ListBox x:Name="DescriptionsListBox"
+                             MinHeight="120"
+                             MaxHeight="200"
+                             FontSize="12">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </GroupBox>
+
+                <!-- Hashtags -->
+                <GroupBox Header="Hashtags Suggeriti" Margin="0,0,0,10">
+                    <TextBox x:Name="HashtagsTextBox"
+                             TextWrapping="Wrap"
+                             IsReadOnly="True"
+                             Background="WhiteSmoke"
+                             FontSize="12"
+                             MinHeight="40"/>
+                </GroupBox>
+                
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Close Button -->
+        <Button Grid.Row="6" 
+                Content="Chiudi"
+                Width="100"
+                Height="30"
+                HorizontalAlignment="Right"
+                Click="CloseButton_Click"
+                Margin="0,10,0,0"/>
+    </Grid>
+</Window>

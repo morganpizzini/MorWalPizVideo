@@ -9,14 +9,14 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class ScraperController : ApplicationControllerBase
 {
-    private readonly DataService dataService;
+    private readonly DataService _dataService;
     private readonly IYTService ytService;
     private readonly Kernel _kernel;
 
-    public ScraperController(IYTService _ytService, DataService _dataService, Kernel kernel)
+    public ScraperController(IYTService _ytService, DataService dataService, Kernel kernel)
     {
         ytService = _ytService;
-        dataService = _dataService;
+        _dataService = dataService;
 
         // Configura Semantic Kernel
         _kernel = kernel;
@@ -25,7 +25,7 @@ public class ScraperController : ApplicationControllerBase
     [HttpGet]
     public async Task<IActionResult> Index(string channelName, int videos = 1, int commentsNumber = 20, bool showVideo = true)
     {
-        var channel = await dataService.GetChannel(channelName);
+        var channel = await _dataService.GetChannel(channelName);
         if (channel == null)
         {
             return BadRequest("Channel not found");
@@ -35,7 +35,7 @@ public class ScraperController : ApplicationControllerBase
         var (processedVideos, extractedComments) = await ProcessChannelVideos(channel, videos, commentsNumber, showVideo);
 
         // Salva il canale aggiornato con le informazioni sui video elaborati
-        await dataService.UpdateChannel(channel with { Videos = processedVideos });
+        await _dataService.UpdateChannel(channel with { Videos = processedVideos });
 
         // Salva i commenti in un file di testo
         var fileName = $"Comments_{channel.ChannelId}_{DateTime.Now:yyyyMMddHHmmss}.txt";

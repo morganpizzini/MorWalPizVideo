@@ -1,4 +1,4 @@
-import { updateProductCategory } from '@services/apiService';
+import { updateProductCategory } from '@morwalpizvideo/services';
 import type { UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 
 export default async function action({ request, params }: { request: Request; params: { categoryId: string } }) {

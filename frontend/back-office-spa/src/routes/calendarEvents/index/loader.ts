@@ -1,6 +1,5 @@
 import { CalendarEvent } from '@morwalpizvideo/models';
-import { get } from '@services/apiService';
-import endpoints from '@services/endpoints';
+import { get, endpoints } from '@morwalpizvideo/services';
 
 export default async function loader() {
   try {

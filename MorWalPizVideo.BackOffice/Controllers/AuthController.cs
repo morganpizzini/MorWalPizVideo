@@ -92,9 +92,19 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation("Successful login for user {Username} from IP {IpAddress}", request.Username, ipAddress);
 
+        // Set HttpOnly Secure SameSite cookie
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true, // Requires HTTPS
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddHours(24) // Match JWT expiry
+        };
+        Response.Cookies.Append("auth_token", token, cookieOptions);
+
         return Ok(new LoginResponse
         {
-            Token = token,
+            Token = token, // Still return token for backward compatibility during transition
             User = new UserInfo
             {
                 Id = user.Id!,
@@ -103,6 +113,17 @@ public class AuthController : ControllerBase
                 Role = user.Role
             }
         });
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        // Clear the auth cookie
+        Response.Cookies.Delete("auth_token");
+        
+        _logger.LogInformation("User logged out");
+        
+        return Ok(new { message = "Logged out successfully" });
     }
 
     [HttpPost("validate")]
@@ -153,6 +174,13 @@ public record LoginResponse
 {
     public string Token { get; init; } = string.Empty;
     public UserInfo User { get; init; } = new();
+}
+
+public record ShopLoginResponse
+{
+    public string CustomerId { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string SessionToken { get; init; } = string.Empty;
 }
 
 public record UserInfo

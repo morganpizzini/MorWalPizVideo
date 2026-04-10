@@ -15,9 +15,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             _collection = database.GetCollection<T>(collectionName);
         }
 
-        public async Task AddItemAsync(T item)
+        public async Task<T> AddItemAsync(T item)
         {
             await _collection.InsertOneAsync(item);
+            return item;
         }
 
         public async Task DeleteItemAsync(string id)

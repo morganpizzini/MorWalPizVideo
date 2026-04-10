@@ -162,11 +162,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     videoRefs
                 );
 
-                await _dataService.SaveCompilation(compilation);
+                compilation = await _dataService.SaveCompilation(compilation);
                 
                 _logger.LogInformation("Compilation created: {Id} - {Title}", compilation.Id, compilation.Title);
                 
-                return CreatedAtAction(nameof(GetById), new { id = compilation.Id }, compilation);
+                return Created($"/api/Compilations/{compilation.Id}", compilation);
             }
             catch (Exception ex)
             {

@@ -4,15 +4,15 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class SponsorAppliesController : ApplicationControllerBase
 {
-    private readonly DataService dataService;
-    public SponsorAppliesController(DataService _dataService)
+    private readonly DataService _dataService;
+    public SponsorAppliesController(DataService dataService)
     {
-        dataService = _dataService;
+        _dataService = dataService;
     }
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var result = await dataService.GetSponsorApplies();
+        var result = await _dataService.GetSponsorApplies();
         return Ok(result);
     }
 }

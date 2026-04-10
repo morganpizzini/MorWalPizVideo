@@ -164,19 +164,31 @@ const Home: React.FC = () => {
               isSmall={true}
               gradientColors={['#a18cd1', '#fbc2eb']}
             />
-                  </Col>
-                  <Col md={4} className="g-4">
-                      <Card
-                          title="Custom Forms"
-                          subtitle="Gestione delle forms"
-                          content="Crea e gestisci le domande e risposte anonime"
-                          link="/customforms"
-                          buttonText="Gestisci Forms"
-                          icon={List}
-                          isSmall={true}
-                          gradientColors={['#a18cd1', '#fbc2eb']}
-                      />
-                  </Col>
+          </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Custom Forms"
+              subtitle="Gestione delle forms"
+              content="Crea e gestisci le domande e risposte anonime"
+              link="/customforms"
+              buttonText="Gestisci Forms"
+              icon={List}
+              isSmall={true}
+              gradientColors={['#a18cd1', '#fbc2eb']}
+            />
+          </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Insights"
+              subtitle="Gestione della ricerca contenuti"
+              content="Trova gli insights più rilevanti riguardo i contenuti per Youtube e social"
+              link="/insights"
+              buttonText="Gestisci Insights"
+              icon={List}
+              isSmall={true}
+              gradientColors={['#a18cd1', '#fbc2eb']}
+            />
+          </Col>
         </Row>
       </Container>
     </>

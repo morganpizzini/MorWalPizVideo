@@ -6,67 +6,71 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Pianificazioni di Pubblicazione"
-        Height="600"
-        Width="800"
+        Height="650"
+        Width="900"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        ResizeMode="CanResize">
-    <Grid Margin="10">
+        ResizeMode="CanResize"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header and Add Button -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" 
-                       Text="Gestisci le pianificazioni di pubblicazione per i tuoi video"
-                       FontSize="14"
-                       VerticalAlignment="Center"/>
-            
-            <Button Grid.Column="1"
-                    x:Name="AddScheduleButton"
-                    Content="Aggiungi Pianificazione"
-                    Padding="10,5"
-                    Click="AddScheduleButton_Click"/>
-        </Grid>
+        <!-- Header with Add Button -->
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="📅 Gestisci le pianificazioni di pubblicazione per i tuoi video"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                
+                <Button Grid.Column="1"
+                        x:Name="AddScheduleButton"
+                        Content="➕ Aggiungi Pianificazione"
+                        Click="AddScheduleButton_Click"/>
+            </Grid>
+        </Border>
 
         <!-- Schedules List -->
-        <GroupBox Grid.Row="1" Header="Pianificazioni Attive" Padding="5">
-            <ListView x:Name="SchedulesListView">
+        <GroupBox Grid.Row="1" Header="📋 Pianificazioni Attive" Margin="0,0,0,20">
+            <ListView x:Name="SchedulesListView" BorderThickness="0">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="Nome" Width="200">
+                        <GridViewColumn Header="Nome" Width="220">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
                         
-                        <GridViewColumn Header="Giorni" Width="150">
+                        <GridViewColumn Header="Giorni" Width="180">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding DaysDisplay}"/>
+                                    <TextBlock Text="{Binding DaysDisplay}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
                         
-                        <GridViewColumn Header="Orario" Width="100">
+                        <GridViewColumn Header="⏰ Orario" Width="100">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding PublishTimeDisplay}"/>
+                                    <TextBlock Text="{Binding PublishTimeDisplay}"
+                                               FontWeight="Medium"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
                         
-                        <GridViewColumn Header="Attivo" Width="60">
+                        <GridViewColumn Header="Attivo" Width="80">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding IsActive, Mode=TwoWay}" 
@@ -77,16 +81,20 @@
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
                         
-                        <GridViewColumn Header="Azioni" Width="120">
+                        <GridViewColumn Header="Azioni" Width="160">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Button Content="Modifica" 
-                                                Width="60"
-                                                Margin="0,0,5,0"
+                                        <Button Content="✏️ Modifica" 
+                                                Style="{StaticResource SecondaryButton}"
+                                                Width="70"
+                                                Padding="8,4"
+                                                Margin="0,0,8,0"
                                                 Click="EditScheduleButton_Click"/>
-                                        <Button Content="Elimina" 
-                                                Width="60"
+                                        <Button Content="🗑️ Elimina" 
+                                                Style="{StaticResource DangerButton}"
+                                                Width="70"
+                                                Padding="8,4"
                                                 Click="DeleteScheduleButton_Click"/>
                                     </StackPanel>
                                 </DataTemplate>
@@ -98,19 +106,19 @@
         </GroupBox>
 
         <!-- Bottom Buttons -->
-        <StackPanel Grid.Row="2" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right"
-                    Margin="0,10,0,0">
-            <Button x:Name="RefreshButton"
-                    Content="Aggiorna"
-                    Width="80"
-                    Margin="0,0,10,0"
-                    Click="RefreshButton_Click"/>
-            <Button x:Name="CloseButton"
-                    Content="Chiudi"
-                    Width="80"
-                    Click="CloseButton_Click"/>
-        </StackPanel>
+        <Border Grid.Row="2" Style="{StaticResource Card}">
+            <StackPanel Style="{StaticResource DialogFooter}" Margin="0">
+                <Button x:Name="RefreshButton"
+                        Content="🔄 Aggiorna"
+                        Style="{StaticResource SecondaryButton}"
+                        Width="100"
+                        Margin="0,0,10,0"
+                        Click="RefreshButton_Click"/>
+                <Button x:Name="CloseButton"
+                        Content="Chiudi"
+                        Width="100"
+                        Click="CloseButton_Click"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

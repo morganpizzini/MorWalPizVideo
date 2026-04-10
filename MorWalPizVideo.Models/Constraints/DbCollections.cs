@@ -30,5 +30,16 @@
         public const string Users = "users";
         public const string LoginAttempts = "loginAttempts";
         public const string ApiKeys = "apiKeys";
+        
+        // Insights Collections
+        public const string InsightTopics = "insightTopics";
+        public const string InsightNewsItems = "insightNewsItems";
+        public const string InsightContentPlans = "insightContentPlans";
+        
+        // Shop Collections
+        public const string DigitalProducts = "digitalProducts";
+        public const string DigitalProductCategories = "digitalProductCategories";
+        public const string Customers = "customers";
+        public const string Carts = "carts";
     }
 }

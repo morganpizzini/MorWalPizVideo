@@ -1,4 +1,4 @@
-import { updateSponsorWithImage } from '@services/apiService';
+import { updateSponsorWithImage } from '@morwalpizvideo/services';
 
 export default async function action({ request, params }: { request: Request; params: { id: string } }) {
   const formData = await request.formData();

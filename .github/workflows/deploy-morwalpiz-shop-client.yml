@@ -1,0 +1,64 @@
+name: Deploy MorWalPiz Shop Client
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/morwalpiz-shop.client/**'
+      - 'frontend/fe-packages/**'
+      - '.github/workflows/deploy-morwalpiz-shop-client.yml'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: morwalpiz-shop-client
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'yarn'
+        cache-dependency-path: frontend/yarn.lock
+
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: yarn install --frozen-lockfile
+
+    - name: Build application
+      working-directory: ./frontend/morwalpiz-shop.client
+      run: yarn build
+      env:
+        VITE_API_URL: ${{ secrets.SHOP_API_URL }}
+        VITE_RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push Docker image
+      working-directory: ./frontend/morwalpiz-shop.client
+      run: |
+        az acr login --name ${{ secrets.ACR_NAME }}
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }} .
+        docker tag ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:latest
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }}
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:latest
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        images: ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }}
+
+    - name: Azure logout
+      run: az logout

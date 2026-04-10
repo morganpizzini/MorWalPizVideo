@@ -6,13 +6,21 @@
   "packageManager": "yarn@1.22.22",
   "workspaces": [
     "fe-packages/*",
+    "fe-packages/layout/*",
     "back-office-spa",
-    "morwalpizvideo.client"
+    "morwalpizvideo.client",
+    "morwalpiz-shop.client"
   ],
   "scripts": {
     "build:models": "yarn workspace @morwalpizvideo/models build",
+    "build:services": "yarn workspace @morwalpizvideo/services build",
+    "build:layout": "yarn workspace @morwalpiz/layout build",
+    "build:shared": "yarn build:models && yarn build:services && yarn build:layout",
     "clean:models": "yarn workspace @morwalpizvideo/models clean",
-    "install:all": "yarn install"
+    "install:all": "yarn install",
+    "dev:back-office-spa": "yarn build:shared && yarn workspace back-office-spa dev",
+    "dev:morwalpizvideo-client": "yarn build:shared && yarn workspace morwalpizvideo.client dev",
+    "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -6,15 +6,15 @@
         xmlns:local="clr-namespace:MorWalPiz.VideoImporter.Views"
         mc:Ignorable="d"
         Title="Dettaglio File"
-        Height="500"
-        Width="700"
+        Height="650"
+        Width="800"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="15">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -25,184 +25,188 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Nome file originale -->
-            <StackPanel Grid.Row="0"
-                        Margin="0,0,0,10">
-                <Label Content="Nome file originale:"
-                       FontWeight="Bold"/>
-                <TextBox x:Name="OriginalFileNameTextBox"
-                         IsReadOnly="True"
-                         Margin="0,5,0,0"/>
-            </StackPanel>
-            <!-- Nome file pulito -->
-            <StackPanel Grid.Row="1"
-                        Margin="0,0,0,10">
-                <Label Content="Nome file pulito:"
-                       FontWeight="Bold"/>
-                <TextBox x:Name="CleanFileNameTextBox"
-                         IsReadOnly="False"
-                         Margin="0,5,0,0"
-                         TextChanged="CleanFileNameTextBox_TextChanged"/>
-            </StackPanel>
-            <StackPanel Grid.Row="2"
-                        Margin="0,0,0,10">
-                <Label Content="Titolo:"
-                       FontWeight="Bold"/>
-                <TextBox x:Name="TitleTextBox"
-                         IsReadOnly="False"
-                         Margin="0,5,0,0"/>
-            </StackPanel>
-            <!-- Descrizione -->
-            <StackPanel Grid.Row="3"
-                        Margin="0,0,0,10">
-                <Label Content="Descrizione:"
-                       FontWeight="Bold"/>
-                <TextBox x:Name="DescriptionTextBox"
-                         IsReadOnly="False"
-                         Margin="0,5,0,0"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         Height="60"
-                         VerticalScrollBarVisibility="Auto"/>
-                <!-- Aggiungi questo CheckBox -->
-                <CheckBox x:Name="ContainsWeaponCheckBox"
-                          Content="Contiene Armi?"
-                          Margin="5,10,5,5"/>
+            <!-- Original File Name -->
+            <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="📄 Nome file originale"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="OriginalFileNameTextBox"
+                             IsReadOnly="True"
+                             Background="{StaticResource BackgroundBrush}"/>
+                </StackPanel>
+            </Border>
 
+            <!-- Clean File Name -->
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="✏️ Nome file pulito"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="CleanFileNameTextBox"
+                             TextChanged="CleanFileNameTextBox_TextChanged"/>
+                </StackPanel>
+            </Border>
 
-            </StackPanel>
-            <!-- Data e ora di pubblicazione -->
-            <GroupBox Grid.Row="4"
-                      Header="Data e ora di pubblicazione"
-                      Margin="0,0,0,10"
-                      Padding="10">
+            <!-- Title -->
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="📌 Titolo"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="TitleTextBox"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Description and Weapon CheckBox -->
+            <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="📝 Descrizione"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="DescriptionTextBox"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="80"
+                             VerticalScrollBarVisibility="Auto"/>
+                    <CheckBox x:Name="ContainsWeaponCheckBox"
+                              Content="⚔️ Contiene Armi?"
+                              Margin="0,12,0,0"
+                              FontWeight="Medium"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Publish Date and Time -->
+            <GroupBox Grid.Row="4" Header="📅 Data e ora di pubblicazione" Margin="0,0,0,15">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Data di pubblicazione -->
-                    <StackPanel Grid.Column="0"
-                                Margin="0,0,10,0">
-                        <Label Content="Data:"
-                               FontWeight="Bold"/>
-                        <DatePicker x:Name="PublishDatePicker"
-                                    Margin="0,5,0,0"/>
+                    <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                        <TextBlock Text="Data"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <DatePicker x:Name="PublishDatePicker"/>
                     </StackPanel>
 
-                    <!-- Ora di pubblicazione -->
-                    <StackPanel Grid.Column="1"
-                                Margin="10,0,0,0">
-                        <Label Content="Ora:"
-                               FontWeight="Bold"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Ora (HH:MM)"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBox x:Name="HourTextBox"
-                                     Width="30"
-                                     Margin="0,5,0,0"
+                                     Width="60"
+                                     Margin="0,0,8,0"
                                      PreviewTextInput="NumericTextBox_PreviewTextInput"/>
-                            <Label Content=":"
-                                   VerticalAlignment="Center"/>
+                            <TextBlock Text=":" 
+                                       VerticalAlignment="Center"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Margin="0,0,8,0"/>
                             <TextBox x:Name="MinuteTextBox"
-                                     Width="30"
-                                     Margin="0,5,0,0"
+                                     Width="60"
                                      PreviewTextInput="NumericTextBox_PreviewTextInput"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
             </GroupBox>
 
-            <!-- Traduzioni per le lingue secondarie -->
+            <!-- Translations -->
             <GroupBox Grid.Row="5"
-                      Header="Traduzioni"
-                      Margin="0,0,0,10"
-                      Padding="10"
+                      Header="🌍 Traduzioni"
+                      Margin="0,0,0,15"
                       x:Name="TranslationsGroupBox">
                 <ItemsControl x:Name="SecondaryLanguagesItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,5,0,15">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                <!-- Header della lingua -->
-                                <Label Grid.Row="0"
-                                       Grid.Column="0"
-                                       Grid.ColumnSpan="3"
-                                       Content="{Binding Name}"
-                                       FontWeight="Bold"/>
+                                    <!-- Language Header -->
+                                    <TextBlock Grid.Row="0"
+                                               Text="{Binding Name}"
+                                               FontWeight="Bold"
+                                               FontSize="14"
+                                               Foreground="{StaticResource PrimaryBrush}"
+                                               Margin="0,0,0,15"/>
 
-                                <!-- Titolo tradotto -->
-                                <Label Grid.Row="1"
-                                       Grid.Column="0"
-                                       Content="Titolo:"
-                                       VerticalAlignment="Center"/>
-                                <TextBox Grid.Row="1"
-                                         Grid.Column="1"
-                                         Margin="10,0,10,0"
-                                         x:Name="TitleTranslationTextBox"
-                                         Tag="{Binding Id}"
-                                         ToolTip="Titolo tradotto"/>
+                                    <!-- Title Translation -->
+                                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                                        <TextBlock Text="Titolo"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="12"
+                                                   Margin="0,0,0,5"/>
+                                        <TextBox x:Name="TitleTranslationTextBox"
+                                                 Tag="{Binding Id}"
+                                                 ToolTip="Titolo tradotto"/>
+                                    </StackPanel>
 
-                                <!-- Descrizione tradotta -->
-                                <Label Grid.Row="2"
-                                       Grid.Column="0"
-                                       Content="Descrizione:"
-                                       VerticalAlignment="Top"
-                                       Margin="0,10,0,0"/>
-                                <TextBox Grid.Row="2"
-                                         Grid.Column="1"
-                                         Margin="10,10,10,0"
-                                         x:Name="DescriptionTranslationTextBox"
-                                         Tag="{Binding Id}"
-                                         Height="60"
-                                         TextWrapping="Wrap"
-                                         AcceptsReturn="True"
-                                         VerticalScrollBarVisibility="Auto"
-                                         ToolTip="Descrizione tradotta"/>
-                            </Grid>
+                                    <!-- Description Translation -->
+                                    <StackPanel Grid.Row="2">
+                                        <TextBlock Text="Descrizione"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="12"
+                                                   Margin="0,0,0,5"/>
+                                        <TextBox x:Name="DescriptionTranslationTextBox"
+                                                 Tag="{Binding Id}"
+                                                 Height="70"
+                                                 TextWrapping="Wrap"
+                                                 AcceptsReturn="True"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 ToolTip="Descrizione tradotta"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </GroupBox>
-            <!-- Pulsanti di azione -->
-            <Grid Grid.Row="7">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
 
-                <!-- Reset a sinistra -->
-                <Button x:Name="ResetButton"
-                        Grid.Column="0"
-                        Content="Reset Nome"
-                        Width="100"
-                        HorizontalAlignment="Left"
-                        Click="ResetButton_Click"/>
+            <!-- Action Buttons -->
+            <Border Grid.Row="7" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Pulsanti Annulla e Salva a destra -->
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton"
-                            Content="Annulla"
-                            Width="80"
-                            Margin="0,0,10,0"
-                            Click="CancelButton_Click"/>
-                    <Button x:Name="SaveButton"
-                            Content="Salva"
-                            Width="80"
-                            Click="SaveButton_Click"/>
-                </StackPanel>
-            </Grid>
+                    <Button x:Name="ResetButton"
+                            Grid.Column="0"
+                            Content="↺ Reset Nome"
+                            Style="{StaticResource SecondaryButton}"
+                            Width="120"
+                            Click="ResetButton_Click"/>
+
+                    <StackPanel Grid.Column="2" Style="{StaticResource DialogFooter}" Margin="0">
+                        <Button x:Name="CancelButton"
+                                Content="Annulla"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="100"
+                                Margin="0,0,10,0"
+                                Click="CancelButton_Click"/>
+                        <Button x:Name="SaveButton"
+                                Content="Salva"
+                                Width="100"
+                                Click="SaveButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </ScrollViewer>
 </Window>

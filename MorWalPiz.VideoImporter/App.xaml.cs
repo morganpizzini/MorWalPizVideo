@@ -64,6 +64,7 @@ namespace MorWalPiz.VideoImporter
                 if (settings != null && !string.IsNullOrEmpty(settings.ApiEndpoint))
                 {
                     ApiSettings.ApiEndpoint = settings.ApiEndpoint;
+                    ApiSettings.ApiKey = settings.ApiKey;
                 }
             }
 

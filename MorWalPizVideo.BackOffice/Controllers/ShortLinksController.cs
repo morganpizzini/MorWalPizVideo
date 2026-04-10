@@ -46,23 +46,43 @@ public class ShortLinksController : ApplicationControllerBase
     [HttpGet]
     public async Task<IActionResult> FetchShortLinks()
     {
-        var shortlinks = await _dataService.FetchShortLinks();
-
+        var allShortLinks = new List<ShortLink>();
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(shortlinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
+
+        // Fetch short links from matches (YouTubeContent)
+        var matches = await _dataService.FetchMatches();
+        foreach (var match in matches)
+        {
+            allShortLinks.AddRange(match.ShortLinks);
+        }
+
+        // Fetch short links from channels (YTChannel)
+        var channels = await _dataService.FetchChannels();
+        foreach (var channel in channels)
+        {
+            allShortLinks.AddRange(channel.ShortLinks);
+        }
+
+        // Fetch standalone short links (exclude YouTubeVideo and YouTubeChannel to avoid duplication)
+        var standaloneLinks = await _dataService.FetchShortLinks();
+        allShortLinks.AddRange(standaloneLinks.Where(x => 
+            x.LinkType != LinkType.YouTubeVideo && 
+            x.LinkType != LinkType.YouTubeChannel));
+
+        return Ok(allShortLinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
     }
 
     [HttpGet("{code}")]
     public async Task<IActionResult> GetShortLink(string code)
     {
-        var shortlink = await _dataService.GetShortLinkByCode(code);
+        var (shortLink, sourceType, owningEntity) = await FindShortLinkAsync(code);
 
-        if (shortlink == null)
+        if (shortLink == null)
         {
             return NotFound("No shortlink found for this video");
         }
         var siteUrl = configuration.GetValue<string>("SiteUrl");
-        return Ok(ContractUtils.Convert(shortlink, $"{siteUrl}"));
+        return Ok(ContractUtils.Convert(shortLink, $"{siteUrl}"));
     }
     [HttpPost]
     public async Task<IActionResult> CreateShortLink(CreateShortLinkRequest request)
@@ -88,11 +108,12 @@ public class ShortLinksController : ApplicationControllerBase
                 {
                     return Ok($"{siteUrl}{existingContentShortLink.Code}");
                 }
-                existingMatch.AddShortLink(newShortLink);
+                newShortLink.LinkType = LinkType.YouTubeVideo;
+                existingMatch = existingMatch.AddShortLink(newShortLink);
                 await _dataService.UpdateMatch(existingMatch);
                 break;
             case LinkType.YouTubeChannel:
-                var existingChannel = await _dataService.GetChannel(request.Target);
+                var existingChannel = await _dataService.FindChannel(request.Target);
                 if (existingChannel == null)
                 {
                     return BadRequest("Channel do not exists");
@@ -103,11 +124,13 @@ public class ShortLinksController : ApplicationControllerBase
                 {
                     return Ok($"{siteUrl}{exisintgShortLink.Code}");
                 }
-                existingChannel.AddShortLink(newShortLink);
+                newShortLink.LinkType = LinkType.YouTubeChannel;
+                existingChannel = existingChannel.AddShortLink(newShortLink);
                 await _dataService.UpdateChannel(existingChannel);
+                var channels = await _dataService.FetchChannels();
                 break;
             default:
-                await _dataService.SaveShortLink(newShortLink);
+                newShortLink = await _dataService.SaveShortLink(newShortLink);
                 break;
         }
         var json = await client.ResetCache(CacheKeys.ShortLinks);
@@ -116,6 +139,12 @@ public class ShortLinksController : ApplicationControllerBase
         {
             await discordService.CreatePost(shortLinkCode, request.Message);
             await telegramService.CreatePost(shortLinkCode, request.Message);
+        }
+
+        // Ensure the code is not null or empty before building the URL
+        if (string.IsNullOrEmpty(newShortLink.Code))
+        {
+            return StatusCode(500, "Failed to generate short link code");
         }
 
         return Ok($"{siteUrl}{newShortLink.Code}");
@@ -154,7 +183,9 @@ public class ShortLinksController : ApplicationControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
-        var existingShortLink = await _dataService.GetShortLink(request.Id);
+        // Search across all sources to find the existing short link
+        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkByIdAsync(request.Id);
+        
         if (existingShortLink == null)
         {
             return NotFound("Short link not found");
@@ -169,28 +200,64 @@ public class ShortLinksController : ApplicationControllerBase
             LinkType = request.Body.LinkType 
         };
 
+        // Update based on the new LinkType and handle migration between types
         switch (request.Body.LinkType)
         {
             case LinkType.YouTubeVideo:
+                updatedShortLink.LinkType = LinkType.YouTubeVideo;
                 var existingMatch = await _dataService.FindMatch(request.Body.Target);
                 if (existingMatch == null)
                 {
                     return BadRequest("Match do not exists");
                 }
-                existingMatch = existingMatch.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                
+                // Remove from old location if it's being migrated
+                if (sourceType != ShortLinkSourceType.Match)
+                {
+                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
+                    existingMatch.AddShortLink(updatedShortLink);
+                }
+                else
+                {
+                    existingMatch = (YouTubeContent)owningEntity!;
+                    existingMatch = existingMatch.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                }
                 await _dataService.UpdateMatch(existingMatch);
                 break;
+                
             case LinkType.YouTubeChannel:
+                updatedShortLink.LinkType = LinkType.YouTubeChannel;
                 var existingChannel = await _dataService.GetChannel(request.Body.Target);
                 if (existingChannel == null)
                 {
                     return BadRequest("Channel do not exists");
                 }
-                existingChannel = existingChannel.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                
+                // Remove from old location if it's being migrated
+                if (sourceType != ShortLinkSourceType.Channel)
+                {
+                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
+                    existingChannel.AddShortLink(updatedShortLink);
+                }
+                else
+                {
+                    existingChannel = (YTChannel)owningEntity!;
+                    existingChannel = existingChannel.UpdateShortLink(existingShortLink.Code, updatedShortLink);
+                }
                 await _dataService.UpdateChannel(existingChannel);
                 break;
+                
             default:
-                await _dataService.UpdateShortlink(updatedShortLink);
+                // Remove from old location if it's being migrated from match or channel
+                if (sourceType != ShortLinkSourceType.Standalone)
+                {
+                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
+                    await _dataService.SaveShortLink(updatedShortLink);
+                }
+                else
+                {
+                    await _dataService.UpdateShortlink(updatedShortLink);
+                }
                 break;
         }
 
@@ -204,37 +271,139 @@ public class ShortLinksController : ApplicationControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteShortLink(string id)
     {
-        var existingShortLink = await _dataService.GetShortLink(id);
+        // Search across all sources to find the short link
+        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkByIdAsync(id);
+        
         if (existingShortLink == null)
             return NotFound("Short link not found");
 
-        switch (existingShortLink.LinkType)
-        {
-            case LinkType.YouTubeVideo:
-                var existingMatch = await _dataService.FindMatch(existingShortLink.Target);
-                if (existingMatch == null)
-                {
-                    return BadRequest("Match does not exist");
-                }
-                existingMatch = existingMatch.RemoveShortLink(existingShortLink.Code);
-                await _dataService.UpdateMatch(existingMatch);
-                break;
-            case LinkType.YouTubeChannel:
-                var existingChannel = await _dataService.GetChannel(existingShortLink.Target);
-                if (existingChannel == null)
-                {
-                    return BadRequest("Channel does not exist");
-                }
-                existingChannel = existingChannel.RemoveShortLink(existingShortLink.Code);
-                await _dataService.UpdateChannel(existingChannel);
-                break;
-            default:
-                await _dataService.DeleteShortLink(id);
-                break;
-        }
+        await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
 
         return NoContent();
     }
+
+    #region Helper Methods
+
+    private enum ShortLinkSourceType
+    {
+        Standalone,
+        Match,
+        Channel
+    }
+
+    /// <summary>
+    /// Finds a short link by code across all sources (standalone, matches, channels).
+    /// </summary>
+    /// <returns>Tuple of (ShortLink, SourceType, OwningEntity)</returns>
+    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkAsync(string id)
+    {
+        // Search in matches
+        var matches = await _dataService.FetchMatches();
+        foreach (var match in matches)
+        {
+            var matchShortLink = match.ShortLinks.FirstOrDefault(sl => sl.Id == id);
+            if (matchShortLink != null)
+            {
+                return (matchShortLink, ShortLinkSourceType.Match, match);
+            }
+        }
+
+        // Search in channels
+        var channels = await _dataService.FetchChannels();
+        foreach (var channel in channels)
+        {
+            var channelShortLink = channel.ShortLinks.FirstOrDefault(sl => sl.Id == id);
+            if (channelShortLink != null)
+            {
+                return (channelShortLink, ShortLinkSourceType.Channel, channel);
+            }
+        }
+
+        // Search in standalone repository
+        var standaloneLink = await _dataService.GetShortLink(id);
+        if (standaloneLink != null)
+        {
+            return (standaloneLink, ShortLinkSourceType.Standalone, null);
+        }
+
+        return (null, ShortLinkSourceType.Standalone, null);
+    }
+
+    /// <summary>
+    /// Finds a short link by ID across all sources (standalone, matches, channels).
+    /// For embedded links (match/channel), uses code as the identifier.
+    /// </summary>
+    /// <returns>Tuple of (ShortLink, SourceType, OwningEntity)</returns>
+    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkByIdAsync(string id)
+    {
+        // First try standalone repository (uses actual ID)
+        var standaloneLink = await _dataService.GetShortLink(id);
+        if (standaloneLink != null)
+        {
+            return (standaloneLink, ShortLinkSourceType.Standalone, null);
+        }
+
+        // For embedded links, the "id" parameter is actually the code
+        // Search in matches
+        var matches = await _dataService.FetchMatches();
+        foreach (var match in matches)
+        {
+            var matchShortLink = match.ShortLinks.FirstOrDefault(sl => sl.Code == id || sl.Id == id);
+            if (matchShortLink != null)
+            {
+                return (matchShortLink, ShortLinkSourceType.Match, match);
+            }
+        }
+
+        // Search in channels
+        var channels = await _dataService.FetchChannels();
+        foreach (var channel in channels)
+        {
+            var channelShortLink = channel.ShortLinks.FirstOrDefault(sl => sl.Code == id || sl.Id == id);
+            if (channelShortLink != null)
+            {
+                return (channelShortLink, ShortLinkSourceType.Channel, channel);
+            }
+        }
+
+        return (null, ShortLinkSourceType.Standalone, null);
+    }
+
+    /// <summary>
+    /// Removes a short link from its source location.
+    /// </summary>
+    private async Task RemoveShortLinkFromSourceAsync(string code, ShortLinkSourceType sourceType, object? owningEntity)
+    {
+        switch (sourceType)
+        {
+            case ShortLinkSourceType.Match:
+                if (owningEntity is YouTubeContent match)
+                {
+                    var updatedMatch = match.RemoveShortLink(code);
+                    await _dataService.UpdateMatch(updatedMatch);
+                }
+                break;
+                
+            case ShortLinkSourceType.Channel:
+                if (owningEntity is YTChannel channel)
+                {
+                    var updatedChannel = channel.RemoveShortLink(code);
+                    await _dataService.UpdateChannel(updatedChannel);
+                }
+                break;
+                
+            case ShortLinkSourceType.Standalone:
+                // For standalone, we need the actual ID from the short link
+                var standaloneLink = await _dataService.GetShortLinkByCode(code);
+                if (standaloneLink != null)
+                {
+                    await _dataService.DeleteShortLink(standaloneLink.Id);
+                }
+                break;
+        }
+    }
+
+    #endregion
 }

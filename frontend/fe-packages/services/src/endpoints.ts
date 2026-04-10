@@ -37,6 +37,17 @@ const VIDEOS_TRANSLATE = `${VIDEOS}/translate`;
 const IMAGE_UPLOAD = `${baseEndpoint}/ImageUpload/upload`;
 const IMAGE_UPLOAD_MULTIPLE = `${baseEndpoint}/ImageUpload/upload-multiple`;
 
+// Shop endpoints
+const SHOP_PRODUCTS = `${baseEndpoint}/shop/products`;
+const SHOP_PRODUCTS_DETAIL = `${SHOP_PRODUCTS}/{productId}`;
+const SHOP_PRODUCT_CATEGORIES = `${baseEndpoint}/shop/categories`;
+const SHOP_AUTH_LOGIN = `${baseEndpoint}/shop/auth/login`;
+const SHOP_AUTH_VERIFY = `${baseEndpoint}/shop/auth/verify`;
+const SHOP_CART = `${baseEndpoint}/shop/cart`;
+const SHOP_CART_ITEMS = `${SHOP_CART}/items`;
+const SHOP_CART_CHECKOUT = `${SHOP_CART}/checkout`;
+const SHOP_LEGAL = `${baseEndpoint}/shop/legal/{type}`;
+
 export default {
     VIDEOS,
     VIDEOS_DETAIL,
@@ -73,7 +84,16 @@ export default {
     VIDEOS_SWAP_THUMBNAIL,
     VIDEOS_TRANSLATE,
     IMAGE_UPLOAD,
-    IMAGE_UPLOAD_MULTIPLE
+    IMAGE_UPLOAD_MULTIPLE,
+    SHOP_PRODUCTS,
+    SHOP_PRODUCTS_DETAIL,
+    SHOP_PRODUCT_CATEGORIES,
+    SHOP_AUTH_LOGIN,
+    SHOP_AUTH_VERIFY,
+    SHOP_CART,
+    SHOP_CART_ITEMS,
+    SHOP_CART_CHECKOUT,
+    SHOP_LEGAL
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

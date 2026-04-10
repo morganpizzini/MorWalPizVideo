@@ -1,4 +1,4 @@
-import { fetchSponsors } from '@services/apiService';
+import { fetchSponsors } from '@morwalpizvideo/services';
 
 export async function loader() {
   const sponsors = await fetchSponsors();

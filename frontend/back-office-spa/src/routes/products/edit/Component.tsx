@@ -4,16 +4,16 @@ import { useFetcher, useLoaderData, useNavigate, Link } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
-import type { Product, ProductCategory } from '@morwalpizvideo/models';
+import type { Product, VideoProductCategory } from '@morwalpizvideo/models';
 
 const EditProduct: React.FC = () => {
-  const { product, categories } = useLoaderData() as { product: Product; categories: ProductCategory[] };
+  const { product, categories } = useLoaderData() as { product: Product; categories: VideoProductCategory[] };
   
   const [title, setTitle] = useState(product.title);
   const [description, setDescription] = useState(product.description);
   const [url, setUrl] = useState(product.url);
-  const [selectedCategories, setSelectedCategories] = useState<ProductCategory[]>(
-    (product.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as ProductCategory[]
+  const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>(
+    (product.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as VideoProductCategory[]
   );
   
   const fetcher = useFetcher();

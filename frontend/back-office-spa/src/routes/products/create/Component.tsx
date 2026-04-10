@@ -4,15 +4,15 @@ import { useFetcher, useNavigate, Link } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
-import type { ProductCategory } from '@morwalpizvideo/models';
-import { fetchProductCategories } from '@services/apiService';
+import type { VideoProductCategory } from '@morwalpizvideo/models';
+import { fetchProductCategories } from '@morwalpizvideo/services';
 
 const CreateProduct: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<ProductCategory[]>([]);
+  const [categories, setCategories] = useState<VideoProductCategory[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   
   const fetcher = useFetcher();

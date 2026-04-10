@@ -6,6 +6,7 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.Models.Responses;
 using System.Text.Json;
+using MorWalPiz.Contracts.DTOs;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
@@ -39,6 +40,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
             );
 
             return Ok(translations);
+        }
+
+        [HttpPost("transcript-analysis")]
+        public async Task<IActionResult> AnalyzeTranscript([FromBody] TranscriptAnalysisRequest request)
+        {
+            var result = await ProcessTranscriptAnalysis(request.Transcript, request.Context);
+            return Ok(result);
         }
 
         private async Task<IList<ReviewApiVideoResponse>> ProcessFileNamesRecursively(IList<string> fileNames, string context, string languages)
@@ -209,6 +217,130 @@ Infine, assembla tutte le informazioni generate seguendo scrupolosamente lo sche
             // Riassembla le righe in una nuova stringa
             return string.Join(Environment.NewLine, rows);
         }
+
+        /// <summary>
+        /// Cleans up transcript text by removing timestamps, empty lines, and extra whitespace.
+        /// Timestamps pattern: (MM:SS.mmm) or (HH:MM:SS.mmm)
+        /// </summary>
+        /// <param name="text">The text to clean up</param>
+        /// <returns>Cleaned up text</returns>
+        private string CleanupTranscriptText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            // Split text into lines
+            var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            
+            // Process each line
+            var cleanedLines = new List<string>();
+            foreach (var line in lines)
+            {
+                // Trim whitespace
+                var trimmedLine = line.Trim();
+                
+                // Skip empty lines
+                if (string.IsNullOrWhiteSpace(trimmedLine))
+                    continue;
+
+                // Remove timestamp patterns like (45:20.516) or (1:45:20.516)
+                // Pattern matches: (digits:digits.digits) or (digits:digits:digits.digits)
+                var cleanedLine = System.Text.RegularExpressions.Regex.Replace(
+                    trimmedLine,
+                    @"\(\d+:\d+(?::\d+)?\.?\d*\)",
+                    string.Empty
+                ).Trim();
+
+                // Skip if line became empty after timestamp removal
+                if (string.IsNullOrWhiteSpace(cleanedLine))
+                    continue;
+
+                // Remove multiple spaces
+                cleanedLine = System.Text.RegularExpressions.Regex.Replace(cleanedLine, @"\s+", " ");
+
+                cleanedLines.Add(cleanedLine);
+            }
+
+            // Join lines with newline
+            return string.Join(Environment.NewLine, cleanedLines);
+        }
+        private async Task<TranscriptAnalysisResponse> ProcessTranscriptAnalysis(string transcript, string? context)
+        {
+            // Clean up the transcript text
+            var cleanedTranscript = CleanupTranscriptText(transcript);
+
+            // Step 1: Generate SEO-optimized description
+            var contextInfo = string.IsNullOrEmpty(context) ? string.Empty : $"Contesto aggiuntivo: {context.Trim()}.";
+
+            var seoPrompt = @$"
+Sei un esperto SEO per YouTube specializzato in contenuti relativi alle armi da fuoco e al tiro sportivo dinamico (IPSC, IDPA).
+
+{contextInfo}
+
+Analizza la seguente trascrizione di un video e genera UNA descrizione SEO-ottimizzata per YouTube (250-400 caratteri).
+La descrizione deve:
+- Essere accattivante e coinvolgente
+- Includere parole chiave rilevanti in modo naturale
+- Spiegare cosa accade nel video senza frasi ridondanti come ""in questo video vedrete""
+- Usare un tono autorevole ma amichevole
+
+Trascrizione:
+{cleanedTranscript}
+
+Fornisci solo la descrizione SEO, senza altro testo.";
+
+            var seoPromptTrimmed = PrettifyString(seoPrompt);
+
+            var seoResult = await _kernel.InvokePromptAsync(seoPromptTrimmed);
+            var seoDescription = seoResult.ToString().Trim();
+
+            // Step 2: Generate titles, descriptions, and hashtags using SEO description
+            var metadataPrompt = @$"
+Sei un Content Strategist per YouTube specializzato in armi da fuoco e tiro sportivo dinamico (IPSC, IDPA).
+
+{contextInfo}
+
+Basandoti sulla trascrizione e sulla descrizione SEO fornita, genera metadati ottimizzati per YouTube.
+
+Trascrizione:
+{cleanedTranscript}
+
+Descrizione SEO:
+{seoDescription}
+
+Genera:
+1. **Titles**: 3-5 titoli accattivanti (max 70 caratteri ciascuno), con parole chiave all'inizio
+2. **Descriptions**: 3-5 descrizioni alternative (250-400 caratteri ciascuna), coinvolgenti e SEO-friendly
+3. **Hashtags**: 5-8 hashtag rilevanti (senza il simbolo #)
+
+Rispondi in formato JSON con questa struttura:
+{{
+  ""titles"": [""titolo1"", ""titolo2"", ...],
+  ""descriptions"": [""descrizione1"", ""descrizione2"", ...],
+  ""hashtags"": [""hashtag1"", ""hashtag2"", ...]
+}}";
+
+            var metadataPromptTrimmed = PrettifyString(metadataPrompt);
+
+#pragma warning disable SKEXP0010
+            var executionSettings = new AzureOpenAIPromptExecutionSettings()
+            {
+                ResponseFormat = typeof(TranscriptMetadata)
+            };
+#pragma warning restore SKEXP0010
+
+            var metadataResult = await _kernel.InvokePromptAsync(metadataPromptTrimmed, new KernelArguments(executionSettings));
+            var metadata = JsonSerializer.Deserialize<TranscriptMetadata>(metadataResult.ToString()) ?? new TranscriptMetadata();
+
+            return new TranscriptAnalysisResponse
+            {
+                SeoDescription = seoDescription,
+                Titles = metadata.Titles,
+                Descriptions = metadata.Descriptions,
+                Hashtags = metadata.Hashtags
+            };
+        }
+
         private async Task<List<VideoTranslationResponse>> ProcessVideoTranslation(string title, string description, List<string> languages)
         {
             var languagesString = string.Join(", ", languages);
@@ -246,5 +378,13 @@ Infine, assembla tutte le informazioni generate seguendo scrupolosamente lo sche
             return translations ?? new List<VideoTranslationResponse>();
         }
 
+    }
+
+    // Helper class for structured JSON response
+    public class TranscriptMetadata
+    {
+        public List<string> Titles { get; set; } = new();
+        public List<string> Descriptions { get; set; } = new();
+        public List<string> Hashtags { get; set; } = new();
     }
 }

@@ -213,7 +213,7 @@ namespace MorWalPiz.VideoImporter.Services
                             DefaultLanguage = video.DefaultLanguage,
                             DefaultAudioLanguage = video.DefaultLanguage,
                             // Aggiungi tag personalizzati
-                            Tags = tags.Concat(video.Tags.Length > 0 ? video.Tags.Split(",") : []).ToList()
+                            Tags = MergeTags(tags, video.Tags)
                         },
                         Status = new VideoStatus
                         {
@@ -533,6 +533,34 @@ namespace MorWalPiz.VideoImporter.Services
         }
 
         /// <summary>
+        /// Merges default hashtags with video-specific contextual tags
+        /// </summary>
+        /// <param name="defaultTags">Default hashtags from settings</param>
+        /// <param name="videoTags">Video-specific contextual tags (comma-separated)</param>
+        /// <returns>Merged and deduplicated list of tags</returns>
+        private List<string> MergeTags(IList<string> defaultTags, string videoTags)
+        {
+            // Start with default tags
+            var allTags = new List<string>(defaultTags ?? new List<string>());
+
+            // Add video-specific tags if present
+            if (!string.IsNullOrWhiteSpace(videoTags))
+            {
+                var videoTagsList = videoTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                             .Select(tag => tag.Trim())
+                                             .Where(tag => !string.IsNullOrWhiteSpace(tag));
+                allTags.AddRange(videoTagsList);
+            }
+
+            // Deduplicate (case-insensitive) and return
+            return allTags
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>
         /// Pulisce i dati di autenticazione memorizzati dal FileDataStore
         /// </summary>
         /// <returns>Esito dell'operazione di pulizia</returns>
@@ -691,6 +719,137 @@ namespace MorWalPiz.VideoImporter.Services
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Traduce automaticamente un video YouTube esistente e aggiorna le localizzazioni
+        /// </summary>
+        /// <param name="youtubeVideoId">ID del video YouTube</param>
+        /// <returns>Risultato dell'operazione di traduzione e aggiornamento</returns>
+        public async Task<VideoLocalizationUpdateResult> AutoTranslateVideoAsync(string youtubeVideoId)
+        {
+            var result = new VideoLocalizationUpdateResult
+            {
+                YouTubeVideoId = youtubeVideoId
+            };
+
+            try
+            {
+                // Validate input
+                if (string.IsNullOrWhiteSpace(youtubeVideoId))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "L'ID del video YouTube non può essere vuoto";
+                    return result;
+                }
+
+                // Get enabled non-default languages from database
+                using var dbContext = App.DatabaseService.CreateContext();
+                var enabledLanguages = dbContext.Languages
+                    .Where(l => !l.IsDefault && l.IsSelected)
+                    .ToList();
+
+                if (enabledLanguages.Count == 0)
+                {
+                    result.Success = true;
+                    result.WarningMessage = "Nessuna lingua abilitata per la traduzione. Operazione completata senza traduzioni.";
+                    return result;
+                }
+
+                // Fetch video from YouTube
+                var listRequest = _youtubeUpdateService.Videos.List("snippet");
+                listRequest.Id = youtubeVideoId;
+
+                LogApiCall("VideoList", youtubeVideoId, new { VideoId = youtubeVideoId, Part = "snippet" }, null, 
+                    "Fetching video for auto-translation");
+
+                var listResponse = await listRequest.ExecuteAsync();
+
+                if (listResponse.Items == null || listResponse.Items.Count == 0)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Video con ID '{youtubeVideoId}' non trovato su YouTube";
+                    return result;
+                }
+
+                var video = listResponse.Items.First();
+                var originalTitle = video.Snippet.Title;
+                var originalDescription = video.Snippet.Description;
+
+                result.OriginalTitle = originalTitle;
+                result.OriginalDescription = originalDescription;
+
+                // Get API settings
+                using var settings = App.DatabaseService.CreateContext();
+                var apiSettings = settings.Settings.FirstOrDefault();
+                
+                if (apiSettings == null || string.IsNullOrWhiteSpace(apiSettings.ApiEndpoint))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Endpoint API non configurato nelle impostazioni";
+                    return result;
+                }
+
+                // Call translation API
+                var apiService = new ApiService(apiSettings.ApiEndpoint, null);
+                var translations = await apiService.TranslateVideoContentAsync(
+                    originalTitle, 
+                    originalDescription, 
+                    enabledLanguages);
+
+                if (translations == null || translations.Count == 0)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Nessuna traduzione ricevuta dall'API";
+                    return result;
+                }
+
+                // Build localizations dictionary
+                var localizations = new Dictionary<string, VideoLocalization>();
+
+                foreach (var translation in translations)
+                {
+                    var language = enabledLanguages.FirstOrDefault(l => 
+                        string.Equals(l.Code, translation.LanguageCode, StringComparison.OrdinalIgnoreCase));
+
+                    if (language != null && !string.IsNullOrWhiteSpace(translation.TranslatedTitle))
+                    {
+                        localizations[language.Code] = new VideoLocalization
+                        {
+                            Title = translation.TranslatedTitle,
+                            Description = translation.TranslatedDescription ?? string.Empty
+                        };
+                    }
+                }
+
+                result.TranslationsCreated = localizations.Count;
+
+                // Update YouTube video with localizations
+                video.Localizations = localizations;
+
+                LogApiCall("VideoUpdate", youtubeVideoId, video, null, 
+                    $"Updating video with {localizations.Count} localizations");
+
+                var updateRequest = _youtubeUpdateService.Videos.Update(video, "snippet,localizations");
+                await updateRequest.ExecuteAsync();
+
+                LogApiCall("VideoUpdate", youtubeVideoId, null, 
+                    new { Success = true, VideoId = youtubeVideoId, TranslationsCount = localizations.Count }, 
+                    "Video updated successfully with auto-translations");
+
+                result.Success = true;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Errore durante la traduzione automatica: {ex.Message}";
+                
+                // Log the error
+                Console.WriteLine($"Errore AutoTranslateVideoAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+
+            return result;
         }
     }
 }

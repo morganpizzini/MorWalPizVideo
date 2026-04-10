@@ -1,6 +1,5 @@
 import { data } from 'react-router';
-import { post } from '@services/apiService';
-import endpoints from '@services/endpoints';
+import { post, endpoints } from '@morwalpizvideo/services';
 
 export default async function action({ request }: { request: Request }) {
   const values = Object.fromEntries(await request.formData());
