@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
@@ -6,6 +7,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.Server.Controllers
 {
+    [AllowAnonymous]
     public abstract class ApplicationController : ApplicationControllerBase
     {   
         protected readonly IGenericDataService dataService;

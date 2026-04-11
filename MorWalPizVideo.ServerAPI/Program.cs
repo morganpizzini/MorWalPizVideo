@@ -181,10 +181,10 @@ else
 }
 
 // Add fake authentication for development (allows all routes to be open)
-// builder.Services.AddAuthentication("FakeScheme")
-//     .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+builder.Services.AddAuthentication("FakeScheme")
+    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
 
-// builder.Services.AddAuthorization();
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -239,8 +239,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Add authentication and authorization middleware
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (enableOutputCache)
     app.UseOutputCache();
