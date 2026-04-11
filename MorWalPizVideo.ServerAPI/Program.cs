@@ -41,9 +41,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MorWalPizPolicy",
         builder =>
     {
-        builder.WithOrigins("https://morwalpiz.com")
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        builder.WithOrigins(
+            "https://morwalpiz.com",
+            "https://www.morwalpiz.com")
+          .AllowAnyMethod()
+          .AllowAnyHeader();
     });
 });
 
@@ -86,7 +88,7 @@ if (enableCache)
 if (enableSwagger)
     builder.Services.AddOpenApi();
 
-builder.Services.AddScoped<IGenericDataService,MinimalDataService>();
+builder.Services.AddScoped<IGenericDataService, MinimalDataService>();
 
 if (enableMock)
 {
@@ -109,7 +111,7 @@ if (enableMock)
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
-    
+
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
@@ -137,13 +139,13 @@ else
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
-    
+
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
     builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
     builder.Services.AddScoped<ICartRepository, CartRepository>();
-    
+
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
@@ -153,9 +155,9 @@ else
     // This ensures Azure Key Vault configuration is fully loaded before accessing database settings
     builder.Services.Configure<MorWalPizDatabaseSettings>(
         builder.Configuration.GetSection("MorWalPizDatabase"));
-    
+
     builder.Services.AddScoped<IMongoDbService, MongoDbService>();
-    builder.Services.AddScoped<IMongoDatabase>(provider => 
+    builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
 
     builder.Services.AddHttpClient(HttpClientNames.Recaptcha, httpClient =>
@@ -179,10 +181,10 @@ else
 }
 
 // Add fake authentication for development (allows all routes to be open)
-builder.Services.AddAuthentication("FakeScheme")
-    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+// builder.Services.AddAuthentication("FakeScheme")
+//     .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
 
-builder.Services.AddAuthorization();
+// builder.Services.AddAuthorization();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -237,8 +239,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Add authentication and authorization middleware
-app.UseAuthentication();
-app.UseAuthorization();
+// app.UseAuthentication();
+// app.UseAuthorization();
 
 if (enableOutputCache)
     app.UseOutputCache();
