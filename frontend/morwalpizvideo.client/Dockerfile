@@ -4,31 +4,39 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy the local models package first
-COPY fe-packages/models ./packages/models
-COPY package*.json ./
+# Copy root package files and workspace manifests
+COPY package.json yarn.lock ./
+COPY fe-packages/models/package.json ./fe-packages/models/
+COPY fe-packages/services/package.json ./fe-packages/services/
+COPY morwalpizvideo.client/package.json ./morwalpizvideo.client/
 
-# Install dependencies and build models package
-WORKDIR /app/packages/models
-RUN npm ci && npm run build
+# Install all dependencies (workspaces)
+RUN yarn install --frozen-lockfile
 
-# Go back to app root and copy morwalpizvideo.client files
+# Copy shared package sources and build them
+COPY fe-packages/models ./fe-packages/models
+COPY fe-packages/services ./fe-packages/services
+
+WORKDIR /app/fe-packages/models
+RUN yarn build
+
+WORKDIR /app/fe-packages/services
+RUN yarn build
+
+# Refresh workspace links after building packages
 WORKDIR /app
-COPY morwalpizvideo.client/package*.json ./morwalpizvideo.client/
+RUN yarn install --force --frozen-lockfile
 
-# Install dependencies for morwalpizvideo.client
+# Copy morwalpizvideo.client source files
 WORKDIR /app/morwalpizvideo.client
-RUN npm ci
-
-# Copy source files
+COPY morwalpizvideo.client/tsconfig*.json ./
+COPY morwalpizvideo.client/vite.config.ts ./
 COPY morwalpizvideo.client/src ./src
 COPY morwalpizvideo.client/index.html ./
-COPY morwalpizvideo.client/vite.config.ts ./
-COPY morwalpizvideo.client/tsconfig*.json ./
 COPY morwalpizvideo.client/public ./public
 
 # Build the application
-RUN npm run build-uncheck
+RUN yarn build-uncheck
 
 # Stage 2: Production
 FROM nginx:alpine
