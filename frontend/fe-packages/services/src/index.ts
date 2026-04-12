@@ -2,7 +2,7 @@
 
 // API Service exports
 export { default as apiService } from './apiService';
-export { setAuthTokenProvider } from './apiService';
+export { setAuthTokenProvider, setRequestCredentialsMode } from './apiService';
 
 // Export individual HTTP methods
 export { get, post, put, patch, Delete, postFormData, getFile, call } from './apiService';

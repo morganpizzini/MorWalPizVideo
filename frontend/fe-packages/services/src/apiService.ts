@@ -15,12 +15,36 @@ type AuthTokenProvider = () => string | null;
 let authTokenProvider: AuthTokenProvider | null = null;
 
 /**
+ * Request credentials mode type
+ * Controls whether credentials (cookies, authorization headers) are included in cross-origin requests
+ */
+type CredentialsMode = RequestCredentials;
+
+/**
+ * Global credentials mode setting
+ * Defaults to 'include' for backward compatibility with authenticated apps
+ */
+let requestCredentialsMode: CredentialsMode = 'include';
+
+/**
  * Register an authentication token provider
  * This allows applications to inject their own auth logic
  * @param provider Function that returns the current auth token or null
  */
 export function setAuthTokenProvider(provider: AuthTokenProvider): void {
     authTokenProvider = provider;
+}
+
+/**
+ * Set the request credentials mode for all API calls
+ * This controls whether credentials (cookies, authorization headers) are included in cross-origin requests
+ * @param mode The credentials mode: 'include' | 'omit' | 'same-origin'
+ *             - 'include': Always send credentials (default for authenticated apps)
+ *             - 'omit': Never send credentials (recommended for public/unauthenticated apps)
+ *             - 'same-origin': Only send credentials for same-origin requests
+ */
+export function setRequestCredentialsMode(mode: CredentialsMode): void {
+    requestCredentialsMode = mode;
 }
 
 /**
@@ -178,8 +202,8 @@ export async function call(url: string, method: string, body: any, overrideHeade
         }
     }
 
-    // Include credentials (cookies) in the request
-    options.credentials = 'include';
+    // Include credentials based on configured mode
+    options.credentials = requestCredentialsMode;
     
     return fetch(buildFullUrl(url), options)
         .then(async (response) => {

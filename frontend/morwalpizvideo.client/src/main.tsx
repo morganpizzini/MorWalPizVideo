@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './main.scss'
+import { setRequestCredentialsMode } from '@morwalpizvideo/services'
 import Root from "./routes/root";
 import ErrorPage from "./error-page";
 import ErrorPageRoot from "./error-page-root";
@@ -175,6 +176,10 @@ const gaTrackingId = "G-ST9GQYL925";
 if (window.location.hostname != "localhost") {
     ReactGA.initialize(gaTrackingId)
 }
+
+// Configure API service to omit credentials for public client
+// This prevents CORS errors when the ServerAPI CORS policy doesn't allow credentials
+setRequestCredentialsMode('omit');
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
