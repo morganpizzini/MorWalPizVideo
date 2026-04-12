@@ -37,10 +37,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             try
             {
                 var settings = _dbSettings.Value;
-
+                var featureCors = await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableCors);
                 var result = new
                 {
                     Success = true,
+                    CorsEnabled = featureCors,
                     ConfigurationLoaded = !string.IsNullOrEmpty(settings?.ConnectionString),
                     HasConnectionString = !string.IsNullOrEmpty(settings?.ConnectionString),
                     HasDatabaseName = !string.IsNullOrEmpty(settings?.DatabaseName),

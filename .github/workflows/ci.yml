@@ -28,18 +28,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
 
       - name: Install dependencies
         working-directory: frontend
-        run: |
-          npm ci
-          cd packages/models && npm run build
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:models
 
       - name: Build ${{ matrix.app }}
-        working-directory: frontend/${{ matrix.app }}
-        run: npm run build
+        working-directory: frontend
+        run: yarn workspace ${{ matrix.app }} build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
