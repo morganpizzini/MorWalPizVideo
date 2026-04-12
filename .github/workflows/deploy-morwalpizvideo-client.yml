@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'frontend/morwalpizvideo.client/**'
-      - 'frontend/packages/**'
+      - 'frontend/fe-packages/**'
       - '.github/workflows/deploy-morwalpizvideo-client.yml'
   workflow_dispatch:
   

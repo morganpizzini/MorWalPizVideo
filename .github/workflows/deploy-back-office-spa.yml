@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'frontend/back-office-spa/**'
-      - 'frontend/packages/**'
+      - 'frontend/fe-packages/**'
       - '.github/workflows/deploy-back-office-spa.yml'
   workflow_dispatch:
 
