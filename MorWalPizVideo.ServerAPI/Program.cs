@@ -27,30 +27,30 @@ var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMoc
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
-var allowAllCors = "AllowAllOrigins";
-var morWalPizCors = "MorWalPizPolicy";
+//var allowAllCors = "AllowAllOrigins";
+//var morWalPizCors = "MorWalPizPolicy";
 
-// Configure the CORS policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(allowAllCors,
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
+//// Configure the CORS policy
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy(allowAllCors,
+//        builder =>
+//        {
+//            builder.AllowAnyOrigin()
+//                   .AllowAnyMethod()
+//                   .AllowAnyHeader();
+//        });
 
-    options.AddPolicy(morWalPizCors,
-        builder =>
-    {
-        builder.WithOrigins(
-            "https://morwalpiz.com",
-            "https://www.morwalpiz.com")
-          .AllowAnyMethod()
-          .AllowAnyHeader();
-    });
-});
+//    options.AddPolicy(morWalPizCors,
+//        builder =>
+//    {
+//        builder.WithOrigins(
+//            "https://morwalpiz.com",
+//            "https://www.morwalpiz.com")
+//          .AllowAnyMethod()
+//          .AllowAnyHeader();
+//    });
+//});
 
 // Configure Azure KeyVault if enabled
 if (enableKeyVault)

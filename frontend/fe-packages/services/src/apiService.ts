@@ -201,7 +201,7 @@ export async function call(url: string, method: string, body: any, overrideHeade
             options.body = JSON.stringify(body);
         }
     }
-
+    
     // Include credentials based on configured mode
     options.credentials = requestCredentialsMode;
     
