@@ -42,8 +42,8 @@ builder.Services.AddCors(options =>
         builder =>
     {
         builder.WithOrigins(
-            "https://morwalpiz.com",
-            "https://www.morwalpiz.com")
+            "https://morwalpiz.com/",
+            "https://www.morwalpiz.com/")
           .AllowAnyMethod()
           .AllowAnyHeader();
     });
