@@ -38,10 +38,14 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             {
                 var settings = _dbSettings.Value;
                 var featureCors = await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableCors);
+                var enableCache = await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableCache);
+                var enableOutputCache = await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableOutputCache);
                 var result = new
                 {
                     Success = true,
                     CorsEnabled = featureCors,
+                    EnableOutputCache = enableOutputCache,
+                    EnableCache = enableCache,
                     ConfigurationLoaded = !string.IsNullOrEmpty(settings?.ConnectionString),
                     HasConnectionString = !string.IsNullOrEmpty(settings?.ConnectionString),
                     HasDatabaseName = !string.IsNullOrEmpty(settings?.DatabaseName),

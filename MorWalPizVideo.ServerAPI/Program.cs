@@ -240,7 +240,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors(enableCors ? morWalPizCors : allowAllCors);
+//app.UseCors(enableCors ? morWalPizCors : allowAllCors);
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
@@ -250,8 +250,6 @@ if (enableOutputCache)
     app.UseOutputCache();
 
 app.MapControllers();
-
-app.MapFallbackToFile("/index.html");
 
 app.Run();
 
