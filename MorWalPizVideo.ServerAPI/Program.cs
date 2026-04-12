@@ -27,10 +27,13 @@ var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMoc
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
+var allowAllCors = "AllowAllOrigins";
+var morWalPizCors = "MorWalPizPolicy";
+
 // Configure the CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAllOrigins",
+    options.AddPolicy(allowAllCors,
         builder =>
         {
             builder.AllowAnyOrigin()
@@ -38,12 +41,12 @@ builder.Services.AddCors(options =>
                    .AllowAnyHeader();
         });
 
-    options.AddPolicy("MorWalPizPolicy",
+    options.AddPolicy(morWalPizCors,
         builder =>
     {
         builder.WithOrigins(
-            "https://morwalpiz.com/",
-            "https://www.morwalpiz.com/")
+            "https://morwalpiz.com",
+            "https://www.morwalpiz.com")
           .AllowAnyMethod()
           .AllowAnyHeader();
     });
@@ -215,7 +218,6 @@ else
     });
 }
 
-app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
 
 app.MapDefaultEndpoints();
 
@@ -237,6 +239,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(enableCors ? morWalPizCors : allowAllCors);
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
