@@ -38,9 +38,21 @@ var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMoc
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
+
+
 // Configure the CORS policy
 builder.Services.AddCors(options =>
 {
+    if (builder.Environment.IsDevelopment())
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.SetIsOriginAllowed(_ => true) // Allow any origin in dev
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Required for cookies
+        });
+    }
     options.AddPolicy("AllowAllOrigins",
         builder =>
         {
@@ -89,22 +101,6 @@ builder.AddServiceDefaults();
 // Configure comprehensive health checks
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
-// Enable CORS for all in development with credentials support
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddCors(options =>
-    {
-        options.AddDefaultPolicy(policy =>
-        {
-            policy.SetIsOriginAllowed(_ => true) // Allow any origin in dev
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials(); // Required for cookies
-        });
-    });
-}
-
-
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
 
 builder.Services.AddSingleton<IChatCompletionService>(sp =>
@@ -128,10 +124,6 @@ builder.Services.AddControllers()
 
 if (!enableMock)
 {
-    // Configure options for lazy loading
-    //builder.Services.Configure<TelegramSettings>("TelegramSettings", builder.Configuration.GetSection("TelegramSettings"));
-    //builder.Services.Configure<TelegramSettings>("DiscordSettings", builder.Configuration.GetSection("DiscordSettings"));
-
     // Register configuration services for lazy loading
     builder.Services.AddScoped<IDiscordConfigurationService, DiscordConfigurationService>();
     builder.Services.AddScoped<ITelegramConfigurationService, TelegramConfigurationService>();
@@ -409,9 +401,6 @@ if (enableHangFire)
     );
 }
 
-app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
-
-
 app.MapDefaultEndpoints();
 
 if (enableSwagger)
@@ -431,6 +420,9 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
+
+
+app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
 
 app.UseAuthentication();
 app.UseAuthorization();
