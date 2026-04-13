@@ -23,15 +23,27 @@ namespace MorWalPizVideo.Server.Services
             IList<YouTubeContent> matches = await _dataService.FetchMatches();
 
             // Get all videoIds that need to be populated with details
-            // For single videos, use the isLink
+            // For single videos (IsLink=true), fetch if title/description is empty
             // For collections, get all videoIds from the VideoRefs
-            var videoIds =
-                    matches
-                        .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
-                        .SelectMany(x => x.VideoRefs)
-                        // Only fetch details for VideoRefs that don't have title populated yet
-                        .Where(a => string.IsNullOrEmpty(a.Title))
-                        .Select(x => x.YoutubeId).ToList();
+            var videoIds = new List<string>();
+            
+            // Add single video IDs that need metadata
+            videoIds.AddRange(
+                matches
+                    .Where(x => x.IsLink && (string.IsNullOrEmpty(x.Title) || string.IsNullOrEmpty(x.Description)))
+                    .Select(x => x.ThumbnailVideoId)
+            );
+            
+            // Add collection video ref IDs that need metadata
+            videoIds.AddRange(
+                matches
+                    .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
+                    .SelectMany(x => x.VideoRefs)
+                    .Where(a => string.IsNullOrEmpty(a.Title))
+                    .Select(x => x.YoutubeId)
+            );
+            
+            videoIds = videoIds.Distinct().ToList();
 
             if (videoIds.Count > 0)
             {
@@ -68,11 +80,21 @@ namespace MorWalPizVideo.Server.Services
                 if (match.IsLink && videoDict.TryGetValue(match.ThumbnailVideoId, out var singleVideo))
                 {
                     // For single video matches, update title, description, etc. from the video
+                    // Also update the VideoRef with metadata
+                    var updatedVideoRef = new VideoRef(
+                        singleVideo.YoutubeId,
+                        match.VideoRefs?.FirstOrDefault()?.Categories ?? Array.Empty<CategoryRef>(),
+                        singleVideo.Title,
+                        singleVideo.Description,
+                        singleVideo.PublishedAt
+                    );
+                    
                     var updatedMatch = match with
                     {
                         Title = singleVideo.Title,
                         Description = singleVideo.Description,
-                        CreationDateTime = singleVideo.PublishedAt
+                        CreationDateTime = singleVideo.PublishedAt,
+                        VideoRefs = new[] { updatedVideoRef }
                     };
                     
                     updatedMatches.Add(updatedMatch);
