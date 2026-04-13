@@ -172,11 +172,6 @@ interface ResponseOptions {
 export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false, responseOptions?: ResponseOptions) {
     const headers = new Headers();
 
-    // Don't set Content-Type for FormData - let the browser set it with the boundary
-    if (!isFormData) {
-        headers.append("Content-Type", 'application/json');
-    }
-
     // Add authorization header if user is authenticated
     const token = getAuthToken();
     if (token) {
@@ -192,15 +187,26 @@ export async function call(url: string, method: string, body: any, overrideHeade
         headers: headers
     };
 
+    // Determine if we have a request body that needs to be sent
+    let hasBody = false;
+    
     if (body) {
         if (isFormData) {
             // For FormData, use it directly
+            // Don't set Content-Type - let the browser set it with the boundary
             options.body = body as FormData;
+            hasBody = true;
         } else if (Object.keys(body).length > 0) {
-            // For regular objects, stringify them
+            // For regular objects, stringify them and set Content-Type
             options.body = JSON.stringify(body);
+            headers.append("Content-Type", 'application/json');
+            hasBody = true;
         }
     }
+    
+    // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
+    // This avoids triggering CORS preflight for simple requests
+    // Only set Content-Type when we actually have a JSON body to send
     
     // Include credentials based on configured mode
     options.credentials = requestCredentialsMode;

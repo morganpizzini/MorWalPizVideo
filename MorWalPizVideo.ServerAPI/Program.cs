@@ -31,27 +31,26 @@ var allowAllCors = "AllowAllOrigins";
 var morWalPizCors = "MorWalPizPolicy";
 
 // Configure the CORS policy
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy(allowAllCors,
-//        builder =>
-//        {
-//            builder.AllowAnyOrigin()
-//                    .AllowAnyHeader()
-//                   .AllowAnyMethod();
-//        });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(allowAllCors,
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                    .AllowAnyHeader()
+                   .AllowAnyMethod();
+        });
 
-//    options.AddPolicy(morWalPizCors,
-//        builder =>
-//    {
-//        builder.WithOrigins(
-//            "https://morwalpiz.com",
-//            "https://www.morwalpiz.com")
-//            .AllowAnyHeader()
-//          .AllowAnyMethod()
-//            .AllowCredentials(); // Required for cookies
-//    });
-//});
+    options.AddPolicy(morWalPizCors,
+        builder =>
+    {
+        builder.WithOrigins(
+            "https://morwalpiz.com",
+            "https://www.morwalpiz.com")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 // Configure Azure KeyVault if enabled
 if (enableKeyVault)
@@ -223,8 +222,8 @@ app.MapDefaultEndpoints();
 // Map health check endpoint
 app.MapHealthChecks("/health");
 
-app.UseDefaultFiles();
-app.MapStaticAssets();
+//app.UseDefaultFiles();
+//app.MapStaticAssets();
 
 // Configure the HTTP request pipeline.
 if (enableSwagger)
@@ -239,7 +238,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//app.UseCors(enableCors ? morWalPizCors : allowAllCors);
+app.UseCors(enableCors ? morWalPizCors : allowAllCors);
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
