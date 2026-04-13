@@ -7,7 +7,6 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.Server.Controllers
 {
-    [AllowAnonymous]
     public abstract class ApplicationController : ApplicationControllerBase
     {   
         protected readonly IGenericDataService dataService;
