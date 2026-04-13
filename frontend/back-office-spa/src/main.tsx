@@ -1,9 +1,8 @@
 // filepath: c:\Users\morga\OneDrive\Desktop\MorWalPizVideo\BackOfficeSPA\back-office-spa\src\main.tsx
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { RouterProvider } from 'react-router';
 import { createRoot } from 'react-dom/client';
-import router from './router';
 import { ToastProvider } from './components/ToastNotification';
+
 
 // Load runtime environment configuration (injected by Docker entrypoint)
 // This dynamically loads /env-config.js to avoid Vite trying to bundle it
@@ -22,10 +21,18 @@ const loadEnvConfig = () => {
 };
 
 // Load env config then mount the React app
-loadEnvConfig().then(() => {
+async function bootstrap() {
+  await loadEnvConfig();
+  const [{ RouterProvider }, { default: router }] = await Promise.all([
+    import('react-router'),
+    import('./router'),
+  ]);
+
   createRoot(document.getElementById('root')!).render(
     <ToastProvider>
       <RouterProvider router={router} />
     </ToastProvider>
   );
-});
+}
+
+bootstrap();

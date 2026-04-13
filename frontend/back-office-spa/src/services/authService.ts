@@ -53,7 +53,25 @@ class AuthService {
   async login(username: string, password: string): Promise<LoginResponse> {
     const response = await post('/api/auth/login', { username, password });
 
-    // Store token and user info
+    // Check if response contains errors (failed login)
+    if (response.errors || !response.token || !response.user) {
+      // Extract error details for better user feedback
+      const errorData: any = {};
+      
+      if (response.message) errorData.message = response.message;
+      if (response.retryAfter) errorData.retryAfter = response.retryAfter;
+      if (response.remainingAttempts !== undefined) errorData.remainingAttempts = response.remainingAttempts;
+      
+      // If we have structured error data, throw it
+      if (Object.keys(errorData).length > 0) {
+        throw errorData;
+      }
+      
+      // Otherwise throw a generic error
+      throw new Error(response.errors?.[0] || 'Login failed. Please check your credentials.');
+    }
+
+    // Store token and user info only on successful login
     this.setToken(response.token);
     this.setUser(response.user);
 

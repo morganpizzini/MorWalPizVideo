@@ -242,6 +242,19 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             }
                             break;
                         }
+                    case 401:
+                    case 429:
+                        {
+                            // Parse JSON response for authentication errors and rate limit errors
+                            try {
+                                const parsedResponse = await response.json();
+                                // Return the entire parsed response to preserve structure (message, retryAfter, remainingAttempts, etc.)
+                                return parsedResponse;
+                            } catch {
+                                errorMessages.push("Authentication failed");
+                            }
+                            break;
+                        }
                     case 404:
                         errorMessages.push({ api: "Not found" });
                         break;
