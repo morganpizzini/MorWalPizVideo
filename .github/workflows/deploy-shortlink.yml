@@ -1,4 +1,4 @@
-name: Deploy ServerAPI
+name: Deploy Shortlinks
 
 on:
   push:
