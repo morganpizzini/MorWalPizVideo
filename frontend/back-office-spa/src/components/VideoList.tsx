@@ -99,7 +99,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                   </td>
                   <td>
                     {match.url ? (
-                      <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-truncate d-block" style={{ maxWidth: '150px' }}>
+                      <a href={`https://morwalpiz.com/matches/${match.url}`} target="_blank" rel="noopener noreferrer" className="text-truncate d-block" style={{ maxWidth: '150px' }}>
                         {match.url}
                       </a>
                     ) : (

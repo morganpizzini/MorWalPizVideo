@@ -64,12 +64,12 @@ public class VideosController : ApplicationControllerBase
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
         await externalDataService.FetchMatches();
 
+        // Auto-create shortlink for the imported video
+        await CreateVideoShortLinkAsync(request.VideoId);
+
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(ApiTagCacheKeys.Matches);
         await client.ReloadCache();
-
-        // Auto-create shortlink for the imported video
-        await CreateVideoShortLinkAsync(request.VideoId);
 
         return NoContent();
     }

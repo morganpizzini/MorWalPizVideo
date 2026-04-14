@@ -1,7 +1,9 @@
 using Azure.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.FeatureManagement;
 using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
@@ -98,6 +100,11 @@ else
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
 
+builder.Services.AddAuthentication("FakeScheme")
+    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 
 // Add health checks
@@ -139,6 +146,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (enableOutputCache)
     app.UseOutputCache();

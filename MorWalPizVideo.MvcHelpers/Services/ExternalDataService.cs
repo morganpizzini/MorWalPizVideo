@@ -75,7 +75,7 @@ namespace MorWalPizVideo.Server.Services
                 return string.Empty;
             
             // Trim and replace spaces with dashes
-            var slug = title.Trim().Replace(" ", "-");
+            var slug = title.Replace("-", "").Trim().Replace(" ", "-");
             
             // URL encode to handle special characters
             slug = Uri.EscapeDataString(slug);
