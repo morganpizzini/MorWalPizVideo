@@ -108,7 +108,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
 // Add health checks
-builder.Services.AddHealthChecks();
+//builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -132,7 +132,7 @@ else
 app.MapDefaultEndpoints();
 
 // Map health check endpoint
-app.MapHealthChecks("/health");
+//app.MapHealthChecks("/health");
 
 // Configure the HTTP request pipeline.
 if (enableSwagger)
