@@ -69,6 +69,20 @@ namespace MorWalPizVideo.Server.Services
             return matches.OrderByDescending(x => x.CreationDateTime).ToList();
         }
 
+        private static string GenerateUrlSlug(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return string.Empty;
+            
+            // Trim and replace spaces with dashes
+            var slug = title.Trim().Replace(" ", "-");
+            
+            // URL encode to handle special characters
+            slug = Uri.EscapeDataString(slug);
+            
+            return slug;
+        }
+
         private IList<YouTubeContent> ParseMatches(IList<YouTubeContent> matches, IList<Video> videos)
         {
             // Create a dictionary for quick video lookup
@@ -89,10 +103,16 @@ namespace MorWalPizVideo.Server.Services
                         singleVideo.PublishedAt
                     );
                     
+                    // Generate URL from title if current URL is empty
+                    var url = string.IsNullOrWhiteSpace(match.Url) 
+                        ? GenerateUrlSlug(singleVideo.Title) 
+                        : match.Url;
+                    
                     var updatedMatch = match with
                     {
                         Title = singleVideo.Title,
                         Description = singleVideo.Description,
+                        Url = url,
                         CreationDateTime = singleVideo.PublishedAt,
                         VideoRefs = new[] { updatedVideoRef }
                     };

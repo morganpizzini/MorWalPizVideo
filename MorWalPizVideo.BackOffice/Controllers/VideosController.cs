@@ -5,6 +5,8 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -65,6 +67,10 @@ public class VideosController : ApplicationControllerBase
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(ApiTagCacheKeys.Matches);
         await client.ReloadCache();
+
+        // Auto-create shortlink for the imported video
+        await CreateVideoShortLinkAsync(request.VideoId);
+
         return NoContent();
     }
     [HttpPost("ConvertIntoRoot")]
@@ -171,18 +177,11 @@ public class VideosController : ApplicationControllerBase
         }
 
         // Fetch category and convert to CategoryRef object
-        CategoryRef[] categories;
-        if (string.IsNullOrEmpty(request.Category))
-        {
-            categories = Array.Empty<CategoryRef>();
-        }
-        else
-        {
-            var categoryEntities = await _dataService.FetchCategories(new[] { request.Category });
-            categories = categoryEntities
-                .Select(x => new CategoryRef(x.Id, x.Title))
-                .ToArray();
-        }
+        var categoryEntities = await _dataService.FetchCategories(request.Categories);
+        var categories = categoryEntities
+            .Select(x => new CategoryRef(x.Id, x.Title))
+            .ToArray();
+        
 
         var updatedMatch = existingMatch.AddVideo(request.VideoId, categories);
         await _dataService.UpdateMatch(updatedMatch);
@@ -191,6 +190,83 @@ public class VideosController : ApplicationControllerBase
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
         await externalDataService.FetchMatches();
 
+        // Auto-create shortlink for the sub-video
+        await CreateVideoShortLinkAsync(request.VideoId);
+
         return NoContent();
     }
+
+    #region ShortLink Helper
+
+    /// <summary>
+    /// Auto-creates a shortlink for a video (similar to ShortLinksController logic).
+    /// </summary>
+    private async Task CreateVideoShortLinkAsync(string videoId)
+    {
+        var existingMatch = await _dataService.FindMatch(videoId);
+        if (existingMatch == null)
+        {
+            return;
+        }
+
+        // Check if shortlink already exists for this video
+        var existingShortLink = existingMatch.ShortLinks
+            .FirstOrDefault(x => x.Target == videoId && string.IsNullOrEmpty(x.QueryString));
+        
+        if (existingShortLink != null)
+        {
+            return; // Shortlink already exists
+        }
+
+        // Generate unique shortlink code
+        var shortLinkCode = await CalculateShortLinkAsync();
+
+        // Create new shortlink
+        var newShortLink = new ShortLink(shortLinkCode, videoId, Array.Empty<QueryLink>())
+        {
+            LinkType = LinkType.YouTubeVideo
+        };
+
+        // Add shortlink to match
+        existingMatch = existingMatch.AddShortLink(newShortLink);
+        await _dataService.UpdateMatch(existingMatch);
+
+        // Reset shortlink cache
+        await client.ResetCache(CacheKeys.ShortLinks);
+    }
+
+    /// <summary>
+    /// Generates a unique shortlink code (mirrors ShortLinksController logic).
+    /// </summary>
+    private async Task<string> CalculateShortLinkAsync()
+    {
+        var shortlinks = await _dataService.FetchShortLinks();
+        var sl = shortlinks.Select(x => x.Code.ToLower()).ToList();
+
+        return GetUniqueValue(sl);
+
+        string GetUniqueValue(IEnumerable<string> strings)
+        {
+            // Sort and concatenate the input strings
+            string concatenated = string.Join("", strings.OrderBy(s => s));
+
+            // Hash the concatenated string
+            using SHA256 sha256 = SHA256.Create();
+            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(concatenated));
+
+            // Convert hash bytes to a hexadecimal string
+            string hash = Convert.ToHexString(hashBytes);
+
+            // Check if the truncated hash conflicts with inputs
+            string uniqueString = hash.Substring(0, 5).ToLower();
+            while (strings.Contains(uniqueString))
+            {
+                uniqueString = GetUniqueValue([.. strings, uniqueString]);
+            }
+
+            return uniqueString;
+        }
+    }
+
+    #endregion
 }

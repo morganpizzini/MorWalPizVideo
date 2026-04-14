@@ -13,8 +13,8 @@ const CreateSubVideo: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const toast = useToast();
 
-  // Load categories from the API using the loader
-  const { categories: availableCategories } = useLoaderData() as LoaderData;
+  // Load categories and videos from the API using the loader
+  const { categories: availableCategories, videos } = useLoaderData() as LoaderData;
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -70,14 +70,16 @@ const CreateSubVideo: React.FC = () => {
       <Form onSubmit={handleSubmit}>
         <Form.Group controlId="formMatchId" className="mb-3">
           <Form.Label>
-            Root Video ID (Match ID) <span className="text-danger">*</span>
+            Root Video (Match) <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Control
-            type="text"
-            value={matchId}
-            onChange={e => setMatchId(e.target.value)}
-            placeholder="Enter the root video ID"
-          />
+          <Form.Select value={matchId} onChange={e => setMatchId(e.target.value)}>
+            <option value="">Select a root video</option>
+            {videos.map((video: any) => (
+              <option key={video.id} value={video.isLink ? video.thumbnailVideoId : video.id}>
+                {video.title || video.id}
+              </option>
+            ))}
+          </Form.Select>
           <FieldError error={errors?.matchId} />
         </Form.Group>
 
