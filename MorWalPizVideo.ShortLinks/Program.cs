@@ -2,7 +2,6 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.FeatureManagement;
 using MongoDB.Driver;
-using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
@@ -17,7 +16,6 @@ builder.Services.AddFeatureManagement()
 var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
-var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 
@@ -48,15 +46,6 @@ if (enableKeyVault)
 }
 
 builder.AddServiceDefaults();
-// Add services to the container.
-if (enableCache)
-{
-    builder.Services.AddOutputCache(options =>
-    {
-        options.AddBasePolicy(builder =>
-            builder.Expire(TimeSpan.FromMinutes(10)));
-    });
-}
 
 if (enableSwagger)
     builder.Services.AddOpenApi();
@@ -67,7 +56,6 @@ if (enableMock)
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
-    
 }
 else
 {
@@ -107,9 +95,6 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-// Add health checks
-//builder.Services.AddHealthChecks();
-
 var app = builder.Build();
 
 
@@ -131,9 +116,6 @@ else
 
 app.MapDefaultEndpoints();
 
-// Map health check endpoint
-//app.MapHealthChecks("/health");
-
 // Configure the HTTP request pipeline.
 if (enableSwagger)
 {
@@ -151,8 +133,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (enableOutputCache)
-    app.UseOutputCache();
 
 app.MapControllers();
 

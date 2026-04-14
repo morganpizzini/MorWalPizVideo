@@ -51,28 +51,21 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             var updatedShortLink = shortLink with { ClicksCount = shortLink.ClicksCount + 1 };
 
             // Find which entity contains this shortlink and update it
-            var youtubeContents = await FetchMatches();
-            foreach (var content in youtubeContents)
+            var youtubeContents = await FetchMatchesWithoutCache();
+            var existing = youtubeContents.FirstOrDefault(x => x.GetShortLink(code) != null);
+            if(existing != null)
             {
-                if (content.GetShortLink(code) != null)
-                {
-                    var updatedContent = content.UpdateShortLink(code, updatedShortLink);
-                    await _shortlinkDataService.UpdateYouTubeContent(updatedContent);
-                    ClearCache();
-                    return;
-                }
+                var updatedContent = existing.UpdateShortLink(code, updatedShortLink);
+                await _shortlinkDataService.UpdateYouTubeContent(updatedContent);
+                return;
             }
 
-            var channels = await FetchChannels();
-            foreach (var channel in channels)
-            {
-                if (channel.GetShortLink(code) != null)
-                {
-                    var updatedChannel = channel.UpdateShortLink(code, updatedShortLink);
-                    await _shortlinkDataService.UpdateYTChannel(updatedChannel);
-                    ClearCache();
-                    return;
-                }
+            var channels = await FetchChannelsWithoutCache();
+            var existingChannel = channels.FirstOrDefault(x => x.GetShortLink(code) != null);
+            if(existingChannel != null) {
+                var updatedChannel = existingChannel.UpdateShortLink(code, updatedShortLink);
+                await _shortlinkDataService.UpdateYTChannel(updatedChannel);
+                return;
             }
 
             // Update standalone shortlink
@@ -276,34 +269,28 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             return Redirect(webUrl);
         }
+        private async Task<IList<YouTubeContent>> FetchMatchesWithoutCache() => (await _shortlinkDataService.FetchMatches())
+                            .OrderByDescending(x => x.CreationDateTime)
+                            .ToList();
+
+
         private async Task<IList<YouTubeContent>> FetchMatches(int skip = 0, int take = int.MaxValue)
         {
-            return (await cache.GetOrCreateAsync<IList<YouTubeContent>>(CacheKeys.Matches, async () =>
-            {
-                return (await _shortlinkDataService.FetchMatches())
-                            .OrderByDescending(x => x.CreationDateTime)
-                            .ToList();
-            })).Skip(skip).Take(take).ToList();
+            return (await cache.GetOrCreateAsync(CacheKeys.Matches, FetchMatchesWithoutCache)).Skip(skip).Take(take).ToList();
         }
+        
+        private async Task<IList<ShortLink>> FetchShortlinksWithoutCache() =>
+            (await _shortlinkDataService.FetchShortLink())
+                        .OrderByDescending(x => x.CreationDateTime)
+                        .ToList();
+        private Task<IList<ShortLink>> FetchShortlinks() =>
+            cache.GetOrCreateAsync(CacheKeys.ShortLinks, FetchShortlinksWithoutCache);
 
-        private async Task<IList<ShortLink>> FetchShortlinks()
-        {
-            return (await cache.GetOrCreateAsync<IList<ShortLink>>(CacheKeys.ShortLinks, async () =>
-            {
-                return (await _shortlinkDataService.FetchShortLink())
-                            .OrderByDescending(x => x.CreationDateTime)
-                            .ToList();
-            })).ToList();
-        }
-
+        private async Task<IList<YTChannel>> FetchChannelsWithoutCache() => 
+            (await _shortlinkDataService.FetchChannels()).OrderByDescending(x => x.CreationDateTime).ToList());
         private async Task<IList<YTChannel>> FetchChannels()
         {
-            return (await cache.GetOrCreateAsync<IList<YTChannel>>(CacheKeys.Channels, async () =>
-            {
-                return (await _shortlinkDataService.FetchChannels())
-                            .OrderByDescending(x => x.CreationDateTime)
-                            .ToList();
-            })).ToList();
+            return (await cache.GetOrCreateAsync(CacheKeys.Channels,FetchChannelsWithoutCache)).ToList();
         }
 
         private void ClearCache()
