@@ -48,7 +48,14 @@ const SHOP_CART_ITEMS = `${SHOP_CART}/items`;
 const SHOP_CART_CHECKOUT = `${SHOP_CART}/checkout`;
 const SHOP_LEGAL = `${baseEndpoint}/shop/legal/{type}`;
 
+// API Keys endpoints
+const APIKEYS = `${baseEndpoint}/apikeys`;
+const APIKEYS_DETAIL = `${APIKEYS}/{id}`;
+const APIKEYS_TOGGLE = `${APIKEYS}/{id}/toggle`;
+const APIKEYS_REGENERATE = `${APIKEYS}/{id}/regenerate`;
+
 export default {
+
     VIDEOS,
     VIDEOS_DETAIL,
     CATEGORIES,
@@ -93,7 +100,11 @@ export default {
     SHOP_CART,
     SHOP_CART_ITEMS,
     SHOP_CART_CHECKOUT,
-    SHOP_LEGAL
+    SHOP_LEGAL,
+    APIKEYS,
+    APIKEYS_DETAIL,
+    APIKEYS_TOGGLE,
+    APIKEYS_REGENERATE,
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

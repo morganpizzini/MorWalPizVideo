@@ -287,7 +287,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             cache.GetOrCreateAsync(CacheKeys.ShortLinks, FetchShortlinksWithoutCache);
 
         private async Task<IList<YTChannel>> FetchChannelsWithoutCache() => 
-            (await _shortlinkDataService.FetchChannels()).OrderByDescending(x => x.CreationDateTime).ToList());
+            (await _shortlinkDataService.FetchChannels()).OrderByDescending(x => x.CreationDateTime).ToList();
         private async Task<IList<YTChannel>> FetchChannels()
         {
             return (await cache.GetOrCreateAsync(CacheKeys.Channels,FetchChannelsWithoutCache)).ToList();

@@ -78,6 +78,10 @@ import InsightForm from '../../routes/insights/form';
 import InsightNews from '../../routes/insights/news';
 import scanNewsAction from '../../routes/insights/scan-news/action';
 
+import ApiKeys from '../../routes/apiKeys/index';
+import ApiKeyDetail from '../../routes/apiKeys/detail';
+import ApiKeyForm from '../../routes/apiKeys/form';
+
 /**
  * Protected routes (require authentication)
  * These routes are rendered within the PrimaryLayout component
@@ -451,6 +455,33 @@ export const protectedRoutes: RouteConfig[] = [
           {
             path: 'scan-news',
             action: scanNewsAction,
+          },
+        ],
+      },
+    ],
+  }),
+
+  // API Keys
+  createRouteGroup('keys', {
+    action: ApiKeys.action,
+    children: [
+      { index: true, path: '', loader: ApiKeys.loader, Component: ApiKeys.component },
+      { path: 'create', loader: ApiKeyForm.loader, Component: ApiKeyForm.component, action: ApiKeyForm.action },
+      {
+        path: ':id',
+        Component: Outlet,
+        children: [
+          {
+            index: true,
+            path: '',
+            loader: ApiKeyDetail.loader,
+            Component: ApiKeyDetail.component,
+          },
+          {
+            path: 'edit',
+            loader: ApiKeyForm.loader,
+            action: ApiKeyForm.action,
+            Component: ApiKeyForm.component,
           },
         ],
       },

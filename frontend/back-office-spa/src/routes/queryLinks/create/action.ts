@@ -9,8 +9,8 @@ export default async function action({ request }: { request: Request }) {
     errors['title'] = 'Title cannot be empty';
   }
 
-  if (!values.link || (values.link as string).trim().length === 0) {
-    errors['link'] = 'Link cannot be empty';
+    if (!values.value || (values.value as string).trim().length === 0) {
+        errors['value'] = 'Value cannot be empty';
   }
 
   if (Object.keys(errors).length > 0) {

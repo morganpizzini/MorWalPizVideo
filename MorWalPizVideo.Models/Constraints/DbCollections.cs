@@ -5,6 +5,7 @@
         public const string MorWalPiz = "MorWalPiz";
         public const string Telegram = "Telegram";
         public const string Discord = "Discord";
+        public const string Facebook = "Facebook";
         public const string YouTube = "YouTube";
         public const string Recaptcha = "Recaptcha";
     }

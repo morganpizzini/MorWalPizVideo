@@ -11,9 +11,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,scss}\""
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../fe-packages/models",
-    "@morwalpizvideo/services": "file:../fe-packages/services",
-    "@morwalpiz/layout": "file:../fe-packages/layout",
+    "@morwalpizvideo/models": "1.0.0",
+    "@morwalpizvideo/services": "1.0.0",
+    "@morwalpiz/layout": "1.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router": "^7.4.0",

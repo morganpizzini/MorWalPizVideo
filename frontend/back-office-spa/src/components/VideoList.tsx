@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Table, Form, InputGroup, Badge } from 'react-bootstrap';
+import { Button, Table, Form, InputGroup, Badge, Modal, Alert } from 'react-bootstrap';
 import { Match } from '../models/video/types';
+import { publishVideoToSocial } from '../services/videoService';
 
 interface VideoListProps {
   matches: Match[];
@@ -13,6 +14,12 @@ interface ExpandedState {
 const VideoList: React.FC<VideoListProps> = ({ matches }) => {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [publishMessage, setPublishMessage] = useState('');
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
 
   const toggleExpand = (matchId: string) => {
     setExpanded(prev => ({
@@ -40,6 +47,45 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
     if (window.confirm('Are you sure you want to delete this video content?')) {
       // TODO: Implement delete functionality
       console.log('Delete match:', matchId);
+    }
+  };
+
+  const handleOpenPublishModal = (matchId: string) => {
+    setSelectedVideoId(matchId);
+    setPublishMessage('');
+    setPublishError(null);
+    setPublishSuccess(null);
+    setShowPublishModal(true);
+  };
+
+  const handleClosePublishModal = () => {
+    setShowPublishModal(false);
+    setSelectedVideoId(null);
+    setPublishMessage('');
+    setPublishError(null);
+    setPublishSuccess(null);
+  };
+
+  const handlePublishSubmit = async () => {
+    if (!selectedVideoId || !publishMessage.trim()) {
+      setPublishError('Please enter a message');
+      return;
+    }
+
+    setPublishLoading(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      await publishVideoToSocial(selectedVideoId, publishMessage);
+      setPublishSuccess('Successfully published to all social media platforms!');
+      setTimeout(() => {
+        handleClosePublishModal();
+      }, 2000);
+    } catch (error: any) {
+      setPublishError(error.message || 'Failed to publish to social media');
+    } finally {
+      setPublishLoading(false);
     }
   };
 
@@ -110,7 +156,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                     <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>
                   </td>
                   <td>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex gap-2 flex-wrap">
                       <Button
                         variant="outline-primary"
                         size="sm"
@@ -124,6 +170,13 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                         onClick={() => window.location.href = `/videos/${match.id}/edit`}
                       >
                         Edit
+                      </Button>
+                      <Button
+                        variant="outline-success"
+                        size="sm"
+                        onClick={() => handleOpenPublishModal(match.id)}
+                      >
+                        Publish
                       </Button>
                       <Button
                         variant="outline-danger"
@@ -176,6 +229,53 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
           )}
         </tbody>
       </Table>
+
+      {/* Publish to Social Media Modal */}
+      <Modal show={showPublishModal} onHide={handleClosePublishModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Publish to Social Media</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {publishError && (
+            <Alert variant="danger" dismissible onClose={() => setPublishError(null)}>
+              {publishError}
+            </Alert>
+          )}
+          {publishSuccess && (
+            <Alert variant="success">
+              {publishSuccess}
+            </Alert>
+          )}
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Message</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                value={publishMessage}
+                onChange={(e) => setPublishMessage(e.target.value)}
+                placeholder="Enter your message to post on Facebook, Telegram, and Discord..."
+                disabled={publishLoading || !!publishSuccess}
+              />
+              <Form.Text className="text-muted">
+                This message will be posted to Facebook, Telegram, and Discord with the video shortlink.
+              </Form.Text>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClosePublishModal} disabled={publishLoading}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handlePublishSubmit} 
+            disabled={publishLoading || !publishMessage.trim() || !!publishSuccess}
+          >
+            {publishLoading ? 'Publishing...' : 'Publish'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

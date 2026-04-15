@@ -25,8 +25,8 @@
     ]
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../fe-packages/models",
-    "@morwalpizvideo/services": "file:../fe-packages/services",
+    "@morwalpizvideo/models": "1.0.0",
+    "@morwalpizvideo/services": "1.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "react": "19.2.4",

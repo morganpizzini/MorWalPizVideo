@@ -110,8 +110,8 @@ const QueryLinks: React.FC = () => {
           <p>
             <strong>Title:</strong> {selectedLink?.title}
           </p>
-          <p>
-            <strong>Description:</strong> {selectedLink?.description}
+                  <p>
+                      <strong>Value:</strong> {selectedLink?.value}
           </p>
         </Modal.Body>
         <Modal.Footer>

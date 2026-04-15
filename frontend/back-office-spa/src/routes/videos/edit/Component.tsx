@@ -2,14 +2,25 @@ import React, { useState } from 'react';
 import { useLoaderData, Form } from 'react-router';
 import { Card, Row, Col, Form as BootstrapForm, Button, Badge, Table } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, VideoRef } from '@morwalpizvideo/models';
+import { Match, VideoRef, CategoryRef } from '@morwalpizvideo/models';
 import VideoRefEditModal from '@components/VideoRefEditModal';
 
 const Component: React.FC = () => {
-  const { match } = useLoaderData() as { match: Match };
+  const { match, categories } = useLoaderData() as { match: Match; categories: CategoryRef[] };
   const [showModal, setShowModal] = useState(false);
   const [selectedVideoRef, setSelectedVideoRef] = useState<VideoRef | null>(null);
   const [videoRefs, setVideoRefs] = useState<VideoRef[]>(match.videoRefs || []);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    match.categories?.map(c => c.id) || []
+  );
+
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleEditVideoRef = (videoRef: VideoRef) => {
     setSelectedVideoRef(videoRef);
@@ -89,7 +100,7 @@ const Component: React.FC = () => {
                   </Col>
                   <Col sm={9}>
                     <BootstrapForm.Control
-                      type="url"
+                      type="text"
                       id="url"
                       name="url"
                       defaultValue={match.url}
@@ -99,19 +110,26 @@ const Component: React.FC = () => {
 
                 <Row className="mb-3">
                   <Col sm={3}>
-                    <BootstrapForm.Label htmlFor="categories">Categories</BootstrapForm.Label>
+                    <BootstrapForm.Label>Categories</BootstrapForm.Label>
                   </Col>
                   <Col sm={9}>
-                    <BootstrapForm.Control
-                      type="text"
-                      id="categories"
-                      name="categories"
-                      defaultValue={match.categories?.join(', ') || ''}
-                      placeholder="Enter categories separated by commas"
-                    />
-                    <BootstrapForm.Text className="text-muted">
-                      Separate multiple categories with commas
-                    </BootstrapForm.Text>
+                    <input type="hidden" name="categories" value={JSON.stringify(selectedCategories)} />
+                    {categories && categories.length > 0 ? (
+                      <div className="d-flex flex-column gap-2">
+                        {categories.map((category) => (
+                          <BootstrapForm.Check
+                            key={category.categoryId}
+                            type="checkbox"
+                            id={`category-${category.categoryId}`}
+                            label={category.title}
+                            checked={selectedCategories.includes(category.categoryId)}
+                            onChange={() => handleCategoryChange(category.categoryId)}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted small">No categories available</p>
+                    )}
                   </Col>
                 </Row>
 
@@ -278,6 +296,7 @@ const Component: React.FC = () => {
         videoRef={selectedVideoRef}
         onHide={() => setShowModal(false)}
         onSave={handleSaveVideoRef}
+        availableCategories={categories}
       />
     </>
   );

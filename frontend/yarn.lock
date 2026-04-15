@@ -1105,17 +1105,6 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@morwalpiz/layout@file:fe-packages/layout":
-  version "1.0.0"
-
-"@morwalpizvideo/models@file:fe-packages/models":
-  version "1.0.0"
-
-"@morwalpizvideo/services@file:fe-packages/services":
-  version "1.0.0"
-  dependencies:
-    "@morwalpizvideo/models" "file:../../../../AppData/Local/Yarn/Cache/v6/npm-@morwalpizvideo-services-1.0.0-f3be9000-73a5-4bfe-91bc-6a353b6ca183-1775593350450/node_modules/@morwalpizvideo/models"
-
 "@parcel/watcher-android-arm64@2.5.6":
   version "2.5.6"
   resolved "https://registry.yarnpkg.com/@parcel/watcher-android-arm64/-/watcher-android-arm64-2.5.6.tgz#5f32e0dba356f4ac9a11068d2a5c134ca3ba6564"

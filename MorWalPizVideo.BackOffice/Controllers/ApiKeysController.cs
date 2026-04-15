@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Models.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -205,6 +206,7 @@ public class ApiKeysController : ControllerBase
 // DTOs
 public record CreateApiKeyRequest
 {
+    [Required]
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public int? RateLimitPerMinute { get; init; }

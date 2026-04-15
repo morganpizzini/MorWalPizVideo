@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
@@ -16,13 +17,22 @@ public class VideosController : ApplicationControllerBase
     private readonly ICrossApiService client;
     private readonly IYTService yTService;
     private readonly IExternalDataService externalDataService;
+    private readonly ITelegramService telegramService;
+    private readonly IDiscordService discordService;
+    private readonly IFacebookService facebookService;
+    
     public VideosController(DataService dataService, ICrossApiService _clientFactory,
-        IYTService _yTService, IExternalDataService _externalDataService)
+        IYTService _yTService, IExternalDataService _externalDataService,
+        ITelegramService _telegramService, IDiscordService _discordService,
+        IFacebookService _facebookService)
     {
         _dataService = dataService;
         client = _clientFactory;
         yTService = _yTService;
         externalDataService = _externalDataService;
+        telegramService = _telegramService;
+        discordService = _discordService;
+        facebookService = _facebookService;
     }
 
     [HttpGet()]
@@ -41,6 +51,39 @@ public class VideosController : ApplicationControllerBase
             return NotFound();
         }
         return Ok(match);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] VideoUpdateRequest request)
+    {
+        var existingMatch = await _dataService.FindMatch(id);
+        if (existingMatch == null)
+        {
+            return NotFound("Video not found");
+        }
+
+        // Fetch categories and convert to CategoryRef objects
+        var categories = (await _dataService.FetchCategories(request.Categories))
+            .Select(x => new CategoryRef(x.Id, x.Title))
+            .ToArray();
+
+        // Update the match using immutable record pattern
+        var updatedMatch = existingMatch with
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Url = request.Url,
+            ThumbnailVideoId = request.ThumbnailVideoId,
+            Categories = categories
+        };
+
+        await _dataService.UpdateMatch(updatedMatch);
+
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.ReloadCache();
+
+        return NoContent();
     }
 
     [HttpPost("Translate")]
@@ -194,6 +237,76 @@ public class VideosController : ApplicationControllerBase
         await CreateVideoShortLinkAsync(request.VideoId);
 
         return NoContent();
+    }
+
+    [HttpPost("{id}/publish-social")]
+    public async Task<IActionResult> PublishToSocialMedia(string id, [FromBody] PublishSocialRequest request)
+    {
+        var match = await _dataService.FindMatch(id);
+        if (match == null)
+        {
+            return NotFound("Video not found");
+        }
+
+        // Get the shortlink for this video
+        var shortLink = match.ShortLinks
+            .FirstOrDefault(x => x.Target == id && string.IsNullOrEmpty(x.QueryString));
+
+        if (shortLink == null)
+        {
+            return BadRequest("No shortlink found for this video");
+        }
+
+        var errors = new List<string>();
+
+        // Publish to Telegram
+        try
+        {
+            var telegramError = await telegramService.CreatePost(shortLink.Code, request.Message);
+            if (!string.IsNullOrEmpty(telegramError))
+            {
+                errors.Add($"Telegram: {telegramError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Telegram: {ex.Message}");
+        }
+
+        // Publish to Discord
+        try
+        {
+            var discordError = await discordService.CreatePost(shortLink.Code, request.Message);
+            if (!string.IsNullOrEmpty(discordError))
+            {
+                errors.Add($"Discord: {discordError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Discord: {ex.Message}");
+        }
+
+        // Publish to Facebook
+        try
+        {
+            var facebookError = await facebookService.CreatePost(shortLink.Code, request.Message);
+            if (!string.IsNullOrEmpty(facebookError))
+            {
+                errors.Add($"Facebook: {facebookError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Facebook: {ex.Message}");
+        }
+
+        if (errors.Any())
+        {
+            return BadRequest(new { errors });
+        }
+
+        return Ok(new { message = "Successfully published to all platforms" });
     }
 
     #region ShortLink Helper

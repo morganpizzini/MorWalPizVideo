@@ -40,6 +40,7 @@ const CreateQueryLink: React.FC = () => {
     };
 
     const confirmCreate = () => {
+
         fetcher.submit(
             {
                 title,
@@ -90,7 +91,7 @@ const CreateQueryLink: React.FC = () => {
                         <strong>Title:</strong> {title}
                     </p>
                     <p>
-                        <strong>Description:</strong> {value}
+                        <strong>Value:</strong> {value}
                     </p>
                 </Modal.Body>
                 <Modal.Footer>

@@ -5,6 +5,14 @@ import { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categories';
 import { Product, CreateProductDTO, UpdateProductDTO } from './product';
 import { ProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from './productCategory';
 import { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from './sponsor';
+import {
+  ApiKeyDto,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  UpdateApiKeyRequest,
+  ToggleApiKeyResponse,
+  RegenerateApiKeyResponse,
+} from './apiKey';
 
 export type {
   QueryLink,
@@ -28,6 +36,12 @@ export type {
   Sponsor,
   CreateSponsorDTO,
   UpdateSponsorDTO,
+  ApiKeyDto,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  UpdateApiKeyRequest,
+  ToggleApiKeyResponse,
+  RegenerateApiKeyResponse,
 };
 
 export { LinkType };

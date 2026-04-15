@@ -44,4 +44,12 @@ export const VideoService = {
   getReviewDetails: async (reviewText: string): Promise<ReviewDetails> => {
     return post(`/api/Chat`, reviewText);
   },
+
+  // Publish video to social media
+  publishToSocial: async (videoId: string, message: string): Promise<void> => {
+    await post(`/api/Videos/${videoId}/publish-social`, { message });
+  },
 };
+
+// Export individual function for convenience
+export const publishVideoToSocial = VideoService.publishToSocial;

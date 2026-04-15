@@ -3,11 +3,14 @@ using MorWalPiz.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class CreateQueryLinkRequest
 {
+    [Required]
     public string Title { get; set; } = string.Empty;
+    [Required]
     public string Value { get; set; } = string.Empty;
 }
 

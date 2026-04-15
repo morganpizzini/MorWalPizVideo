@@ -122,6 +122,10 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
     });
 
+var facebookSettings = builder.Configuration
+        .GetSection("FacebookSettings")
+        .Get<FacebookSettings>();
+
 if (!enableMock)
 {
     // Register configuration services for lazy loading
@@ -147,6 +151,24 @@ if (!enableMock)
     {
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
     });
+
+    
+    if (!string.IsNullOrEmpty(facebookSettings.PageId))
+    {
+        builder.Services.AddHttpClient(HttpClientNames.Facebook, httpClient =>
+        {
+            httpClient.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+        
+            if (!string.IsNullOrEmpty(facebookSettings?.AccessToken))
+            {
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", facebookSettings.AccessToken);
+            }
+        });
+    }
 
     // Note: Discord and Telegram HttpClients will be created via factories when needed
 }
@@ -254,6 +276,7 @@ if (enableMock)
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
+    builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
     
@@ -317,6 +340,10 @@ else
     builder.Services.AddScoped<ICrossApiService, CrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordService>();
     builder.Services.AddScoped<ITelegramService, TelegramService>();
+    if (!string.IsNullOrEmpty(facebookSettings.PageId))
+        builder.Services.AddScoped<IFacebookService, FacebookService>();
+    else
+        builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();

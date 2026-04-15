@@ -25,8 +25,8 @@
     ]
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../fe-packages/models",
-    "@morwalpizvideo/services": "file:../fe-packages/services",
+    "@morwalpizvideo/models": "1.0.0",
+    "@morwalpizvideo/services": "1.0.0",
     "@tanstack/match-sorter-utils": "^8.19.4",
     "@tanstack/react-table": "^8.21.2",
     "bootstrap": "^5.3.3",

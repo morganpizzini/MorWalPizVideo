@@ -94,6 +94,9 @@ function getApiBaseUrl(): string {
  * Handles both '/api/...' and 'api/...' formats safely
  */
 function buildFullUrl(path: string): string {
+    if (path == null || path == undefined || path.length == 0) {
+        throw new Error("Path cannot be null/undefined or empty");
+    }
     const baseUrl = getApiBaseUrl();
     
     // Normalize path to have single leading slash

@@ -53,7 +53,12 @@ const ShortLinks: React.FC = () => {
   };
   // Definizione delle colonne
   const columns = useMemo<ColumnDef<ShortLink>[]>(
-    () => [
+      () => [
+          {
+              accessorKey: 'code',
+              header: 'Code',
+              cell: info => info.getValue(),
+          },
       {
         accessorKey: 'target',
         header: 'Target',
@@ -83,10 +88,10 @@ const ShortLinks: React.FC = () => {
           const link = props.row.original;
           return (
             <div className="text-end">
-              <Link className="btn btn-link px-1" to={`/shortlinks/${link.shortLinkId}`}>
+              <Link className="btn btn-link px-1" to={`/shortlinks/${link.code}`}>
                 Detail
               </Link>
-              <Link className="btn btn-link px-1" to={`/shortlinks/${link.shortLinkId}/edit`}>
+              <Link className="btn btn-link px-1" to={`/shortlinks/${link.code}/edit`}>
                 Edit
               </Link>
               <Button variant="link" className="px-1" onClick={() => handleDelete(link)}>

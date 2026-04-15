@@ -21,7 +21,7 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
 
   useEffect(() => {
     if (videoRef) {
-      setCategories(videoRef.categories || []);
+      setCategories(videoRef.categories.map(cat => ({ ...cat, categoryId: cat.id })) || []);
     }
   }, [videoRef]);
 
@@ -29,12 +29,12 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
   const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const categoryId = e.target.value;
     if (e.target.checked) {
-      const category = availableCategories.find(cat => cat.id === categoryId);
+      const category = availableCategories.find(cat => cat.categoryId === categoryId);
       if (category) {
         setCategories([...categories, category]);
       }
     } else {
-      setCategories(categories.filter(cat => cat.id !== categoryId));
+      setCategories(categories.filter(cat => cat.categoryId !== categoryId));
     }
   };
 
@@ -83,7 +83,7 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
             <div className="mb-2 d-flex gap-1 flex-wrap">
               {categories.length > 0 ? (
                 categories.map((cat, idx) => {
-                  const isInAvailableList = availableCategories.some(availCat => availCat.id === cat.id);
+                  const isInAvailableList = availableCategories.some(availCat => availCat.categoryId === cat.categoryId);
                   return (
                     <Badge
                       key={idx}
@@ -104,12 +104,12 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
               {availableCategories.length > 0 ? (
                 availableCategories.map(cat => (
                   <Form.Check
-                    key={cat.id}
+                    key={cat.categoryId}
                     type="checkbox"
-                    id={`category-${cat.id}`}
+                    id={`category-${cat.categoryId}`}
                     label={cat.title}
-                    value={cat.id}
-                    checked={categories.some(selectedCat => selectedCat.id === cat.id)}
+                    value={cat.categoryId}
+                    checked={categories.some(selectedCat => selectedCat.categoryId === cat.categoryId)}
                     onChange={handleCategoryChange}
                     className="mb-2"
                   />

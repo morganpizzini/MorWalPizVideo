@@ -31,7 +31,7 @@
     "typescript": "~5.7.2"
   },
   "dependencies": {
-    "@morwalpizvideo/models": "file:../models"
+    "@morwalpizvideo/models": "1.0.0"
   },
   "files": [
     "dist"

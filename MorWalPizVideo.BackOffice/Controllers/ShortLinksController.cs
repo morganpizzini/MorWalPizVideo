@@ -184,7 +184,7 @@ public class ShortLinksController : ApplicationControllerBase
     public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
         // Search across all sources to find the existing short link
-        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkByIdAsync(request.Id);
+        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(request.Id);
         
         if (existingShortLink == null)
         {
@@ -272,7 +272,7 @@ public class ShortLinksController : ApplicationControllerBase
     public async Task<IActionResult> DeleteShortLink(string id)
     {
         // Search across all sources to find the short link
-        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkByIdAsync(id);
+        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(id);
         
         if (existingShortLink == null)
             return NotFound("Short link not found");
@@ -297,13 +297,13 @@ public class ShortLinksController : ApplicationControllerBase
     /// Finds a short link by code across all sources (standalone, matches, channels).
     /// </summary>
     /// <returns>Tuple of (ShortLink, SourceType, OwningEntity)</returns>
-    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkAsync(string id)
+    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkAsync(string code)
     {
         // Search in matches
         var matches = await _dataService.FetchMatches();
         foreach (var match in matches)
         {
-            var matchShortLink = match.ShortLinks.FirstOrDefault(sl => sl.Id == id);
+            var matchShortLink = match.ShortLinks.FirstOrDefault(sl => sl.Code == code);
             if (matchShortLink != null)
             {
                 return (matchShortLink, ShortLinkSourceType.Match, match);
@@ -314,7 +314,7 @@ public class ShortLinksController : ApplicationControllerBase
         var channels = await _dataService.FetchChannels();
         foreach (var channel in channels)
         {
-            var channelShortLink = channel.ShortLinks.FirstOrDefault(sl => sl.Id == id);
+            var channelShortLink = channel.ShortLinks.FirstOrDefault(sl => sl.Code == code);
             if (channelShortLink != null)
             {
                 return (channelShortLink, ShortLinkSourceType.Channel, channel);
@@ -322,7 +322,7 @@ public class ShortLinksController : ApplicationControllerBase
         }
 
         // Search in standalone repository
-        var standaloneLink = await _dataService.GetShortLink(id);
+        var standaloneLink = await _dataService.GetShortLinkByCode(code);
         if (standaloneLink != null)
         {
             return (standaloneLink, ShortLinkSourceType.Standalone, null);
@@ -331,50 +331,11 @@ public class ShortLinksController : ApplicationControllerBase
         return (null, ShortLinkSourceType.Standalone, null);
     }
 
-    /// <summary>
-    /// Finds a short link by ID across all sources (standalone, matches, channels).
-    /// For embedded links (match/channel), uses code as the identifier.
-    /// </summary>
-    /// <returns>Tuple of (ShortLink, SourceType, OwningEntity)</returns>
-    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkByIdAsync(string id)
-    {
-        // First try standalone repository (uses actual ID)
-        var standaloneLink = await _dataService.GetShortLink(id);
-        if (standaloneLink != null)
-        {
-            return (standaloneLink, ShortLinkSourceType.Standalone, null);
-        }
-
-        // For embedded links, the "id" parameter is actually the code
-        // Search in matches
-        var matches = await _dataService.FetchMatches();
-        foreach (var match in matches)
-        {
-            var matchShortLink = match.ShortLinks.FirstOrDefault(sl => sl.Code == id || sl.Id == id);
-            if (matchShortLink != null)
-            {
-                return (matchShortLink, ShortLinkSourceType.Match, match);
-            }
-        }
-
-        // Search in channels
-        var channels = await _dataService.FetchChannels();
-        foreach (var channel in channels)
-        {
-            var channelShortLink = channel.ShortLinks.FirstOrDefault(sl => sl.Code == id || sl.Id == id);
-            if (channelShortLink != null)
-            {
-                return (channelShortLink, ShortLinkSourceType.Channel, channel);
-            }
-        }
-
-        return (null, ShortLinkSourceType.Standalone, null);
-    }
-
+   
     /// <summary>
     /// Removes a short link from its source location.
     /// </summary>
-    private async Task RemoveShortLinkFromSourceAsync(string code, ShortLinkSourceType sourceType, object? owningEntity)
+    private async Task  RemoveShortLinkFromSourceAsync(string code, ShortLinkSourceType sourceType, object? owningEntity)
     {
         switch (sourceType)
         {

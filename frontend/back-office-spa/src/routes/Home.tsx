@@ -9,7 +9,8 @@ import {
   Video,
   Image,
   Calendar,
-  Settings,
+    Settings,
+    Key,
   List
 } from 'lucide-react';
 
@@ -19,9 +20,20 @@ const Home: React.FC = () => {
       <h1>BackOffice MorWalPiz</h1>
       <p className="text-muted">Seleziona un opzione per proseguire</p>
       <hr />
-      <h3>Gestione youtube</h3>
       <Container>
-        <Row>
+              <Row>
+                  <Col md={4} className="g-4">
+                      <Card
+                          title="Api key"
+                          subtitle="Navigate to the api key page"
+                          content="Click the button below to go to the api key page."
+                          link="/keys"
+                          buttonText="Go to Api Keys"
+                          icon={Key}
+                          isSmall={true}
+                          gradientColors={['#FF6B6B', '#4ECDC4']}
+                      />
+                  </Col>
           <Col md={4} className="g-4">
             <Card
               title="Querylinks Page"
