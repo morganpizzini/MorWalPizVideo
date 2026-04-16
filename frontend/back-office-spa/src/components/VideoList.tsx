@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Button, Table, Form, InputGroup, Badge, Modal, Alert } from 'react-bootstrap';
+import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
+import { useRevalidator } from 'react-router';
 import { Match } from '../models/video/types';
-import { publishVideoToSocial } from '../services/videoService';
+import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
 
 interface VideoListProps {
   matches: Match[];
@@ -11,7 +12,12 @@ interface ExpandedState {
   [key: string]: boolean;
 }
 
+interface RefreshingState {
+  [key: string]: boolean;
+}
+
 const VideoList: React.FC<VideoListProps> = ({ matches }) => {
+  const revalidator = useRevalidator();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -20,6 +26,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState<RefreshingState>({});
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   const toggleExpand = (matchId: string) => {
     setExpanded(prev => ({
@@ -89,12 +97,42 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
     }
   };
 
+  const handleRefresh = async (matchId: string) => {
+    setRefreshing(prev => ({ ...prev, [matchId]: true }));
+    setRefreshError(null);
+
+    try {
+      await refreshVideoYouTubeData(matchId);
+      // Revalidate the route to refresh the data
+      revalidator.revalidate();
+    } catch (error: any) {
+      setRefreshError(error.message || 'Failed to refresh YouTube data');
+      setTimeout(() => setRefreshError(null), 5000);
+    } finally {
+      setRefreshing(prev => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  const handleView = (matchId: string) => {
+    window.location.href = `/videos/${matchId}`;
+  };
+
+  const handleEdit = (matchId: string) => {
+    window.location.href = `/videos/${matchId}/edit`;
+  };
+
   return (
     <div className="mt-5">
       <h3>Existing Videos</h3>
       <p className="text-muted mb-3">
         {matches.length} YouTube content(s) with {matches.reduce((sum, m) => sum + (m.videoRefs?.length || 0), 0)} total video(s)
       </p>
+
+      {refreshError && (
+        <Alert variant="danger" dismissible onClose={() => setRefreshError(null)} className="mb-3">
+          {refreshError}
+        </Alert>
+      )}
 
       <div className="mb-3">
         <InputGroup>
@@ -114,7 +152,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
             <th>Description</th>
             <th>URL</th>
             <th>Videos</th>
-            <th style={{ width: '200px' }}>Actions</th>
+            <th style={{ width: '120px' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -156,36 +194,36 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                     <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>
                   </td>
                   <td>
-                    <div className="d-flex gap-2 flex-wrap">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => window.location.href = `/videos/${match.id}`}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => window.location.href = `/videos/${match.id}/edit`}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        onClick={() => handleOpenPublishModal(match.id)}
-                      >
-                        Publish
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleDelete(match.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="outline-primary" size="sm" id={`dropdown-${match.id}`}>
+                        Actions
+                      </Dropdown.Toggle>
+
+                      <Dropdown.Menu>
+                        <Dropdown.Item onClick={() => handleView(match.id)}>
+                          View
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => handleEdit(match.id)}>
+                          Edit
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => handleOpenPublishModal(match.id)}>
+                          Publish to Social
+                        </Dropdown.Item>
+                        <Dropdown.Item 
+                          onClick={() => handleRefresh(match.id)}
+                          disabled={refreshing[match.id]}
+                        >
+                          {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        <Dropdown.Item 
+                          onClick={() => handleDelete(match.id)}
+                          className="text-danger"
+                        >
+                          Delete
+                        </Dropdown.Item>
+                      </Dropdown.Menu>
+                    </Dropdown>
                   </td>
                 </tr>
                 

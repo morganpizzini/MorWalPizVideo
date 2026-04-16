@@ -239,6 +239,22 @@ public class VideosController : ApplicationControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/refresh-youtube")]
+    public async Task<IActionResult> RefreshYouTubeData(string id)
+    {
+        var updatedMatch = await externalDataService.RefreshMatch(id);
+        if (updatedMatch == null)
+        {
+            return NotFound("Video not found");
+        }
+
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.ReloadCache();
+
+        return Ok(updatedMatch);
+    }
+
     [HttpPost("{id}/publish-social")]
     public async Task<IActionResult> PublishToSocialMedia(string id, [FromBody] PublishSocialRequest request)
     {

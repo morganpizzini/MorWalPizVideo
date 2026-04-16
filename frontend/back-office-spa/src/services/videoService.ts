@@ -49,7 +49,13 @@ export const VideoService = {
   publishToSocial: async (videoId: string, message: string): Promise<void> => {
     await post(`/api/Videos/${videoId}/publish-social`, { message });
   },
+
+  // Refresh YouTube metadata for a video
+  refreshYouTubeData: async (videoId: string): Promise<void> => {
+    await post(`/api/Videos/${videoId}/refresh-youtube`, {});
+  },
 };
 
 // Export individual function for convenience
 export const publishVideoToSocial = VideoService.publishToSocial;
+export const refreshVideoYouTubeData = VideoService.refreshYouTubeData;

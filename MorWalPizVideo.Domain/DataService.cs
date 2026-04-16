@@ -352,7 +352,8 @@ namespace MorWalPizVideo.Server.Services
             // Try to find by ThumbnailVideoId first (for backward compatibility and for single videos)
             (await _youTubeContent.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
             // Then try to find by Id (for collections)
-            (await _youTubeContent.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault();
+            (await _youTubeContent.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault() ??
+            (await _youTubeContent.GetItemsAsync(x =>x.VideoRefs!=null && x.VideoRefs.Where(x=>!string.IsNullOrEmpty(x.YoutubeId)).Any(a=>a.YoutubeId == matchId))).FirstOrDefault();
 
         public async Task SaveMatch(YouTubeContent entity)
         {

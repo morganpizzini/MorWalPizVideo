@@ -6,6 +6,7 @@ namespace MorWalPizVideo.Server.Services
     public interface IExternalDataService
     {
         Task<IList<YouTubeContent>> FetchMatches();
+        Task<YouTubeContent?> RefreshMatch(string id);
     }
   
     public class ExternalDataService : IExternalDataService
@@ -67,6 +68,51 @@ namespace MorWalPizVideo.Server.Services
             }
 
             return matches.OrderByDescending(x => x.CreationDateTime).ToList();
+        }
+
+        public async Task<YouTubeContent?> RefreshMatch(string id)
+        {
+            // Find the match by id
+            var match = await _dataService.FindMatch(id);
+            if (match == null)
+            {
+                return null;
+            }
+
+            // Collect all video IDs that need to be refreshed (force refresh, ignore existing metadata)
+            var videoIds = new List<string>();
+            
+            if (match.IsLink)
+            {
+                // For single videos, refresh the thumbnail video
+                videoIds.Add(match.ThumbnailVideoId);
+            }
+            else if (match.VideoRefs != null && match.VideoRefs.Length > 0)
+            {
+                // For collections, refresh all video refs
+                videoIds.AddRange(match.VideoRefs.Select(x => x.YoutubeId));
+            }
+
+            if (videoIds.Count == 0)
+            {
+                return match;
+            }
+
+            // Fetch fresh YouTube metadata
+            var videos = await _youtubeService.FetchFromYoutube(videoIds.Distinct().ToList());
+            
+            // Parse and update the match
+            var updatedMatches = ParseMatches(new[] { match }, videos);
+            var updatedMatch = updatedMatches.FirstOrDefault();
+
+            if (updatedMatch != null)
+            {
+                // Persist the updated match
+                await _dataService.UpdateMatch(updatedMatch);
+                return updatedMatch;
+            }
+
+            return match;
         }
 
         private static string GenerateUrlSlug(string title)
