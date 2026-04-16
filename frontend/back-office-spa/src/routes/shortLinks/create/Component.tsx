@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useNavigate, useFetcher } from 'react-router';
+import { useNavigate, useFetcher, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -10,6 +10,7 @@ import { LinkType, QueryLink } from '@morwalpizvideo/models';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const CreateShortLink: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [target, setTarget] = useState('');
   const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
   const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
@@ -19,6 +20,7 @@ const CreateShortLink: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [queryLinksLoading, setQueryLinksLoading] = useState(false);
+  const [initialTargetSet, setInitialTargetSet] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const fetcher = useFetcher();
@@ -43,6 +45,25 @@ const CreateShortLink: React.FC = () => {
         });
     }
   }, [linkType]);
+
+  // Auto-select video from querystring
+  useEffect(() => {
+    const targetParam = searchParams.get('target');
+    const linkTypeParam = searchParams.get('linkType');
+    
+    if (targetParam && !initialTargetSet) {
+      setTarget(targetParam);
+      setInitialTargetSet(true);
+      
+      // Set link type if provided
+      if (linkTypeParam !== null) {
+        const parsedLinkType = parseInt(linkTypeParam);
+        if (!isNaN(parsedLinkType)) {
+          setLinkType(parsedLinkType);
+        }
+      }
+    }
+  }, [searchParams, initialTargetSet]);
 
   // Load available query links when component mounts
   useEffect(() => {

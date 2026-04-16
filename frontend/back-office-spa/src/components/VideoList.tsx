@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
-import { useRevalidator } from 'react-router';
+import { useRevalidator, Link } from 'react-router';
 import { Match } from '../models/video/types';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
 
@@ -44,7 +44,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
       match.title?.toLowerCase().includes(term) ||
       match.description?.toLowerCase().includes(term) ||
       match.id?.toLowerCase().includes(term) ||
-      match.videoRefs?.some(ref => 
+      match.videoRefs?.some(ref =>
         ref.youtubeId.toLowerCase().includes(term) ||
         ref.categories?.some(cat => cat.title.toLowerCase().includes(term))
       )
@@ -209,14 +209,14 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                         <Dropdown.Item onClick={() => handleOpenPublishModal(match.id)}>
                           Publish to Social
                         </Dropdown.Item>
-                        <Dropdown.Item 
+                        <Dropdown.Item
                           onClick={() => handleRefresh(match.id)}
                           disabled={refreshing[match.id]}
                         >
                           {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}
                         </Dropdown.Item>
                         <Dropdown.Divider />
-                        <Dropdown.Item 
+                        <Dropdown.Item
                           onClick={() => handleDelete(match.id)}
                           className="text-danger"
                         >
@@ -226,35 +226,68 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                     </Dropdown>
                   </td>
                 </tr>
-                
+
                 {/* Sub-rows - VideoRefs */}
                 {expanded[match.id] && match.videoRefs && match.videoRefs.length > 0 && (
-                  match.videoRefs.map((videoRef) => (
-                    <tr key={`${match.id}-${videoRef.youtubeId}`} className="table-light">
-                      <td></td>
-                      <td colSpan={2} className="ps-5">
-                        <div className="d-flex align-items-center gap-2">
-                          <code className="text-primary">{videoRef.youtubeId}</code>
-                          {videoRef.youtubeId === match.thumbnailVideoId && (
-                            <Badge bg="success">Thumbnail</Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td colSpan={3}>
-                        <div className="d-flex gap-1 flex-wrap">
-                          {videoRef.categories && videoRef.categories.length > 0 ? (
-                            videoRef.categories.map((cat, catIdx) => (
-                              <Badge key={catIdx} bg="secondary">
-                                {cat.title}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-muted">No categories</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  match.videoRefs.map((videoRef) => {
+                    // Find shortlink for this specific video
+                    const videoShortLink = match.shortLinks?.find(
+                      sl => sl.target === videoRef.youtubeId
+                    );
+
+                    return (
+                      <tr key={`${match.id}-${videoRef.youtubeId}`} className="table-light">
+                        <td></td>
+                        <td colSpan={2} className="ps-5">
+                          <div className="d-flex align-items-center gap-2">
+                            <code className="text-primary">{videoRef.youtubeId}</code>
+                            {videoRef.youtubeId === match.thumbnailVideoId && (
+                              <Badge bg="success">Thumbnail</Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td colSpan={2}>
+                          <div className="d-flex gap-1 flex-wrap">
+                            {videoRef.categories && videoRef.categories.length > 0 ? (
+                              videoRef.categories.map((cat, catIdx) => (
+                                <Badge key={catIdx} bg="secondary">
+                                  {cat.title}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted">No categories</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            {videoShortLink ? (
+                              <>
+                                <Badge bg="success" className="d-flex align-items-center gap-1">
+                                  <i className="bi bi-link-45deg"></i>
+                                  {videoShortLink.code}
+                                </Badge>
+                                <Link
+                                  to={`/shortlinks/${videoShortLink.code}/edit?videoId=${videoRef.youtubeId}`}
+                                  className="btn btn-sm btn-outline-primary"
+                                  title={`Edit shortlink (${videoShortLink.queryLinkIds?.length || 0} query params)`}
+                                >
+                                  Edit
+                                </Link>
+                              </>
+                            ) : (
+                              <Link
+                                to={`/shortlinks/create?target=${videoRef.youtubeId}&linkType=0`}
+                                className="btn btn-sm btn-outline-success"
+                              >
+                                <i className="bi bi-plus-circle"></i>  + ShortLink
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </React.Fragment>
             ))
@@ -305,9 +338,9 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
           <Button variant="secondary" onClick={handleClosePublishModal} disabled={publishLoading}>
             Cancel
           </Button>
-          <Button 
-            variant="primary" 
-            onClick={handlePublishSubmit} 
+          <Button
+            variant="primary"
+            onClick={handlePublishSubmit}
             disabled={publishLoading || !publishMessage.trim() || !!publishSuccess}
           >
             {publishLoading ? 'Publishing...' : 'Publish'}

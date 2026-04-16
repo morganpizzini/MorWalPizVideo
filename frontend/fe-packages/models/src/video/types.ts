@@ -1,5 +1,7 @@
 // Types for Video operations, based on backend controller
 
+import { ShortLink } from '../shortLink';
+
 /**
  * Enum representing the type of match in the system
  */
@@ -57,6 +59,7 @@ export interface Match {
   isLink: boolean;
   videos?: Video[];
   creationDateTime?: string;
+  shortLinks?: ShortLink[];
 }
 
 export interface VideoImportRequest {

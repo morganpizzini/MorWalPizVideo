@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useFetcher, useNavigate, useLoaderData } from 'react-router';
+import { useFetcher, useNavigate, useLoaderData, useSearchParams } from 'react-router';
 import { Form, Button, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -10,6 +10,7 @@ import PageHeader from '@components/PageHeader';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const EditShortLink: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [model, setModel] = useState<ShortLink | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -17,6 +18,7 @@ const EditShortLink: React.FC = () => {
   const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
   const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
   const [queryLinksLoading, setQueryLinksLoading] = useState(false);
+  const [initialVideoSet, setInitialVideoSet] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -59,6 +61,34 @@ const EditShortLink: React.FC = () => {
         });
     }
   }, [model?.linkType]);
+
+  // Auto-select video from querystring
+  useEffect(() => {
+    const videoIdParam = searchParams.get('videoId');
+    
+    if (videoIdParam && model && !initialVideoSet && matches.length > 0) {
+      // Check if the video exists in matches
+      let foundVideo = false;
+      for (const match of matches) {
+        if (match.isLink && match.thumbnailUrl === videoIdParam) {
+          foundVideo = true;
+          break;
+        }
+        if (!match.isLink && match.videos) {
+          const video = match.videos.find(v => v.youtubeId === videoIdParam);
+          if (video) {
+            foundVideo = true;
+            break;
+          }
+        }
+      }
+      
+      if (foundVideo) {
+        setModel({ ...model, target: videoIdParam, videoId: videoIdParam });
+        setInitialVideoSet(true);
+      }
+    }
+  }, [searchParams, model, matches, initialVideoSet]);
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';

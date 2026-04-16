@@ -23,10 +23,11 @@ export enum LinkType {
 export interface ShortLink {
   /** Unique identifier for the short link */
   shortLinkId: string;
+  code: string;
 
   /** Target of the link (video ID, channel ID, Instagram post ID, etc.) */
   target: string;
-  
+
   /** Type of the link */
   linkType: LinkType;
 
@@ -38,7 +39,7 @@ export interface ShortLink {
 
   /** Number of times the link has been clicked */
   clicksCount: number;
-  
+
   /** Legacy property for backward compatibility */
   videoId: string;
 }
