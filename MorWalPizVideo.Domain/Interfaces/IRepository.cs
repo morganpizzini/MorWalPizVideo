@@ -42,4 +42,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface IDigitalProductCategoryRepository : IRepository<DigitalProductCategory> { }
     public interface ICustomerRepository : IRepository<Customer> { }
     public interface ICartRepository : IRepository<Cart> { }
+
+    // Shooting ITA repositories
+    public interface ICompetitionRepository : IRepository<Competition> { }
 }

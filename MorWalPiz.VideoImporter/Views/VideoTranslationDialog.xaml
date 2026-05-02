@@ -27,7 +27,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10">
                     <StackPanel>
                         <!-- Title Card -->
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                             <StackPanel>
                                 <TextBlock Text="📌 Titolo del Video"
                                            FontSize="16"
@@ -35,7 +35,7 @@
                                            Margin="0,0,0,5"/>
                                 
                                 <TextBlock Text="Inserisci il titolo del video da tradurre"
-                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
                                            Margin="0,0,0,10"
                                            TextWrapping="Wrap"/>
                                 
@@ -45,7 +45,7 @@
                         </Border>
 
                         <!-- Description Card -->
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                             <StackPanel>
                                 <TextBlock Text="📄 Descrizione del Video"
                                            FontSize="16"
@@ -53,7 +53,7 @@
                                            Margin="0,0,0,5"/>
                                 
                                 <TextBlock Text="Inserisci la descrizione completa del video"
-                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
                                            Margin="0,0,0,10"
                                            TextWrapping="Wrap"/>
                                 
@@ -71,7 +71,7 @@
                         <!-- Translate Button -->
                         <Button x:Name="TranslateButton"
                                 Content="🌐 Traduci"
-                                Style="{StaticResource PrimaryButtonStyle}"
+                                Style="{StaticResource PrimaryButton}"
                                 HorizontalAlignment="Center"
                                 Padding="30,10"
                                 Click="TranslateButton_Click"
@@ -106,7 +106,7 @@
             <!-- Close Button -->
             <Button Grid.Column="1"
                     Content="Chiudi"
-                    Style="{StaticResource SecondaryButtonStyle}"
+                    Style="{StaticResource SecondaryButton}"
                     Padding="20,8"
                     Click="CloseButton_Click"/>
         </Grid>

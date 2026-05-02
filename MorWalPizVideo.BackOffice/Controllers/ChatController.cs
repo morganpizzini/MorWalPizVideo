@@ -76,6 +76,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
         private async Task<IList<ReviewApiVideoResponse>> ProcessFileNamesChunk(List<string> fileNames, string context, string languages)
         {
+            var elementCounts = fileNames.Count;
             var fileNamesString = $"- {string.Join("\n - ", fileNames)}";
 
             var requestContext = string.IsNullOrEmpty(context) ? string.Empty : $"Il contesto più specifico è: {context.Trim()}.";
@@ -131,6 +132,8 @@ Infine, assembla tutte le informazioni generate seguendo scrupolosamente lo sche
             var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
 
             var parsedResults = JsonSerializer.Deserialize<Review>(result.ToString()) ?? new Review();
+            if(parsedResults.Videos.Count != elementCounts)
+                throw new Exception("Il numero di risultati restituiti non corrisponde al numero di input. Assicurati che l'output del modello segua esattamente lo schema JSON richiesto.");
             var customObjectForTranslation = JsonSerializer.Serialize(parsedResults.Videos.Select(x=> new
             {
                 Title = x.Title,
@@ -200,7 +203,8 @@ Infine, assembla tutte le informazioni generate seguendo scrupolosamente lo sche
             }
             
             //merge result from two request
-
+            if(computed.Count != elementCounts)
+                throw new Exception("Il numero di risultati restituiti non corrisponde al numero di input. Assicurati che l'output del modello segua esattamente lo schema JSON richiesto.");
             return computed;
         }
         private string PrettifyString(string s)

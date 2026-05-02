@@ -554,16 +554,12 @@ namespace MorWalPiz.VideoImporter
                 var translations = contextDialog.ProcessingResult;
 
                 // Aggiorna i file video con le traduzioni ricevute
-                foreach (var item in selectedItems)
+                //foreach (var item in selectedItems)
+                for(int i = 0; i < selectedItems.Count; i++)
                 {
-                    var cleanFileName = !string.IsNullOrEmpty(item.EditedCleanFileName)
-                        ? item.EditedCleanFileName
-                        : item.CleanFileName;
-
-                    var current = translations.FirstOrDefault(t => t.Name == cleanFileName);
-                    if (current == null)
-                        continue;
-
+                    var item = selectedItems[i];
+                    var current = translations[i];
+                    
                     // Ottieni la lingua predefinita dal database
                     using var dbContext = App.DatabaseService.CreateContext();
                     var defaultLanguage = dbContext.Languages.FirstOrDefault(l => l.IsDefault);

@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- Selected Files Card -->
-        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,20">
             <StackPanel>
                 <TextBlock Text="📁 File Selezionati"
                            FontSize="16"
@@ -37,7 +37,7 @@
         </Border>
 
         <!-- Video Context Card -->
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,15">
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,15">
             <StackPanel>
                 <TextBlock Text="📝 Contesto Video"
                            FontSize="16"
@@ -45,7 +45,7 @@
                            Margin="0,0,0,5"/>
                 
                 <TextBlock Text="Inserisci il contesto o le informazioni aggiuntive per i video selezionati"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
                            Margin="0,0,0,10"
                            TextWrapping="Wrap"/>
             </StackPanel>
@@ -85,15 +85,15 @@
 
             <!-- Buttons -->
             <StackPanel Grid.Column="1"
-                        Style="{StaticResource DialogFooterStyle}">
+                        Style="{StaticResource DialogFooter}">
                 <Button Content="Annulla"
-                        Style="{StaticResource SecondaryButtonStyle}"
+                        Style="{StaticResource SecondaryButton}"
                         Width="90"
                         Click="CancelButton_Click"/>
 
                 <Button x:Name="ConfirmButton"
                         Content="✅ Invia"
-                        Style="{StaticResource PrimaryButtonStyle}"
+                        Style="{StaticResource PrimaryButton}"
                         Width="90"
                         Margin="10,0,0,0"
                         Click="ConfirmButton_Click"

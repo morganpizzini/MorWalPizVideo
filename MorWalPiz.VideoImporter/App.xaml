@@ -35,7 +35,7 @@
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
         <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}"/>
-        
+
         <!-- Modern Button Style - Primary -->
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>

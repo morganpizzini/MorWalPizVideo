@@ -185,14 +185,18 @@
                                                         Margin="0,0,0,5"/>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                 <TextBlock Text="🕐 " VerticalAlignment="Center"/>
-                                                <TextBox Width="35"
+                                                <TextBox Width="40"
                                                          Text="{Binding PublishTimeHour, Mode=TwoWay}"
                                                          Tag="Hour"
                                                          Margin="0,0,3,0"
+                                                         Padding="5,5"
+                                                         Height="40"
                                                          PreviewTextInput="NumericTextBox_PreviewTextInput"/>
                                                 <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                <TextBox Width="35"
+                                                <TextBox Width="40"
                                                          Text="{Binding PublishTimeMinute, Mode=TwoWay}"
+                                                         Padding="5,5"
+                                                         Height="40"
                                                          Tag="Minute"
                                                          PreviewTextInput="NumericTextBox_PreviewTextInput"/>
                                             </StackPanel>

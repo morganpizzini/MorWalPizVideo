@@ -21,6 +21,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -79,9 +80,18 @@
                               FontWeight="Medium"/>
                 </StackPanel>
             </Border>
-
+            <!-- Title -->
+            <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="📺 Tags"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,8"/>
+                    <TextBox x:Name="TagsTextBox"/>
+                </StackPanel>
+            </Border>
             <!-- Publish Date and Time -->
-            <GroupBox Grid.Row="4" Header="📅 Data e ora di pubblicazione" Margin="0,0,0,15">
+            <GroupBox Grid.Row="5" Header="📅 Data e ora di pubblicazione" Margin="0,0,0,15">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -120,7 +130,7 @@
             </GroupBox>
 
             <!-- Translations -->
-            <GroupBox Grid.Row="5"
+            <GroupBox Grid.Row="6"
                       Header="🌍 Traduzioni"
                       Margin="0,0,0,15"
                       x:Name="TranslationsGroupBox">
@@ -178,7 +188,7 @@
             </GroupBox>
 
             <!-- Action Buttons -->
-            <Border Grid.Row="7" Style="{StaticResource Card}">
+            <Border Grid.Row="8" Style="{StaticResource Card}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

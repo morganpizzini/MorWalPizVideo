@@ -15,7 +15,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <!-- Hashtags Card -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="⚙️ Hashtag Predefiniti"
                                FontSize="16"
@@ -23,7 +23,7 @@
                                Margin="0,0,0,10"/>
                     
                     <TextBlock Text="Inserisci gli hashtag separati da virgola (esempio: video, social)"
-                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,0,0,10"
                                TextWrapping="Wrap"/>
                     
@@ -36,7 +36,7 @@
             </Border>
 
             <!-- API Configuration Card -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="🔗 Configurazione API"
                                FontSize="16"
@@ -65,15 +65,15 @@
             </Border>
 
             <!-- Action Buttons -->
-            <StackPanel Style="{StaticResource DialogFooterStyle}">
+            <StackPanel Style="{StaticResource DialogFooter}">
                 <Button x:Name="SaveButton"
                         Content="💾 Salva"
-                        Style="{StaticResource PrimaryButtonStyle}"
+                        Style="{StaticResource PrimaryButton}"
                         Width="100"
                         Click="SaveButton_Click"/>
                 <Button x:Name="CancelButton"
                         Content="Annulla"
-                        Style="{StaticResource SecondaryButtonStyle}"
+                        Style="{StaticResource SecondaryButton}"
                         Width="100"
                         Margin="10,0,0,0"
                         Click="CancelButton_Click"/>

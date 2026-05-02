@@ -1,9 +1,7 @@
-﻿using Google.Apis.YouTube.v3.Data;
-using MorWalPizVideo.Domain.Interfaces;
+﻿using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
-using System.Threading.Channels;
 
 namespace MorWalPizVideo.Server.Services
 {
@@ -119,6 +117,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly IInsightTopicRepository _insightTopicRepository;
         private readonly IInsightNewsItemRepository _insightNewsItemRepository;
         private readonly IInsightContentPlanRepository _insightContentPlanRepository;
+        private readonly ICompetitionRepository _competitionRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -143,7 +142,8 @@ namespace MorWalPizVideo.Server.Services
             ICartRepository cartRepository,
             IInsightTopicRepository insightTopicRepository,
             IInsightNewsItemRepository insightNewsItemRepository,
-            IInsightContentPlanRepository insightContentPlanRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository)
+            IInsightContentPlanRepository insightContentPlanRepository,
+            ICompetitionRepository competitionRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;
@@ -159,6 +159,7 @@ namespace MorWalPizVideo.Server.Services
             _insightTopicRepository = insightTopicRepository;
             _insightNewsItemRepository = insightNewsItemRepository;
             _insightContentPlanRepository = insightContentPlanRepository;
+            _competitionRepository = competitionRepository;
         }
 
         // Shop - DigitalProduct methods
@@ -890,6 +891,42 @@ namespace MorWalPizVideo.Server.Services
                 return;
 
             await _insightContentPlanRepository.DeleteItemAsync(contentPlan.Id);
+        }
+
+        // Competition methods
+        public Task<IList<Competition>> GetCompetitions() => _competitionRepository.GetItemsAsync();
+
+        public async Task<IList<Competition>> GetCompetitionsByStatus(CompetitionStatus status) =>
+            await _competitionRepository.GetItemsAsync(x => x.Status == status);
+
+        public async Task<Competition?> GetCompetitionById(string id) =>
+            await _competitionRepository.GetItemAsync(id);
+
+        public async Task SaveCompetition(Competition entity)
+        {
+            var existingCompetition = await _competitionRepository.GetItemsAsync(x => x.Name.ToLower() == entity.Name.ToLower());
+            if (existingCompetition.Count > 0)
+                return;
+
+            await _competitionRepository.AddItemAsync(entity);
+        }
+
+        public async Task UpdateCompetition(Competition entity)
+        {
+            var existingCompetition = await _competitionRepository.GetItemsAsync(x => x.Id == entity.Id);
+            if (existingCompetition.Count == 0)
+                return;
+
+            await _competitionRepository.UpdateItemAsync(entity);
+        }
+
+        public async Task DeleteCompetition(string competitionId)
+        {
+            var competition = (await _competitionRepository.GetItemsAsync(x => x.Id == competitionId)).FirstOrDefault();
+            if (competition == null)
+                return;
+
+            await _competitionRepository.DeleteItemAsync(competition.Id);
         }
 
     }

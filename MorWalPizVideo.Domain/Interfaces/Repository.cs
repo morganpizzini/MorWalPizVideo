@@ -160,6 +160,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class CompetitionRepository : BaseRepository<Competition>, ICompetitionRepository
+    {
+        public CompetitionRepository(IMongoDatabase database) : base(database, DbCollections.Competitions)
+        {
+        }
+    }
+
     public class UserRepository : BaseRepository<User>, IUserRepository
     {
         public UserRepository(IMongoDatabase database) : base(database, DbCollections.Users)

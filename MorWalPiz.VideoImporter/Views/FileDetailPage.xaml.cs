@@ -33,7 +33,7 @@ namespace MorWalPiz.VideoImporter.Views
       // Imposta la descrizione
       TitleTextBox.Text = file.Title;
       DescriptionTextBox.Text = file.Description;
-
+      TagsTextBox.Text = file.Tags;
       // Imposta il CheckBox ContainsWeapon (Assicurati che esista un CheckBox con x:Name="ContainsWeaponCheckBox" nel XAML)
       ContainsWeaponCheckBox.IsChecked = file.containsWeapon;
 

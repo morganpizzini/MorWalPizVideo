@@ -42,5 +42,8 @@
         public const string DigitalProductCategories = "digitalProductCategories";
         public const string Customers = "customers";
         public const string Carts = "carts";
+        
+        // Shooting ITA Collections
+        public const string Competitions = "competitions";
     }
 }

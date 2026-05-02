@@ -17,7 +17,7 @@
                        Margin="0,0,0,20"/>
 
             <!-- New Tenant Card -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="➕ Nuovo Tenant"
                                FontSize="16"
@@ -46,7 +46,7 @@
                         <Button x:Name="AddTenantButton" 
                                 Grid.Column="2" 
                                 Content="Aggiungi" 
-                                Style="{StaticResource PrimaryButtonStyle}"
+                                Style="{StaticResource PrimaryButton}"
                                 Margin="10,0,0,0"
                                 Click="AddTenantButton_Click"/>
                     </Grid>
@@ -54,7 +54,7 @@
             </Border>
 
             <!-- Existing Tenants Card -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="📋 Tenant Esistenti"
                                FontSize="16"
@@ -95,7 +95,7 @@
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <Button Content="✏️" 
                                                     ToolTip="Modifica"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    Style="{StaticResource SecondaryButton}"
                                                     Padding="8,4"
                                                     Margin="0,0,5,0"
                                                     Click="EditTenantButton_Click"
@@ -116,15 +116,15 @@
             </Border>
 
             <!-- Action Buttons -->
-            <StackPanel Style="{StaticResource DialogFooterStyle}">
+            <StackPanel Style="{StaticResource DialogFooter}">
                 <Button x:Name="RefreshButton" 
                         Content="🔄 Aggiorna" 
-                        Style="{StaticResource SecondaryButtonStyle}"
+                        Style="{StaticResource SecondaryButton}"
                         Width="110"
                         Click="RefreshButton_Click"/>
                 <Button x:Name="CloseButton" 
                         Content="Chiudi" 
-                        Style="{StaticResource SecondaryButtonStyle}"
+                        Style="{StaticResource SecondaryButton}"
                         Width="100"
                         Margin="10,0,0,0"
                         Click="CloseButton_Click"/>
