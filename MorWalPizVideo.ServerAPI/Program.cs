@@ -115,6 +115,7 @@ if (enableMock)
     builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
+    builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
@@ -143,6 +144,7 @@ else
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
+    builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
 
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();

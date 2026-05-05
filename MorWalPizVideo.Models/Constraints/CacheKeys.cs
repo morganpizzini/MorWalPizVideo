@@ -18,5 +18,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string DigitalProductCategories = "digitalProductCategories";
         public const string Customers = "customers";
         public const string Carts = "carts";
+        public const string Competitions = "competitions";
     }
 }

@@ -10,55 +10,55 @@ namespace MorWalPizVideo.Server.Models
     {
         [DataMember]
         [BsonElement("name")]
-        public string Name { get; init; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
 
         [DataMember]
         [BsonElement("description")]
-        public string? Description { get; init; }
+        public string? Description { get; set; }
 
         [DataMember]
         [BsonElement("location")]
-        public string? Location { get; init; }
+        public string? Location { get; set; }
 
         [DataMember]
         [BsonElement("startDate")]
-        public DateTime StartDate { get; init; }
+        public DateTime StartDate { get; set; }
 
         [DataMember]
         [BsonElement("endDate")]
-        public DateTime? EndDate { get; init; }
+        public DateTime? EndDate { get; set; }
 
         [DataMember]
         [BsonElement("organizerId")]
-        public string? OrganizerId { get; init; }
+        public string? OrganizerId { get; set; }
 
         [DataMember]
         [BsonElement("status")]
-        public CompetitionStatus Status { get; init; } = CompetitionStatus.Draft;
+        public CompetitionStatus Status { get; set; } = CompetitionStatus.Draft;
 
         [DataMember]
         [BsonElement("maxParticipants")]
-        public int? MaxParticipants { get; init; }
+        public int? MaxParticipants { get; set; }
 
         [DataMember]
         [BsonElement("registrationDeadline")]
-        public DateTime? RegistrationDeadline { get; init; }
+        public DateTime? RegistrationDeadline { get; set; }
 
         [DataMember]
         [BsonElement("rules")]
-        public string? Rules { get; init; }
+        public string? Rules { get; set; }
 
         [DataMember]
         [BsonElement("stages")]
-        public List<Stage> Stages { get; init; } = new();
+        public List<Stage> Stages { get; set; } = new();
 
         [DataMember]
         [BsonElement("imageUrl")]
-        public string? ImageUrl { get; init; }
+        public string? ImageUrl { get; set; }
 
         [DataMember]
         [BsonElement("websiteUrl")]
-        public string? WebsiteUrl { get; init; }
+        public string? WebsiteUrl { get; set; }
     }
 
     /// <summary>

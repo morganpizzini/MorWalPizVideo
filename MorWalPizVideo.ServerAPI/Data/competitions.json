@@ -1,0 +1,86 @@
+[
+  {
+    "_id": { "$oid": "6650000000000000000000a1" },
+    "name": "Campionato Regionale IPSC 2025",
+    "description": "Campionato regionale di tiro sportivo IPSC per la stagione 2025.",
+    "location": "Poligono di Tiro - Milano Nord",
+    "startDate": "2025-06-14T08:00:00Z",
+    "endDate": "2025-06-15T18:00:00Z",
+    "organizerId": null,
+    "status": 2,
+    "maxParticipants": 120,
+    "registrationDeadline": "2025-06-01T23:59:00Z",
+    "rules": "Regolamento IPSC standard. Divisioni ammesse: Open, Standard, Classic, Production.",
+    "stages": [
+      {
+        "stageNumber": 1,
+        "name": "Il Corridoio",
+        "description": "Percorso lineare con bersagli in sequenza obbligatoria.",
+        "targetCount": 8,
+        "roundCount": 16,
+        "minScore": 0,
+        "maxScore": 160,
+        "timeLimitSeconds": 90,
+        "briefing": "Iniziare dalla linea di partenza, procedere lungo il corridoio e ingaggiare tutti i bersagli.",
+        "order": 1
+      },
+      {
+        "stageNumber": 2,
+        "name": "La Piazza",
+        "description": "Percorso aperto con bersagli multipli e ostacoli.",
+        "targetCount": 12,
+        "roundCount": 24,
+        "minScore": 0,
+        "maxScore": 240,
+        "timeLimitSeconds": 120,
+        "briefing": "Posizione iniziale a scelta del tiratore. Ingaggiare tutti i bersagli nell'ordine preferito.",
+        "order": 2
+      },
+      {
+        "stageNumber": 3,
+        "name": "La Torre",
+        "description": "Tiro da struttura elevata con bersagli a distanze variabili.",
+        "targetCount": 6,
+        "roundCount": 12,
+        "minScore": 0,
+        "maxScore": 120,
+        "timeLimitSeconds": 60,
+        "briefing": "Posizionarsi sulla torre e ingaggiare i bersagli da sinistra a destra.",
+        "order": 3
+      }
+    ],
+    "imageUrl": null,
+    "websiteUrl": null,
+    "creationDateTime": "2025-01-10T10:00:00Z"
+  },
+  {
+    "_id": { "$oid": "6650000000000000000000a2" },
+    "name": "Open Day Tiro Dinamico",
+    "description": "Evento dimostrativo aperto a tutti gli appassionati di tiro sportivo.",
+    "location": "Poligono Sportivo - Roma Sud",
+    "startDate": "2025-09-20T09:00:00Z",
+    "endDate": "2025-09-20T17:00:00Z",
+    "organizerId": null,
+    "status": 1,
+    "maxParticipants": 50,
+    "registrationDeadline": "2025-09-10T23:59:00Z",
+    "rules": "Evento dimostrativo. Nessuna competizione ufficiale. Attrezzatura fornita.",
+    "stages": [
+      {
+        "stageNumber": 1,
+        "name": "Demo Stage",
+        "description": "Stage dimostrativo per principianti e curiosi.",
+        "targetCount": 5,
+        "roundCount": 10,
+        "minScore": 0,
+        "maxScore": 100,
+        "timeLimitSeconds": null,
+        "briefing": "Istruttori presenti. Seguire le indicazioni dello staff.",
+        "order": 1
+      }
+    ],
+    "imageUrl": null,
+    "websiteUrl": null,
+    "creationDateTime": "2025-02-15T14:00:00Z"
+  }
+]

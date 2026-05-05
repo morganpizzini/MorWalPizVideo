@@ -237,4 +237,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class CompetitionMockRepository : BaseMockRepository<Competition>, ICompetitionRepository
+    {
+        public CompetitionMockRepository(IHostEnvironment environment) : base(environment, "competitions")
+        {
+        }
+    }
 }
