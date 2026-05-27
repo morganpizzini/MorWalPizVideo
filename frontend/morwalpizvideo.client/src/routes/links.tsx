@@ -1,7 +1,9 @@
 ﻿import ReactGA from "react-ga4";
 import './links.scss'
 export default function Matches() {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'link-video' });
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'link-video' });
+    }
 
     return (
         <>

@@ -8,7 +8,9 @@ import ReactGA from "react-ga4"
 import configKeys from "@utils/configKeys"
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
 export default function Index() {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
+    }
     const { matches, configuration, activeForms } = useLoaderData();
 
     const [selectedCategories, setSelectedCategories] = useState([]);

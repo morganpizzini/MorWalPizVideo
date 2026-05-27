@@ -11,13 +11,11 @@ import QueryLinkCreate from '../../routes/queryLinks/create';
 
 import ShortLinks from '../../routes/shortLinks/index';
 import ShortLinkDetail from '../../routes/shortLinks/detail';
-import ShortLinkEdit from '../../routes/shortLinks/edit';
-import ShortLinkCreate from '../../routes/shortLinks/create';
+import ShortLinkForm from '../../routes/shortLinks/form';
 
 import ChannelLinks from '../../routes/channels/index';
 import ChannelDetail from '../../routes/channels/detail';
-import ChannelEdit from '../../routes/channels/edit';
-import ChannelCreate from '../../routes/channels/create';
+import ChannelForm from '../../routes/channels/form';
 
 import Categories from '../../routes/categories/index';
 import CategoryDetail from '../../routes/categories/detail';
@@ -52,8 +50,7 @@ import MorWalPizConfigurationCreate from '../../routes/morwalpizconfigurations/c
 
 // Import with namespace for components that use named exports
 import * as ProductCategories from '../../routes/productCategories/index';
-import * as ProductCategoryCreate from '../../routes/productCategories/create';
-import * as ProductCategoryEdit from '../../routes/productCategories/edit';
+import ProductCategoryForm from '../../routes/productCategories/form';
 
 import * as Sponsors from '../../routes/sponsors/index';
 import * as SponsorCreate from '../../routes/sponsors/create';
@@ -61,8 +58,7 @@ import * as SponsorEdit from '../../routes/sponsors/edit';
 
 import * as Products from '../../routes/products/index';
 import * as ProductDetail from '../../routes/products/detail';
-import * as ProductCreate from '../../routes/products/create';
-import * as ProductEdit from '../../routes/products/edit';
+import ProductForm from '../../routes/products/form';
 
 import Compilations from '../../routes/compilations/index';
 import CompilationDetail from '../../routes/compilations/detail';
@@ -153,7 +149,7 @@ export const protectedRoutes: RouteConfig[] = [
     action: ShortLinks.Action,
     children: [
       { index: true, path: '', loader: ShortLinks.Loader, Component: ShortLinks.Component },
-      { path: 'create', Component: ShortLinkCreate.Component, action: ShortLinkCreate.Action },
+      { path: 'create', loader: ShortLinkForm.Loader, Component: ShortLinkForm.Component, action: ShortLinkForm.Action },
       {
         path: ':id',
         Component: Outlet,
@@ -166,9 +162,9 @@ export const protectedRoutes: RouteConfig[] = [
           },
           {
             path: 'edit',
-            loader: ShortLinkDetail.Loader,
-            action: ShortLinkEdit.Action,
-            Component: ShortLinkEdit.Component,
+            loader: ShortLinkForm.Loader,
+            action: ShortLinkForm.Action,
+            Component: ShortLinkForm.Component,
           },
         ],
       },
@@ -180,7 +176,7 @@ export const protectedRoutes: RouteConfig[] = [
     action: ChannelLinks.Action,
     children: [
       { index: true, path: '', loader: ChannelLinks.Loader, Component: ChannelLinks.Component },
-      { path: 'create', Component: ChannelCreate.Component, action: ChannelCreate.Action },
+      { path: 'create', loader: ChannelForm.Loader, Component: ChannelForm.Component, action: ChannelForm.Action },
       {
         path: ':id',
         Component: Outlet,
@@ -193,9 +189,9 @@ export const protectedRoutes: RouteConfig[] = [
           },
           {
             path: 'edit',
-            loader: ChannelDetail.Loader,
-            action: ChannelEdit.Action,
-            Component: ChannelEdit.Component,
+            loader: ChannelForm.Loader,
+            action: ChannelForm.Action,
+            Component: ChannelForm.Component,
           },
         ],
       },
@@ -318,12 +314,12 @@ export const protectedRoutes: RouteConfig[] = [
     action: ProductCategories.action,
     children: [
       { index: true, path: '', loader: ProductCategories.loader, Component: ProductCategories.Component },
-      { path: 'create', Component: ProductCategoryCreate.Component, action: ProductCategoryCreate.action },
+      { path: 'create', loader: ProductCategoryForm.Loader, Component: ProductCategoryForm.Component, action: ProductCategoryForm.Action },
       {
         path: ':categoryId/edit',
-        loader: ProductCategoryEdit.loader,
-        action: ProductCategoryEdit.action,
-        Component: ProductCategoryEdit.Component,
+        loader: ProductCategoryForm.Loader,
+        action: ProductCategoryForm.Action,
+        Component: ProductCategoryForm.Component,
       },
     ],
   }),
@@ -348,7 +344,7 @@ export const protectedRoutes: RouteConfig[] = [
     action: Products.action,
     children: [
       { index: true, path: '', loader: Products.loader, Component: Products.Component },
-      { path: 'create', Component: ProductCreate.Component, action: ProductCreate.action },
+      { path: 'create', loader: ProductForm.Loader, Component: ProductForm.Component, action: ProductForm.Action },
       {
         path: ':productId',
         Component: Outlet,
@@ -361,9 +357,9 @@ export const protectedRoutes: RouteConfig[] = [
           },
           {
             path: 'edit',
-            loader: ProductEdit.loader,
-            action: ProductEdit.action,
-            Component: ProductEdit.Component,
+            loader: ProductForm.Loader,
+            action: ProductForm.Action,
+            Component: ProductForm.Component,
           },
         ],
       },

@@ -6,7 +6,9 @@ import ReactGA from "react-ga4"
 
 export default function Calendar() {
     const { calendar } = useLoaderData();
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'calendar' })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'calendar' })
+    }
     return (
         <>
             <SEO

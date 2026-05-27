@@ -1,3 +1,5 @@
+using MorWalPizVideo.ServerAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
@@ -116,6 +118,9 @@ if (enableMock)
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
+    builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
+    builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
+    builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
 
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
@@ -145,6 +150,9 @@ else
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
+    builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
+    builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
+    builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
 
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
@@ -186,11 +194,45 @@ else
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
 
-// Add fake authentication for development (allows all routes to be open)
-builder.Services.AddAuthentication("FakeScheme")
-    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+// Authentication: JWT in production, fake scheme in dev
+if (enableDev)
+{
+    builder.Services.AddAuthentication("FakeScheme")
+        .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+}
+else
+{
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
+    var key = System.Text.Encoding.ASCII.GetBytes(secret);
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"],
+            ClockSkew = System.TimeSpan.Zero
+        };
+    });
+}
 
 builder.Services.AddAuthorization();
+
+// Web Push notifications
+if (!string.IsNullOrEmpty(builder.Configuration["WebPush:PublicKey"]))
+{
+    builder.Services.AddScoped<IWebPushService, WebPushService>();
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Table, Button, Form, InputGroup } from 'react-bootstrap';
 import {
   useReactTable,
@@ -34,6 +35,9 @@ function GenericTable<T extends object>({
   // State for react-table
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const pageIndex = Math.max(0, parseInt(searchParams.get('page') || '1', 10) - 1);
 
   // Table configuration
   const table = useReactTable<T>({
@@ -42,19 +46,28 @@ function GenericTable<T extends object>({
     state: {
       sorting,
       globalFilter,
+      pagination: { pageIndex, pageSize },
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: updater => {
+      const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
+      setSearchParams(prev => {
+        const params = new URLSearchParams(prev);
+        if (next.pageIndex === 0) {
+          params.delete('page');
+        } else {
+          params.set('page', String(next.pageIndex + 1));
+        }
+        return params;
+      }, { replace: true });
+    },
     globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-      pagination: {
-        pageSize,
-      },
-    },
+    manualPagination: false,
   });
 
   return (
@@ -63,7 +76,14 @@ function GenericTable<T extends object>({
         <InputGroup>
           <Form.Control
             value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
+            onChange={e => {
+            setGlobalFilter(e.target.value);
+            setSearchParams(prev => {
+              const params = new URLSearchParams(prev);
+              params.delete('page');
+              return params;
+            }, { replace: true });
+          }}
             placeholder={searchPlaceholder}
           />
         </InputGroup>

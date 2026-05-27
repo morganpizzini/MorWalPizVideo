@@ -1,237 +1,177 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Badge, Spinner, Alert, ListGroup, Button } from 'react-bootstrap';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendar, faMapMarkerAlt, faUsers, faClock, faArrowLeft, faExternalLinkAlt, faBullseye } from '@fortawesome/free-solid-svg-icons';
-import { competitionService, handleApiError } from '../services/competitionService';
-import type { Competition } from '../types/competition';
-import { getStatusLabel, getStatusBadgeClass, formatDate, formatDateTime } from '../types/competition';
+import {
+  Container,
+  Row,
+  Col,
+  Badge,
+  Spinner,
+  Alert,
+  Card,
+  ListGroup,
+  Button,
+} from 'react-bootstrap';
+import { type Competition, CompetitionStatus, CompetitionStatusLabels } from '../types/competition';
+import apiService from '../services/apiService';
 
-export default function CompetitionDetailPage() {
+const statusVariant: Record<CompetitionStatus, string> = {
+  [CompetitionStatus.Draft]: 'secondary',
+  [CompetitionStatus.Published]: 'info',
+  [CompetitionStatus.RegistrationOpen]: 'success',
+  [CompetitionStatus.RegistrationClosed]: 'warning',
+  [CompetitionStatus.InProgress]: 'primary',
+  [CompetitionStatus.Completed]: 'dark',
+  [CompetitionStatus.Cancelled]: 'danger',
+};
+
+const CompetitionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      loadCompetition(id);
-    }
+    if (!id) return;
+    apiService
+      .getCompetitionById(id)
+      .then(setCompetition)
+      .catch(() => setError('Competizione non trovata.'))
+      .finally(() => setLoading(false));
   }, [id]);
-
-  const loadCompetition = async (competitionId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await competitionService.getById(competitionId);
-      setCompetition(data);
-    } catch (err) {
-      setError(handleApiError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-3">Caricamento dettagli...</p>
-      </Container>
+      <div className="text-center py-5">
+        <Spinner animation="border" role="status" />
+      </div>
     );
   }
 
   if (error || !competition) {
     return (
-      <Container className="py-5">
-        <Alert variant="danger">
-          {error || 'Competizione non trovata'}
-        </Alert>
-        <Link to="/competitions" className="btn btn-secondary">
-          <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
-          Torna alle competizioni
-        </Link>
+      <Container>
+        <Alert variant="danger">{error ?? 'Competizione non trovata.'}</Alert>
+        <Button as={Link as any} to="/competitions" variant="outline-secondary" size="sm">
+          ← Torna alle competizioni
+        </Button>
       </Container>
     );
   }
 
+  const sortedStages = [...competition.stages].sort((a, b) => a.order - b.order);
+
   return (
-    <Container className="py-4">
+    <Container>
+      <div className="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <Link to="/competitions" className="btn btn-outline-secondary btn-sm">
+          ← Competizioni
+        </Link>
+        <h2 className="mb-0">{competition.name}</h2>
+        <Badge bg={statusVariant[competition.status]}>
+          {CompetitionStatusLabels[competition.status]}
+        </Badge>
+      </div>
+
       <Row className="mb-4">
-        <Col>
-          <Link to="/competitions" className="btn btn-outline-secondary mb-3">
-            <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
-            Torna alle competizioni
-          </Link>
-        </Col>
-      </Row>
-
-      {competition.imageUrl && (
-        <Row className="mb-4">
-          <Col>
-            <img
-              src={competition.imageUrl}
-              alt={competition.name}
-              className="img-fluid rounded shadow"
-              style={{ width: '100%', maxHeight: '400px', objectFit: 'cover' }}
-            />
-          </Col>
-        </Row>
-      )}
-
-      <Row>
-        <Col lg={8}>
-          <Card className="shadow-sm mb-4">
-            <Card.Body>
-              <div className="mb-3">
-                <Badge bg="" className={getStatusBadgeClass(competition.status)}>
-                  {getStatusLabel(competition.status)}
-                </Badge>
-              </div>
-              <h1 className="display-5 mb-3">{competition.name}</h1>
-              {competition.description && (
-                <p className="lead text-muted">{competition.description}</p>
-              )}
-            </Card.Body>
-          </Card>
-
+        <Col md={8}>
+          {competition.description && (
+            <p className="text-muted">{competition.description}</p>
+          )}
           {competition.rules && (
-            <Card className="shadow-sm mb-4">
-              <Card.Header>
-                <h5 className="mb-0">Regolamento</h5>
-              </Card.Header>
+            <Card className="mb-3">
+              <Card.Header>📜 Regolamento</Card.Header>
               <Card.Body>
-                <div dangerouslySetInnerHTML={{ __html: competition.rules }} />
+                <p className="mb-0" style={{ whiteSpace: 'pre-line' }}>
+                  {competition.rules}
+                </p>
               </Card.Body>
-            </Card>
-          )}
-
-          {competition.stages.length > 0 && (
-            <Card className="shadow-sm mb-4">
-              <Card.Header>
-                <h5 className="mb-0">
-                  <FontAwesomeIcon icon={faBullseye} className="me-2" />
-                  Prove ({competition.stages.length})
-                </h5>
-              </Card.Header>
-              <ListGroup variant="flush">
-                {competition.stages
-                  .sort((a, b) => a.order - b.order)
-                  .map((stage) => (
-                    <ListGroup.Item key={stage.stageNumber}>
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div>
-                          <h6 className="mb-1">
-                            Prova {stage.stageNumber}: {stage.name}
-                          </h6>
-                          <div className="text-muted small">
-                            <span className="me-3">
-                              🎯 {stage.targetCount} bersagli
-                            </span>
-                            <span className="me-3">
-                              🔄 {stage.roundCount} colpi
-                            </span>
-                            <span>
-                              📊 {stage.minScore}-{stage.maxScore} punti
-                            </span>
-                            {stage.timeLimitSeconds && (
-                              <span className="ms-3">
-                                ⏱️ {stage.timeLimitSeconds}s
-                              </span>
-                            )}
-                          </div>
-                          {stage.briefing && (
-                            <p className="mt-2 mb-0 small">{stage.briefing}</p>
-                          )}
-                        </div>
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-              </ListGroup>
             </Card>
           )}
         </Col>
-
-        <Col lg={4}>
-          <Card className="shadow-sm mb-4">
-            <Card.Header>
-              <h5 className="mb-0">Informazioni</h5>
-            </Card.Header>
-            <ListGroup variant="flush">
+        <Col md={4}>
+          <ListGroup variant="flush" className="border rounded">
+            {competition.location && (
               <ListGroup.Item>
-                <div className="d-flex align-items-center">
-                  <FontAwesomeIcon icon={faCalendar} className="me-3 text-primary" />
-                  <div>
-                    <div className="small text-muted">Data inizio</div>
-                    <strong>{formatDateTime(competition.startDate)}</strong>
-                  </div>
-                </div>
+                <strong>📍 Luogo</strong>
+                <br />
+                {competition.location}
               </ListGroup.Item>
-              {competition.endDate && (
-                <ListGroup.Item>
-                  <div className="d-flex align-items-center">
-                    <FontAwesomeIcon icon={faCalendar} className="me-3 text-primary" />
-                    <div>
-                      <div className="small text-muted">Data fine</div>
-                      <strong>{formatDateTime(competition.endDate)}</strong>
-                    </div>
-                  </div>
-                </ListGroup.Item>
-              )}
-              {competition.location && (
-                <ListGroup.Item>
-                  <div className="d-flex align-items-center">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} className="me-3 text-primary" />
-                    <div>
-                      <div className="small text-muted">Luogo</div>
-                      <strong>{competition.location}</strong>
-                    </div>
-                  </div>
-                </ListGroup.Item>
-              )}
-              {competition.maxParticipants && (
-                <ListGroup.Item>
-                  <div className="d-flex align-items-center">
-                    <FontAwesomeIcon icon={faUsers} className="me-3 text-primary" />
-                    <div>
-                      <div className="small text-muted">Posti disponibili</div>
-                      <strong>{competition.maxParticipants} partecipanti</strong>
-                    </div>
-                  </div>
-                </ListGroup.Item>
-              )}
-              {competition.registrationDeadline && (
-                <ListGroup.Item>
-                  <div className="d-flex align-items-center">
-                    <FontAwesomeIcon icon={faClock} className="me-3 text-primary" />
-                    <div>
-                      <div className="small text-muted">Scadenza iscrizioni</div>
-                      <strong>{formatDate(competition.registrationDeadline)}</strong>
-                    </div>
-                  </div>
-                </ListGroup.Item>
-              )}
-            </ListGroup>
-          </Card>
-
-          {competition.websiteUrl && (
-            <Card className="shadow-sm mb-4">
-              <Card.Body>
-                <Button
-                  variant="primary"
-                  href={competition.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-100"
-                >
-                  Sito web ufficiale
-                  <FontAwesomeIcon icon={faExternalLinkAlt} className="ms-2" />
-                </Button>
-              </Card.Body>
-            </Card>
-          )}
+            )}
+            <ListGroup.Item>
+              <strong>🗓️ Data inizio</strong>
+              <br />
+              {new Date(competition.startDate).toLocaleString('it-IT')}
+            </ListGroup.Item>
+            {competition.endDate && (
+              <ListGroup.Item>
+                <strong>🗓️ Data fine</strong>
+                <br />
+                {new Date(competition.endDate).toLocaleString('it-IT')}
+              </ListGroup.Item>
+            )}
+            {competition.maxParticipants && (
+              <ListGroup.Item>
+                <strong>👥 Max partecipanti</strong>
+                <br />
+                {competition.maxParticipants}
+              </ListGroup.Item>
+            )}
+            {competition.registrationDeadline && (
+              <ListGroup.Item>
+                <strong>⏰ Scadenza iscrizioni</strong>
+                <br />
+                {new Date(competition.registrationDeadline).toLocaleString('it-IT')}
+              </ListGroup.Item>
+            )}
+            {competition.websiteUrl && (
+              <ListGroup.Item>
+                <strong>🌐 Sito web</strong>
+                <br />
+                <a href={competition.websiteUrl} target="_blank" rel="noopener noreferrer">
+                  {competition.websiteUrl}
+                </a>
+              </ListGroup.Item>
+            )}
+          </ListGroup>
         </Col>
       </Row>
+
+      {sortedStages.length > 0 && (
+        <>
+          <h4 className="mb-3">🎯 Stage ({sortedStages.length})</h4>
+          <Row xs={1} md={2} className="g-3">
+            {sortedStages.map((stage) => (
+              <Col key={stage.stageNumber}>
+                <Card className="h-100">
+                  <Card.Header className="d-flex justify-content-between">
+                    <strong>Stage {stage.stageNumber} – {stage.name}</strong>
+                    {stage.timeLimitSeconds && (
+                      <span className="text-muted small">⏱ {stage.timeLimitSeconds}s</span>
+                    )}
+                  </Card.Header>
+                  <Card.Body>
+                    {stage.description && (
+                      <p className="text-muted small mb-2">{stage.description}</p>
+                    )}
+                    <div className="d-flex gap-3 text-muted small mb-2">
+                      <span>🎯 Bersagli: {stage.targetCount}</span>
+                      <span>🔫 Colpi: {stage.roundCount}</span>
+                      <span>📊 Score max: {stage.maxScore}</span>
+                    </div>
+                    {stage.briefing && (
+                      <p className="mb-0 small border-top pt-2" style={{ whiteSpace: 'pre-line' }}>
+                        {stage.briefing}
+                      </p>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </>
+      )}
     </Container>
   );
-}
+};
+
+export default CompetitionDetailPage;

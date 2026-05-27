@@ -3,6 +3,8 @@ import type {
   Competition,
   CompetitionStatistics,
   CompetitionStatus,
+  StageEvaluation,
+  UpsertStageEvaluationRequest,
 } from '../types/competition';
 
 // API base URL - should be configured via environment variables
@@ -111,6 +113,38 @@ export const competitionService = {
    */
   async delete(id: string): Promise<void> {
     await api.delete(`/api/competitions/${id}`);
+  },
+
+  /**
+   * Submit or update a stage evaluation
+   */
+  async upsertStageEvaluation(
+    competitionId: string,
+    stageNumber: number,
+    data: UpsertStageEvaluationRequest,
+    token?: string
+  ): Promise<StageEvaluation> {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await api.post<StageEvaluation>(
+      `/api/competitions/${competitionId}/stages/${stageNumber}/evaluations`,
+      data,
+      { headers }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get all evaluations for a stage
+   */
+  async getStageEvaluations(
+    competitionId: string,
+    stageNumber: number
+  ): Promise<StageEvaluation[]> {
+    const response = await api.get<StageEvaluation[]>(
+      `/api/competitions/${competitionId}/stages/${stageNumber}/evaluations`
+    );
+    return response.data;
   },
 };
 

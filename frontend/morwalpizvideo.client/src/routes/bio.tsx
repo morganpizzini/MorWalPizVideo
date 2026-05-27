@@ -6,7 +6,9 @@ import ReactGA from "react-ga4"
 
 export default function Bio() {
     const { links } = useLoaderData();
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'bio' })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'bio' })
+    }
     return (
         <>
             <SEO

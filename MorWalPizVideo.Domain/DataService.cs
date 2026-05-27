@@ -21,6 +21,11 @@ namespace MorWalPizVideo.Server.Services
         Task<IList<Product>> GetProducts();
         Task<IList<Sponsor>> GetSponsors();
         Task SaveSponsorApplies(SponsorApply entity);
+        Task<IList<Competition>> GetCompetitions();
+
+        Task<IList<Competition>> GetCompetitionsByStatus(CompetitionStatus status);
+
+        Task<Competition?> GetCompetitionById(string id);
     }
     public class MinimalDataService : IGenericDataService {
         protected readonly IYouTubeContentRepository _youTubeContent;
@@ -33,7 +38,9 @@ namespace MorWalPizVideo.Server.Services
         protected readonly IProductRepository _productRepository;
         protected readonly ISponsorRepository _sponsorRepository;
         protected readonly ISponsorApplyRepository _sponsorApplyRepository;
-        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IBioLinkRepository bioLinkRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository)
+        protected readonly ICompetitionRepository _competitionRepository;
+
+        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IBioLinkRepository bioLinkRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository)
         {
             _youTubeContent = youTubeContent;
             _compilationRepository = compilationRepository;
@@ -47,6 +54,7 @@ namespace MorWalPizVideo.Server.Services
             _configurationRepository = configurationRepository;
             _sponsorRepository = sponsorRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
+            _competitionRepository = competitionRepository;
         }
         public async Task<IList<BioLink>> GetBioLinks() => [.. (await _bioLinkRepository.GetItemsAsync(x => x.Enable)).OrderBy(x => x.Order)];
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
@@ -99,6 +107,13 @@ namespace MorWalPizVideo.Server.Services
                 return;
             await _sponsorApplyRepository.AddItemAsync(entity);
         }
+        public Task<IList<Competition>> GetCompetitions() => _competitionRepository.GetItemsAsync();
+
+        public async Task<IList<Competition>> GetCompetitionsByStatus(CompetitionStatus status) =>
+            await _competitionRepository.GetItemsAsync(x => x.Status == status);
+
+        public async Task<Competition?> GetCompetitionById(string id) =>
+            await _competitionRepository.GetItemAsync(id);
 
     }
     public class DataService : MinimalDataService
@@ -117,7 +132,6 @@ namespace MorWalPizVideo.Server.Services
         private readonly IInsightTopicRepository _insightTopicRepository;
         private readonly IInsightNewsItemRepository _insightNewsItemRepository;
         private readonly IInsightContentPlanRepository _insightContentPlanRepository;
-        private readonly ICompetitionRepository _competitionRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -143,7 +157,7 @@ namespace MorWalPizVideo.Server.Services
             IInsightTopicRepository insightTopicRepository,
             IInsightNewsItemRepository insightNewsItemRepository,
             IInsightContentPlanRepository insightContentPlanRepository,
-            ICompetitionRepository competitionRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository)
+            ICompetitionRepository competitionRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository, competitionRepository)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;
@@ -159,7 +173,6 @@ namespace MorWalPizVideo.Server.Services
             _insightTopicRepository = insightTopicRepository;
             _insightNewsItemRepository = insightNewsItemRepository;
             _insightContentPlanRepository = insightContentPlanRepository;
-            _competitionRepository = competitionRepository;
         }
 
         // Shop - DigitalProduct methods
@@ -894,13 +907,7 @@ namespace MorWalPizVideo.Server.Services
         }
 
         // Competition methods
-        public Task<IList<Competition>> GetCompetitions() => _competitionRepository.GetItemsAsync();
-
-        public async Task<IList<Competition>> GetCompetitionsByStatus(CompetitionStatus status) =>
-            await _competitionRepository.GetItemsAsync(x => x.Status == status);
-
-        public async Task<Competition?> GetCompetitionById(string id) =>
-            await _competitionRepository.GetItemAsync(id);
+        
 
         public async Task SaveCompetition(Competition entity)
         {

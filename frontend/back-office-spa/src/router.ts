@@ -1,7 +1,21 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, redirect } from 'react-router';
 import PrimaryLayout from './layouts/PrimaryLayout';
 import { authRoutes } from './router/routes/auth.routes';
 import { protectedRoutes } from './router/routes';
+import { authService } from './services/authService';
+
+async function authLoader() {
+  if (!authService.isAuthenticated()) {
+    return redirect('/login');
+  }
+  const isValid = await authService.validateToken();
+  if (!isValid) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    return redirect('/login');
+  }
+  return null;
+}
 
 /**
  * Application router configuration
@@ -17,6 +31,7 @@ export default createBrowserRouter([
   {
     path: '/',
     Component: PrimaryLayout,
+    loader: authLoader,
     children: protectedRoutes,
   },
 ]);

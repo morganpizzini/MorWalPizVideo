@@ -57,11 +57,7 @@ const Products: React.FC = () => {
       {
         accessorKey: 'title',
         header: 'Title',
-        cell: info => (
-          <Link to={`/products/${info.row.original.id}`}>
-            {info.getValue() as string}
-          </Link>
-        ),
+        cell: info => info.getValue() as string,
       },
       {
         accessorKey: 'description',
@@ -100,6 +96,9 @@ const Products: React.FC = () => {
           const product = props.row.original;
           return (
             <div className="text-end">
+              <Link className="btn btn-link px-1" to={`/products/${product.id}`}>
+                Detail
+              </Link>
               <Link className="btn btn-link px-1" to={`/products/${product.id}/edit`}>
                 Edit
               </Link>

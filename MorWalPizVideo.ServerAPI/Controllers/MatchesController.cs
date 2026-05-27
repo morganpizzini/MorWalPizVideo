@@ -21,11 +21,15 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         [OutputCache(Tags = [CacheKeys.Matches])]
         [HttpGet]
-        public async Task<IActionResult> Index(int skip = 0, int take = 23) {
+        public async Task<IActionResult> Index(int skip = 0, int take = 23)
+        {
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
             var count = await CountMatches();
             var entities = await FetchMatches(skip, take);
+            if (!isAuthenticated)
+                entities = entities.Where(x => !x.IsPrivate).ToList();
             var next = skip > 0 ? take * skip : take;
-            return Ok(new BaseResponse<IList<YouTubeContent>>(entities,count,$"skip={next}&take={take}"));
+            return Ok(new BaseResponse<IList<YouTubeContent>>(entities, count, $"skip={next}&take={take}"));
         }
 
         [HttpGet("{url}")]
@@ -33,7 +37,10 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> Detail(string url)
         {
             var match = await FindMatch(url);
-            return match == null ? NotFound() : Ok(match);
+            if (match == null) return NotFound();
+            if (match.IsPrivate && !(User.Identity?.IsAuthenticated ?? false))
+                return StatusCode(403);
+            return Ok(match);
         }
 
         [HttpGet("{url}/images")]

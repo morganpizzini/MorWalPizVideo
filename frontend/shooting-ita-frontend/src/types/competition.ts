@@ -1,5 +1,3 @@
-// Competition domain types matching C# backend models
-
 export enum CompetitionStatus {
   Draft = 0,
   Published = 1,
@@ -10,9 +8,20 @@ export enum CompetitionStatus {
   Cancelled = 6,
 }
 
+export const CompetitionStatusLabels: Record<CompetitionStatus, string> = {
+  [CompetitionStatus.Draft]: 'Bozza',
+  [CompetitionStatus.Published]: 'Pubblicato',
+  [CompetitionStatus.RegistrationOpen]: 'Iscrizioni aperte',
+  [CompetitionStatus.RegistrationClosed]: 'Iscrizioni chiuse',
+  [CompetitionStatus.InProgress]: 'In corso',
+  [CompetitionStatus.Completed]: 'Completato',
+  [CompetitionStatus.Cancelled]: 'Annullato',
+};
+
 export interface Stage {
   stageNumber: number;
   name: string;
+  description?: string;
   targetCount: number;
   roundCount: number;
   minScore: number;
@@ -27,88 +36,15 @@ export interface Competition {
   name: string;
   description?: string;
   location?: string;
-  startDate: string; // ISO date string
-  endDate?: string; // ISO date string
+  startDate: string;
+  endDate?: string;
   organizerId?: string;
   status: CompetitionStatus;
   maxParticipants?: number;
-  registrationDeadline?: string; // ISO date string
+  registrationDeadline?: string;
   rules?: string;
   stages: Stage[];
   imageUrl?: string;
   websiteUrl?: string;
-  creationDateTime: string; // ISO date string
-}
-
-export interface CompetitionStatistics {
-  totalCompetitions: number;
-  byStatus: Array<{ status: string; count: number }>;
-  upcomingCompetitions: number;
-  ongoingCompetitions: number;
-  completedCompetitions: number;
-  averageStagesPerCompetition: number;
-  competitionsWithRegistrationOpen: number;
-}
-
-// Helper functions
-export function getStatusLabel(status: CompetitionStatus): string {
-  switch (status) {
-    case CompetitionStatus.Draft:
-      return 'Bozza';
-    case CompetitionStatus.Published:
-      return 'Pubblicata';
-    case CompetitionStatus.RegistrationOpen:
-      return 'Iscrizioni Aperte';
-    case CompetitionStatus.RegistrationClosed:
-      return 'Iscrizioni Chiuse';
-    case CompetitionStatus.InProgress:
-      return 'In Corso';
-    case CompetitionStatus.Completed:
-      return 'Completata';
-    case CompetitionStatus.Cancelled:
-      return 'Annullata';
-    default:
-      return 'Sconosciuto';
-  }
-}
-
-export function getStatusBadgeClass(status: CompetitionStatus): string {
-  switch (status) {
-    case CompetitionStatus.Draft:
-      return 'bg-secondary';
-    case CompetitionStatus.Published:
-      return 'bg-info';
-    case CompetitionStatus.RegistrationOpen:
-      return 'bg-success';
-    case CompetitionStatus.RegistrationClosed:
-      return 'bg-warning';
-    case CompetitionStatus.InProgress:
-      return 'bg-primary';
-    case CompetitionStatus.Completed:
-      return 'bg-dark';
-    case CompetitionStatus.Cancelled:
-      return 'bg-danger';
-    default:
-      return 'bg-secondary';
-  }
-}
-
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('it-IT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleString('it-IT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  creationDateTime: string;
 }

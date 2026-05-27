@@ -152,7 +152,7 @@ if (!enableMock)
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
     });
 
-    
+
     if (!string.IsNullOrEmpty(facebookSettings.PageId))
     {
         builder.Services.AddHttpClient(HttpClientNames.Facebook, httpClient =>
@@ -161,7 +161,7 @@ if (!enableMock)
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
-        
+
             if (!string.IsNullOrEmpty(facebookSettings?.AccessToken))
             {
                 httpClient.DefaultRequestHeaders.Authorization =
@@ -192,7 +192,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
-        
+
         // Check cookie for token if Authorization header is not present
         options.Events = new JwtBearerEvents
         {
@@ -259,6 +259,7 @@ if (enableMock)
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
+    builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
@@ -271,6 +272,11 @@ if (enableMock)
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemMockRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanMockRepository>();
 
+    // Shooting ITA repositories (Mock)
+    builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
+    builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
+    builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
+
     // services
     //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
@@ -279,7 +285,7 @@ if (enableMock)
     builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-    
+
     // Insight Agent Service (Mock)
     builder.Services.AddScoped<IInsightAgentService, MockInsightAgentService>();
 }
@@ -322,6 +328,7 @@ else
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+    builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
 
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
@@ -333,6 +340,11 @@ else
     builder.Services.AddScoped<IInsightTopicRepository, InsightTopicRepository>();
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanRepository>();
+
+    // Shooting ITA repositories (Production)
+    builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
+    builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
+    builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
@@ -347,7 +359,7 @@ else
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
-    
+
     // Insight Agent Service (Production)
     builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();
 }
@@ -425,6 +437,14 @@ if (enableHangFire)
         "news-job",            // Job ID
         job => job.ExecuteAsync(), // The method to run
         "0 18 * * 0"              // Cron expression: Sunday at 18:00
+    );
+
+    // YouTube metadata sync — runs daily at 03:00 UTC
+    var youtubeSyncCron = app.Configuration["YouTubeSyncCron"] ?? "0 3 * * *";
+    RecurringJob.AddOrUpdate<YouTubeSyncJob>(
+        "youtube-sync-job",
+        job => job.ExecuteAsync(),
+        youtubeSyncCron
     );
 }
 

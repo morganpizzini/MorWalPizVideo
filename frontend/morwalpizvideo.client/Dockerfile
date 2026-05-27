@@ -35,25 +35,29 @@ COPY morwalpizvideo.client/src ./src
 COPY morwalpizvideo.client/index.html ./
 COPY morwalpizvideo.client/public ./public
 
-# Build the application
+# Build the application (client bundle)
 RUN yarn build-uncheck
 
-# Stage 2: Production
-FROM nginx:alpine
+# Build the SSR bundle (bundles all deps; no node_modules needed at runtime)
+RUN yarn build:ssr
 
-# Copy custom nginx configuration
-COPY morwalpizvideo.client/nginx.conf /etc/nginx/conf.d/default.conf
+# Stage 2: Production — Node.js SSR server
+FROM node:22-alpine
 
-# Copy built static files from builder stage
-COPY --from=builder /app/morwalpizvideo.client/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy docker entrypoint script for runtime env injection
-COPY morwalpizvideo.client/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# Create a minimal package.json with only the production HTTP server dep
+RUN printf '{"type":"module","dependencies":{"express":"^4.19.0"}}' > package.json \
+    && npm install --no-audit --no-fund
 
-# Expose port 80
-EXPOSE 80
+# Copy client static files and the self-contained SSR bundle
+COPY --from=builder /app/morwalpizvideo.client/dist      ./dist
+COPY --from=builder /app/morwalpizvideo.client/dist-ssr  ./dist-ssr
 
-# Use custom entrypoint
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+# Copy the SSR server entry point
+COPY morwalpizvideo.client/server.mjs ./
+
+# Expose the Node.js SSR server port
+EXPOSE 3000
+
+CMD ["node", "server.mjs"]

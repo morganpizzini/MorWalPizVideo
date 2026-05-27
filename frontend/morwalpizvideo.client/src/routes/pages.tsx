@@ -3,7 +3,9 @@ import SEO from "@utils/seo";
 import ReactGA from "react-ga4"
 export default function Matches() {
     const { page } = useLoaderData();
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: page.title })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: page.title })
+    }
     return (
         <>
             <SEO

@@ -7,7 +7,9 @@ import TitleComponent from "@layouts/title-header";
 
 export default function Compilations() {
     const { compilation } = useLoaderData();
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: compilation.title })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: compilation.title })
+    }
 
     return (
         <>

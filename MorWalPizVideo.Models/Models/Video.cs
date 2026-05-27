@@ -43,45 +43,50 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("title")]
         public string Title { get; init; }
-        
+
         [DataMember]
         [BsonElement("description")]
         public string Description { get; init; }
-        
+
         [DataMember]
         [BsonElement("views")]
         public int Views { get; init; }
-        
+
         [DataMember]
         [BsonElement("likes")]
         public int Likes { get; init; }
-        
+
         [DataMember]
         [BsonElement("comments")]
         public int Comments { get; init; }
-        
+
         [DataMember]
         [BsonElement("publishedAt")]
         public DateTime PublishedAt { get; init; }
-        
+
         [DataMember]
         [BsonElement("thumbnail")]
         public string Thumbnail { get; init; }
-        
+
         [DataMember]
         [BsonElement("duration")]
         public string Duration { get; init; }
-        
+
         [DataMember]
         [BsonElement("categories")]
         public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
-        
+
+        /// <summary>When true, an authenticated user is required; unauthenticated requests return 403.</summary>
+        [DataMember]
+        [BsonElement("isPrivate")]
+        public bool IsPrivate { get; init; } = false;
+
         // Constructor to create minimal video from a video reference
-        public Video(string youtubeId, CategoryRef[] categories) 
+        public Video(string youtubeId, CategoryRef[] categories)
             : this(youtubeId, string.Empty, string.Empty, 0, 0, 0, DateTime.MinValue, string.Empty, string.Empty, categories)
         {
         }
-        
+
         // Convert to VideoRef for lightweight references
         public VideoRef ToVideoRef() => new VideoRef(YoutubeId, Categories, Title, Description, PublishedAt);
     }

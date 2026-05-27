@@ -45,4 +45,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     // Shooting ITA repositories
     public interface ICompetitionRepository : IRepository<Competition> { }
+    public interface IUserChannelRepository : IRepository<UserChannel>
+    {
+        Task<IList<UserChannel>> GetByUserIdAsync(string userId);
+        Task<IList<UserChannel>> GetByChannelIdAsync(string channelId);
+        Task<UserChannel?> GetByUserAndChannelAsync(string userId, string channelId);
+    }
+    public interface IUserChannelOwnerRepository : IRepository<UserChannelOwner>
+    {
+        Task<IList<UserChannelOwner>> GetByUserIdAsync(string userId);
+        Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId);
+    }
+    public interface IUserRequestRepository : IRepository<UserRequest> { }
 }

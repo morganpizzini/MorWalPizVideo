@@ -56,8 +56,8 @@ const target = env.ASPNETCORE_HTTPS_PORT
     : 'https://localhost:7140';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react(), VitePWA(manifestForPlugIn)],
+export default defineConfig(({ mode }) => ({
+  plugins: mode === 'ssr' ? [react()] : [react(), VitePWA(manifestForPlugIn)],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -78,4 +78,7 @@ export default defineConfig({
       },
     }
   },
-});
+  ssr: {
+    noExternal: true,
+  },
+}));

@@ -1,4 +1,4 @@
-import { post, setAuthTokenProvider } from '@morwalpizvideo/services';
+import { post, setAuthTokenProvider, setUnauthorizedHandler } from '@morwalpizvideo/services';
 
 interface UserInfo {
   id: string;
@@ -19,6 +19,12 @@ class AuthService {
   constructor() {
     // Register this service as the auth token provider for the shared services package
     setAuthTokenProvider(() => this.getToken());
+    // Redirect to login on 401 responses (unless on auth endpoints)
+    setUnauthorizedHandler(() => {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+      window.location.href = '/login';
+    });
   }
 
   // Store token in localStorage
@@ -99,8 +105,8 @@ class AuthService {
     if (!token) return false;
 
     try {
-      await post('/api/auth/validate', { token });
-      return true;
+      const response = await post('/api/auth/validate', { token });
+      return response !== null && response !== undefined && !response.errors;
     } catch {
       return false;
     }

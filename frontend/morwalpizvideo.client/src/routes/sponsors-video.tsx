@@ -1,6 +1,8 @@
 import ReactGA from "react-ga4"
 export default function Matches() {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'sponsor-video' })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'sponsor-video' })
+    }
     return (
         <>
             <div id="page-container" className="p-4 bg-white">

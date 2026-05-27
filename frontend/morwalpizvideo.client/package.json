@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b && vite build",
+    "build:client": "tsc -b && vite build",
+    "build:ssr": "vite build --mode ssr --ssr src/entry-server.tsx --outDir dist-ssr",
+    "build:all": "npm run build:client && npm run build:ssr",
     "build-uncheck": "vite build",
     "dev": "vite",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
@@ -13,7 +16,8 @@
     "lint-format": "npm run lint && npm run format",
     "package:azure": "npm run build-uncheck && bestzip azure-package.zip dist/*",
     "prepare": "husky",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "node server.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -29,6 +33,7 @@
     "@morwalpizvideo/services": "1.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
+    "express": "^4.19.0",
     "react": "19.2.4",
     "react-bootstrap": "^2.10.9",
     "react-dom": "19.2.4",

@@ -7,7 +7,9 @@ import ReactGA from "react-ga4"
 import Gallery from "@utils/gallery";
 export default function Matches() {
     const { match, images } = useLoaderData();
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: match.title })
+    if (typeof window !== 'undefined') {
+        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: match.title })
+    }
     return (
         <>
             <SEO

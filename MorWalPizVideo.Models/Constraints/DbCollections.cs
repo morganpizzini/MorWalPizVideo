@@ -1,6 +1,7 @@
 ﻿namespace MorWalPizVideo.Models.Constraints
 {
-    public static class HttpClientNames {
+    public static class HttpClientNames
+    {
 
         public const string MorWalPiz = "MorWalPiz";
         public const string Telegram = "Telegram";
@@ -18,7 +19,7 @@
         public const string CustomForms = "customForms";
         public const string QueryLinks = "queryLinks";
         public const string PublishSchedules = "publishSchedules";
-        
+
         public const string YouTubeContent = "youtubeContent";
         public const string Pages = "pages";
         public const string Sponsors = "sponsors";
@@ -31,19 +32,22 @@
         public const string Users = "users";
         public const string LoginAttempts = "loginAttempts";
         public const string ApiKeys = "apiKeys";
-        
+
         // Insights Collections
         public const string InsightTopics = "insightTopics";
         public const string InsightNewsItems = "insightNewsItems";
         public const string InsightContentPlans = "insightContentPlans";
-        
+
         // Shop Collections
         public const string DigitalProducts = "digitalProducts";
         public const string DigitalProductCategories = "digitalProductCategories";
         public const string Customers = "customers";
         public const string Carts = "carts";
-        
+
         // Shooting ITA Collections
         public const string Competitions = "competitions";
+        public const string UserChannels = "userChannels";
+        public const string UserChannelOwners = "userChannelOwners";
+        public const string UserRequests = "userRequests";
     }
 }

@@ -47,6 +47,12 @@ export function setRequestCredentialsMode(mode: CredentialsMode): void {
     requestCredentialsMode = mode;
 }
 
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: () => void): void {
+    unauthorizedHandler = handler;
+}
+
 /**
  * Get authentication token from registered provider or localStorage fallback
  * @returns Auth token or null
@@ -252,15 +258,26 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             break;
                         }
                     case 401:
-                    case 429:
                         {
-                            // Parse JSON response for authentication errors and rate limit errors
                             try {
                                 const parsedResponse = await response.json();
-                                // Return the entire parsed response to preserve structure (message, retryAfter, remainingAttempts, etc.)
+                                if (unauthorizedHandler && !url.includes('/auth/')) {
+                                    unauthorizedHandler();
+                                }
                                 return parsedResponse;
                             } catch {
                                 errorMessages.push("Authentication failed");
+                            }
+                            break;
+                        }
+                    case 429:
+                        {
+                            // Parse JSON response for rate limit errors
+                            try {
+                                const parsedResponse = await response.json();
+                                return parsedResponse;
+                            } catch {
+                                errorMessages.push("Too many requests");
                             }
                             break;
                         }

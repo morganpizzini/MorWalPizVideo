@@ -188,7 +188,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
             var user = await FindByUsernameAsync(username) ?? await FindByEmailAsync(username);
-            
+
             if (user == null)
                 return null;
 
@@ -231,7 +231,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.IpAddress, ipAddress),
                 Builders<LoginAttempt>.Filter.Gte(a => a.AttemptTime, cutoffTime)
             );
-            
+
             return await _collection.Find(filter)
                 .SortByDescending(a => a.AttemptTime)
                 .ToListAsync();
@@ -244,7 +244,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.Username, username),
                 Builders<LoginAttempt>.Filter.Gte(a => a.AttemptTime, cutoffTime)
             );
-            
+
             return await _collection.Find(filter)
                 .SortByDescending(a => a.AttemptTime)
                 .ToListAsync();
@@ -258,7 +258,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.IsSuccessful, false),
                 Builders<LoginAttempt>.Filter.Gte(a => a.AttemptTime, cutoffTime)
             );
-            
+
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
@@ -270,7 +270,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.IsSuccessful, false),
                 Builders<LoginAttempt>.Filter.Gte(a => a.AttemptTime, cutoffTime)
             );
-            
+
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
@@ -280,11 +280,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.IpAddress, ipAddress),
                 Builders<LoginAttempt>.Filter.Eq(a => a.IsSuccessful, false)
             );
-            
+
             var lastAttempt = await _collection.Find(filter)
                 .SortByDescending(a => a.AttemptTime)
                 .FirstOrDefaultAsync();
-                
+
             return lastAttempt?.AttemptTime;
         }
 
@@ -294,11 +294,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<LoginAttempt>.Filter.Eq(a => a.Username, username),
                 Builders<LoginAttempt>.Filter.Eq(a => a.IsSuccessful, false)
             );
-            
+
             var lastAttempt = await _collection.Find(filter)
                 .SortByDescending(a => a.AttemptTime)
                 .FirstOrDefaultAsync();
-                
+
             return lastAttempt?.AttemptTime;
         }
 
@@ -306,8 +306,41 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
             var cutoffTime = DateTime.UtcNow.Subtract(olderThan);
             var filter = Builders<LoginAttempt>.Filter.Lt(a => a.AttemptTime, cutoffTime);
-            
+
             await _collection.DeleteManyAsync(filter);
         }
+    }
+
+    public class UserChannelRepository : BaseRepository<UserChannel>, IUserChannelRepository
+    {
+        public UserChannelRepository(IMongoDatabase database) : base(database, DbCollections.UserChannels) { }
+
+        public async Task<IList<UserChannel>> GetByUserIdAsync(string userId)
+            => await GetItemsAsync(uc => uc.UserId == userId && uc.IsActive);
+
+        public async Task<IList<UserChannel>> GetByChannelIdAsync(string channelId)
+            => await GetItemsAsync(uc => uc.ChannelId == channelId && uc.IsActive);
+
+        public async Task<UserChannel?> GetByUserAndChannelAsync(string userId, string channelId)
+        {
+            var results = await GetItemsAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
+            return results.FirstOrDefault();
+        }
+    }
+
+    public class UserChannelOwnerRepository : BaseRepository<UserChannelOwner>, IUserChannelOwnerRepository
+    {
+        public UserChannelOwnerRepository(IMongoDatabase database) : base(database, DbCollections.UserChannelOwners) { }
+
+        public async Task<IList<UserChannelOwner>> GetByUserIdAsync(string userId)
+            => await GetItemsAsync(o => o.UserId == userId && o.IsActive);
+
+        public async Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId)
+            => await GetItemsAsync(o => o.ChannelId == channelId && o.IsActive);
+    }
+
+    public class UserRequestRepository : BaseRepository<UserRequest>, IUserRequestRepository
+    {
+        public UserRequestRepository(IMongoDatabase database) : base(database, DbCollections.UserRequests) { }
     }
 }

@@ -37,6 +37,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
   // Define default labels for known routes
   const defaultLabels: Record<string, string> = {
     categories: 'Categories',
+    products: 'Products',
     querylinks: 'Query Links',
     shortlinks: 'Short Links',
     channels: 'Channels',
@@ -82,7 +83,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
 
           // Get the appropriate label
           const label = isId ? getEntityName(segment) : labels[segment] || segment;
-
+          
           return (
             <Breadcrumb.Item
               key={url}

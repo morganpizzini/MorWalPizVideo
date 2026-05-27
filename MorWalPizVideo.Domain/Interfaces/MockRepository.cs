@@ -104,7 +104,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
             var u = username.ToLower();
-            return (await this.GetItemsAsync(x=> x.Username.ToLower() == u || x.Email.ToLower() == u)).FirstOrDefault();
+            return (await this.GetItemsAsync(x => x.Username.ToLower() == u || x.Email.ToLower() == u)).FirstOrDefault();
         }
     }
     public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
@@ -244,4 +244,38 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+
+    public class UserChannelMockRepository : BaseMockRepository<UserChannel>, IUserChannelRepository
+    {
+        public UserChannelMockRepository(IHostEnvironment environment) : base(environment, "userChannels") { }
+
+        public async Task<IList<UserChannel>> GetByUserIdAsync(string userId)
+            => (await GetItemsAsync(uc => uc.UserId == userId && uc.IsActive));
+
+        public async Task<IList<UserChannel>> GetByChannelIdAsync(string channelId)
+            => (await GetItemsAsync(uc => uc.ChannelId == channelId && uc.IsActive));
+
+        public async Task<UserChannel?> GetByUserAndChannelAsync(string userId, string channelId)
+        {
+            var all = await GetItemsAsync(uc => uc.UserId == userId && uc.ChannelId == channelId);
+            return all.FirstOrDefault();
+        }
+    }
+
+    public class UserChannelOwnerMockRepository : BaseMockRepository<UserChannelOwner>, IUserChannelOwnerRepository
+    {
+        public UserChannelOwnerMockRepository(IHostEnvironment environment) : base(environment, "userChannelOwners") { }
+
+        public async Task<IList<UserChannelOwner>> GetByUserIdAsync(string userId)
+            => (await GetItemsAsync(o => o.UserId == userId && o.IsActive));
+
+        public async Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId)
+            => (await GetItemsAsync(o => o.ChannelId == channelId && o.IsActive));
+    }
+
+    public class UserRequestMockRepository : BaseMockRepository<UserRequest>, IUserRequestRepository
+    {
+        public UserRequestMockRepository(IHostEnvironment environment) : base(environment, "userRequests") { }
+    }
 }
+
