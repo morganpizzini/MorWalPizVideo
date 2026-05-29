@@ -247,91 +247,89 @@ function Sponsors() {
 
 function BuyMeACoffeeCard() {
     return (
-        <>
-            <div className="card position-relative">
-                <div className="px-2" style={{ "heigth": "200px" }}>
-                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" style={{ objectFit: "contain", "width": "100%" }} />
-                </div>
-                <div className="card-body">
-                    <p className="text-muted mb-1 text-uppercase">supporto</p>
-                    <h5 className="card-title">Aiutami nel mio percorso!</h5>
-                    <p className="card-text">Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i contenuti in anteprima e una chat diretta!</p>
-                </div>
-                <Link to="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer" className="stretched-link">
-                </Link>
+        <div className="card position-relative home-card">
+            <div className="home-card__thumb home-card__thumb--promo home-card__thumb--coffee">
+                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" />
             </div>
-
-        </>)
+            <div className="card-body">
+                <p className="home-card__category">supporto</p>
+                <h5 className="card-title">Aiutami nel mio percorso!</h5>
+                <p className="card-text">Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i contenuti in anteprima e una chat diretta!</p>
+            </div>
+            <Link to="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer" className="stretched-link" aria-label="Buy me a coffee"></Link>
+        </div>
+    );
 }
 
 function GoToShortsCard() {
     return (
-        <>
-            <div className="card position-relative">
-                <div className="px-2" style={{ "heigth": "200px" }}>
-                    <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" style={{ objectFit: "contain", "width": "100%" }} />
-                </div>
-                <div className="card-body">
-                    <p className="text-muted mb-1 text-uppercase">CONSIGLI</p>
-                    <h5 className="card-title">Poco tempo? Ci sono gli SHORTS!</h5>
-                    <p className="card-text">Guarda tutti i momenti salienti estratti dai miei video!</p>
-                </div>
-                <Link to="https://www.youtube.com/@morwalpiz/shorts" target="_blank" rel="noopener noreferrer" className="stretched-link">
-                </Link>
+        <div className="card position-relative home-card">
+            <div className="home-card__thumb home-card__thumb--promo">
+                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" />
             </div>
-
-        </>)
+            <div className="card-body">
+                <p className="home-card__category">consigli</p>
+                <h5 className="card-title">Poco tempo? Ci sono gli SHORTS!</h5>
+                <p className="card-text">Guarda tutti i momenti salienti estratti dai miei video!</p>
+            </div>
+            <Link to="https://www.youtube.com/@morwalpiz/shorts" target="_blank" rel="noopener noreferrer" className="stretched-link" aria-label="Vai agli Shorts"></Link>
+        </div>
+    );
 }
+
 function RenderMatchCard(match, i) {
-    const className = i == 0 ? "card position-relative d-md-none w-100" : "card position-relative w-100";
+    const className = i == 0
+        ? "card position-relative home-card d-md-none"
+        : "card position-relative home-card";
     if (match.videoRefs == null)
-        return (<></>)
+        return (<></>);
     const isLink = match.videoRefs.length == 1;
-    var shortlink = '';
+    let shortlink = '';
     if (isLink)
         shortlink = match.shortLinks.filter(x => x.target == match.contentId)[0]?.code ?? `https://youtu.be/${match.contentId}`;
     if (!shortlink.startsWith('http')) {
         shortlink = `https://shorts.morwalpiz.com/${shortlink}`;
     }
     return (
-        <div className={className} style={{ width: '100%' }}>
-            <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} className="card-img-top" alt="Video Thumbnail" />
+        <div className={className}>
+            <div className="home-card__thumb">
+                <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} alt="Video Thumbnail" />
+            </div>
             <div className="card-body">
-                {isLink &&
-                    <p className="text-muted mb-1 text-uppercase">{match.category}</p>
-                }
-                {!isLink &&
-                    <p className="text-muted mb-1 text-uppercase">{match.videoRefs?.length} video</p>
-                }
+                <p className="home-card__category">
+                    {isLink ? match.category : `${match.videoRefs?.length} video`}
+                </p>
                 <h5 className="card-title">{match.title}</h5>
                 <p className="card-text">{match.description}</p>
-                <div className="d-flex justify-content-between align-items-center">
-                    {isLink &&
-                        <div className="d-flex justify-content-start align-items-center">
-                            <Link to={shortlink} target="_blank" rel="noopener noreferrer" className="me-1 pt-1">
-                                <i className="fa-1_8x text-danger fab fa-youtube"></i>
+            </div>
+            {(isLink || match.creationDateTime) && (
+                <div className="home-card__footer">
+                    {isLink ? (
+                        <div className="home-card__share">
+                            <Link to={shortlink} target="_blank" rel="noopener noreferrer" aria-label="Guarda su YouTube" className="home-card__share-link">
+                                <i className="text-danger fab fa-youtube"></i>
                             </Link>
-                            <FacebookShareButton url={`https://youtu.be/${match.contentId}`} className="Demo__some-network__share-button me-1">
+                            <FacebookShareButton url={`https://youtu.be/${match.contentId}`} className="home-card__share-link">
                                 <FacebookIcon size={26} round />
                             </FacebookShareButton>
                             <WhatsappShareButton
                                 url={`https://youtu.be/${match.contentId}`}
                                 title={match.title}
                                 separator=":: "
-                                className="Demo__some-network__share-button"
+                                className="home-card__share-link"
                             >
                                 <WhatsappIcon size={26} round />
                             </WhatsappShareButton>
                         </div>
-                    }
-                    <div className="text-muted text-end">
+                    ) : <span />}
+                    <div className="home-card__date">
                         <DateDisplay dateString={match.creationDateTime} />
                     </div>
                 </div>
-            </div>
+            )}
             {!isLink &&
-                <Link to={`/matches/${match.url}`} className="stretched-link"></Link>
+                <Link to={`/matches/${match.url}`} className="stretched-link" aria-label={match.title}></Link>
             }
         </div>
-    )
+    );
 }

@@ -1,27 +1,143 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
 
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MorWalPiz</title>
+    <meta name="theme-color" content="#cacaca" />
+    <title>MorWalPiz - Morgan Pizzini</title>
+    <meta name="description"
+        content="MorWalPiz - Il canale di Morgan Pizzini: video, gare IPSC, shorts, attrezzatura e contenuti dedicati alla community." />
+    <meta name="keywords"
+        content="morwalpiz, morgan pizzini, morgan walker pizzini, youtube, ipsc, tiro sportivo, video" />
+    <link rel="canonical" href="https://morwalpiz.it/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MorWalPiz" />
+    <meta property="og:title" content="MorWalPiz - Morgan Pizzini" />
+    <meta property="og:description"
+        content="MorWalPiz - Il canale di Morgan Pizzini: video, gare IPSC, shorts, attrezzatura e contenuti dedicati alla community." />
+    <meta property="og:url" content="https://morwalpiz.it/" />
+    <meta property="og:image" content="https://morwalpiz.it/images/logo-800.jpg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MorWalPiz - Morgan Pizzini" />
+    <meta name="twitter:description"
+        content="MorWalPiz - Il canale di Morgan Pizzini: video, gare IPSC, shorts, attrezzatura e contenuti dedicati alla community." />
+    <meta name="twitter:image" content="https://morwalpiz.it/images/logo-800.jpg" />
 
     <!-- Load runtime environment configuration (injected by Docker entrypoint) -->
     <script src="/env-config.js"></script>
 
     <link rel="stylesheet" type="text/css"
         href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
-    <!-- Bootstrap CSS -->
-    <!--<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">-->
-    <!-- Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Minimal skeleton styles — visible before the React bundle loads/hydrates */
+        #initial-skeleton {
+            font-family: 'Roboto', Arial, sans-serif;
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+
+        #initial-skeleton .sk-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 2.5rem;
+            letter-spacing: 0.05em;
+            margin: 0 0 1.5rem;
+            color: #222;
+        }
+
+        #initial-skeleton .sk-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(1, 1fr);
+        }
+
+        @media (min-width: 600px) {
+            #initial-skeleton .sk-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 900px) {
+            #initial-skeleton .sk-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        #initial-skeleton .sk-card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #initial-skeleton .sk-thumb {
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(110deg, #e2e2e2 30%, #f0f0f0 50%, #e2e2e2 70%);
+            background-size: 200% 100%;
+            animation: sk-shimmer 1.4s linear infinite;
+        }
+
+        #initial-skeleton .sk-body {
+            padding: 0.85rem 1rem 1.1rem;
+        }
+
+        #initial-skeleton .sk-line {
+            height: 0.7rem;
+            border-radius: 4px;
+            background: linear-gradient(110deg, #ececec 30%, #f5f5f5 50%, #ececec 70%);
+            background-size: 200% 100%;
+            animation: sk-shimmer 1.4s linear infinite;
+            margin-bottom: 0.6rem;
+        }
+
+        #initial-skeleton .sk-line.short {
+            width: 40%;
+        }
+
+        #initial-skeleton .sk-line.tall {
+            height: 1rem;
+            width: 80%;
+        }
+
+        @keyframes sk-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Hide skeleton once React renders content into #root */
+        #root:not(:empty) + #initial-skeleton {
+            display: none;
+        }
+    </style>
     <!--ssr-head-->
 </head>
 
 <body>
     <div id="root"></div>
+    <div id="initial-skeleton" aria-hidden="true">
+        <h1 class="sk-title">MorWalPiz</h1>
+        <div class="sk-grid">
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+            <div class="sk-card"><div class="sk-thumb"></div><div class="sk-body"><div class="sk-line short"></div><div class="sk-line tall"></div><div class="sk-line"></div><div class="sk-line"></div></div></div>
+        </div>
+        <noscript>
+            <p style="text-align:center;margin-top:1rem">Per visualizzare il sito è necessario abilitare JavaScript.</p>
+        </noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
     <script src="/js/cookie-consent.js"></script>

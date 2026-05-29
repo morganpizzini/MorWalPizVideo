@@ -3,17 +3,8 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 
     &:hover {
-        transform: scale(1.03); /* Slight zoom-in on hover */
+        transform: scale(1.03);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-    }
-    /* Stili per le card */
-    & img {
-        object-fit: cover;
-        height: 200px;
-
-        @media (max-width: 768px) {
-            height: inherit;
-        }
     }
 }
 
@@ -30,21 +21,117 @@
     margin-bottom: 1rem;
 }
 
-.Demo__some-network {
-    vertical-align: top;
-    display: inline-block;
-    margin-right: 10px;
-    text-align: center;
-}
+.home-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fff;
 
-.Demo__some-network__share-count {
-    display: inline-flex;
-    justify-content: center;
-    white-space: nowrap;
-    overflow: visible;
-    width: 0;
-    margin-top: 3px;
-    font-size: 12px;
+    &__thumb {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background-color: #f1f1f1;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        &--promo {
+            background-color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            img {
+                width: auto;
+                max-width: 75%;
+                max-height: 75%;
+                object-fit: contain;
+            }
+        }
+
+        &--coffee {
+            background-color: #6c757d;
+        }
+    }
+
+    &__category {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.35rem;
+    }
+
+    .card-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        line-height: 1.25;
+        margin-bottom: 0.5rem;
+        color: #1f1f1f;
+    }
+
+    .card-text {
+        font-size: 0.9rem;
+        color: #555;
+        margin-bottom: 0;
+    }
+
+    .card-body {
+        padding: 0.9rem 1rem 0.75rem;
+        flex: 1 1 auto;
+    }
+
+    &__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem 0.85rem;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 0.25rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    &__share {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    &__share-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+
+        i.fa-youtube {
+            font-size: 1.7rem;
+        }
+
+        &:hover {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+    }
+
+    &__date {
+        color: #6c757d;
+        font-size: 0.85rem;
+        text-align: right;
+        white-space: nowrap;
+    }
 }
 
 .categories-container > button {
@@ -53,13 +140,11 @@
 
 .Demo__some-network__share-button {
     cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
 .Demo__some-network__share-button:hover:not(:active) {
     opacity: 0.75;
-}
-
-.Demo__some-network__custom-icon {
-    width: 32px;
-    height: 32px;
 }

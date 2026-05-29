@@ -25,6 +25,24 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<Program>
     public CompilationMockRepository? CompilationRepository { get; private set; }
     public MatchMockRepository? MatchRepository { get; private set; }
 
+    static BackOfficeWebApplicationFactory()
+    {
+        // Program.cs reads feature flags eagerly during WebApplication.CreateBuilder(),
+        // BEFORE ConfigureAppConfiguration callbacks run. Environment variables are picked up
+        // by the default configuration sources at builder creation time, so this is the only
+        // reliable way to force mock mode (and to disable Swagger/Hangfire/KeyVault/CORS) end-to-end.
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableMock", "true");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableSwagger", "false");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableHangFire", "false");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableKeyVault", "false");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableCors", "false");
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", "test-secret-key-for-testing-purposes-only-min-32-chars");
+        Environment.SetEnvironmentVariable("JwtSettings__Issuer", "MorWalPizVideo.BackOffice.Tests");
+        Environment.SetEnvironmentVariable("JwtSettings__Audience", "MorWalPizVideo.BackOffice.Tests");
+        Environment.SetEnvironmentVariable("SiteUrl", "http://localhost/");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((context, config) =>
