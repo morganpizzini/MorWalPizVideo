@@ -115,6 +115,7 @@
         justify-content: center;
         line-height: 1;
         transition: opacity 0.15s ease, transform 0.15s ease;
+        text-decoration: none;
 
         i.fa-youtube {
             font-size: 1.7rem;
@@ -134,7 +135,7 @@
     }
 }
 
-.categories-container > button {
+.categories-container>button {
     text-transform: capitalize;
 }
 
