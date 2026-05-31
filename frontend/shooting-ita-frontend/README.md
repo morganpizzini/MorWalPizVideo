@@ -1,5 +1,14 @@
 # React + TypeScript + Vite
 
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SITE_KEY` | Google reCAPTCHA v3 site key. |
+| `SITE_SECRET` | Google reCAPTCHA v3 secret (server-side only). |
+| `VITE_API_BASE_URL` | Base URL of the BackOffice API consumed by `@morwalpizvideo/services` (matches + channels endpoints). No trailing slash. |
+| `VITE_EXCLUSIVE_CATEGORY_ID` | YouTube `CategoryRef.id` treated as "Exclusives" on the home rail and the `/exclusives` page. **Leaving this empty deliberately renders the consistent FR-010 empty state** on both surfaces (per analysis finding C2). |
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

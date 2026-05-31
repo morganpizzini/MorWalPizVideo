@@ -1,14 +1,15 @@
 ﻿import { Link, useLoaderData } from "react-router";
-import { useContext } from 'react';
-import AccordionContext from 'react-bootstrap/AccordionContext';
-import Accordion from 'react-bootstrap/Accordion';
-import { useAccordionButton } from 'react-bootstrap/AccordionButton';
+
+interface AccCategory { id: string; title: string }
+interface AccProduct { id: string; title: string; description?: string; url: string; categories?: AccCategory[] }
+interface AccSubGroup { title: string | null; products: AccProduct[] }
+interface AccColumnGroup { title: string; id: string; subcategories: Record<string, AccSubGroup> }
 
 export default function Accessories() {
-    const { products } = useLoaderData();
+    const { products } = useLoaderData() as { products: AccProduct[] };
 
     // Group products by main category (first category) and subcategory (second category)
-    const columnGroups = products.reduce((acc, product) => {
+    const columnGroups = products.reduce<Record<string, AccColumnGroup>>((acc, product) => {
         if (!product.categories || product.categories.length === 0) {
             return acc; // Skip products without categories
         }
@@ -61,7 +62,7 @@ export default function Accessories() {
                                     )}
                                     <Accordion>
                                         <ul className="ps-0">
-                                            {subData.products.map((product, i) => (
+                            {subData.products.map((product: AccProduct, i: number) => (
                                                 <li key={product.id} className="list-group-item">
                                                     {product.description && product.description.length > 0 ? (
                                                         <>
@@ -94,7 +95,18 @@ export default function Accessories() {
     );
 }
 
-function CustomToggle({ children, eventKey, callback }) {
+import { useContext } from 'react';
+import AccordionContext from 'react-bootstrap/AccordionContext';
+import Accordion from 'react-bootstrap/Accordion';
+import { useAccordionButton } from 'react-bootstrap/AccordionButton';
+
+interface CustomToggleProps {
+    children: React.ReactNode;
+    eventKey: string;
+    callback?: (eventKey: string) => void;
+}
+
+export function CustomToggle({ children, eventKey, callback }: CustomToggleProps) {
     const { activeEventKey } = useContext(AccordionContext);
 
     const decoratedOnClick = useAccordionButton(

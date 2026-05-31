@@ -29,6 +29,7 @@
     ]
   },
   "dependencies": {
+    "@morwalpiz/layout": "1.0.0",
     "@morwalpizvideo/models": "1.0.0",
     "@morwalpizvideo/services": "1.0.0",
     "@popperjs/core": "^2.11.8",

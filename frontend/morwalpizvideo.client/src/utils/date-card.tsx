@@ -1,6 +1,11 @@
 import './date-card.scss'
 
-export default function DateDisplay({ dateString, className }) {
+interface DateCardProps {
+    dateString: string;
+    className?: string;
+}
+
+export default function DateDisplay({ dateString, className }: DateCardProps) {
     const date = new Date(dateString);
     // Get the abbreviated month
     const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);

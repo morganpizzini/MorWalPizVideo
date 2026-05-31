@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts.Contracts.Videos;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
@@ -323,6 +324,60 @@ public class VideosController : ApplicationControllerBase
         }
 
         return Ok(new { message = "Successfully published to all platforms" });
+    }
+
+    [HttpPost("{youtubeId}/channel")]
+    public async Task<IActionResult> AssignChannel(string youtubeId, [FromBody] VideoChannelAssignmentPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(youtubeId))
+        {
+            return BadRequest(new { error = "youtubeId is required" });
+        }
+        if (payload is null || string.IsNullOrWhiteSpace(payload.ChannelId))
+        {
+            return BadRequest(new { error = "channelId is required" });
+        }
+
+        var targetChannel = await _dataService.GetChannelById(payload.ChannelId);
+        if (targetChannel is null)
+        {
+            return BadRequest(new { error = $"Unknown channelId '{payload.ChannelId}'" });
+        }
+
+        var allChannels = await _dataService.GetChannels();
+        var owningChannels = allChannels
+            .Where(c => c.Videos != null && c.Videos.Any(v => v.VideoId == youtubeId))
+            .ToList();
+        var existsInMatches = (await _dataService.FindMatch(youtubeId)) != null;
+
+        if (owningChannels.Count == 0 && !existsInMatches)
+        {
+            return NotFound(new { error = $"Video '{youtubeId}' was not found in any channel or match" });
+        }
+
+        // Remove from every other owning channel (idempotent: skips target).
+        foreach (var c in owningChannels.Where(c => c.ChannelId != payload.ChannelId))
+        {
+            var trimmedVideos = c.Videos.Where(v => v.VideoId != youtubeId).ToList();
+            var updated = c with { Videos = trimmedVideos };
+            await _dataService.UpdateChannel(updated);
+        }
+
+        // Ensure on target channel.
+        var targetVideos = targetChannel.Videos?.ToList() ?? new List<YouTubeVideo>();
+        if (!targetVideos.Any(v => v.VideoId == youtubeId))
+        {
+            targetVideos.Add(new YouTubeVideo { VideoId = youtubeId, LastCommentDate = DateTime.UtcNow });
+            var updatedTarget = targetChannel with { Videos = targetVideos };
+            await _dataService.UpdateChannel(updatedTarget);
+        }
+
+        await client.ResetCache(CacheKeys.Channels);
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.ReloadCache();
+
+        return Ok(new { youtubeId, channelId = payload.ChannelId });
     }
 
     #region ShortLink Helper

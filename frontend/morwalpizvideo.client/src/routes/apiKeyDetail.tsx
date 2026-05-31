@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { useLoaderData, Link, useNavigate } from 'react-router';
 import { toggleApiKey, deleteApiKey, regenerateApiKey } from '../services/apiKeys';
+import type { ApiKey, GeneratedApiKey } from '../services/apiKeys.types';
 
 export default function ApiKeyDetail() {
-  const { apiKey: initialApiKey } = useLoaderData();
-  const [apiKey, setApiKey] = useState(initialApiKey);
+  const { apiKey: initialApiKey } = useLoaderData() as { apiKey: ApiKey };
+  const [apiKey, setApiKey] = useState<ApiKey>(initialApiKey);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [regenerateConfirm, setRegenerateConfirm] = useState(false);
-  const [generatedKey, setGeneratedKey] = useState(null);
+  const [generatedKey, setGeneratedKey] = useState<GeneratedApiKey | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const navigate = useNavigate();
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
     return date.toLocaleString('it-IT', {
@@ -47,7 +48,7 @@ export default function ApiKeyDetail() {
       setSuccessMessage(result.message);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ export default function ApiKeyDetail() {
       await deleteApiKey(apiKey.id);
       navigate('/apikeys');
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
       setDeleteConfirm(false);
       setIsLoading(false);
     }
@@ -78,7 +79,7 @@ export default function ApiKeyDetail() {
       setGeneratedKey(result);
       setShowKeyModal(true);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +89,7 @@ export default function ApiKeyDetail() {
     if (generatedKey?.key) {
       navigator.clipboard.writeText(generatedKey.key);
       const btn = document.getElementById('copyKeyBtn');
+      if (!btn) return;
       const originalText = btn.innerHTML;
       btn.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
       btn.classList.remove('btn-primary');
@@ -185,7 +187,7 @@ export default function ApiKeyDetail() {
                   <div className="col-12">
                     <label className="text-muted small">Allowed IP Addresses</label>
                     <div className="d-flex flex-wrap gap-2">
-                      {apiKey.allowedIpAddresses.map((ip, index) => (
+                      {apiKey.allowedIpAddresses.map((ip: string, index: number) => (
                         <span key={index} className="badge bg-secondary fs-6">
                           {ip}
                         </span>
@@ -260,7 +262,7 @@ export default function ApiKeyDetail() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header bg-danger text-white">
@@ -316,7 +318,7 @@ export default function ApiKeyDetail() {
 
       {/* Regenerate Confirmation Modal */}
       {regenerateConfirm && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header bg-warning">
@@ -372,7 +374,7 @@ export default function ApiKeyDetail() {
 
       {/* New Key Display Modal */}
       {showKeyModal && generatedKey && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content">
               <div className="modal-header bg-success text-white">
@@ -401,7 +403,7 @@ export default function ApiKeyDetail() {
                       className="form-control font-monospace"
                       value={generatedKey.key}
                       readOnly
-                      onClick={(e) => e.target.select()}
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
                       style={{ fontSize: '0.9rem' }}
                     />
                     <button

@@ -3,10 +3,13 @@ import { Helmet } from "react-helmet-async";
 import { getCreatorImage } from "@services/linktree";
 import "./linktree.scss";
 
-export default function Linktree() {
-    const { match, videoLinks } = useLoaderData();
+interface VideoLinkItem { contentCreatorName: string; shortLinkCode?: string; youTubeVideoId?: string; imageName?: string }
+interface MatchInfo { title?: string; description?: string }
 
-    const handleVideoLinkClick = (videoLink) => {
+export default function Linktree() {
+    const { match, videoLinks } = useLoaderData() as { match: MatchInfo; videoLinks: VideoLinkItem[] };
+
+    const handleVideoLinkClick = (videoLink: VideoLinkItem) => {
         // Track click analytics if needed
         console.log(`Clicked on ${videoLink.contentCreatorName}'s video`);
         
@@ -18,10 +21,10 @@ export default function Linktree() {
         }
     };
 
-    const getCreatorInitials = (name) => {
+    const getCreatorInitials = (name: string) => {
         return name
             .split(' ')
-            .map(word => word.charAt(0))
+            .map((word: string) => word.charAt(0))
             .join('')
             .toUpperCase()
             .substring(0, 2);
@@ -56,7 +59,7 @@ export default function Linktree() {
                             <p>Torna più tardi per vedere i contenuti dei creator!</p>
                         </div>
                     ) : (
-                        videoLinks.map((videoLink, index) => (
+                        videoLinks.map((videoLink: VideoLinkItem, index: number) => (
                             <div
                                 key={index}
                                 className="video-link"
@@ -86,10 +89,12 @@ export default function Linktree() {
                                             src={getCreatorImage(videoLink.imageName)}
                                             alt={videoLink.contentCreatorName}
                                             className="creator-image"
-                                            onError={(e) => {
+                                            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                                 // Fallback to placeholder if image fails to load
-                                                e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
+                                                const img = e.currentTarget;
+                                                img.style.display = 'none';
+                                                const next = img.nextSibling as HTMLElement | null;
+                                                if (next) next.style.display = 'flex';
                                             }}
                                         />
                                     ) : null}

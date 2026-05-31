@@ -1,11 +1,10 @@
+import type { LoaderFunctionArgs } from 'react-router';
 import { getCustomFormByUrl } from '../services/customForms';
 
 /**
  * Loader for custom form route
- * @param {Object} params - Route parameters
- * @returns {Promise<Object>} Form data
  */
-export default async function customFormLoader({ params }) {
+export default async function customFormLoader({ params }: LoaderFunctionArgs) {
   const { formUrl } = params;
   
   if (!formUrl) {

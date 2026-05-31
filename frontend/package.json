@@ -9,7 +9,8 @@
     "fe-packages/layout/*",
     "back-office-spa",
     "morwalpizvideo.client",
-    "morwalpiz-shop.client"
+    "morwalpiz-shop.client",
+    "shooting-ita-frontend"
   ],
   "scripts": {
     "build:models": "yarn workspace @morwalpizvideo/models build",

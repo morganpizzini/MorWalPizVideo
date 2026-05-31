@@ -1,6 +1,12 @@
 import { Link } from "react-router";
 import "./title-header.scss"
-export default function TitleComponent(props) {
+
+interface TitleComponentProps {
+    dimensions?: string;
+    hideLink?: boolean;
+}
+
+export default function TitleComponent(props: TitleComponentProps) {
 
     return (
         <div className={`container text-center ${props.dimensions}`}>

@@ -1,0 +1,13 @@
+src/routes/calendar.tsx(49,46): error TS18048: 'event.description.length' is possibly 'undefined'.
+src/routes/compilations.tsx(22,17): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/routes/compilations.tsx(23,27): error TS18048: 'compilation.videos.length' is possibly 'undefined'.
+src/routes/compilations.tsx(23,90): error TS18048: 'compilation.videos' is possibly 'undefined'.
+src/routes/index.tsx(28,13): error TS18048: 'firstMatchId.videos.length' is possibly 'undefined'.
+src/routes/index.tsx(29,13): error TS2322: Type 'string' is not assignable to type 'IndexMatch'.
+src/routes/index.tsx(29,28): error TS18048: 'firstMatchId.videos' is possibly 'undefined'.
+src/routes/index.tsx(29,48): error TS18048: 'firstMatchId.videos' is possibly 'undefined'.
+src/routes/index.tsx(31,13): error TS2322: Type 'string' is not assignable to type 'IndexMatch'.
+src/routes/index.tsx(311,31): error TS2339: Property 'creationDateTime' does not exist on type 'IndexMatch'.
+src/routes/index.tsx(332,56): error TS2339: Property 'creationDateTime' does not exist on type 'IndexMatch'.
+src/routes/index.tsx(337,45): error TS2339: Property 'url' does not exist on type 'IndexMatch'.
+src/routes/matches.tsx(22,17): error TS2322: Type 'string | undefined' is not assignable to type 'string'.

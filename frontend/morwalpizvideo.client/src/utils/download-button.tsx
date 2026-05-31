@@ -1,4 +1,10 @@
-const DownloadButton = ({ fileUrl,fileName,btnText }) => {
+interface DownloadButtonProps {
+    fileUrl: string;
+    fileName?: string;
+    btnText: string;
+}
+
+const DownloadButton = ({ fileUrl, btnText }: DownloadButtonProps) => {
     const handleDownload = async () => {
         const response = await fetch(fileUrl);
         const blob = await response.blob();

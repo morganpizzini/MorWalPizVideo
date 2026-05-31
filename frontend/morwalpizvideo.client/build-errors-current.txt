@@ -1,0 +1,201 @@
+
+> morwalpizvideo.client@0.0.0 build:client
+> tsc -b && vite build
+
+src/entry-server.tsx(29,25): error TS2322: Type '{ helmet?: HelmetData | undefined; }' is not assignable to type '{ helmet?: HelmetServerState | null | undefined; }'.
+  Types of property 'helmet' are incompatible.
+    Type 'HelmetData | undefined' is not assignable to type 'HelmetServerState | null | undefined'.
+      Type 'HelmetData' is missing the following properties from type 'HelmetServerState': base, bodyAttributes, htmlAttributes, noscript, and 3 more.
+src/error-page.tsx(11,21): error TS18046: 'error' is of type 'unknown'.
+src/error-page.tsx(11,41): error TS18046: 'error' is of type 'unknown'.
+src/main.tsx(18,28): error TS2307: Cannot find module 'virtual:pwa-register' or its corresponding type declarations.
+src/routes/accessories.tsx(11,43): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/routes/accessories.tsx(11,48): error TS7006: Parameter 'product' implicitly has an 'any' type.
+src/routes/accessories.tsx(55,38): error TS18046: 'categoryData' is of type 'unknown'.
+src/routes/accessories.tsx(57,45): error TS18046: 'categoryData' is of type 'unknown'.
+src/routes/accessories.tsx(59,38): error TS18046: 'subData' is of type 'unknown'.
+src/routes/accessories.tsx(60,78): error TS18046: 'subData' is of type 'unknown'.
+src/routes/accessories.tsx(64,46): error TS18046: 'subData' is of type 'unknown'.
+src/routes/accessories.tsx(64,68): error TS7006: Parameter 'product' implicitly has an 'any' type.
+src/routes/accessories.tsx(64,77): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/accessories.tsx(97,10): error TS6133: 'CustomToggle' is declared but its value is never read.
+src/routes/accessories.tsx(97,25): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/routes/accessories.tsx(97,35): error TS7031: Binding element 'eventKey' implicitly has an 'any' type.
+src/routes/accessories.tsx(97,45): error TS7031: Binding element 'callback' implicitly has an 'any' type.
+src/routes/apiKeyDetail.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(17,23): error TS7006: Parameter 'dateString' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(46,17): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(50,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeyDetail.tsx(64,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeyDetail.tsx(77,17): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(81,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeyDetail.tsx(88,23): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyDetail.tsx(89,50): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyDetail.tsx(91,28): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(92,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(93,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(94,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(96,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(97,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(98,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyDetail.tsx(188,55): error TS7006: Parameter 'ip' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(188,59): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/routes/apiKeyDetail.tsx(263,45): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeyDetail.tsx(319,45): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeyDetail.tsx(375,45): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeyDetail.tsx(402,43): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyDetail.tsx(404,48): error TS2339: Property 'select' does not exist on type 'EventTarget'.
+src/routes/apiKeyForm.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/apiKeyForm.tsx(34,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/routes/apiKeyForm.tsx(42,31): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/routes/apiKeyForm.tsx(70,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeyForm.tsx(76,23): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(77,50): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(80,28): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(81,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(82,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(83,7): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(85,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(86,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(87,9): error TS18047: 'btn' is possibly 'null'.
+src/routes/apiKeyForm.tsx(146,21): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeyForm.tsx(237,45): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeyForm.tsx(260,53): error TS2339: Property 'name' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(269,43): error TS2339: Property 'key' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(271,48): error TS2339: Property 'select' does not exist on type 'EventTarget'.
+src/routes/apiKeyForm.tsx(289,55): error TS2339: Property 'rateLimitPerMinute' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(291,33): error TS2339: Property 'expiresAt' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(294,66): error TS2339: Property 'expiresAt' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(297,33): error TS2339: Property 'allowedIpAddresses' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(297,68): error TS2339: Property 'allowedIpAddresses' does not exist on type 'never'.
+src/routes/apiKeyForm.tsx(300,57): error TS2339: Property 'allowedIpAddresses' does not exist on type 'never'.
+src/routes/apiKeys.tsx(12,9): error TS6133: 'navigate' is declared but its value is never read.
+src/routes/apiKeys.tsx(14,23): error TS7006: Parameter 'dateString' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(26,27): error TS7006: Parameter 'apiKey' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(36,31): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(44,18): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(44,35): error TS7006: Parameter 'key' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(51,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeys.tsx(57,30): error TS7006: Parameter 'apiKey' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(69,55): error TS2339: Property 'id' does not exist on type 'never'.
+src/routes/apiKeys.tsx(71,18): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(71,38): error TS7006: Parameter 'key' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(71,70): error TS2339: Property 'id' does not exist on type 'never'.
+src/routes/apiKeys.tsx(76,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/apiKeys.tsx(139,32): error TS7006: Parameter 'apiKey' implicitly has an 'any' type.
+src/routes/apiKeys.tsx(208,45): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/apiKeys.tsx(223,87): error TS2339: Property 'name' does not exist on type 'never'.
+src/routes/bio.tsx(26,36): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/routes/bluetooth.tsx(28,29): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/routes/bluetooth.tsx(30,27): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ 0: string; 1: string; 10: string; 11: string; 12: string; 20: string; 21: string; 30: string; }'.
+src/routes/bluetooth.tsx(58,33): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/routes/bluetooth.tsx(62,21): error TS2345: Argument of type '(prev: never[]) => { text: any; timestamp: string; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '(prev: never[]) => { text: any; timestamp: string; }[]' is not assignable to type '(prevState: never[]) => never[]'.
+    Type '{ text: any; timestamp: string; }[]' is not assignable to type 'never[]'.
+      Type '{ text: any; timestamp: string; }' is not assignable to type 'never'.
+src/routes/bluetooth.tsx(70,21): error TS2345: Argument of type '(prev: never[]) => { text: string; timestamp: string; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '(prev: never[]) => { text: string; timestamp: string; }[]' is not assignable to type '(prevState: never[]) => never[]'.
+    Type '{ text: string; timestamp: string; }[]' is not assignable to type 'never[]'.
+      Type '{ text: string; timestamp: string; }' is not assignable to type 'never'.
+src/routes/bluetooth.tsx(79,33): error TS2339: Property 'removeEventListener' does not exist on type 'never'.
+src/routes/bluetooth.tsx(80,33): error TS2339: Property 'stopNotifications' does not exist on type 'never'.
+src/routes/bluetooth.tsx(82,30): error TS2339: Property 'gatt' does not exist on type 'never'.
+src/routes/bluetooth.tsx(83,20): error TS2339: Property 'gatt' does not exist on type 'never'.
+src/routes/bluetooth.tsx(94,53): error TS2339: Property 'bluetooth' does not exist on type 'Navigator'.
+src/routes/bluetooth.tsx(111,37): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/routes/bluetooth.tsx(125,25): error TS2345: Argument of type '(prev: never[]) => { text: string; timestamp: string; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '(prev: never[]) => { text: string; timestamp: string; }[]' is not assignable to type '(prevState: never[]) => never[]'.
+    Type '{ text: string; timestamp: string; }[]' is not assignable to type 'never[]'.
+      Type '{ text: string; timestamp: string; }' is not assignable to type 'never'.
+src/routes/bluetooth.tsx(131,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/routes/bluetooth.tsx(131,33): error TS18046: 'err' is of type 'unknown'.
+src/routes/bluetooth.tsx(138,21): error TS2339: Property 'gatt' does not exist on type 'never'.
+src/routes/bluetooth.tsx(139,20): error TS2339: Property 'gatt' does not exist on type 'never'.
+src/routes/bluetooth.tsx(207,56): error TS2339: Property 'text' does not exist on type 'never'.
+src/routes/bluetooth.tsx(208,80): error TS2339: Property 'timestamp' does not exist on type 'never'.
+src/routes/calendar.tsx(22,32): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/routes/calendar.tsx(22,39): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/calendar.tsx(54,76): error TS7006: Parameter 'category' implicitly has an 'any' type.
+src/routes/compilations.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/compilations.tsx(32,46): error TS7006: Parameter 'video' implicitly has an 'any' type.
+src/routes/customForm.loader.ts(8,50): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/customForm.tsx(28,6): error TS2554: Expected 0-1 arguments, but got 2.
+src/routes/customForm.tsx(30,31): error TS7006: Parameter 'questionId' implicitly has an 'any' type.
+src/routes/customForm.tsx(30,43): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/routes/customForm.tsx(30,50): error TS7006: Parameter 'questionType' implicitly has an 'any' type.
+src/routes/customForm.tsx(41,31): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/routes/customForm.tsx(47,15): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/routes/customForm.tsx(48,13): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/routes/customForm.tsx(49,24): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/routes/customForm.tsx(63,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/routes/customForm.tsx(68,45): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/routes/customForm.tsx(69,22): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/routes/customForm.tsx(108,16): error TS18046: 'err' is of type 'unknown'.
+src/routes/customForm.tsx(157,38): error TS7006: Parameter 'question' implicitly has an 'any' type.
+src/routes/customForm.tsx(157,48): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/routes/customForm.tsx(167,25): error TS2322: Type 'string' is not assignable to type 'number'.
+src/routes/customForm.tsx(180,47): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/routes/customForm.tsx(208,47): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/routes/customForm.tsx(215,55): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/routes/customForm.tsx(219,60): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/routes/index.tsx(9,44): error TS7016: Could not find a declaration file for module 'react-responsive-masonry'. 'C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/node_modules/react-responsive-masonry/lib/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/react-responsive-masonry` if it exists or add a new declaration (.d.ts) file containing `declare module 'react-responsive-masonry';`
+src/routes/index.tsx(29,29): error TS7006: Parameter 'category' implicitly has an 'any' type.
+src/routes/index.tsx(30,31): error TS2345: Argument of type '(prev: never[]) => any[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '(prev: never[]) => any[]' is not assignable to type '(prevState: never[]) => never[]'.
+    Type 'any[]' is not assignable to type 'never[]'.
+      Type 'any' is not assignable to type 'never'.
+src/routes/index.tsx(31,27): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/routes/index.tsx(39,32): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/routes/index.tsx(40,57): error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/routes/index.tsx(50,52): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/routes/index.tsx(51,38): error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/routes/index.tsx(57,60): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/routes/index.tsx(58,34): error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/routes/index.tsx(64,38): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/routes/index.tsx(65,34): error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/routes/index.tsx(90,72): error TS7006: Parameter 'form' implicitly has an 'any' type.
+src/routes/index.tsx(124,37): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+src/routes/index.tsx(125,83): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'never'.
+src/routes/index.tsx(138,37): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/routes/index.tsx(152,35): error TS7006: Parameter 'items' implicitly has an 'any' type.
+src/routes/index.tsx(152,42): error TS7006: Parameter 'selectedCategories' implicitly has an 'any' type.
+src/routes/index.tsx(172,40): error TS7006: Parameter 'match' implicitly has an 'any' type.
+src/routes/index.tsx(172,47): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/index.tsx(197,45): error TS7006: Parameter 'match' implicitly has an 'any' type.
+src/routes/index.tsx(197,52): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/index.tsx(216,43): error TS7006: Parameter 'match' implicitly has an 'any' type.
+src/routes/index.tsx(216,50): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/index.tsx(280,26): error TS7006: Parameter 'match' implicitly has an 'any' type.
+src/routes/index.tsx(280,33): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/routes/index.tsx(289,45): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/routes/linktree.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/linktree.tsx(9,35): error TS7006: Parameter 'videoLink' implicitly has an 'any' type.
+src/routes/linktree.tsx(21,33): error TS7006: Parameter 'name' implicitly has an 'any' type.
+src/routes/linktree.tsx(24,18): error TS7006: Parameter 'word' implicitly has an 'any' type.
+src/routes/linktree.tsx(59,41): error TS7006: Parameter 'videoLink' implicitly has an 'any' type.
+src/routes/linktree.tsx(59,52): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/routes/linktree.tsx(91,58): error TS2339: Property 'style' does not exist on type 'EventTarget'.
+src/routes/linktree.tsx(92,58): error TS2339: Property 'nextSibling' does not exist on type 'EventTarget'.
+src/routes/matches.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/matches.loader.ts(11,28): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/routes/matches.tsx(25,38): error TS7006: Parameter 'video' implicitly has an 'any' type.
+src/routes/matches.tsx(51,29): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/routes/matches.tsx(51,39): error TS7031: Binding element 'images' implicitly has an 'any' type.
+src/routes/pages.loader.ts(3,40): error TS7031: Binding element 'params' implicitly has an 'any' type.
+src/routes/sponsors.action.ts(4,9): error TS7031: Binding element 'request' implicitly has an 'any' type.
+src/routes/sponsors.action.ts(15,16): error TS2339: Property 'email' does not exist on type '{}'.
+src/routes/sponsors.action.ts(19,16): error TS2339: Property 'name' does not exist on type '{}'.
+src/routes/sponsors.action.ts(24,16): error TS2339: Property 'description' does not exist on type '{}'.
+src/routes/sponsors.tsx(36,31): error TS7006: Parameter 'sponsor' implicitly has an 'any' type.
+src/routes/sponsors.tsx(59,64): error TS2322: Type 'string' is not assignable to type 'number'.
+src/services/matches.ts(4,49): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string | undefined'.
+src/utils/seo.tsx(26,14): error TS18048: 'imageUrl.length' is possibly 'undefined'.
+src/utils/seo.tsx(33,14): error TS18048: 'imageUrl.length' is possibly 'undefined'.
+npm error Lifecycle script `build:client` failed with error:
+npm error code 2
+npm error path C:\Users\morga\OneDrive\Desktop\MorWalPizVideo\frontend\morwalpizvideo.client
+npm error workspace morwalpizvideo.client@0.0.0
+npm error location C:\Users\morga\OneDrive\Desktop\MorWalPizVideo\frontend\morwalpizvideo.client
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc -b && vite build

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLoaderData, useNavigate, Link } from 'react-router';
 import { createApiKey, updateApiKey } from '../services/apiKeys';
+import type { ApiKey, GeneratedApiKey } from '../services/apiKeys.types';
 
 export default function ApiKeyForm() {
-  const { apiKey, isEdit } = useLoaderData();
+  const { apiKey, isEdit } = useLoaderData() as { apiKey: ApiKey | null; isEdit: boolean };
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -15,8 +16,8 @@ export default function ApiKeyForm() {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [generatedKey, setGeneratedKey] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [generatedKey, setGeneratedKey] = useState<GeneratedApiKey | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function ApiKeyForm() {
     }
   }, [isEdit, apiKey]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -39,7 +40,7 @@ export default function ApiKeyForm() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
@@ -56,7 +57,7 @@ export default function ApiKeyForm() {
         expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined
       };
 
-      if (isEdit) {
+      if (isEdit && apiKey) {
         // Update existing key
         await updateApiKey(apiKey.id, submitData);
         navigate('/apikeys');
@@ -67,7 +68,7 @@ export default function ApiKeyForm() {
         setShowKeyModal(true);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
       setIsSubmitting(false);
     }
   };
@@ -77,6 +78,7 @@ export default function ApiKeyForm() {
       navigator.clipboard.writeText(generatedKey.key);
       // Show a temporary success message
       const btn = document.getElementById('copyKeyBtn');
+      if (!btn) return;
       const originalText = btn.innerHTML;
       btn.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
       btn.classList.remove('btn-primary');
@@ -143,7 +145,7 @@ export default function ApiKeyForm() {
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    rows="3"
+                    rows={3}
                     placeholder="Optional description of what this key is used for"
                   />
                 </div>
@@ -159,8 +161,8 @@ export default function ApiKeyForm() {
                     name="rateLimitPerMinute"
                     value={formData.rateLimitPerMinute}
                     onChange={handleChange}
-                    min="1"
-                    max="1000"
+                    min={1}
+                    max={1000}
                     placeholder="60"
                   />
                   <div className="form-text">
@@ -234,7 +236,7 @@ export default function ApiKeyForm() {
 
       {/* One-Time Key Display Modal */}
       {showKeyModal && generatedKey && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content">
               <div className="modal-header bg-success text-white">
@@ -268,7 +270,7 @@ export default function ApiKeyForm() {
                       className="form-control font-monospace"
                       value={generatedKey.key}
                       readOnly
-                      onClick={(e) => e.target.select()}
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
                       style={{ fontSize: '0.9rem' }}
                     />
                     <button

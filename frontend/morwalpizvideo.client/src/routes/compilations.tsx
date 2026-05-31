@@ -3,10 +3,14 @@ import './matches.scss'
 import SEO from "@utils/seo";
 import ReactGA from "react-ga4"
 import TitleComponent from "@layouts/title-header";
+import { VideoPlayer } from "@morwalpiz/layout";
 
+
+interface CompVideo { youtubeId: string; title: string }
+interface Compilation { title: string; description?: string; videos?: CompVideo[] }
 
 export default function Compilations() {
-    const { compilation } = useLoaderData();
+    const { compilation } = useLoaderData() as { compilation: Compilation };
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: compilation.title })
     }
@@ -15,8 +19,8 @@ export default function Compilations() {
         <>
             <SEO
                 title={compilation.title}
-                description={compilation.description}
-                imageUrl={compilation.videos?.length > 0 ? `https://img.youtube.com/vi/${compilation.videos[0].youtubeId}/hqdefault.jpg` : ''}
+                description={compilation.description ?? ''}
+                imageUrl={compilation.videos && compilation.videos.length > 0 ? `https://img.youtube.com/vi/${compilation.videos[0].youtubeId}/hqdefault.jpg` : ''}
                 type='article' />
             <div className="container">
                 <TitleComponent hideLink={true} dimensions="small" />
@@ -28,21 +32,11 @@ export default function Compilations() {
                 <hr />
 
                 <div id="video-container" className="row">
-                    {compilation.videos?.map(video => (
+                    {compilation.videos?.map((video: CompVideo) => (
                         <div key={video.youtubeId} className="col-6 mb-3">
                             <div className="video-block border rounded border-dark bg-white">
                                 <div className="video-thumbnail">
-                                    <iframe
-                                        width="100%"
-                                        height="180px"
-                                        className="rounded"
-                                        src={`https://www.youtube.com/embed/${video.youtubeId}`}
-                                        title="YouTube video player"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        referrerPolicy="strict-origin-when-cross-origin"
-                                        allowFullScreen>
-                                    </iframe>
+                                    <VideoPlayer youtubeId={video.youtubeId} height="180px" />
                                 </div>
                                 <div className="video-details">
                                     <div className="video-title">{video.title}</div>

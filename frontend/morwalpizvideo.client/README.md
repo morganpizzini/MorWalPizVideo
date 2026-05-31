@@ -1,5 +1,13 @@
 # React + Vite
 
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SITE_KEY` | Google reCAPTCHA v3 site key. |
+| `SITE_SECRET` | Google reCAPTCHA v3 secret (server-side only). |
+| `VITE_MORWALPIZ_CHANNEL_ID` | `YTChannel.ChannelId` of the MorWalPiz channel. Used by the FR-017 client-side filter to hide matches whose videos do not belong to the MorWalPiz channel. |
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

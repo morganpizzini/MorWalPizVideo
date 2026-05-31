@@ -5,7 +5,7 @@ const EVENT_SERVICE_UUID = '7520ffff-14d2-4cda-8b6b-697c554c9311';
 //const EVENT_CHARACTERISTIC_UUID = '75200000-14d2-4cda-8b6b-697c554c9311';
 const EVENT_CHARACTERISTIC_UUID = '75200001-14d2-4cda-8b6b-697c554c9311';
 
-const eventNames = {
+const eventNames: Record<number, string> = {
     0x00: 'SESSION_STARTED',
     0x01: 'SESSION_STOPPED',
     0x0A: 'DRYFIRE_REPEAT_BEGIN',
@@ -16,16 +16,18 @@ const eventNames = {
     0x1E: 'SHOT_DETECTED',
 };
 
+interface LogMessage { text: string; timestamp: string }
+
 const BluetoothEventsPage = () => {
-    const [device, setDevice] = useState(null);
-    const [eventCharacteristic, setEventCharacteristic] = useState(null);
+    const [device, setDevice] = useState<any>(null);
+    const [eventCharacteristic, setEventCharacteristic] = useState<any>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
-    const [messages, setMessages] = useState([]);
-    const [error, setError] = useState(null);
+    const [messages, setMessages] = useState<LogMessage[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     // Parsing degli eventi
-    const parseEventData = (value) => {
+    const parseEventData = (value: DataView) => {
         const eventId = value.getUint8(1);
         const eventName = eventNames[eventId] || `UNKNOWN_EVENT (0x${eventId.toString(16)})`;
 
@@ -55,8 +57,8 @@ const BluetoothEventsPage = () => {
     };
 
     // Gestore delle notifiche
-    const handleNotification = (event) => {
-        const value = event.target.value;
+    const handleNotification = (event: any) => {
+        const value = event.target.value as DataView;
         const message = parseEventData(value);
 
         setMessages(prev => [
@@ -91,7 +93,7 @@ const BluetoothEventsPage = () => {
         setError(null);
 
         try {
-            const bluetoothDevice = await navigator.bluetooth.requestDevice({
+            const bluetoothDevice = await (navigator as any).bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [EVENT_SERVICE_UUID],
                 //filters: [{ services: [EVENT_SERVICE_UUID] }],
@@ -108,7 +110,7 @@ const BluetoothEventsPage = () => {
             
             const characteristics = await service.getCharacteristics();
             console.log("Caratteristiche disponibili:");
-            characteristics.forEach(c => console.log(c.uuid));
+            characteristics.forEach((c: any) => console.log(c.uuid));
 
             console.log('ciao')
             const characteristic = await service.getCharacteristic(EVENT_CHARACTERISTIC_UUID);
@@ -128,7 +130,7 @@ const BluetoothEventsPage = () => {
             ]);
         } catch (err) {
             console.error('Errore connessione Bluetooth:', err);
-            setError(`Errore: ${err.message}`);
+            setError(`Errore: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setIsConnecting(false);
         }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLoaderData } from 'react-router';
 import { submitFormResponse } from '../services/customForms';
 import ReactGA from 'react-ga4';
@@ -15,19 +15,24 @@ const AnswerType = {
   SingleChoice: 2
 };
 
+interface FormOption { optionId: string; optionText: string }
+interface FormQuestion { questionId: string; questionText: string; questionType: number; isRequired: boolean; options: FormOption[] }
+interface CustomFormData { id: string; url: string; title: string; description?: string; questions: FormQuestion[] }
+interface AnswerEntry { questionId: string; answerType: number; textResponse?: string; selectedOptionIds?: string[]; selectedOptionId?: string }
+
 export default function CustomForm() {
-  const { form } = useLoaderData();
-  const [answers, setAnswers] = useState({});
+  const { form } = useLoaderData() as { form: CustomFormData };
+  const [answers, setAnswers] = useState<Record<string, AnswerEntry>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Track page view
-  useState(() => {
+  useEffect(() => {
     ReactGA.send({ hitType: 'pageview', page: `/forms/${form.url}`, title: form.title });
-  }, []);
+  }, [form.url, form.title]);
 
-  const handleAnswerChange = (questionId, value, questionType) => {
+  const handleAnswerChange = (questionId: string, value: Partial<AnswerEntry>, questionType: number) => {
     setAnswers(prev => ({
       ...prev,
       [questionId]: {
@@ -38,14 +43,14 @@ export default function CustomForm() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
     // Validate all required questions are answered
     const unansweredRequired = form.questions
-      .filter(q => q.isRequired)
-      .find(q => {
+      .filter((q: FormQuestion) => q.isRequired)
+      .find((q: FormQuestion) => {
         const answer = answers[q.questionId];
         if (!answer) return true;
         
@@ -65,7 +70,7 @@ export default function CustomForm() {
     }
 
     // Convert answers object to array
-    const answersArray = form.questions.map(q => {
+    const answersArray = form.questions.map((q: FormQuestion) => {
       const answer = answers[q.questionId];
       if (!answer) {
         // Provide empty answer for non-required questions
@@ -105,7 +110,7 @@ export default function CustomForm() {
         label: form.title
       });
     } catch (err) {
-      setError(err.message || 'Failed to submit form. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to submit form. Please try again.');
       console.error('Error submitting form:', err);
     } finally {
       setIsSubmitting(false);
@@ -154,7 +159,7 @@ export default function CustomForm() {
               )}
 
               <form onSubmit={handleSubmit}>
-                {form.questions.map((question, index) => (
+                {form.questions.map((question: FormQuestion, index: number) => (
                   <div key={question.questionId} className="mb-4 pb-4 border-bottom">
                     <label className="form-label fw-bold">
                       {index + 1}. {question.questionText}
@@ -164,10 +169,10 @@ export default function CustomForm() {
                     {question.questionType === QuestionType.Open && (
                       <textarea
                         className="form-control"
-                        rows="4"
+                        rows={4}
                         placeholder="Enter your answer..."
                         required={question.isRequired}
-                        onChange={(e) => handleAnswerChange(
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleAnswerChange(
                           question.questionId,
                           { textResponse: e.target.value },
                           AnswerType.Open

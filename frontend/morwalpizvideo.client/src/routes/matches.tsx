@@ -5,8 +5,13 @@ import SEO from "@utils/seo";
 import DateDisplay from "@utils/date-display";
 import ReactGA from "react-ga4"
 import Gallery from "@utils/gallery";
+import { VideoPlayer } from "@morwalpiz/layout";
+interface MatchVideoRef { youtubeId: string; title: string; description?: string; category?: string; publishedAt: string }
+interface MatchData { title: string; description?: string; thumbnailUrl: string; videoRefs: MatchVideoRef[] }
+interface MatchImage { source: string; title: string; description: string }
+
 export default function Matches() {
-    const { match, images } = useLoaderData();
+    const { match, images } = useLoaderData() as { match: MatchData; images: MatchImage[] };
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: match.title })
     }
@@ -14,21 +19,20 @@ export default function Matches() {
         <>
             <SEO
                 title={match.title}
-                description={match.description}
+                description={match.description ?? ''}
                 imageUrl={`https://img.youtube.com/vi/${match.thumbnailUrl}/hqdefault.jpg`}
                 type='article' />
             {images.length > 0 && 
                 <GalleryComponent className="mb-2" images={images} />
             }
             <div id="video-container" className="row">
-                {match.videoRefs.map(video => (
+                {match.videoRefs.map((video: MatchVideoRef) => (
                     <div key={video.youtubeId} className="col-12 mb-3">
                         <div key={video.youtubeId} className="video-block border rounded border-dark bg-white">
                             <div className="row">
                                 <div className="col-md-6">
                                     <div className="video-thumbnail">
-                                        <iframe width="100%" height="306px" className="rounded"
-                                            src={`https://www.youtube.com/embed/${video.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                                        <VideoPlayer youtubeId={video.youtubeId} height="306px" />
                                     </div>
                                 </div>
                                 <div className="col-md-6 d-flex align-items-center">
@@ -48,7 +52,7 @@ export default function Matches() {
     );
 }
 
-function GalleryComponent({ className,images }) {
+function GalleryComponent({ className, images }: { className?: string; images: MatchImage[] }) {
     const [showGallery, setShowGallery] = useState(false);
 
     return (<div className={className}>

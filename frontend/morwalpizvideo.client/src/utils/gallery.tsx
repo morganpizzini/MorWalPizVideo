@@ -1,18 +1,27 @@
 import { useState } from 'react';
 import Carousel from 'react-bootstrap/Carousel';
 
-export default function ControlledCarousel({images}) {
-    const [index, setIndex] = useState(0);
-   
+export interface GalleryImage {
+    source: string;
+    title?: string;
+    description?: string;
+}
 
-    const handleSelect = (selectedIndex) => {
+interface ControlledCarouselProps {
+    images: GalleryImage[];
+}
+
+export default function ControlledCarousel({ images }: ControlledCarouselProps) {
+    const [index, setIndex] = useState(0);
+
+    const handleSelect = (selectedIndex: number) => {
         setIndex(selectedIndex);
     };
 
     return (
         <>
             <Carousel fade pause="hover" indicators={false} activeIndex={index} onSelect={handleSelect}>
-                {images.map((image, i) => (
+                {images.map((image: GalleryImage, i: number) => (
                     <Carousel.Item key={i}>
                         <img className="w-100 d-block" src={image.source} />
                         {/*<Carousel.Caption>*/}
@@ -22,7 +31,7 @@ export default function ControlledCarousel({images}) {
                     </Carousel.Item>))}
             </Carousel>
             <div className="row mt-3">
-                {images.map((image, i) => (<div className="col-2 c-pointer" key={i} onClick={() => handleSelect(i)}>
+                {images.map((image: GalleryImage, i: number) => (<div className="col-2 c-pointer" key={i} onClick={() => handleSelect(i)}>
                     <img className="w-100" src={image.source} alt={image.title} />
                 </div>))}
             </div>

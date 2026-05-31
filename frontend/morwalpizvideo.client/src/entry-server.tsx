@@ -23,10 +23,11 @@ export async function render(request: Request): Promise<{ html: string; head: st
     }
 
     const router = createStaticRouter(handler.dataRoutes, context);
+    // react-helmet-async expects HelmetServerState; we only read a few subfields, so cast.
     const helmetContext: { helmet?: HelmetData } = {};
 
     const html = renderToString(
-        <HelmetProvider context={helmetContext}>
+        <HelmetProvider context={helmetContext as { helmet?: import('react-helmet-async').HelmetServerState | null }}>
             <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY ?? ''}>
                 <StaticRouterProvider router={router} context={context} />
             </GoogleReCaptchaProvider>

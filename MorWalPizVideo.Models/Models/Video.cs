@@ -22,7 +22,8 @@ namespace MorWalPizVideo.Server.Models
             DateTime publishedAt,
             string thumbnail,
             string duration,
-            CategoryRef[]? categories = null)
+            CategoryRef[]? categories = null,
+            string channelId = "")
         {
             YoutubeId = youtubeId;
             Title = title;
@@ -34,6 +35,7 @@ namespace MorWalPizVideo.Server.Models
             Thumbnail = thumbnail;
             Duration = duration;
             Categories = categories ?? Array.Empty<CategoryRef>();
+            ChannelId = channelId ?? string.Empty;
         }
 
         [DataMember]
@@ -80,6 +82,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("isPrivate")]
         public bool IsPrivate { get; init; } = false;
+
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
 
         // Constructor to create minimal video from a video reference
         public Video(string youtubeId, CategoryRef[] categories)

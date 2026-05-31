@@ -4,8 +4,11 @@ import SEO from "@utils/seo";
 import DateDisplay from "@utils/date-card";
 import ReactGA from "react-ga4"
 
+interface CalCategory { id: string; title: string }
+interface CalEvent { oldEvent: boolean; startDate: string; endDate: string; title: string; description?: string; categories?: CalCategory[]; matchId?: string; matchUrl?: string }
+
 export default function Calendar() {
-    const { calendar } = useLoaderData();
+    const { calendar } = useLoaderData() as { calendar: CalEvent[] };
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'calendar' })
     }
@@ -19,7 +22,7 @@ export default function Calendar() {
             <h1 className="text-center mb-4">CALENDARIO</h1>
             <hr />
             <div className="calendar-container p-4">
-                {calendar.map((event, i) => {
+                {calendar.map((event: CalEvent, i: number) => {
                     const isOldEvent = event.oldEvent;
                     return (
                         <div
@@ -43,7 +46,7 @@ export default function Calendar() {
                                             <h5 className={`event-title mb-2 ${isOldEvent ? 'text-muted' : ''}`}>
                                                 {event.title}
                                             </h5>
-                                            {event.description?.length > 0 && (
+                                            {event.description && event.description.length > 0 && (
                                                 <p className={`event-description mb-2 ${isOldEvent ? 'text-muted' : ''}`}>
                                                     <em>{event.description}</em>
                                                 </p>
@@ -51,7 +54,7 @@ export default function Calendar() {
                                             {/* Categories Display */}
                                             {event.categories && event.categories.length > 0 && (
                                                 <div className="event-categories mt-2">
-                                                    {event.categories.map((category) => (
+                                                    {event.categories.map((category: CalCategory) => (
                                                         <span
                                                             key={category.id}
                                                             className={`badge category-badge ${isOldEvent ? 'bg-secondary' : 'bg-primary'} me-2 mb-1`}

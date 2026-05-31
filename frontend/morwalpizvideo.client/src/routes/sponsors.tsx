@@ -5,8 +5,10 @@ import {
 } from 'react-google-recaptcha-v3';
 import { useFetcher } from "react-router";
 
+interface SponsorItem { title: string; imgSrc: string; url: string }
+
 export default function Sponsors() {
-    const { sponsors } = useLoaderData();
+    const { sponsors } = useLoaderData() as { sponsors: SponsorItem[] };
     let fetcher = useFetcher();
     let busy = fetcher.state !== "idle";
     let errors = fetcher.data?.errors;
@@ -33,7 +35,7 @@ export default function Sponsors() {
         <>
             <h1 className="text-center mb-3">SPONSORS</h1>
             <div className="row text-center mb-5">
-                {sponsors.map(sponsor => <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
+                {sponsors.map((sponsor: SponsorItem) => <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
                     <img className="mw-100" src={sponsor.imgSrc} />
                     <Link to={sponsor.url} target="_blank" rel="noopener noreferrer" className="stretched-link"></Link>
                 </div>)}
@@ -56,7 +58,7 @@ export default function Sponsors() {
                         </div>
                         <div className="form-group">
                             <label className="form-label fw-bold">Descrizione</label>
-                            <textarea className="form-control" rows="5" name="description" value={description} onChange={e => setDescription(e.target.value)} placeholder='Breve descrizione'></textarea>
+                            <textarea className="form-control" rows={5} name="description" value={description} onChange={e => setDescription(e.target.value)} placeholder='Breve descrizione'></textarea>
                             {errors?.description ? (
                                 <em className="text-danger">{errors.description}</em>
                             ) : null}

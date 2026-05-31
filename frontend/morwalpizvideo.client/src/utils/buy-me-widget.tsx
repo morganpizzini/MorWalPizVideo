@@ -4,11 +4,14 @@ export default function BuyMeWidget() {
     const containerId = "supportByBMCWidget";
     useEffect(() => {
         const element = document.getElementById(containerId);
-        if (element.hasChildNodes()) {
+        if (!element || element.hasChildNodes()) {
             return;
         }
         const script = document.createElement("script");
         const div = document.getElementById(containerId);
+        if (!div) {
+            return;
+        }
         script.setAttribute(
             "src",
             "/js/buy-me-coffee-widget.js"

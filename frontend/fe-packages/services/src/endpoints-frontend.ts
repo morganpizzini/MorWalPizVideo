@@ -16,6 +16,9 @@ const MATCHES = `${baseEndpoint}/matches`;
 const MATCHES_DETAIL = `${MATCHES}/{matchId}`;
 const MATCHES_IMAGES = `${MATCHES}/{matchId}/images`;
 
+// Channels (used by the FR-016 video↔channel join)
+const CHANNELS = `${baseEndpoint}/channels`;
+
 // Pages
 const PAGES = `${baseEndpoint}/pages`;
 const PAGES_DETAIL = `${PAGES}/{pageId}`;
@@ -46,6 +49,7 @@ export default {
     MATCHES,
     MATCHES_DETAIL,
     MATCHES_IMAGES,
+    CHANNELS,
     PAGES,
     PAGES_DETAIL,
     PRODUCTS,

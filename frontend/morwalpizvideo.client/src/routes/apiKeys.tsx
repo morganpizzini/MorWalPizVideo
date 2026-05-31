@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { useLoaderData, Link, useNavigate } from 'react-router';
+import { useLoaderData, Link } from 'react-router';
 import { toggleApiKey, deleteApiKey } from '../services/apiKeys';
+import type { ApiKey } from '../services/apiKeys.types';
 
 export default function ApiKeys() {
-  const { apiKeys: initialApiKeys } = useLoaderData();
-  const [apiKeys, setApiKeys] = useState(initialApiKeys);
+  const { apiKeys: initialApiKeys } = useLoaderData() as { apiKeys: ApiKey[] };
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>(initialApiKeys);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ApiKey | null>(null);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
@@ -23,7 +23,7 @@ export default function ApiKeys() {
     });
   };
 
-  const getStatusBadge = (apiKey) => {
+  const getStatusBadge = (apiKey: ApiKey) => {
     if (!apiKey.isActive) {
       return <span className="badge bg-secondary">Inactive</span>;
     }
@@ -33,7 +33,7 @@ export default function ApiKeys() {
     return <span className="badge bg-success">Active</span>;
   };
 
-  const handleToggle = async (id) => {
+  const handleToggle = async (id: string) => {
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -48,13 +48,13 @@ export default function ApiKeys() {
       setSuccessMessage(result.message);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteClick = (apiKey) => {
+  const handleDeleteClick = (apiKey: ApiKey) => {
     setDeleteConfirm(apiKey);
   };
 
@@ -73,7 +73,7 @@ export default function ApiKeys() {
       setDeleteConfirm(null);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
       setDeleteConfirm(null);
     } finally {
       setIsLoading(false);
@@ -205,7 +205,7 @@ export default function ApiKeys() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header bg-danger text-white">

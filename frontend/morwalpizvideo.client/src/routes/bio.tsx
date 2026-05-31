@@ -4,8 +4,10 @@ import SEO from "@utils/seo";
 import TitleComponent from "@layouts/title-header";
 import ReactGA from "react-ga4"
 
+interface BioLink { title: string; description: string; url: string; icon: string }
+
 export default function Bio() {
-    const { links } = useLoaderData();
+    const { links } = useLoaderData() as { links: BioLink[] };
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'bio' })
     }
@@ -23,7 +25,7 @@ export default function Bio() {
                     <img className="page-image rounded-circle img-thumbnail" style={{ "height": "75px", "width": "75px" }} alt='chi sono' src={`/images/pages/chi-sono.jpg`} />
                     <hr />
                     <div className="link-container">
-                        {links.map(link => (
+                        {links.map((link: BioLink) => (
                             <>
                                 <div className="bg-white">
                                     <h4 className="text-uppercase mb-0">

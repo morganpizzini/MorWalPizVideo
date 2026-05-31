@@ -1,8 +1,9 @@
+import type { LoaderFunctionArgs } from "react-router";
 import { getMatchLinktree, getMatch } from "@services/linktree";
 
-export default async function loader({ params }) {
-    const matchPromise = getMatch(params.matchId);
-    const linktreePromise = getMatchLinktree(params.matchId);
+export default async function loader({ params }: LoaderFunctionArgs) {
+    const matchPromise = getMatch(params.matchId as string);
+    const linktreePromise = getMatchLinktree(params.matchId as string);
     
     try {
         const [match, videoLinks] = await Promise.all([matchPromise, linktreePromise]);

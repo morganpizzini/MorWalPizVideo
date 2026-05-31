@@ -1,8 +1,9 @@
+import type { LoaderFunctionArgs } from 'react-router';
 import { getApiKeyById } from '../services/apiKeys';
 
-export default async function loader({ params }) {
+export default async function loader({ params }: LoaderFunctionArgs) {
   try {
-    const apiKey = await getApiKeyById(params.id);
+    const apiKey = await getApiKeyById(params.id as string);
     return { apiKey };
   } catch (error) {
     console.error('Error loading API key:', error);

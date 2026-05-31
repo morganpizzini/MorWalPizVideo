@@ -59,3 +59,7 @@ export {
     insightsNewsApi,
     insightsContentPlansApi
 } from './insightsService';
+
+// Video ↔ Channel join (FR-016 / FR-017)
+export { loadChannelMap, buildOwnerMap, resolveOwner } from './videoChannelMap';
+export type { ChannelBadge, ChannelWithVideos, VideoLike, VideoRefLike, MatchLike } from './videoChannelMap';

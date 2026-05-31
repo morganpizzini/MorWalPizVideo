@@ -40,6 +40,8 @@ export interface Video {
   comments?: number;
   publishedAt?: string;
   categories: CategoryRef[];
+  /** Owning YouTube channel id. Optional during the legacy-backfill window; resolved client-side via YTChannel.Videos[] when missing. */
+  channelId?: string;
 }
 
 /**

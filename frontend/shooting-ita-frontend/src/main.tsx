@@ -1,31 +1,42 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout.tsx';
-import HomePage from './pages/HomePage.tsx';
-import RequestVideoPage from './pages/RequestVideoPage.tsx';
-import RequestAdPage from './pages/RequestAdPage.tsx';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import {
   GoogleReCaptchaProvider
 } from 'react19-google-recaptcha-v3';
-import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap CSS
-import './index.css' // Keep your global styles if any
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './index.css'
+
+import RootShell from './routes/root';
+import HomeRoute from './routes/home/Component';
+import { homeLoader } from './routes/home/loader';
+import VideoRoute from './routes/video/Component';
+import LatestRoute from './routes/latest/Component';
+import { latestLoader } from './routes/latest/loader';
+import ExclusivesRoute from './routes/exclusives/Component';
+import { exclusivesLoader } from './routes/exclusives/loader';
+import PopularRoute from './routes/popular/Component';
+import { popularLoader } from './routes/popular/loader';
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootShell />,
+    children: [
+      { index: true, element: <HomeRoute />, loader: homeLoader },
+      { path: 'video/:youtubeId', element: <VideoRoute /> },
+      { path: 'latest', element: <LatestRoute />, loader: latestLoader },
+      { path: 'exclusives', element: <ExclusivesRoute />, loader: exclusivesLoader },
+      { path: 'popular', element: <PopularRoute />, loader: popularLoader },
+      { path: '*', element: <div>404 Not Found</div> },
+    ],
+  },
+]);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
-        <Routes>
-          <Route path="/" element={<Layout />}> {/* Use Layout for all routes */}
-            <Route index element={<HomePage />} />
-            <Route path="request-video" element={<RequestVideoPage />} />
-            <Route path="request-ad" element={<RequestAdPage />} />
-            {/* Add other routes here */}
-            {/* Example: <Route path="about" element={<AboutPage />} /> */}
-            <Route path="*" element={<div>404 Not Found</div>} /> {/* Catch-all route */}
-          </Route>
-        </Routes>
-      </GoogleReCaptchaProvider>
-    </BrowserRouter>
+    <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
+      <RouterProvider router={router} />
+    </GoogleReCaptchaProvider>
   </React.StrictMode>,
 )

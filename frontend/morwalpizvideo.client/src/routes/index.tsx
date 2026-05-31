@@ -7,38 +7,45 @@ import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } 
 import ReactGA from "react-ga4"
 import configKeys from "@utils/configKeys"
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
+interface IndexCategory { title: string }
+interface IndexShortLink { target: string; code: string }
+interface IndexVideoRef { youtubeId: string }
+interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
+interface IndexForm { id: string; url: string; title: string }
+
 export default function Index() {
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
     }
-    const { matches, configuration, activeForms } = useLoaderData();
+    const { matches, configuration, activeForms } = useLoaderData() as { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[] };
 
-    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
     if (matches == null)
         return (<>Nothing to show</>)
-    let firstMatchId = matches[0];
-    if (firstMatchId) {
-        if (firstMatchId.videos?.length > 0) {
-            firstMatchId = firstMatchId.videos[firstMatchId.videos.length - 1].youtubeId;
+    let firstMatchId: string = '';
+    const first = matches[0];
+    if (first) {
+        if (first.videos && first.videos.length > 0) {
+            firstMatchId = first.videos[first.videos.length - 1].youtubeId;
         } else {
-            firstMatchId = firstMatchId.contentId
+            firstMatchId = first.contentId
         }
     }
 
-    const toggleCategory = (category) => {
-        setSelectedCategories((prev) =>
+    const toggleCategory = (category: string) => {
+        setSelectedCategories((prev: string[]) =>
             prev.includes(category)
-                ? prev.filter((cat) => cat !== category)
+                ? prev.filter((cat: string) => cat !== category)
                 : [...prev, category]
         );
     };
 
     const filteredItems = useMemo(() => {
         if (selectedCategories.length === 0) return matches;
-        return matches.filter((item) => {
-            const itemCategories = item.categories.map((cat) => cat.title)
-            return selectedCategories.every((selectedCategory) =>
+        return matches.filter((item: IndexMatch) => {
+            const itemCategories = item.categories.map((cat: IndexCategory) => cat.title)
+            return selectedCategories.every((selectedCategory: string) =>
                 itemCategories.includes(selectedCategory)
             );
         });
@@ -47,22 +54,22 @@ export default function Index() {
     const availableCategories = useMemo(() => {
         if (selectedCategories.length === 0) {
             // Tutte le categorie sono disponibili se non ci sono filtri attivi
-            const allCategories = matches.flatMap((item) => 
-                item.categories.map((cat) => cat.title)
+            const allCategories = matches.flatMap((item: IndexMatch) => 
+                item.categories.map((cat: IndexCategory) => cat.title)
             );
             return [...new Set(allCategories)];
         }
 
         // Determina le categorie presenti negli oggetti filtrati
-        const remainingCategories = filteredItems.flatMap((item) =>
-            item.categories.map((cat) => cat.title)
+        const remainingCategories = filteredItems.flatMap((item: IndexMatch) =>
+            item.categories.map((cat: IndexCategory) => cat.title)
         );
         return [...new Set(remainingCategories)];
     }, [filteredItems, matches, selectedCategories]);
 
     const allCategories = useMemo(() => {
-        const all = matches.flatMap((item) =>
-            item.categories.map((cat) => cat.title)
+        const all = matches.flatMap((item: IndexMatch) =>
+            item.categories.map((cat: IndexCategory) => cat.title)
         );
         return [...new Set(all)];
     }, [matches]);
@@ -87,7 +94,7 @@ export default function Index() {
                     </div>
                 </>
             }
-            {activeForms && activeForms.length > 0 && activeForms.map((form) => (
+            {activeForms && activeForms.length > 0 && activeForms.map((form: IndexForm) => (
                 <div key={form.id} className="alert alert-info my-3 d-flex align-items-center justify-content-between" role="alert">
                     <div>
                         <i className="fa fa-clipboard-question me-2"></i>
@@ -149,7 +156,7 @@ export default function Index() {
     );
 }
 
-function renderContentWithBanners(items, selectedCategories) {
+function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[]) {
     // Common configuration for all Masonry layouts
     const columnsCountBreakPoints = { 350: 1, 750: 2, 900: 3 };
     const gutterBreakpoints = { 350: "12px", 750: "16px", 900: "24px" };
@@ -169,7 +176,7 @@ function renderContentWithBanners(items, selectedCategories) {
                 gutterBreakpoints={gutterBreakpoints}
             >
                 <Masonry>
-                    {firstSection.map((match, i) => {
+                    {firstSection.map((match: IndexMatch, i: number) => {
                         // Create an array of elements to render
                         const elementsToRender = [
                             // Always render the match card
@@ -194,7 +201,7 @@ function renderContentWithBanners(items, selectedCategories) {
                     gutterBreakpoints={gutterBreakpoints}
                 >
                     <Masonry>
-                        {middleSection.map((match, i) => (
+                        {middleSection.map((match: IndexMatch, i: number) => (
                             <React.Fragment key={`match-${i + 7}`}>
                                 {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
                             </React.Fragment>
@@ -213,7 +220,7 @@ function renderContentWithBanners(items, selectedCategories) {
                     gutterBreakpoints={gutterBreakpoints}
                 >
                     <Masonry>
-                        {lastSection.map((match, i) => (
+                        {lastSection.map((match: IndexMatch, i: number) => (
                             <React.Fragment key={`match-${i + 15}`}>
                                 {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
                             </React.Fragment>
@@ -277,7 +284,7 @@ function GoToShortsCard() {
     );
 }
 
-function RenderMatchCard(match, i) {
+function RenderMatchCard(match: IndexMatch, i: number) {
     const className = i == 0
         ? "card position-relative home-card d-md-none"
         : "card position-relative home-card";
@@ -286,7 +293,7 @@ function RenderMatchCard(match, i) {
     const isLink = match.videoRefs.length == 1;
     let shortlink = '';
     if (isLink)
-        shortlink = match.shortLinks.filter(x => x.target == match.contentId)[0]?.code ?? `https://youtu.be/${match.contentId}`;
+        shortlink = match.shortLinks.filter((x: IndexShortLink) => x.target == match.contentId)[0]?.code ?? `https://youtu.be/${match.contentId}`;
     if (!shortlink.startsWith('http')) {
         shortlink = `https://shorts.morwalpiz.com/${shortlink}`;
     }
@@ -323,7 +330,7 @@ function RenderMatchCard(match, i) {
                         </div>
                     ) : <span />}
                     <div className="home-card__date">
-                        <DateDisplay dateString={match.creationDateTime} />
+                        <DateDisplay dateString={match.creationDateTime ?? ''} />
                     </div>
                 </div>
             )}

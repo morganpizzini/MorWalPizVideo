@@ -1,15 +1,15 @@
 ﻿import { askForSponsor } from '@services/sponsors'
 import { data } from "react-router";
-export default async function action({
-        request,
-    }) {
+import type { ActionFunctionArgs } from "react-router";
+
+export default async function action({ request }: ActionFunctionArgs) {
     const formData = await request.formData();
     const email = String(formData.get("email"));
     const name = String(formData.get("name"));
     const token = String(formData.get("token"));
     const description = String(formData.get("description"));
 
-    const errors = {};
+    const errors: { email?: string; name?: string; description?: string } = {};
 
     if (!email.includes("@")) {
         errors.email = "Indirizzo email non valido";

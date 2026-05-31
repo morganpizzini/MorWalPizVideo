@@ -1,6 +1,7 @@
+import type { LoaderFunctionArgs } from 'react-router';
 import { getApiKeyById } from '../services/apiKeys';
 
-export default async function loader({ params }) {
+export default async function loader({ params }: LoaderFunctionArgs) {
   // If editing (has id parameter), fetch the API key
   if (params.id) {
     try {

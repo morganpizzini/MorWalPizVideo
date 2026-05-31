@@ -21,4 +21,7 @@ public class TestScenarioContext
     public string? ExistingVideoId { get; set; }
     public string? CreatedVideoId { get; set; }
     public string? ExistingRootMatchId { get; set; }
+    public string? AssignVideoYoutubeId { get; set; }
+    public string? AssignSourceChannelId { get; set; }
+    public string? AssignTargetChannelId { get; set; }
 }
