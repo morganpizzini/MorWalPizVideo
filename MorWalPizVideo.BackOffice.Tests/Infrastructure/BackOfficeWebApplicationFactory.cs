@@ -17,7 +17,7 @@ using MorWalPizVideo.BackOffice.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
-public class BackOfficeWebApplicationFactory : WebApplicationFactory<Program>
+public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVideo.BackOffice.Program>
 {
     // Expose mock repositories as singleton instances for direct test access
     public YTChannelMockRepository? YTChannelRepository { get; private set; }

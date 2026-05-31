@@ -10,7 +10,7 @@ public class TelegramServiceMock : ITelegramService
         return Task.FromResult("");
     }
 }
-public class TelegramService : ITelegramService,IDisposable
+public class TelegramService : ITelegramService
 {
     private readonly HttpClient client;
     private readonly string channelName;
@@ -40,10 +40,5 @@ public class TelegramService : ITelegramService,IDisposable
 
         return response.IsSuccessStatusCode ? string.Empty
                     : await response.Content.ReadAsStringAsync();
-    }
-
-    public void Dispose()
-    {
-        client?.Dispose();
     }
 }

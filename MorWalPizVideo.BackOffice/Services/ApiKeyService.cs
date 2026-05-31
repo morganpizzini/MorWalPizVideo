@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
@@ -12,11 +13,13 @@ public class ApiKeyService : IApiKeyService
 {
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ApiKeySettings _settings;
+    private readonly ILogger<ApiKeyService> _logger;
 
-    public ApiKeyService(IApiKeyRepository apiKeyRepository, IOptions<ApiKeySettings> settings)
+    public ApiKeyService(IApiKeyRepository apiKeyRepository, IOptions<ApiKeySettings> settings, ILogger<ApiKeyService> logger)
     {
         _apiKeyRepository = apiKeyRepository;
         _settings = settings.Value;
+        _logger = logger;
     }
 
     public async Task<(ApiKey apiKey, string unhashedKey)> CreateApiKeyAsync(
@@ -102,8 +105,9 @@ public class ApiKeyService : IApiKeyService
             await _apiKeyRepository.UpdateItemAsync(updatedKey);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to update LastUsed for ApiKey {ApiKeyId}", apiKeyId);
             return false;
         }
     }

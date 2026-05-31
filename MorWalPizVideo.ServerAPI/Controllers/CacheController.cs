@@ -18,7 +18,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpGet("purge")]
         public async Task<IActionResult> Index([FromQuery(Name = "k")] string tag){
             
-            await cache.EvictByTagAsync(tag, default);
+            await cache.EvictByTagAsync(tag.ToLowerInvariant(), default);
 
             return NoContent();
         }

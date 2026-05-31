@@ -11,7 +11,7 @@ public class FacebookServiceMock : IFacebookService
     }
 }
 
-public class FacebookService : IFacebookService, IDisposable
+public class FacebookService : IFacebookService
 {
     private readonly HttpClient client;
     private readonly string pageId;
@@ -44,11 +44,6 @@ public class FacebookService : IFacebookService, IDisposable
 
         return response.IsSuccessStatusCode ? string.Empty
                     : await response.Content.ReadAsStringAsync();
-    }
-
-    public void Dispose()
-    {
-        client?.Dispose();
     }
 }
 

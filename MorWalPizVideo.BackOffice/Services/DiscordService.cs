@@ -9,7 +9,7 @@ public class DiscordServiceMock : IDiscordService
         return Task.FromResult("");
     }
 }
-public class DiscordService : IDiscordService, IDisposable
+public class DiscordService : IDiscordService
 {
     private readonly HttpClient client;
     private readonly string channelName;
@@ -43,10 +43,5 @@ public class DiscordService : IDiscordService, IDisposable
         return response.IsSuccessStatusCode ? string.Empty
                 : await response.Content.ReadAsStringAsync();
 
-    }
-
-    public void Dispose()
-    {
-        client?.Dispose();
     }
 }

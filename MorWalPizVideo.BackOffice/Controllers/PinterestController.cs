@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.Models.Constraints;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -50,7 +51,7 @@ public class PinterestController : ApplicationControllerBase
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(string code)
     {
-        using var client = new HttpClient();
+        var httpClient = client.CreateClient(HttpClientNames.Pinterest);
         var content = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
@@ -60,7 +61,7 @@ public class PinterestController : ApplicationControllerBase
             new KeyValuePair<string, string>("redirect_uri", $"https://{Request.Host}/api/pinterest/callback")
         });
 
-        var response = await client.PostAsync("https://api.pinterest.com/v5/oauth/token", content);
+        var response = await httpClient.PostAsync("oauth/token", content);
         var responseContent = await response.Content.ReadAsStringAsync();
 
         // Salva il token di accesso
@@ -70,8 +71,8 @@ public class PinterestController : ApplicationControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePin(CreatePinterestPinRequest request)
     {
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.Token);
+        var httpClient = client.CreateClient(HttpClientNames.Pinterest);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.Token);
 
         var content = new StringContent(JsonSerializer.Serialize(new
         {
@@ -86,7 +87,7 @@ public class PinterestController : ApplicationControllerBase
             }
         }), Encoding.UTF8, "application/json");
 
-        var response = await client.PostAsync("https://api.pinterest.com/v5/pins", content);
+        var response = await httpClient.PostAsync("pins", content);
         var responseContent = await response.Content.ReadAsStringAsync();
 
         return Ok(responseContent);

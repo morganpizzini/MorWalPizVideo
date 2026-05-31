@@ -27,7 +27,7 @@ public class ImageUploadController : ApplicationControllerBase
         }
 
         var matchCollection = database.GetCollection<YouTubeContent>(DbCollections.YouTubeContent);
-        var existingMatch = matchCollection.Find(x => x.Url == folderName).FirstOrDefault();
+        var existingMatch = await matchCollection.Find(x => x.Url == folderName).FirstOrDefaultAsync();
 
         if (existingMatch == null)
         {

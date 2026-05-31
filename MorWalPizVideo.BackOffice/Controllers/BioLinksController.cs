@@ -43,23 +43,14 @@ public class BioLinksController : ApplicationControllerBase
 
         var entity = new BioLink(request.Title, request.Description, request.Url, request.Icon, request.Order);
 
-        var items = collection.Find(x => x.Order >= entity.Order)
-            .ToList();
+        await collection.UpdateManyAsync(
+            Builders<BioLink>.Filter.Gte(x => x.Order, entity.Order),
+            Builders<BioLink>.Update.Inc(x => x.Order, 1));
 
-        var updates = new List<WriteModel<BioLink>>();
-        foreach (var item in items)
-        {
-            var filter = Builders<BioLink>.Filter.Eq(x => x.Id, item.Id);
-            var update = Builders<BioLink>.Update.Set(x => x.Order, item.Order + 1);
-            updates.Add(new UpdateOneModel<BioLink>(filter, update));
-        }
+        await collection.InsertOneAsync(entity);
 
-        updates.Add(new InsertOneModel<BioLink>(entity));
-
-        await collection.BulkWriteAsync(updates);
-
-        var json = await client.ResetCache(CacheKeys.BioLinks);
-        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.ResetCache(CacheKeys.BioLinks);
+        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
     [HttpPut]
@@ -67,34 +58,36 @@ public class BioLinksController : ApplicationControllerBase
     {
         var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
 
-        var entity = collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefault();
+        var entity = await collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefaultAsync();
         if (entity == null)
             return BadRequest("Bio link has not found");
 
-        var orderChange = entity.Order != request.Order;
+        var oldOrder = entity.Order;
+        var newOrder = request.Order;
 
-        entity = entity with { Title = request.NewTitle, Description = request.Description, Order = request.Order };
-        var updates = new List<WriteModel<BioLink>>();
-        if (orderChange)
+        entity = entity with { Title = request.NewTitle, Description = request.Description, Order = newOrder };
+
+        if (newOrder < oldOrder)
         {
-            var items = collection.Find(x => x.Order >= entity.Order)
-                .ToList();
-
-            foreach (var item in items)
-            {
-                var filter = Builders<BioLink>.Filter.Eq(x => x.Id, item.Id);
-                var update = Builders<BioLink>.Update.Set(x => x.Order, item.Order + 1);
-                updates.Add(new UpdateOneModel<BioLink>(filter, update));
-            }
+            await collection.UpdateManyAsync(
+                Builders<BioLink>.Filter.And(
+                    Builders<BioLink>.Filter.Gte(x => x.Order, newOrder),
+                    Builders<BioLink>.Filter.Lt(x => x.Order, oldOrder)),
+                Builders<BioLink>.Update.Inc(x => x.Order, 1));
+        }
+        else if (newOrder > oldOrder)
+        {
+            await collection.UpdateManyAsync(
+                Builders<BioLink>.Filter.And(
+                    Builders<BioLink>.Filter.Gt(x => x.Order, oldOrder),
+                    Builders<BioLink>.Filter.Lte(x => x.Order, newOrder)),
+                Builders<BioLink>.Update.Inc(x => x.Order, -1));
         }
 
-        updates.Add(new ReplaceOneModel<BioLink>(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity));
+        await collection.ReplaceOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity);
 
-        var result = await collection.BulkWriteAsync(updates);
-
-
-        var json = await client.ResetCache(CacheKeys.BioLinks);
-        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.ResetCache(CacheKeys.BioLinks);
+        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -103,7 +96,7 @@ public class BioLinksController : ApplicationControllerBase
     {
         var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
 
-        var entity = collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefault();
+        var entity = await collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefaultAsync();
         if (entity == null)
         {
             return BadRequest("Bio link has not found");
@@ -111,14 +104,10 @@ public class BioLinksController : ApplicationControllerBase
 
         entity = entity with { Enable = !entity.Enable };
 
-        var updates = new List<WriteModel<BioLink>>();
+        await collection.ReplaceOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity);
 
-        updates.Add(new ReplaceOneModel<BioLink>(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity));
-
-        var result = await collection.BulkWriteAsync(updates);
-
-        var json = await client.ResetCache(CacheKeys.BioLinks);
-        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.ResetCache(CacheKeys.BioLinks);
+        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -127,15 +116,15 @@ public class BioLinksController : ApplicationControllerBase
     {
         var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
 
-        var entity = collection.Find(x => x.Title.ToLower() == title).FirstOrDefault();
+        var entity = await collection.Find(x => x.Title.ToLower() == title).FirstOrDefaultAsync();
         if (entity == null)
         {
             return BadRequest("Bio link has not found");
         }
-        collection.DeleteOne(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
+        await collection.DeleteOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
 
-        var json = await client.ResetCache(CacheKeys.BioLinks);
-        json = await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.ResetCache(CacheKeys.BioLinks);
+        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
         return NoContent();
     }
 }

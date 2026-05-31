@@ -33,18 +33,18 @@ public class CrossApiService : ICrossApiService
     }
     public Task<string> ResetCache(string key)
     {
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
+        var httpClient = this.client.CreateClient(HttpClientNames.MorWalPiz);
 
-        return client.GetStringAsync($"cache/reset?k={key}");
+        return httpClient.GetStringAsync($"cache/reset?k={Uri.EscapeDataString(key)}");
     }
     public Task<string> PurgeCache(string key)
     {
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        return client.GetStringAsync($"cache/purge/{key}");
+        var httpClient = this.client.CreateClient(HttpClientNames.MorWalPiz);
+        return httpClient.GetStringAsync($"cache/purge?k={Uri.EscapeDataString(key)}");
     }
     public Task<string> ReloadCache()
     {
-        using var client = this.client.CreateClient(HttpClientNames.MorWalPiz);
-        return client.GetStringAsync($"matches");
+        var httpClient = this.client.CreateClient(HttpClientNames.MorWalPiz);
+        return httpClient.GetStringAsync($"matches");
     }
 }

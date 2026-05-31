@@ -152,6 +152,11 @@ if (!enableMock)
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
     });
 
+    builder.Services.AddHttpClient(HttpClientNames.Pinterest, httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://api.pinterest.com/v5/");
+    });
+
 
     if (!string.IsNullOrEmpty(facebookSettings.PageId))
     {
@@ -477,3 +482,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+namespace MorWalPizVideo.BackOffice
+{
+    public partial class Program { }
+}

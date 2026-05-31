@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MorWalPizVideo.BackOffice\MorWalPizVideo.BackOffice.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.ServerAPI\MorWalPizVideo.ServerAPI.csproj" />
   </ItemGroup>
 
 </Project>

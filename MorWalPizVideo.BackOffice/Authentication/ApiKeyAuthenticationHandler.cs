@@ -80,8 +80,13 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         // Record request
         await _rateLimitingService.RecordRequestAsync(apiKey.Id!);
 
-        // Update last used timestamp (fire and forget)
-        _ = _apiKeyService.UpdateLastUsedAsync(apiKey.Id!);
+        // Update last used timestamp (fire and forget); surface telemetry on failure
+        _ = _apiKeyService.UpdateLastUsedAsync(apiKey.Id!)
+            .ContinueWith(
+                t => _logger.LogError(t.Exception, "Failed to update LastUsed for ApiKey {ApiKeyId}", apiKey.Id),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
 
         // Create claims
         var claims = new[]
