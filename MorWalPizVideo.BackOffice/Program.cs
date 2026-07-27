@@ -21,10 +21,11 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using Azure.Core;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -79,9 +80,21 @@ if (enableKeyVault)
     {
         try
         {
+            var tokenCredentialType = Type.GetType("Azure.Identity.DefaultAzureCredential, Azure.Core");
+            if (tokenCredentialType is null)
+            {
+                throw new InvalidOperationException("Unable to resolve Azure.Identity.DefaultAzureCredential from Azure.Core.");
+            }
+
+            var tokenCredential = Activator.CreateInstance(tokenCredentialType) as TokenCredential;
+            if (tokenCredential is null)
+            {
+                throw new InvalidOperationException("Failed to create Azure token credential instance.");
+            }
+
             builder.Configuration.AddAzureKeyVault(
                 new Uri(keyVaultUrl),
-                new DefaultAzureCredential());
+                tokenCredential);
         }
         catch (Exception ex)
         {

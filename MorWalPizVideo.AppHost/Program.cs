@@ -9,7 +9,7 @@ var shopGroup = builder.AddGroup("Shop");
 var frontoffice = builder.AddProject<Projects.MorWalPizVideo_ServerAPI>("server")
     .InGroup(frontendGroup);
 
-builder.AddNpmApp("morwalpizvideo", "../frontend", "dev:morwalpizvideo-client")
+builder.AddJavaScriptApp("morwalpizvideo", "../frontend", "dev:morwalpizvideo-client")
     .WithReference(frontoffice)
     .WaitFor(frontoffice)
     .WithEnvironment("ASPNETCORE_URLS", frontoffice.GetEndpoint("https"))
@@ -17,7 +17,7 @@ builder.AddNpmApp("morwalpizvideo", "../frontend", "dev:morwalpizvideo-client")
     .WithHttpEndpoint(port: 5174, env: "PORT")
     .InGroup(frontendGroup);
 
-builder.AddNpmApp("morwalpizshop", "../frontend", "dev:morwalpiz-shop-client")
+builder.AddJavaScriptApp("morwalpizshop", "../frontend", "dev:morwalpiz-shop-client")
     .WithReference(frontoffice)
     .WaitFor(frontoffice)
     .WithEnvironment("ASPNETCORE_URLS", frontoffice.GetEndpoint("https"))
@@ -28,7 +28,7 @@ builder.AddNpmApp("morwalpizshop", "../frontend", "dev:morwalpiz-shop-client")
 var backoffice = builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoffice")
                     .InGroup(backendGroup);
 
-builder.AddNpmApp("back-office-spa", "../frontend", "dev:back-office-spa")
+builder.AddJavaScriptApp("back-office-spa", "../frontend", "dev:back-office-spa")
     .WithReference(backoffice)
     .WaitFor(backoffice)
     .WithEnvironment("ASPNETCORE_URLS", backoffice.GetEndpoint("https"))

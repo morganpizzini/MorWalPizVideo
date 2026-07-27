@@ -6,7 +6,6 @@
   "packageManager": "yarn@1.22.22",
   "workspaces": [
     "fe-packages/*",
-    "fe-packages/layout/*",
     "back-office-spa",
     "morwalpizvideo.client",
     "morwalpiz-shop.client",

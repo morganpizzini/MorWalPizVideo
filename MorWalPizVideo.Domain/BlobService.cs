@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using MorWalPizVideo.Models.Configuration;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace MorWalPizVideo.Domain
 {
@@ -35,7 +36,7 @@ namespace MorWalPizVideo.Domain
         {
             var _blobContainerClient = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
             var images = new List<string>();
-            await foreach (var blobItem in _blobContainerClient.GetBlobsAsync(prefix: folderName))
+            await foreach (var blobItem in _blobContainerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: folderName, cancellationToken: CancellationToken.None))
             {
                 if (blobItem.Properties.ContentType?.StartsWith("image/") == true)
                 {
