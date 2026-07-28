@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "pretest": "yarn --cwd .. build:models && yarn --cwd .. build:services",
     "build": "tsc -b && vite build",
     "build-uncheck": "vite build",
     "dev": "vite",
