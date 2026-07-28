@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../../../test/test-utils';
 import { useLoaderData, useFetcher, useNavigate } from 'react-router';
@@ -69,31 +69,34 @@ describe('Edit Category', () => {
   });
 
   it('opens the confirmation modal on form submit', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     const titleInput = screen.getByDisplayValue('Sport');
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Updated Sport');
-    fireEvent.click(screen.getByRole('button', { name: /update/i }));
+    await user.click(screen.getByRole('button', { name: /update/i }));
     expect(screen.getByText('Confirm Edit')).toBeInTheDocument();
   });
 
   it('closes the modal when Cancel is clicked', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     const titleInput = screen.getByDisplayValue('Sport');
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Updated Sport');
-    fireEvent.click(screen.getByRole('button', { name: /update/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: /update/i }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByText('Confirm Edit')).not.toBeInTheDocument());
   });
 
   it('calls fetcher.submit when the modal confirm is clicked', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     const titleInput = screen.getByDisplayValue('Sport');
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Updated Sport');
-    fireEvent.click(screen.getByRole('button', { name: /update/i }));
-    fireEvent.click(screen.getByTestId('edit-modal-confirm'));
+    await user.click(screen.getByRole('button', { name: /update/i }));
+    await user.click(screen.getByTestId('edit-modal-confirm'));
     expect(mockSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Updated Sport', description: 'Sport events' }),
       expect.objectContaining({ method: 'post' })

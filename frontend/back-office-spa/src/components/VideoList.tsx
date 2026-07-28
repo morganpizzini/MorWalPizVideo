@@ -157,8 +157,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
         </thead>
         <tbody>
           {filteredMatches.length > 0 ? (
-            filteredMatches.map(match => (
-              <React.Fragment key={match.id}>
+            filteredMatches.map((match, matchIndex) => (
+              <React.Fragment key={match.id || `match-${matchIndex}`}>
                 {/* Main row - YouTubeContent */}
                 <tr>
                   <td>
@@ -250,7 +250,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                           <div className="d-flex gap-1 flex-wrap">
                             {videoRef.categories && videoRef.categories.length > 0 ? (
                               videoRef.categories.map((cat, catIdx) => (
-                                <Badge key={catIdx} bg="secondary">
+                                <Badge key={`${videoRef.youtubeId}-${cat.title}-${catIdx}`} bg="secondary">
                                   {cat.title}
                                 </Badge>
                               ))

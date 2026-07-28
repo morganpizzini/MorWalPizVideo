@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../../../test/test-utils';
 import { useFetcher, useNavigate } from 'react-router';
@@ -69,32 +69,35 @@ describe('Create Category', () => {
   });
 
   it('shows the confirmation modal after form submit', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     const titleInput = screen.getByLabelText(/title/i);
     const descInput = screen.getByLabelText(/description/i);
     await userEvent.type(titleInput, 'New Category');
     await userEvent.type(descInput, 'A description');
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    await user.click(screen.getByRole('button', { name: /create/i }));
     expect(screen.getByText('Confirm Create')).toBeInTheDocument();
     expect(screen.getByText('New Category')).toBeInTheDocument();
     expect(screen.getByText('A description')).toBeInTheDocument();
   });
 
   it('closes the modal when Cancel is clicked', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     await userEvent.type(screen.getByLabelText(/title/i), 'Test');
     await userEvent.type(screen.getByLabelText(/description/i), 'Desc');
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: /create/i }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByText('Confirm Create')).not.toBeInTheDocument());
   });
 
   it('calls fetcher.submit when modal confirm is clicked', async () => {
+    const user = userEvent.setup();
     await renderComponent();
     await userEvent.type(screen.getByLabelText(/title/i), 'New Category');
     await userEvent.type(screen.getByLabelText(/description/i), 'A description');
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
-    fireEvent.click(screen.getByTestId('create-modal-confirm'));
+    await user.click(screen.getByRole('button', { name: /create/i }));
+    await user.click(screen.getByTestId('create-modal-confirm'));
     expect(mockSubmit).toHaveBeenCalledWith(
       { title: 'New Category', description: 'A description' },
       expect.objectContaining({ method: 'post' })

@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 COPY fe-packages/models/package.json ./fe-packages/models/
 COPY fe-packages/services/package.json ./fe-packages/services/
+COPY fe-packages/layout/package.json ./fe-packages/layout/
 COPY morwalpizvideo.client/package.json ./morwalpizvideo.client/
 
 # Install all dependencies (workspaces)
@@ -16,11 +17,15 @@ RUN yarn install --frozen-lockfile
 # Copy shared package sources and build them
 COPY fe-packages/models ./fe-packages/models
 COPY fe-packages/services ./fe-packages/services
+COPY fe-packages/layout ./fe-packages/layout
 
 WORKDIR /app/fe-packages/models
 RUN yarn build
 
 WORKDIR /app/fe-packages/services
+RUN yarn build
+
+WORKDIR /app/fe-packages/layout
 RUN yarn build
 
 # Refresh workspace links after building packages
