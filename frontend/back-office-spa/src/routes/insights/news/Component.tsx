@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Button, Modal } from 'react-bootstrap';
+import { Card, Form, Button, Modal, Badge } from 'react-bootstrap';
 import { useLoaderData, useFetcher, useNavigate } from 'react-router';
 import { InsightNewsItem, InsightNewsStatus } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
@@ -85,6 +85,14 @@ const InsightNewsReview: React.FC = () => {
           <div className="mb-3">
             <strong>AI Relevance Score:</strong> {newsItem.aiRelevanceScore.toFixed(2)}
           </div>
+          {newsItem.status === InsightNewsStatus.AutoDetected && (
+            <div className="mb-3">
+              <Badge bg="primary" className="me-2">Auto-Detected</Badge>
+              <span className="text-muted">
+                {newsItem.platformSource || 'Social'} scan{newsItem.analysisReason ? ` — ${newsItem.analysisReason}` : ''}
+              </span>
+            </div>
+          )}
         </Card.Body>
       </Card>
 

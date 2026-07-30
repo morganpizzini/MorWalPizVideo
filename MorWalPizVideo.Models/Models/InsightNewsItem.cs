@@ -13,21 +13,42 @@ namespace MorWalPizVideo.Server.Models
         /// Newly discovered, pending review
         /// </summary>
         Pending,
-        
+
         /// <summary>
         /// Accepted by user for content generation
         /// </summary>
         Accepted,
-        
+
         /// <summary>
         /// Rejected by user
         /// </summary>
         Rejected,
-        
+
         /// <summary>
         /// Content has been generated from this news item
         /// </summary>
-        Generated
+        Generated,
+
+        /// <summary>
+        /// Automatically discovered and classified as news by the social scanner, pending human review
+        /// </summary>
+        AutoDetected
+    }
+
+    /// <summary>
+    /// Distinguishes which insight pipeline produced an item within the shared insight collection
+    /// </summary>
+    public enum InsightSourceKind
+    {
+        /// <summary>
+        /// Discovered or scanned news content for the topic
+        /// </summary>
+        Content,
+
+        /// <summary>
+        /// Derived idea/hint extracted from YouTube video comments
+        /// </summary>
+        ShortContent
     }
 
     /// <summary>
@@ -39,15 +60,21 @@ namespace MorWalPizVideo.Server.Models
     {
         [JsonConstructor]
         public InsightNewsItem(
-            string topicId, 
-            string title, 
-            string summary, 
-            string sourceUrl, 
+            string topicId,
+            string title,
+            string summary,
+            string sourceUrl,
             string sourceName,
             InsightNewsStatus status = InsightNewsStatus.Pending,
             int starRating = 0,
             double aiRelevanceScore = 0.0,
-            DateTime? discoveredAt = null)
+            DateTime? discoveredAt = null,
+            string? platformSource = null,
+            string? postId = null,
+            string? analysisReason = null,
+            InsightSourceKind sourceKind = InsightSourceKind.Content,
+            string? commentExcerpt = null,
+            string? sentiment = null)
         {
             TopicId = topicId;
             Title = title;
@@ -58,6 +85,12 @@ namespace MorWalPizVideo.Server.Models
             StarRating = starRating;
             AIRelevanceScore = aiRelevanceScore;
             DiscoveredAt = discoveredAt ?? DateTime.UtcNow;
+            PlatformSource = platformSource ?? string.Empty;
+            PostId = postId ?? string.Empty;
+            AnalysisReason = analysisReason ?? string.Empty;
+            SourceKind = sourceKind;
+            CommentExcerpt = commentExcerpt ?? string.Empty;
+            Sentiment = sentiment ?? string.Empty;
         }
 
         /// <summary>
@@ -124,6 +157,48 @@ namespace MorWalPizVideo.Server.Models
         public DateTime DiscoveredAt { get; init; }
 
         /// <summary>
+        /// Social platform this item was auto-detected from (e.g. Instagram), empty for manually discovered items
+        /// </summary>
+        [DataMember]
+        [BsonElement("platformSource")]
+        public string PlatformSource { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Platform-native post identifier, used for scanner dedup/cursor tracking
+        /// </summary>
+        [DataMember]
+        [BsonElement("postId")]
+        public string PostId { get; init; } = string.Empty;
+
+        /// <summary>
+        /// AI reasoning for why this post was classified as news
+        /// </summary>
+        [DataMember]
+        [BsonElement("analysisReason")]
+        public string AnalysisReason { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Which insight pipeline produced this item (content vs. ShortContent), sharing the same collection
+        /// </summary>
+        [DataMember]
+        [BsonElement("sourceKind")]
+        public InsightSourceKind SourceKind { get; init; } = InsightSourceKind.Content;
+
+        /// <summary>
+        /// Excerpt of the source comment that inspired a ShortContent idea, empty for other source kinds
+        /// </summary>
+        [DataMember]
+        [BsonElement("commentExcerpt")]
+        public string CommentExcerpt { get; init; } = string.Empty;
+
+        /// <summary>
+        /// AI-assessed sentiment of the originating comment for ShortContent items, empty for other source kinds
+        /// </summary>
+        [DataMember]
+        [BsonElement("sentiment")]
+        public string Sentiment { get; init; } = string.Empty;
+
+        /// <summary>
         /// Update the status of the news item
         /// </summary>
         public InsightNewsItem UpdateStatus(InsightNewsStatus newStatus)
@@ -154,10 +229,10 @@ namespace MorWalPizVideo.Server.Models
             var userPreferenceScore = StarRating / 5.0;
 
             // Weighted combination: 45% AI, 20% recency, 20% source trust, 15% user preference
-            var compositeScore = 
-                (0.45 * AIRelevanceScore) + 
-                (0.20 * recencyScore) + 
-                (0.20 * sourceTrustScore) + 
+            var compositeScore =
+                (0.45 * AIRelevanceScore) +
+                (0.20 * recencyScore) +
+                (0.20 * sourceTrustScore) +
                 (0.15 * userPreferenceScore);
 
             return compositeScore;

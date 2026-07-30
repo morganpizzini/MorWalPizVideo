@@ -1,5 +1,6 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Server.Models;
 using System.Text.Json;
@@ -18,8 +19,8 @@ namespace MorWalPizVideo.BackOffice.Services
         public async Task<IList<InsightNewsItem>> DiscoverNewsAsync(InsightTopic topic)
         {
             var seedArgumentsString = string.Join(", ", topic.SeedArguments);
-            var preferredSourcesString = topic.PreferredSources.Any() 
-                ? $"Focus on these sources: {string.Join(", ", topic.PreferredSources)}" 
+            var preferredSourcesString = topic.PreferredSources.Any()
+                ? $"Focus on these sources: {string.Join(", ", topic.PreferredSources)}"
                 : "Search across all available sources";
 
             var prompt = @$"
@@ -60,7 +61,7 @@ Return results as a JSON array following the specified schema.";
 #pragma warning restore SKEXP0010
 
             var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
-            var discoveryResponse = JsonSerializer.Deserialize<NewsDiscoveryResponse>(result.ToString()) 
+            var discoveryResponse = JsonSerializer.Deserialize<NewsDiscoveryResponse>(result.ToString())
                 ?? new NewsDiscoveryResponse();
 
             // Convert to domain models
@@ -98,7 +99,7 @@ Return results as a JSON array following the specified schema.";
             // If there are many items, use AI to refine the ranking
             if (newsItems.Count > 10)
             {
-                var itemSummaries = string.Join("\n", rankedItems.Take(20).Select((item, index) => 
+                var itemSummaries = string.Join("\n", rankedItems.Take(20).Select((item, index) =>
                     $"{index + 1}. {item.Title} (Score: {item.CalculateRankingScore():F2}, AI: {item.AIRelevanceScore:F2}, Stars: {item.StarRating})"));
 
                 var prompt = @$"
@@ -210,7 +211,7 @@ Return as JSON with 'title' and 'outline' (detailed markdown-formatted outline).
 #pragma warning restore SKEXP0010
 
             var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
-            var planResponse = JsonSerializer.Deserialize<ContentPlanResponse>(result.ToString()) 
+            var planResponse = JsonSerializer.Deserialize<ContentPlanResponse>(result.ToString())
                 ?? new ContentPlanResponse { Title = "Generated Content Plan", Outline = "Content outline..." };
 
             var contentPlan = new InsightContentPlan(
@@ -227,6 +228,124 @@ Return as JSON with 'title' and 'outline' (detailed markdown-formatted outline).
             };
 
             return contentPlan;
+        }
+
+        public async Task<PostClassificationResult> ClassifyPostAsync(InsightTopic topic, RawSocialPostDto post)
+        {
+            var seedArgumentsString = string.Join(", ", topic.SeedArguments);
+
+            var prompt = @$"
+You are a news relevance classifier for a YouTube channel about firearms and dynamic sport shooting (IPSC, IDPA).
+
+Topic: {topic.Title}
+Description: {topic.Description}
+Seed Arguments: {seedArgumentsString}
+
+A public social media post was collected from a monitored source. Decide if it is a genuine news item relevant to this topic
+(e.g. a product launch, rule change, competition result, industry development) as opposed to generic/promotional content unrelated to news.
+
+Post Platform: {post.PlatformSource}
+Post Author: {post.Author}
+Post Text: {post.Text}
+
+Respond as JSON with:
+- isNews: boolean
+- relevanceScore: 0.0 to 1.0
+- reason: short explanation of your decision
+- suggestedTitle: a short headline for the post if it is news
+- summary: a 2-3 sentence summary of the post if it is news";
+
+            var trimmedPrompt = PrettifyString(prompt);
+
+#pragma warning disable SKEXP0010
+            var executionSettings = new AzureOpenAIPromptExecutionSettings()
+            {
+                ResponseFormat = typeof(PostClassificationResult)
+            };
+#pragma warning restore SKEXP0010
+
+            var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
+            return JsonSerializer.Deserialize<PostClassificationResult>(result.ToString())
+                ?? new PostClassificationResult { IsNews = false, Reason = "AI response could not be parsed" };
+        }
+
+        public async Task<IList<InsightNewsItem>> AnalyzeVideoCommentsAsync(
+            InsightTopic topic,
+            string videoId,
+            string videoTitle,
+            string videoUrl,
+            string channelName,
+            IList<VideoCommentDto> comments)
+        {
+            var newsItems = new List<InsightNewsItem>();
+
+            if (comments == null || comments.Count == 0)
+                return newsItems;
+
+            var seedArgumentsString = string.Join(", ", topic.SeedArguments);
+            var commentsBlock = string.Join("\n\n", comments.Select((c, i) =>
+                $"[{i + 1}] Autore: {c.Author}\nCommento: {c.Text}\nData: {c.PublishedAt:O}"));
+
+            var prompt = @$"
+Analizza i seguenti commenti raccolti su un video YouTube intitolato '{videoTitle}', relativo al topic '{topic.Title}' ({seedArgumentsString}):
+
+COMMENTI:
+{commentsBlock}
+
+Per ogni commento individua se contiene un'idea o uno spunto per un potenziale nuovo contenuto correlato al topic.
+Rispondi come JSON con questa struttura:
+{{{{
+  ""ideas"": [
+    {{{{
+      ""commentIndex"": numero_indice_commento,
+      ""sentiment"": ""positivo/negativo/neutro"",
+      ""idea"": ""descrizione dell'idea per il contenuto"",
+      ""commentExcerpt"": ""parte del commento che ha ispirato l'idea""
+    }}}}
+  ]
+}}}}
+Se nessun commento contiene idee, restituisci un array 'ideas' vuoto.";
+
+            var trimmedPrompt = PrettifyString(prompt);
+
+#pragma warning disable SKEXP0010
+            var executionSettings = new AzureOpenAIPromptExecutionSettings()
+            {
+                ResponseFormat = typeof(VideoCommentAnalysisResponse)
+            };
+#pragma warning restore SKEXP0010
+
+            var result = await _kernel.InvokePromptAsync(trimmedPrompt, new KernelArguments(executionSettings));
+            var analysis = JsonSerializer.Deserialize<VideoCommentAnalysisResponse>(result.ToString())
+                ?? new VideoCommentAnalysisResponse();
+
+            foreach (var idea in analysis.Ideas)
+            {
+                if (string.IsNullOrWhiteSpace(idea.Idea))
+                    continue;
+
+                newsItems.Add(new InsightNewsItem(
+                    topicId: topic.Id,
+                    title: idea.Idea,
+                    summary: idea.CommentExcerpt,
+                    sourceUrl: $"{videoUrl}?insightIdea={videoId}-{idea.CommentIndex}",
+                    sourceName: channelName,
+                    status: InsightNewsStatus.AutoDetected,
+                    starRating: 0,
+                    aiRelevanceScore: 0.5,
+                    discoveredAt: DateTime.UtcNow,
+                    platformSource: "YouTube",
+                    postId: videoId,
+                    analysisReason: idea.CommentExcerpt,
+                    sourceKind: InsightSourceKind.ShortContent,
+                    commentExcerpt: idea.CommentExcerpt,
+                    sentiment: idea.Sentiment)
+                {
+                    Id = Guid.NewGuid().ToString()
+                });
+            }
+
+            return newsItems;
         }
 
         private string PrettifyString(string s)
@@ -265,6 +384,19 @@ Return as JSON with 'title' and 'outline' (detailed markdown-formatted outline).
         {
             public string Title { get; set; } = string.Empty;
             public string Outline { get; set; } = string.Empty;
+        }
+
+        private class VideoCommentAnalysisResponse
+        {
+            public List<VideoCommentIdeaDto> Ideas { get; set; } = new();
+        }
+
+        private class VideoCommentIdeaDto
+        {
+            public int CommentIndex { get; set; }
+            public string Sentiment { get; set; } = "neutro";
+            public string Idea { get; set; } = string.Empty;
+            public string CommentExcerpt { get; set; } = string.Empty;
         }
     }
 
@@ -306,8 +438,8 @@ Return as JSON with 'title' and 'outline' (detailed markdown-formatted outline).
             {
                 var sourceIndex = random.Next(MockSourceNames.Length);
                 var prefixIndex = random.Next(MockTitlePrefixes.Length);
-                var seedArg = topic.SeedArguments.Any() 
-                    ? topic.SeedArguments[random.Next(topic.SeedArguments.Count())] 
+                var seedArg = topic.SeedArguments.Any()
+                    ? topic.SeedArguments[random.Next(topic.SeedArguments.Count())]
                     : topic.Title;
 
                 var newsItem = new InsightNewsItem(
@@ -425,6 +557,73 @@ This is a mock outline. In production, this would be generated by AI based on ac
             };
 
             return Task.FromResult(contentPlan);
+        }
+
+        public Task<PostClassificationResult> ClassifyPostAsync(InsightTopic topic, RawSocialPostDto post)
+        {
+            var seedArguments = topic.SeedArguments ?? Array.Empty<string>();
+            var matchesSeedArgument = seedArguments.Any() &&
+                seedArguments.Any(arg => post.Text.Contains(arg, StringComparison.OrdinalIgnoreCase));
+
+            var random = new Random(post.PostUrl.GetHashCode());
+            var isNews = matchesSeedArgument || random.NextDouble() > 0.5;
+            var score = matchesSeedArgument
+                ? Math.Round(0.7 + (random.NextDouble() * 0.3), 2)
+                : Math.Round(0.3 + (random.NextDouble() * 0.4), 2);
+
+            return Task.FromResult(new PostClassificationResult
+            {
+                IsNews = isNews,
+                RelevanceScore = score,
+                Reason = matchesSeedArgument
+                    ? $"Post text matches one of the topic's seed arguments for '{topic.Title}'."
+                    : "Mock classification without a matching seed argument.",
+                SuggestedTitle = isNews ? $"{post.PlatformSource} update: {topic.Title}" : string.Empty,
+                Summary = isNews ? post.Text : string.Empty
+            });
+        }
+
+        public Task<IList<InsightNewsItem>> AnalyzeVideoCommentsAsync(
+            InsightTopic topic,
+            string videoId,
+            string videoTitle,
+            string videoUrl,
+            string channelName,
+            IList<VideoCommentDto> comments)
+        {
+            var newsItems = new List<InsightNewsItem>();
+
+            if (comments == null || comments.Count == 0)
+                return Task.FromResult<IList<InsightNewsItem>>(newsItems);
+
+            var random = new Random(videoId.GetHashCode());
+            var ideaCount = Math.Min(comments.Count, random.Next(1, 4));
+
+            for (int i = 0; i < ideaCount; i++)
+            {
+                var comment = comments[i];
+                newsItems.Add(new InsightNewsItem(
+                    topicId: topic.Id,
+                    title: $"Mock ShortContent idea from '{videoTitle}' #{i + 1}",
+                    summary: comment.Text,
+                    sourceUrl: $"{videoUrl}?insightIdea={videoId}-{i}",
+                    sourceName: channelName,
+                    status: InsightNewsStatus.AutoDetected,
+                    starRating: 0,
+                    aiRelevanceScore: 0.5,
+                    discoveredAt: DateTime.UtcNow,
+                    platformSource: "YouTube",
+                    postId: videoId,
+                    analysisReason: comment.Text,
+                    sourceKind: InsightSourceKind.ShortContent,
+                    commentExcerpt: comment.Text,
+                    sentiment: "neutro")
+                {
+                    Id = Guid.NewGuid().ToString()
+                });
+            }
+
+            return Task.FromResult<IList<InsightNewsItem>>(newsItems);
         }
     }
 }

@@ -36,6 +36,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface IInsightTopicRepository : IRepository<InsightTopic> { }
     public interface IInsightNewsItemRepository : IRepository<InsightNewsItem> { }
     public interface IInsightContentPlanRepository : IRepository<InsightContentPlan> { }
+    public interface IInsightSourceCursorRepository : IRepository<InsightSourceCursor> { }
 
     // Shop repositories
     public interface IDigitalProductRepository : IRepository<DigitalProduct> { }

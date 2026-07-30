@@ -133,6 +133,7 @@ export type {
 export {
   InsightNewsStatus,
   ContentPlanType,
+  InsightSourceKind,
 } from './insights';
 
 export type {

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts.DTOs;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -10,16 +12,19 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         private readonly DataService _dataService;
         private readonly IInsightAgentService _insightAgentService;
+        private readonly IInsightIngestionService _insightIngestionService;
 
-        public InsightsController(DataService dataService, IInsightAgentService insightAgentService)
+        public InsightsController(DataService dataService, IInsightAgentService insightAgentService, IInsightIngestionService insightIngestionService)
         {
             _dataService = dataService;
             _insightAgentService = insightAgentService;
+            _insightIngestionService = insightIngestionService;
         }
 
         #region Topics
 
         [HttpGet("topics")]
+        [ApiKeyAuth]
         public async Task<IActionResult> GetTopics()
         {
             var topics = await _dataService.GetInsightTopics();
@@ -108,15 +113,56 @@ namespace MorWalPizVideo.BackOffice.Controllers
             return Ok(rankedNews);
         }
 
+        /// <summary>
+        /// Ingests posts collected by the interactive scanner app for a manually triggered run.
+        /// Protected via API key since it is called by the desktop scanner, not by the SPA.
+        /// </summary>
+        [HttpPost("topics/{id}/manual-scan")]
+        [ApiKeyAuth]
+        public async Task<IActionResult> ManualScanTopic([FromRoute] string id, [FromBody] ManualScanRequest request)
+        {
+            var topic = await _dataService.GetInsightTopicById(id);
+            if (topic == null)
+                return NotFound();
+
+            var result = await _insightIngestionService.ProcessManualScanAsync(topic, request);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Analyzes recent YouTube comments for a channel and derives ShortContent insight items (ideas/hints)
+        /// for the topic, replacing the retired ScraperController flow. Uses classic backoffice authentication
+        /// since it is called from the admin SPA.
+        /// </summary>
+        [HttpPost("topics/{id}/scan-short-content")]
+        public async Task<IActionResult> ScanShortContentForTopic([FromRoute] string id, [FromBody] ScanShortContentRequest request)
+        {
+            var topic = await _dataService.GetInsightTopicById(id);
+            if (topic == null)
+                return NotFound();
+
+            if (string.IsNullOrWhiteSpace(request.ChannelName))
+                return BadRequest("ChannelName is required");
+
+            var result = await _insightIngestionService.ProcessShortContentScanAsync(topic, request.ChannelName, request.Videos, request.CommentsNumber);
+            return Ok(result);
+        }
+
         [HttpGet("news")]
-        public async Task<IActionResult> GetAllNews()
+        public async Task<IActionResult> GetAllNews([FromQuery] InsightSourceKind? sourceKind = null)
         {
             var newsItems = await _dataService.GetInsightNewsItems();
+
+            if (sourceKind.HasValue)
+            {
+                newsItems = newsItems.Where(n => n.SourceKind == sourceKind.Value).ToList();
+            }
+
             return Ok(newsItems);
         }
 
         [HttpGet("topics/{id}/news")]
-        public async Task<IActionResult> GetNewsForTopic([FromRoute] string id, [FromQuery] InsightNewsStatus? status = null)
+        public async Task<IActionResult> GetNewsForTopic([FromRoute] string id, [FromQuery] InsightNewsStatus? status = null, [FromQuery] InsightSourceKind? sourceKind = null)
         {
             var topic = await _dataService.GetInsightTopicById(id);
             if (topic == null)
@@ -127,6 +173,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
             if (status.HasValue)
             {
                 newsItems = newsItems.Where(n => n.Status == status.Value).ToList();
+            }
+
+            if (sourceKind.HasValue)
+            {
+                newsItems = newsItems.Where(n => n.SourceKind == sourceKind.Value).ToList();
             }
 
             return Ok(newsItems);

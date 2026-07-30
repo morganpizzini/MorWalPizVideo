@@ -132,6 +132,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly IInsightTopicRepository _insightTopicRepository;
         private readonly IInsightNewsItemRepository _insightNewsItemRepository;
         private readonly IInsightContentPlanRepository _insightContentPlanRepository;
+        private readonly IInsightSourceCursorRepository _insightSourceCursorRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -157,6 +158,7 @@ namespace MorWalPizVideo.Server.Services
             IInsightTopicRepository insightTopicRepository,
             IInsightNewsItemRepository insightNewsItemRepository,
             IInsightContentPlanRepository insightContentPlanRepository,
+            IInsightSourceCursorRepository insightSourceCursorRepository,
             ICompetitionRepository competitionRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository, competitionRepository)
         {
             _productCategoryRepository = productCategoryRepository;
@@ -173,6 +175,7 @@ namespace MorWalPizVideo.Server.Services
             _insightTopicRepository = insightTopicRepository;
             _insightNewsItemRepository = insightNewsItemRepository;
             _insightContentPlanRepository = insightContentPlanRepository;
+            _insightSourceCursorRepository = insightSourceCursorRepository;
         }
 
         // Shop - DigitalProduct methods
@@ -868,6 +871,31 @@ namespace MorWalPizVideo.Server.Services
 
             var updatedNewsItem = newsItem.UpdateStarRating(starRating);
             await _insightNewsItemRepository.UpdateItemAsync(updatedNewsItem);
+        }
+
+        public async Task<bool> InsightNewsItemExistsBySourceUrl(string sourceUrl)
+        {
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+                return false;
+
+            var existing = await _insightNewsItemRepository.GetItemsAsync(x => x.SourceUrl.ToLower() == sourceUrl.ToLower());
+            return existing.Count > 0;
+        }
+
+        // InsightSourceCursor methods
+        public async Task<InsightSourceCursor?> GetInsightSourceCursor(string topicId, string sourceUrl) =>
+            (await _insightSourceCursorRepository.GetItemsAsync(x => x.TopicId == topicId && x.SourceUrl == sourceUrl)).FirstOrDefault();
+
+        public async Task SaveOrUpdateInsightSourceCursor(InsightSourceCursor cursor)
+        {
+            var existing = await GetInsightSourceCursor(cursor.TopicId, cursor.SourceUrl);
+            if (existing == null)
+            {
+                await _insightSourceCursorRepository.AddItemAsync(cursor);
+                return;
+            }
+
+            await _insightSourceCursorRepository.UpdateItemAsync(cursor with { Id = existing.Id });
         }
 
         // InsightContentPlan methods

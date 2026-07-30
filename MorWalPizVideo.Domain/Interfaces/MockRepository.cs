@@ -238,6 +238,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class InsightSourceCursorMockRepository : BaseMockRepository<InsightSourceCursor>, IInsightSourceCursorRepository
+    {
+        public InsightSourceCursorMockRepository(IHostEnvironment environment) : base(environment, "insightSourceCursors")
+        {
+        }
+    }
+
     public class CompetitionMockRepository : BaseMockRepository<Competition>, ICompetitionRepository
     {
         public CompetitionMockRepository(IHostEnvironment environment) : base(environment, "competitions")

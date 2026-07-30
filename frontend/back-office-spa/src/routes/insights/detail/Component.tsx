@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Badge, Button, Tabs, Tab } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher } from 'react-router';
-import { InsightTopic, InsightNewsItem, InsightContentPlan, InsightNewsStatus } from '@morwalpizvideo/models';
+import { InsightTopic, InsightNewsItem, InsightContentPlan, InsightNewsStatus, InsightSourceKind } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
 
@@ -42,8 +42,16 @@ const InsightTopicDetail: React.FC = () => {
       [InsightNewsStatus.Accepted]: 'success',
       [InsightNewsStatus.Rejected]: 'danger',
       [InsightNewsStatus.Generated]: 'info',
+      [InsightNewsStatus.AutoDetected]: 'primary',
     };
-    return <Badge bg={variants[status]}>{InsightNewsStatus[status]}</Badge>;
+    const labels: Record<InsightNewsStatus, string> = {
+      [InsightNewsStatus.Pending]: 'Pending',
+      [InsightNewsStatus.Accepted]: 'Accepted',
+      [InsightNewsStatus.Rejected]: 'Rejected',
+      [InsightNewsStatus.Generated]: 'Generated',
+      [InsightNewsStatus.AutoDetected]: 'Auto-Detected',
+    };
+    return <Badge bg={variants[status]}>{labels[status]}</Badge>;
   };
 
   const renderStars = (rating: number) => {
@@ -117,7 +125,12 @@ const InsightTopicDetail: React.FC = () => {
                     <Card key={item.id} className="border">
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-start mb-2">
-                          <h6 className="mb-0">{item.title}</h6>
+                          <h6 className="mb-0">
+                            {item.title}
+                            {item.sourceKind === InsightSourceKind.ShortContent && (
+                              <Badge bg="dark" className="ms-2">Short Content</Badge>
+                            )}
+                          </h6>
                           {getStatusBadge(item.status)}
                         </div>
                         <p className="mb-2">{item.summary}</p>

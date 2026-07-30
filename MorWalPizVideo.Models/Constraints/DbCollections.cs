@@ -38,6 +38,7 @@
         public const string InsightTopics = "insightTopics";
         public const string InsightNewsItems = "insightNewsItems";
         public const string InsightContentPlans = "insightContentPlans";
+        public const string InsightSourceCursors = "insightSourceCursors";
 
         // Shop Collections
         public const string DigitalProducts = "digitalProducts";

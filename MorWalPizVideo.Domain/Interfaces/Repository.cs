@@ -160,6 +160,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class InsightSourceCursorRepository : BaseRepository<InsightSourceCursor>, IInsightSourceCursorRepository
+    {
+        public InsightSourceCursorRepository(IMongoDatabase database) : base(database, DbCollections.InsightSourceCursors)
+        {
+        }
+    }
+
     public class CompetitionRepository : BaseRepository<Competition>, ICompetitionRepository
     {
         public CompetitionRepository(IMongoDatabase database) : base(database, DbCollections.Competitions)

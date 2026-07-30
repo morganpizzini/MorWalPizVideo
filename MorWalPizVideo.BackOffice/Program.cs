@@ -289,6 +289,7 @@ if (enableMock)
     builder.Services.AddScoped<IInsightTopicRepository, InsightTopicMockRepository>();
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemMockRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanMockRepository>();
+    builder.Services.AddScoped<IInsightSourceCursorRepository, InsightSourceCursorMockRepository>();
 
     // Shooting ITA repositories (Mock)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
@@ -296,7 +297,6 @@ if (enableMock)
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
 
     // services
-    //builder.Services.AddScoped<IYTService, YTServiceMock>();
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordServiceMock>();
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
@@ -358,6 +358,7 @@ else
     builder.Services.AddScoped<IInsightTopicRepository, InsightTopicRepository>();
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanRepository>();
+    builder.Services.AddScoped<IInsightSourceCursorRepository, InsightSourceCursorRepository>();
 
     // Shooting ITA repositories (Production)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
@@ -381,6 +382,8 @@ else
     // Insight Agent Service (Production)
     builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();
 }
+
+builder.Services.AddScoped<IInsightIngestionService, InsightIngestionService>();
 
 if (enableSwagger)
 {

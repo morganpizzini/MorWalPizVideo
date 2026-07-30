@@ -215,14 +215,14 @@ AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF impo
 | POST | `/transcript-analysis` | `AnalyzeTranscript(TranscriptAnalysisRequest)` — extract topics / chapters. |
 
 #### `InsightsController` — `api/insights`
-Content-planning suite: AI agent–driven topic monitoring → news scanning → content plan generation.
+Content-planning suite: AI agent–driven topic monitoring → news scanning → content plan generation. `InsightNewsItem` is a single shared collection for both AI-discovered news (`Content`) and YouTube-comment-derived ideas (`ShortContent`), distinguished by the `sourceKind` field.
 | Resource | Endpoints |
 | -------- | --------- |
-| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news` |
-| News items (`InsightNewsItem`) | `GET /news`, `GET /topics/{id}/news?status=`, `GET /news/{id}`, `PUT /news/{id}/review`, `DELETE /news/{id}` |
+| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news`, `POST /topics/{id}/scan-short-content` |
+| News items (`InsightNewsItem`) | `GET /news?sourceKind=`, `GET /topics/{id}/news?status=&sourceKind=`, `GET /news/{id}`, `PUT /news/{id}/review`, `DELETE /news/{id}` |
 | Content plans (`InsightContentPlan`) | `POST /content-plans`, `GET /content-plans`, `GET /topics/{id}/content-plans`, `GET /content-plans/{id}`, `PUT /content-plans/{id}`, `DELETE /content-plans/{id}` |
 
-Implemented through `IInsightAgentService` (`InsightAgentService` in prod, `MockInsightAgentService` in mock).
+Implemented through `IInsightAgentService` (`InsightAgentService` in prod, `MockInsightAgentService` in mock) and `IInsightIngestionService` (dedup/cursor pipeline, also used by `POST /topics/{id}/manual-scan`). `POST /topics/{id}/scan-short-content` fetches new YouTube comments per video since the last processed comment (tracked on the `YTChannel`), derives ShortContent ideas via AI, and persists them as `InsightNewsItem` records — replacing the retired `ScraperController`. It uses standard backoffice authentication (JWT/cookie), same as the rest of this controller, since it is called from the admin SPA.
 
 #### `UtilityController` — `api/utility`
 | Verb | Route | Purpose |
@@ -236,8 +236,7 @@ Generates a QR code for arbitrary `data`, with an optional center logo `IFormFil
 #### `ImageUploadController` — `api/imageupload`
 Uploads to blob storage (Azure Blob in prod, `BlobServiceMock` in mock). Supports single (`/upload`) or batch (`/upload-multiple`) uploads, scoped to a `folderName` and optionally placed under a per-match folder.
 
-#### `ScraperController` — `api/scraper`
-Quick utility to scrape recent videos + comments for a given `channelName` (used to seed insights / video ideas).
+> `ScraperController` (`api/scraper`) has been retired. Its comment-scraping/idea-extraction logic was migrated into `InsightsController`'s `POST /topics/{id}/scan-short-content`, which stores results as `ShortContent`-kind `InsightNewsItem`s instead of on the `YTChannel.Videos[].VideoIdeas` list.
 
 ### 3.7 Social Distribution
 

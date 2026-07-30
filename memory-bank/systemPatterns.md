@@ -73,7 +73,7 @@ frontend/
 
 ## Authentication & Security
 - JWT tokens with role-based access
-- API key system for external integrations (ScraperController)
+- API key system for external integrations (BackOffice endpoints via `ApiKeyAuth`)
 - Rate limiting via `ApiKeyRateLimitingService`
 - CORS configuration for cross-origin requests
 

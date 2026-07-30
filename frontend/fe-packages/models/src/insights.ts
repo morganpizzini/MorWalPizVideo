@@ -7,14 +7,20 @@ export enum InsightNewsStatus {
   Accepted = 1,
   Rejected = 2,
   Generated = 3,
+  AutoDetected = 4,
 }
 
 export enum ContentPlanType {
   Article = 0,
   Podcast = 1,
-  Video = 2,
-  SocialPost = 3,
+  SocialPost = 2,
+  VideoScript = 3,
   Newsletter = 4,
+}
+
+export enum InsightSourceKind {
+  Content = 0,
+  ShortContent = 1,
 }
 
 export interface InsightTopic {
@@ -39,6 +45,12 @@ export interface InsightNewsItem {
   discoveredAt: string;
   rankingScore: number;
   creationDateTime: string;
+  platformSource: string;
+  postId: string;
+  analysisReason: string;
+  sourceKind: InsightSourceKind;
+  commentExcerpt: string;
+  sentiment: string;
 }
 
 export interface InsightContentPlan {

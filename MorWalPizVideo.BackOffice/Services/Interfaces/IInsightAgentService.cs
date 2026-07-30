@@ -1,3 +1,4 @@
+using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Services.Interfaces
@@ -31,5 +32,36 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces
             IList<string> newsItemIds,
             ContentPlanType contentType,
             IList<string> targetPlatforms);
+
+        /// <summary>
+        /// Classifies a raw social post collected by the scanner as news or not, relative to the given topic
+        /// </summary>
+        /// <param name="topic">The topic the post was scanned for</param>
+        /// <param name="post">The raw post collected from the public source</param>
+        /// <returns>Classification result including decision, score, reason and a suggested title/summary</returns>
+        Task<PostClassificationResult> ClassifyPostAsync(InsightTopic topic, RawSocialPostDto post);
+
+        /// <summary>
+        /// Analyzes a batch of YouTube video comments and derives ShortContent ideas/hints relevant to the topic
+        /// </summary>
+        Task<IList<InsightNewsItem>> AnalyzeVideoCommentsAsync(
+            InsightTopic topic,
+            string videoId,
+            string videoTitle,
+            string videoUrl,
+            string channelName,
+            IList<VideoCommentDto> comments);
+    }
+
+    /// <summary>
+    /// AI classification outcome for a single scanned social post
+    /// </summary>
+    public class PostClassificationResult
+    {
+        public bool IsNews { get; set; }
+        public double RelevanceScore { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string SuggestedTitle { get; set; } = string.Empty;
+        public string Summary { get; set; } = string.Empty;
     }
 }
