@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
@@ -8,108 +8,112 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 {
     public class MatchMockRepository : BaseMockRepository<YouTubeContent>, IYouTubeContentRepository
     {
-        public MatchMockRepository(IHostEnvironment environment) : base(environment, "matches")
+        public MatchMockRepository(IMockScenario scenario) : base(scenario, "matches")
         {
         }
     }
     public class PageMockRepository : BaseMockRepository<Page>, IPageRepository
     {
-        public PageMockRepository(IHostEnvironment environment) : base(environment, "pages")
+        public PageMockRepository(IMockScenario scenario) : base(scenario, "pages")
         {
         }
     }
     public class ProductMockRepository : BaseMockRepository<Product>, IProductRepository
     {
-        public ProductMockRepository(IHostEnvironment environment) : base(environment, "products")
+        public ProductMockRepository(IMockScenario scenario) : base(scenario, "products")
         {
         }
     }
 
     public class ProductCategoryMockRepository : BaseMockRepository<ProductCategory>, IProductCategoryRepository
     {
-        public ProductCategoryMockRepository(IHostEnvironment environment) : base(environment, "productCategories")
+        public ProductCategoryMockRepository(IMockScenario scenario) : base(scenario, "productCategories")
         {
         }
     }
 
     public class ConfigurationMockRepository : BaseMockRepository<MorWalPizConfiguration>, IConfigurationRepository
     {
-        public ConfigurationMockRepository(IHostEnvironment environment) : base(environment, "configurations")
+        public ConfigurationMockRepository(IMockScenario scenario) : base(scenario, "configurations")
         {
         }
     }
 
     public class SponsorMockRepository : BaseMockRepository<Sponsor>, ISponsorRepository
     {
-        public SponsorMockRepository(IHostEnvironment environment) : base(environment, "sponsors")
+        public SponsorMockRepository(IMockScenario scenario) : base(scenario, "sponsors")
         {
         }
     }
     public class YTChannelMockRepository : BaseMockRepository<YTChannel>, IYTChannelRepository
     {
-        public YTChannelMockRepository(IHostEnvironment environment) : base(environment, "ytchannels")
+        public YTChannelMockRepository(IMockScenario scenario) : base(scenario, "ytchannels")
         {
         }
     }
     public class CalendarEventMockRepository : BaseMockRepository<CalendarEvent>, ICalendarEventRepository
     {
-        public CalendarEventMockRepository(IHostEnvironment environment) : base(environment, "calendarEvents")
+        public CalendarEventMockRepository(IMockScenario scenario) : base(scenario, "calendarEvents")
         {
         }
     }
 
     public class CompilationMockRepository : BaseMockRepository<Compilation>, ICompilationRepository
     {
-        public CompilationMockRepository(IHostEnvironment environment) : base(environment, "compilations")
+        public CompilationMockRepository(IMockScenario scenario) : base(scenario, "compilations")
         {
         }
     }
 
     public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
     {
-        public BioLinkMockRepository(IHostEnvironment environment) : base(environment, "bioLinks") { }
+        public BioLinkMockRepository(IMockScenario scenario) : base(scenario, "bioLinks") { }
     }
 
     public class SponsorApplyMockRepository : BaseMockRepository<SponsorApply>, ISponsorApplyRepository
     {
-        public SponsorApplyMockRepository(IHostEnvironment environment) : base(environment, "sponsorApplies") { }
+        public SponsorApplyMockRepository(IMockScenario scenario) : base(scenario, "sponsorApplies") { }
     }
 
     public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
     {
-        public ShortLinkMockRepository(IHostEnvironment environment) : base(environment, "shortLinks")
+        public ShortLinkMockRepository(IMockScenario scenario) : base(scenario, "shortLinks")
         {
         }
     }
 
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
     {
-        public CategoryMockRepository(IHostEnvironment environment) : base(environment, "categories")
+        public CategoryMockRepository(IMockScenario scenario) : base(scenario, "categories")
         {
         }
     }
     public class QueryLinkMockRepository : BaseMockRepository<QueryLink>, IQueryLinkRepository
     {
-        public QueryLinkMockRepository(IHostEnvironment environment) : base(environment, "queryLinks")
+        public QueryLinkMockRepository(IMockScenario scenario) : base(scenario, "queryLinks")
         {
         }
     }
 
     public class UserMockRepository : BaseMockRepository<User>, IUserRepository
     {
-        public UserMockRepository(IHostEnvironment environment) : base(environment, "users")
+        public UserMockRepository(IMockScenario scenario) : base(scenario, "users")
         {
         }
 
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
             var u = username.ToLower();
-            return (await this.GetItemsAsync(x => x.Username.ToLower() == u || x.Email.ToLower() == u)).FirstOrDefault();
+            var user = (await GetItemsAsync(x => x.Username.ToLower() == u || x.Email.ToLower() == u)).FirstOrDefault();
+            if (user == null || !user.IsActive)
+                return null;
+
+            return UserRepository.VerifyPassword(password, user.PasswordHash, user.Salt) ? user : null;
         }
     }
     public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
     {
-        public LoginAttemptMockRepository(IHostEnvironment environment) : base(environment, "loginAttempts")
+        public LoginAttemptMockRepository(IMockScenario scenario) : base(scenario, "loginAttempts")
         {
         }
 
@@ -177,84 +181,84 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class PublishScheduleMockRepository : BaseMockRepository<PublishSchedule>, IPublishScheduleRepository
     {
-        public PublishScheduleMockRepository(IHostEnvironment environment) : base(environment, "publishSchedules")
+        public PublishScheduleMockRepository(IMockScenario scenario) : base(scenario, "publishSchedules")
         {
         }
     }
 
     public class CustomFormMockRepository : BaseMockRepository<CustomForm>, ICustomFormRepository
     {
-        public CustomFormMockRepository(IHostEnvironment environment) : base(environment, "customForms")
+        public CustomFormMockRepository(IMockScenario scenario) : base(scenario, "customForms")
         {
         }
     }
 
     public class DigitalProductMockRepository : BaseMockRepository<DigitalProduct>, IDigitalProductRepository
     {
-        public DigitalProductMockRepository(IHostEnvironment environment) : base(environment, "digitalProducts")
+        public DigitalProductMockRepository(IMockScenario scenario) : base(scenario, "digitalProducts")
         {
         }
     }
 
     public class DigitalProductCategoryMockRepository : BaseMockRepository<DigitalProductCategory>, IDigitalProductCategoryRepository
     {
-        public DigitalProductCategoryMockRepository(IHostEnvironment environment) : base(environment, "digitalProductCategories")
+        public DigitalProductCategoryMockRepository(IMockScenario scenario) : base(scenario, "digitalProductCategories")
         {
         }
     }
 
     public class CustomerMockRepository : BaseMockRepository<Customer>, ICustomerRepository
     {
-        public CustomerMockRepository(IHostEnvironment environment) : base(environment, "customers")
+        public CustomerMockRepository(IMockScenario scenario) : base(scenario, "customers")
         {
         }
     }
 
     public class CartMockRepository : BaseMockRepository<Cart>, ICartRepository
     {
-        public CartMockRepository(IHostEnvironment environment) : base(environment, "carts")
+        public CartMockRepository(IMockScenario scenario) : base(scenario, "carts")
         {
         }
     }
 
     public class InsightTopicMockRepository : BaseMockRepository<InsightTopic>, IInsightTopicRepository
     {
-        public InsightTopicMockRepository(IHostEnvironment environment) : base(environment, "insightTopics")
+        public InsightTopicMockRepository(IMockScenario scenario) : base(scenario, "insightTopics")
         {
         }
     }
 
     public class InsightNewsItemMockRepository : BaseMockRepository<InsightNewsItem>, IInsightNewsItemRepository
     {
-        public InsightNewsItemMockRepository(IHostEnvironment environment) : base(environment, "insightNewsItems")
+        public InsightNewsItemMockRepository(IMockScenario scenario) : base(scenario, "insightNewsItems")
         {
         }
     }
 
     public class InsightContentPlanMockRepository : BaseMockRepository<InsightContentPlan>, IInsightContentPlanRepository
     {
-        public InsightContentPlanMockRepository(IHostEnvironment environment) : base(environment, "insightContentPlans")
+        public InsightContentPlanMockRepository(IMockScenario scenario) : base(scenario, "insightContentPlans")
         {
         }
     }
 
     public class InsightSourceCursorMockRepository : BaseMockRepository<InsightSourceCursor>, IInsightSourceCursorRepository
     {
-        public InsightSourceCursorMockRepository(IHostEnvironment environment) : base(environment, "insightSourceCursors")
+        public InsightSourceCursorMockRepository(IMockScenario scenario) : base(scenario, "insightSourceCursors")
         {
         }
     }
 
     public class CompetitionMockRepository : BaseMockRepository<Competition>, ICompetitionRepository
     {
-        public CompetitionMockRepository(IHostEnvironment environment) : base(environment, "competitions")
+        public CompetitionMockRepository(IMockScenario scenario) : base(scenario, "competitions")
         {
         }
     }
 
     public class UserChannelMockRepository : BaseMockRepository<UserChannel>, IUserChannelRepository
     {
-        public UserChannelMockRepository(IHostEnvironment environment) : base(environment, "userChannels") { }
+        public UserChannelMockRepository(IMockScenario scenario) : base(scenario, "userChannels") { }
 
         public async Task<IList<UserChannel>> GetByUserIdAsync(string userId)
             => (await GetItemsAsync(uc => uc.UserId == userId && uc.IsActive));
@@ -271,7 +275,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class UserChannelOwnerMockRepository : BaseMockRepository<UserChannelOwner>, IUserChannelOwnerRepository
     {
-        public UserChannelOwnerMockRepository(IHostEnvironment environment) : base(environment, "userChannelOwners") { }
+        public UserChannelOwnerMockRepository(IMockScenario scenario) : base(scenario, "userChannelOwners") { }
 
         public async Task<IList<UserChannelOwner>> GetByUserIdAsync(string userId)
             => (await GetItemsAsync(o => o.UserId == userId && o.IsActive));
@@ -282,7 +286,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class UserRequestMockRepository : BaseMockRepository<UserRequest>, IUserRequestRepository
     {
-        public UserRequestMockRepository(IHostEnvironment environment) : base(environment, "userRequests") { }
+        public UserRequestMockRepository(IMockScenario scenario) : base(scenario, "userRequests") { }
     }
 }
 

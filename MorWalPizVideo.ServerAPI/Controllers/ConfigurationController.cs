@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using MorWalPizVideo.Models.Constraints;
@@ -5,6 +6,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.Server.Controllers
 {
+    [AllowAnonymous] // ADR-002: explicit public read access
     public class ConfigurationController : ApplicationController
     {
         public ConfigurationController(

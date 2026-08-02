@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
@@ -19,11 +20,10 @@ namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
 public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVideo.BackOffice.Program>
 {
-    // Expose mock repositories as singleton instances for direct test access
-    public YTChannelMockRepository? YTChannelRepository { get; private set; }
-    public ShortLinkMockRepository? ShortLinkRepository { get; private set; }
-    public CompilationMockRepository? CompilationRepository { get; private set; }
-    public MatchMockRepository? MatchRepository { get; private set; }
+    public YTChannelMockRepository? YTChannelRepository => Services.GetRequiredService<IYTChannelRepository>() as YTChannelMockRepository;
+    public ShortLinkMockRepository? ShortLinkRepository => Services.GetRequiredService<IShortLinkRepository>() as ShortLinkMockRepository;
+    public CompilationMockRepository? CompilationRepository => Services.GetRequiredService<ICompilationRepository>() as CompilationMockRepository;
+    public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
 
     static BackOfficeWebApplicationFactory()
     {
@@ -66,55 +66,6 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
         // Use ConfigureTestServices to override services AFTER Program.cs registration
         builder.ConfigureTestServices(services =>
         {
-            // Remove all MongoDB-related repository registrations if they exist
-            var descriptorsToRemove = services
-                .Where(d => d.ServiceType.Name.Contains("Repository") && 
-                           !d.ServiceType.Name.Contains("Mock") &&
-                           d.ServiceType.Namespace == "MorWalPizVideo.Domain.Interfaces")
-                .ToList();
-
-            foreach (var descriptor in descriptorsToRemove)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Get IHostEnvironment for mock repository construction
-            var serviceProvider = services.BuildServiceProvider();
-            var hostEnvironment = serviceProvider.GetRequiredService<IHostEnvironment>();
-
-            // Create singleton instances of frequently-accessed mock repositories
-            YTChannelRepository = new YTChannelMockRepository(hostEnvironment);
-            ShortLinkRepository = new ShortLinkMockRepository(hostEnvironment);
-            CompilationRepository = new CompilationMockRepository(hostEnvironment);
-            MatchRepository = new MatchMockRepository(hostEnvironment);
-
-            // Register exposed repositories as singletons
-            services.AddSingleton<IYTChannelRepository>(YTChannelRepository);
-            services.AddSingleton<IShortLinkRepository>(ShortLinkRepository);
-            services.AddSingleton<ICompilationRepository>(CompilationRepository);
-            services.AddSingleton<IYouTubeContentRepository>(MatchRepository);
-
-            // Register remaining repositories as scoped (no need for direct test access)
-            services.AddSingleton<IProductRepository, ProductMockRepository>();
-            services.AddSingleton<ISponsorRepository, SponsorMockRepository>();
-            services.AddSingleton<ISponsorApplyRepository, SponsorApplyMockRepository>();
-            services.AddSingleton<IPageRepository, PageMockRepository>();
-            services.AddSingleton<ICalendarEventRepository, CalendarEventMockRepository>();
-            services.AddSingleton<IBioLinkRepository, BioLinkMockRepository>();
-            services.AddSingleton<ICategoryRepository, CategoryMockRepository>();
-            services.AddSingleton<IQueryLinkRepository, QueryLinkMockRepository>();
-            services.AddSingleton<IUserRepository, UserMockRepository>();
-            services.AddSingleton<ILoginAttemptRepository, LoginAttemptMockRepository>();
-            services.AddSingleton<IProductCategoryRepository, ProductCategoryMockRepository>();
-            services.AddSingleton<IPublishScheduleRepository, PublishScheduleMockRepository>();
-            services.AddSingleton<IConfigurationRepository, ConfigurationMockRepository>();
-            services.AddSingleton<ICustomFormRepository, CustomFormMockRepository>();
-            services.AddSingleton<IApiKeyRepository, ApiKeyMockRepository>();
-            services.AddSingleton<IDigitalProductRepository, DigitalProductMockRepository>();
-            services.AddSingleton<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
-            services.AddSingleton<ICustomerRepository, CustomerMockRepository>();
-            services.AddSingleton<ICartRepository, CartMockRepository>();
-
             // Mock external services to prevent real HTTP calls during tests
       
             services.AddScoped<IDiscordService, DiscordServiceMock>();

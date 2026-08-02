@@ -51,8 +51,7 @@ public class ShortLinksStepDefinitions
         {
             throw new Exception("No short links found in the repository. Ensure mock data is seeded correctly.");
         }
-        // Extract the ID from the URL response
-        _context.CreatedShortLinkId = existing.Id;
+        _context.CreatedShortLinkId = existing.Code;
     }
 
     [When(@"I request all short links")]
@@ -89,10 +88,11 @@ public class ShortLinksStepDefinitions
     }
 
     [Then(@"the response should be successful")]
-    public void ThenTheResponseShouldBeSuccessful()
+    public async Task ThenTheResponseShouldBeSuccessful()
     {
         _context.Response.Should().NotBeNull();
-        _context.Response!.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await _context.Response!.Content.ReadAsStringAsync();
+        _context.Response.StatusCode.Should().Be(HttpStatusCode.OK, content);
     }
 
     [Then(@"the response should be No Content")]
@@ -176,7 +176,8 @@ public class ShortLinksStepDefinitions
         {
             throw new Exception("No match with embedded short links found in the repository. Ensure mock data is seeded correctly.");
         }
-        _context.EmbeddedShortLinkId = match.ShortLinks[0].Id;
+        _context.EmbeddedShortLinkId = match.ShortLinks[0].Code;
+        _context.TestMatchId = match.Id;
     }
 
     [Given(@"a channel with embedded short link exists")]
@@ -189,7 +190,7 @@ public class ShortLinksStepDefinitions
             throw new Exception("No channels with embedded short links found in the repository. Ensure mock data is seeded correctly.");
         }
         
-        _context.EmbeddedShortLinkId = result.Id;
+        _context.EmbeddedShortLinkId = result.ShortLinks[0].Code;
     }
 
     [Given(@"a match exists for short link creation")]
@@ -229,17 +230,18 @@ public class ShortLinksStepDefinitions
     public async Task WhenIUpdateTheEmbeddedShortLink()
     {
         _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
+        _context.TestMatchId.Should().NotBeNullOrEmpty();
         
         var updateRequest = new
         {
-            Target = "updated-target",
+            Target = _context.TestMatchId,
             LinkType = 0, // Keep as YouTubeVideo
             QueryLinkIds = Array.Empty<string>()
         };
 
         _context.Response = await _client.PutAsJsonAsync(
             $"/api/ShortLinks/{_context.EmbeddedShortLinkId}",
-            new { Id = _context.EmbeddedShortLinkId, Body = updateRequest });
+            updateRequest);
     }
 
     [When(@"I delete the embedded short link by code")]

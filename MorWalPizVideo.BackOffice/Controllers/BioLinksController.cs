@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class ToggleBioLinkRequest
@@ -29,25 +29,23 @@ public class UpdateBioLinkRequest
 
 public class BioLinksController : ApplicationControllerBase
 {
-    private readonly IMongoDatabase database;
+    private readonly IBioLinkRepository repository;
     private readonly ICrossApiService client;
-    public BioLinksController(IMongoDatabase _database, ICrossApiService _clientFactory)
+    public BioLinksController(IBioLinkRepository repository, ICrossApiService client)
     {
-        database = _database;
-        client = _clientFactory;
+        this.repository = repository;
+        this.client = client;
     }
     [HttpPost]
     public async Task<IActionResult> CreateBioLink(CreateBioLinkRequest request)
     {
-        var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
-
         var entity = new BioLink(request.Title, request.Description, request.Url, request.Icon, request.Order);
+        var shiftedLinks = (await repository.GetItemsAsync(link => link.Order >= entity.Order))
+            .Select(link => link with { Order = link.Order + 1 });
+        foreach (var shiftedLink in shiftedLinks)
+            await repository.UpdateItemAsync(shiftedLink);
 
-        await collection.UpdateManyAsync(
-            Builders<BioLink>.Filter.Gte(x => x.Order, entity.Order),
-            Builders<BioLink>.Update.Inc(x => x.Order, 1));
-
-        await collection.InsertOneAsync(entity);
+        await repository.AddItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
         await client.PurgeCache(ApiTagCacheKeys.BioLinks);
@@ -56,9 +54,7 @@ public class BioLinksController : ApplicationControllerBase
     [HttpPut]
     public async Task<IActionResult> UpdateBioLink(UpdateBioLinkRequest request)
     {
-        var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
-
-        var entity = await collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefaultAsync();
+        var entity = (await repository.GetItemsAsync(link => link.Title.ToLower() == request.Title.ToLower())).FirstOrDefault();
         if (entity == null)
             return BadRequest("Bio link has not found");
 
@@ -69,22 +65,18 @@ public class BioLinksController : ApplicationControllerBase
 
         if (newOrder < oldOrder)
         {
-            await collection.UpdateManyAsync(
-                Builders<BioLink>.Filter.And(
-                    Builders<BioLink>.Filter.Gte(x => x.Order, newOrder),
-                    Builders<BioLink>.Filter.Lt(x => x.Order, oldOrder)),
-                Builders<BioLink>.Update.Inc(x => x.Order, 1));
+            var shiftedLinks = await repository.GetItemsAsync(link => link.Order >= newOrder && link.Order < oldOrder);
+            foreach (var shiftedLink in shiftedLinks)
+                await repository.UpdateItemAsync(shiftedLink with { Order = shiftedLink.Order + 1 });
         }
         else if (newOrder > oldOrder)
         {
-            await collection.UpdateManyAsync(
-                Builders<BioLink>.Filter.And(
-                    Builders<BioLink>.Filter.Gt(x => x.Order, oldOrder),
-                    Builders<BioLink>.Filter.Lte(x => x.Order, newOrder)),
-                Builders<BioLink>.Update.Inc(x => x.Order, -1));
+            var shiftedLinks = await repository.GetItemsAsync(link => link.Order > oldOrder && link.Order <= newOrder);
+            foreach (var shiftedLink in shiftedLinks)
+                await repository.UpdateItemAsync(shiftedLink with { Order = shiftedLink.Order - 1 });
         }
 
-        await collection.ReplaceOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity);
+        await repository.UpdateItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
         await client.PurgeCache(ApiTagCacheKeys.BioLinks);
@@ -94,9 +86,7 @@ public class BioLinksController : ApplicationControllerBase
     [HttpPut("toggle")]
     public async Task<IActionResult> ToggleBioLink(ToggleBioLinkRequest request)
     {
-        var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
-
-        var entity = await collection.Find(x => x.Title.ToLower() == request.Title).FirstOrDefaultAsync();
+        var entity = (await repository.GetItemsAsync(link => link.Title.ToLower() == request.Title.ToLower())).FirstOrDefault();
         if (entity == null)
         {
             return BadRequest("Bio link has not found");
@@ -104,7 +94,7 @@ public class BioLinksController : ApplicationControllerBase
 
         entity = entity with { Enable = !entity.Enable };
 
-        await collection.ReplaceOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id), entity);
+        await repository.UpdateItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
         await client.PurgeCache(ApiTagCacheKeys.BioLinks);
@@ -114,14 +104,12 @@ public class BioLinksController : ApplicationControllerBase
     [HttpDelete("{title}")]
     public async Task<IActionResult> DeleteBioLink(string title)
     {
-        var collection = database.GetCollection<BioLink>(DbCollections.BioLinks);
-
-        var entity = await collection.Find(x => x.Title.ToLower() == title).FirstOrDefaultAsync();
+        var entity = (await repository.GetItemsAsync(link => link.Title.ToLower() == title.ToLower())).FirstOrDefault();
         if (entity == null)
         {
             return BadRequest("Bio link has not found");
         }
-        await collection.DeleteOneAsync(Builders<BioLink>.Filter.Eq(e => e.Id, entity.Id));
+        await repository.DeleteItemAsync(entity.Id);
 
         await client.ResetCache(CacheKeys.BioLinks);
         await client.PurgeCache(ApiTagCacheKeys.BioLinks);

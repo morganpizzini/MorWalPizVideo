@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { getShopCart, updateCartItem, removeFromCart, checkoutCart } from '@morwalpizvideo/services';
 import type { Cart } from '@morwalpizvideo/models';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuthSession } from '../store/auth-storage';
 
 // Skeleton loader for cart items
 function CartItemSkeleton() {
@@ -92,20 +93,26 @@ function CartPageSkeleton() {
 }
 
 export async function loader(): Promise<Cart> {
+  const session = getAuthSession();
+  const emptyCart: Cart = {
+    id: '',
+    customerId: session?.customerId ?? '',
+    items: [],
+    isCompleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  if (!session) {
+    return emptyCart;
+  }
+
   try {
-    const cart = await getShopCart();
+    const cart = await getShopCart(session.customerId);
     return cart;
   } catch (error) {
     console.error('Error loading cart:', error);
-    // Return empty cart if error
-    return {
-      id: '',
-      customerId: '',
-      items: [],
-      isCompleted: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    return emptyCart;
   }
 }
 
@@ -150,13 +157,13 @@ export default function CartPage() {
   };
 
   const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    if (quantity < 1) return;
+    if (quantity < 1 || !session?.customerId) return;
 
     setIsUpdatingItem(productId);
     setError(null);
 
     try {
-      const updatedCart = await updateCartItem({ productId, quantity });
+      const updatedCart = await updateCartItem(session.customerId, productId, { productId, quantity });
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Error updating cart:', err);
@@ -167,11 +174,13 @@ export default function CartPage() {
   };
 
   const handleRemoveItem = async (productId: string) => {
+    if (!session?.customerId) return;
+
     setIsUpdatingItem(productId);
     setError(null);
 
     try {
-      const updatedCart = await removeFromCart(productId);
+      const updatedCart = await removeFromCart(session.customerId, productId);
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Error removing item:', err);
@@ -187,7 +196,7 @@ export default function CartPage() {
       return;
     }
 
-    if (!session?.email) {
+    if (!session?.email || !session?.customerId) {
       setError('Sessione non valida. Effettua nuovamente il login.');
       return;
     }
@@ -196,7 +205,7 @@ export default function CartPage() {
     setError(null);
 
     try {
-      const result = await checkoutCart({ 
+      const result = await checkoutCart(session.customerId, {
         cartId: cart.id,
         email: session.email
       });

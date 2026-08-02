@@ -206,7 +206,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return user;
         }
 
-        private static bool VerifyPassword(string password, string hash, string salt)
+        public static bool VerifyPassword(string password, string hash, string salt)
         {
             using var pbkdf2 = new Rfc2898DeriveBytes(password, Convert.FromBase64String(salt), 100000, HashAlgorithmName.SHA256);
             var testHash = Convert.ToBase64String(pbkdf2.GetBytes(256));

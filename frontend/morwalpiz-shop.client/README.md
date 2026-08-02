@@ -61,8 +61,8 @@ yarn format
 Create a `.env` file in the project root:
 
 ```env
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_RECAPTCHA_SITE_KEY=your_recaptcha_site_key_here
+VITE_API_BASE_URL=http://localhost:53090/api
+VITE_RECAPTCHA_KEY=your_recaptcha_site_key_here
 ```
 
 ## Project Structure
@@ -102,13 +102,14 @@ A Dockerfile will be added following the same pattern as the `morwalpizvideo.cli
 
 ## Integration with Backend
 
-The application connects to the MorWalPiz Video BackOffice API for:
-- Product catalog management
-- Order processing
-- User authentication
+The application connects exclusively to `MorWalPizVideo.ServerAPI` (the public API) for:
+- Product catalog reads
+- Anonymous customer authentication and cart
 - Digital content delivery via Azure Blob Storage
 
-API base URL is configured via `VITE_API_BASE_URL` environment variable.
+Product/category management and other administrative operations are owned by `MorWalPizVideo.BackOffice` and its `back-office-spa` admin UI, not by this app.
+
+API base URL is configured via `VITE_API_BASE_URL` environment variable. In production, its value is injected at container startup by `docker-entrypoint.sh` into `env-config.js` (`window.ENV`), the same pattern used by the other frontend apps.
 
 ## Next Steps (Implementation Phases)
 

@@ -91,6 +91,7 @@ public class VideoChannelAssignmentStepDefinitions
 
     [When(@"I assign the video to the channel")]
     [When(@"I assign the video to the channel again")]
+    [When(@"I assign the video to the target channel")]
     public async Task WhenIAssignTheVideoToTheChannel()
     {
         var ytId = await ResolveExistingVideoIdAsync();

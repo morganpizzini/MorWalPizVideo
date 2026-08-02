@@ -16,6 +16,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public CustomFormAnswer[] Answers { get; set; } = [];
     }
     
+    [AllowAnonymous] // ADR-002: explicit public read/submit access
     public class CustomFormsController : ApplicationController
     {
         private readonly ILogger<CustomFormsController> _logger;

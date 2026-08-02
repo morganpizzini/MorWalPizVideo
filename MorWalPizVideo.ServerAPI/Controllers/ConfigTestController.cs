@@ -13,12 +13,12 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly IFeatureManager _featureManager;
         private readonly IOptions<MorWalPizDatabaseSettings> _dbSettings;
-        private readonly IMongoDbService _mongoDbService;
+        private readonly IMongoDbService? _mongoDbService;
 
         public ConfigTestController(
             IFeatureManager featureManager,
             IOptions<MorWalPizDatabaseSettings> dbSettings,
-            IMongoDbService mongoDbService)
+            IMongoDbService? mongoDbService = null)
         {
             _featureManager = featureManager;
             _dbSettings = dbSettings;
@@ -77,6 +77,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
             try
             {
+                if (_mongoDbService is null)
+                    return Ok(new { Success = true, Message = "Mock scenario provider is active" });
+
                 var database = _mongoDbService.GetDatabase();
 
                 // Try to ping the database

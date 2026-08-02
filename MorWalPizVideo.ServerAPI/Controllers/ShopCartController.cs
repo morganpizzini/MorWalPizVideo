@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -7,6 +8,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
     [Route("api/shop/cart")]
+    [AllowAnonymous]
     public class ShopCartController : ApplicationController
     {
         private readonly ICartRepository _cartRepository;

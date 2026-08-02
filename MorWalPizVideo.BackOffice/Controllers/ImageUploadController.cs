@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using MorWalPizVideo.Domain;
-using MorWalPizVideo.Models.Constraints;
-using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -10,12 +8,12 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 public class ImageUploadController : ApplicationControllerBase
 {
     private readonly IBlobService blobServiceClient;
-    private readonly IMongoDatabase database;
+    private readonly IYouTubeContentRepository contentRepository;
 
-    public ImageUploadController(IMongoDatabase _database, IBlobService _blobServiceClient)
+    public ImageUploadController(IYouTubeContentRepository contentRepository, IBlobService blobServiceClient)
     {
-        database = _database;
-        blobServiceClient = _blobServiceClient;
+        this.contentRepository = contentRepository;
+        this.blobServiceClient = blobServiceClient;
     }
 
     [HttpPost("upload")]
@@ -26,8 +24,7 @@ public class ImageUploadController : ApplicationControllerBase
             return BadRequest("File non valido.");
         }
 
-        var matchCollection = database.GetCollection<YouTubeContent>(DbCollections.YouTubeContent);
-        var existingMatch = await matchCollection.Find(x => x.Url == folderName).FirstOrDefaultAsync();
+        var existingMatch = (await contentRepository.GetItemsAsync(match => match.Url == folderName)).FirstOrDefault();
 
         if (existingMatch == null)
         {

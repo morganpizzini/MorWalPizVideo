@@ -44,8 +44,10 @@ const SHOP_PRODUCT_CATEGORIES = `${baseEndpoint}/shop/categories`;
 const SHOP_AUTH_LOGIN = `${baseEndpoint}/shop/auth/login`;
 const SHOP_AUTH_VERIFY = `${baseEndpoint}/shop/auth/verify`;
 const SHOP_CART = `${baseEndpoint}/shop/cart`;
-const SHOP_CART_ITEMS = `${SHOP_CART}/items`;
-const SHOP_CART_CHECKOUT = `${SHOP_CART}/checkout`;
+const SHOP_CART_DETAIL = `${SHOP_CART}/{customerId}`;
+const SHOP_CART_ITEMS = `${SHOP_CART_DETAIL}/items`;
+const SHOP_CART_ITEM_DETAIL = `${SHOP_CART_ITEMS}/{productId}`;
+const SHOP_CART_CHECKOUT = `${SHOP_CART_DETAIL}/checkout`;
 const SHOP_LEGAL = `${baseEndpoint}/shop/legal/{type}`;
 
 // API Keys endpoints
@@ -98,7 +100,9 @@ export default {
     SHOP_AUTH_LOGIN,
     SHOP_AUTH_VERIFY,
     SHOP_CART,
+    SHOP_CART_DETAIL,
     SHOP_CART_ITEMS,
+    SHOP_CART_ITEM_DETAIL,
     SHOP_CART_CHECKOUT,
     SHOP_LEGAL,
     APIKEYS,

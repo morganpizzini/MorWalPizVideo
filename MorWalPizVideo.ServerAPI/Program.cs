@@ -8,9 +8,11 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
+using MorWalPizVideo.MvcHelpers.Authentication;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
@@ -29,6 +31,9 @@ var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.En
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
+
+if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
+    throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
 
 var allowAllCors = "AllowAllOrigins";
 var morWalPizCors = "MorWalPizPolicy";
@@ -98,6 +103,8 @@ builder.Services.AddScoped<IGenericDataService, MinimalDataService>();
 
 if (enableMock)
 {
+    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
+
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>();
@@ -228,6 +235,12 @@ else
 
 builder.Services.AddAuthorization();
 
+// ADR-002: internal cache operations authenticated service identity (BackOffice -> ServerAPI CacheController).
+builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSection("InternalServiceSettings"));
+builder.Services.AddAuthentication()
+    .AddScheme<InternalServiceAuthenticationOptions, InternalServiceAuthenticationHandler>(
+        InternalServiceAuthenticationHandler.SchemeName, options => { });
+
 // Web Push notifications
 if (!string.IsNullOrEmpty(builder.Configuration["WebPush:PublicKey"]))
 {
@@ -295,3 +308,8 @@ if (enableOutputCache)
 app.MapControllers();
 
 app.Run();
+
+namespace MorWalPizVideo.ServerAPI
+{
+    public partial class Program { }
+}

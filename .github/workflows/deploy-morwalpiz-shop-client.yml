@@ -36,9 +36,6 @@ jobs:
     - name: Build application
       working-directory: ./frontend/morwalpiz-shop.client
       run: yarn build
-      env:
-        VITE_API_URL: ${{ secrets.SHOP_API_URL }}
-        VITE_RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
 
     - name: Login to Azure
       uses: azure/login@v1

@@ -77,25 +77,33 @@ export async function shopVerifyEmail(
 // Cart
 // ============================================
 
-export async function getShopCart(): Promise<Cart> {
-  return await get(endpoints.SHOP_CART);
+export async function getShopCart(customerId: string): Promise<Cart> {
+  const url = ComposeUrl(endpoints.SHOP_CART_DETAIL, { customerId });
+  return await get(url);
 }
 
-export async function addToCart(data: AddToCartRequest): Promise<Cart> {
-  return await post(endpoints.SHOP_CART_ITEMS, data);
+export async function addToCart(customerId: string, data: AddToCartRequest): Promise<Cart> {
+  const url = ComposeUrl(endpoints.SHOP_CART_ITEMS, { customerId });
+  return await post(url, data);
 }
 
-export async function updateCartItem(data: UpdateCartItemRequest): Promise<Cart> {
-  return await put(endpoints.SHOP_CART_ITEMS, data);
+export async function updateCartItem(
+  customerId: string,
+  productId: string,
+  data: UpdateCartItemRequest
+): Promise<Cart> {
+  const url = ComposeUrl(endpoints.SHOP_CART_ITEM_DETAIL, { customerId, productId });
+  return await put(url, data);
 }
 
-export async function removeFromCart(productId: string): Promise<Cart> {
-  const url = `${endpoints.SHOP_CART_ITEMS}/${productId}`;
+export async function removeFromCart(customerId: string, productId: string): Promise<Cart> {
+  const url = ComposeUrl(endpoints.SHOP_CART_ITEM_DETAIL, { customerId, productId });
   return await Delete(url);
 }
 
-export async function checkoutCart(data: CheckoutRequest): Promise<CheckoutResponse> {
-  return await post(endpoints.SHOP_CART_CHECKOUT, data);
+export async function checkoutCart(customerId: string, data: CheckoutRequest): Promise<CheckoutResponse> {
+  const url = ComposeUrl(endpoints.SHOP_CART_CHECKOUT, { customerId });
+  return await post(url, data);
 }
 
 // ============================================

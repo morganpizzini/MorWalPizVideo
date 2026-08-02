@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -11,7 +12,7 @@ using MorWalPizVideo.Server.Controllers;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
-
+    [AllowAnonymous] // ADR-002: explicit public read access
     public class SponsorsController : ApplicationController
     {
         private readonly IHttpClientFactory httpClientFactory;

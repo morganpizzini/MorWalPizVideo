@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.MvcHelpers.Authentication;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
+    [InternalServiceAuth] // ADR-002: internal cache operations require an authenticated service identity
     public class CacheController : ApplicationController
     {
         private readonly IOutputCacheStore cache;

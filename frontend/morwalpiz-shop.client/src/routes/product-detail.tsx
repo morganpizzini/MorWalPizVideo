@@ -99,7 +99,7 @@ export default function ProductDetail() {
   const product = useLoaderData() as DigitalProduct;
   const navigate = useNavigate();
   const navigation = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -134,7 +134,7 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !session?.customerId) {
       navigate(`/login?redirect=/products/${product.id}`);
       return;
     }
@@ -144,7 +144,7 @@ export default function ProductDetail() {
     setSuccess(false);
 
     try {
-      await addToCart({
+      await addToCart(session.customerId, {
         productId: product.id,
         quantity: 1,
       });

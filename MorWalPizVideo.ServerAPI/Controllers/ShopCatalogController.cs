@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using MorWalPizVideo.Models.Constraints;
@@ -9,6 +10,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
     [Route("api/shop")]
+    [AllowAnonymous]
     public class ShopCatalogController : ApplicationController
     {
         private readonly IDigitalProductRepository _productRepository;

@@ -67,14 +67,39 @@ const router = createBrowserRouter([
   },
 ]);
 
-const recaptchaKey = import.meta.env.VITE_RECAPTCHA_KEY || '';
+const recaptchaKey =
+  (typeof window !== 'undefined' && (window as any).ENV?.VITE_RECAPTCHA_KEY) ||
+  import.meta.env.VITE_RECAPTCHA_KEY ||
+  '';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <HelmetProvider>
-      <GoogleReCaptchaProvider reCaptchaKey={recaptchaKey}>
-        <RouterProvider router={router} />
-      </GoogleReCaptchaProvider>
-    </HelmetProvider>
-  </StrictMode>
-);
+// Load runtime environment configuration (injected by Docker entrypoint)
+// This dynamically loads /env-config.js to avoid Vite trying to bundle it
+function loadEnvConfig(): Promise<void> {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = '/env-config.js';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      // In development, env-config.js may not exist - that's OK
+      console.warn('env-config.js not found - using build-time environment variables');
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
+}
+
+async function bootstrap() {
+  await loadEnvConfig();
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <HelmetProvider>
+        <GoogleReCaptchaProvider reCaptchaKey={recaptchaKey}>
+          <RouterProvider router={router} />
+        </GoogleReCaptchaProvider>
+      </HelmetProvider>
+    </StrictMode>
+  );
+}
+
+bootstrap();

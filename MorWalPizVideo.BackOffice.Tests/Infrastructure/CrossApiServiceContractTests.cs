@@ -1,5 +1,7 @@
 using System.Net;
+using Microsoft.Extensions.Options;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
@@ -11,7 +13,7 @@ public class CrossApiServiceContractTests
         var handler = new StubHttpMessageHandler();
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/api/") };
         var factory = HttpClientFactoryStub.WithClient(HttpClientNames.MorWalPiz, client);
-        return (new CrossApiService(factory), handler);
+        return (new CrossApiService(factory, Options.Create(new InternalServiceSettings())), handler);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
@@ -9,6 +10,7 @@ using MorWalPizVideo.Server.Controllers;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
+    [AllowAnonymous] // ADR-002: explicit public read access
     public class MatchesController : ApplicationController
     {
         private readonly IBlobService _blobService;

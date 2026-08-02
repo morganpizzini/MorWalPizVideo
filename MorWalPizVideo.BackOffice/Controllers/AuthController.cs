@@ -9,6 +9,7 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous] // ADR-002: explicit anonymous access (login/logout/validate must remain reachable without a prior token)
 public class AuthController : ControllerBase
 {
     private readonly IUserRepository _userRepository;

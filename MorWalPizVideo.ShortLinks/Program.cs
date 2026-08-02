@@ -2,6 +2,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.FeatureManagement;
 using MongoDB.Driver;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
@@ -18,6 +19,9 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+
+if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
+    throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
 
 // Configure Azure KeyVault if enabled
 if (enableKeyVault)
@@ -53,6 +57,7 @@ if (enableSwagger)
 builder.Services.AddScoped<IShortLinkDataService, ShortlinkDataService>();
 if (enableMock)
 {
+    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
@@ -88,8 +93,12 @@ else
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
 
-builder.Services.AddAuthentication("FakeScheme")
-    .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+// ADR-002: ShortLinks redirect is anonymous by default; fake auth is only ever registered in Development + EnableDev.
+var authenticationBuilder = builder.Services.AddAuthentication();
+if (enableDev && builder.Environment.IsDevelopment())
+{
+    authenticationBuilder.AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+}
 
 builder.Services.AddAuthorization();
 
@@ -137,3 +146,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+namespace MorWalPizVideo.ShortLinks
+{
+    public partial class Program { }
+}

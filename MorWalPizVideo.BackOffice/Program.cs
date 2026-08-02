@@ -1,6 +1,7 @@
 using Azure.Identity;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 using Microsoft.SemanticKernel;
@@ -16,6 +17,7 @@ using MorWalPizVideo.BackOffice.Services.Factories;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
@@ -38,6 +40,9 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
+
+if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
+    throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
 
 
 
@@ -226,7 +231,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+// ADR-002: BackOffice management defaults to requiring an authenticated JWT/cookie principal
+// for any endpoint that does not declare its own [Authorize]/[AllowAnonymous] metadata.
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -241,11 +253,16 @@ builder.Services.AddSingleton<IApiKeyRateLimitingService, ApiKeyRateLimitingServ
 builder.Services.AddAuthentication()
     .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>("ApiKey", options => { });
 
+// ADR-002: internal cache operations authenticated service identity (BackOffice -> ServerAPI CacheController).
+builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSection("InternalServiceSettings"));
+
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 
 if (enableMock)
 {
+    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
+
     var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
 
     builder.Services.AddHttpClient(HttpClientNames.MorWalPiz, httpClient =>

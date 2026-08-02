@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
 using MorWalPizVideo.Models.Constraints;
@@ -8,6 +9,7 @@ using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
+    [AllowAnonymous] // ADR-002: explicit public read access
     public class CalendarEventsController : ApplicationController
     {
         public CalendarEventsController(

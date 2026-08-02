@@ -64,7 +64,7 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 
 | Flag | Effect when enabled |
 | ---- | ------------------- |
-| `EnableMock` | Swaps every repository + most external services for in-memory mocks reading from [Data/*.json](Data/). Lets the API run with no MongoDB / no third-party creds. |
+| `EnableMock` | Swaps every repository + most external services for the code-initialized `PrimaryScenario`. Lets the API run with no MongoDB / no third-party creds. |
 | `EnableHangFire` | Registers Hangfire server + dashboard at `/hangfire` and schedules the recurring jobs (§5). Storage = SQL Server in prod, in-memory in dev. |
 | `EnableSwagger` | Mounts Swagger UI at `/swagger` with both `Bearer` and `ApiKey` security schemes. |
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using `DefaultAzureCredential`. Falls back gracefully if unreachable. |
@@ -388,7 +388,7 @@ Under [Services/](Services/) — registered in `Program.cs`. Most have a matchin
 | Factories (`IDiscordHttpClientFactory`, `ITelegramHttpClientFactory`) | Build HttpClient instances **lazily** so missing tokens don't block startup. |
 
 ### Repositories (provided by `MorWalPizVideo.Domain`)
-Mock vs MongoDB registration is performed in `Program.cs` based on `EnableMock`. Each entity has its own `IxxxRepository` + `xxxRepository` + `xxxMockRepository` triad — e.g. `IProductRepository`, `IYouTubeContentRepository`, `IApiKeyRepository`, `IUserRequestRepository`, etc. Mock implementations seed from [Data/*.json](Data/).
+Mock vs MongoDB registration is performed in `Program.cs` based on `EnableMock`. Each entity has its own `IxxxRepository` + `xxxRepository` + `xxxMockRepository` triad — e.g. `IProductRepository`, `IYouTubeContentRepository`, `IApiKeyRepository`, `IUserRequestRepository`, etc. Mock implementations share the singleton, code-initialized `PrimaryScenario`.
 
 ---
 

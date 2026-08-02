@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -7,6 +8,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
     [Route("api/shop/auth")]
+    [AllowAnonymous]
     public class ShopAuthController : ApplicationController
     {
         private readonly ICustomerRepository _customerRepository;
@@ -57,16 +59,14 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
             // Generate session token (simple implementation)
             var sessionToken = Guid.NewGuid().ToString();
+            var expiresAt = DateTime.UtcNow.AddHours(24);
 
             return Ok(new
             {
+                customerId = customer.Id,
+                email = customer.Email,
                 sessionToken,
-                customer = new
-                {
-                    customer.Id,
-                    customer.Email,
-                    customer.Name
-                }
+                expiresAt
             });
         }
 
