@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using SharedContractUtils = MorWalPiz.Contracts.ContractUtils;
+using MorWalPiz.Contracts;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MorWalPizVideo.Models.Configuration;
@@ -33,7 +35,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             var entities = await cache.GetOrCreateAsync(CacheKeys.Sponsors, dataService.GetSponsors);
            
-            return Ok(entities.Select(x=>(x with { ImgSrc = $"{blobOptions.Endpoint}/{blobOptions.SponsorContainerName}/{x.ImgSrc}" })));
+            return Ok(entities.Select(x => SharedContractUtils.Convert(x, $"{blobOptions.Endpoint}/{blobOptions.SponsorContainerName}")));
         }
 
         [HttpPost]
@@ -41,7 +43,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             using var client = httpClientFactory.CreateClient(HttpClientNames.Recaptcha);
             var host = HttpContext.Request.Host.Value;
-            var parameters = new Dictionary<string, string> { { "secret", configuration["RecaptchaSecretKey"] ?? string.Empty }, { "response", request.Token }, { "remoteip", host } };
+            var parameters = new Dictionary<string, string> { { "secret", configuration["RecaptchaSecretKey"] ?? string.Empty }, { "response", request.Token ?? string.Empty }, { "remoteip", host ?? string.Empty } };
             var encodedContent = new FormUrlEncodedContent(parameters);
 
             var response = await client.PostAsync("", encodedContent);

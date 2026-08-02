@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -33,7 +35,7 @@ public class PublishScheduleController : ApplicationControllerBase
   public async Task<IActionResult> GetPublishSchedules()
   {
     var schedules = await _dataService.GetPublishSchedules();
-    return Ok(schedules);
+    return Ok(schedules.Select(ContractUtils.Convert));
   }
 
   [HttpGet("{id}")]
@@ -43,7 +45,7 @@ public class PublishScheduleController : ApplicationControllerBase
     if (schedule == null)
       return NotFound("Publish schedule not found");
 
-    return Ok(schedule);
+    return Ok(ContractUtils.Convert(schedule));
   }
 
   [HttpGet("video/{videoId}")]
@@ -53,7 +55,7 @@ public class PublishScheduleController : ApplicationControllerBase
     if (schedule == null)
       return NotFound("Publish schedule not found for the specified video");
 
-    return Ok(schedule);
+    return Ok(ContractUtils.Convert(schedule));
   }
 
   [HttpPost]

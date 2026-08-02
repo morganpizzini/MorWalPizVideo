@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -19,7 +21,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     public async Task<IActionResult> GetConfigurations()
     {
       var configurations = await _dataService.GetConfigurations();
-      return Ok(configurations);
+      return Ok(configurations.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
@@ -29,7 +31,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
       if (configuration == null)
         return NotFound("Configuration not found");
 
-      return Ok(configuration);
+      return Ok(ContractUtils.Convert(configuration));
     }
 
     [HttpGet("key/{key}")]
@@ -39,7 +41,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
       if (configuration == null)
         return NotFound($"Configuration with key '{key}' not found");
 
-      return Ok(configuration);
+      return Ok(ContractUtils.Convert(configuration));
     }
 
     [HttpPost]

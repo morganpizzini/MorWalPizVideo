@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts.Videos;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
@@ -40,7 +42,7 @@ public class VideosController : ApplicationControllerBase
     public async Task<IActionResult> Fetch()
     {
         var matches = await _dataService.FetchMatches();
-        return Ok(matches);
+        return Ok(matches.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
@@ -51,7 +53,7 @@ public class VideosController : ApplicationControllerBase
         {
             return NotFound();
         }
-        return Ok(match);
+        return Ok(ContractUtils.Convert(match));
     }
 
     [HttpPut("{id}")]
@@ -253,7 +255,7 @@ public class VideosController : ApplicationControllerBase
         await client.PurgeCache(ApiTagCacheKeys.Matches);
         await client.ReloadCache();
 
-        return Ok(updatedMatch);
+        return Ok(ContractUtils.Convert(updatedMatch));
     }
 
     [HttpPost("{id}/publish-social")]

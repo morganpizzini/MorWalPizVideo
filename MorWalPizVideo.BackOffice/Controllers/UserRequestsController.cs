@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Models.Models;
 
@@ -44,7 +46,7 @@ public class UserRequestsController : ControllerBase
     await _repository.AddItemAsync(request);
     _logger.LogInformation("New user request submitted: {Topic} by {Name}", request.Topic, request.Name);
 
-    return CreatedAtAction(nameof(GetById), new { id = request.Id }, request);
+    return CreatedAtAction(nameof(GetById), new { id = request.Id }, ContractUtils.Convert(request));
   }
 
   /// <summary>
@@ -60,7 +62,7 @@ public class UserRequestsController : ControllerBase
         ? await _repository.GetItemsAsync(r => r.Status == status.Value)
         : await _repository.GetItemsAsync();
 
-    return Ok(items.OrderByDescending(r => r.Votes).ThenByDescending(r => r.CreationDateTime));
+    return Ok(items.OrderByDescending(r => r.Votes).ThenByDescending(r => r.CreationDateTime).Select(ContractUtils.Convert));
   }
 
   /// <summary>
@@ -74,7 +76,7 @@ public class UserRequestsController : ControllerBase
     var item = await _repository.GetItemAsync(id);
     if (item == null)
       return NotFound();
-    return Ok(item);
+    return Ok(ContractUtils.Convert(item));
   }
 
   /// <summary>
@@ -99,7 +101,7 @@ public class UserRequestsController : ControllerBase
     _logger.LogInformation("User request {Id} status changed to {Status} by {Admin}",
         id, dto.Status, User.Identity?.Name);
 
-    return Ok(updated);
+    return Ok(ContractUtils.Convert(updated));
   }
 
   /// <summary>

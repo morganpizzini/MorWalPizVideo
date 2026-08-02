@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using MorWalPiz.Contracts;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -31,7 +32,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> GetProducts()
         {
             var products = await _productRepository.GetItemsAsync();
-            return Ok(products);
+            return Ok(products.Select(ContractUtils.Convert));
         }
 
         [HttpGet("products/{id}")]
@@ -39,7 +40,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> GetProduct(string id)
         {
             var product = await _productRepository.GetItemAsync(id);
-            return product == null ? NotFound() : Ok(product);
+            return product == null ? NotFound() : Ok(ContractUtils.Convert(product));
         }
 
         [HttpGet("categories")]
@@ -47,7 +48,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> GetCategories()
         {
             var categories = await _categoryRepository.GetItemsAsync();
-            return Ok(categories);
+            return Ok(categories.Select(ContractUtils.Convert));
         }
 
         [HttpGet("categories/{id}")]
@@ -55,7 +56,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> GetCategory(string id)
         {
             var category = await _categoryRepository.GetItemAsync(id);
-            return category == null ? NotFound() : Ok(category);
+            return category == null ? NotFound() : Ok(ContractUtils.Convert(category));
         }
 
         [HttpGet("categories/{id}/products")]
@@ -63,7 +64,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> GetProductsByCategory(string id)
         {
             var products = await _productRepository.GetItemsAsync();
-            var filtered = products.Where(p => p.CategoryIds.Contains(id)).ToList();
+            var filtered = products.Where(p => p.CategoryIds.Contains(id)).Select(ContractUtils.Convert).ToList();
             return Ok(filtered);
         }
     }

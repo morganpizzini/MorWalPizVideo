@@ -2,6 +2,8 @@ using Azure.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -24,26 +26,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserContract>>> GetUsers()
         {
             var users = await _dataService.FetchUsers();
-            
-            // Return users without sensitive data
-            var userList = users.Select(u => new
-            {
-                u.Id,
-                u.Username,
-                u.Email,
-                u.Role,
-                u.IsActive,
-                u.LastLogin
-            });
-
-            return Ok(userList);
+            return Ok(users.Select(ContractUtils.Convert));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<object>> GetUser(string id)
+        public async Task<ActionResult<UserContract>> GetUser(string id)
         {
             var user = await _dataService.GetUser(id);
             
@@ -52,18 +42,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return NotFound();
             }
 
-            // Return user without sensitive data
-            var userInfo = new
-            {
-                user.Id,
-                user.Username,
-                user.Email,
-                user.Role,
-                user.IsActive,
-                user.LastLogin
-            };
-
-            return Ok(userInfo);
+            return Ok(ContractUtils.Convert(user));
         }
 
         [AllowAnonymous]
@@ -89,17 +68,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
             await _dataService.SaveUser(user);
 
-            var userInfo = new
-            {
-                user.Id,
-                user.Username,
-                user.Email,
-                user.Role,
-                user.IsActive,
-                user.LastLogin
-            };
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userInfo);
+            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ContractUtils.Convert(user));
         
         }
 
@@ -136,17 +105,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
             await _dataService.SaveUser(user);
 
-            var userInfo = new
-            {
-                user.Id,
-                user.Username,
-                user.Email,
-                user.Role,
-                user.IsActive,
-                user.LastLogin
-            };
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userInfo);
+            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ContractUtils.Convert(user));
         }
 
         [HttpPut("{id}")]

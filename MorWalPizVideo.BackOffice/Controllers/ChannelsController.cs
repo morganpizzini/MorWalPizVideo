@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using System.ComponentModel.DataAnnotations;
@@ -24,7 +26,8 @@ public class ChannelsController : ApplicationControllerBase
     [HttpGet]
     public async Task<IActionResult> GetChannels()
     {
-        return Ok(await _dataService.GetChannels());
+        var entities = await _dataService.GetChannels();
+        return Ok(entities.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
@@ -35,7 +38,7 @@ public class ChannelsController : ApplicationControllerBase
         {
             return NotFound();
         }
-        return Ok(existing);
+        return Ok(ContractUtils.Convert(existing));
     }
 
     [HttpPost]

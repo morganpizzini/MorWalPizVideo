@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -26,12 +28,12 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all calendar events
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IList<CalendarEvent>>> GetAll()
+        public async Task<ActionResult<IList<CalendarEventContract>>> GetAll()
         {
             try
             {
                 var events = await _dataService.GetCalendarEvents();
-                return Ok(events);
+                return Ok(events.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
             {
@@ -44,7 +46,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get calendar event by title
         /// </summary>
         [HttpGet("by-title/{title}")]
-        public async Task<ActionResult<CalendarEvent>> GetByTitle(string title)
+        public async Task<ActionResult<CalendarEventContract>> GetByTitle(string title)
         {
             try
             {
@@ -59,7 +61,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return NotFound($"Calendar event with title '{title}' not found");
                 }
 
-                return Ok(calendarEvent);
+                return Ok(ContractUtils.Convert(calendarEvent));
             }
             catch (Exception ex)
             {
@@ -72,7 +74,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new calendar event
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<CalendarEvent>> Create([FromBody] CalendarEvent calendarEvent)
+        public async Task<ActionResult<CalendarEventContract>> Create([FromBody] CalendarEvent calendarEvent)
         {
             try
             {
@@ -117,7 +119,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 
                 _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
                 
-                return CreatedAtAction(nameof(GetByTitle), new { title = calendarEvent.Title }, calendarEvent);
+                return CreatedAtAction(nameof(GetByTitle), new { title = calendarEvent.Title }, ContractUtils.Convert(calendarEvent));
             }
             catch (Exception ex)
             {
@@ -130,7 +132,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Update an existing calendar event
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(string id, [FromBody] CalendarEvent calendarEvent)
+        public async Task<ActionResult<CalendarEventContract>> Update(string id, [FromBody] CalendarEvent calendarEvent)
         {
             try
             {
@@ -175,7 +177,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 
                 _logger.LogInformation("Calendar event updated: {Id} - {Title}", id, calendarEvent.Title);
                 
-                return Ok(calendarEvent);
+                return Ok(ContractUtils.Convert(calendarEvent));
             }
             catch (Exception ex)
             {

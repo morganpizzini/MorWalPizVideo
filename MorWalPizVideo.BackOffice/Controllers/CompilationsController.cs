@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -57,7 +59,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 var compilations = await _dataService.GetCompilations();
-                return Ok(compilations);
+                return Ok(compilations.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
             {
@@ -85,7 +87,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return NotFound($"Compilation with ID '{id}' not found");
                 }
 
-                return Ok(compilation);
+                return Ok(ContractUtils.Convert(compilation));
             }
             catch (Exception ex)
             {
@@ -166,7 +168,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 
                 _logger.LogInformation("Compilation created: {Id} - {Title}", compilation.Id, compilation.Title);
                 
-                return Created($"/api/Compilations/{compilation.Id}", compilation);
+                return Created($"/api/Compilations/{compilation.Id}", ContractUtils.Convert(compilation));
             }
             catch (Exception ex)
             {

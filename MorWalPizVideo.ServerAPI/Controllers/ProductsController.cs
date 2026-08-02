@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using Microsoft.Extensions.Caching.Memory;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
@@ -22,7 +24,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> Index()
         {
             var entities = await cache.GetOrCreateAsync(CacheKeys.Products, dataService.GetProducts);
-            return Ok(entities);
+            return Ok(entities.Select(ContractUtils.Convert));
         }
     }
 }

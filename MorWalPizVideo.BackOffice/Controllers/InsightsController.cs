@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.DTOs;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Server.Models;
@@ -28,7 +30,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public async Task<IActionResult> GetTopics()
         {
             var topics = await _dataService.GetInsightTopics();
-            return Ok(topics);
+            return Ok(topics.Select(ContractUtils.Convert));
         }
 
         [HttpGet("topics/{id}")]
@@ -38,7 +40,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             if (topic == null)
                 return NotFound();
 
-            return Ok(topic);
+            return Ok(ContractUtils.Convert(topic));
         }
 
         [HttpPost("topics")]
@@ -55,7 +57,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             };
 
             await _dataService.SaveInsightTopic(topic);
-            return CreatedAtAction(nameof(GetTopicById), new { id = topic.Id }, topic);
+            return CreatedAtAction(nameof(GetTopicById), new { id = topic.Id }, ContractUtils.Convert(topic));
         }
 
         [HttpPut("topics/{id}")]
@@ -74,7 +76,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             };
 
             await _dataService.UpdateInsightTopic(updated);
-            return Ok(updated);
+            return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("topics/{id}")]
@@ -110,7 +112,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             // Rank the items
             var rankedNews = await _insightAgentService.RankNewsItemsAsync(discoveredNews);
 
-            return Ok(rankedNews);
+            return Ok(rankedNews.Select(ContractUtils.Convert));
         }
 
         /// <summary>
@@ -158,7 +160,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 newsItems = newsItems.Where(n => n.SourceKind == sourceKind.Value).ToList();
             }
 
-            return Ok(newsItems);
+            return Ok(newsItems.Select(ContractUtils.Convert));
         }
 
         [HttpGet("topics/{id}/news")]
@@ -180,7 +182,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 newsItems = newsItems.Where(n => n.SourceKind == sourceKind.Value).ToList();
             }
 
-            return Ok(newsItems);
+            return Ok(newsItems.Select(ContractUtils.Convert));
         }
 
         [HttpGet("news/{id}")]
@@ -190,7 +192,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             if (newsItem == null)
                 return NotFound();
 
-            return Ok(newsItem);
+            return Ok(ContractUtils.Convert(newsItem));
         }
 
         [HttpPut("news/{id}/review")]
@@ -213,7 +215,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
 
             await _dataService.UpdateInsightNewsItem(updated);
-            return Ok(updated);
+            return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("news/{id}")]
@@ -265,14 +267,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
             }
 
-            return CreatedAtAction(nameof(GetContentPlanById), new { id = contentPlan.Id }, contentPlan);
+            return CreatedAtAction(nameof(GetContentPlanById), new { id = contentPlan.Id }, ContractUtils.Convert(contentPlan));
         }
 
         [HttpGet("content-plans")]
         public async Task<IActionResult> GetAllContentPlans()
         {
             var plans = await _dataService.GetInsightContentPlans();
-            return Ok(plans);
+            return Ok(plans.Select(ContractUtils.Convert));
         }
 
         [HttpGet("topics/{id}/content-plans")]
@@ -283,7 +285,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return NotFound();
 
             var plans = await _dataService.GetInsightContentPlansByTopicId(id);
-            return Ok(plans);
+            return Ok(plans.Select(ContractUtils.Convert));
         }
 
         [HttpGet("content-plans/{id}")]
@@ -293,7 +295,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             if (plan == null)
                 return NotFound();
 
-            return Ok(plan);
+            return Ok(ContractUtils.Convert(plan));
         }
 
         [HttpPut("content-plans/{id}")]
@@ -321,7 +323,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
 
             await _dataService.UpdateInsightContentPlan(updated);
-            return Ok(updated);
+            return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("content-plans/{id}")]

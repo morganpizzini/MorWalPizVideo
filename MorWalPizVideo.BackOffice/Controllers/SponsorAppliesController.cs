@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Server.Services;
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -13,6 +15,6 @@ public class SponsorAppliesController : ApplicationControllerBase
     public async Task<IActionResult> Index()
     {
         var result = await _dataService.GetSponsorApplies();
-        return Ok(result);
+        return Ok(result.Select(ContractUtils.Convert));
     }
 }

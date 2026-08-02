@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -50,7 +51,7 @@ public class ProductsController : ApplicationControllerBase
     public async Task<IActionResult> GetProducts()
     {
         var entities = await _dataService.GetProducts();
-        return Ok(entities);
+        return Ok(entities.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
@@ -59,7 +60,7 @@ public class ProductsController : ApplicationControllerBase
         var entity = await _dataService.GetProductById(id);
         if (entity == null)
             return NotFound();
-        return Ok(entity);
+        return Ok(ContractUtils.Convert(entity));
     }
 
     [HttpPost]

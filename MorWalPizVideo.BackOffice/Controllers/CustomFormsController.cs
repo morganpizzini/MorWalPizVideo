@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -62,12 +64,12 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all custom forms
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IList<CustomForm>>> Fetch()
+        public async Task<ActionResult<IList<CustomFormContract>>> Fetch()
         {
             try
             {
                 var forms = await _dataService.Fetch();
-                return Ok(forms);
+                return Ok(forms.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
             {
@@ -80,7 +82,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get custom form by ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<CustomForm>> GetById(BaseRequestId request)
+        public async Task<ActionResult<CustomFormContract>> GetById(BaseRequestId request)
         {
             try
             {
@@ -91,7 +93,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                return Ok(form);
+                return Ok(ContractUtils.Convert(form));
             }
             catch (Exception ex)
             {
@@ -104,7 +106,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new custom form
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<CustomForm>> Create(BaseRequest<CreateCustomFormRequest> request)
+        public async Task<ActionResult<CustomFormContract>> Create(BaseRequest<CreateCustomFormRequest> request)
         {
             try
             {
@@ -151,7 +153,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
                 
-                return CreatedAtAction(nameof(GetById), new { id = form.Id }, form);
+                return CreatedAtAction(nameof(GetById), new { id = form.Id }, ContractUtils.Convert(form));
             }
             catch (Exception ex)
             {
