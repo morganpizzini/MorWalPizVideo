@@ -42,7 +42,7 @@ Full collection materialization and in-memory sorting/filtering bypass Mongo ind
 
 ### Mock Data
 
-Current mock repositories use JSON files loaded through a scenario abstraction. They support deterministic local behavior without MongoDB. External integrations also need fake implementations so full workflows can run offline. See [Development](development.md).
+Current mock repositories are code-initialized, in-memory entity collections loaded through the `IMockScenario`/`PrimaryScenario` abstraction, not JSON files. They support deterministic local behavior without MongoDB. External integrations also need fake implementations so full workflows can run offline. See [Development](development.md).
 
 ### SQLite
 

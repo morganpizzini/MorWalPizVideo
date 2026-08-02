@@ -44,5 +44,11 @@ namespace MorWalPiz.Contracts.Contracts
 
         [DataMember]
         public string VideoId { get; set; } = string.Empty;
+
+        [DataMember]
+        public string? ContentId { get; set; }
+
+        [DataMember]
+        public string? ChannelId { get; set; }
     }
 }

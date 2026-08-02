@@ -32,7 +32,9 @@ namespace MorWalPiz.Contracts
                 QueryString = entity.QueryString,
                 ShortLinkId = entity.Id,
                 ClicksCount = entity.ClicksCount,
-                LinkType = entity.LinkType
+                LinkType = entity.LinkType,
+                ContentId = entity.ContentId,
+                ChannelId = entity.ChannelId
             };
         }
         public static QueryLinkContract Convert (QueryLink entity)

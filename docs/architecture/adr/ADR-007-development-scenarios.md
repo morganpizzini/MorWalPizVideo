@@ -5,7 +5,7 @@
 
 ## Context
 
-Local workflows depend on MongoDB, Blob, Key Vault, YouTube, social APIs, AI, and other providers. JSON mock repositories exist but external fakes and coherent scenarios are incomplete.
+Local workflows depend on MongoDB, Blob, Key Vault, YouTube, social APIs, AI, and other providers. Mock repositories exist as code-initialized, in-memory entity collections (`IMockScenario`, `BaseScenario`, `PrimaryScenario`, `BaseMockRepository<T>` in `MorWalPizVideo.Domain`) rather than JSON fixture files. Only one scenario (`PrimaryScenario`) exists today and several external providers (Translator/AI completion, Pinterest, reCAPTCHA, Web Push) still lack fakes, so named scenarios and full external-fake coverage remain incomplete.
 
 ## Decision
 

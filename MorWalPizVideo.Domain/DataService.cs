@@ -345,9 +345,10 @@ namespace MorWalPizVideo.Server.Services
         }
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
-        public async Task<ShortLink?> GetShortLinkByCode(string shortLink) => (await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == shortLink.ToLower())).FirstOrDefault();
+        public Task<ShortLink?> GetShortLinkByCode(string shortLink) => _shortLinkRepository.GetByCodeAsync(shortLink);
         public async Task<ShortLink?> GetShortLink(string id) => (await _shortLinkRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
+        public Task<int> IncrementShortLinkClicksAsync(string id) => _shortLinkRepository.IncrementClicksAsync(id);
 
         public async Task<ShortLink> SaveShortLink(ShortLink entity)
         {

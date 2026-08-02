@@ -63,11 +63,10 @@ public class ShortLinksController : ApplicationControllerBase
             allShortLinks.AddRange(channel.ShortLinks);
         }
 
-        // Fetch standalone short links (exclude YouTubeVideo and YouTubeChannel to avoid duplication)
+        // Fetch standalone short links. New YouTubeVideo/YouTubeChannel links are created here directly
+        // (ADR-004: canonical standalone aggregate), so no exclusion/dedup against embedded links is needed.
         var standaloneLinks = await _dataService.FetchShortLinks();
-        allShortLinks.AddRange(standaloneLinks.Where(x => 
-            x.LinkType != LinkType.YouTubeVideo && 
-            x.LinkType != LinkType.YouTubeChannel));
+        allShortLinks.AddRange(standaloneLinks);
 
         return Ok(allShortLinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
     }
@@ -101,16 +100,18 @@ public class ShortLinksController : ApplicationControllerBase
                 {
                     return BadRequest("Match do not exists");
                 }
-                var existingContentShortLink = existingMatch.ShortLinks
-                    .FirstOrDefault(x => x.Target == newShortLink.Target 
+                var existingContentShortLink = (await _dataService.FetchShortLinks())
+                    .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo
+                                                    && x.ContentId == existingMatch.Id
+                                                    && x.Target == newShortLink.Target
                                                     && x.QueryString == newShortLink.QueryString);
                 if (existingContentShortLink != null)
                 {
                     return Ok($"{siteUrl}{existingContentShortLink.Code}");
                 }
                 newShortLink.LinkType = LinkType.YouTubeVideo;
-                existingMatch = existingMatch.AddShortLink(newShortLink);
-                await _dataService.UpdateMatch(existingMatch);
+                newShortLink.ContentId = existingMatch.Id;
+                newShortLink = await _dataService.SaveShortLink(newShortLink);
                 break;
             case LinkType.YouTubeChannel:
                 var existingChannel = await _dataService.FindChannel(request.Target);
@@ -118,16 +119,25 @@ public class ShortLinksController : ApplicationControllerBase
                 {
                     return BadRequest("Channel do not exists");
                 }
-                var exisintgShortLink = existingChannel.ShortLinks.FirstOrDefault(x => x.Target == newShortLink.Target
+                var exisintgShortLink = (await _dataService.FetchShortLinks())
+                    .FirstOrDefault(x => x.LinkType == LinkType.YouTubeChannel
+                                                    && x.ChannelId == existingChannel.Id
+                                                    && x.Target == newShortLink.Target
                                                     && x.QueryString == newShortLink.QueryString);
                 if (exisintgShortLink != null)
                 {
                     return Ok($"{siteUrl}{exisintgShortLink.Code}");
                 }
                 newShortLink.LinkType = LinkType.YouTubeChannel;
-                existingChannel = existingChannel.AddShortLink(newShortLink);
-                await _dataService.UpdateChannel(existingChannel);
-                var channels = await _dataService.FetchChannels();
+                newShortLink.ChannelId = existingChannel.Id;
+                newShortLink = await _dataService.SaveShortLink(newShortLink);
+                break;
+            case LinkType.CustomUrl:
+                if (!IsSafeAbsoluteHttpUrl(request.Target))
+                {
+                    return BadRequest("Target must be an absolute http or https URL");
+                }
+                newShortLink = await _dataService.SaveShortLink(newShortLink);
                 break;
             default:
                 newShortLink = await _dataService.SaveShortLink(newShortLink);
@@ -200,64 +210,42 @@ public class ShortLinksController : ApplicationControllerBase
             LinkType = request.Body.LinkType 
         };
 
-        // Update based on the new LinkType and handle migration between types
+        // All link types now converge on the canonical standalone collection (ADR-004): links still
+        // embedded on a match/channel are migrated out on update rather than re-embedded.
         switch (request.Body.LinkType)
         {
             case LinkType.YouTubeVideo:
-                updatedShortLink.LinkType = LinkType.YouTubeVideo;
                 var existingMatch = await _dataService.FindMatch(request.Body.Target);
                 if (existingMatch == null)
                 {
                     return BadRequest("Match do not exists");
                 }
-                
-                // Remove from old location if it's being migrated
-                if (sourceType != ShortLinkSourceType.Match)
-                {
-                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
-                    existingMatch.AddShortLink(updatedShortLink);
-                }
-                else
-                {
-                    existingMatch = (YouTubeContent)owningEntity!;
-                    existingMatch = existingMatch.UpdateShortLink(existingShortLink.Code, updatedShortLink);
-                }
-                await _dataService.UpdateMatch(existingMatch);
+                updatedShortLink.LinkType = LinkType.YouTubeVideo;
+                updatedShortLink.ContentId = existingMatch.Id;
+                updatedShortLink.ChannelId = null;
+                await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
                 break;
                 
             case LinkType.YouTubeChannel:
-                updatedShortLink.LinkType = LinkType.YouTubeChannel;
                 var existingChannel = await _dataService.GetChannel(request.Body.Target);
                 if (existingChannel == null)
                 {
                     return BadRequest("Channel do not exists");
                 }
-                
-                // Remove from old location if it's being migrated
-                if (sourceType != ShortLinkSourceType.Channel)
-                {
-                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
-                    existingChannel.AddShortLink(updatedShortLink);
-                }
-                else
-                {
-                    existingChannel = (YTChannel)owningEntity!;
-                    existingChannel = existingChannel.UpdateShortLink(existingShortLink.Code, updatedShortLink);
-                }
-                await _dataService.UpdateChannel(existingChannel);
+                updatedShortLink.LinkType = LinkType.YouTubeChannel;
+                updatedShortLink.ChannelId = existingChannel.Id;
+                updatedShortLink.ContentId = null;
+                await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
                 break;
                 
             default:
-                // Remove from old location if it's being migrated from match or channel
-                if (sourceType != ShortLinkSourceType.Standalone)
+                if (request.Body.LinkType == LinkType.CustomUrl && !IsSafeAbsoluteHttpUrl(request.Body.Target))
                 {
-                    await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
-                    await _dataService.SaveShortLink(updatedShortLink);
+                    return BadRequest("Target must be an absolute http or https URL");
                 }
-                else
-                {
-                    await _dataService.UpdateShortlink(updatedShortLink);
-                }
+                updatedShortLink.ContentId = null;
+                updatedShortLink.ChannelId = null;
+                await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
                 break;
         }
 
@@ -284,6 +272,67 @@ public class ShortLinksController : ApplicationControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// One-time admin operation completing the ADR-004 migration: moves short links still embedded on
+    /// matches/channels into the canonical standalone collection. Idempotent and safe to re-run.
+    /// </summary>
+    [HttpPost("backfill-canonical")]
+    public async Task<IActionResult> BackfillCanonical()
+    {
+        var migrated = 0;
+
+        var matches = await _dataService.FetchMatches();
+        foreach (var match in matches)
+        {
+            var embeddedLinks = match.ShortLinks.ToList();
+            if (embeddedLinks.Count == 0)
+                continue;
+
+            // Accumulate removals on a local copy: each RemoveShortLink call is immutable, so a single
+            // UpdateMatch persists all removals for this match instead of one overwriting the other.
+            var updatedMatch = match;
+            foreach (var embedded in embeddedLinks)
+            {
+                if (await _dataService.GetShortLinkByCode(embedded.Code) is null)
+                {
+                    var canonical = embedded with { ContentId = embedded.LinkType == LinkType.YouTubeVideo ? match.Id : null };
+                    await _dataService.SaveShortLink(canonical);
+                    migrated++;
+                }
+                updatedMatch = updatedMatch.RemoveShortLink(embedded.Code);
+            }
+            await _dataService.UpdateMatch(updatedMatch);
+        }
+
+        var channels = await _dataService.FetchChannels();
+        foreach (var channel in channels)
+        {
+            var embeddedLinks = channel.ShortLinks.ToList();
+            if (embeddedLinks.Count == 0)
+                continue;
+
+            var updatedChannel = channel;
+            foreach (var embedded in embeddedLinks)
+            {
+                if (await _dataService.GetShortLinkByCode(embedded.Code) is null)
+                {
+                    var canonical = embedded with { ChannelId = embedded.LinkType == LinkType.YouTubeChannel ? channel.Id : null };
+                    await _dataService.SaveShortLink(canonical);
+                    migrated++;
+                }
+                updatedChannel = updatedChannel.RemoveShortLink(embedded.Code);
+            }
+            await _dataService.UpdateChannel(updatedChannel);
+        }
+
+        if (migrated > 0)
+        {
+            await client.ResetCache(CacheKeys.ShortLinks);
+        }
+
+        return Ok(new { migrated });
+    }
+
     #region Helper Methods
 
     private enum ShortLinkSourceType
@@ -299,7 +348,15 @@ public class ShortLinksController : ApplicationControllerBase
     /// <returns>Tuple of (ShortLink, SourceType, OwningEntity)</returns>
     private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkAsync(string code)
     {
-        // Search in matches
+        // Canonical-first (ADR-004): all new short links are created directly in the standalone
+        // collection, resolved here with a single indexed lookup before falling back to legacy scans.
+        var standaloneLink = await _dataService.GetShortLinkByCode(code);
+        if (standaloneLink != null)
+        {
+            return (standaloneLink, ShortLinkSourceType.Standalone, null);
+        }
+
+        // Legacy fallback: short links embedded before the canonical migration.
         var matches = await _dataService.FetchMatches();
         foreach (var match in matches)
         {
@@ -310,7 +367,6 @@ public class ShortLinksController : ApplicationControllerBase
             }
         }
 
-        // Search in channels
         var channels = await _dataService.FetchChannels();
         foreach (var channel in channels)
         {
@@ -321,15 +377,29 @@ public class ShortLinksController : ApplicationControllerBase
             }
         }
 
-        // Search in standalone repository
-        var standaloneLink = await _dataService.GetShortLinkByCode(code);
-        if (standaloneLink != null)
-        {
-            return (standaloneLink, ShortLinkSourceType.Standalone, null);
-        }
-
         return (null, ShortLinkSourceType.Standalone, null);
     }
+
+    /// <summary>
+    /// Migrates a short link out of its legacy embedded location (if any) and persists it in the
+    /// canonical standalone collection.
+    /// </summary>
+    private async Task MigrateToCanonicalAsync(string code, ShortLinkSourceType sourceType, object? owningEntity, ShortLink updatedShortLink)
+    {
+        if (sourceType != ShortLinkSourceType.Standalone)
+        {
+            await RemoveShortLinkFromSourceAsync(code, sourceType, owningEntity);
+            await _dataService.SaveShortLink(updatedShortLink);
+        }
+        else
+        {
+            await _dataService.UpdateShortlink(updatedShortLink);
+        }
+    }
+
+    private static bool IsSafeAbsoluteHttpUrl(string target) =>
+        Uri.TryCreate(target, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
    
     /// <summary>

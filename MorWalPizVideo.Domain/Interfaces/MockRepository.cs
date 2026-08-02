@@ -80,6 +80,23 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public ShortLinkMockRepository(IMockScenario scenario) : base(scenario, "shortLinks")
         {
         }
+
+        public async Task<ShortLink?> GetByCodeAsync(string code)
+        {
+            var normalizedCode = code.Trim().ToLowerInvariant();
+            return (await GetItemsAsync(x => x.Code.ToLowerInvariant() == normalizedCode)).FirstOrDefault();
+        }
+
+        public async Task<int> IncrementClicksAsync(string id)
+        {
+            var item = await GetItemAsync(id);
+            if (item == null)
+                return 0;
+
+            item.ClicksCount += 1;
+            await UpdateItemAsync(item);
+            return item.ClicksCount;
+        }
     }
 
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository

@@ -1,8 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MorWalPizVideo.Models.Constraints;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -18,14 +15,14 @@ public class CreatePinterestPinRequest
 
 public class PinterestController : ApplicationControllerBase
 {
-    private readonly IHttpClientFactory client;
+    private readonly IPinterestService pinterestService;
     private readonly string channelName;
     private readonly string siteUrl;
     private readonly PinterestSettings pinterestSettings;
     private readonly string scope = "pins:read_write";
-    public PinterestController(IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    public PinterestController(IPinterestService _pinterestService, IConfiguration _configuration)
     {
-        client = _clientFactory;
+        pinterestService = _pinterestService;
 
         siteUrl = _configuration["SiteUrl"] ?? string.Empty;
         if (siteUrl == null)
@@ -51,44 +48,15 @@ public class PinterestController : ApplicationControllerBase
     [HttpGet("callback")]
     public async Task<IActionResult> Callback(string code)
     {
-        var httpClient = client.CreateClient(HttpClientNames.Pinterest);
-        var content = new FormUrlEncodedContent(new[]
-        {
-            new KeyValuePair<string, string>("grant_type", "authorization_code"),
-            new KeyValuePair<string, string>("client_id", pinterestSettings.AppId),
-            new KeyValuePair<string, string>("client_secret", pinterestSettings.AppSecret),
-            new KeyValuePair<string, string>("code", code),
-            new KeyValuePair<string, string>("redirect_uri", $"https://{Request.Host}/api/pinterest/callback")
-        });
-
-        var response = await httpClient.PostAsync("oauth/token", content);
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        // Salva il token di accesso
-        var token = JsonSerializer.Deserialize<dynamic>(responseContent)!.access_token;
+        var redirectUri = $"https://{Request.Host}/api/pinterest/callback";
+        var token = await pinterestService.ExchangeCodeForTokenAsync(code, redirectUri);
         return Ok(token);
     }
     [HttpPost]
     public async Task<IActionResult> CreatePin(CreatePinterestPinRequest request)
     {
-        var httpClient = client.CreateClient(HttpClientNames.Pinterest);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.Token);
-
-        var content = new StringContent(JsonSerializer.Serialize(new
-        {
-            board_id = request.BoardId,
-            link = request.Link,
-            title = request.Title,
-            description = request.Description,
-            media_source = new
-            {
-                source_type = "external",
-                url = request.ImageUrl
-            }
-        }), Encoding.UTF8, "application/json");
-
-        var response = await httpClient.PostAsync("pins", content);
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await pinterestService.CreatePinAsync(
+            request.Token, request.BoardId, request.Link, request.Title, request.Description, request.ImageUrl);
 
         return Ok(responseContent);
     }

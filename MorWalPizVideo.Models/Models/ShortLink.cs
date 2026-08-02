@@ -41,6 +41,18 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("linkType")]
         public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
 
+        // Canonical internal reference to the owning YouTubeContent, set when this standalone
+        // record represents a YouTubeVideo short link (ADR-004: canonical standalone aggregate).
+        [DataMember]
+        [BsonElement("contentId")]
+        public string? ContentId { get; set; }
+
+        // Canonical internal reference to the owning YTChannel, set when this standalone
+        // record represents a YouTubeChannel short link (ADR-004: canonical standalone aggregate).
+        [DataMember]
+        [BsonElement("channelId")]
+        public string? ChannelId { get; set; }
+
         [BsonIgnore]
         public string QueryString => QueryLinks != null ? string.Join("&", QueryLinks.Select(ql => ql.Value)) : string.Empty;
     }

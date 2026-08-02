@@ -395,10 +395,13 @@ public class VideosController : ApplicationControllerBase
             return;
         }
 
-        // Check if shortlink already exists for this video
-        var existingShortLink = existingMatch.ShortLinks
-            .FirstOrDefault(x => x.Target == videoId && string.IsNullOrEmpty(x.QueryString));
-        
+        // Check if a canonical shortlink already exists for this video (ADR-004: standalone aggregate).
+        var existingShortLink = (await _dataService.FetchShortLinks())
+            .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo
+                && x.ContentId == existingMatch.Id
+                && x.Target == videoId
+                && string.IsNullOrEmpty(x.QueryString));
+
         if (existingShortLink != null)
         {
             return; // Shortlink already exists
@@ -407,15 +410,14 @@ public class VideosController : ApplicationControllerBase
         // Generate unique shortlink code
         var shortLinkCode = await CalculateShortLinkAsync();
 
-        // Create new shortlink
+        // Create new canonical shortlink referencing the owning match instead of embedding it.
         var newShortLink = new ShortLink(shortLinkCode, videoId, Array.Empty<QueryLink>())
         {
-            LinkType = LinkType.YouTubeVideo
+            LinkType = LinkType.YouTubeVideo,
+            ContentId = existingMatch.Id
         };
 
-        // Add shortlink to match
-        existingMatch = existingMatch.AddShortLink(newShortLink);
-        await _dataService.UpdateMatch(existingMatch);
+        await _dataService.SaveShortLink(newShortLink);
 
         // Reset shortlink cache
         await client.ResetCache(CacheKeys.ShortLinks);

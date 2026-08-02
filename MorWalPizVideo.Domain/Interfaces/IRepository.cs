@@ -25,7 +25,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
     public interface ICompilationRepository : IRepository<Compilation> { }
     public interface IBioLinkRepository : IRepository<BioLink> { }
-    public interface IShortLinkRepository : IRepository<ShortLink> { }
+    public interface IShortLinkRepository : IRepository<ShortLink>
+    {
+        // Indexed canonical lookup by normalized code (ADR-004: single indexed resolution).
+        Task<ShortLink?> GetByCodeAsync(string code);
+        // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
+        Task<int> IncrementClicksAsync(string id);
+    }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
     public interface ICategoryRepository : IRepository<Category>
     {

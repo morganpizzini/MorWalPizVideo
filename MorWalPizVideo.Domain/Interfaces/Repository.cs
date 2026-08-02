@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Models.Models;
@@ -69,6 +70,23 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         public ShortLinkRepository(IMongoDatabase database) : base(database, DbCollections.ShortLinks)
         {
+        }
+
+        public async Task<ShortLink?> GetByCodeAsync(string code)
+        {
+            var normalizedCode = code.Trim().ToLowerInvariant();
+            return await _collection.Find(Builders<ShortLink>.Filter.Eq(x => x.Code, normalizedCode)).FirstOrDefaultAsync();
+        }
+
+        public async Task<int> IncrementClicksAsync(string id)
+        {
+            var filter = ObjectId.TryParse(id, out var objectId)
+                ? Builders<ShortLink>.Filter.Eq("_id", objectId)
+                : Builders<ShortLink>.Filter.Eq("_id", id);
+            var update = Builders<ShortLink>.Update.Inc(x => x.ClicksCount, 1);
+            var options = new FindOneAndUpdateOptions<ShortLink> { ReturnDocument = ReturnDocument.After };
+            var updated = await _collection.FindOneAndUpdateAsync(filter, update, options);
+            return updated?.ClicksCount ?? 0;
         }
     }
 

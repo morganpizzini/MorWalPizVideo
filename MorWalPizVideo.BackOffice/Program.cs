@@ -174,6 +174,7 @@ if (!enableMock)
     {
         httpClient.BaseAddress = new Uri("https://api.pinterest.com/v5/");
     });
+    builder.Services.AddScoped<IPinterestService, PinterestService>();
 
 
     if (!string.IsNullOrEmpty(facebookSettings.PageId))
@@ -323,6 +324,8 @@ if (enableMock)
 
     // Insight Agent Service (Mock)
     builder.Services.AddScoped<IInsightAgentService, MockInsightAgentService>();
+
+    builder.Services.AddScoped<IPinterestService, PinterestServiceMock>();
 }
 else
 {

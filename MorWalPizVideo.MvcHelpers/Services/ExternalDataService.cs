@@ -230,6 +230,10 @@ namespace MorWalPizVideo.Server.Services
     {
         public Task<IList<ShortLink>> FetchShortLink();
         public Task UpdateShortlink(ShortLink entity);
+        // Canonical-first indexed lookup (ADR-004).
+        Task<ShortLink?> GetShortLinkByCode(string code);
+        // Atomic click counter for canonical standalone short links.
+        Task<int> IncrementShortLinkClicksAsync(string id);
         Task<IList<YouTubeContent>> FetchMatches();
         Task<IList<YTChannel>> FetchChannels();
         Task UpdateYouTubeContent(YouTubeContent entity);
@@ -253,6 +257,8 @@ namespace MorWalPizVideo.Server.Services
         }
         public Task<IList<ShortLink>> FetchShortLink() => _shortLinkRepository.GetItemsAsync();
         public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
+        public Task<ShortLink?> GetShortLinkByCode(string code) => _shortLinkRepository.GetByCodeAsync(code);
+        public Task<int> IncrementShortLinkClicksAsync(string id) => _shortLinkRepository.IncrementClicksAsync(id);
         public Task<IList<YouTubeContent>> FetchMatches() => _matchRepository.GetItemsAsync();
         public Task<IList<YTChannel>> FetchChannels() => _channelRepository.GetItemsAsync();
         public Task UpdateYouTubeContent(YouTubeContent entity) => _matchRepository.UpdateItemAsync(entity);

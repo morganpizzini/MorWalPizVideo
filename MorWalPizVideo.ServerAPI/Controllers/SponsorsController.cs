@@ -11,21 +11,20 @@ using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
+using MorWalPizVideo.ServerAPI.Services;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
     [AllowAnonymous] // ADR-002: explicit public read access
     public class SponsorsController : ApplicationController
     {
-        private readonly IHttpClientFactory httpClientFactory;
-        private readonly IConfiguration configuration;
+        private readonly IRecaptchaService recaptchaService;
         private readonly BlobStorageOptions blobOptions;
         public SponsorsController(
             IGenericDataService _dataService, IMorWalPizCache _memoryCache,
-            IHttpClientFactory _httpClientFactory, IConfiguration _configuration, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_memoryCache)
+            IRecaptchaService _recaptchaService, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_memoryCache)
         {
-            configuration = _configuration;
-            httpClientFactory = _httpClientFactory;
+            recaptchaService = _recaptchaService;
             blobOptions = _blobOptions.Value;
         }
 
@@ -41,14 +40,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(SponsorRequest request)
         {
-            using var client = httpClientFactory.CreateClient(HttpClientNames.Recaptcha);
-            var host = HttpContext.Request.Host.Value;
-            var parameters = new Dictionary<string, string> { { "secret", configuration["RecaptchaSecretKey"] ?? string.Empty }, { "response", request.Token ?? string.Empty }, { "remoteip", host ?? string.Empty } };
-            var encodedContent = new FormUrlEncodedContent(parameters);
-
-            var response = await client.PostAsync("", encodedContent);
-            var result = System.Text.Json.JsonSerializer.Deserialize<RecaptchaResponse>(await response.Content.ReadAsStringAsync());
-            if (result == null || !result.success || result.action != "sponsorForm")
+            var host = HttpContext.Request.Host.Value ?? string.Empty;
+            var verified = await recaptchaService.VerifyAsync(request.Token, host, "sponsorForm");
+            if (!verified)
             {
                 return BadRequest("Recaptcha failed");
             }

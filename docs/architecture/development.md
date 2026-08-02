@@ -45,7 +45,7 @@ Fakes support configurable latency, transient failure, permanent failure, malfor
 
 | Application | Preferred local dependencies |
 |---|---|
-| BackOffice + SPA | JSON repositories, fake integrations, fake auth |
+| BackOffice + SPA | In-memory scenario repositories, fake integrations, fake auth |
 | ServerAPI + public/shop clients | Same scenario data, fake Blob, anonymous public behavior |
 | ShortLinks | Canonical link scenario and in-memory visit tracking |
 | Shooting ITA | Shared service mock or local ServerAPI |

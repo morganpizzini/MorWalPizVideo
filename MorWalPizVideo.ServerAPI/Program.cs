@@ -122,6 +122,7 @@ if (enableMock)
     builder.Services.AddScoped<IUserRepository, UserMockRepository>();
     builder.Services.AddScoped<ICompilationRepository, CompilationMockRepository>();
     builder.Services.AddScoped<IYTService, YTServiceMock>();
+    builder.Services.AddScoped<IRecaptchaService, RecaptchaServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
@@ -185,6 +186,7 @@ else
     {
         httpClient.BaseAddress = new Uri("https://www.google.com/recaptcha/api/siteverify");
     });
+    builder.Services.AddScoped<IRecaptchaService, RecaptchaService>();
     builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
     {
         httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
@@ -242,7 +244,11 @@ builder.Services.AddAuthentication()
         InternalServiceAuthenticationHandler.SchemeName, options => { });
 
 // Web Push notifications
-if (!string.IsNullOrEmpty(builder.Configuration["WebPush:PublicKey"]))
+if (enableMock)
+{
+    builder.Services.AddScoped<IWebPushService, WebPushServiceMock>();
+}
+else if (!string.IsNullOrEmpty(builder.Configuration["WebPush:PublicKey"]))
 {
     builder.Services.AddScoped<IWebPushService, WebPushService>();
 }
