@@ -39,7 +39,6 @@ var enableHangFire = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enabl
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
-var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
@@ -59,14 +58,6 @@ builder.Services.AddCors(options =>
                   .AllowCredentials(); // Required for cookies
         });
     }
-    options.AddPolicy("AllowAllOrigins",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
-
     options.AddPolicy("MorWalPizPolicy",
         builder =>
     {
@@ -510,7 +501,15 @@ if (!app.Environment.IsDevelopment())
 }
 
 
-app.UseCors(enableCors ? "MorWalPizPolicy" : "AllowAllOrigins");
+// ADR-002 follow-up (TD-007): fail closed outside Development instead of falling back to an open policy.
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors();
+}
+else
+{
+    app.UseCors("MorWalPizPolicy");
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

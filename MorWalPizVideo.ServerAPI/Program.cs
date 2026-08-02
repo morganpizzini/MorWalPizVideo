@@ -30,24 +30,24 @@ var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCa
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
-var enableCors = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCors);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
 
-var allowAllCors = "AllowAllOrigins";
 var morWalPizCors = "MorWalPizPolicy";
 
 // Configure the CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(allowAllCors,
-        builder =>
+    if (builder.Environment.IsDevelopment())
+    {
+        options.AddDefaultPolicy(policy =>
         {
-            builder.AllowAnyOrigin()
-                    .AllowAnyHeader()
-                   .AllowAnyMethod();
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
         });
+    }
 
     options.AddPolicy(morWalPizCors,
         builder =>
@@ -302,7 +302,15 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors(enableCors ? morWalPizCors : allowAllCors);
+// ADR-002 follow-up (TD-007): fail closed outside Development instead of falling back to an open policy.
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors();
+}
+else
+{
+    app.UseCors(morWalPizCors);
+}
 
 // Add authentication and authorization middleware
 app.UseAuthentication();

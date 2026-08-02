@@ -77,10 +77,22 @@ jobs:
       - name: Build
         run: dotnet build ${{ matrix.project.path }}/${{ matrix.project.path }}.csproj --configuration Release --no-restore
 
+  test-backend:
+    name: Test Backend Applications
+    runs-on: ubuntu-latest
+    needs: build-backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+
       - name: Test
-        run: |
-          if [ -d "tests" ]; then
-            dotnet test --configuration Release --no-build --verbosity normal
-          else
-            echo "No tests found, skipping test step"
-          fi
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --verbosity normal

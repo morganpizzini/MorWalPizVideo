@@ -68,7 +68,7 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | `EnableHangFire` | Registers Hangfire server + dashboard at `/hangfire` and schedules the recurring jobs (§5). Storage = SQL Server in prod, in-memory in dev. |
 | `EnableSwagger` | Mounts Swagger UI at `/swagger` with both `Bearer` and `ApiKey` security schemes. |
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using `DefaultAzureCredential`. Falls back gracefully if unreachable. |
-| `EnableCors` | Uses the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) instead of `AllowAllOrigins`. |
+| `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
 
 ### 2.3 Health Checks
 Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (dev) `/alive`. Probes: `self`, `mongodb`, `azure-openai`, `youtube-api`, `morwalpiz-api`, `hangfire-sqlserver`, `hangfire-processing`, `feature-management`, `mock-services`. Full details in [HEALTH_CHECKS.md](HEALTH_CHECKS.md).
@@ -90,12 +90,12 @@ Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (de
 ### 3.1 Authentication & Identity
 
 #### `AuthController` — `api/auth` *(anonymous)*
-Login/logout/validate. Sets `auth_token` HttpOnly Secure SameSite=Strict cookie on success; also returns the JWT in body for transitional clients.
+Login/logout/validate. Sets `auth_token` HttpOnly Secure SameSite=Strict cookie on success; the JWT is not returned in the response body — the cookie is the only session artifact the client holds.
 | Verb | Route | Method | Purpose |
 | ---- | ----- | ------ | ------- |
 | POST | `/login` | `Login(LoginRequest)` | Username + password. Rate-limited via `IRateLimitingService`; logs attempt to `LoginAttempt`. |
 | POST | `/logout` | `Logout()` | Clears the `auth_token` cookie. |
-| POST | `/validate` | `ValidateToken(ValidateTokenRequest)` | Validates a token's signature & expiry. |
+| POST | `/validate` | `ValidateToken()` | Validates the `auth_token` cookie's signature & expiry. |
 
 #### `UserController` — `api/user`
 Admin user CRUD + bootstrap. `InitUsers` is `[AllowAnonymous]` and used **once** to seed the first admin account; do not expose in production once seeded.

@@ -1,4 +1,4 @@
-import { post, setAuthTokenProvider, setUnauthorizedHandler } from '@morwalpizvideo/services';
+import { post, setUnauthorizedHandler } from '@morwalpizvideo/services';
 
 interface UserInfo {
   id: string;
@@ -8,38 +8,22 @@ interface UserInfo {
 }
 
 interface LoginResponse {
-  token: string;
   user: UserInfo;
 }
 
 class AuthService {
-  private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'auth_user';
 
   constructor() {
-    // Register this service as the auth token provider for the shared services package
-    setAuthTokenProvider(() => this.getToken());
     // Redirect to login on 401 responses (unless on auth endpoints)
     setUnauthorizedHandler(() => {
-      localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.USER_KEY);
       window.location.href = '/login';
     });
   }
 
-  // Store token in localStorage
-  setToken(token: string): void {
-    localStorage.setItem(this.TOKEN_KEY, token);
-  }
-
-  // Get token from localStorage
-  getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-
-  // Store user info in localStorage
+  // Store user info in localStorage (display only; the session itself lives in the HttpOnly auth cookie)
   setUser(user: UserInfo): void {
-    console.log('Storing user info:', user);
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
   }
 
@@ -50,9 +34,9 @@ class AuthService {
     return userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null;
   }
 
-  // Check if user is authenticated
+  // Quick UI check based on locally cached user info; the auth cookie is the real authority
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getUser();
   }
 
   // Login method
@@ -60,7 +44,7 @@ class AuthService {
     const response = await post('/api/auth/login', { username, password });
 
     // Check if response contains errors (failed login)
-    if (response.errors || !response.token || !response.user) {
+    if (response.errors || !response.user) {
       // Extract error details for better user feedback
       const errorData: any = {};
       
@@ -77,8 +61,7 @@ class AuthService {
       throw new Error(response.errors?.[0] || 'Login failed. Please check your credentials.');
     }
 
-    // Store token and user info only on successful login
-    this.setToken(response.token);
+    // Store user info only on successful login; the auth cookie is set by the server
     this.setUser(response.user);
 
     return response;
@@ -94,18 +77,14 @@ class AuthService {
       console.error('Logout API call failed:', error);
     } finally {
       // Always clear local storage
-      localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.USER_KEY);
     }
   }
 
-  // Validate token with backend
+  // Validate the session cookie with the backend
   async validateToken(): Promise<boolean> {
-    const token = this.getToken();
-    if (!token) return false;
-
     try {
-      const response = await post('/api/auth/validate', { token });
+      const response = await post('/api/auth/validate', {});
       return response !== null && response !== undefined && !response.errors;
     } catch {
       return false;

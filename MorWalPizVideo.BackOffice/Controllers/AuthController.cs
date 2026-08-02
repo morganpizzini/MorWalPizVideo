@@ -106,7 +106,6 @@ public class AuthController : ControllerBase
 
         return Ok(new LoginResponse
         {
-            Token = token, // Still return token for backward compatibility during transition
             User = new UserInfo
             {
                 Id = user.Id!,
@@ -129,10 +128,16 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public IActionResult ValidateToken([FromBody] ValidateTokenRequest request)
+    public IActionResult ValidateToken()
     {
-        var userId = _jwtService.ValidateToken(request.Token);
-        
+        var token = Request.Cookies["auth_token"];
+        if (string.IsNullOrEmpty(token))
+        {
+            return Unauthorized(new { message = "Invalid token" });
+        }
+
+        var userId = _jwtService.ValidateToken(token);
+
         if (userId == null)
         {
             return Unauthorized(new { message = "Invalid token" });
@@ -174,7 +179,6 @@ public record LoginRequest
 
 public record LoginResponse
 {
-    public string Token { get; init; } = string.Empty;
     public UserInfo User { get; init; } = new();
 }
 
@@ -191,9 +195,4 @@ public record UserInfo
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
     public string Role { get; init; } = string.Empty;
-}
-
-public record ValidateTokenRequest
-{
-    public string Token { get; init; } = string.Empty;
 }

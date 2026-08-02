@@ -10,7 +10,6 @@ async function authLoader() {
   }
   const isValid = await authService.validateToken();
   if (!isValid) {
-    localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     return redirect('/login');
   }
