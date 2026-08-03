@@ -77,6 +77,7 @@ namespace MorWalPiz.VideoImporter.Views
 
                 //refresh app settings
                 App.ApiSettings.ApiEndpoint = apiEndpoint;
+                App.ApiSettings.ApiKey = apiKey;
 
                 System.Windows.MessageBox.Show("Impostazioni salvate con successo!", "Informazione", MessageBoxButton.OK, MessageBoxImage.Information);
                 DialogResult = true;

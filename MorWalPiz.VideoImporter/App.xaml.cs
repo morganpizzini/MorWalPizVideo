@@ -58,14 +58,20 @@ namespace MorWalPiz.VideoImporter
             // Inizializza le impostazioni API
             ApiSettings = new ApiSettings();
 
+            var configuredApiEndpoint = Configuration["ApiEndpoint"] ?? Configuration["BackOffice:ApiEndpoint"];
+            var configuredApiKey = Configuration["ApiKey"] ?? Configuration["BackOffice:ApiKey"];
+
             using (var context = DatabaseService.CreateContext())
             {
                 var settings = context.Settings.FirstOrDefault();
-                if (settings != null && !string.IsNullOrEmpty(settings.ApiEndpoint))
-                {
-                    ApiSettings.ApiEndpoint = settings.ApiEndpoint;
-                    ApiSettings.ApiKey = settings.ApiKey;
-                }
+
+                ApiSettings.ApiEndpoint = !string.IsNullOrWhiteSpace(configuredApiEndpoint)
+                    ? configuredApiEndpoint
+                    : settings?.ApiEndpoint ?? string.Empty;
+
+                ApiSettings.ApiKey = !string.IsNullOrWhiteSpace(configuredApiKey)
+                    ? configuredApiKey
+                    : settings?.ApiKey ?? string.Empty;
             }
 
             // Inizializza il servizio di upload YouTube con Key Vault
