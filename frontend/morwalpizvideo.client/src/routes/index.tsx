@@ -10,8 +10,6 @@ import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
 import { getMatches } from "@services/matches";
 import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
-import { get } from "@morwalpizvideo/services";
-import { buildOwnerMap, frontendEndpoints, MORWALPIZ_CHANNEL_ID, type ChannelWithVideos } from "@morwalpizvideo/services";
 interface IndexCategory { title: string }
 interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
@@ -38,17 +36,12 @@ export default function Index() {
         let cancelled = false;
 
         setError(false);
-        Promise.all([getMatches(true), getConfiguration(), getActiveForms(), get(frontendEndpoints.CHANNELS)])
-            .then(([response, configuration, activeForms, channels]) => {
+        Promise.all([getMatches(true), getConfiguration(), getActiveForms()])
+            .then(([response, configuration, activeForms]) => {
                 if (cancelled) return;
                 const matchesResponse = response as MatchesResponse;
-                const channelList = (channels ?? []) as ChannelWithVideos[];
-                const ownerMap = buildOwnerMap(matchesResponse.data ?? [], channelList);
-                const matches = (matchesResponse.data ?? []).filter((match) =>
-                    (match.videoRefs ?? []).some((video) =>
-                        ownerMap.get(video.youtubeId)?.channelId === MORWALPIZ_CHANNEL_ID));
                 setData({
-                    matches,
+                    matches: matchesResponse.data ?? [],
                     configuration: configuration as Record<string, boolean>,
                     activeForms: activeForms ?? []
                 });
