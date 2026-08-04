@@ -8,7 +8,7 @@
 - Remove secret-bearing source, migration seeds, and publish artifacts.
 - Correct development flags and deployed CORS.
 - Align Docker images with .NET 10.
-- Fix CI so existing backend tests execute.
+- Fix CI so existing backend tests execute. (Completed 2026-08-03; backend build matrix includes ShortLinks.)
 
 ### Exit Criteria
 
@@ -25,8 +25,8 @@
 - Separate host-neutral controller behavior from authorization.
 - Publish an endpoint authentication matrix.
 - Remove API-key administration from the public frontend.
-- Add authenticated BackOffice digital-artifact management.
-- Deprecate duplicate BackOffice public shop controllers.
+- Add authenticated BackOffice digital-artifact management. (Completed 2026-08-03)
+- Deprecate duplicate BackOffice public shop controllers. (Completed 2026-08-03)
 
 ### Exit Criteria
 
@@ -53,7 +53,11 @@
 - Acquired artifacts download successfully from private storage.
 - Old unversioned consumers continue through documented aliases.
 
-## Phase 3: Canonical Short Links
+## Phase 3: Canonical Short Links (Completed 2026-08-03)
+
+### Implementation Note
+
+The canonical short-link implementation is now in place and validated for the current behavior slice. The core feature is complete; remaining work is operational follow-up such as rollout monitoring, retention/cleanup tuning, and any later removal of legacy compatibility reads.
 
 ### Work
 
@@ -73,6 +77,17 @@
 - Legacy embedded reads show zero use before removal.
 
 ## Phase 4: Persistence And Service Decomposition
+
+### Status Note (2026-08-03)
+
+Phase 4 is complete (Completed 2026-08-03).
+
+Exit-criteria evidence:
+
+- Representative query plans use intended indexes: committed audit/apply outputs and explain evidence are recorded under `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-audit-output.json`, `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-apply-output.json`, and `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-explain-evidence.md`.
+- Focused services have bounded dependencies and tests: high-impact BackOffice controllers use focused services instead of `DataService` and are covered by `MorWalPizVideo.BackOffice.Tests/Features/FocusedServiceDependencyTests.cs`.
+- Response backfill counts reconcile exactly: form response migration safety coverage is green in `MorWalPizVideo.BackOffice.Tests/Features/FormsMigrationSafetyTests.cs`.
+- No unbounded public query materializes full collections: public shop endpoints enforce bounded parameters and repository pushdown, covered by `MorWalPizVideo.BackOffice.Tests/Features/ShopCatalogQueryPushdownTests.cs`.
 
 ### Work
 
@@ -114,6 +129,34 @@ Only start when product need is confirmed:
 - Customer and download analytics with approved retention.
 - Provider-neutral transactional email.
 - Detailed short-link analytics.
+
+## Phase 7: Operational Verification And Convergence
+
+### Purpose
+
+Validate and converge the post-refactor platform once major structural work is done, with explicit closure of remaining Phase 4 evidence/testing/query-boundary gaps before final sign-off. This phase is operational, not feature-delivery, and can run even if Deferred Capabilities remain intentionally unstarted.
+
+### Work
+
+- Close and evidence all outstanding Phase 4 blockers, then mark Phase 4 completed.
+- Publish a repeatable verification bundle per release candidate: query-plan evidence, index audit outcomes, focused-service dependency checks, and migration reconciliation results.
+- Fix failing migration safety scenarios and confirm deterministic reconciliation for custom-form response separation.
+- Eliminate any remaining unbounded public full-collection query paths and verify bounded-query behavior under load.
+- Run production-like convergence checks across auth, cache eviction coherence, background jobs, and cross-service contracts after decomposition changes.
+- Remove temporary compatibility reads/routes only after telemetry confirms non-usage for the defined stabilization window.
+- Record a convergence sign-off that separates resolved refactor debt from still-deferred product capabilities.
+
+### Exit Criteria
+
+- Phase 4 is explicitly marked completed with objective evidence attached for each former blocker.
+- Verification bundle is green for agreed critical flows across public, admin, and background-processing surfaces.
+- No Sev1/Sev2 regressions are observed during the stabilization window after convergence release.
+- Legacy compatibility paths targeted for retirement show zero required usage and are removed (or scheduled with a dated removal gate).
+- Remaining open items are only Deferred Capabilities, not refactor correctness or operational safety gaps.
+
+### Rollback Discipline Alignment
+
+Apply one reversible behavior slice per deployment, keep additive compatibility until telemetry-backed validation passes, and never combine irreversible cleanup steps (contract removal, destructive data cleanup, credential rotation) in the same deployment unit.
 
 ## Rollback Discipline
 

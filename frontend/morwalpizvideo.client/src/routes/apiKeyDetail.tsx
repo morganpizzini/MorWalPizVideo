@@ -1,4 +1,4 @@
-import { useState } from 'react';
+export { }; import { useState } from 'react';
 import { useLoaderData, Link, useNavigate } from 'react-router';
 import { toggleApiKey, deleteApiKey, regenerateApiKey } from '../services/apiKeys';
 import type { ApiKey, GeneratedApiKey } from '../services/apiKeys.types';
@@ -206,8 +206,8 @@ export default function ApiKeyDetail() {
               <h5 className="mb-0">Actions</h5>
             </div>
             <div className="card-body d-grid gap-2">
-              <Link 
-                to={`/apikeys/${apiKey.id}/edit`} 
+              <Link
+                to={`/apikeys/${apiKey.id}/edit`}
                 className="btn btn-primary"
               >
                 <i className="fas fa-edit me-2"></i>
@@ -270,9 +270,9 @@ export default function ApiKeyDetail() {
                   <i className="fas fa-exclamation-triangle me-2"></i>
                   Confirm Delete
                 </h5>
-                <button 
-                  type="button" 
-                  className="btn-close btn-close-white" 
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
                   onClick={() => setDeleteConfirm(false)}
                 ></button>
               </div>
@@ -284,17 +284,17 @@ export default function ApiKeyDetail() {
                 </p>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => setDeleteConfirm(false)}
                   disabled={isLoading}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
+                <button
+                  type="button"
+                  className="btn btn-danger"
                   onClick={handleDeleteConfirm}
                   disabled={isLoading}
                 >
@@ -326,9 +326,9 @@ export default function ApiKeyDetail() {
                   <i className="fas fa-exclamation-triangle me-2"></i>
                   Confirm Regenerate
                 </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => setRegenerateConfirm(false)}
                 ></button>
               </div>
@@ -340,17 +340,17 @@ export default function ApiKeyDetail() {
                 </p>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => setRegenerateConfirm(false)}
                   disabled={isLoading}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  className="btn btn-warning" 
+                <button
+                  type="button"
+                  className="btn btn-warning"
                   onClick={handleRegenerateConfirm}
                   disabled={isLoading}
                 >

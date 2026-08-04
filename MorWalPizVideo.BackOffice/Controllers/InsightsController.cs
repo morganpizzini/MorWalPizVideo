@@ -12,13 +12,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
 {
     public class InsightsController : ApplicationControllerBase
     {
-        private readonly DataService _dataService;
+        private readonly IInsightsService _insightsService;
         private readonly IInsightAgentService _insightAgentService;
         private readonly IInsightIngestionService _insightIngestionService;
 
-        public InsightsController(DataService dataService, IInsightAgentService insightAgentService, IInsightIngestionService insightIngestionService)
+        public InsightsController(IInsightsService insightsService, IInsightAgentService insightAgentService, IInsightIngestionService insightIngestionService)
         {
-            _dataService = dataService;
+            _insightsService = insightsService;
             _insightAgentService = insightAgentService;
             _insightIngestionService = insightIngestionService;
         }
@@ -29,14 +29,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [ApiKeyAuth]
         public async Task<IActionResult> GetTopics()
         {
-            var topics = await _dataService.GetInsightTopics();
+            var topics = await _insightsService.GetTopicsAsync();
             return Ok(topics.Select(ContractUtils.Convert));
         }
 
         [HttpGet("topics/{id}")]
         public async Task<IActionResult> GetTopicById([FromRoute] string id)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
@@ -56,14 +56,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Id = Guid.NewGuid().ToString()
             };
 
-            await _dataService.SaveInsightTopic(topic);
+            await _insightsService.SaveTopicAsync(topic);
             return CreatedAtAction(nameof(GetTopicById), new { id = topic.Id }, ContractUtils.Convert(topic));
         }
 
         [HttpPut("topics/{id}")]
         public async Task<IActionResult> UpdateTopic([FromRoute] string id, [FromBody] UpdateInsightTopicRequest request)
         {
-            var existing = await _dataService.GetInsightTopicById(id);
+            var existing = await _insightsService.GetTopicByIdAsync(id);
             if (existing == null)
                 return NotFound();
 
@@ -75,18 +75,18 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 PreferredSources = request.PreferredSources ?? existing.PreferredSources
             };
 
-            await _dataService.UpdateInsightTopic(updated);
+            await _insightsService.UpdateTopicAsync(updated);
             return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("topics/{id}")]
         public async Task<IActionResult> DeleteTopic([FromRoute] string id)
         {
-            var existing = await _dataService.GetInsightTopicById(id);
+            var existing = await _insightsService.GetTopicByIdAsync(id);
             if (existing == null)
                 return NotFound();
 
-            await _dataService.DeleteInsightTopic(id);
+            await _insightsService.DeleteTopicAsync(id);
             return NoContent();
         }
 
@@ -97,7 +97,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPost("topics/{id}/scan-news")]
         public async Task<IActionResult> ScanNewsForTopic([FromRoute] string id)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
@@ -106,7 +106,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             // Save discovered news items
             foreach (var newsItem in discoveredNews)
             {
-                await _dataService.SaveInsightNewsItem(newsItem);
+                await _insightsService.SaveNewsItemAsync(newsItem);
             }
 
             // Rank the items
@@ -123,7 +123,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [ApiKeyAuth]
         public async Task<IActionResult> ManualScanTopic([FromRoute] string id, [FromBody] ManualScanRequest request)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
@@ -139,7 +139,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPost("topics/{id}/scan-short-content")]
         public async Task<IActionResult> ScanShortContentForTopic([FromRoute] string id, [FromBody] ScanShortContentRequest request)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
@@ -153,7 +153,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpGet("news")]
         public async Task<IActionResult> GetAllNews([FromQuery] InsightSourceKind? sourceKind = null)
         {
-            var newsItems = await _dataService.GetInsightNewsItems();
+            var newsItems = await _insightsService.GetNewsItemsAsync();
 
             if (sourceKind.HasValue)
             {
@@ -166,11 +166,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpGet("topics/{id}/news")]
         public async Task<IActionResult> GetNewsForTopic([FromRoute] string id, [FromQuery] InsightNewsStatus? status = null, [FromQuery] InsightSourceKind? sourceKind = null)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
-            var newsItems = await _dataService.GetInsightNewsItemsByTopicId(id);
+            var newsItems = await _insightsService.GetNewsItemsByTopicIdAsync(id);
 
             if (status.HasValue)
             {
@@ -188,7 +188,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpGet("news/{id}")]
         public async Task<IActionResult> GetNewsById([FromRoute] string id)
         {
-            var newsItem = await _dataService.GetInsightNewsItemById(id);
+            var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
             if (newsItem == null)
                 return NotFound();
 
@@ -198,7 +198,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPut("news/{id}/review")]
         public async Task<IActionResult> ReviewNewsItem([FromRoute] string id, [FromBody] ReviewNewsItemRequest request)
         {
-            var newsItem = await _dataService.GetInsightNewsItemById(id);
+            var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
             if (newsItem == null)
                 return NotFound();
 
@@ -214,18 +214,18 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 updated = updated.UpdateStarRating(request.StarRating.Value);
             }
 
-            await _dataService.UpdateInsightNewsItem(updated);
+            await _insightsService.UpdateNewsItemAsync(updated);
             return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("news/{id}")]
         public async Task<IActionResult> DeleteNewsItem([FromRoute] string id)
         {
-            var existing = await _dataService.GetInsightNewsItemById(id);
+            var existing = await _insightsService.GetNewsItemByIdAsync(id);
             if (existing == null)
                 return NotFound();
 
-            await _dataService.DeleteInsightNewsItem(id);
+            await _insightsService.DeleteNewsItemAsync(id);
             return NoContent();
         }
 
@@ -236,14 +236,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPost("content-plans")]
         public async Task<IActionResult> GenerateContentPlan([FromBody] GenerateContentPlanRequest request)
         {
-            var topic = await _dataService.GetInsightTopicById(request.TopicId);
+            var topic = await _insightsService.GetTopicByIdAsync(request.TopicId);
             if (topic == null)
                 return NotFound("Topic not found");
 
             // Verify all news items exist
             foreach (var newsItemId in request.NewsItemIds)
             {
-                var newsItem = await _dataService.GetInsightNewsItemById(newsItemId);
+                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId);
                 if (newsItem == null)
                     return NotFound($"News item {newsItemId} not found");
             }
@@ -254,16 +254,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 request.ContentType,
                 request.TargetPlatforms);
 
-            await _dataService.SaveInsightContentPlan(contentPlan);
+            await _insightsService.SaveContentPlanAsync(contentPlan);
 
             // Mark news items as generated
             foreach (var newsItemId in request.NewsItemIds)
             {
-                var newsItem = await _dataService.GetInsightNewsItemById(newsItemId);
+                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId);
                 if (newsItem != null)
                 {
                     var updated = newsItem.UpdateStatus(InsightNewsStatus.Generated);
-                    await _dataService.UpdateInsightNewsItem(updated);
+                    await _insightsService.UpdateNewsItemAsync(updated);
                 }
             }
 
@@ -273,25 +273,25 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpGet("content-plans")]
         public async Task<IActionResult> GetAllContentPlans()
         {
-            var plans = await _dataService.GetInsightContentPlans();
+            var plans = await _insightsService.GetContentPlansAsync();
             return Ok(plans.Select(ContractUtils.Convert));
         }
 
         [HttpGet("topics/{id}/content-plans")]
         public async Task<IActionResult> GetContentPlansForTopic([FromRoute] string id)
         {
-            var topic = await _dataService.GetInsightTopicById(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id);
             if (topic == null)
                 return NotFound();
 
-            var plans = await _dataService.GetInsightContentPlansByTopicId(id);
+            var plans = await _insightsService.GetContentPlansByTopicIdAsync(id);
             return Ok(plans.Select(ContractUtils.Convert));
         }
 
         [HttpGet("content-plans/{id}")]
         public async Task<IActionResult> GetContentPlanById([FromRoute] string id)
         {
-            var plan = await _dataService.GetInsightContentPlanById(id);
+            var plan = await _insightsService.GetContentPlanByIdAsync(id);
             if (plan == null)
                 return NotFound();
 
@@ -301,7 +301,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPut("content-plans/{id}")]
         public async Task<IActionResult> UpdateContentPlan([FromRoute] string id, [FromBody] UpdateContentPlanRequest request)
         {
-            var existing = await _dataService.GetInsightContentPlanById(id);
+            var existing = await _insightsService.GetContentPlanByIdAsync(id);
             if (existing == null)
                 return NotFound();
 
@@ -322,18 +322,18 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 updated = updated with { TargetPlatforms = request.TargetPlatforms };
             }
 
-            await _dataService.UpdateInsightContentPlan(updated);
+            await _insightsService.UpdateContentPlanAsync(updated);
             return Ok(ContractUtils.Convert(updated));
         }
 
         [HttpDelete("content-plans/{id}")]
         public async Task<IActionResult> DeleteContentPlan([FromRoute] string id)
         {
-            var existing = await _dataService.GetInsightContentPlanById(id);
+            var existing = await _insightsService.GetContentPlanByIdAsync(id);
             if (existing == null)
                 return NotFound();
 
-            await _dataService.DeleteInsightContentPlan(id);
+            await _insightsService.DeleteContentPlanAsync(id);
             return NoContent();
         }
 

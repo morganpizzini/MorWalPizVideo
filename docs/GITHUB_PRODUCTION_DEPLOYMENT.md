@@ -256,10 +256,12 @@ Configure runtime environment variables for each frontend Web App:
 ```bash
 az webapp config appsettings set \
   --resource-group rg-morwalpiz-prod \
-  --name morwalpiz-backoffice-spa \
+  --name morwalpiz-admin-spa \
   --settings \
-    VITE_API_BASE_URL=https://morwalpiz-backoffice-api.azurewebsites.net
+    VITE_API_BASE_URL=https://morwalpiz-admin.azurewebsites.net
 ```
+
+The BackOffice API CORS policy accepts exactly `https://morwalpiz-admin-spa.azurewebsites.net` with credentials. Both applications must remain HTTPS-only because `auth_token` and the antiforgery cookie are Secure and `SameSite=None`.
 
 #### MorWalPizVideo Client
 ```bash

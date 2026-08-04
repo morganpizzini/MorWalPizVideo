@@ -48,6 +48,16 @@ Scenario: Get embedded short link from match by code
     Then the response should be successful
     And the response should contain the short link details
 
+Scenario: Get embedded short link from match by code is case-insensitive
+    Given a match with embedded short link exists
+    When I request the short link by its code with different casing
+    Then the response should be successful
+    And the response should contain the short link details
+
+Scenario: Reject unsafe destination targets for generic short links
+    When I create a short link with target "javascript:alert(1)" and link type "Other"
+    Then the response should be a bad request
+
 Scenario: Get embedded short link from channel by code
     Given a channel with embedded short link exists
     When I request the short link by its code

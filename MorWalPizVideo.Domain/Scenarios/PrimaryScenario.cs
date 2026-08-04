@@ -114,6 +114,7 @@ public sealed class PrimaryScenario : BaseScenario
         Set("bioLinks", Array.Empty<BioLink>());
         Set("configurations", Array.Empty<MorWalPizConfiguration>());
         Set("customForms", Array.Empty<CustomForm>());
+        Set("customFormResponses", Array.Empty<CustomFormResponseDocument>());
         Set("insightTopics", Array.Empty<InsightTopic>());
         Set("insightNewsItems", Array.Empty<InsightNewsItem>());
         Set("insightContentPlans", Array.Empty<InsightContentPlan>());

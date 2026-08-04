@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MorWalPiz.InsightScanner.Models;
 using MorWalPiz.InsightScanner.Services;
 
@@ -14,24 +16,55 @@ namespace MorWalPiz.InsightScanner
         public static ScannerAppSettings Settings { get; private set; } = new();
         public static IBackOfficeInsightClient BackOfficeClient { get; private set; } = null!;
         public static HybridInsightScanner Scanner { get; private set; } = null!;
+        private IHost? _host;
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
-
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddUserSecrets<App>()
-                .AddEnvironmentVariables()
+            _host = new HostBuilder()
+                .ConfigureAppConfiguration(configuration =>
+                {
+                    configuration.SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                        .AddUserSecrets<App>()
+                        .AddEnvironmentVariables();
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    var settings = new ScannerAppSettings();
+                    context.Configuration.GetSection("BackOffice").Bind(settings);
+                    context.Configuration.GetSection("Scanner").Bind(settings);
+                    services.AddSingleton(settings);
+                    services.AddHttpClient<IBackOfficeInsightClient, BackOfficeInsightClient>(client =>
+                    {
+                        client.BaseAddress = new Uri(settings.ApiEndpoint);
+                        client.Timeout = TimeSpan.FromSeconds(100);
+                        if (!string.IsNullOrEmpty(settings.ApiKey))
+                        {
+                            client.DefaultRequestHeaders.Add("X-API-Key", settings.ApiKey);
+                        }
+                    });
+                    services.AddSingleton<HybridInsightScanner>(_ =>
+                        new HybridInsightScanner([new LightFetchSourceScanStrategy()]));
+                })
                 .Build();
 
-            Settings = new ScannerAppSettings();
-            configuration.GetSection("BackOffice").Bind(Settings);
-            configuration.GetSection("Scanner").Bind(Settings);
+            await _host.StartAsync();
+            Settings = _host.Services.GetRequiredService<ScannerAppSettings>();
+            BackOfficeClient = _host.Services.GetRequiredService<IBackOfficeInsightClient>();
+            Scanner = _host.Services.GetRequiredService<HybridInsightScanner>();
 
-            BackOfficeClient = new BackOfficeInsightClient(Settings.ApiEndpoint, Settings.ApiKey);
-            Scanner = new HybridInsightScanner([new LightFetchSourceScanStrategy()]);
+            base.OnStartup(e);
+        }
+
+        protected override async void OnExit(ExitEventArgs e)
+        {
+            if (_host is not null)
+            {
+                await _host.StopAsync();
+                _host.Dispose();
+            }
+
+            base.OnExit(e);
         }
     }
 }

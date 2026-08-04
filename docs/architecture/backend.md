@@ -26,7 +26,7 @@ sequenceDiagram
     Controller-->>Client: DTO or Problem Details
 ```
 
-Controllers currently call repositories and broad data facades directly in several areas. The target is focused application services for content, catalog, shop, forms, insights, links, and publishing.
+Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally.
 
 ## Persistence
 
@@ -35,7 +35,7 @@ Controllers currently call repositories and broad data facades directly in sever
 - `BaseRepository<T>` implements generic CRUD.
 - Specialized repository interfaces identify collections and feature queries.
 - Updates commonly replace complete documents.
-- No source-managed Mongo indexes or migrations currently exist.
+- Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`) with manifest ownership in `docs/architecture/operations/mongo-index-manifest.phase4.json`.
 - `BsonIgnoreExtraElements` supports additive compatibility for many entities.
 
 Full collection materialization and in-memory sorting/filtering bypass Mongo indexes. New repository methods must push predicates, projections, ordering, limits, and atomic updates into MongoDB.

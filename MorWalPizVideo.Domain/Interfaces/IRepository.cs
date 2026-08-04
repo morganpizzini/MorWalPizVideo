@@ -13,21 +13,39 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
-    public interface IYouTubeContentRepository : IRepository<YouTubeContent> { }
-    public interface IProductRepository : IRepository<Product> { }
+    public interface IYouTubeContentRepository : IRepository<YouTubeContent>
+    {
+        Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
+        Task<long> CountPublicAsync(bool includePrivate);
+        Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate);
+        Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate);
+    }
+    public interface IProductRepository : IRepository<Product>
+    {
+        Task<IList<Product>> GetPublicOrderedAsync(int skip, int take);
+    }
     public interface IProductCategoryRepository : IRepository<ProductCategory> { }
     public interface IYTChannelRepository : IRepository<YTChannel> { }
     public interface ISponsorRepository : IRepository<Sponsor> { }
     public interface ISponsorApplyRepository : IRepository<SponsorApply> { }
-    public interface IPageRepository : IRepository<Page> { }
+    public interface IPageRepository : IRepository<Page>
+    {
+        Task<Page?> GetByUrlAsync(string url);
+    }
     public interface IQueryLinkRepository : IRepository<QueryLink> { }
     public interface IPublishScheduleRepository : IRepository<PublishSchedule> { }
-    public interface ICalendarEventRepository : IRepository<CalendarEvent> { }
-    public interface ICompilationRepository : IRepository<Compilation> { }
+    public interface ICalendarEventRepository : IRepository<CalendarEvent>
+    {
+        Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit);
+    }
+    public interface ICompilationRepository : IRepository<Compilation>
+    {
+        Task<Compilation?> GetByUrlAsync(string url);
+    }
     public interface IBioLinkRepository : IRepository<BioLink> { }
     public interface IShortLinkRepository : IRepository<ShortLink>
     {
-        // Indexed canonical lookup by normalized code (ADR-004: single indexed resolution).
+        // Indexed canonical lookup by normalized code; comparison is case-insensitive for legacy compatibility.
         Task<ShortLink?> GetByCodeAsync(string code);
         // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
         Task<int> IncrementClicksAsync(string id);
@@ -36,7 +54,20 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ICategoryRepository : IRepository<Category>
     {
     }
-    public interface ICustomFormRepository : IRepository<CustomForm> { }
+    public interface ICustomFormRepository : IRepository<CustomForm>
+    {
+        Task<IList<CustomForm>> GetActiveAsync();
+        Task<CustomForm?> GetByUrlAsync(string url);
+        Task<IList<CustomForm>> GetBatchAsync(string? continuationToken, int batchSize);
+    }
+
+    public interface ICustomFormResponseRepository : IRepository<CustomFormResponseDocument>
+    {
+        Task<IList<CustomFormResponseDocument>> GetByFormIdAsync(string formId, int limit = 500);
+        Task<int> CountByFormIdAsync(string formId);
+        Task<bool> ExistsForFormAsync(string formId);
+        Task<bool> UpsertByFormAndResponseIdAsync(CustomFormResponseDocument item);
+    }
 
     // Insights repositories
     public interface IInsightTopicRepository : IRepository<InsightTopic> { }
@@ -45,8 +76,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface IInsightSourceCursorRepository : IRepository<InsightSourceCursor> { }
 
     // Shop repositories
-    public interface IDigitalProductRepository : IRepository<DigitalProduct> { }
-    public interface IDigitalProductCategoryRepository : IRepository<DigitalProductCategory> { }
+    public interface IDigitalProductRepository : IRepository<DigitalProduct>
+    {
+        Task<IList<DigitalProduct>> GetByCategoryIdAsync(string categoryId, int limit = 500);
+        Task<IList<DigitalProduct>> GetPublicCatalogAsync(int skip, int take);
+    }
+    public interface IDigitalProductCategoryRepository : IRepository<DigitalProductCategory>
+    {
+        Task<IList<DigitalProductCategory>> GetOrderedAsync(int skip, int take);
+    }
     public interface ICustomerRepository : IRepository<Customer> { }
     public interface ICartRepository : IRepository<Cart> { }
 

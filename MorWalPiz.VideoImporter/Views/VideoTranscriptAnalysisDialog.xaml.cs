@@ -11,7 +11,7 @@ namespace MorWalPiz.VideoImporter.Views
         public VideoTranscriptAnalysisDialog(string apiEndpoint, string? apiKey = null)
         {
             InitializeComponent();
-            _apiService = new ApiService(apiEndpoint,apiKey);
+            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey);
         }
 
         private async void TrimTextBUtton_Click(object sender, RoutedEventArgs e)
@@ -22,7 +22,7 @@ namespace MorWalPiz.VideoImporter.Views
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
             var transcript = TranscriptTextBox.Text?.Trim();
-            
+
             if (string.IsNullOrWhiteSpace(transcript))
             {
                 System.Windows.MessageBox.Show("Inserisci una trascrizione prima di analizzare.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -46,7 +46,7 @@ namespace MorWalPiz.VideoImporter.Views
 
                 // Display results
                 SeoDescriptionTextBox.Text = result.SeoDescription;
-                
+
                 TitlesListBox.Items.Clear();
                 foreach (var title in result.Titles)
                 {

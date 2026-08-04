@@ -49,14 +49,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
     public class CustomFormsController : ApplicationControllerBase
     {
-        private readonly DataService _dataService;
+        private readonly IFormsService _formsService;
         private readonly ILogger<CustomFormsController> _logger;
 
         public CustomFormsController(
-            DataService dataService,
+            IFormsService formsService,
             ILogger<CustomFormsController> logger)
         {
-            _dataService = dataService;
+            _formsService = formsService;
             _logger = logger;
         }
 
@@ -68,7 +68,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var forms = await _dataService.Fetch();
+                var forms = await _formsService.GetAllFormsAsync();
                 return Ok(forms.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
@@ -87,7 +87,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
 
-                var form = await _dataService.GetCustomFormById(request.Id);
+                var form = await _formsService.GetFormByIdAsync(request.Id);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
@@ -149,7 +149,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Body.Active
                 );
 
-                await _dataService.SaveCustomForm(form);
+                await _formsService.SaveFormAsync(form);
                 
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
                 
@@ -171,7 +171,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if form exists
-                var existingForm = await _dataService.GetCustomFormById(request.Id);
+                var existingForm = await _formsService.GetFormByIdAsync(request.Id);
                 if (existingForm == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
@@ -217,7 +217,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Active = request.Body.Active
                 };
 
-                await _dataService.UpdateCustomForm(updatedForm);
+                await _formsService.UpdateFormAsync(updatedForm);
                 
                 _logger.LogInformation("Custom form updated: {Id} - {Title}", request.Id, updatedForm.Title);
                 
@@ -239,13 +239,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if form exists
-                var existingForm = await _dataService.GetCustomFormById(request.Id);
+                var existingForm = await _formsService.GetFormByIdAsync(request.Id);
                 if (existingForm == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                await _dataService.DeleteCustomForm(request.Id);
+                await _formsService.DeleteFormAsync(request.Id);
                 
                 _logger.LogInformation("Custom form deleted: {Id}", request.Id);
                 
@@ -273,7 +273,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 // Check if form exists
-                var form = await _dataService.GetCustomFormById(id);
+                var form = await _formsService.GetFormByIdAsync(id);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{id}' not found");
@@ -340,7 +340,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Answers
                 );
 
-                await _dataService.AddFormResponse(id, response);
+                await _formsService.AddResponseAsync(id, response);
                 
                 _logger.LogInformation("Form response submitted for form: {FormId}", id);
                 
@@ -366,19 +366,39 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("Form ID cannot be empty");
                 }
 
-                var form = await _dataService.GetCustomFormById(id);
+                var form = await _formsService.GetFormByIdAsync(id);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{id}' not found");
                 }
 
-                return Ok(form.Responses);
+                var responses = await _formsService.GetResponsesAsync(id, 5000);
+                return Ok(responses);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching responses for form ID: {Id}", id);
                 return StatusCode(500, "An error occurred while fetching form responses");
             }
+        }
+
+        [HttpGet("{id}/responses/reconcile")]
+        public async Task<ActionResult<FormResponseCountReconciliation>> ReconcileResponses(string id)
+        {
+            var reconciliation = await _formsService.ReconcileCountsAsync(id);
+            if (reconciliation == null)
+            {
+                return NotFound($"Custom form with ID '{id}' not found");
+            }
+
+            return Ok(reconciliation);
+        }
+
+        [HttpPost("responses/backfill")]
+        public async Task<ActionResult<FormResponseBackfillBatchResult>> BackfillResponses([FromQuery] string? continuationToken = null, [FromQuery] int batchSize = 50)
+        {
+            var result = await _formsService.BackfillEmbeddedResponsesAsync(continuationToken, batchSize);
+            return Ok(result);
         }
     }
 }

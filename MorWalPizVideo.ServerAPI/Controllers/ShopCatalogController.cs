@@ -29,9 +29,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         [HttpGet("products")]
         [OutputCache(Tags = [CacheKeys.DigitalProducts])]
-        public async Task<IActionResult> GetProducts()
+        public async Task<IActionResult> GetProducts(int skip = 0, int take = 200)
         {
-            var products = await _productRepository.GetItemsAsync();
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            var products = await _productRepository.GetPublicCatalogAsync(safeSkip, safeTake);
             return Ok(products.Select(ContractUtils.Convert));
         }
 
@@ -45,9 +47,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         [HttpGet("categories")]
         [OutputCache(Tags = [CacheKeys.DigitalProductCategories])]
-        public async Task<IActionResult> GetCategories()
+        public async Task<IActionResult> GetCategories(int skip = 0, int take = 200)
         {
-            var categories = await _categoryRepository.GetItemsAsync();
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            var categories = await _categoryRepository.GetOrderedAsync(safeSkip, safeTake);
             return Ok(categories.Select(ContractUtils.Convert));
         }
 
@@ -61,11 +65,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         [HttpGet("categories/{id}/products")]
         [OutputCache(Tags = [CacheKeys.DigitalProducts, CacheKeys.DigitalProductCategories], VaryByRouteValueNames = ["id"])]
-        public async Task<IActionResult> GetProductsByCategory(string id)
+        public async Task<IActionResult> GetProductsByCategory(string id, int limit = 2000)
         {
-            var products = await _productRepository.GetItemsAsync();
-            var filtered = products.Where(p => p.CategoryIds.Contains(id)).Select(ContractUtils.Convert).ToList();
-            return Ok(filtered);
+            var safeLimit = Math.Clamp(limit, 1, 2000);
+            var products = await _productRepository.GetByCategoryIdAsync(id, safeLimit);
+            return Ok(products.Select(ContractUtils.Convert));
         }
     }
 }

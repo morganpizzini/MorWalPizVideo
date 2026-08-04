@@ -9,7 +9,7 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Requires JWT authentication
+[Authorize] // Requires JWT authentication; BackOffice-only API-key administration
 public class ApiKeysController : ControllerBase
 {
     private readonly IApiKeyRepository _apiKeyRepository;

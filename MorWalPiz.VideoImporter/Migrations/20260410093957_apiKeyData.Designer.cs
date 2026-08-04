@@ -219,7 +219,7 @@ namespace MorWalPiz.VideoImporter.Migrations
                         {
                             Id = 1,
                             ApiEndpoint = "https://localhost:7221",
-                            ApiKey = "OnhQfkZyZxdSTZhIMGQC9gK1xRwU/8vdaBhmXYUjr50=",
+                            ApiKey = "REPLACE_WITH_API_KEY",
                             ApplicationName = "MorWalPiz Site",
                             DefaultHashtags = "video, hashtag",
                             TenantId = 1
@@ -228,7 +228,7 @@ namespace MorWalPiz.VideoImporter.Migrations
                         {
                             Id = 2,
                             ApiEndpoint = "https://localhost:7221",
-                            ApiKey = "OnhQfkZyZxdSTZhIMGQC9gK1xRwU/8vdaBhmXYUjr50=",
+                            ApiKey = "REPLACE_WITH_API_KEY",
                             ApplicationName = "ShootingITA Site",
                             DefaultHashtags = "video, hashtag",
                             TenantId = 2

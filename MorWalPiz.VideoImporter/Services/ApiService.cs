@@ -7,33 +7,40 @@ using MorWalPiz.Contracts.DTOs;
 
 namespace MorWalPiz.VideoImporter.Services
 {
+    public interface IApiServiceFactory
+    {
+        ApiService Create(string apiEndpoint, string? apiKey = null);
+    }
+
+    public sealed class ApiServiceFactory : IApiServiceFactory
+    {
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public ApiServiceFactory(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+        }
+
+        public ApiService Create(string apiEndpoint, string? apiKey = null)
+        {
+            var httpClient = _httpClientFactory.CreateClient("BackOffice");
+            httpClient.BaseAddress = new Uri(apiEndpoint);
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                httpClient.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+            }
+
+            return new ApiService(httpClient);
+        }
+    }
+
     public class ApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly string? _apiKey;
 
-        public ApiService(string apiEndpoint, string? apiKey = null)
+        public ApiService(HttpClient httpClient)
         {
-            var handler = new SocketsHttpHandler
-            {
-                ConnectTimeout = TimeSpan.FromSeconds(30),            // TCP handshake timeout
-                PooledConnectionLifetime = TimeSpan.FromMinutes(10),  // Optional, for reusing connections
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(20)       // Optional, for long-lived idle connections
-            };
-            _httpClient = new HttpClient(handler)
-            {
-                BaseAddress = new Uri(apiEndpoint),
-                Timeout = TimeSpan.FromSeconds(300) // 5 minutes timeout
-            };
-            
-            _apiKey = apiKey;
-            
-            // Add API Key to default headers if provided
-            if (!string.IsNullOrEmpty(_apiKey))
-            {
-                _httpClient.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
-            }
+            _httpClient = httpClient;
         }
 
         public async Task<IList<ReviewApiVideoResponse>> SendVideosContextAsync(IEnumerable<string> videoNames, string context, IList<Language> languagues)

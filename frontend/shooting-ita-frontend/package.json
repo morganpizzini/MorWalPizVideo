@@ -17,7 +17,6 @@
     "@morwalpiz/layout": "1.0.0",
     "@morwalpizvideo/models": "1.0.0",
     "@morwalpizvideo/services": "1.0.0",
-    "axios": "^1.8.4",
     "bootstrap": "^5.3.5",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",

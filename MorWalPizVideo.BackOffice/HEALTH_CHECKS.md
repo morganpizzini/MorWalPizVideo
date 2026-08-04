@@ -79,9 +79,22 @@ All endpoints return detailed JSON responses:
 - **Timeout**: 10 seconds
 - **Failure Status**: Degraded
 
-### 6. Hangfire Health Checks (When Enabled)
+### 6. Blob Storage Readiness (When Configured)
 
-#### SQL Server Health Check (Production)
+- **Name**: `blob-storage`
+- **Tags**: `ready`, `storage`
+- **Purpose**: Performs an authorized `GetProperties` operation against the configured public preview container
+- **Failure Status**: Unhealthy
+- **Diagnostics**: Reports only the service authority, authentication mode on success, or exception type on failure; credentials and private Blob URLs are never returned
+- **Registration**: Production/non-mock mode only when an endpoint or connection-string fallback is configured
+
+This container-scoped operation validates the least-privilege role used by each host without requiring account-wide service-property permissions. It is readiness-only and does not alter anonymous preview access.
+
+### 7. Hangfire Health Checks (When Enabled)
+
+Hangfire is disabled in checked-in configuration. While disabled, neither probe below is registered and readiness has no dependency on a Hangfire store or worker. When enabled, startup first requires `ConnectionStrings:HangfireConnection`; the application does not provision the SQL database or run migrations.
+
+#### SQL Server Health Check
 - **Name**: `hangfire-sqlserver`
 - **Tags**: `ready`, `hangfire`, `database`
 - **Purpose**: Validates Hangfire SQL Server database
@@ -95,13 +108,13 @@ All endpoints return detailed JSON responses:
 - **Timeout**: 5 seconds
 - **Failure Status**: Degraded
 
-### 7. Feature Management Health Check
+### 8. Feature Management Health Check
 - **Name**: `feature-management`
 - **Tags**: `startup`, `configuration`
 - **Purpose**: Validates feature flag configuration
 - **Failure Status**: Unhealthy
 
-### 8. Mock Services Health Check (Mock Mode)
+### 9. Mock Services Health Check (Mock Mode)
 - **Name**: `mock-services`
 - **Tags**: `ready`, `mock`
 - **Purpose**: Always healthy in mock mode
@@ -114,7 +127,7 @@ All endpoints return detailed JSON responses:
 Health checks automatically adapt based on feature flags:
 
 - `EnableMock`: Switches between real and mock health checks
-- `EnableHangFire`: Adds/removes Hangfire-related health checks
+- `EnableHangFire`: Adds both Hangfire SQL storage and processing checks; when disabled, adds neither
 - `EnableSwagger`: Used for feature management validation
 
 ### Environment-Specific Behavior
@@ -230,9 +243,10 @@ fi
    - Review request quotas and limits
 
 3. **Hangfire Health Check Failures**
-   - Ensure SQL Server is available (production)
+  - Keep `EnableHangFire` disabled until an approved durable SQL store exists
+  - Verify the externally provisioned SQL store and `ConnectionStrings:HangfireConnection`
    - Check Hangfire dashboard for job processing status
-   - Verify Hangfire configuration
+  - Do not treat local probe success as restart-durability, retry/idempotency, or production readiness evidence
 
 ### Health Check Debugging
 

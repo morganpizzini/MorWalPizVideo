@@ -12,7 +12,7 @@ The authentication system has been upgraded with three priority levels of securi
 
 **Problem**: Storing JWT tokens in `localStorage` makes them vulnerable to XSS (Cross-Site Scripting) attacks. Any malicious JavaScript code injected into the page can access and exfiltrate the token.
 
-**Solution**: Implemented HttpOnly Secure SameSite cookies for token storage.
+**Solution**: Implemented an HttpOnly, Secure cookie for the browser session plus antiforgery validation for unsafe cookie-authenticated requests.
 
 #### Backend Changes
 
@@ -20,14 +20,18 @@ The authentication system has been upgraded with three priority levels of securi
 - Login endpoint now sets an `auth_token` cookie with security flags:
   - `HttpOnly: true` - Prevents JavaScript access
   - `Secure: true` - Requires HTTPS
-  - `SameSite: Strict` - Prevents CSRF attacks
-  - `Expires: 24 hours` - Matches JWT expiry
+  - `SameSite: None` - Allows the accepted HTTPS SPA origin to call the separate API origin
+  - `Path: /` - Makes the session available to all BackOffice API routes
+  - `Expires` - Matches the configured JWT expiration
 - Added `/api/auth/logout` endpoint to clear the cookie
-- Token still returned in response body for backward compatibility during transition
+- Login, validate, and logout response bodies remain unchanged; the JWT is not exposed to browser JavaScript
 
 **File: `MorWalPizVideo.BackOffice/Program.cs`**
 - JWT Bearer authentication now checks cookies if Authorization header is missing
-- CORS configured to support credentials (`AllowCredentials()`)
+- Production CORS accepts exactly `https://morwalpiz-admin-spa.azurewebsites.net` with credentials
+- ASP.NET Core antiforgery uses the `X-CSRF-TOKEN` header and a Secure, HttpOnly, `SameSite=None` `__Host-morwalpiz-csrf` cookie
+- Unsafe requests carrying `auth_token`, including logout and validate, require a valid antiforgery token
+- Bearer-only, API-key-only, anonymous, safe-method, and health-probe requests do not acquire a CSRF requirement
 - HSTS (HTTP Strict Transport Security) enabled in production
 - Development CORS allows any origin with credentials
 
@@ -35,10 +39,13 @@ The authentication system has been upgraded with three priority levels of securi
 
 **File: `frontend/fe-packages/services/src/apiService.ts`**
 - All API calls now include `credentials: 'include'` to send cookies
+- Unsafe cookie requests acquire `/api/auth/csrf`, cache its token, and send it as `X-CSRF-TOKEN`
+- Bearer requests and public clients configured with `credentials: 'omit'` retain their existing behavior
 
 **File: `frontend/back-office-spa/src/services/authService.ts`**
 - `logout()` method now calls `/api/auth/logout` endpoint
-- localStorage cleanup retained as fallback
+- Cached CSRF state is reset after login, logout, and unauthorized-session handling
+- `localStorage` contains display-only user information, not the JWT
 
 ### Priority 2: Remove Debug Logging
 
@@ -76,8 +83,9 @@ The authentication system has been upgraded with three priority levels of securi
 - Even if XSS vulnerability exists, attacker cannot steal authentication token
 
 ### CSRF Protection
-- SameSite=Strict prevents cookie from being sent in cross-site requests
-- Cookies only sent when navigating directly to the application
+- Cross-site cookie transport is limited to the exact credentialed CORS origin
+- Unsafe requests carrying the auth cookie require the matching server-issued antiforgery token
+- Supplying a forged bearer or API-key header does not bypass cookie CSRF validation
 
 ### HTTPS Enforcement
 - Secure flag ensures cookies only transmitted over HTTPS
@@ -93,27 +101,28 @@ The authentication system has been upgraded with three priority levels of securi
 ### Backward Compatibility
 
 The implementation maintains backward compatibility:
-1. Login endpoint returns JWT in response body (will be removed in future version)
-2. Frontend still stores token in localStorage temporarily
-3. Both cookie and Authorization header accepted by backend
+1. Login, validate, and logout response shapes are unchanged
+2. `auth_token` remains the cookie name
+3. JWT bearer headers and API-key clients remain supported without browser CSRF token handling
+4. Anonymous endpoints and health probes retain their existing access behavior
 
 ### Testing Checklist
 
-- [ ] Login successfully creates auth cookie
-- [ ] Subsequent API calls work without Authorization header
-- [ ] Logout clears the cookie
-- [ ] Cookie not sent in cross-origin requests (CORS verification)
-- [ ] HTTPS enforced in production
+- [x] Login creates an HttpOnly, Secure, `SameSite=None` auth cookie
+- [x] Exact production SPA origin receives credentialed CORS headers; unsupported origins do not
+- [x] Missing and forged CSRF tokens fail on unsafe cookie requests
+- [x] Valid CSRF permits validate and logout, and logout clears the cookie
+- [x] Bearer-only and API-key-only requests remain exempt from cookie CSRF
+- [ ] Verify the accepted SPA/API origins and HTTPS-only cookie flow after Azure deployment
 - [ ] Password verification works with new iteration count
 
 ### Future Recommendations
 
-1. **Remove localStorage token storage**: Once cookie authentication is verified working, remove localStorage token storage completely
-2. **Password migration**: Consider migrating all stored passwords to new hash parameters
-3. **Consider Argon2id**: For new implementations, Argon2id is recommended over PBKDF2
-4. **Implement refresh tokens**: Add refresh token mechanism with shorter JWT expiry
-5. **Add CSP headers**: Implement Content Security Policy to further prevent XSS
-6. **Monitor failed login attempts**: Alert on suspicious patterns
+1. **Password migration**: Consider migrating all stored passwords to new hash parameters
+2. **Consider Argon2id**: For new implementations, Argon2id is recommended over PBKDF2
+3. **Implement refresh tokens**: Add refresh token mechanism with shorter JWT expiry
+4. **Add CSP headers**: Implement Content Security Policy to further prevent XSS
+5. **Monitor failed login attempts**: Alert on suspicious patterns
 
 ## Configuration
 

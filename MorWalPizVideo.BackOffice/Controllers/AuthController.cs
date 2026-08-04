@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
 using System.Security.Cryptography;
@@ -18,8 +20,8 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
-        IUserRepository userRepository, 
-        IJwtService jwtService, 
+        IUserRepository userRepository,
+        IJwtService jwtService,
         IRateLimitingService rateLimitingService,
         ILogger<AuthController> logger)
     {
@@ -46,11 +48,11 @@ public class AuthController : ControllerBase
         var rateLimitResult = await _rateLimitingService.CheckRateLimitAsync(ipAddress, request.Username);
         if (!rateLimitResult.IsAllowed)
         {
-            _logger.LogWarning("Rate limit exceeded for IP {IpAddress} and user {Username}. Reason: {Reason}", 
+            _logger.LogWarning("Rate limit exceeded for IP {IpAddress} and user {Username}. Reason: {Reason}",
                 ipAddress, request.Username, rateLimitResult.Reason);
-            
-            return new ObjectResult(new 
-            { 
+
+            return new ObjectResult(new
+            {
                 message = rateLimitResult.Reason,
                 retryAfter = rateLimitResult.RetryAfter?.TotalSeconds,
                 remainingAttempts = 0
@@ -62,12 +64,13 @@ public class AuthController : ControllerBase
 
         // Attempt authentication
         var user = await _userRepository.AuthenticateAsync(request.Username, request.Password);
-        
+
         if (user == null)
         {
             await _rateLimitingService.RecordLoginAttemptAsync(ipAddress, request.Username, false, userAgent, "Invalid credentials");
-            
-            return Unauthorized(new { 
+
+            return Unauthorized(new
+            {
                 message = "Invalid credentials",
                 remainingAttempts = rateLimitResult.RemainingAttempts - 1
             });
@@ -76,8 +79,9 @@ public class AuthController : ControllerBase
         if (!user.IsActive)
         {
             await _rateLimitingService.RecordLoginAttemptAsync(ipAddress, request.Username, false, userAgent, "Account disabled");
-            
-            return Unauthorized(new { 
+
+            return Unauthorized(new
+            {
                 message = "Account is disabled",
                 remainingAttempts = rateLimitResult.RemainingAttempts - 1
             });
@@ -87,20 +91,24 @@ public class AuthController : ControllerBase
         await _rateLimitingService.RecordLoginAttemptAsync(ipAddress, request.Username, true, userAgent, "");
 
         var token = _jwtService.GenerateToken(user);
-        
+
         // Update last login
         var updatedUser = user with { LastLogin = DateTime.UtcNow };
         await _userRepository.UpdateItemAsync(updatedUser);
 
         _logger.LogInformation("Successful login for user {Username} from IP {IpAddress}", request.Username, ipAddress);
 
-        // Set HttpOnly Secure SameSite cookie
+        var expirationDays = double.Parse(HttpContext.RequestServices
+            .GetRequiredService<IConfiguration>()["JwtSettings:ExpirationDays"] ?? "7");
+
+        // The SPA and API use distinct HTTPS origins, so credentialed browser requests require SameSite=None.
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = true, // Requires HTTPS
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddHours(24) // Match JWT expiry
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Expires = DateTimeOffset.UtcNow.AddDays(expirationDays),
+            Path = "/"
         };
         Response.Cookies.Append("auth_token", token, cookieOptions);
 
@@ -116,18 +124,32 @@ public class AuthController : ControllerBase
         });
     }
 
+    [HttpGet("csrf")]
+    public IActionResult IssueCsrfToken([FromServices] IAntiforgery antiforgery)
+    {
+        var tokens = antiforgery.GetAndStoreTokens(HttpContext);
+        return Ok(new { token = tokens.RequestToken });
+    }
+
     [HttpPost("logout")]
+    [RequireCookieAntiforgery]
     public IActionResult Logout()
     {
         // Clear the auth cookie
-        Response.Cookies.Delete("auth_token");
-        
+        Response.Cookies.Delete("auth_token", new CookieOptions
+        {
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Path = "/"
+        });
+
         _logger.LogInformation("User logged out");
-        
+
         return Ok(new { message = "Logged out successfully" });
     }
 
     [HttpPost("validate")]
+    [RequireCookieAntiforgery]
     public IActionResult ValidateToken()
     {
         var token = Request.Cookies["auth_token"];

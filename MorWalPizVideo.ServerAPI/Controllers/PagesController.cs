@@ -14,10 +14,15 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     [AllowAnonymous] // ADR-002: explicit public read access
     public class PagesController : ApplicationController
     {
+        private readonly ICatalogService _catalogService;
         private readonly BlobStorageOptions blobOptions;
         public PagesController(
-            IGenericDataService _dataService, IMorWalPizCache _memoryCache, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _memoryCache)
+            IGenericDataService _dataService,
+            IMorWalPizCache _memoryCache,
+            ICatalogService catalogService,
+            IOptions<BlobStorageOptions> _blobOptions) : base(_dataService, _memoryCache)
         {
+            _catalogService = catalogService;
             blobOptions = _blobOptions.Value;
         }
 
@@ -25,9 +30,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.Pages], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url) {
 
-            var entities = await cache.GetOrCreateAsync(CacheKeys.Pages, dataService.GetPages);
-
-            var page = entities?.FirstOrDefault(x => x.Url == url);
+            var page = await _catalogService.GetPageByUrlAsync(url);
             if(page == null)
                 return NotFound();
             return Ok(page with { ThumbnailUrl = $"{blobOptions.Endpoint}/{blobOptions.PageContainerName}/{page.Url}/thumbnail.jpg" });

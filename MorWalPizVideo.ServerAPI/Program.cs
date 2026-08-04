@@ -100,6 +100,12 @@ if (enableSwagger)
     builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IGenericDataService, MinimalDataService>();
+builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IShopService, ShopService>();
+builder.Services.AddScoped<IFormsService, FormsService>();
+builder.Services.AddScoped<IInsightsService, InsightsService>();
+builder.Services.AddScoped<ILinksService, LinksService>();
 
 if (enableMock)
 {
@@ -125,6 +131,7 @@ if (enableMock)
     builder.Services.AddScoped<IRecaptchaService, RecaptchaServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
+    builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
@@ -157,6 +164,7 @@ else
     builder.Services.AddScoped<IYTService, YTService>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
+    builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();

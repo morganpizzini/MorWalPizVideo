@@ -32,6 +32,12 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("target")] string Target,
         [property: DataMember][property: BsonElement("queryLinks")] IList<QueryLink> QueryLinks) : BaseEntity
     {
+        public static string NormalizeCode(string? code) => (code ?? string.Empty).Trim().ToLowerInvariant();
+
+        public string NormalizedCode => NormalizeCode(Code);
+
+        public bool MatchesCode(string? candidateCode) =>
+            string.Equals(NormalizedCode, NormalizeCode(candidateCode), System.StringComparison.OrdinalIgnoreCase);
 
         [DataMember]
         [BsonElement("clicksCount")]

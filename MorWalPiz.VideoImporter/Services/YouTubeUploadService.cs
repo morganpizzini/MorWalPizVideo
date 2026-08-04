@@ -300,11 +300,12 @@ namespace MorWalPiz.VideoImporter.Services
                         var uploadResponse = await videosInsertRequest.UploadAsync();
                         result.YouTubeId = videosInsertRequest.ResponseBody?.Id;
                         result.Success = uploadResponse.Status == UploadStatus.Completed;
-                        
+
                         // Log the upload response
-                        LogApiCall("VideoInsert", video.FileName, null, new { 
-                            Success = result.Success, 
-                            YouTubeId = result.YouTubeId, 
+                        LogApiCall("VideoInsert", video.FileName, null, new
+                        {
+                            Success = result.Success,
+                            YouTubeId = result.YouTubeId,
                             UploadStatus = uploadResponse.Status.ToString(),
                             ResponseBody = videosInsertRequest.ResponseBody
                         }, "Video upload completed");
@@ -341,10 +342,10 @@ namespace MorWalPiz.VideoImporter.Services
                                 // Utilizziamo il servizio con autorizzazioni dedicate per l'aggiornamento
                                 var listRequest = _youtubeUpdateService.Videos.List("snippet");
                                 listRequest.Id = result.YouTubeId;
-                                
+
                                 // Log the list request
                                 LogApiCall("VideoList", video.FileName, new { VideoId = result.YouTubeId, Part = "snippet" }, null, "Fetching uploaded video for localization update");
-                                
+
                                 var listResponse = await listRequest.ExecuteAsync();
                                 var uploadedVideo = listResponse.Items.First();
 
@@ -352,10 +353,10 @@ namespace MorWalPiz.VideoImporter.Services
 
                                 // Log the update request with localizations
                                 LogApiCall("VideoUpdate", video.FileName, uploadedVideo, null, "Updating video with localizations");
-                                
+
                                 var updateRequest = _youtubeUpdateService.Videos.Update(uploadedVideo, "snippet,localizations");
                                 await updateRequest.ExecuteAsync();
-                                
+
                                 // Log successful update response
                                 LogApiCall("VideoUpdate", video.FileName, null, new { Success = true, VideoId = result.YouTubeId }, "Video updated successfully with localizations");
 
@@ -760,7 +761,7 @@ namespace MorWalPiz.VideoImporter.Services
                 var listRequest = _youtubeUpdateService.Videos.List("snippet");
                 listRequest.Id = youtubeVideoId;
 
-                LogApiCall("VideoList", youtubeVideoId, new { VideoId = youtubeVideoId, Part = "snippet" }, null, 
+                LogApiCall("VideoList", youtubeVideoId, new { VideoId = youtubeVideoId, Part = "snippet" }, null,
                     "Fetching video for auto-translation");
 
                 var listResponse = await listRequest.ExecuteAsync();
@@ -782,7 +783,7 @@ namespace MorWalPiz.VideoImporter.Services
                 // Get API settings
                 using var settings = App.DatabaseService.CreateContext();
                 var apiSettings = settings.Settings.FirstOrDefault();
-                
+
                 if (apiSettings == null || string.IsNullOrWhiteSpace(apiSettings.ApiEndpoint))
                 {
                     result.Success = false;
@@ -791,10 +792,10 @@ namespace MorWalPiz.VideoImporter.Services
                 }
 
                 // Call translation API
-                var apiService = new ApiService(apiSettings.ApiEndpoint, null);
+                var apiService = App.ApiServiceFactory.Create(apiSettings.ApiEndpoint);
                 var translations = await apiService.TranslateVideoContentAsync(
-                    originalTitle, 
-                    originalDescription, 
+                    originalTitle,
+                    originalDescription,
                     enabledLanguages);
 
                 if (translations == null || translations.Count == 0)
@@ -809,7 +810,7 @@ namespace MorWalPiz.VideoImporter.Services
 
                 foreach (var translation in translations)
                 {
-                    var language = enabledLanguages.FirstOrDefault(l => 
+                    var language = enabledLanguages.FirstOrDefault(l =>
                         string.Equals(l.Code, translation.LanguageCode, StringComparison.OrdinalIgnoreCase));
 
                     if (language != null && !string.IsNullOrWhiteSpace(translation.TranslatedTitle))
@@ -827,14 +828,14 @@ namespace MorWalPiz.VideoImporter.Services
                 // Update YouTube video with localizations
                 video.Localizations = localizations;
 
-                LogApiCall("VideoUpdate", youtubeVideoId, video, null, 
+                LogApiCall("VideoUpdate", youtubeVideoId, video, null,
                     $"Updating video with {localizations.Count} localizations");
 
                 var updateRequest = _youtubeUpdateService.Videos.Update(video, "snippet,localizations");
                 await updateRequest.ExecuteAsync();
 
-                LogApiCall("VideoUpdate", youtubeVideoId, null, 
-                    new { Success = true, VideoId = youtubeVideoId, TranslationsCount = localizations.Count }, 
+                LogApiCall("VideoUpdate", youtubeVideoId, null,
+                    new { Success = true, VideoId = youtubeVideoId, TranslationsCount = localizations.Count },
                     "Video updated successfully with auto-translations");
 
                 result.Success = true;
@@ -843,7 +844,7 @@ namespace MorWalPiz.VideoImporter.Services
             {
                 result.Success = false;
                 result.ErrorMessage = $"Errore durante la traduzione automatica: {ex.Message}";
-                
+
                 // Log the error
                 Console.WriteLine($"Errore AutoTranslateVideoAsync: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");

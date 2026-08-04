@@ -18,6 +18,7 @@
         public const string Channels = "ytChannels";
         public const string Compilations = "compilations";
         public const string CustomForms = "customForms";
+        public const string CustomFormResponses = "customFormResponses";
         public const string QueryLinks = "queryLinks";
         public const string PublishSchedules = "publishSchedules";
 

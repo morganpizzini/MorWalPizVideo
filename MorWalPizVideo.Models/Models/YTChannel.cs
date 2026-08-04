@@ -27,7 +27,7 @@ namespace MorWalPizVideo.Server.Models
         // Remove a shortlink from the collection
         public YTChannel RemoveShortLink(string code)
         {
-            var newShortLinks = ShortLinks.Where(sl => sl.Code != code).ToArray();
+            var newShortLinks = ShortLinks.Where(sl => !sl.MatchesCode(code)).ToArray();
             return this with { ShortLinks = newShortLinks };
         }
         
@@ -35,14 +35,14 @@ namespace MorWalPizVideo.Server.Models
         public YTChannel UpdateShortLink(string code, ShortLink updatedShortLink)
         {
             var newShortLinks = ShortLinks.Select(sl => 
-                sl.Code == code ? updatedShortLink : sl).ToArray();
+                sl.MatchesCode(code) ? updatedShortLink : sl).ToArray();
             return this with { ShortLinks = newShortLinks };
         }
         
         // Get a shortlink by code
         public ShortLink? GetShortLink(string code)
         {
-            return ShortLinks.FirstOrDefault(sl => sl.Code == code);
+            return ShortLinks.FirstOrDefault(sl => sl.MatchesCode(code));
         }
     }
 

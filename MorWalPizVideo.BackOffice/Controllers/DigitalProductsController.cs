@@ -1,30 +1,33 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
+[Authorize]
 [Route("api/shop/products")]
+// Legacy compatibility alias for the explicit admin route family under /api/admin/shop/products.
 public class DigitalProductsController : ApplicationControllerBase
 {
-    private readonly DataService _dataService;
+    private readonly IShopManagementService _shopManagementService;
 
-    public DigitalProductsController(DataService dataService)
+    public DigitalProductsController(IShopManagementService shopManagementService)
     {
-        _dataService = dataService;
+        _shopManagementService = shopManagementService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProducts()
     {
-        var entities = await _dataService.GetDigitalProductsAsync();
+        var entities = await _shopManagementService.GetDigitalProductsAsync();
         return Ok(entities);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProduct(string id)
     {
-        var entity = await _dataService.GetDigitalProductByIdAsync(id);
+        var entity = await _shopManagementService.GetDigitalProductByIdAsync(id);
         if (entity == null)
             return NotFound();
         return Ok(entity);
@@ -42,14 +45,14 @@ public class DigitalProductsController : ApplicationControllerBase
             request.Price,
             request.IsActive);
 
-        await _dataService.SaveDigitalProduct(product);
+        await _shopManagementService.SaveDigitalProductAsync(product);
         return NoContent();
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(string id, [FromBody] UpdateDigitalProductRequest request)
     {
-        var entity = await _dataService.GetDigitalProductByIdAsync(id);
+        var entity = await _shopManagementService.GetDigitalProductByIdAsync(id);
         if (entity == null)
             return BadRequest("Digital product not found");
 
@@ -64,18 +67,18 @@ public class DigitalProductsController : ApplicationControllerBase
             IsActive = request.IsActive ?? entity.IsActive
         };
 
-        await _dataService.UpdateDigitalProduct(updatedProduct);
+        await _shopManagementService.UpdateDigitalProductAsync(updatedProduct);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(string id)
     {
-        var entity = await _dataService.GetDigitalProductByIdAsync(id);
+        var entity = await _shopManagementService.GetDigitalProductByIdAsync(id);
         if (entity == null)
             return BadRequest("Digital product not found");
 
-        await _dataService.DeleteDigitalProduct(entity.Id);
+        await _shopManagementService.DeleteDigitalProductAsync(entity.Id);
         return NoContent();
     }
 }

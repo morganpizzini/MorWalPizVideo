@@ -1,4 +1,3 @@
-using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,8 +11,6 @@ namespace MorWalPiz.VideoImporter.Views
   {
     private VideoFile _currentFile;
     private List<Language> _secondaryLanguages;
-    private static readonly HttpClient _httpClient = new HttpClient();
-
     public FileDetailPage(VideoFile file)
     {
       InitializeComponent();

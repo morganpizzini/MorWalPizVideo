@@ -2,7 +2,21 @@
 
 ## Status
 
-MongoDB is owned and operated by the project owner. No Mongo index definitions or migration runner are currently found in source. The operations below are required design work, not evidence that indexes already exist.
+MongoDB is owned and operated by the project owner.
+
+Source-owned index operations now exist:
+
+- BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit` and `POST /api/mongoindexes/apply`.
+- Index definitions are maintained in source via `MongoIndexOperationsService` (runtime manifest) and the operational file `docs/architecture/operations/mongo-index-manifest.phase4.json`.
+
+Operational evidence is now recorded for the Phase 4 verification baseline under `docs/architecture/operations/mongo-index-audits/`:
+
+- `phase4-2026-08-03-sample-audit-output.json`
+- `phase4-2026-08-03-sample-apply-output.json`
+- `phase4-2026-08-03-explain-evidence.md`
+- `phase4-2026-08-03-verification-bundle.md`
+
+Per-environment production records should continue to be added for each rollout window.
 
 ## Safety Sequence
 
@@ -63,6 +77,13 @@ Field names must be confirmed against deployed BSON before creation. Prefer expl
 10. Remove embedded links only after backup and compatibility-window completion.
 
 ## Custom-Form Response Migration
+
+Current source status:
+
+- Separate `customFormResponses` collection exists (`DbCollections.CustomFormResponses`, `CustomFormResponseDocument`).
+- Dual-write is implemented in `FormsService.AddResponseAsync` (upsert into response collection, then legacy embedded compatibility write).
+- Backfill and reconciliation operations are implemented in `FormsService.BackfillEmbeddedResponsesAsync` and `FormsService.ReconcileCountsAsync`, exposed in BackOffice at `POST /api/customforms/responses/backfill` and `GET /api/customforms/{id}/responses/reconcile`.
+- Legacy embedded responses are still present for compatibility and reads still merge collection + embedded data.
 
 1. Add a `customFormResponses` collection keyed by form ID and submission ID.
 2. Dual-write new responses while retaining existing reads.

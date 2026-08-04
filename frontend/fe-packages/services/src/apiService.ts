@@ -25,6 +25,7 @@ type CredentialsMode = RequestCredentials;
  * Defaults to 'include' for backward compatibility with authenticated apps
  */
 let requestCredentialsMode: CredentialsMode = 'include';
+let csrfTokenPromise: Promise<string> | null = null;
 
 /**
  * Register an authentication token provider
@@ -47,6 +48,10 @@ export function setRequestCredentialsMode(mode: CredentialsMode): void {
     requestCredentialsMode = mode;
 }
 
+export function resetCsrfToken(): void {
+    csrfTokenPromise = null;
+}
+
 let unauthorizedHandler: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: () => void): void {
@@ -62,12 +67,12 @@ function getAuthToken(): string | null {
     if (authTokenProvider) {
         return authTokenProvider();
     }
-    
+
     // Fallback to localStorage for backward compatibility
     if (typeof window !== 'undefined' && window.localStorage) {
         return localStorage.getItem('authToken');
     }
-    
+
     return null;
 }
 
@@ -79,18 +84,18 @@ function getApiBaseUrl(): string {
     // Check runtime environment (injected by Docker entrypoint)
     if (typeof window !==
 
- 'undefined' && (window as any).ENV?.VITE_API_BASE_URL) {
+        'undefined' && (window as any).ENV?.VITE_API_BASE_URL) {
         return (window as any).ENV.VITE_API_BASE_URL;
     }
     if (typeof window !== 'undefined' && (window as any).ENV?.API_BASE_URL) {
         return (window as any).ENV.API_BASE_URL;
     }
-    
+
     // Check build-time environment (Vite)
     if (import.meta.env.VITE_API_BASE_URL) {
         return import.meta.env.VITE_API_BASE_URL;
     }
-    
+
     // Default to relative paths (for Vite dev proxy)
     return '';
 }
@@ -104,20 +109,43 @@ function buildFullUrl(path: string): string {
         throw new Error("Path cannot be null/undefined or empty");
     }
     const baseUrl = getApiBaseUrl();
-    
+
     // Normalize path to have single leading slash
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    
+
     // If no base URL, return relative path (for Vite proxy)
     if (!baseUrl) {
         return normalizedPath;
     }
-    
+
     // Remove trailing slash from base URL
     const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    
+
     // Combine base URL with path
     return `${cleanBase}${normalizedPath}`;
+}
+
+async function getCsrfToken(): Promise<string> {
+    csrfTokenPromise ??= fetch(buildFullUrl('/api/auth/csrf'), {
+        method: 'GET',
+        credentials: 'include'
+    }).then(async response => {
+        if (!response.ok) {
+            throw new Error(`Unable to acquire CSRF token (${response.status})`);
+        }
+
+        const payload = await response.json() as { token?: string };
+        if (!payload.token) {
+            throw new Error('CSRF token response was invalid');
+        }
+
+        return payload.token;
+    }).catch(error => {
+        csrfTokenPromise = null;
+        throw error;
+    });
+
+    return csrfTokenPromise;
 }
 
 export function post(url: string, obj: any, overrideHeaderEnv: string = '') {
@@ -187,6 +215,12 @@ export async function call(url: string, method: string, body: any, overrideHeade
         headers.append("Authorization", `Bearer ${token}`);
     }
 
+    const isUnsafeMethod = !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method.toUpperCase());
+    const isAnonymousAuthRequest = url.includes('/api/auth/login') || url.includes('/api/auth/csrf');
+    if (requestCredentialsMode === 'include' && isUnsafeMethod && !token && !isAnonymousAuthRequest) {
+        headers.append('X-CSRF-TOKEN', await getCsrfToken());
+    }
+
     if (query) {
         url += `?${new URLSearchParams(query).toString()}`;
     }
@@ -198,7 +232,7 @@ export async function call(url: string, method: string, body: any, overrideHeade
 
     // Determine if we have a request body that needs to be sent
     let hasBody = false;
-    
+
     if (body) {
         if (isFormData) {
             // For FormData, use it directly
@@ -212,14 +246,14 @@ export async function call(url: string, method: string, body: any, overrideHeade
             hasBody = true;
         }
     }
-    
+
     // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
     // This avoids triggering CORS preflight for simple requests
     // Only set Content-Type when we actually have a JSON body to send
-    
+
     // Include credentials based on configured mode
     options.credentials = requestCredentialsMode;
-    
+
     return fetch(buildFullUrl(url), options)
         .then(async (response) => {
             if (response.ok) {
@@ -230,11 +264,11 @@ export async function call(url: string, method: string, body: any, overrideHeade
                     return Promise.resolve({});
                 }
                 const parsedResponse = await response.json();
-                
+
                 // If returnFullResponse is true, return the entire response object
                 if (responseOptions?.returnFullResponse || !Object.prototype.hasOwnProperty.call(parsedResponse, 'data'))
                     return parsedResponse;
-                
+
                 // Default behavior: return data property if it exists, otherwise return full response
                 return parsedResponse.data;
             } else {
@@ -363,21 +397,21 @@ const apiService = {
     postFormData,
     getFile,
     call,
-    
+
     // Product services
     fetchProducts,
     getProduct,
     createProduct,
     updateProduct,
     deleteProduct,
-    
+
     // ProductCategory services
     fetchProductCategories,
     getProductCategory,
     createProductCategory,
     updateProductCategory,
     deleteProductCategory,
-    
+
     // Sponsor services
     fetchSponsors,
     getSponsor,

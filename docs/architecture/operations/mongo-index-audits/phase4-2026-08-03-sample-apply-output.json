@@ -1,0 +1,69 @@
+{
+  "capturedAtUtc": "2026-08-03T14:12:00Z",
+  "environment": "local-verification",
+  "operation": "POST /api/mongoindexes/apply",
+  "request": {
+    "approvalToken": "apply-approved-indexes",
+    "approvedKeys": [
+      "shortlinks.code.unique",
+      "customformresponses.formid_submittedat_desc",
+      "customformresponses.formid_responseid.unique",
+      "youtubecontent_isprivate_creation_desc",
+      "pages_url",
+      "compilations_url",
+      "customforms_active_url",
+      "calendarevents_creation_desc"
+    ]
+  },
+  "result": [
+    {
+      "key": "shortlinks.code.unique",
+      "collection": "shortLinks",
+      "name": "ux_shortlinks_code_ci",
+      "action": "skipped_existing"
+    },
+    {
+      "key": "customformresponses.formid_submittedat_desc",
+      "collection": "customFormResponses",
+      "name": "ix_customformresponses_formid_submittedat_desc",
+      "action": "created"
+    },
+    {
+      "key": "customformresponses.formid_responseid.unique",
+      "collection": "customFormResponses",
+      "name": "ux_customformresponses_formid_responseid",
+      "action": "created"
+    },
+    {
+      "key": "youtubecontent_isprivate_creation_desc",
+      "collection": "youtubeContent",
+      "name": "ix_youtubecontent_isprivate_creation_desc",
+      "action": "created"
+    },
+    {
+      "key": "pages_url",
+      "collection": "pages",
+      "name": "ix_pages_url",
+      "action": "skipped_existing"
+    },
+    {
+      "key": "compilations_url",
+      "collection": "compilations",
+      "name": "ix_compilations_url",
+      "action": "skipped_existing"
+    },
+    {
+      "key": "customforms_active_url",
+      "collection": "customForms",
+      "name": "ix_customforms_active_url",
+      "action": "created"
+    },
+    {
+      "key": "calendarevents_creation_desc",
+      "collection": "calendarEvents",
+      "name": "ix_calendarevents_creation_desc",
+      "action": "created"
+    }
+  ],
+  "notes": "Output sanitized for repository inclusion. No credentials or connection details are recorded."
+}

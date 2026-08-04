@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MorWalPizVideo.Server.Utils;
+using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Configuration;
 using MongoDB.Driver;
 using System.Security.Authentication;
 
@@ -24,7 +26,8 @@ public static class HealthCheckService
             if (dbConfig != null)
             {
                 healthChecksBuilder.AddMongoDb(
-                    clientFactory: sp => {
+                    clientFactory: sp =>
+                    {
                         MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(dbConfig.ConnectionString));
                         settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
                         return new MongoClient(settings);
@@ -71,17 +74,15 @@ public static class HealthCheckService
         else
         {
             // Mock mode health checks - always healthy
-            healthChecksBuilder.AddCheck("mock-services", () => 
-                HealthCheckResult.Healthy("Running in mock mode - all external dependencies are mocked"), 
+            healthChecksBuilder.AddCheck("mock-services", () =>
+                HealthCheckResult.Healthy("Running in mock mode - all external dependencies are mocked"),
                 ["ready", "mock"]);
         }
 
         if (enableHangfire)
         {
-            // Hangfire Health Check
-            if (!enableMock && !string.IsNullOrEmpty(configuration.GetConnectionString("HangfireConnection")))
+            if (!string.IsNullOrEmpty(configuration.GetConnectionString("HangfireConnection")))
             {
-                // Production - SQL Server for Hangfire
                 healthChecksBuilder.AddSqlServer(
                     connectionString: configuration.GetConnectionString("HangfireConnection")!,
                     name: "hangfire-sqlserver",
@@ -92,13 +93,23 @@ public static class HealthCheckService
 
             // Hangfire processing health check
             healthChecksBuilder.AddHangfire(
-                setup => {
+                setup =>
+                {
                     setup.MinimumAvailableServers = 1;
                 },
                 name: "hangfire-processing",
                 failureStatus: HealthStatus.Degraded,
                 tags: ["ready", "hangfire"],
                 timeout: TimeSpan.FromSeconds(5));
+        }
+
+        var blobOptions = configuration.GetSection("BlobStorage").Get<BlobStorageOptions>() ?? new BlobStorageOptions();
+        if (!enableMock && BlobStorageClientFactory.IsConfigured(blobOptions))
+        {
+            healthChecksBuilder.AddCheck<BlobStorageHealthCheck>(
+                "blob-storage",
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready", "storage"]);
         }
 
         // Feature Management Health Check

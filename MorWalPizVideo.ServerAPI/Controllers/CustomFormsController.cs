@@ -20,12 +20,15 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     public class CustomFormsController : ApplicationController
     {
         private readonly ILogger<CustomFormsController> _logger;
+        private readonly IFormsService _formsService;
 
         public CustomFormsController(
             IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
+            IFormsService formsService,
             ILogger<CustomFormsController> logger) : base(_dataService, _memoryCache)
         {
+            _formsService = formsService;
             _logger = logger;
         }
 
@@ -38,7 +41,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             try
             {
-                var forms = await dataService.GetActiveForms();
+                var forms = await _formsService.GetActiveFormsAsync();
                 
                 // Return forms without responses for privacy
                 var publicForms = forms.Select(f => f with { Responses = Array.Empty<CustomFormResponse>() }).ToList();
@@ -65,7 +68,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     return BadRequest("URL cannot be empty");
                 }
 
-                var form = await dataService.GetCustomFormByUrl(url);
+                var form = await _formsService.GetFormByUrlAsync(url);
                 if (form == null)
                 {
                     return NotFound($"Custom form with URL '{url}' not found");
@@ -97,7 +100,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             try
             {
                 // Check if form exists
-                var form = await dataService.GetCustomFormById(request.Id);
+                var form = await _formsService.GetFormByIdAsync(request.Id);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
@@ -183,7 +186,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     request.Body.Answers
                 );
 
-                await dataService.AddFormResponse(request.Id, response);
+                await _formsService.AddResponseAsync(request.Id, response);
 
                 _logger.LogInformation("Form response submitted for form: {FormId}", request.Id);
 

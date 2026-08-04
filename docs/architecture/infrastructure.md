@@ -47,21 +47,25 @@ CORS does not replace host filtering. Configure actual Azure/custom hosts and tr
 
 Separate containers by exposure:
 
-- Public preview images: anonymous read or explicitly public delivery.
-- Private digital originals: no anonymous access.
-- Administrative uploads: least-privilege write access.
+- Public preview images (`ContainerName`): anonymous read remains enabled.
+- Public sponsor and page previews (`SponsorContainerName` and `PageContainerName`): anonymous read remains enabled because current public DTOs compose direct preview URLs.
+- Private digital originals and administrative uploads (`UploadContainerName`): no anonymous access.
+- Private recovery copies (`RecoveryContainerName`): no anonymous access, restricted operator access, and a separate non-production account where practical.
 
 ServerAPI issues short-lived, read-only SAS URLs after acquisition verification. Public DTOs never expose storage keys.
 
 Operational controls:
 
 - Prefer managed identity and least-privilege Blob roles over connection strings.
-- Enable blob/container soft delete.
-- Enable versioning where overwrite recovery is required.
-- Configure lifecycle cleanup for obsolete versions and temporary uploads.
-- Set content type, content disposition, checksum, size, ETag, and cache metadata.
+- Scope BackOffice Blob Data Contributor to only the preview/upload containers it writes. Do not grant its runtime identity recovery-container access.
+- Scope ServerAPI Blob Data Reader to `ContainerName`, the only container it lists. Public sponsor/page previews remain anonymous compatibility reads and require no ServerAPI data role.
+- Retain blob and container soft-deleted data and versions for 30 days.
+- Delete temporary and recovery artifacts after 7 days through an approved lifecycle rule.
+- Persist explicit content type plus SHA-256, size, and upload-time metadata; use the service ETag for recovery evidence and configure preview cache policy at the container/CDN boundary.
 - Monitor capacity, latency, egress, authorization failures, and unusual downloads.
-- Document restore and key/identity rotation procedures.
+- Execute checksum-verified restores only through the private recovery container.
+- Prefer managed identity with least-privilege container-scoped Blob roles; retain the existing connection-string keys only as a compatibility fallback.
+- Follow `operations/phase5-activation-and-recovery.md` for restore, lifecycle, RBAC, and credential evidence.
 
 ## MongoDB
 
@@ -73,7 +77,7 @@ Output cache accelerates public projections. Memory cache is process-local and m
 
 ## Jobs
 
-Hangfire belongs to BackOffice. Production storage must be durable. Dashboard access is authenticated and restricted. Jobs are idempotent, retry-aware, observable, and safe under repeated execution.
+Hangfire belongs to BackOffice and remains disabled by default. In disabled mode no server, recurring registration, dashboard, storage health probe, or runtime store dependency is activated. Enabling it requires the existing durable `ConnectionStrings:HangfireConnection`; startup fails fast when that key is empty. Source does not provision SQL or migrations. The existing `/hangfire` dashboard is available only while enabled and requires an authenticated `admin` role. Existing recurring IDs and `YouTubeSyncCron` remain unchanged. Restart durability, safe retries/idempotency, and exported telemetry with approved thresholds are mandatory activation gates; see `operations/phase5-activation-and-recovery.md`.
 
 ## Resilience And Telemetry
 

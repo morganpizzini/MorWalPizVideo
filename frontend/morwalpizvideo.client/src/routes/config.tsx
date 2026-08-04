@@ -24,12 +24,6 @@ import indexLoader from "./index.loader";
 import linktreeLoader from "./linktree.loader";
 import compilationsLoader from "./compilations.loader";
 import customFormLoader from "./customForm.loader";
-import ApiKeys from "./apiKeys";
-import apiKeysLoader from "./apiKeys.loader";
-import ApiKeyForm from "./apiKeyForm";
-import apiKeyFormLoader from "./apiKeyForm.loader";
-import ApiKeyDetail from "./apiKeyDetail";
-import apiKeyDetailLoader from "./apiKeyDetail.loader";
 import CookiePolicy from "./cookie-policy";
 import Bluetooth from "./bluetooth";
 import Stream from "./stream";
@@ -119,26 +113,6 @@ export const routes: RouteObject[] = [
                         path: "linktree/:matchId",
                         loader: linktreeLoader,
                         element: <Linktree />,
-                    },
-                    {
-                        path: "apikeys",
-                        loader: apiKeysLoader,
-                        element: <ApiKeys />,
-                    },
-                    {
-                        path: "apikeys/create",
-                        loader: apiKeyFormLoader,
-                        element: <ApiKeyForm />,
-                    },
-                    {
-                        path: "apikeys/:id",
-                        loader: apiKeyDetailLoader,
-                        element: <ApiKeyDetail />,
-                    },
-                    {
-                        path: "apikeys/:id/edit",
-                        loader: apiKeyFormLoader,
-                        element: <ApiKeyForm />,
                     },
                 ],
             },

@@ -1,4 +1,4 @@
-import type { LoaderFunctionArgs } from 'react-router';
+export { }; import type { LoaderFunctionArgs } from 'react-router';
 import { getApiKeyById } from '../services/apiKeys';
 
 export default async function loader({ params }: LoaderFunctionArgs) {
@@ -12,7 +12,7 @@ export default async function loader({ params }: LoaderFunctionArgs) {
       throw new Response('API key not found', { status: 404 });
     }
   }
-  
+
   // Creating new API key
   return { apiKey: null, isEdit: false };
 }

@@ -18,18 +18,9 @@ namespace MorWalPiz.InsightScanner.Services
             PropertyNameCaseInsensitive = true
         };
 
-        public BackOfficeInsightClient(string apiEndpoint, string? apiKey)
+        public BackOfficeInsightClient(HttpClient httpClient)
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(apiEndpoint),
-                Timeout = TimeSpan.FromSeconds(100)
-            };
-
-            if (!string.IsNullOrEmpty(apiKey))
-            {
-                _httpClient.DefaultRequestHeaders.Add("X-API-Key", apiKey);
-            }
+            _httpClient = httpClient;
         }
 
         public async Task<List<InsightTopicSummary>> GetTopicsAsync()

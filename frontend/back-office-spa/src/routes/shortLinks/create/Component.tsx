@@ -7,6 +7,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 import { LinkType, QueryLink } from '@morwalpizvideo/models';
+import { endpoints, get } from '@morwalpizvideo/services';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const CreateShortLink: React.FC = () => {
@@ -28,7 +29,7 @@ const CreateShortLink: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -50,11 +51,11 @@ const CreateShortLink: React.FC = () => {
   useEffect(() => {
     const targetParam = searchParams.get('target');
     const linkTypeParam = searchParams.get('linkType');
-    
+
     if (targetParam && !initialTargetSet) {
       setTarget(targetParam);
       setInitialTargetSet(true);
-      
+
       // Set link type if provided
       if (linkTypeParam !== null) {
         const parsedLinkType = parseInt(linkTypeParam);
@@ -68,8 +69,7 @@ const CreateShortLink: React.FC = () => {
   // Load available query links when component mounts
   useEffect(() => {
     setQueryLinksLoading(true);
-    fetch('/api/querylinks')
-      .then(response => response.json())
+    get(endpoints.QUERYLINKS)
       .then((data: QueryLink[]) => {
         setAvailableQueryLinks(data);
       })
@@ -112,7 +112,7 @@ const CreateShortLink: React.FC = () => {
       }
     );
   };
-  
+
   // Get label text based on link type
   const getTargetFieldLabel = () => {
     switch (linkType) {
@@ -141,8 +141,8 @@ const CreateShortLink: React.FC = () => {
           <Form.Label>
             Link Type <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Select 
-            value={linkType} 
+          <Form.Select
+            value={linkType}
             onChange={e => setLinkType(parseInt(e.target.value))}
           >
             <option value={LinkType.YouTubeVideo}>YouTube Video</option>
@@ -153,22 +153,22 @@ const CreateShortLink: React.FC = () => {
             <option value={LinkType.CustomUrl}>Custom URL</option>
           </Form.Select>
         </Form.Group>
-          <Form.Group controlId="formTarget" className="mb-3">
+        <Form.Group controlId="formTarget" className="mb-3">
           <Form.Label>
             {getTargetFieldLabel()} <span className="text-danger">*</span>
           </Form.Label>
-          
+
           {linkType === LinkType.YouTubeVideo && matches.length > 0 ? (
             <>
-              <Form.Select 
-                value={target} 
+              <Form.Select
+                value={target}
                 onChange={e => setTarget(e.target.value)}
                 disabled={loading}
               >
                 <option value="">Select a video</option>
                 {matches.map(match => (
                   <React.Fragment key={match.matchId}>
-                    
+
                     {match.videoRefs?.map(video => (
                       <option key={video.youtubeId} value={video.youtubeId}>
                         {video.title || video.youtubeId}
@@ -182,14 +182,14 @@ const CreateShortLink: React.FC = () => {
           ) : (
             <Form.Control type="text" value={target} onChange={e => setTarget(e.target.value)} />
           )}
-          
+
           <FieldError error={errors?.target} />
           <Form.Text className="text-muted">
             {linkType === LinkType.CustomUrl && "Enter the full URL including http:// or https://"}
             {linkType === LinkType.YouTubeVideo && !matches.length && "Loading available videos..."}
           </Form.Text>
         </Form.Group>
-        
+
         <MultiSelectWithBadges
           items={availableQueryLinks}
           selectedItems={selectedQueryLinks}
@@ -202,20 +202,20 @@ const CreateShortLink: React.FC = () => {
           disabled={queryLinksLoading}
           error={errors?.queryLinkIds}
         />
-        
+
         <Form.Group controlId="formMessage" className="mb-3">
           <Form.Label>Message</Form.Label>
-          <Form.Control 
-            as="textarea" 
-            rows={3} 
-            value={message} 
-            onChange={e => setMessage(e.target.value)} 
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={message}
+            onChange={e => setMessage(e.target.value)}
           />
           <Form.Text className="text-muted">
             Optional message to be sent with the link when shared
           </Form.Text>
         </Form.Group>
-        
+
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Create
         </Button>

@@ -1,4 +1,5 @@
 using MorWalPizVideo.Server.Services;
+using System.Diagnostics;
 
 namespace MorWalPizVideo.BackOffice.Jobs;
 
@@ -9,6 +10,9 @@ namespace MorWalPizVideo.BackOffice.Jobs;
 /// </summary>
 public class YouTubeSyncJob
 {
+  public const string JobId = "youtube-sync-job";
+  public const string CronConfigurationKey = "YouTubeSyncCron";
+  public const string DefaultCronSchedule = "0 3 * * *";
   private readonly IExternalDataService _externalDataService;
   private readonly ILogger<YouTubeSyncJob> _logger;
 
@@ -24,15 +28,16 @@ public class YouTubeSyncJob
   /// </summary>
   public async Task ExecuteAsync()
   {
-    _logger.LogInformation("YouTubeSyncJob started at {Time}", DateTimeOffset.UtcNow);
+    var stopwatch = Stopwatch.StartNew();
+    JobSignals.LogStarted(_logger, JobId, DateTimeOffset.UtcNow);
     try
     {
       var matches = await _externalDataService.FetchMatches();
-      _logger.LogInformation("YouTubeSyncJob completed. Synced {Count} content items.", matches.Count);
+      JobSignals.LogCompleted(_logger, JobId, DateTimeOffset.UtcNow, stopwatch.ElapsedMilliseconds, matches.Count);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "YouTubeSyncJob failed.");
+      JobSignals.LogFailed(_logger, JobId, DateTimeOffset.UtcNow, stopwatch.ElapsedMilliseconds, ex);
       throw;
     }
   }

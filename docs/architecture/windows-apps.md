@@ -12,8 +12,9 @@ VideoImporter is a .NET 10 WPF application for tenant-aware local media preparat
 - `ITenantContext` and `ITenantService` coordinate tenant behavior.
 - Configuration loads JSON, user secrets, environment variables, and optional Key Vault.
 - YouTube upload is abstracted through `IYouTubeUploadService`.
-- BackOffice calls use API-key authentication.
-- Startup and much UI behavior rely on static `App` properties and code-behind.
+- A Generic Host owns configuration and DI; `IHttpClientFactory` creates the named BackOffice client used by `IApiServiceFactory`.
+- BackOffice calls preserve API-key authentication and existing DTOs.
+- Static `App` properties temporarily bridge existing code-behind to host-resolved services during incremental migration.
 
 ### Target Direction
 
@@ -34,8 +35,9 @@ InsightScanner is a .NET 10 WPF application that scans external sources and subm
 
 - Configuration loads JSON, user secrets, and environment variables.
 - `HybridInsightScanner` composes source strategies.
-- `IBackOfficeInsightClient` owns submission behavior.
-- Startup exposes static services through `App`.
+- A Generic Host owns configuration and DI.
+- `IBackOfficeInsightClient` is a typed factory-managed client and owns API-key submission behavior.
+- Startup exposes host-resolved services through `App` as an incremental compatibility bridge.
 - WebView2 and code-behind coordinate parts of the workflow.
 
 ### Target Direction

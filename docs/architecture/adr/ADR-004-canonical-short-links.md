@@ -21,7 +21,7 @@ ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. 
 
 ## Consequences
 
-A data backfill and conflict resolution are required. Resolution becomes one indexed lookup and counts become concurrency-safe.
+A data backfill and conflict resolution are required. Resolution becomes one indexed lookup and counts become concurrency-safe. Canonical short-link codes are normalized and compared case-insensitively for compatibility, while new writes enforce safe absolute HTTP/HTTPS destinations for generic short links.
 
 ## Migration And Rollback
 
@@ -29,4 +29,4 @@ Backfill, dual-read canonical-first, create the unique index, switch writes, obs
 
 ## Validation
 
-Test URL safety, query preservation, code uniqueness, all destination kinds, concurrent counting, and legacy migration equality.
+The canonical short-link implementation is now in place and validated for the current behavior slice. The core behavior is implemented and covered by the current tests; remaining follow-up is operational (for example monitoring rollout, retention, and any later cleanup of legacy compatibility reads) rather than a missing core feature.

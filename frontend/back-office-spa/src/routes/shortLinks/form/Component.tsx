@@ -7,6 +7,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 import { LinkType, QueryLink, ShortLink } from '@morwalpizvideo/models';
+import { endpoints, get } from '@morwalpizvideo/services';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const ShortLinkForm: React.FC = () => {
@@ -33,7 +34,7 @@ const ShortLinkForm: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -75,8 +76,7 @@ const ShortLinkForm: React.FC = () => {
   // Load available query links
   useEffect(() => {
     setQueryLinksLoading(true);
-    fetch('/api/querylinks')
-      .then(response => response.json())
+    get(endpoints.QUERYLINKS)
       .then((data: QueryLink[]) => {
         setAvailableQueryLinks(data);
         if (entity?.queryLinkIds?.length) {

@@ -93,9 +93,9 @@ namespace MorWalPizVideo.Server.Services
             await _customFormRepository.UpdateItemAsync(updatedForm);
         }
         public async Task<IList<CustomForm>> GetActiveForms() =>
-            await _customFormRepository.GetItemsAsync(x => x.Active);
+            await _customFormRepository.GetActiveAsync();
         public async Task<CustomForm?> GetCustomFormByUrl(string url) =>
-            (await _customFormRepository.GetItemsAsync(x => x.Url.ToLower() == url.ToLower())).FirstOrDefault();
+            await _customFormRepository.GetByUrlAsync(url);
         public Task<IList<Page>> GetPages() => _pageRepository.GetItemsAsync();
 
         public Task<IList<Product>> GetProducts() => _productRepository.GetItemsAsync();
@@ -347,15 +347,21 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
         public Task<ShortLink?> GetShortLinkByCode(string shortLink) => _shortLinkRepository.GetByCodeAsync(shortLink);
         public async Task<ShortLink?> GetShortLink(string id) => (await _shortLinkRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
-        public Task UpdateShortlink(ShortLink entity) => _shortLinkRepository.UpdateItemAsync(entity);
+        public Task UpdateShortlink(ShortLink entity)
+        {
+            var normalizedEntity = entity with { Code = ShortLink.NormalizeCode(entity.Code) };
+            return _shortLinkRepository.UpdateItemAsync(normalizedEntity);
+        }
         public Task<int> IncrementShortLinkClicksAsync(string id) => _shortLinkRepository.IncrementClicksAsync(id);
 
         public async Task<ShortLink> SaveShortLink(ShortLink entity)
         {
-            var existingShortLink = await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == entity.Code.ToLower());
+            var normalizedCode = ShortLink.NormalizeCode(entity.Code);
+            var normalizedEntity = entity with { Code = normalizedCode };
+            var existingShortLink = await _shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == normalizedCode);
             if (existingShortLink.Count > 0)
-                return entity;
-            return await _shortLinkRepository.AddItemAsync(entity);
+                return normalizedEntity;
+            return await _shortLinkRepository.AddItemAsync(normalizedEntity);
         }
 
         public async Task DeleteShortLink(string shortLinkId)

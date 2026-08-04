@@ -12,9 +12,16 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     [AllowAnonymous] // ADR-002: explicit public read access
     public class CalendarEventsController : ApplicationController
     {
+        private readonly ICatalogService _catalogService;
+        private readonly IContentService _contentService;
         public CalendarEventsController(
-            IGenericDataService _dataService, IMorWalPizCache _memoryCache) : base(_dataService, _memoryCache)
+            IGenericDataService _dataService,
+            IMorWalPizCache _memoryCache,
+            ICatalogService catalogService,
+            IContentService contentService) : base(_dataService, _memoryCache)
         {
+            _catalogService = catalogService;
+            _contentService = contentService;
         }
 
         [HttpGet]
@@ -23,15 +30,19 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             return Ok(await cache.GetOrCreateAsync(CacheKeys.BioLinks, async () =>
             {
-                var elements = (await dataService.GetCalendarEvents())
-                .Where(x => x.CreationDateTime >= DateTime.Now.AddDays(-10))
-                .OrderByDescending(x => x.CreationDateTime).ToList();
+                var elements = await _catalogService.GetRecentCalendarEventsAsync(DateTime.Now.AddDays(-10), 250);
+                var matchIds = elements
+                    .Select(x => x.MatchId)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
 
-                var matches = await FetchMatches();
+                var matches = await _contentService.GetMatchesByIdsAsync(matchIds, includePrivate: false);
+                var matchesById = matches.ToDictionary(x => x.Id, StringComparer.Ordinal);
 
                 return elements.Select(entity =>
                 {
-                    var match = matches.FirstOrDefault(x => x.Id == entity.MatchId);
+                    matchesById.TryGetValue(entity.MatchId ?? string.Empty, out var match);
                     return match == null ? entity : entity with { MatchUrl = match.ContentType == YoutubeContentType.SingleVideo ? match.ContentId : match.Url };
                 }).ToList();
             }));

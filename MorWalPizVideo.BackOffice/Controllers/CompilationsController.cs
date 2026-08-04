@@ -39,14 +39,17 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
     public class CompilationsController : ApplicationControllerBase
     {
-        private readonly DataService _dataService;
+        private readonly ICatalogService _catalogService;
+        private readonly IContentService _contentService;
         private readonly ILogger<CompilationsController> _logger;
 
         public CompilationsController(
-            DataService dataService,
+            ICatalogService catalogService,
+            IContentService contentService,
             ILogger<CompilationsController> logger)
         {
-            _dataService = dataService;
+            _catalogService = catalogService;
+            _contentService = contentService;
             _logger = logger;
         }
 
@@ -58,7 +61,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var compilations = await _dataService.GetCompilations();
+                var compilations = await _catalogService.GetCompilationsAsync();
                 return Ok(compilations.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
@@ -81,7 +84,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("ID cannot be empty");
                 }
 
-                var compilation = await _dataService.GetCompilationById(id);
+                var compilation = await _catalogService.GetCompilationByIdAsync(id);
                 if (compilation == null)
                 {
                     return NotFound($"Compilation with ID '{id}' not found");
@@ -110,7 +113,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 {
                     var invalidVideos = new List<string>();
                     var foundVideoRefs = new List<VideoRef>();
-                    var allMatches = await _dataService.FetchMatches();
+                    var allMatches = await _contentService.GetAllMatchesAsync();
 
                     foreach (var youtubeId in request.Body.Videos)
                     {
@@ -164,7 +167,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     videoRefs
                 );
 
-                compilation = await _dataService.SaveCompilation(compilation);
+                compilation = await _catalogService.SaveCompilationAsync(compilation);
                 
                 _logger.LogInformation("Compilation created: {Id} - {Title}", compilation.Id, compilation.Title);
                 
@@ -186,7 +189,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if compilation exists
-                var existingCompilation = await _dataService.GetCompilationById(request.Id);
+                var existingCompilation = await _catalogService.GetCompilationByIdAsync(request.Id);
                 if (existingCompilation == null)
                 {
                     return NotFound($"Compilation with ID '{request.Id}' not found");
@@ -198,7 +201,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 {
                     var invalidVideos = new List<string>();
                     var foundVideoRefs = new List<VideoRef>();
-                    var allMatches = await _dataService.FetchMatches();
+                    var allMatches = await _contentService.GetAllMatchesAsync();
 
                     foreach (var youtubeId in request.Body.Videos)
                     {
@@ -253,7 +256,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Videos = videoRefs
                 };
 
-                await _dataService.UpdateCompilation(updatedCompilation);
+                await _catalogService.UpdateCompilationAsync(updatedCompilation);
                 
                 _logger.LogInformation("Compilation updated: {Id} - {Title}", request.Id, updatedCompilation.Title);
                 
@@ -275,13 +278,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if compilation exists
-                var existingCompilation = await _dataService.GetCompilationById(request.Id);
+                var existingCompilation = await _catalogService.GetCompilationByIdAsync(request.Id);
                 if (existingCompilation == null)
                 {
                     return NotFound($"Compilation with ID '{request.Id}' not found");
                 }
 
-                await _dataService.DeleteCompilation(request.Id);
+                await _catalogService.DeleteCompilationAsync(request.Id);
                 
                 _logger.LogInformation("Compilation deleted: {Id}", request.Id);
                 

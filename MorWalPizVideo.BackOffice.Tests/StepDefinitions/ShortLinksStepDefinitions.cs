@@ -102,6 +102,14 @@ public class ShortLinksStepDefinitions
         _context.Response!.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
+    [Then(@"the response should be a bad request")]
+    public async Task ThenTheResponseShouldBeABadRequest()
+    {
+        _context.Response.Should().NotBeNull();
+        var content = await _context.Response!.Content.ReadAsStringAsync();
+        _context.Response.StatusCode.Should().Be(HttpStatusCode.BadRequest, content);
+    }
+
     [Then(@"the response should contain a list of short links")]
     public async Task ThenTheResponseShouldContainAListOfShortLinks()
     {
@@ -224,6 +232,14 @@ public class ShortLinksStepDefinitions
     {
         _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
         _context.Response = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
+    }
+
+    [When(@"I request the short link by its code with different casing")]
+    public async Task WhenIRequestTheShortLinkByItsCodeWithDifferentCasing()
+    {
+        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
+        var upperCasedCode = _context.EmbeddedShortLinkId!.ToUpperInvariant();
+        _context.Response = await _client.GetAsync($"/api/ShortLinks/{upperCasedCode}");
     }
 
     [When(@"I update the embedded short link")]

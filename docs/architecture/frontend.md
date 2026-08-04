@@ -27,7 +27,7 @@ Owns:
 - Credential mode and token-provider injection.
 - Shared domain API functions.
 
-Applications must not introduce direct `fetch` or Axios clients when this package already owns the call. Public applications set credentials to `omit`; authenticated applications use the established token/cookie flow.
+Applications must not introduce direct `fetch` or Axios clients when this package already owns the call. Public applications set credentials to `omit`; authenticated applications use the established token/cookie flow. Service-worker network interception and downloads from arbitrary URLs issued by the API remain direct-fetch exceptions because they do not call a repository-owned endpoint.
 
 ### Layout
 
@@ -69,9 +69,7 @@ The client never receives a storage key. Payment method, price-changing, and sim
 
 ## Shooting ITA
 
-Shooting ITA is in scope and reuses shared layout and service behavior. Current maintained routes include home and focused video/category views. Unreachable legacy modules require an explicit retain/remove decision.
-
-Replace its placeholder hard-coded Axios API client with `@morwalpizvideo/services`. Preserve its local category derivation where the behavior is application-specific.
+Shooting ITA is in scope and reuses shared layout and service behavior. Current maintained routes include home and focused video/category views. Its unused hard-coded Axios placeholder and dependency have been removed; maintained API calls use `@morwalpizvideo/services`. Preserve its local category derivation where the behavior is application-specific.
 
 ## State Management
 

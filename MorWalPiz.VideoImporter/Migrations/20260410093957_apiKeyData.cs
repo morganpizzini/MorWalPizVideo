@@ -21,14 +21,14 @@ namespace MorWalPiz.VideoImporter.Migrations
                 keyColumn: "Id",
                 keyValue: 1,
                 column: "ApiKey",
-                value: "w5pH-nVupIi6fqUXZC9Fa3IRQ1NGDuQkCSN77o6Y3nw");
+                value: "REPLACE_WITH_API_KEY");
 
             migrationBuilder.UpdateData(
                 table: "Settings",
                 keyColumn: "Id",
                 keyValue: 2,
                 column: "ApiKey",
-                value: "w5pH-nVupIi6fqUXZC9Fa3IRQ1NGDuQkCSN77o6Y3nw");
+                value: "REPLACE_WITH_API_KEY");
         }
 
         /// <inheritdoc />

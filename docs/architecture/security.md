@@ -27,17 +27,19 @@ Required response:
 
 Rotation must occur before relying on source cleanup alone.
 
+Current desktop seed source and migration artifacts use non-secret placeholders. This narrows current-source exposure but does not revoke historical credentials, remove them from repository history or old artifacts, or prove that old credentials fail. Those actions remain administrator-owned and require independently verifiable redacted evidence.
+
 ## Administrative Authentication
 
-BackOffice uses JWT bearer and can read a secure cookie. Target browser posture:
+BackOffice uses JWT bearer and can read a secure cookie. Implemented browser posture:
 
-- HttpOnly, Secure cookie.
-- Appropriate SameSite mode for the admin/API origin relationship.
-- Explicit credentialed CORS for the admin SPA only.
-- CSRF protection for state-changing cookie-authenticated requests.
+- HttpOnly, Secure, `SameSite=None` `auth_token` cookie for the separate HTTPS SPA/API origins.
+- Explicit credentialed CORS for `https://morwalpiz-admin-spa.azurewebsites.net` only.
+- `X-CSRF-TOKEN` protection for unsafe requests carrying the auth cookie, including logout.
+- Bearer-only and API-key-only requests remain outside the browser-cookie CSRF flow.
 - Short token lifetime, server-side revocation strategy where required, and audited login throttling.
 
-Remove browser JWTs from local storage after the cookie flow is complete.
+The SPA stores display-only user information in local storage; the browser JWT remains in the HttpOnly cookie.
 
 ## API-Key Authentication
 
@@ -52,6 +54,8 @@ Cart possession authorizes only the corresponding permanent-free acquisitions. O
 ## Private Content
 
 Target visibility policies are Public, RegisteredCustomer, and EntitlementRequired. Authorization applies consistently to content metadata, image lists, original files, and associated endpoints. Generic `IsAuthenticated` checks are insufficient because administrator, API-key, fake, and customer identities have different rights.
+
+Blob authorization follows container purpose. Match, sponsor, and page previews retain anonymous read for current public URLs. Originals/uploads and recovery content remain private. BackOffice receives contributor rights only on required write containers; ServerAPI receives reader rights only on the preview container it lists; the recovery container is operator restricted and isolated in a non-production account where practical. Managed identity is preferred, and connection strings remain secret-configured fallback material.
 
 ## Short-Link Safety
 

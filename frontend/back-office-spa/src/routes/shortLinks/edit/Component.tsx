@@ -7,6 +7,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 import { ShortLink, LinkType, QueryLink } from '@/models';
 import PageHeader from '@components/PageHeader';
+import { endpoints, get } from '@morwalpizvideo/services';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const EditShortLink: React.FC = () => {
@@ -30,8 +31,7 @@ const EditShortLink: React.FC = () => {
   // Load available query links and set selected ones when component mounts
   useEffect(() => {
     setQueryLinksLoading(true);
-    fetch('/api/querylinks')
-      .then(response => response.json())
+    get(endpoints.QUERYLINKS)
       .then((data: QueryLink[]) => {
         setAvailableQueryLinks(data);
         // Set selected query links based on entity's queryLinkIds
@@ -65,7 +65,7 @@ const EditShortLink: React.FC = () => {
   // Auto-select video from querystring
   useEffect(() => {
     const videoIdParam = searchParams.get('videoId');
-    
+
     if (videoIdParam && model && !initialVideoSet && matches.length > 0) {
       // Check if the video exists in matches
       let foundVideo = false;
@@ -82,7 +82,7 @@ const EditShortLink: React.FC = () => {
           }
         }
       }
-      
+
       if (foundVideo) {
         setModel({ ...model, target: videoIdParam, videoId: videoIdParam });
         setInitialVideoSet(true);
@@ -95,7 +95,7 @@ const EditShortLink: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -162,8 +162,8 @@ const EditShortLink: React.FC = () => {
           <Form.Label>
             Link Type <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Select 
-            value={model.linkType} 
+          <Form.Select
+            value={model.linkType}
             onChange={e => setModel({ ...model, linkType: parseInt(e.target.value) })}
           >
             <option value={LinkType.YouTubeVideo}>YouTube Video</option>
@@ -174,15 +174,15 @@ const EditShortLink: React.FC = () => {
             <option value={LinkType.CustomUrl}>Custom URL</option>
           </Form.Select>
         </Form.Group>
-          <Form.Group controlId="formTarget" className="mb-3">
+        <Form.Group controlId="formTarget" className="mb-3">
           <Form.Label>
             {getTargetFieldLabel()} <span className="text-danger">*</span>
           </Form.Label>
-          
+
           {model.linkType === LinkType.YouTubeVideo && matches.length > 0 ? (
             <>
-              <Form.Select 
-                value={model.target} 
+              <Form.Select
+                value={model.target}
                 onChange={e => setModel({ ...model, target: e.target.value, videoId: e.target.value })}
                 disabled={loading}
               >
@@ -213,14 +213,14 @@ const EditShortLink: React.FC = () => {
               onChange={e => setModel({ ...model, target: e.target.value, videoId: e.target.value })}
             />
           )}
-          
+
           <FieldError error={errors?.target} />
           <Form.Text className="text-muted">
             {model.linkType === LinkType.CustomUrl && "Enter the full URL including http:// or https://"}
             {model.linkType === LinkType.YouTubeVideo && !matches.length && "Loading available videos..."}
           </Form.Text>
         </Form.Group>
-        
+
         <MultiSelectWithBadges
           items={availableQueryLinks}
           selectedItems={selectedQueryLinks}
@@ -233,7 +233,7 @@ const EditShortLink: React.FC = () => {
           disabled={queryLinksLoading}
           error={errors?.queryLinkIds}
         />
-        
+
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Save Changes
         </Button>

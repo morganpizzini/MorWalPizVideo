@@ -14,11 +14,14 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     public class MatchesController : ApplicationController
     {
         private readonly IBlobService _blobService;
+        private readonly IContentService _contentService;
         public MatchesController(IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
-            IBlobService blobService) : base(_dataService, _memoryCache)
+            IBlobService blobService,
+            IContentService contentService) : base(_dataService, _memoryCache)
         {
             _blobService = blobService;
+            _contentService = contentService;
         }
 
         [OutputCache(Tags = [CacheKeys.Matches])]
@@ -26,10 +29,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> Index(int skip = 0, int take = 23)
         {
             var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-            var count = await CountMatches();
-            var entities = await FetchMatches(skip, take);
-            if (!isAuthenticated)
-                entities = entities.Where(x => !x.IsPrivate).ToList();
+            var count = await _contentService.CountMatchesAsync(includePrivate: isAuthenticated);
+            var entities = await _contentService.GetMatchesPageAsync(includePrivate: isAuthenticated, skip: skip, take: take);
             var next = skip > 0 ? take * skip : take;
             return Ok(new BaseResponse<IList<YouTubeContent>>(entities, count, $"skip={next}&take={take}"));
         }
@@ -38,10 +39,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.Matches], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url)
         {
-            var match = await FindMatch(url);
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+            var match = await _contentService.GetMatchByUrlAsync(url, includePrivate: isAuthenticated);
             if (match == null) return NotFound();
-            if (match.IsPrivate && !(User.Identity?.IsAuthenticated ?? false))
-                return StatusCode(403);
             return Ok(match);
         }
 
@@ -49,7 +49,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.Matches], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> FetchImages(string url)
         {
-            var match = FindMatch(url);
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+            var match = await _contentService.GetMatchByUrlAsync(url, includePrivate: isAuthenticated);
             if (match == null)
                 return NotFound();
             var images = await _blobService.GetImagesInFolderAsync(url);
@@ -57,6 +58,5 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             return Ok(images);
         }
 
-        private async Task<YouTubeContent?> FindMatch(string url) => (await FetchMatches())?.FirstOrDefault(x => x.Url == url);
     }
 }

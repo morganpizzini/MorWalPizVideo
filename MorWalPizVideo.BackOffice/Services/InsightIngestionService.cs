@@ -13,13 +13,13 @@ namespace MorWalPizVideo.BackOffice.Services
     private const int DefaultCommentsPerVideo = 20;
     private const int MaxCommentsPerVideo = 100;
 
-    private readonly DataService _dataService;
+    private readonly IInsightsService _insightsService;
     private readonly IInsightAgentService _insightAgentService;
     private readonly IYTService _ytService;
 
-    public InsightIngestionService(DataService dataService, IInsightAgentService insightAgentService, IYTService ytService)
+    public InsightIngestionService(IInsightsService insightsService, IInsightAgentService insightAgentService, IYTService ytService)
     {
-      _dataService = dataService;
+      _insightsService = insightsService;
       _insightAgentService = insightAgentService;
       _ytService = ytService;
     }
@@ -36,7 +36,7 @@ namespace MorWalPizVideo.BackOffice.Services
 
         try
         {
-          var cursor = await _dataService.GetInsightSourceCursor(topic.Id, source.SourceUrl);
+          var cursor = await _insightsService.GetSourceCursorAsync(topic.Id, source.SourceUrl);
 
           // Posts are expected newest-first; stop at the first post already seen in a previous run.
           var candidatePosts = new List<RawSocialPostDto>();
@@ -55,7 +55,7 @@ namespace MorWalPizVideo.BackOffice.Services
             if (string.IsNullOrWhiteSpace(post.PostUrl))
               continue;
 
-            if (await _dataService.InsightNewsItemExistsBySourceUrl(post.PostUrl))
+            if (await _insightsService.NewsItemExistsBySourceUrlAsync(post.PostUrl))
             {
               summary.SkippedDuplicateCount++;
               continue;
@@ -86,7 +86,7 @@ namespace MorWalPizVideo.BackOffice.Services
               Id = Guid.NewGuid().ToString()
             };
 
-            await _dataService.SaveInsightNewsItem(newsItem);
+            await _insightsService.SaveNewsItemAsync(newsItem);
             createdNewsItemIds.Add(newsItem.Id);
             summary.CreatedCount++;
           }
@@ -97,7 +97,7 @@ namespace MorWalPizVideo.BackOffice.Services
             var updatedCursor = (cursor ?? new InsightSourceCursor(topic.Id, source.SourceUrl) { Id = Guid.NewGuid().ToString() })
                 .UpdateCursor(newest.PostId, newest.PostUrl, DateTime.UtcNow);
 
-            await _dataService.SaveOrUpdateInsightSourceCursor(updatedCursor);
+            await _insightsService.SaveOrUpdateSourceCursorAsync(updatedCursor);
           }
         }
         catch (Exception ex)
@@ -128,7 +128,7 @@ namespace MorWalPizVideo.BackOffice.Services
     {
       var response = new ScanShortContentResponseDto();
 
-      var channel = await _dataService.GetChannel(channelName);
+      var channel = await _insightsService.GetChannelByNameAsync(channelName);
       if (channel == null)
         return response;
 
@@ -162,7 +162,7 @@ namespace MorWalPizVideo.BackOffice.Services
 
           foreach (var newsItem in newsItems)
           {
-            await _dataService.SaveInsightNewsItem(newsItem);
+            await _insightsService.SaveNewsItemAsync(newsItem);
             response.CreatedNewsItemIds.Add(newsItem.Id);
           }
 
@@ -189,7 +189,7 @@ namespace MorWalPizVideo.BackOffice.Services
         }
       }
 
-      await _dataService.UpdateChannel(channel with { Videos = processedVideos });
+      await _insightsService.UpdateChannelAsync(channel with { Videos = processedVideos });
 
       return response;
     }

@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using MorWalPizVideo.MvcHelpers.Authentication;
 using AuthController = MorWalPizVideo.BackOffice.Controllers.AuthController;
 using ApplicationControllerBase = MorWalPizVideo.BackOffice.Controllers.ApplicationControllerBase;
+using AdminDigitalProductsController = MorWalPizVideo.BackOffice.Controllers.AdminDigitalProductsController;
+using AdminDigitalProductCategoriesController = MorWalPizVideo.BackOffice.Controllers.AdminDigitalProductCategoriesController;
+using DigitalProductsController = MorWalPizVideo.BackOffice.Controllers.DigitalProductsController;
+using DigitalProductCategoriesController = MorWalPizVideo.BackOffice.Controllers.DigitalProductCategoriesController;
 using BioLinksController = MorWalPizVideo.ServerAPI.Controllers.BioLinksController;
 using CalendarEventsController = MorWalPizVideo.ServerAPI.Controllers.CalendarEventsController;
 using CacheController = MorWalPizVideo.ServerAPI.Controllers.CacheController;
@@ -12,6 +16,7 @@ using CustomFormsController = MorWalPizVideo.ServerAPI.Controllers.CustomFormsCo
 using MatchesController = MorWalPizVideo.ServerAPI.Controllers.MatchesController;
 using PagesController = MorWalPizVideo.ServerAPI.Controllers.PagesController;
 using ProductsController = MorWalPizVideo.ServerAPI.Controllers.ProductsController;
+using ShopCatalogController = MorWalPizVideo.ServerAPI.Controllers.ShopCatalogController;
 using SponsorsController = MorWalPizVideo.ServerAPI.Controllers.SponsorsController;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -59,5 +64,37 @@ public class AuthorizationPolicyTests
     public void ServerApi_ConfigurationController_allows_anonymous()
     {
         Assert.NotEmpty(typeof(MorWalPizVideo.Server.Controllers.ConfigurationController).GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+    }
+
+    [Fact]
+    public void Legacy_shop_catalog_routes_remain_public_and_anonymous()
+    {
+        var controllerType = typeof(ShopCatalogController);
+        Assert.NotEmpty(controllerType.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+        Assert.Empty(controllerType.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
+    }
+
+    [Fact]
+    public void BackOffice_digital_product_admin_routes_require_authorization()
+    {
+        var adminProductsController = typeof(AdminDigitalProductsController);
+        var legacyProductsController = typeof(DigitalProductsController);
+
+        Assert.NotEmpty(adminProductsController.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
+        Assert.NotEmpty(legacyProductsController.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
+        Assert.Empty(adminProductsController.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+        Assert.Empty(legacyProductsController.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+    }
+
+    [Fact]
+    public void BackOffice_digital_product_category_admin_routes_require_authorization()
+    {
+        var adminCategoriesController = typeof(AdminDigitalProductCategoriesController);
+        var legacyCategoriesController = typeof(DigitalProductCategoriesController);
+
+        Assert.NotEmpty(adminCategoriesController.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
+        Assert.NotEmpty(legacyCategoriesController.GetCustomAttributes<AuthorizeAttribute>(inherit: false));
+        Assert.Empty(adminCategoriesController.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+        Assert.Empty(legacyCategoriesController.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
     }
 }

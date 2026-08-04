@@ -21,9 +21,11 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
         private async Task<(ShortLink? shortLink, bool isCanonical)> FindShortLinkInContent(string code)
         {
+            var normalizedCode = ShortLink.NormalizeCode(code);
+
             // Canonical-first (ADR-004): new short links are created directly in the standalone
             // collection, resolved here with a single indexed lookup.
-            var canonical = await _shortlinkDataService.GetShortLinkByCode(code);
+            var canonical = await _shortlinkDataService.GetShortLinkByCode(normalizedCode);
             if (canonical != null)
             {
                 return (canonical, true);
@@ -31,14 +33,14 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             // Legacy fallback: short links embedded before the canonical migration.
             var youtubeContents = await FetchMatches();
-            var shortLink = youtubeContents.FirstOrDefault(x=>x.GetShortLink(code) != null)?.GetShortLink(code);
+            var shortLink = youtubeContents.SelectMany(x => x.ShortLinks).FirstOrDefault(sl => sl.MatchesCode(normalizedCode));
             if (shortLink != null)
             {
                 return (shortLink, false);
             }
 
             var channels = await FetchChannels();
-            shortLink = channels.FirstOrDefault(x=>x.GetShortLink(code) != null)?.GetShortLink(code);
+            shortLink = channels.SelectMany(x => x.ShortLinks).FirstOrDefault(sl => sl.MatchesCode(normalizedCode));
             return (shortLink, false);
         }
 
@@ -55,7 +57,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             // Find which entity contains this shortlink and update it
             var youtubeContents = await FetchMatchesWithoutCache();
-            var existing = youtubeContents.FirstOrDefault(x => x.GetShortLink(code) != null);
+            var existing = youtubeContents.FirstOrDefault(x => x.ShortLinks.Any(sl => sl.MatchesCode(code)));
             if(existing != null)
             {
                 var updatedContent = existing.UpdateShortLink(code, updatedShortLink);
@@ -64,7 +66,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             }
 
             var channels = await FetchChannelsWithoutCache();
-            var existingChannel = channels.FirstOrDefault(x => x.GetShortLink(code) != null);
+            var existingChannel = channels.FirstOrDefault(x => x.ShortLinks.Any(sl => sl.MatchesCode(code)));
             if(existingChannel != null) {
                 var updatedChannel = existingChannel.UpdateShortLink(code, updatedShortLink);
                 await _shortlinkDataService.UpdateYTChannel(updatedChannel);

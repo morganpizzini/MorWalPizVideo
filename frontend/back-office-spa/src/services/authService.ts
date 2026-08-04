@@ -1,4 +1,4 @@
-import { post, setUnauthorizedHandler } from '@morwalpizvideo/services';
+import { post, resetCsrfToken, setUnauthorizedHandler } from '@morwalpizvideo/services';
 
 interface UserInfo {
   id: string;
@@ -18,6 +18,7 @@ class AuthService {
     // Redirect to login on 401 responses (unless on auth endpoints)
     setUnauthorizedHandler(() => {
       localStorage.removeItem(this.USER_KEY);
+      resetCsrfToken();
       window.location.href = '/login';
     });
   }
@@ -47,21 +48,22 @@ class AuthService {
     if (response.errors || !response.user) {
       // Extract error details for better user feedback
       const errorData: any = {};
-      
+
       if (response.message) errorData.message = response.message;
       if (response.retryAfter) errorData.retryAfter = response.retryAfter;
       if (response.remainingAttempts !== undefined) errorData.remainingAttempts = response.remainingAttempts;
-      
+
       // If we have structured error data, throw it
       if (Object.keys(errorData).length > 0) {
         throw errorData;
       }
-      
+
       // Otherwise throw a generic error
       throw new Error(response.errors?.[0] || 'Login failed. Please check your credentials.');
     }
 
     // Store user info only on successful login; the auth cookie is set by the server
+    resetCsrfToken();
     this.setUser(response.user);
 
     return response;
@@ -78,6 +80,7 @@ class AuthService {
     } finally {
       // Always clear local storage
       localStorage.removeItem(this.USER_KEY);
+      resetCsrfToken();
     }
   }
 

@@ -6,6 +6,7 @@ using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Domain.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
@@ -13,6 +14,57 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         public YouTubeContentRepository(IMongoDatabase database) : base(database, DbCollections.YouTubeContent)
         {
+        }
+
+        public async Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 200);
+            var filter = includePrivate
+                ? Builders<YouTubeContent>.Filter.Empty
+                : Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false);
+
+            return await _collection
+                .Find(filter)
+                .SortByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
+        }
+
+        public async Task<long> CountPublicAsync(bool includePrivate)
+        {
+            var filter = includePrivate
+                ? Builders<YouTubeContent>.Filter.Empty
+                : Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false);
+            return await _collection.CountDocumentsAsync(filter);
+        }
+
+        public async Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate)
+        {
+            var filter = Builders<YouTubeContent>.Filter.Eq(x => x.Url, url);
+            if (!includePrivate)
+            {
+                filter &= Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false);
+            }
+
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate)
+        {
+            if (ids == null || ids.Count == 0)
+            {
+                return [];
+            }
+
+            var filter = Builders<YouTubeContent>.Filter.In(x => x.Id, ids);
+            if (!includePrivate)
+            {
+                filter &= Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false);
+            }
+
+            return await _collection.Find(filter).ToListAsync();
         }
     }
     public class QueryLinkRepository : BaseRepository<QueryLink>, IQueryLinkRepository
@@ -32,6 +84,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public PageRepository(IMongoDatabase database) : base(database, DbCollections.Pages)
         {
         }
+
+        public async Task<Page?> GetByUrlAsync(string url)
+            => await _collection.Find(x => x.Url == url).FirstOrDefaultAsync();
     }
     public class SponsorRepository : BaseRepository<Sponsor>, ISponsorRepository
     {
@@ -43,6 +98,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         public ProductRepository(IMongoDatabase database) : base(database, DbCollections.Products)
         {
+        }
+
+        public async Task<IList<Product>> GetPublicOrderedAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return await _collection
+                .Find(_ => true)
+                .SortByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
         }
     }
     public class ProductCategoryRepository : BaseRepository<ProductCategory>, IProductCategoryRepository
@@ -57,6 +124,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CalendarEventRepository(IMongoDatabase database) : base(database, DbCollections.CalendarEvents)
         {
         }
+
+        public async Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 250);
+            return await _collection
+                .Find(x => x.CreationDateTime >= fromInclusive)
+                .SortByDescending(x => x.CreationDateTime)
+                .Limit(safeLimit)
+                .ToListAsync();
+        }
     }
 
     public class CompilationRepository : BaseRepository<Compilation>, ICompilationRepository
@@ -64,6 +141,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CompilationRepository(IMongoDatabase database) : base(database, DbCollections.Compilations)
         {
         }
+
+        public async Task<Compilation?> GetByUrlAsync(string url)
+            => await _collection.Find(x => x.Url == url).FirstOrDefaultAsync();
     }
 
     public class ShortLinkRepository : BaseRepository<ShortLink>, IShortLinkRepository
@@ -74,8 +154,14 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<ShortLink?> GetByCodeAsync(string code)
         {
-            var normalizedCode = code.Trim().ToLowerInvariant();
-            return await _collection.Find(Builders<ShortLink>.Filter.Eq(x => x.Code, normalizedCode)).FirstOrDefaultAsync();
+            var normalizedCode = ShortLink.NormalizeCode(code);
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+            {
+                return null;
+            }
+
+            var filter = Builders<ShortLink>.Filter.Regex(x => x.Code, new BsonRegularExpression($"^{Regex.Escape(normalizedCode)}$", "i"));
+            return await _collection.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<int> IncrementClicksAsync(string id)
@@ -127,6 +213,61 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CustomFormRepository(IMongoDatabase database) : base(database, DbCollections.CustomForms)
         {
         }
+
+        public async Task<IList<CustomForm>> GetActiveAsync()
+            => await _collection.Find(x => x.Active).ToListAsync();
+
+        public async Task<CustomForm?> GetByUrlAsync(string url)
+        {
+            var escaped = Regex.Escape(url.Trim());
+            var filter = Builders<CustomForm>.Filter.Regex(x => x.Url, new BsonRegularExpression($"^{escaped}$", "i"));
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<IList<CustomForm>> GetBatchAsync(string? continuationToken, int batchSize)
+        {
+            var safeBatchSize = Math.Clamp(batchSize, 1, 200);
+            var filter = string.IsNullOrWhiteSpace(continuationToken)
+                ? Builders<CustomForm>.Filter.Empty
+                : Builders<CustomForm>.Filter.Gt(x => x.Id, continuationToken);
+
+            return await _collection
+                .Find(filter)
+                .SortBy(x => x.Id)
+                .Limit(safeBatchSize)
+                .ToListAsync();
+        }
+    }
+
+    public class CustomFormResponseRepository : BaseRepository<CustomFormResponseDocument>, ICustomFormResponseRepository
+    {
+        public CustomFormResponseRepository(IMongoDatabase database) : base(database, DbCollections.CustomFormResponses)
+        {
+        }
+
+        public async Task<IList<CustomFormResponseDocument>> GetByFormIdAsync(string formId, int limit = 500)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 5000);
+            return await _collection
+                .Find(x => x.FormId == formId)
+                .SortByDescending(x => x.SubmittedAt)
+                .Limit(safeLimit)
+                .ToListAsync();
+        }
+
+        public async Task<int> CountByFormIdAsync(string formId)
+            => (int)await _collection.CountDocumentsAsync(x => x.FormId == formId);
+
+        public async Task<bool> ExistsForFormAsync(string formId)
+            => await _collection.Find(x => x.FormId == formId).Limit(1).AnyAsync();
+
+        public async Task<bool> UpsertByFormAndResponseIdAsync(CustomFormResponseDocument item)
+        {
+            var filter = Builders<CustomFormResponseDocument>.Filter.Eq(x => x.FormId, item.FormId)
+                & Builders<CustomFormResponseDocument>.Filter.Eq(x => x.ResponseId, item.ResponseId);
+            var result = await _collection.ReplaceOneAsync(filter, item, new ReplaceOptions { IsUpsert = true });
+            return result.UpsertedId != null;
+        }
     }
 
     public class DigitalProductRepository : BaseRepository<DigitalProduct>, IDigitalProductRepository
@@ -134,12 +275,45 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public DigitalProductRepository(IMongoDatabase database) : base(database, DbCollections.DigitalProducts)
         {
         }
+
+        public async Task<IList<DigitalProduct>> GetPublicCatalogAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return await _collection
+                .Find(x => x.IsActive)
+                .SortByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
+        }
+
+        public async Task<IList<DigitalProduct>> GetByCategoryIdAsync(string categoryId, int limit = 500)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 2000);
+            return await _collection
+                .Find(x => x.CategoryIds.Contains(categoryId))
+                .Limit(safeLimit)
+                .ToListAsync();
+        }
     }
 
     public class DigitalProductCategoryRepository : BaseRepository<DigitalProductCategory>, IDigitalProductCategoryRepository
     {
         public DigitalProductCategoryRepository(IMongoDatabase database) : base(database, DbCollections.DigitalProductCategories)
         {
+        }
+
+        public async Task<IList<DigitalProductCategory>> GetOrderedAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return await _collection
+                .Find(_ => true)
+                .SortBy(x => x.DisplayOrder)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
         }
     }
 

@@ -11,17 +11,84 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public MatchMockRepository(IMockScenario scenario) : base(scenario, "matches")
         {
         }
+
+        public async Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 200);
+            var all = await GetItemsAsync();
+            var query = all.AsEnumerable();
+            if (!includePrivate)
+            {
+                query = query.Where(x => !x.IsPrivate);
+            }
+
+            return query
+                .OrderByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Take(safeTake)
+                .ToList();
+        }
+
+        public async Task<long> CountPublicAsync(bool includePrivate)
+        {
+            var all = await GetItemsAsync();
+            return includePrivate ? all.Count : all.Count(x => !x.IsPrivate);
+        }
+
+        public async Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate)
+        {
+            var all = await GetItemsAsync();
+            var query = all.Where(x => x.Url == url);
+            if (!includePrivate)
+            {
+                query = query.Where(x => !x.IsPrivate).ToList();
+            }
+
+            return query.FirstOrDefault();
+        }
+
+        public async Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate)
+        {
+            if (ids.Count == 0)
+            {
+                return [];
+            }
+
+            var all = await GetItemsAsync();
+            var query = all.Where(x => ids.Contains(x.Id));
+            if (!includePrivate)
+            {
+                query = query.Where(x => !x.IsPrivate).ToList();
+            }
+
+            return query.ToList();
+        }
     }
     public class PageMockRepository : BaseMockRepository<Page>, IPageRepository
     {
         public PageMockRepository(IMockScenario scenario) : base(scenario, "pages")
         {
         }
+
+        public async Task<Page?> GetByUrlAsync(string url)
+            => (await GetItemsAsync(x => x.Url == url)).FirstOrDefault();
     }
     public class ProductMockRepository : BaseMockRepository<Product>, IProductRepository
     {
         public ProductMockRepository(IMockScenario scenario) : base(scenario, "products")
         {
+        }
+
+        public async Task<IList<Product>> GetPublicOrderedAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return (await GetItemsAsync())
+                .OrderByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Take(safeTake)
+                .ToList();
         }
     }
 
@@ -56,6 +123,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CalendarEventMockRepository(IMockScenario scenario) : base(scenario, "calendarEvents")
         {
         }
+
+        public async Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 250);
+            return (await GetItemsAsync(x => x.CreationDateTime >= fromInclusive))
+                .OrderByDescending(x => x.CreationDateTime)
+                .Take(safeLimit)
+                .ToList();
+        }
     }
 
     public class CompilationMockRepository : BaseMockRepository<Compilation>, ICompilationRepository
@@ -63,6 +139,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CompilationMockRepository(IMockScenario scenario) : base(scenario, "compilations")
         {
         }
+
+        public async Task<Compilation?> GetByUrlAsync(string url)
+            => (await GetItemsAsync(x => x.Url == url)).FirstOrDefault();
     }
 
     public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
@@ -208,6 +287,61 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public CustomFormMockRepository(IMockScenario scenario) : base(scenario, "customForms")
         {
         }
+
+        public Task<IList<CustomForm>> GetActiveAsync() => GetItemsAsync(x => x.Active);
+
+        public async Task<CustomForm?> GetByUrlAsync(string url)
+            => (await GetItemsAsync(x => x.Url.ToLower() == url.ToLower())).FirstOrDefault();
+
+        public async Task<IList<CustomForm>> GetBatchAsync(string? continuationToken, int batchSize)
+        {
+            var safeBatchSize = Math.Clamp(batchSize, 1, 200);
+            var forms = await GetItemsAsync();
+            var ordered = forms.OrderBy(x => x.Id, StringComparer.Ordinal);
+
+            if (!string.IsNullOrWhiteSpace(continuationToken))
+            {
+                ordered = ordered.Where(x => string.CompareOrdinal(x.Id, continuationToken) > 0)
+                    .OrderBy(x => x.Id, StringComparer.Ordinal);
+            }
+
+            return ordered.Take(safeBatchSize).ToList();
+        }
+    }
+
+    public class CustomFormResponseMockRepository : BaseMockRepository<CustomFormResponseDocument>, ICustomFormResponseRepository
+    {
+        public CustomFormResponseMockRepository(IMockScenario scenario) : base(scenario, "customFormResponses")
+        {
+        }
+
+        public async Task<IList<CustomFormResponseDocument>> GetByFormIdAsync(string formId, int limit = 500)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 5000);
+            return (await GetItemsAsync(x => x.FormId == formId))
+                .OrderByDescending(x => x.SubmittedAt)
+                .Take(safeLimit)
+                .ToList();
+        }
+
+        public async Task<int> CountByFormIdAsync(string formId)
+            => (await GetItemsAsync(x => x.FormId == formId)).Count;
+
+        public async Task<bool> ExistsForFormAsync(string formId)
+            => (await GetItemsAsync(x => x.FormId == formId)).Count > 0;
+
+        public async Task<bool> UpsertByFormAndResponseIdAsync(CustomFormResponseDocument item)
+        {
+            var existing = (await GetItemsAsync(x => x.FormId == item.FormId && x.ResponseId == item.ResponseId)).FirstOrDefault();
+            if (existing == null)
+            {
+                await AddItemAsync(item);
+                return true;
+            }
+
+            await UpdateItemAsync(item with { Id = existing.Id });
+            return false;
+        }
     }
 
     public class DigitalProductMockRepository : BaseMockRepository<DigitalProduct>, IDigitalProductRepository
@@ -215,12 +349,42 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public DigitalProductMockRepository(IMockScenario scenario) : base(scenario, "digitalProducts")
         {
         }
+
+        public async Task<IList<DigitalProduct>> GetPublicCatalogAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return (await GetItemsAsync(x => x.IsActive))
+                .OrderByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Take(safeTake)
+                .ToList();
+        }
+
+        public async Task<IList<DigitalProduct>> GetByCategoryIdAsync(string categoryId, int limit = 500)
+        {
+            var safeLimit = Math.Clamp(limit, 1, 2000);
+            return (await GetItemsAsync(x => x.CategoryIds.Contains(categoryId)))
+                .Take(safeLimit)
+                .ToList();
+        }
     }
 
     public class DigitalProductCategoryMockRepository : BaseMockRepository<DigitalProductCategory>, IDigitalProductCategoryRepository
     {
         public DigitalProductCategoryMockRepository(IMockScenario scenario) : base(scenario, "digitalProductCategories")
         {
+        }
+
+        public async Task<IList<DigitalProductCategory>> GetOrderedAsync(int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 500);
+            return (await GetItemsAsync())
+                .OrderBy(x => x.DisplayOrder)
+                .Skip(safeSkip)
+                .Take(safeTake)
+                .ToList();
         }
     }
 

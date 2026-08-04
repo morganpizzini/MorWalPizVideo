@@ -2,50 +2,14 @@
  * API Keys management service
  */
 
-import { frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
-
-/**
- * Get authentication token from localStorage
- * @returns {string|null} JWT token
- */
-function getAuthToken(): string | null {
-  return localStorage.getItem('authToken');
-}
-
-/**
- * Create headers with authentication
- * @returns {Object} Headers object
- */
-function getAuthHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-}
-
-/**
- * Helper to build full URL from endpoint using ComposeUrl
- * ComposeUrl handles base URL resolution and environment variables
- */
-function buildUrl(endpoint: string): string {
-  return ComposeUrl(endpoint, {});
-}
+import { Delete, get, post, put, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 /**
  * Get all API keys
  * @returns {Promise<Array>} Array of API keys
  */
 export async function getAllApiKeys(): Promise<any[]> {
-  const response = await fetch(buildUrl(frontendEndpoints.APIKEYS), {
-    headers: getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch API keys: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return get(frontendEndpoints.APIKEYS);
 }
 
 /**
@@ -54,18 +18,7 @@ export async function getAllApiKeys(): Promise<any[]> {
  * @returns {Promise<Object>} API key details
  */
 export async function getApiKeyById(id: string): Promise<any> {
-  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
-    headers: getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('API key not found');
-    }
-    throw new Error(`Failed to fetch API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return get(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id }));
 }
 
 /**
@@ -85,18 +38,7 @@ export async function createApiKey(data: {
   allowedIpAddresses?: string[];
   expiresAt?: string;
 }): Promise<any> {
-  const response = await fetch(buildUrl(frontendEndpoints.APIKEYS), {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to create API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return post(frontendEndpoints.APIKEYS, data);
 }
 
 /**
@@ -117,18 +59,7 @@ export async function updateApiKey(id: string, data: {
   allowedIpAddresses?: string[];
   expiresAt?: string;
 }): Promise<any> {
-  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to update API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return put(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id }), data);
 }
 
 /**
@@ -137,17 +68,7 @@ export async function updateApiKey(id: string, data: {
  * @returns {Promise<Object>} Response with new status
  */
 export async function toggleApiKey(id: string): Promise<any> {
-  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_TOGGLE, { id })), {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to toggle API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return post(ComposeUrl(frontendEndpoints.APIKEYS_TOGGLE, { id }), {});
 }
 
 /**
@@ -156,17 +77,7 @@ export async function toggleApiKey(id: string): Promise<any> {
  * @returns {Promise<Object>} Response with new unhashed key
  */
 export async function regenerateApiKey(id: string): Promise<any> {
-  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_REGENERATE, { id })), {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to regenerate API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return post(ComposeUrl(frontendEndpoints.APIKEYS_REGENERATE, { id }), {});
 }
 
 /**
@@ -175,15 +86,5 @@ export async function regenerateApiKey(id: string): Promise<any> {
  * @returns {Promise<Object>} Response message
  */
 export async function deleteApiKey(id: string): Promise<any> {
-  const response = await fetch(buildUrl(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id })), {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to delete API key: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return Delete(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id }));
 }

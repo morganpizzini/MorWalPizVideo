@@ -54,7 +54,7 @@ The admin Web API powering the MorWalPizVideo platform. It exposes the managemen
 | Scheme | Where it applies | Notes |
 | ------ | ---------------- | ----- |
 | **JWT Bearer** (default) | Every controller inheriting [`ApplicationControllerBase`](../MorWalPizVideo.MvcHelpers/Controllers/ApplicationControllerBase.cs) — it carries `[Authorize]` at the class level. | Token read from `Authorization: Bearer …` **or** from the HttpOnly cookie `auth_token` (set by `/api/auth/login`). |
-| **API Key** | Controllers/actions decorated `[ApiKeyAuth]` (notably `ChatController`). | Header `X-API-Key`. Hashed (SHA-256) at rest, rate-limited, optional IP whitelist + expiry. Managed via `/api/apikeys`. |
+| **API Key** | Controllers/actions decorated `[ApiKeyAuth]` (notably `ChatController`). | Header `X-API-Key`. Hashed (SHA-256) at rest, rate-limited, optional IP whitelist + expiry. Managed via `/api/apikeys` and remains BackOffice-only. |
 | **Anonymous** | Endpoints explicitly tagged `[AllowAnonymous]` (login, public form submission, user request submission, `/api/user/init/{username}` bootstrap). | |
 
 See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md) and [docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md](../docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md) (HttpOnly cookies, PBKDF2-SHA256 100k iterations, HSTS, CORS with credentials).
@@ -65,13 +65,13 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | Flag | Effect when enabled |
 | ---- | ------------------- |
 | `EnableMock` | Swaps every repository + most external services for the code-initialized `PrimaryScenario`. Lets the API run with no MongoDB / no third-party creds. |
-| `EnableHangFire` | Registers Hangfire server + dashboard at `/hangfire` and schedules the recurring jobs (§5). Storage = SQL Server in prod, in-memory in dev. |
+| `EnableHangFire` | Disabled by default. When enabled, requires durable SQL configuration, registers the server and recurring jobs, and mounts the admin-only dashboard at `/hangfire`. |
 | `EnableSwagger` | Mounts Swagger UI at `/swagger` with both `Bearer` and `ApiKey` security schemes. |
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using `DefaultAzureCredential`. Falls back gracefully if unreachable. |
 | `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
 
 ### 2.3 Health Checks
-Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (dev) `/alive`. Probes: `self`, `mongodb`, `azure-openai`, `youtube-api`, `morwalpiz-api`, `hangfire-sqlserver`, `hangfire-processing`, `feature-management`, `mock-services`. Full details in [HEALTH_CHECKS.md](HEALTH_CHECKS.md).
+Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (dev) `/alive`. Hangfire storage and processing probes are registered only when `EnableHangFire` is enabled. Full details in [HEALTH_CHECKS.md](HEALTH_CHECKS.md).
 
 ### 2.4 Request/Response Conventions
 - Routes follow `api/[controller]` by convention (provided by `ApplicationControllerBase`).
@@ -90,10 +90,11 @@ Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (de
 ### 3.1 Authentication & Identity
 
 #### `AuthController` — `api/auth` *(anonymous)*
-Login/logout/validate. Sets `auth_token` HttpOnly Secure SameSite=Strict cookie on success; the JWT is not returned in the response body — the cookie is the only session artifact the client holds.
+Login/logout/validate. Sets an `auth_token` HttpOnly Secure SameSite=None cookie on success for the separate HTTPS admin SPA origin; the JWT is not returned in the response body. Unsafe requests carrying this cookie require the `X-CSRF-TOKEN` value issued by `/csrf`.
 | Verb | Route | Method | Purpose |
 | ---- | ----- | ------ | ------- |
 | POST | `/login` | `Login(LoginRequest)` | Username + password. Rate-limited via `IRateLimitingService`; logs attempt to `LoginAttempt`. |
+| GET | `/csrf` | `IssueCsrfToken()` | Issues and stores the antiforgery token used by the shared browser client. |
 | POST | `/logout` | `Logout()` | Clears the `auth_token` cookie. |
 | POST | `/validate` | `ValidateToken()` | Validates the `auth_token` cookie's signature & expiry. |
 
@@ -110,7 +111,13 @@ Admin user CRUD + bootstrap. `InitUsers` is `[AllowAnonymous]` and used **once**
 | DELETE | `/{id}` | Delete user. |
 
 #### `ApiKeysController` — `api/apikeys`
-CRUD for service-to-service API keys (model: [`ApiKey`](#52-apikey)). The plaintext key is returned **only at create/regenerate** time. See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md).
+CRUD for service-to-service API keys (model: [`ApiKey`](#52-apikey)). The plaintext key is returned **only at create/regenerate** time. This surface remains BackOffice-only and protected by explicit authenticated admin access. See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md).
+
+#### Digital artifact management routes
+- Admin-only routes: `/api/admin/shop/products` and `/api/admin/shop/categories`
+- Legacy BackOffice aliases: `/api/shop/products` and `/api/shop/categories`
+
+The admin routes are the explicit BackOffice boundary for digital artifact management. The legacy `/api/shop/*` routes remain active as compatibility aliases but are now clearly protected and documented as legacy aliases. Public ServerAPI shop routes under `/api/shop/*` remain anonymous and route-owned by the public host.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
 | POST | `/` | Create key (returns plaintext once). |
@@ -359,12 +366,14 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 
 ## 5. Background Jobs (Hangfire)
 
-Registered in `Program.cs` only when `EnableHangFire = true`. Dashboard at `/hangfire`.
+Registered in `Program.cs` only when `EnableHangFire = true`. Checked-in configuration keeps it disabled and leaves `ConnectionStrings:HangfireConnection` empty because no durable SQL store is currently provisioned. Enabling without that setting fails startup. The `/hangfire` dashboard requires an authenticated `admin` role.
 
 | Job | File | Schedule | What it does | What it could do later |
 | --- | ---- | -------- | ------------ | ---------------------- |
 | `news-job` | [Jobs/NewsJobs.cs](Jobs/NewsJobs.cs) | `0 18 * * 0` (Sunday 18:00) | **Stub.** Intended to roll up the week's shorts + videos, compose a CMS page, populate `VideoReelIds`/`ShortReelIds`, and broadcast a Telegram + Discord post. | Implement the actual pipeline; persist a `Page`; emit via `ITelegramService`/`IDiscordService`. |
 | `youtube-sync-job` | [Jobs/YouTubeSyncJob.cs](Jobs/YouTubeSyncJob.cs) | `0 3 * * *` (daily 03:00 UTC, overridable via `YouTubeSyncCron`) | Iterates every `YouTubeContent`, refreshes title/description/thumbnail/stats from the YouTube Data API via `IExternalDataService.FetchMatches()`. | Add per-content quota tracking; partial sync filters; failure notifications. |
+
+Jobs emit provider-neutral structured started, completed, and failed log events through the existing logging/OpenTelemetry path. A production telemetry backend, thresholds, alert evidence, safe retry/idempotency review, and restart-durability proof remain mandatory activation gates.
 
 ---
 

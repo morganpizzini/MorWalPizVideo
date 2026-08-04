@@ -250,6 +250,13 @@ builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSec
 
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
+builder.Services.AddScoped<IFormsService, FormsService>();
+builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IShopService, ShopService>();
+builder.Services.AddScoped<IShopManagementService, ShopManagementService>();
+builder.Services.AddScoped<IInsightsService, InsightsService>();
+builder.Services.AddScoped<ILinksService, LinksService>();
 
 if (enableMock)
 {
@@ -285,6 +292,7 @@ if (enableMock)
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleMockRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
+    builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
@@ -356,6 +364,7 @@ else
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
+    builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
 
@@ -389,6 +398,7 @@ else
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    builder.Services.AddScoped<IMongoIndexOperationsService, MongoIndexOperationsService>();
 
     // Insight Agent Service (Production)
     builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();
