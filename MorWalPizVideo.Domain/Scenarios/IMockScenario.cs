@@ -10,3 +10,10 @@ public interface IMockScenario
     void Replace<T>(string collectionName, T item) where T : BaseEntity;
     void Delete<T>(string collectionName, string id) where T : BaseEntity;
 }
+
+public interface IMockScenarioLifecycle : IMockScenario
+{
+    string Name { get; }
+    void Select(string scenarioName);
+    void Reinitialize();
+}

@@ -28,6 +28,8 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - `https://morwalpiz-admin.azurewebsites.net`: BackOffice API; credentialed CORS accepts only the BackOffice SPA origin.
 - `https://shorts.morwalpiz.com`: branded redirects.
 
+The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
+
 Other Azure application names and custom bindings are environment-managed and must be inventoried before deployment changes.
 
 ## Local Orchestration
@@ -39,6 +41,8 @@ Aspire AppHost starts:
 - ShortLinks.
 
 It does not provision MongoDB, Key Vault, Shooting ITA, or either WPF application. Developers supply those dependencies or use mocks/fakes.
+
+Local development keeps the relative `/api` Vite proxy and Development credentialed CORS behavior. The production public frontend continues to call ServerAPI directly, while only the BackOffice SPA uses credentialed cross-origin calls to the BackOffice API.
 
 ## CI Baseline
 

@@ -79,7 +79,6 @@ export interface CustomForm {
   url: string;
   active: boolean;
   questions: AnyQuestion[];
-  responses: CustomFormResponse[];
   responseCount: number;
   creationDateTime: string;
 }

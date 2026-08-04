@@ -37,20 +37,98 @@ namespace MorWalPizVideo.Domain
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
     }
+
+    public enum BlobMockOutcome
+    {
+        Success,
+        TransientFailure,
+        PermanentFailure,
+        MalformedResponse
+    }
+
     public class BlobServiceMock : IBlobService
     {
+        private sealed record StoredBlob(byte[] Content, string ContentType, IReadOnlyDictionary<string, string> Metadata);
+
+        private readonly Dictionary<string, StoredBlob> blobs = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object sync = new();
+
+        public BlobMockOutcome Outcome { get; set; } = BlobMockOutcome.Success;
+
         public Task<List<string>> GetImagesInFolderAsync(string folderName, CancellationToken cancellationToken = default)
-            =>
-            Task.FromResult(new List<string> { "https://placehold.co/1920x1080", "https://placehold.co/1920x1080", "https://placehold.co/1920x1080" });
+        {
+            ThrowIfConfigured(cancellationToken);
+            lock (sync)
+            {
+                var prefix = folderName.TrimEnd('/') + "/";
+                return Task.FromResult(blobs.Keys
+                    .Where(path => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .Select(path => $"mock://blob/{path}")
+                    .ToList());
+            }
+        }
 
-        public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
+            => UploadAsync(filePath, stream, cancellationToken);
 
-        public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default)
+            => UploadAsync(filePath, stream, cancellationToken);
 
-        public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default) => Task.FromResult<Stream?>(null);
+        public async Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
+        {
+            var result = await DownloadWithMetadataAsync(filePath, loadInMatchFolder, cancellationToken);
+            return result.IsSuccess ? result.Content : null;
+        }
 
-        public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new BlobDownloadResult(BlobDownloadStatus.NotFound));
+        public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
+        {
+            ThrowIfConfigured(cancellationToken);
+            lock (sync)
+            {
+                if (!blobs.TryGetValue(filePath, out var blob))
+                    return Task.FromResult(new BlobDownloadResult(BlobDownloadStatus.NotFound));
+
+                if (Outcome == BlobMockOutcome.MalformedResponse)
+                    return Task.FromResult(new BlobDownloadResult(BlobDownloadStatus.ChecksumMismatch, Metadata: blob.Metadata));
+
+                return Task.FromResult(new BlobDownloadResult(
+                    BlobDownloadStatus.Success,
+                    new MemoryStream(blob.Content.ToArray()),
+                    blob.ContentType,
+                    $"\"{Convert.ToHexString(SHA256.HashData(blob.Content)).ToLowerInvariant()}\"",
+                    new Dictionary<string, string>(blob.Metadata, StringComparer.OrdinalIgnoreCase)));
+            }
+        }
+
+        private Task UploadAsync(string filePath, MemoryStream stream, CancellationToken cancellationToken)
+        {
+            ThrowIfConfigured(cancellationToken);
+            var content = stream.ToArray();
+            var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["sha256"] = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant()
+            };
+            lock (sync)
+                blobs[filePath] = new StoredBlob(content, GetContentType(filePath), metadata);
+            return Task.CompletedTask;
+        }
+
+        private void ThrowIfConfigured(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Outcome == BlobMockOutcome.TransientFailure)
+                throw new RequestFailedException(503, "Configured transient blob failure.");
+            if (Outcome == BlobMockOutcome.PermanentFailure)
+                throw new RequestFailedException(500, "Configured permanent blob failure.");
+        }
+
+        private static string GetContentType(string filePath) => Path.GetExtension(filePath).ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
     }
     public class BlobService : IBlobService
     {

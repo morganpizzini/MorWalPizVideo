@@ -8,22 +8,22 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public class FormsMigrationSafetyTests
 {
     [Fact]
-    public async Task GetResponses_MergesCollectionAndEmbeddedWithoutDroppingLegacy()
+    public async Task GetResponses_UsesStandaloneCollectionOnlyAndPreservesOrder()
     {
         var scenario = new PrimaryScenario();
         var formRepository = new CustomFormMockRepository(scenario);
         var responseRepository = new CustomFormResponseMockRepository(scenario);
         var service = new FormsService(formRepository, responseRepository);
 
-        var embeddedOnly = new CustomFormResponse(
-            responseId: "r-embedded",
-            submittedAt: DateTime.UtcNow.AddMinutes(-10),
-            answers: [new OpenAnswer("q1", "embedded")]);
-
         var both = new CustomFormResponse(
             responseId: "r-both",
             submittedAt: DateTime.UtcNow.AddMinutes(-5),
             answers: [new OpenAnswer("q1", "both")]);
+
+        var newest = new CustomFormResponse(
+            responseId: "r-newest",
+            submittedAt: DateTime.UtcNow,
+            answers: [new OpenAnswer("q1", "newest")]);
 
         var form = new CustomForm(
             title: "Form",
@@ -33,17 +33,20 @@ public class FormsMigrationSafetyTests
             active: true)
         {
             Id = "form-1",
-            Responses = [embeddedOnly, both]
+            Responses = [new CustomFormResponse(
+                "r-embedded",
+                DateTime.UtcNow.AddMinutes(-10),
+                [new OpenAnswer("q1", "embedded")]), both]
         };
 
         await formRepository.AddItemAsync(form);
         await responseRepository.UpsertByFormAndResponseIdAsync(CustomFormResponseDocument.FromResponse("form-1", both));
+        await responseRepository.UpsertByFormAndResponseIdAsync(CustomFormResponseDocument.FromResponse("form-1", newest));
 
         var responses = await service.GetResponsesAsync("form-1", limit: 50);
 
         Assert.Equal(2, responses.Count);
-        Assert.Contains(responses, x => x.ResponseId == "r-embedded");
-        Assert.Contains(responses, x => x.ResponseId == "r-both");
+        Assert.Equal(["r-newest", "r-both"], responses.Select(x => x.ResponseId));
     }
 
     [Fact]

@@ -69,7 +69,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 var forms = await _formsService.GetAllFormsAsync();
-                return Ok(forms.Select(ContractUtils.Convert));
+                var contracts = new List<CustomFormContract>(forms.Count);
+                foreach (var form in forms)
+                {
+                    contracts.Add(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id)));
+                }
+
+                return Ok(contracts);
             }
             catch (Exception ex)
             {
@@ -93,7 +99,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                return Ok(ContractUtils.Convert(form));
+                return Ok(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id)));
             }
             catch (Exception ex)
             {
@@ -153,7 +159,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
                 
-                return CreatedAtAction(nameof(GetById), new { id = form.Id }, ContractUtils.Convert(form));
+                return CreatedAtAction(nameof(GetById), new { id = form.Id }, ContractUtils.Convert(form, 0));
             }
             catch (Exception ex)
             {

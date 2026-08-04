@@ -82,15 +82,17 @@ Current source status:
 
 - Separate `customFormResponses` collection exists (`DbCollections.CustomFormResponses`, `CustomFormResponseDocument`).
 - Dual-write is implemented in `FormsService.AddResponseAsync` (upsert into response collection, then legacy embedded compatibility write).
+- Dual-write is implemented in `FormsService.AddResponseAsync` (upsert into response collection, then legacy embedded compatibility write).
 - Backfill and reconciliation operations are implemented in `FormsService.BackfillEmbeddedResponsesAsync` and `FormsService.ReconcileCountsAsync`, exposed in BackOffice at `POST /api/customforms/responses/backfill` and `GET /api/customforms/{id}/responses/reconcile`.
-- Legacy embedded responses are still present for compatibility and reads still merge collection + embedded data.
+- BackOffice response reads and counts are now collection-authoritative through `GET /api/customforms/{id}/responses`; response IDs are de-duplicated by the repository key and ordered by submission time. Embedded responses remain only as migration input.
 
 1. Add a `customFormResponses` collection keyed by form ID and submission ID.
 2. Dual-write new responses while retaining existing reads.
 3. Backfill embedded responses in resumable batches.
 4. Verify counts and sampled payload equality.
 5. Switch reporting/reads to the response collection.
-6. Remove embedded arrays only after rollback expiry.
+5. Switch reporting/reads to the response collection. This is now complete for BackOffice and the SPA.
+6. Remove embedded arrays only after production backfill/reconciliation evidence and rollback expiry.
 
 Recommended indexes: form ID plus submitted timestamp descending; unique submission ID; optional retention only if product policy permits deletion.
 

@@ -1,3 +1,5 @@
+#### `CustomFormsController` — `api/customforms`
+Dynamic form designer (text / select / checkbox / etc. — see `CustomFormEnums`). Public form submission is open via `POST /{id}/responses` (`[AllowAnonymous]`); authenticated response listing uses the standalone `customFormResponses` collection via `GET /{id}/responses`, ordered newest-first with duplicate response IDs suppressed. Form read contracts contain metadata and questions only; response records are not embedded.
 # MorWalPizVideo.BackOffice — Project Documentation
 
 The admin Web API powering the MorWalPizVideo platform. It exposes the management surface used by the `back-office-spa` (React 19) SPA and by the WPF `MorWalPiz.VideoImporter` desktop tool. It owns YouTube content lifecycle, translations, the digital shop, social distribution (Discord / Telegram / Pinterest), insights (AI content planning), custom forms, sponsor management and the Shooting ITA vertical (competitions / user requests / push notifications).

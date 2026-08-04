@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 namespace MorWalPizVideo.Domain.Scenarios;
 
-public sealed class PrimaryScenario : BaseScenario
+public class PrimaryScenario : BaseScenario
 {
     public const string AdminUsername = "MorWalPiz";
     public const string AdminEmail = "morwalpiz@example.test";

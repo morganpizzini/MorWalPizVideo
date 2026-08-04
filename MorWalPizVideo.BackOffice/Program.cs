@@ -131,6 +131,16 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
     });
 
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "__Host-morwalpiz-csrf";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.Path = "/";
+});
+
 var facebookSettings = builder.Configuration
         .GetSection("FacebookSettings")
         .Get<FacebookSettings>();
@@ -260,7 +270,8 @@ builder.Services.AddScoped<ILinksService, LinksService>();
 
 if (enableMock)
 {
-    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
+    builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
+    builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
 
     var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
 
@@ -521,7 +532,9 @@ else
     app.UseCors("MorWalPizPolicy");
 }
 
+app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<CookieAntiforgeryMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

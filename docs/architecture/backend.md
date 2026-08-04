@@ -4,7 +4,7 @@
 
 Each API is an independent ASP.NET Core host. Startup selects feature flags, configuration providers, authentication, repositories, services, health checks, and middleware.
 
-Production persistence uses Mongo repositories. Development/test may select code-initialized mock repositories through `IMockScenario` and `PrimaryScenario`. Mock selection is rejected outside Development or Test.
+Production persistence uses Mongo repositories. Development/test may select code-initialized mock repositories through the Domain-owned `IMockScenarioLifecycle`; the default is `Primary`, with named scenario selection from startup configuration and fixture overrides. Mock selection is rejected outside Development or Test, and production registrations continue to construct Mongo/external providers only when mock mode is off.
 
 ## Request Flow
 
@@ -26,7 +26,7 @@ sequenceDiagram
     Controller-->>Client: DTO or Problem Details
 ```
 
-Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally.
+Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally. `DataService` and `IGenericDataService` remain compatibility surfaces for controllers not yet migrated.
 
 ## Persistence
 
@@ -53,7 +53,8 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 ### BackOffice
 
 - JWT bearer is the principal scheme.
-- The bearer handler can read the secure `auth_token` cookie.
+- JWT bearer remains the authentication scheme for the API, and its handler can read the secure `auth_token` cookie.
+- BackOffice browser clients use that cookie only; the SPA does not persist or emit a JWT Bearer token.
 - Selected machine endpoints use the `ApiKey` scheme.
 - Anonymous access must be explicit and limited to genuine bootstrap/login/submission cases.
 

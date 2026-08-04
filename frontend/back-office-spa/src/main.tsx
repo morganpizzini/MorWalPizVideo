@@ -2,6 +2,9 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { createRoot } from 'react-dom/client';
 import { ToastProvider } from './components/ToastNotification';
+import { setCookieOnlyMode } from '@morwalpizvideo/services';
+
+setCookieOnlyMode(true);
 
 
 // Load runtime environment configuration (injected by Docker entrypoint)

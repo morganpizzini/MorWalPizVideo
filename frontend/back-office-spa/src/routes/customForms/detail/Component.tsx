@@ -19,7 +19,7 @@ import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 
 const CustomFormDetail: React.FC = () => {
-  const form = useLoaderData() as CustomForm;
+  const form = useLoaderData() as CustomForm & { responses: CustomFormResponse[] };
   const [showModal, setShowModal] = useState(false);
   const fetcher = useFetcher();
   const navigate = useNavigate();

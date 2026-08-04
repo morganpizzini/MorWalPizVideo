@@ -36,6 +36,9 @@ public abstract class BaseScenario : IMockScenario
     protected void Set<T>(string collectionName, IEnumerable<T> items) where T : BaseEntity =>
         collections[collectionName] = items.Select(Clone).ToList();
 
+    protected void Clear<T>(string collectionName) where T : BaseEntity =>
+        collections[collectionName] = new List<T>();
+
     public IList<T> Read<T>(string collectionName) where T : BaseEntity
     {
         var collection = GetCollection<T>(collectionName);

@@ -3,6 +3,7 @@ import {
   post,
   resetCsrfToken,
   setAuthTokenProvider,
+  setCookieOnlyMode,
   setRequestCredentialsMode,
 } from '@morwalpizvideo/services';
 
@@ -10,6 +11,7 @@ describe('shared API client CSRF integration', () => {
   beforeEach(() => {
     resetCsrfToken();
     setAuthTokenProvider(() => null);
+    setCookieOnlyMode(false);
     setRequestCredentialsMode('include');
   });
 
@@ -65,6 +67,23 @@ describe('shared API client CSRF integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     expect((request.headers as Headers).has('X-CSRF-TOKEN')).toBe(false);
+  });
+
+  it('uses the HttpOnly cookie instead of localStorage or a browser bearer header', async () => {
+    localStorage.setItem('authToken', 'browser-token');
+    setCookieOnlyMode(true);
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-token' }))
+      .mockResolvedValueOnce(jsonResponse({ saved: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await post('/api/protected-resource', { value: 1 });
+
+    const request = fetchMock.mock.calls[1][1] as RequestInit;
+    const headers = request.headers as Headers;
+    expect(headers.has('Authorization')).toBe(false);
+    expect(request.credentials).toBe('include');
   });
 });
 

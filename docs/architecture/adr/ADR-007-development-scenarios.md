@@ -5,11 +5,11 @@
 
 ## Context
 
-Local workflows depend on MongoDB, Blob, Key Vault, YouTube, social APIs, AI, and other providers. Mock repositories exist as code-initialized, in-memory entity collections (`IMockScenario`, `BaseScenario`, `PrimaryScenario`, `BaseMockRepository<T>` in `MorWalPizVideo.Domain`) rather than JSON fixture files. Only one scenario (`PrimaryScenario`) exists today and several external providers (Translator/AI completion, Pinterest, reCAPTCHA, Web Push) still lack fakes, so named scenarios and full external-fake coverage remain incomplete.
+Local workflows depend on MongoDB, Blob, Key Vault, YouTube, social APIs, AI, and other providers. Mock repositories exist as code-initialized, in-memory entity collections (`IMockScenario`, `IMockScenarioLifecycle`, `BaseScenario`, and `BaseMockRepository<T>` in `MorWalPizVideo.Domain`) rather than JSON fixture files. Named scenarios are selected by fixture override, startup `MockScenario` configuration, or the `Primary` default.
 
 ## Decision
 
-Use deterministic named scenarios behind existing repository interfaces and fake every external provider required for an offline workflow. Composition roots choose complete provider sets. Development enables only Dev and Swagger by default; scenarios select mocks without enabling unrelated production features.
+Use deterministic named scenarios behind existing repository interfaces and fake every external provider required for an offline workflow. Composition roots choose complete provider sets. Development enables only Dev and Swagger by default; scenarios select mocks without enabling unrelated production features. Supported names are `Primary`, `Empty`, `Authorization`, `ExternalFailure`, and `LegacyCompatibility`. `Reset()` restores the selected baseline and `Reinitialize()` replaces the selected scenario without rebuilding the host.
 
 ## Alternatives
 
@@ -23,7 +23,7 @@ Fakes require maintenance and contract tests against real adapters. Developers g
 
 ## Migration And Rollback
 
-Add scenarios and fakes one feature at a time while retaining real-provider configuration. Production rejects mock providers.
+Add scenarios and fakes one feature at a time while retaining real-provider configuration. Production rejects mock providers. VideoImporter, InsightScanner, frontend applications, browser runners, and frontend E2E are outside this backend-only scope.
 
 ## Validation
 

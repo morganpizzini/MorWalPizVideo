@@ -15,14 +15,16 @@ Development environment and `EnableDev` must both be true before fake authentica
 
 ## Scenario-Based Mocks
 
-Current source uses `IMockScenario`, `PrimaryScenario`, and `BaseMockRepository<T>` to provide cloned, lock-protected in-memory collections initialized directly in C#.
+Current source uses `IMockScenario`, `IMockScenarioLifecycle`, named scenarios, and `BaseMockRepository<T>` to provide cloned, lock-protected in-memory collections initialized directly in C#.
+
+When mock mode is enabled, scenario precedence is fixture lifecycle `Select(...)` override, then startup `MockScenario` configuration (or `FeatureManagement:MockScenario`), then `Primary`. Each host owns an isolated singleton lifecycle. `Reset()` restores the selected scenario baseline; `Reinitialize()` recreates the selected scenario instance, allowing tests to reuse a host safely.
 
 Target scenario characteristics:
 
 - Stable IDs and deterministic timestamps.
 - Coherent relationships across content, channels, categories, products, carts, and users.
 - Fresh isolated scenarios for tests.
-- Explicit named scenarios such as empty, standard, authorization failure, external failure, and legacy compatibility.
+- Explicit named scenarios: `Primary`, `Empty`, `Authorization`, `ExternalFailure`, and `LegacyCompatibility`.
 - No real credentials or production-derived personal data.
 
 Repository interfaces remain unchanged between Mongo and mock modes.
@@ -31,7 +33,7 @@ Repository interfaces remain unchanged between Mongo and mock modes.
 
 Provide deterministic implementations for:
 
-- Blob upload/list/download and SAS issuance.
+- Blob upload/list/download and metadata (the current fake does not issue SAS URLs).
 - YouTube metadata and uploads.
 - Translator and AI completion.
 - Discord, Telegram, Facebook, and Pinterest.
@@ -78,7 +80,9 @@ Vitest/Testing Library with route-aware helpers and mocked shared services. Test
 - BackOffice mutation to public cache refresh.
 - Public catalog to anonymous cart to private download.
 - Short-link management to redirect and count.
-- Desktop API-key submission to BackOffice.
+- Desktop API-key submission to BackOffice (deferred; VideoImporter and InsightScanner are excluded from this backend-only iteration).
+
+Browser runners and frontend E2E are also deferred. Backend coverage and HTTP contract tests are the primary validation target.
 
 ## Common Commands
 

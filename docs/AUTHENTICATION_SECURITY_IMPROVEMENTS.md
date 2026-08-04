@@ -1,3 +1,5 @@
+- BackOffice API calls use `credentials: 'include'` to send cookies and enable the explicit cookie-only client mode
+- The BackOffice SPA no longer reads `localStorage.authToken` or emits browser Bearer headers. Non-browser bearer/API-key callers and public clients configured with `credentials: 'omit'` retain their existing behavior.
 # Authentication Security Improvements
 
 This document outlines the security enhancements implemented for the MorWalPizVideo back-office authentication system.

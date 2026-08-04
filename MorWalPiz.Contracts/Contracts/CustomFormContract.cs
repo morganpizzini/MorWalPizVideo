@@ -25,8 +25,5 @@ public class CustomFormContract
     public CustomFormQuestion[] Questions { get; set; } = [];
 
     [DataMember]
-    public CustomFormResponse[] Responses { get; set; } = [];
-
-    [DataMember]
     public int ResponseCount { get; set; }
 }

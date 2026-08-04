@@ -109,7 +109,8 @@ builder.Services.AddScoped<ILinksService, LinksService>();
 
 if (enableMock)
 {
-    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
+    builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
+    builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
 
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();

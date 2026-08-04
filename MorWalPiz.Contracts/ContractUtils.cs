@@ -133,7 +133,7 @@ namespace MorWalPiz.Contracts
                 Description = entity.Description
             };
         }
-        public static CustomFormContract Convert(CustomForm entity)
+        public static CustomFormContract Convert(CustomForm entity, int? responseCount = null)
         {
             return new CustomFormContract
             {
@@ -143,8 +143,7 @@ namespace MorWalPiz.Contracts
                 Url = entity.Url,
                 Active = entity.Active,
                 Questions = entity.Questions,
-                Responses = entity.Responses,
-                ResponseCount = entity.ResponseCount
+                ResponseCount = responseCount ?? entity.ResponseCount
             };
         }
         public static InsightTopicContract Convert(InsightTopic entity)

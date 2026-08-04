@@ -57,7 +57,8 @@ if (enableSwagger)
 builder.Services.AddScoped<IShortLinkDataService, ShortlinkDataService>();
 if (enableMock)
 {
-    builder.Services.AddSingleton<IMockScenario, PrimaryScenario>();
+    builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
+    builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();

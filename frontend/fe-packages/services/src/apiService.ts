@@ -26,6 +26,7 @@ type CredentialsMode = RequestCredentials;
  */
 let requestCredentialsMode: CredentialsMode = 'include';
 let csrfTokenPromise: Promise<string> | null = null;
+let cookieOnlyMode = false;
 
 /**
  * Register an authentication token provider
@@ -48,6 +49,11 @@ export function setRequestCredentialsMode(mode: CredentialsMode): void {
     requestCredentialsMode = mode;
 }
 
+/** Enable cookie-only browser authentication for applications such as BackOffice. */
+export function setCookieOnlyMode(enabled: boolean): void {
+    cookieOnlyMode = enabled;
+}
+
 export function resetCsrfToken(): void {
     csrfTokenPromise = null;
 }
@@ -63,6 +69,10 @@ export function setUnauthorizedHandler(handler: () => void): void {
  * @returns Auth token or null
  */
 function getAuthToken(): string | null {
+    if (cookieOnlyMode) {
+        return null;
+    }
+
     // Try registered provider first
     if (authTokenProvider) {
         return authTokenProvider();

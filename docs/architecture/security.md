@@ -1,3 +1,4 @@
+- The SPA stores display-only user information in local storage; the browser JWT remains in the HttpOnly cookie. The BackOffice client does not read `localStorage.authToken` or emit `Authorization: Bearer`; API-key and explicit non-browser bearer callers remain supported.
 # Security Architecture
 
 ## Security Boundaries

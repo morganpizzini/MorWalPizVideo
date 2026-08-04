@@ -293,6 +293,7 @@ public interface IFormsService
     Task<CustomForm?> GetFormByUrlAsync(string url);
     Task<bool> AddResponseAsync(string formId, CustomFormResponse response);
     Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, int limit = 500);
+    Task<int> GetResponseCountAsync(string formId);
     Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId);
     Task<FormResponseBackfillBatchResult> BackfillEmbeddedResponsesAsync(string? continuationToken, int batchSize);
 }
@@ -380,19 +381,14 @@ public sealed class FormsService(
             responses[response.ResponseId] = response;
         }
 
-        foreach (var response in form.Responses)
-        {
-            if (!responses.ContainsKey(response.ResponseId))
-            {
-                responses[response.ResponseId] = response;
-            }
-        }
-
         return responses.Values
             .OrderByDescending(x => x.SubmittedAt)
             .Take(safeLimit)
             .ToList();
     }
+
+    public Task<int> GetResponseCountAsync(string formId)
+        => customFormResponseRepository.CountByFormIdAsync(formId);
 
     public async Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId)
     {

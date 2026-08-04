@@ -24,7 +24,7 @@ Development enables only:
 - `EnableDev`
 - `EnableSwagger`
 
-Mocks and external fakes should be selected through an explicit local scenario profile rather than enabling every runtime feature flag. Cache, output cache, Key Vault, Hangfire, and production integrations remain disabled locally unless a focused test requires them.
+Mocks and external fakes are selected through the explicit `MockScenario` profile rather than enabling every runtime feature flag. Fixture overrides use `IMockScenarioLifecycle.Select`; `Reset` restores the selected baseline and `Reinitialize` replaces the selected scenario without rebuilding a test host. Cache, output cache, Key Vault, Hangfire, and production integrations remain disabled locally unless a focused test requires them.
 
 Feature flags currently include cache, output cache, mocks, Key Vault, Hangfire, CORS, development, and Swagger. Consolidate flags where registration and middleware must move together.
 
