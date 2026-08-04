@@ -384,7 +384,7 @@ await this.FeatureBackgroundAsync();
     await testRunner.AndAsync("the target channel should contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 45
-    await testRunner.AndAsync("the source channel should not contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("the source channel should contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();

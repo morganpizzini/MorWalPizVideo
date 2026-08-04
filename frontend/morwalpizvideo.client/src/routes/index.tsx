@@ -1,5 +1,5 @@
-﻿import { Link, useLoaderData } from "react-router";
-import React, { useMemo, useState } from "react";
+﻿import { Link } from "react-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import DateDisplay from "@utils/date-display";
 import SEO from "@utils/seo";
 import './index.scss'
@@ -7,22 +7,105 @@ import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } 
 import ReactGA from "react-ga4"
 import configKeys from "@utils/configKeys"
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
+import { getMatches } from "@services/matches";
+import { getConfiguration } from "@services/stream";
+import { getActiveForms } from "@services/customForms";
+import { get } from "@morwalpizvideo/services";
+import { buildOwnerMap, frontendEndpoints, MORWALPIZ_CHANNEL_ID, type ChannelWithVideos } from "@morwalpizvideo/services";
 interface IndexCategory { title: string }
 interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
 interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
 interface IndexForm { id: string; url: string; title: string }
+interface MatchesResponse { data: IndexMatch[]; count: number; next?: string }
+interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[] }
 
 export default function Index() {
-    if (typeof window !== 'undefined') {
-        ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" })
-    }
-    const { matches, configuration, activeForms } = useLoaderData() as { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[] };
-
+    const [data, setData] = useState<IndexData | null>(null);
+    const [error, setError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const hasSentPageView = useRef(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-    if (matches == null)
-        return (<>Nothing to show</>)
+    useEffect(() => {
+        if (!hasSentPageView.current) {
+            ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" });
+            hasSentPageView.current = true;
+        }
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        setError(false);
+        Promise.all([getMatches(true), getConfiguration(), getActiveForms(), get(frontendEndpoints.CHANNELS)])
+            .then(([response, configuration, activeForms, channels]) => {
+                if (cancelled) return;
+                const matchesResponse = response as MatchesResponse;
+                const channelList = (channels ?? []) as ChannelWithVideos[];
+                const ownerMap = buildOwnerMap(matchesResponse.data ?? [], channelList);
+                const matches = (matchesResponse.data ?? []).filter((match) =>
+                    (match.videoRefs ?? []).some((video) =>
+                        ownerMap.get(video.youtubeId)?.channelId === MORWALPIZ_CHANNEL_ID));
+                setData({
+                    matches,
+                    configuration: configuration as Record<string, boolean>,
+                    activeForms: activeForms ?? []
+                });
+            })
+            .catch(() => {
+                if (!cancelled) setError(true);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [retryCount]);
+
+    return (
+        <>
+            <SEO
+                title={"MorWalPiz"}
+                description={"MorWalPiz"}
+                imageUrl={data?.matches.length ? `https://img.youtube.com/vi/${data.matches[0].contentId}/hqdefault.jpg` : ''}
+                type='website' />
+            {!data && !error && <HomeSkeleton />}
+            {error && <HomeError onRetry={() => { setData(null); setRetryCount((count) => count + 1); }} />}
+            {data && <HomeContent data={data} selectedCategories={selectedCategories} onToggleCategory={(category) => {
+                setSelectedCategories((prev: string[]) =>
+                    prev.includes(category)
+                        ? prev.filter((cat: string) => cat !== category)
+                        : [...prev, category]
+                );
+            }} />}
+        </>
+    );
+}
+
+function HomeSkeleton() {
+    return (
+        <div className="home-loading" aria-busy="true" aria-label="Caricamento contenuti">
+            <div className="home-loading__feature" />
+            <div className="home-loading__grid">
+                <div className="home-loading__card" />
+                <div className="home-loading__card" />
+                <div className="home-loading__card" />
+            </div>
+        </div>
+    );
+}
+
+function HomeError({ onRetry }: { onRetry: () => void }) {
+    return (
+        <div className="alert alert-warning my-3 text-center" role="alert">
+            <p className="mb-2">I contenuti non sono disponibili al momento.</p>
+            <button type="button" className="btn btn-warning" onClick={onRetry}>Riprova</button>
+        </div>
+    );
+}
+
+function HomeContent({ data, selectedCategories, onToggleCategory }: { data: IndexData; selectedCategories: string[]; onToggleCategory: (category: string) => void }) {
+    const { matches, configuration, activeForms } = data;
     let firstMatchId: string = '';
     const first = matches[0];
     if (first) {
@@ -32,14 +115,6 @@ export default function Index() {
             firstMatchId = first.contentId
         }
     }
-
-    const toggleCategory = (category: string) => {
-        setSelectedCategories((prev: string[]) =>
-            prev.includes(category)
-                ? prev.filter((cat: string) => cat !== category)
-                : [...prev, category]
-        );
-    };
 
     const filteredItems = useMemo(() => {
         if (selectedCategories.length === 0) return matches;
@@ -76,11 +151,6 @@ export default function Index() {
 
     return (
         <>
-            <SEO
-                title={"MorWalPiz"}
-                description={"MorWalPiz"}
-                imageUrl={matches.length > 0 ? `https://img.youtube.com/vi/${matches[0].contentId}/hqdefault.jpg` : ''}
-                type='website' />
             {configuration[configKeys.STREAM_ENABLE] &&
                 <>
                     <div className="alert alert-warning my-3 d-flex align-items-center justify-content-between" role="alert">
@@ -132,7 +202,7 @@ export default function Index() {
                                     className={`btn ${selectedCategories.includes(category)
                                         ? "btn-success"
                                         : "btn-outline-secondary"}`}
-                                    onClick={() => toggleCategory(category)}
+                                    onClick={() => onToggleCategory(category)}
                                     style={{
                                         opacity: includeCategory ? 1 : 0.5,
                                         marginRight: "10px",

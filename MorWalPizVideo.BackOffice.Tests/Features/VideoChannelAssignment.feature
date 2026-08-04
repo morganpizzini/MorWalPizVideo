@@ -42,4 +42,4 @@ Scenario: Reassigning a video moves it between channels
     When I assign the video to the target channel
     Then the response should be successful
     And the target channel should contain the video
-    And the source channel should not contain the video
+    And the source channel should contain the video

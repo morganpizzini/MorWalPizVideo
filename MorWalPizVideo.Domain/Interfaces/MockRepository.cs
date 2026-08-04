@@ -12,6 +12,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        public async Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds)
+            => await GetItemsAsync(match =>
+                match.CreatorUserId == userId ||
+                match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)));
+
         public async Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take)
         {
             var safeSkip = Math.Max(0, skip);

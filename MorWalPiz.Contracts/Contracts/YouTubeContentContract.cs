@@ -41,4 +41,7 @@ public class YouTubeContentContract
 
     [DataMember]
     public bool IsPrivate { get; set; }
+
+    [DataMember]
+    public string CreatorUserId { get; set; } = string.Empty;
 }

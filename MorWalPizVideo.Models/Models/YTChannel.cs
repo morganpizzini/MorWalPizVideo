@@ -10,6 +10,10 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("channelName")] string ChannelName) : BaseEntity
     {
         [DataMember]
+        [BsonElement("mine")]
+        public bool Mine { get; init; }
+
+        [DataMember]
         [BsonElement("videos")]
         public List<YouTubeVideo> Videos { get; init; } = new List<YouTubeVideo>();
 

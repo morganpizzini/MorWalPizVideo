@@ -75,6 +75,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("isPrivate")]
         public bool IsPrivate { get; init; } = false;
 
+        [DataMember]
+        [BsonElement("creatorUserId")]
+        public string CreatorUserId { get; init; } = string.Empty;
+
         // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]
         public bool IsLink => ContentType == YoutubeContentType.SingleVideo;
@@ -131,6 +135,12 @@ namespace MorWalPizVideo.Server.Models
         public YouTubeContent AddVideo(string videoId, CategoryRef[] categories, string title, string description, DateTime publishedAt)
         {
             var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, categories, title, description, publishedAt)).ToArray();
+            return this with { VideoRefs = newVideoRefs };
+        }
+
+        public YouTubeContent AddVideo(string videoId, CategoryRef[] categories, string title, string description, DateTime publishedAt, string[] channelIds)
+        {
+            var newVideoRefs = VideoRefs.Append(new VideoRef(videoId, categories, title, description, publishedAt, channelIds)).ToArray();
             return this with { VideoRefs = newVideoRefs };
         }
 

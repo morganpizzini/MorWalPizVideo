@@ -7,6 +7,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using MorWalPizVideo.YouTubeUtilities;
 
 namespace MorWalPiz.VideoImporter.Services
 {
@@ -20,6 +21,11 @@ namespace MorWalPiz.VideoImporter.Services
         private string _credentialsJson;
         private string _currentTenantName;
         private const string AuthStoreName = "YouTube.Upload.Auth.Store";
+        private readonly YouTubeOperationExecutor _operationExecutor = new(new YouTubeRetryOptions { Timeout = TimeSpan.FromMinutes(30) });
+        private readonly YouTubeOperationExecutor _uploadExecutor = new(new YouTubeRetryOptions { MaxAttempts = 1, Timeout = TimeSpan.FromMinutes(30) });
+        private readonly DurableYouTubeIntentStore _intentStore = new(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MorWalPizVideo", "UploadIntents"));
         private static readonly object _logLock = new object();
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
@@ -148,7 +154,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// <param name="tags">Lista dei tag da applicare</param>
         /// <param name="progressCallback">Callback per il progresso (opzionale)</param>
         /// <returns>Risultati delle operazioni di upload</returns>
-        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null)
+        public async Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null, CancellationToken cancellationToken = default)
         {
             var results = new List<UploadResult>();
             var videoList = videos.ToList();
@@ -161,6 +167,25 @@ namespace MorWalPiz.VideoImporter.Services
                 {
                     FileName = video.FileName
                 };
+                var operationKey = $"{_currentTenantName}:{Path.GetFullPath(video.FilePath)}";
+                if (!_intentStore.TryBegin(operationKey, out var intent))
+                {
+                    result.Success = intent.State == YouTubeIntentState.Completed;
+                    if (!string.IsNullOrWhiteSpace(intent.YouTubeId))
+                    {
+                        result.YouTubeId = intent.YouTubeId;
+                    }
+                    result.RequiresVerification = intent.State == YouTubeIntentState.Unknown;
+                    result.ErrorMessage = intent.State switch
+                    {
+                        YouTubeIntentState.Completed => "Upload già completato per questo file",
+                        YouTubeIntentState.Unknown => "Esito dell'upload non verificabile: controllare YouTube prima di riprovare",
+                        _ => "Upload già in corso per questo file"
+                    };
+                    results.Add(result);
+                    currentVideoNumber++;
+                    continue;
+                }
 
                 // Report progress: starting new video
                 progressCallback?.Invoke(new UploadProgressInfo
@@ -175,9 +200,11 @@ namespace MorWalPiz.VideoImporter.Services
 
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     // Verifica dell'esistenza del file
                     if (!File.Exists(video.FilePath))
                     {
+                        _intentStore.Cancel(operationKey);
                         result.Success = false;
                         result.ErrorMessage = "Il file non esiste";
                         results.Add(result);
@@ -297,9 +324,17 @@ namespace MorWalPiz.VideoImporter.Services
                         };
 
                         // Caricamento e attesa del completamento
-                        var uploadResponse = await videosInsertRequest.UploadAsync();
+                        var uploadResponse = await _uploadExecutor.ExecuteAsync(
+                            $"upload:{operationKey}",
+                            uploadCancellationToken => videosInsertRequest.UploadAsync(uploadCancellationToken),
+                            cancellationToken);
                         result.YouTubeId = videosInsertRequest.ResponseBody?.Id;
                         result.Success = uploadResponse.Status == UploadStatus.Completed;
+
+                        if (result.Success && !string.IsNullOrWhiteSpace(result.YouTubeId))
+                        {
+                            _intentStore.Complete(operationKey, result.YouTubeId);
+                        }
 
                         // Log the upload response
                         LogApiCall("VideoInsert", video.FileName, null, new
@@ -314,6 +349,8 @@ namespace MorWalPiz.VideoImporter.Services
                         {
                             result.Success = false;
                             result.ErrorMessage = uploadResponse.Exception?.Message ?? "Upload fallito";
+                            _intentStore.MarkUnknown(operationKey);
+                            result.RequiresVerification = true;
                             progressCallback?.Invoke(new UploadProgressInfo
                             {
                                 CurrentFileName = video.FileName,
@@ -346,7 +383,10 @@ namespace MorWalPiz.VideoImporter.Services
                                 // Log the list request
                                 LogApiCall("VideoList", video.FileName, new { VideoId = result.YouTubeId, Part = "snippet" }, null, "Fetching uploaded video for localization update");
 
-                                var listResponse = await listRequest.ExecuteAsync();
+                                var listResponse = await _operationExecutor.ExecuteAsync(
+                                    $"localize:list:{result.YouTubeId}",
+                                    localizationCancellationToken => listRequest.ExecuteAsync(localizationCancellationToken),
+                                    cancellationToken);
                                 var uploadedVideo = listResponse.Items.First();
 
                                 uploadedVideo.Localizations = TransformLocalizations(video.Translations);
@@ -355,7 +395,10 @@ namespace MorWalPiz.VideoImporter.Services
                                 LogApiCall("VideoUpdate", video.FileName, uploadedVideo, null, "Updating video with localizations");
 
                                 var updateRequest = _youtubeUpdateService.Videos.Update(uploadedVideo, "snippet,localizations");
-                                await updateRequest.ExecuteAsync();
+                                await _operationExecutor.ExecuteAsync(
+                                    $"localize:update:{result.YouTubeId}",
+                                    localizationCancellationToken => updateRequest.ExecuteAsync(localizationCancellationToken),
+                                    cancellationToken);
 
                                 // Log successful update response
                                 LogApiCall("VideoUpdate", video.FileName, null, new { Success = true, VideoId = result.YouTubeId }, "Video updated successfully with localizations");
@@ -394,7 +437,16 @@ namespace MorWalPiz.VideoImporter.Services
                 catch (Exception ex)
                 {
                     result.Success = false;
-                    result.ErrorMessage = ex.Message;
+                    if (!string.IsNullOrWhiteSpace(result.YouTubeId))
+                    {
+                        _intentStore.Complete(operationKey, result.YouTubeId);
+                    }
+                    else
+                    {
+                        _intentStore.MarkUnknown(operationKey);
+                        result.RequiresVerification = true;
+                        result.ErrorMessage = $"Esito dell'upload non verificabile: {ex.Message}";
+                    }
 
                     progressCallback?.Invoke(new UploadProgressInfo
                     {

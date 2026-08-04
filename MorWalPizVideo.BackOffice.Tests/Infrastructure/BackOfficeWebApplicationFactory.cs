@@ -91,8 +91,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
 }
 
 /// <summary>
-/// Test authentication handler that automatically authenticates all requests
-/// with a fixed single-user identity (no roles or groups).
+/// Test authentication handler that authenticates requests with an optional test role.
 /// </summary>
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
@@ -106,12 +105,20 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // Create a fixed authenticated identity
-        var claims = new[]
+        if (Request.Headers.ContainsKey("X-Test-Anonymous"))
         {
-            new Claim(ClaimTypes.Name, "test-user"),
-            new Claim(ClaimTypes.NameIdentifier, "test-user-id")
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, "test-user"),
+            new(ClaimTypes.NameIdentifier, "test-user-id")
         };
+        if (Request.Headers.TryGetValue("X-Test-Role", out var role) && !string.IsNullOrWhiteSpace(role))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+        }
 
         var identity = new ClaimsIdentity(claims, "Test");
         var principal = new ClaimsPrincipal(identity);

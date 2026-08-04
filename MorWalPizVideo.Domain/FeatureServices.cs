@@ -6,15 +6,20 @@ namespace MorWalPizVideo.Server.Services;
 
 public interface IContentService
 {
+    Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, bool includePrivate, int skip, int take);
+    Task<int> CountPublicMatchesForChannelAsync(string channelId, bool includePrivate);
     Task<IList<YouTubeContent>> GetMatchesPageAsync(bool includePrivate, int skip, int take);
     Task<int> CountMatchesAsync(bool includePrivate);
     Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate);
     Task<IList<YouTubeContent>> GetMatchesByIdsAsync(IList<string> ids, bool includePrivate);
     Task<IList<YouTubeContent>> GetAllMatchesAsync();
+    Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin);
     Task<YouTubeContent?> GetMatchByIdAsync(string id);
     Task<YouTubeContent?> FindMatchAsync(string matchId);
+    Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin);
     Task SaveMatchAsync(YouTubeContent entity);
     Task UpdateMatchAsync(YouTubeContent entity);
+    Task DeleteMatchAsync(string id);
     Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null);
     Task<IList<YTChannel>> GetChannelsAsync();
     Task<YTChannel?> FindChannelAsync(string channelNameOrId);
@@ -25,22 +30,59 @@ public interface IContentService
 public sealed class ContentService(
     IYouTubeContentRepository youTubeContentRepository,
     ICategoryRepository categoryRepository,
-    IYTChannelRepository ytChannelRepository) : IContentService
+    IYTChannelRepository ytChannelRepository,
+    IUserChannelOwnerRepository userChannelOwnerRepository,
+    IShortLinkRepository shortLinkRepository) : IContentService
 {
+    public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, bool includePrivate, int skip, int take)
+    {
+        var matches = await youTubeContentRepository.GetItemsAsync(match =>
+            (includePrivate || !match.IsPrivate) &&
+            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+        return await AddCanonicalShortLinksAsync(matches.OrderByDescending(match => match.CreationDateTime)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Clamp(take, 1, 200))
+            .ToList());
+    }
+
+    public async Task<int> CountPublicMatchesForChannelAsync(string channelId, bool includePrivate)
+        => (await youTubeContentRepository.GetItemsAsync(match =>
+            (includePrivate || !match.IsPrivate) &&
+            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))).Count;
+
     public Task<IList<YouTubeContent>> GetMatchesPageAsync(bool includePrivate, int skip, int take)
         => youTubeContentRepository.GetPublicOrderedAsync(includePrivate, skip, take);
 
     public async Task<int> CountMatchesAsync(bool includePrivate)
         => (int)await youTubeContentRepository.CountPublicAsync(includePrivate);
 
-    public Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate)
-        => youTubeContentRepository.GetByUrlAsync(url, includePrivate);
+    public async Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate)
+    {
+        var match = await youTubeContentRepository.GetByUrlAsync(url, includePrivate);
+        return match is null ? null : (await AddCanonicalShortLinksAsync([match])).Single();
+    }
 
     public Task<IList<YouTubeContent>> GetMatchesByIdsAsync(IList<string> ids, bool includePrivate)
         => youTubeContentRepository.GetByIdsAsync(ids, includePrivate);
 
     public async Task<IList<YouTubeContent>> GetAllMatchesAsync()
         => [.. (await youTubeContentRepository.GetItemsAsync()).OrderByDescending(x => x.CreationDateTime)];
+
+    public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin)
+    {
+        if (isAdmin)
+        {
+            return await GetAllMatchesAsync();
+        }
+
+        var channelIds = (await userChannelOwnerRepository.GetByUserIdAsync(userId))
+            .Where(owner => owner.IsActive)
+            .Select(owner => owner.ChannelId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        return [.. (await youTubeContentRepository.GetOwnedAsync(userId, channelIds))
+            .OrderByDescending(x => x.CreationDateTime)];
+    }
 
     public async Task<YouTubeContent?> GetMatchByIdAsync(string id)
         => (await youTubeContentRepository.GetItemsAsync(x => x.Id == id)).FirstOrDefault();
@@ -50,6 +92,35 @@ public sealed class ContentService(
             ?? (await youTubeContentRepository.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault()
             ?? (await youTubeContentRepository.GetItemsAsync(x => x.VideoRefs != null
                 && x.VideoRefs.Where(v => !string.IsNullOrEmpty(v.YoutubeId)).Any(v => v.YoutubeId == matchId))).FirstOrDefault();
+
+    private async Task<IList<YouTubeContent>> AddCanonicalShortLinksAsync(IList<YouTubeContent> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return matches;
+        }
+
+        var contentIds = matches.Select(match => match.Id).Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet(StringComparer.Ordinal);
+        var canonicalLinks = await shortLinkRepository.GetItemsAsync(link =>
+            link.LinkType == LinkType.YouTubeVideo &&
+            link.ContentId != null &&
+            contentIds.Contains(link.ContentId));
+
+        return matches.Select(match =>
+        {
+            var linksForMatch = canonicalLinks.Where(link => link.ContentId == match.Id).ToList();
+            var existingCodes = linksForMatch.Select(link => link.NormalizedCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var legacyLinks = match.ShortLinks.Where(link => !existingCodes.Contains(link.NormalizedCode));
+            return match with { ShortLinks = [.. legacyLinks, .. linksForMatch] };
+        }).ToList();
+    }
+
+    public async Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin)
+    {
+        var matches = await GetAuthorizedMatchesAsync(userId, isAdmin);
+        return matches.FirstOrDefault(match => match.ThumbnailVideoId == matchId ||
+            match.Id == matchId || match.VideoRefs.Any(video => video.YoutubeId == matchId));
+    }
 
     public async Task SaveMatchAsync(YouTubeContent entity)
     {
@@ -77,6 +148,8 @@ public sealed class ContentService(
 
         await youTubeContentRepository.UpdateItemAsync(entity);
     }
+
+    public Task DeleteMatchAsync(string id) => youTubeContentRepository.DeleteItemAsync(id);
 
     public Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null)
         => categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);

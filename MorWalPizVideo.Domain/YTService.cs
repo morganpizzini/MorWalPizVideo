@@ -7,6 +7,7 @@ using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Utils;
+using MorWalPizVideo.YouTubeUtilities;
 using System.Text;
 using System.Text.Json;
 using System.Web;
@@ -47,6 +48,7 @@ namespace MorWalPizVideo.Server.Services
         private readonly YouTubeService _youtubeAuthService;
         //private readonly ITranslatorService _translatorService;
         private readonly string _apiKey;
+        private readonly YouTubeOperationExecutor _operationExecutor = new(new YouTubeRetryOptions());
         public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory)//, ITranslatorService translatorService)
         {
             //_translatorService = translatorService;
@@ -148,7 +150,9 @@ namespace MorWalPizVideo.Server.Services
             query["key"] = _apiKey;
             string queryString = query.ToString() ?? "";
 
-            var httpResponseMessage = await _client.GetAsync($"?{queryString}");
+            var httpResponseMessage = await _operationExecutor.ExecuteAsync(
+                $"videos:{string.Join(',', videoIds.OrderBy(id => id))}",
+                cancellationToken => _client.GetAsync($"?{queryString}", cancellationToken));
             if (!httpResponseMessage.IsSuccessStatusCode)
                 return videos;
 

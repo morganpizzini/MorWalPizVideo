@@ -6,7 +6,7 @@ export default async function action({ request }: { request: Request }) {
     const categories = JSON.parse(values.categories);
   try {
       await post(endpoints.VIDEOS_IMPORT, { ...values, categories });
-    return data({ success: true }, { status: 201 });
+    return data({ success: true }, { status: 200 });
   } catch (error) {
     return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });
   }

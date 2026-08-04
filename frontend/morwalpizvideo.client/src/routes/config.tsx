@@ -20,7 +20,6 @@ import sponsorsLoader from "./sponsors.loader";
 import sponsorsAction from "./sponsors.action";
 import calendarLoader from "./calendar.loader";
 import streamLoader from "./stream.loader";
-import indexLoader from "./index.loader";
 import linktreeLoader from "./linktree.loader";
 import compilationsLoader from "./compilations.loader";
 import customFormLoader from "./customForm.loader";
@@ -59,7 +58,6 @@ export const routes: RouteObject[] = [
                 children: [
                     {
                         index: true,
-                        loader: indexLoader,
                         element: <Index />,
                     },
                     {

@@ -31,6 +31,9 @@ using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+var diagnosticsProblemStore = new DiagnosticsProblemStore();
+builder.Services.AddSingleton(diagnosticsProblemStore);
+builder.Logging.AddProvider(new DiagnosticsLoggerProvider(diagnosticsProblemStore));
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
 builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
@@ -262,6 +265,7 @@ builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IVideoAuthorizationService, VideoAuthorizationService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopManagementService, ShopManagementService>();

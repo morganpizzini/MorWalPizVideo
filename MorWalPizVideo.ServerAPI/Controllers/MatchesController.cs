@@ -29,8 +29,15 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> Index(int skip = 0, int take = 23)
         {
             var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-            var count = await _contentService.CountMatchesAsync(includePrivate: isAuthenticated);
-            var entities = await _contentService.GetMatchesPageAsync(includePrivate: isAuthenticated, skip: skip, take: take);
+            var normalChannel = (await _contentService.GetChannelsAsync())
+                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == ContentConstants.MorWalPizYouTubeChannelId);
+            if (normalChannel == null)
+            {
+                return Ok(new BaseResponse<IList<YouTubeContent>>([], 0, string.Empty));
+            }
+
+            var count = await _contentService.CountPublicMatchesForChannelAsync(ContentConstants.MorWalPizYouTubeChannelId, includePrivate: isAuthenticated);
+            var entities = await _contentService.GetPublicMatchesForChannelAsync(ContentConstants.MorWalPizYouTubeChannelId, includePrivate: isAuthenticated, skip: skip, take: take);
             var next = skip > 0 ? take * skip : take;
             return Ok(new BaseResponse<IList<YouTubeContent>>(entities, count, $"skip={next}&take={take}"));
         }
@@ -41,7 +48,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
             var match = await _contentService.GetMatchByUrlAsync(url, includePrivate: isAuthenticated);
-            if (match == null) return NotFound();
+            if (match == null || !await IsCanonicalChannelMatchAsync(match)) return NotFound();
             return Ok(match);
         }
 
@@ -51,11 +58,18 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
             var match = await _contentService.GetMatchByUrlAsync(url, includePrivate: isAuthenticated);
-            if (match == null)
+            if (match == null || !await IsCanonicalChannelMatchAsync(match))
                 return NotFound();
             var images = await _blobService.GetImagesInFolderAsync(url);
 
             return Ok(images);
+        }
+
+        private async Task<bool> IsCanonicalChannelMatchAsync(YouTubeContent match)
+        {
+            var normalChannel = (await _contentService.GetChannelsAsync())
+                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == ContentConstants.MorWalPizYouTubeChannelId);
+            return normalChannel != null && match.VideoRefs.Any(video => video.ChannelIds.Contains(ContentConstants.MorWalPizYouTubeChannelId));
         }
 
     }

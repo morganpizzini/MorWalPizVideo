@@ -24,6 +24,7 @@ export interface CategoryRef {
 export interface VideoRef {
   youtubeId: string;
   categories: CategoryRef[];
+  channelIds: string[];
 }
 
 /**
@@ -62,6 +63,7 @@ export interface Match {
   videos?: Video[];
   creationDateTime?: string;
   shortLinks?: ShortLink[];
+  creatorUserId: string;
 }
 
 export interface VideoImportRequest {

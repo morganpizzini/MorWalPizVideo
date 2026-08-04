@@ -12,6 +12,7 @@ import {
     Settings,
     Key,
   List
+  ,Activity
 } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -34,6 +35,18 @@ const Home: React.FC = () => {
                           gradientColors={['#FF6B6B', '#4ECDC4']}
                       />
                   </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="Diagnostics"
+              subtitle="Salute e problemi recenti"
+              content="Ispeziona lo stato corrente del backend e gli errori live recenti."
+              link="/diagnostics"
+              buttonText="Apri Diagnostics"
+              icon={Activity}
+              isSmall={true}
+              gradientColors={['#4facfe', '#00f2fe']}
+            />
+          </Col>
           <Col md={4} className="g-4">
             <Card
               title="Querylinks Page"

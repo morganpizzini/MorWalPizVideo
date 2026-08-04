@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.Models.Models;
 using Reqnroll;
 using Xunit;
 
@@ -17,6 +19,7 @@ public class VideoChannelAssignmentStepDefinitions
     private readonly TestScenarioContext _context;
     private readonly MatchMockRepository _matchRepository;
     private readonly YTChannelMockRepository _ytChannelRepository;
+    private readonly UserChannelOwnerMockRepository _ownerRepository;
 
     public VideoChannelAssignmentStepDefinitions(BackOfficeWebApplicationFactory factory, TestScenarioContext context)
     {
@@ -24,6 +27,8 @@ public class VideoChannelAssignmentStepDefinitions
         _context = context;
         _matchRepository = factory.MatchRepository!;
         _ytChannelRepository = factory.YTChannelRepository!;
+        _ownerRepository = factory.Services.GetRequiredService<IUserChannelOwnerRepository>() as UserChannelOwnerMockRepository
+            ?? throw new InvalidOperationException("Owner repository is not configured");
     }
 
     private async Task<string> ResolveExistingVideoIdAsync()
@@ -46,6 +51,7 @@ public class VideoChannelAssignmentStepDefinitions
         var channels = await _ytChannelRepository.GetItemsAsync();
         channels.Should().NotBeEmpty("mock data should expose at least one channel");
         var chosen = channels.First();
+        await EnsureTestUserOwnsChannelAsync(chosen.ChannelId);
         _context.AssignTargetChannelId = chosen.ChannelId;
         return chosen;
     }
@@ -72,6 +78,13 @@ public class VideoChannelAssignmentStepDefinitions
         };
         await _ytChannelRepository.UpdateItemAsync(updatedSource);
 
+        await _matchRepository.AddItemAsync(
+            YouTubeContent.CreateSingleVideo(ytId, []) with
+            {
+                CreatorUserId = "test-user-id",
+                VideoRefs = [new VideoRef(ytId, channelIds: [source.ChannelId])]
+            });
+
         _context.AssignSourceChannelId = source.ChannelId;
         _context.AssignVideoYoutubeId = ytId;
     }
@@ -86,7 +99,23 @@ public class VideoChannelAssignmentStepDefinitions
             target = new YTChannel($"target-{Guid.NewGuid():N}", "Target Channel");
             await _ytChannelRepository.AddItemAsync(target);
         }
+        await EnsureTestUserOwnsChannelAsync(target.ChannelId);
         _context.AssignTargetChannelId = target.ChannelId;
+    }
+
+    private async Task EnsureTestUserOwnsChannelAsync(string channelId)
+    {
+        var existing = await _ownerRepository.GetItemsAsync(owner =>
+            owner.UserId == "test-user-id" && owner.ChannelId == channelId && owner.IsActive);
+        if (existing.Count == 0)
+        {
+            await _ownerRepository.AddItemAsync(new UserChannelOwner
+            {
+                UserId = "test-user-id",
+                ChannelId = channelId,
+                IsActive = true
+            });
+        }
     }
 
     [When(@"I assign the video to the channel")]
@@ -146,11 +175,11 @@ public class VideoChannelAssignmentStepDefinitions
         target.Videos.Should().Contain(v => v.VideoId == ytId);
     }
 
-    [Then(@"the source channel should not contain the video")]
-    public async Task ThenTheSourceChannelShouldNotContainTheVideo()
+    [Then(@"the source channel should contain the video")]
+    public async Task ThenTheSourceChannelShouldContainTheVideo()
     {
         var ytId = _context.AssignVideoYoutubeId!;
         var source = (await _ytChannelRepository.GetItemsAsync(c => c.ChannelId == _context.AssignSourceChannelId)).First();
-        source.Videos.Should().NotContain(v => v.VideoId == ytId);
+        source.Videos.Should().Contain(v => v.VideoId == ytId);
     }
 }

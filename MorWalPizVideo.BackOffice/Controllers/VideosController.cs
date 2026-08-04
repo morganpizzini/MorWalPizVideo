@@ -2,6 +2,7 @@
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts.Videos;
 using MorWalPiz.Contracts.Contracts;
+using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
@@ -9,7 +10,9 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.Domain.Interfaces;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -24,11 +27,15 @@ public class VideosController : ApplicationControllerBase
     private readonly ITelegramService telegramService;
     private readonly IDiscordService discordService;
     private readonly IFacebookService facebookService;
+    private readonly IUserRepository userRepository;
+    private readonly IConfiguration configuration;
+    private readonly IVideoAuthorizationService authorization;
     
     public VideosController(IContentService contentService, ILinksService linksService, ICrossApiService _clientFactory,
         IYTService _yTService, IExternalDataService _externalDataService,
         ITelegramService _telegramService, IDiscordService _discordService,
-        IFacebookService _facebookService)
+        IFacebookService _facebookService, IUserRepository _userRepository,
+        IConfiguration _configuration, IVideoAuthorizationService _authorization)
     {
         _contentService = contentService;
         _linksService = linksService;
@@ -38,20 +45,23 @@ public class VideosController : ApplicationControllerBase
         telegramService = _telegramService;
         discordService = _discordService;
         facebookService = _facebookService;
+        userRepository = _userRepository;
+        configuration = _configuration;
+        authorization = _authorization;
     }
 
     [HttpGet()]
     public async Task<IActionResult> Fetch()
     {
-        var matches = await _contentService.GetAllMatchesAsync();
+        var matches = await GetAuthorizedMatchesAsync();
         return Ok(matches.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(BaseRequestId request)
     {
-        var match = await _contentService.GetMatchByIdAsync(request.Id);
-        if(match == null)
+        var match = await FindAuthorizedMatchAsync(request.Id);
+        if (match == null)
         {
             return NotFound();
         }
@@ -61,7 +71,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] VideoUpdateRequest request)
     {
-        var existingMatch = await _contentService.FindMatchAsync(id);
+        var existingMatch = await FindAuthorizedMatchAsync(id);
         if (existingMatch == null)
         {
             return NotFound("Video not found");
@@ -91,20 +101,55 @@ public class VideosController : ApplicationControllerBase
         return NoContent();
     }
 
-    [HttpPost("Translate")]
-    public async Task TranslateShort(IList<string> videoIds)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
     {
+        var match = await FindAuthorizedMatchAsync(id);
+        if (match == null)
+        {
+            return NotFound();
+        }
+
+        await _contentService.DeleteMatchAsync(match.Id);
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.ReloadCache();
+        return NoContent();
+    }
+
+    [HttpPost("Translate")]
+    public async Task<IActionResult> TranslateShort(IList<string> videoIds)
+    {
+        foreach (var videoId in videoIds)
+        {
+            if (await FindAuthorizedMatchAsync(videoId) == null)
+            {
+                return NotFound("Video not found");
+            }
+        }
+
         await yTService.TranslateYoutubeVideo(videoIds);
+        return NoContent();
     }
     [HttpPost("ImportVideo")]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
+        var creatorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(creatorUserId))
+        {
+            return Unauthorized();
+        }
+
         // Fetch categories and convert to CategoryRef objects
         var categories = (await _contentService.GetCategoriesAsync(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
 
-        await _contentService.SaveMatchAsync(YouTubeContent.CreateSingleVideo(request.VideoId, categories));
+        var importedMatch = YouTubeContent.CreateSingleVideo(request.VideoId, categories) with
+        {
+            CreatorUserId = creatorUserId
+        };
+        await _contentService.SaveMatchAsync(importedMatch);
 
         // Populate metadata by calling ExternalDataService.FetchMatches()
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
@@ -122,7 +167,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("ConvertIntoRoot")]
     public async Task<IActionResult> ConvertIntoRoot(RootCreationRequest request)
     {
-        var existingMatch = await _contentService.FindMatchAsync(request.VideoId);
+        var existingMatch = await FindAuthorizedMatchAsync(request.VideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -147,7 +192,7 @@ public class VideosController : ApplicationControllerBase
             request.Url,
             existingMatch.ThumbnailVideoId,
             categories
-        );
+        ) with { CreatorUserId = existingMatch.CreatorUserId };
 
         // Add video with preserved metadata if available
         if (existingVideoRef != null)
@@ -157,7 +202,8 @@ public class VideosController : ApplicationControllerBase
                 existingVideoRef.Categories,
                 existingVideoRef.Title,
                 existingVideoRef.Description,
-                existingVideoRef.PublishedAt
+                existingVideoRef.PublishedAt,
+                existingVideoRef.ChannelIds
             );
         }
         else
@@ -177,7 +223,7 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("SwapThumbnailId")]
     public async Task<IActionResult> SwapThumbnailUrl(SwapRootThumbnailRequest request)
     {
-        var existingMatch = await _contentService.FindMatchAsync(request.CurrentVideoId);
+        var existingMatch = await FindAuthorizedMatchAsync(request.CurrentVideoId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -196,6 +242,12 @@ public class VideosController : ApplicationControllerBase
     [HttpPost("RootCreation")]
     public async Task<IActionResult> RootCreation(RootCreationRequest request)
     {
+        var creatorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(creatorUserId))
+        {
+            return Unauthorized();
+        }
+
         // Fetch categories and convert to CategoryRef objects
         var categories = (await _contentService.GetCategoriesAsync(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
@@ -208,13 +260,13 @@ public class VideosController : ApplicationControllerBase
             request.Url,
             request.VideoId,
             categories
-        ));
+        ) with { CreatorUserId = creatorUserId });
         return NoContent();
     }
     [HttpPost("ImportSubCreation")]
     public async Task<IActionResult> SubVideoCreation(SubVideoCrationRequest request)
     {
-        var existingMatch = await _contentService.FindMatchAsync(request.MatchId);
+        var existingMatch = await FindAuthorizedMatchAsync(request.MatchId);
         if (existingMatch == null)
         {
             return BadRequest("Match do not exists");
@@ -234,17 +286,20 @@ public class VideosController : ApplicationControllerBase
         // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
         await externalDataService.FetchMatches();
 
-        // Auto-create shortlink for the sub-video
-        await CreateVideoShortLinkAsync(request.VideoId);
-
         return NoContent();
     }
 
     [HttpPost("{id}/refresh-youtube")]
     public async Task<IActionResult> RefreshYouTubeData(string id)
     {
+        var existingMatch = await FindAuthorizedMatchAsync(id);
+        if (existingMatch == null)
+        {
+            return NotFound("Video not found");
+        }
+
         var updatedMatch = await externalDataService.RefreshMatch(id);
-        if (updatedMatch == null)
+        if (updatedMatch == null || !await authorization.CanAccessAsync(User, updatedMatch))
         {
             return NotFound("Video not found");
         }
@@ -260,14 +315,17 @@ public class VideosController : ApplicationControllerBase
     public async Task<IActionResult> PublishToSocialMedia(string id, [FromBody] PublishSocialRequest request)
     {
         var match = await _contentService.FindMatchAsync(id);
-        if (match == null)
+        if (match == null || !await authorization.CanAccessAsync(User, match))
         {
             return NotFound("Video not found");
         }
 
         // Get the shortlink for this video
-        var shortLink = match.ShortLinks
-            .FirstOrDefault(x => x.Target == id && string.IsNullOrEmpty(x.QueryString));
+        var shortLink = (await _linksService.GetShortLinksAsync())
+            .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo &&
+                                 x.ContentId == match.Id &&
+                                 x.Target == id &&
+                                 string.IsNullOrEmpty(x.QueryString));
 
         if (shortLink == null)
         {
@@ -344,23 +402,29 @@ public class VideosController : ApplicationControllerBase
             return BadRequest(new { error = $"Unknown channelId '{payload.ChannelId}'" });
         }
 
-        var allChannels = await _contentService.GetChannelsAsync();
-        var owningChannels = allChannels
-            .Where(c => c.Videos != null && c.Videos.Any(v => v.VideoId == youtubeId))
-            .ToList();
-        var existsInMatches = (await _contentService.FindMatchAsync(youtubeId)) != null;
+        if (!await authorization.CanManageChannelAsync(User, payload.ChannelId))
+        {
+            return NotFound(new { error = $"Video '{youtubeId}' was not found" });
+        }
 
-        if (owningChannels.Count == 0 && !existsInMatches)
+        var existingMatch = await _contentService.FindMatchAsync(youtubeId);
+        if (existingMatch != null && !await authorization.CanAccessAsync(User, existingMatch))
+        {
+            return NotFound(new { error = $"Video '{youtubeId}' was not found" });
+        }
+
+        if (existingMatch is null)
         {
             return NotFound(new { error = $"Video '{youtubeId}' was not found in any channel or match" });
         }
 
-        // Remove from every other owning channel (idempotent: skips target).
-        foreach (var c in owningChannels.Where(c => c.ChannelId != payload.ChannelId))
+        if (existingMatch != null)
         {
-            var trimmedVideos = c.Videos.Where(v => v.VideoId != youtubeId).ToList();
-            var updated = c with { Videos = trimmedVideos };
-            await _contentService.UpdateChannelAsync(updated);
+            var updatedRefs = existingMatch.VideoRefs.Select(video =>
+                video.YoutubeId == youtubeId
+                    ? video with { ChannelIds = video.ChannelIds.Append(payload.ChannelId).Distinct().ToArray() }
+                    : video).ToArray();
+            await _contentService.UpdateMatchAsync(existingMatch with { VideoRefs = updatedRefs });
         }
 
         // Ensure on target channel.
@@ -382,15 +446,31 @@ public class VideosController : ApplicationControllerBase
 
     #region ShortLink Helper
 
+    private async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return string.IsNullOrWhiteSpace(userId)
+            ? []
+            : await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User));
+    }
+
+    private async Task<YouTubeContent?> FindAuthorizedMatchAsync(string id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return string.IsNullOrWhiteSpace(userId)
+            ? null
+            : await _contentService.FindAuthorizedMatchAsync(id, userId, await authorization.IsAdminAsync(User));
+    }
+
     /// <summary>
     /// Auto-creates a shortlink for a video (similar to ShortLinksController logic).
     /// </summary>
-    private async Task CreateVideoShortLinkAsync(string videoId)
+    private async Task<string?> CreateVideoShortLinkAsync(string videoId)
     {
         var existingMatch = await _contentService.FindMatchAsync(videoId);
         if (existingMatch == null)
         {
-            return;
+            return null;
         }
 
         // Check if a canonical shortlink already exists for this video (ADR-004: standalone aggregate).
@@ -402,7 +482,7 @@ public class VideosController : ApplicationControllerBase
 
         if (existingShortLink != null)
         {
-            return; // Shortlink already exists
+            return BuildShortLinkUrl(existingShortLink.Code);
         }
 
         // Generate unique shortlink code
@@ -419,6 +499,14 @@ public class VideosController : ApplicationControllerBase
 
         // Reset shortlink cache
         await client.ResetCache(CacheKeys.ShortLinks);
+
+        return BuildShortLinkUrl(newShortLink.Code);
+    }
+
+    private string BuildShortLinkUrl(string code)
+    {
+        var siteUrl = configuration["SiteUrl"] ?? string.Empty;
+        return $"{siteUrl}{code}";
     }
 
     /// <summary>

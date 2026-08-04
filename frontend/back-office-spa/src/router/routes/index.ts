@@ -77,6 +77,7 @@ import scanNewsAction from '../../routes/insights/scan-news/action';
 import ApiKeys from '../../routes/apiKeys/index';
 import ApiKeyDetail from '../../routes/apiKeys/detail';
 import ApiKeyForm from '../../routes/apiKeys/form';
+import Diagnostics from '../../routes/diagnostics';
 
 /**
  * Protected routes (require authentication)
@@ -89,6 +90,8 @@ export const protectedRoutes: RouteConfig[] = [
     Component: Home, 
     errorElement: createErrorElement() 
   },
+
+  { path: 'diagnostics', Component: Diagnostics, errorElement: createErrorElement() },
   
   // Calendar Events
   createRouteGroup('calendarevents', {

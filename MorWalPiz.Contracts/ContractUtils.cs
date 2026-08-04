@@ -65,7 +65,8 @@ namespace MorWalPiz.Contracts
                 Id = entity.Id,
                 ChannelId = entity.ChannelId,
                 ChannelName = entity.ChannelName,
-                Videos = entity.Videos.Select(Convert).ToArray()
+                Videos = entity.Videos.Select(Convert).ToArray(),
+                Mine = entity.Mine
             };
         }
         public static ChannelVideoContract Convert(YouTubeVideo entity)
@@ -243,7 +244,8 @@ namespace MorWalPiz.Contracts
                 ContentType = entity.ContentType,
                 YouTubeVideoLinks = entity.YouTubeVideoLinks,
                 ShortLinks = entity.ShortLinks,
-                IsPrivate = entity.IsPrivate
+                IsPrivate = entity.IsPrivate,
+                CreatorUserId = entity.CreatorUserId
             };
         }
         public static ProductContract Convert(Product entity)

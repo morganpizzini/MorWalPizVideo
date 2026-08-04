@@ -1,4 +1,5 @@
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using System.Security.Cryptography;
 
@@ -13,7 +14,7 @@ public class PrimaryScenario : BaseScenario
     public const string AdminUserId = "100000000000000000000001";
     public const string MatchId = "200000000000000000000001";
     public const string VideoId = "scenario-video-1";
-    public const string ChannelId = "scenario-channel-1";
+    public const string ChannelId = ContentConstants.MorWalPizYouTubeChannelId;
     public const string StandaloneShortLinkCode = "test1";
     public const string MatchShortLinkCode = "match1";
     public const string ChannelShortLinkCode = "channel1";
@@ -28,7 +29,7 @@ public class PrimaryScenario : BaseScenario
             CreationDateTime = CreatedAt
         };
         var categoryReference = new CategoryRef(category.Id, category.Title);
-        var video = new VideoRef(VideoId, [categoryReference], "Scenario video", "Canonical mock video")
+        var video = new VideoRef(VideoId, [categoryReference], "Scenario video", "Canonical mock video", channelIds: [ChannelId])
         {
             CreationDateTime = CreatedAt
         };
@@ -58,6 +59,7 @@ public class PrimaryScenario : BaseScenario
             {
                 Id = MatchId,
                 CreationDateTime = CreatedAt,
+                CreatorUserId = "test-user-id",
                 ShortLinks = [matchShortLink]
             }
         ]);
@@ -66,6 +68,7 @@ public class PrimaryScenario : BaseScenario
             new YTChannel(ChannelId, "Scenario channel")
             {
                 Id = "500000000000000000000001",
+                Mine = true,
                 CreationDateTime = CreatedAt,
                 Videos = [new YouTubeVideo { VideoId = VideoId, Title = video.Title }],
                 ShortLinks = [channelShortLink]
@@ -99,6 +102,16 @@ public class PrimaryScenario : BaseScenario
                 IsActive = true,
                 Role = "admin",
                 CanAccessBackoffice = true
+            },
+            new User
+            {
+                Id = "test-user-id",
+                CreationDateTime = CreatedAt,
+                Username = "test-user",
+                Email = "test-user@example.test",
+                IsActive = true,
+                Role = "user",
+                CanAccessBackoffice = true
             }
         ]);
 
@@ -125,7 +138,13 @@ public class PrimaryScenario : BaseScenario
         Set("carts", Array.Empty<Cart>());
         Set("competitions", Array.Empty<Competition>());
         Set("userChannels", Array.Empty<UserChannel>());
-        Set("userChannelOwners", Array.Empty<UserChannelOwner>());
+        Set("userChannelOwners", [new UserChannelOwner
+        {
+            Id = "600000000000000000000001",
+            UserId = "test-user-id",
+            ChannelId = ChannelId,
+            IsActive = true
+        }]);
         Set("userRequests", Array.Empty<UserRequest>());
         Set("loginAttempts", Array.Empty<LoginAttempt>());
         Set("apiKeys", Array.Empty<ApiKey>());

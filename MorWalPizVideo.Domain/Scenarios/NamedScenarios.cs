@@ -11,6 +11,7 @@ public sealed class EmptyScenario : PrimaryScenario
         Clear<YouTubeContent>("matches");
         Clear<YTChannel>("ytchannels");
         Clear<ShortLink>("shortLinks");
+        Clear<UserChannelOwner>("userChannelOwners");
         Clear<Category>("categories");
         Clear<Product>("products");
         Clear<Page>("pages");

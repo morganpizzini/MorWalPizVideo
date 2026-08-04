@@ -13,6 +13,7 @@ export enum MatchType {
 export interface VideoRef {
     youtubeId: string;
     title: string;
+  channelIds: string[];
   category: string;
 }
 
@@ -49,6 +50,7 @@ export interface Match {
   thumbnailUrl?: string;
   isLink?: boolean;
   videos?: Video[];
+  creatorUserId: string;
 }
 
 /**

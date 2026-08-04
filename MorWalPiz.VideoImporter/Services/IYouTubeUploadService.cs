@@ -12,7 +12,7 @@ namespace MorWalPiz.VideoImporter.Services
         /// <param name="tags">Lista dei tag da applicare</param>
         /// <param name="progressCallback">Callback per il progresso (opzionale)</param>
         /// <returns>Task che rappresenta l'operazione asincrona</returns>
-        Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null);
+        Task<IEnumerable<UploadResult>> UploadVideosAsync(IEnumerable<VideoFile> videos, IList<string> tags, Action<UploadProgressInfo> progressCallback = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Traduce automaticamente un video YouTube esistente e aggiorna le localizzazioni
@@ -108,6 +108,8 @@ namespace MorWalPiz.VideoImporter.Services
         /// Messaggio di avviso per operazioni completate con successo ma con avvertimenti
         /// </summary>
         public string WarningMessage { get; set; }
+
+        public bool RequiresVerification { get; set; }
     }
 
     /// <summary>

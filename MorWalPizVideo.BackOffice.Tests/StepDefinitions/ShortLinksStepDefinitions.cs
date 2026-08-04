@@ -20,6 +20,7 @@ public class ShortLinksStepDefinitions
     public ShortLinksStepDefinitions(BackOfficeWebApplicationFactory factory, TestScenarioContext context)
     {
         _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
         _context = context;
         
         // Access the same repository instances used by the web application
@@ -72,7 +73,7 @@ public class ShortLinksStepDefinitions
         var request = new
         {
             Target = target,
-            LinkType = linkType == "Other" ? 2 : 0,
+            LinkType = linkType == "Other" ? 5 : 0,
             QueryLinkIds = Array.Empty<string>(),
             Message = ""
         };

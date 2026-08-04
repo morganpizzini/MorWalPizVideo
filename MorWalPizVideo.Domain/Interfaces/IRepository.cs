@@ -15,6 +15,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
+        Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
         Task<long> CountPublicAsync(bool includePrivate);
         Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate);

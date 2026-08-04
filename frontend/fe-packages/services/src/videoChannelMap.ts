@@ -9,6 +9,8 @@
 import { get } from './apiService';
 import frontendEndpoints from './endpoints-frontend';
 
+export const MORWALPIZ_CHANNEL_ID = 'UCQRMDE-gxoD43w2q-QCVmIA';
+
 export interface ChannelBadge {
     channelId: string;
     channelName: string;
@@ -20,6 +22,7 @@ export interface ChannelWithVideos {
     channelName: string;
     yTChannelId?: string;
     avatarUrl?: string;
+    mine?: boolean;
     videos?: Array<{ videoId: string }>;
 }
 
@@ -51,6 +54,7 @@ export async function loadChannelMap(): Promise<Map<string, ChannelBadge>> {
     const channels = (await get(frontendEndpoints.CHANNELS)) as ChannelWithVideos[] | undefined;
     const map = new Map<string, ChannelBadge>();
     for (const channel of channels ?? []) {
+        if (!channel.mine || channel.channelId !== MORWALPIZ_CHANNEL_ID) continue;
         const badge: ChannelBadge = {
             channelId: channel.channelId,
             channelName: channel.channelName,
@@ -69,6 +73,7 @@ export function buildOwnerMap(
 
     // (b) Legacy: YTChannel.videos[*].videoId → channel
     for (const channel of channels ?? []) {
+        if (!channel.mine || channel.channelId !== MORWALPIZ_CHANNEL_ID) continue;
         const badge: ChannelBadge = {
             channelId: channel.channelId,
             channelName: channel.channelName,

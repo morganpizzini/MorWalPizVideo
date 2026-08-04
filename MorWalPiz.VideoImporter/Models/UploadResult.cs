@@ -29,5 +29,7 @@ namespace MorWalPiz.VideoImporter.Models
     /// Messaggio di avviso per operazioni completate con successo ma con avvertimenti
     /// </summary>
     public string WarningMessage { get; set; }
+
+    public bool RequiresVerification { get; set; }
   }
 }

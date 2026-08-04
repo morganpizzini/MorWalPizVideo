@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MorWalPiz.Contracts\MorWalPiz.Contracts.csproj" />
+    <ProjectReference Include="..\MorWalPizVideo.YouTubeUtilities\MorWalPizVideo.YouTubeUtilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>

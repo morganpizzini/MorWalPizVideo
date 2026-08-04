@@ -39,6 +39,7 @@
 		<ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
 		<ProjectReference Include="..\MorWalPizVideo.MvcHelpers\MorWalPizVideo.MvcHelpers.csproj" />
 		<ProjectReference Include="..\MorWalPizVideo.ServiceDefaults\MorWalPizVideo.ServiceDefaults.csproj" />
+				<ProjectReference Include="..\MorWalPizVideo.YouTubeUtilities\MorWalPizVideo.YouTubeUtilities.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

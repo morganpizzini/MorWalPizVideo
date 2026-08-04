@@ -146,7 +146,8 @@ namespace MorWalPizVideo.Server.Services
                         match.VideoRefs?.FirstOrDefault()?.Categories ?? Array.Empty<CategoryRef>(),
                         singleVideo.Title,
                         singleVideo.Description,
-                        singleVideo.PublishedAt
+                        singleVideo.PublishedAt,
+                        match.VideoRefs?.FirstOrDefault()?.ChannelIds
                     );
                     
                     // Generate URL from title if current URL is empty
@@ -184,7 +185,8 @@ namespace MorWalPizVideo.Server.Services
                                 videoRef.Categories,
                                 video.Title,
                                 video.Description,
-                                video.PublishedAt
+                                video.PublishedAt,
+                                videoRef.ChannelIds
                             );
                             updatedVideoRefs.Add(updatedVideoRef);
                         }

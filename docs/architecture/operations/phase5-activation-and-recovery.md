@@ -1,8 +1,10 @@
-# Phase 5 Activation And Recovery
+# Phase 5 Activation And Recovery (Deferred)
+
+This document is a future operations prompt only. Hangfire activation and all related recovery automation are deferred; nothing in the current video-platform implementation activates or changes Hangfire.
 
 This runbook defines production operations that source changes and local tests cannot prove. Do not mark Phase 5 complete from configuration review alone.
 
-## Hangfire Activation
+## Hangfire Activation (Future Only)
 
 Hangfire remains disabled by default through `FeatureManagement:EnableHangFire=false`. Keep `ConnectionStrings:HangfireConnection` as a secret placeholder until an approved durable SQL store exists. Enabling the flag without that connection fails startup before any server, scheduler, dashboard, storage, or Hangfire health probe is registered.
 
