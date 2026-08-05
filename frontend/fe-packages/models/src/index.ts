@@ -53,7 +53,8 @@ export type { Product, CreateProductDTO, UpdateProductDTO } from './product';
 
 // Product Category exports (for video content products)
 export type { 
-  ProductCategory as VideoProductCategory, 
+  ProductCategory,
+  ProductCategory as VideoProductCategory,
   CreateProductCategoryDTO, 
   UpdateProductCategoryDTO 
 } from './productCategory';

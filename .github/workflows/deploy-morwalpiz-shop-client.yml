@@ -34,8 +34,8 @@ jobs:
       run: yarn install --frozen-lockfile
 
     - name: Build application
-      working-directory: ./frontend/morwalpiz-shop.client
-      run: yarn build
+      working-directory: ./frontend
+      run: yarn build:shared && yarn workspace morwalpiz-shop.client build
 
     - name: Login to Azure
       uses: azure/login@v1
@@ -43,10 +43,9 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Build and push Docker image
-      working-directory: ./frontend/morwalpiz-shop.client
       run: |
         az acr login --name ${{ secrets.ACR_NAME }}
-        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }} .
+        docker build -f frontend/morwalpiz-shop.client/Dockerfile -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }} frontend
         docker tag ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:latest
         docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:${{ github.sha }}
         docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.AZURE_WEBAPP_NAME }}:latest

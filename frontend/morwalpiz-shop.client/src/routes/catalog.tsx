@@ -223,8 +223,7 @@ export default function Catalog() {
                   }`}
                   onClick={() => handleCategoryChange(category.id)}
                 >
-                  {/* @ts-expect-error - ProductCategory has name property, TypeScript cache issue */}
-                  {category.name}
+                  {category.title}
                   <span className="badge bg-light text-dark ms-2">
                     {getCategoryCount(category.id)}
                   </span>

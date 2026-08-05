@@ -33,7 +33,7 @@ export default function CategoryFilter({
             }`}
             onClick={() => onSelectCategory(category.id)}
           >
-            {category.name}
+            {category.title}
           </button>
         ))}
       </div>
