@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Badge } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher, useLocation } from 'react-router';
-import { CustomForm, QuestionType } from '@morwalpizvideo/models';
+import { CustomForm } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';

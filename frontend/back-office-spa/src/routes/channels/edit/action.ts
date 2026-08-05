@@ -7,12 +7,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const errors: Record<string, string | string[]> = {};
 
   // Validate fields
-  if (!values.title || values.title.trim().length === 0) {
-    errors['title'] = 'Title cannot be empty';
-  }
-
-  if (!values.url || values.url.trim().length === 0) {
-    errors['url'] = 'URL cannot be empty';
+  if (!values.channelName || values.channelName.trim().length === 0) {
+    errors['channelName'] = 'Channel name cannot be empty';
   }
 
   // Check for errors

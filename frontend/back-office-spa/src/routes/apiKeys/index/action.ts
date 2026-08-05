@@ -21,7 +21,8 @@ export default async function action({ request }: { request: Request }) {
 
     if (intent === 'toggle') {
       const response = await post(
-        ComposeUrl(endpoints.APIKEYS_TOGGLE, { id: encodeURIComponent(id) })
+        ComposeUrl(endpoints.APIKEYS_TOGGLE, { id: encodeURIComponent(id) }),
+        {}
       );
 
       if (response?.errors) {

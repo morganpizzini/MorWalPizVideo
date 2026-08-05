@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLoaderData, Link } from 'react-router';
-import { Button, Card, Badge } from 'react-bootstrap';
+import { Card, Badge } from 'react-bootstrap';
 import type { Product } from '@morwalpizvideo/models';
 
 const ProductDetail: React.FC = () => {
@@ -11,12 +11,12 @@ const ProductDetail: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1>Product Details</h1>
         <div>
-          <Button as={Link} to={`/products/${product.id}/edit`} variant="primary" className="me-2">
+          <Link to={`/products/${product.id}/edit`} className="btn btn-primary me-2">
             Edit
-          </Button>
-          <Button as={Link} to="/products" variant="secondary">
+          </Link>
+          <Link to="/products" className="btn btn-secondary">
             Back to List
-          </Button>
+          </Link>
         </div>
       </div>
 

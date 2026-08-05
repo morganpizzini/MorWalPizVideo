@@ -10,7 +10,7 @@ setCookieOnlyMode(true);
 // Load runtime environment configuration (injected by Docker entrypoint)
 // This dynamically loads /env-config.js to avoid Vite trying to bundle it
 const loadEnvConfig = () => {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>(resolve => {
     const script = document.createElement('script');
     script.src = '/env-config.js';
     script.onload = () => resolve();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Modal, Badge } from 'react-bootstrap';
+import { Button, Modal } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher } from 'react-router';
 import { InsightTopic } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';

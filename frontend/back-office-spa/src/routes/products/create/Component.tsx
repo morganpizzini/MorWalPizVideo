@@ -62,9 +62,9 @@ const CreateProduct: React.FC = () => {
     <>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1>Create Product</h1>
-        <Button as={Link} to="/products" variant="secondary">
+        <Link to="/products" className="btn btn-secondary">
           Back to List
-        </Button>
+        </Link>
       </div>
       
       <GenericErrorList errors={errors?.generics} />

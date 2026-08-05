@@ -118,12 +118,12 @@ const Component: React.FC = () => {
                       <div className="d-flex flex-column gap-2">
                         {categories.map((category) => (
                           <BootstrapForm.Check
-                            key={category.categoryId}
+                            key={category.id}
                             type="checkbox"
-                            id={`category-${category.categoryId}`}
+                            id={`category-${category.id}`}
                             label={category.title}
-                            checked={selectedCategories.includes(category.categoryId)}
-                            onChange={() => handleCategoryChange(category.categoryId)}
+                            checked={selectedCategories.includes(category.id)}
+                            onChange={() => handleCategoryChange(category.id)}
                           />
                         ))}
                       </div>

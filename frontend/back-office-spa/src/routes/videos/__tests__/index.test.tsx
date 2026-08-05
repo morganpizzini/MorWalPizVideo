@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
@@ -20,12 +19,12 @@ const mockMatches: Match[] = [
     matchId: 'm1',
     title: 'Italy vs Spain',
     videoId: 'vid1',
-  } as Match,
+  } as unknown as Match,
   {
     matchId: 'm2',
     title: 'France vs Germany',
     videoId: 'vid2',
-  } as Match,
+  } as unknown as Match,
 ];
 
 beforeEach(() => {

@@ -102,13 +102,12 @@ const CompilationForm: React.FC = () => {
   };
 
   const confirmSubmit = () => {
-    const payload = {
-      title,
-      description,
-      url,
-      videos: JSON.stringify(selectedVideoIds),
-      id: isEditMode ? params.id : undefined,
-    };
+    const payload = new FormData();
+    payload.append('title', title);
+    payload.append('description', description);
+    payload.append('url', url);
+    payload.append('videos', JSON.stringify(selectedVideoIds));
+    if (params.id) payload.append('id', params.id);
 
     fetcher.submit(payload, {
       method: 'post',

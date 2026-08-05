@@ -13,8 +13,10 @@ export enum MatchType {
 export interface VideoRef {
     youtubeId: string;
     title: string;
+    description?: string;
   channelIds: string[];
-  category: string;
+  categories?: string[];
+  publishedAt?: string;
 }
 
 /**

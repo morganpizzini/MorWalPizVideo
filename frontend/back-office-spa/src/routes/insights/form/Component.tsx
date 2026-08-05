@@ -69,7 +69,11 @@ const InsightTopicForm: React.FC = () => {
       id: isEditMode ? params.id : undefined,
     };
 
-    fetcher.submit(payload, {
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined) formData.append(key, value);
+    });
+    fetcher.submit(formData, {
       method: 'post',
       action: location.pathname,
     });

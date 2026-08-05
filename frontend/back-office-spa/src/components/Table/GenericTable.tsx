@@ -62,7 +62,7 @@ function GenericTable<T extends object>({
         return params;
       }, { replace: true });
     },
-    globalFilterFn: fuzzyFilter,
+    globalFilterFn: fuzzyFilter<T>(),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

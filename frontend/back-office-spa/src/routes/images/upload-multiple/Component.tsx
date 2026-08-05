@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useFetcher, useLoaderData } from 'react-router';
-import { Form, Button, Card, Row, Col, Image, CloseButton, Modal } from 'react-bootstrap';
+import { Form, Button, Card, Row, Col, CloseButton, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';

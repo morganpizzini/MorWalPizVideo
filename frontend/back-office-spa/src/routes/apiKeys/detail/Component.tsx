@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLoaderData, Link, useFetcher, useNavigate } from 'react-router';
+import { useLoaderData, Link, useNavigate } from 'react-router';
 import { Card, Badge, Button, Modal, Alert } from 'react-bootstrap';
 import { ApiKeyDto, RegenerateApiKeyResponse } from '../../../models';
 import PageHeader from '@components/PageHeader';

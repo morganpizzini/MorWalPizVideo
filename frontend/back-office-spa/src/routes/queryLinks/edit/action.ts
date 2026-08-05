@@ -20,7 +20,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         return data({ success: false, errors }, { status: 400 });
     }
 
-    return put(ComposeUrl(endpoints.QUERYLINKS_DETAIL, { querylinkId: params.id }), values)
+    return put(ComposeUrl(endpoints.QUERYLINKS_DETAIL, { querylinkId: params.id! }), values)
         .then(() => {
             return data({ success: true }, { status: 201 });
         })

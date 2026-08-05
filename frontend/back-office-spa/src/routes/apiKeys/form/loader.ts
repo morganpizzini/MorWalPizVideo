@@ -1,6 +1,7 @@
 import { get, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import type { LoaderFunctionArgs } from 'react-router';
 
-export default async function loader({ params }: { params: { id?: string } }) {
+export default async function loader({ params }: LoaderFunctionArgs) {
   if (params.id) {
     try {
       const response = await get(ComposeUrl(endpoints.APIKEYS_DETAIL, { id: encodeURIComponent(params.id) }));

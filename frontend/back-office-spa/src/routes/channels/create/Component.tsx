@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
 import { useNavigate, useFetcher } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
-// import { useToast } from '@components/ToastNotification/ToastContext';
+import { useToast } from '@components/ToastNotification/ToastContext';
 import { CreateChannelDTO } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 
@@ -11,6 +11,7 @@ const CreateChannel: React.FC = () => {
   const [model, setModel] = useState<CreateChannelDTO>({
     channelName: '',
     yTChannelId: '',
+    mine: false,
   });
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();

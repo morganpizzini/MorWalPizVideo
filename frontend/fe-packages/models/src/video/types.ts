@@ -25,6 +25,9 @@ export interface VideoRef {
   youtubeId: string;
   categories: CategoryRef[];
   channelIds: string[];
+  title?: string;
+  description?: string;
+  publishedAt?: string;
 }
 
 /**

@@ -19,7 +19,6 @@ const Card: React.FC<CardProps> = ({
   subtitle,
   content,
   link,
-  buttonText = 'Go somewhere',
   icon: Icon,
   gradientColors = ['red', 'blue'],
   isSmall = false,

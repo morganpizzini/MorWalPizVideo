@@ -41,10 +41,10 @@ const Compilations: React.FC = () => {
   const confirmDelete = () => {
     if (!selectedCompilation) return;
     const actionPath = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
+    const formData = new FormData();
+    if (selectedCompilation.id) formData.append('id', selectedCompilation.id);
     fetcher.submit(
-      {
-        id: selectedCompilation.id,
-      },
+      formData,
       {
         method: 'post',
         action: actionPath,

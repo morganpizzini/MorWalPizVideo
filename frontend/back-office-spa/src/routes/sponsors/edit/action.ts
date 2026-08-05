@@ -1,10 +1,11 @@
 import { updateSponsorWithImage } from '@morwalpizvideo/services';
+import type { ActionFunctionArgs } from 'react-router';
 
-export default async function action({ request, params }: { request: Request; params: { id: string } }) {
+export default async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
 
   try {
-    await updateSponsorWithImage(params.id, formData);
+    await updateSponsorWithImage(params.id!, formData);
     return { success: true };
   } catch (error) {
     console.error('Error updating sponsor:', error);

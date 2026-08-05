@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useLoaderData, useRevalidator } from 'react-router';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, ContentType, VideoRef } from '@morwalpizvideo/models';
+import { Match, ContentType, VideoRef, CategoryRef } from '@morwalpizvideo/models';
+import { patch } from '@morwalpizvideo/services';
 import VideoRefEditModal from '@components/VideoRefEditModal';
 
 
@@ -21,7 +22,6 @@ const Component: React.FC = () => {
   const revalidator = useRevalidator();
   const [showModal, setShowModal] = useState(false);
   const [selectedVideoRef, setSelectedVideoRef] = useState<VideoRef | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleEditVideoRef = (videoRef: VideoRef) => {
     setSelectedVideoRef(videoRef);
@@ -29,10 +29,9 @@ const Component: React.FC = () => {
   };
 
   const handleSaveVideoRef = async (updatedVideoRef: VideoRef) => {
-    setIsSaving(true);
     try {
       // Update the video ref via API
-      await apiService.patch(`api/videos/${match.id}/videorefs/${updatedVideoRef.youtubeId}`, {
+      await patch(`api/videos/${match.id}/videorefs/${updatedVideoRef.youtubeId}`, {
         categories: updatedVideoRef.categories
       });
       setShowModal(false);
@@ -43,7 +42,6 @@ const Component: React.FC = () => {
       console.error('Failed to update video ref:', error);
       alert('Failed to update video reference. Please try again.');
     } finally {
-      setIsSaving(false);
     }
   };
 
@@ -76,7 +74,7 @@ const Component: React.FC = () => {
             <Card.Body>
               <Row>
                 <Col sm={3}><strong>Match ID:</strong></Col>
-                <Col sm={9}><code>{match.contentId}</code></Col>
+                <Col sm={9}><code>{match.matchId}</code></Col>
               </Row>
               <hr />
               <Row>
@@ -220,7 +218,10 @@ const Component: React.FC = () => {
         videoRef={selectedVideoRef}
         onHide={() => setShowModal(false)}
         onSave={handleSaveVideoRef}
-        availableCategories={categories}
+        availableCategories={categories.map((category: Category): CategoryRef => ({
+          id: category.categoryId,
+          title: category.title,
+        }))}
       />
     </>
   );

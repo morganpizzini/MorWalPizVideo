@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
@@ -24,7 +23,7 @@ const mockShortLinks: ShortLink[] = [
     linkType: LinkType.YouTubeVideo,
     queryLinkIds: [],
     clicksCount: 42,
-  } as ShortLink,
+  } as unknown as ShortLink,
   {
     shortLinkId: '2',
     code: 'xyz789',
@@ -32,7 +31,7 @@ const mockShortLinks: ShortLink[] = [
     linkType: LinkType.YouTubeChannel,
     queryLinkIds: [],
     clicksCount: 10,
-  } as ShortLink,
+  } as unknown as ShortLink,
 ];
 
 const mockSubmit = vi.fn();

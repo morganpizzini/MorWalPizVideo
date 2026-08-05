@@ -130,7 +130,7 @@ const ShortLinks: React.FC = () => {
             <strong>Target:</strong> {selectedLink?.target}
           </p>
           <p>
-            <strong>Query String:</strong> {selectedLink?.queryString}
+            <strong>Target:</strong> {selectedLink?.target}
           </p>
         </Modal.Body>
         <Modal.Footer>

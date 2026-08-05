@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
@@ -18,8 +17,8 @@ vi.mock('react-router', async () => {
 });
 
 const mockChannels: Channel[] = [
-  { channelId: '1', channelName: 'MorWalPiz', yTChannelId: 'UC12345' },
-  { channelId: '2', channelName: 'WalPiz Extra', yTChannelId: 'UC67890' },
+  { channelId: '1', channelName: 'MorWalPiz', yTChannelId: 'UC12345', mine: false },
+  { channelId: '2', channelName: 'WalPiz Extra', yTChannelId: 'UC67890', mine: false },
 ];
 
 const mockSubmit = vi.fn();

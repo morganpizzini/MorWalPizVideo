@@ -60,9 +60,9 @@ const ConfigurationDetail: React.FC = () => {
           </dl>
         </Card.Body>
         <Card.Footer className="d-flex justify-content-between">
-          <Button as={Link} to={`/morwalpizconfigurations/${configuration.id}/edit`} variant="primary">
+          <Link to={`/morwalpizconfigurations/${configuration.id}/edit`} className="btn btn-primary">
             Edit
-          </Button>
+          </Link>
           <Button variant="danger" onClick={handleDelete}>
             Delete
           </Button>

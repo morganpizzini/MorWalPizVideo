@@ -11,7 +11,7 @@ const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_H
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: process.env.PORT || 5173,
+    port: Number(process.env.PORT) || 5173,
     proxy: {
       '^/api': {
         target,
@@ -26,10 +26,5 @@ export default defineConfig({
       '@config': fileURLToPath(new URL('./src/config', import.meta.url)),
       '@services': fileURLToPath(new URL('./src/services', import.meta.url))
     },
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
   },
 });
