@@ -43,6 +43,7 @@ var enableHangFire = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enabl
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
@@ -489,6 +490,41 @@ if (enableHangFire)
 }
 
 var app = builder.Build();
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(exception, "Unhandled request failure for {Path}", context.Request.Path);
+
+        var isDevelopmentDiagnosticsEnabled = app.Environment.IsDevelopment() && enableDev;
+        var statusCode = exception is MongoDB.Driver.MongoException
+            ? StatusCodes.Status503ServiceUnavailable
+            : StatusCodes.Status500InternalServerError;
+
+        if (isDevelopmentDiagnosticsEnabled)
+        {
+            await Results.Problem(
+                statusCode: statusCode,
+                title: "Unhandled request failure",
+                detail: MorWalPizVideo.BackOffice.Services.DiagnosticsRedactor.Redact(exception?.Message),
+                extensions: new Dictionary<string, object?>
+                {
+                    ["exceptionType"] = exception?.GetType().FullName,
+                    ["stackTrace"] = exception?.StackTrace
+                }).ExecuteAsync(context);
+            return;
+        }
+
+        await Results.Problem(
+            statusCode: statusCode,
+            title: statusCode == StatusCodes.Status503ServiceUnavailable
+                ? "Service temporarily unavailable"
+                : "An unexpected error occurred").ExecuteAsync(context);
+    });
+});
 
 if (enableHangFire)
 {
