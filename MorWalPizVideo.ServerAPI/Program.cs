@@ -104,7 +104,7 @@ builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
-builder.Services.AddScoped<IInsightsService, InsightsService>();
+//builder.Services.AddScoped<IInsightsService, InsightsService>();
 builder.Services.AddScoped<ILinksService, LinksService>();
 
 if (enableMock)
@@ -196,10 +196,10 @@ else
         httpClient.BaseAddress = new Uri("https://www.google.com/recaptcha/api/siteverify");
     });
     builder.Services.AddScoped<IRecaptchaService, RecaptchaService>();
-    builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
-    {
-        httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
-    });
+    //builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
+    //{
+    //    httpClient.BaseAddress = new Uri("https://www.googleapis.com/youtube/v3/videos");
+    //});
 }
 
 if (enableCache)
