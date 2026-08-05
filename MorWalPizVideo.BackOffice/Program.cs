@@ -24,7 +24,6 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
-using Azure.Core;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -77,36 +76,66 @@ builder.Services.AddCors(options =>
 if (enableKeyVault)
 {
     var keyVaultUrl = builder.Configuration["KeyVaultUrl"];
-    if (!string.IsNullOrEmpty(keyVaultUrl))
+    if (string.IsNullOrWhiteSpace(keyVaultUrl))
     {
-        try
-        {
-            var tokenCredentialType = Type.GetType("Azure.Identity.DefaultAzureCredential, Azure.Core");
-            if (tokenCredentialType is null)
-            {
-                throw new InvalidOperationException("Unable to resolve Azure.Identity.DefaultAzureCredential from Azure.Core.");
-            }
+        var message = "EnableKeyVault is true but KeyVaultUrl is not configured.";
+        if (!enableMock && !builder.Environment.IsDevelopment())
+            throw new InvalidOperationException(message);
 
-            var tokenCredential = Activator.CreateInstance(tokenCredentialType) as TokenCredential;
-            if (tokenCredential is null)
-            {
-                throw new InvalidOperationException("Failed to create Azure token credential instance.");
-            }
-
-            builder.Configuration.AddAzureKeyVault(
-                new Uri(keyVaultUrl),
-                tokenCredential);
-        }
-        catch (Exception ex)
-        {
-            // Log the exception and continue without KeyVault
-            // This allows the application to start even if KeyVault is unavailable
-            Console.WriteLine($"Warning: Could not connect to KeyVault at {keyVaultUrl}: {ex.Message}");
-        }
+        Console.WriteLine($"Warning: {message}");
     }
     else
     {
-        Console.WriteLine("Warning: EnableKeyVault is true but KeyVaultUrl is not configured");
+        try
+        {
+            var keyVaultUri = new Uri(keyVaultUrl, UriKind.Absolute);
+            builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
+            Console.WriteLine($"Azure Key Vault configuration provider registered for {keyVaultUri.Host}.");
+        }
+        catch (Exception ex)
+        {
+            var message = $"Azure Key Vault configuration could not be loaded from {GetSafeHost(keyVaultUrl)}. " +
+                          $"{ex.GetType().Name}: {ex.Message}";
+            if (!enableMock && !builder.Environment.IsDevelopment())
+                throw new InvalidOperationException(message, ex);
+
+            Console.WriteLine($"Warning: {message}");
+        }
+    }
+}
+
+if (!enableMock && !builder.Environment.IsDevelopment())
+{
+    ValidateRequiredConfiguration(builder.Configuration);
+}
+
+static string GetSafeHost(string value)
+    => Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri.Host : "invalid-url";
+
+static void ValidateRequiredConfiguration(IConfiguration configuration)
+{
+    var requiredValues = new Dictionary<string, string?>
+    {
+        ["MorWalPizDatabase:ConnectionString"] = configuration["MorWalPizDatabase:ConnectionString"],
+        ["MorWalPizDatabase:DatabaseName"] = configuration["MorWalPizDatabase:DatabaseName"],
+        ["AzureConfig:OpenAi:DeploymentName"] = configuration["AzureConfig:OpenAi:DeploymentName"],
+        ["AzureConfig:OpenAi:OpenAiEndpoint"] = configuration["AzureConfig:OpenAi:OpenAiEndpoint"],
+        ["AzureConfig:OpenAi:OpenAiKey"] = configuration["AzureConfig:OpenAi:OpenAiKey"],
+        ["JwtSettings:Secret"] = configuration["JwtSettings:Secret"]
+    };
+
+    if (string.Equals(requiredValues["JwtSettings:Secret"], "your-super-secret-key-with-at-least-32-characters", StringComparison.Ordinal))
+        requiredValues["JwtSettings:Secret"] = null;
+
+    var missingValues = requiredValues
+        .Where(item => string.IsNullOrWhiteSpace(item.Value))
+        .Select(item => item.Key)
+        .ToArray();
+
+    if (missingValues.Length > 0)
+    {
+        throw new InvalidOperationException(
+            $"Required production configuration is missing: {string.Join(", ", missingValues)}.");
     }
 }
 

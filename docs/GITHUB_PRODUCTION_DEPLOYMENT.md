@@ -282,12 +282,22 @@ az webapp config appsettings set \
   --resource-group rg-morwalpiz-prod \
   --name morwalpiz-backoffice-api \
   --settings \
-    MorWalPizDatabase__ConnectionString="<mongodb-connection-string>" \
-    AzureConfig__OpenAi__OpenAiKey="<openai-key>" \
-    AzureConfig__OpenAi__OpenAiEndpoint="<openai-endpoint>" \
-    JwtSettings__Secret="<jwt-secret>" \
-    KeyVaultUrl="<keyvault-url>"
+    FeatureManagement__EnableKeyVault=true \
+    KeyVaultUrl="https://<keyvault-name>.vault.azure.net/"
 ```
+
+The BackOffice API loads production secrets from Key Vault using its App Service managed identity. Assign the `Key Vault Secrets User` role to that identity on the vault. Secret names must use `--` for configuration hierarchy:
+
+```text
+MorWalPizDatabase--ConnectionString
+MorWalPizDatabase--DatabaseName
+AzureConfig--OpenAi--DeploymentName
+AzureConfig--OpenAi--OpenAiEndpoint
+AzureConfig--OpenAi--OpenAiKey
+JwtSettings--Secret
+```
+
+The API fails during startup when Key Vault is enabled but cannot be loaded, or when the required production settings are still missing. This prevents silent fallback to empty or development configuration.
 
 ## Manual Setup Checklist
 

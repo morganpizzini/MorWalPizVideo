@@ -31,6 +31,7 @@ public sealed class DevelopmentDiagnosticsController : ControllerBase
         var database = _configuration.GetSection("MorWalPizDatabase");
         var jwt = _configuration.GetSection("JwtSettings");
         var azureOpenAi = _configuration.GetSection("AzureConfig:OpenAi");
+        var keyVaultUrl = _configuration["KeyVaultUrl"];
 
         return Ok(new
         {
@@ -41,6 +42,14 @@ public sealed class DevelopmentDiagnosticsController : ControllerBase
                 enableMock = _configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock),
                 enableKeyVault = _configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault),
                 enableSwagger = _configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger)
+            },
+            keyVault = new
+            {
+                enabled = _configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault),
+                urlConfigured = HasValue(keyVaultUrl),
+                host = Uri.TryCreate(keyVaultUrl, UriKind.Absolute, out var keyVaultUri)
+                    ? keyVaultUri.Host
+                    : null
             },
             mongo = new
             {

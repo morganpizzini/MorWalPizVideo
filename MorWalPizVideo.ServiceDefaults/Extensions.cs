@@ -108,27 +108,27 @@ public static class Extensions
         {
             Predicate = r => r.Tags.Contains("live"),
             ResponseWriter = WriteHealthCheckResponse
-        });
+        }).AllowAnonymous();
 
         // Readiness probe - external dependencies ready
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("ready"),
             ResponseWriter = WriteHealthCheckResponse
-        });
+        }).AllowAnonymous();
 
         // Startup probe - critical startup dependencies
         app.MapHealthChecks("/health/startup", new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("startup"),
             ResponseWriter = WriteHealthCheckResponse
-        });
+        }).AllowAnonymous();
 
         // General health endpoint - all checks
         app.MapHealthChecks("/health", new HealthCheckOptions
         {
             ResponseWriter = WriteHealthCheckResponse
-        });
+        }).AllowAnonymous();
 
         // Legacy endpoint for backward compatibility (development only)
         if (app.Environment.IsDevelopment())
@@ -136,7 +136,7 @@ public static class Extensions
             app.MapHealthChecks("/alive", new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
-            });
+            }).AllowAnonymous();
         }
 
         return app;

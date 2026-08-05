@@ -69,7 +69,7 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | `EnableMock` | Swaps every repository + most external services for the code-initialized `PrimaryScenario`. Lets the API run with no MongoDB / no third-party creds. |
 | `EnableHangFire` | Disabled by default. When enabled, requires durable SQL configuration, registers the server and recurring jobs, and mounts the admin-only dashboard at `/hangfire`. |
 | `EnableSwagger` | Mounts Swagger UI at `/swagger` with both `Bearer` and `ApiKey` security schemes. |
-| `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using `DefaultAzureCredential`. Falls back gracefully if unreachable. |
+| `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using the App Service managed identity through `DefaultAzureCredential`. Production startup fails if the provider cannot load or required settings are missing. |
 | `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
 
 ### 2.3 Health Checks
