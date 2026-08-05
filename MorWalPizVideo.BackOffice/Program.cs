@@ -1,4 +1,5 @@
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -411,6 +412,11 @@ else
     else
         builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
+    builder.Services.AddSingleton<BlobServiceClient>(provider =>
+    {
+        var options = provider.GetRequiredService<IOptions<BlobStorageOptions>>().Value;
+        return BlobStorageClientFactory.Create(options, new DefaultAzureCredential());
+    });
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
     builder.Services.AddScoped<IMongoIndexOperationsService, MongoIndexOperationsService>();

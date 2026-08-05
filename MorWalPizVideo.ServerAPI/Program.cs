@@ -1,6 +1,7 @@
 using MorWalPizVideo.ServerAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -180,6 +181,11 @@ else
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
+    builder.Services.AddSingleton<BlobServiceClient>(provider =>
+    {
+        var options = provider.GetRequiredService<IOptions<BlobStorageOptions>>().Value;
+        return BlobStorageClientFactory.Create(options, new DefaultAzureCredential());
+    });
     builder.Services.AddScoped<IBlobService, BlobService>();
 
     // Configure MongoDB using Options pattern with lazy loading
