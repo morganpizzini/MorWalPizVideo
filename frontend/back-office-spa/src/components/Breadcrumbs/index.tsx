@@ -52,9 +52,9 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
 
   // Function to get entity name
   const getEntityName = (segment: string): string =>
-      entity?.breadcrumbIdentifier ? entity.breadcrumbIdentifier
-          : segment;
- 
+    entity?.breadcrumbIdentifier ? entity.breadcrumbIdentifier
+      : segment;
+
 
   return (
     <div className="d-flex align-items-center mt-3 mb-3">
@@ -84,7 +84,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
 
           // Get the appropriate label
           const label = isId ? getEntityName(segment) : labels[segment] || segment;
-          
+
           return (
             <Breadcrumb.Item
               key={url}

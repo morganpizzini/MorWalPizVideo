@@ -80,11 +80,11 @@ import { requireBackOfficeAccess } from '../guards';
  * These routes are rendered within the PrimaryLayout component
  */
 export const protectedRoutes: RouteConfig[] = [
-  { 
-    index: true, 
-    path: '', 
-    Component: Home, 
-    errorElement: createErrorElement() 
+  {
+    index: true,
+    path: '',
+    Component: Home,
+    errorElement: createErrorElement()
   },
 
   { path: 'diagnostics', Component: Diagnostics, errorElement: createErrorElement() },
@@ -94,7 +94,7 @@ export const protectedRoutes: RouteConfig[] = [
     Component: RbacManagement,
     errorElement: createErrorElement(),
   },
-  
+
   // Calendar Events
   createRouteGroup('calendarevents', {
     action: CalendarEvents.Action,

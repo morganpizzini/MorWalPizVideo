@@ -61,6 +61,12 @@ Token normalization uses `ToLowerInvariant()` semantics to keep group and permis
 
 The BackOffice SPA `/rbac` route has a route-level guard that calls the authenticated `/api/auth/validate` flow and checks the returned effective-permission union. The server response is authoritative; `localStorage.auth_user` is display-only and cannot grant access. A valid session without canonical `canaccessbackoffice` is redirected to `/`, while an invalid session is redirected to `/login`. The API remains protected independently by `AllowUser`.
 
+### First-admin bootstrap
+
+`POST /api/user/bootstrap-admin/{username}` is an operational bootstrap endpoint. It is anonymous only because no authenticated administrator exists yet; it still requires `X-Bootstrap-Secret` matching protected `BootstrapSettings:Secret` configuration. Empty configuration disables the endpoint. The endpoint accepts only an existing active username, creates or repairs the `admin` group with `canaccessbackoffice`, and assigns that group membership. It refuses to run after any active user already has BackOffice access, including legacy `CanAccessBackoffice`, direct permission, or active-group permission. It never creates a user or predictable password.
+
+Operators must remove or rotate the bootstrap secret after first use. The legacy `/api/user/init/{username}` route remains compatibility-only and must not be used for new administrator provisioning.
+
 ## API-Key Authentication
 
 API keys support VideoImporter, InsightScanner, and selected machine workflows. Store only secure hashes, show raw keys once, enforce expiry and revocation, rate-limit using shared state when scaled horizontally, and trust forwarded client IP headers only behind configured proxies.

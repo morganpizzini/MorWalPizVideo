@@ -60,6 +60,8 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
                 ["JwtSettings:Secret"] = "test-secret-key-for-testing-purposes-only-min-32-chars",
                 ["JwtSettings:Issuer"] = "MorWalPizVideo.BackOffice.Tests",
                 ["JwtSettings:Audience"] = "MorWalPizVideo.BackOffice.Tests"
+                ,
+                ["BootstrapSettings:Secret"] = "test-bootstrap-secret"
             });
         });
 
@@ -67,7 +69,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
         builder.ConfigureTestServices(services =>
         {
             // Mock external services to prevent real HTTP calls during tests
-      
+
             services.AddScoped<IDiscordService, DiscordServiceMock>();
             services.AddScoped<ITelegramService, TelegramServiceMock>();
             services.AddScoped<ICrossApiService, MockCrossApiService>();

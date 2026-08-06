@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -20,10 +23,20 @@ namespace MorWalPizVideo.BackOffice.Controllers
     public class UserController : ApplicationControllerBase
     {
         private readonly DataService _dataService;
+        private readonly IUserGroupRepository _userGroupRepository;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<UserController> _logger;
 
-        public UserController(DataService dataService)
+        public UserController(
+            DataService dataService,
+            IUserGroupRepository userGroupRepository,
+            IConfiguration configuration,
+            ILogger<UserController> logger)
         {
             _dataService = dataService;
+            _userGroupRepository = userGroupRepository;
+            _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -37,7 +50,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public async Task<ActionResult<UserContract>> GetUser(string id)
         {
             var user = await _dataService.GetUser(id);
-            
+
             if (user == null)
             {
                 return NotFound();
@@ -47,36 +60,99 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("init/{username}")]
-        public async Task<IActionResult> InitUsers([FromRoute]string username)
+        [HttpPost("bootstrap-admin/{username}")]
+        public async Task<IActionResult> BootstrapAdmin(string username)
         {
-            var user = await _dataService.GetUserByUsername(username);
-            if (user != null)
-                return Ok();
-
-            var salt = GenerateSalt();
-            var passwordHash = HashPassword(username, salt);
-
-            user = new User
+            var configuredSecret = _configuration["BootstrapSettings:Secret"];
+            var suppliedSecret = Request.Headers["X-Bootstrap-Secret"].ToString();
+            if (string.IsNullOrWhiteSpace(configuredSecret) ||
+                !CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(configuredSecret),
+                    Encoding.UTF8.GetBytes(suppliedSecret)))
             {
-                Username = username,
-                Email = $"{username}@email.it",
-                PasswordHash = passwordHash,
-                Salt = salt,
-                Role = "User",
-                IsActive = true
-            };
+                return Unauthorized();
+            }
 
-            await _dataService.SaveUser(user);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest(new { message = "Username is required." });
+            }
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ContractUtils.Convert(user));
-        
+            var users = await _dataService.FetchUsers();
+            var groups = await _userGroupRepository.GetItemsAsync();
+            var groupsById = groups.ToDictionary(group => group.Id, StringComparer.OrdinalIgnoreCase);
+            var hasBackofficeUser = users.Any(user =>
+                user.IsActive &&
+                (user.CanAccessBackoffice ||
+                 user.DirectPermissions.Contains(
+                     AuthorizationPermissionKeys.CanAccessBackoffice,
+                     StringComparer.OrdinalIgnoreCase) ||
+                 (user.GroupIds ?? []).Any(groupId =>
+                     groupsById.TryGetValue(groupId, out var group) &&
+                     group.IsActive &&
+                     group.Permissions.Contains(
+                         AuthorizationPermissionKeys.CanAccessBackoffice,
+                         StringComparer.OrdinalIgnoreCase))));
+
+            if (hasBackofficeUser)
+            {
+                return Conflict(new { message = "Initial admin bootstrap is already complete." });
+            }
+
+            var user = users.FirstOrDefault(candidate =>
+                string.Equals(candidate.Username, username.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (user is null)
+            {
+                return NotFound(new { message = "User was not found." });
+            }
+
+            if (!user.IsActive)
+            {
+                return BadRequest(new { message = "User is inactive." });
+            }
+
+            var adminGroup = await _userGroupRepository.GetByCodeAsync(AuthorizationGroupCodes.Admin);
+            if (adminGroup is null)
+            {
+                adminGroup = await _userGroupRepository.AddItemAsync(new UserGroup
+                {
+                    Code = AuthorizationGroupCodes.Admin,
+                    Name = "Administrators",
+                    Description = "Initial platform administrators.",
+                    IsActive = true,
+                    Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
+                });
+            }
+            else if (!adminGroup.Permissions.Contains(
+                         AuthorizationPermissionKeys.CanAccessBackoffice,
+                         StringComparer.OrdinalIgnoreCase))
+            {
+                adminGroup = adminGroup with
+                {
+                    Permissions = adminGroup.Permissions
+                        .Append(AuthorizationPermissionKeys.CanAccessBackoffice)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+                await _userGroupRepository.UpdateItemAsync(adminGroup);
+            }
+
+            if (!(user.GroupIds ?? []).Contains(adminGroup.Id, StringComparer.OrdinalIgnoreCase))
+            {
+                await _dataService.UpdateUser(user with
+                {
+                    GroupIds = (user.GroupIds ?? []).Append(adminGroup.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                });
+            }
+
+            _logger.LogInformation("Initial admin group assigned to user {Username}", user.Username);
+            return Ok(new { username = user.Username, group = AuthorizationGroupCodes.Admin });
         }
 
         [HttpPost]
         public async Task<ActionResult<object>> CreateUser([FromBody] CreateUserRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || 
+            if (string.IsNullOrWhiteSpace(request.Username) ||
                 string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password))
             {

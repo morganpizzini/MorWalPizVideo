@@ -9,10 +9,10 @@ import {
   Video,
   Image,
   Calendar,
-    Settings,
-    Key,
+  Settings,
+  Key,
   List
-  ,Activity,
+  , Activity,
   ShieldCheck
 } from 'lucide-react';
 
@@ -23,19 +23,19 @@ const Home: React.FC = () => {
       <p className="text-muted">Seleziona un opzione per proseguire</p>
       <hr />
       <Container>
-              <Row>
-                  <Col md={4} className="g-4">
-                      <Card
-                          title="Api key"
-                          subtitle="Navigate to the api key page"
-                          content="Click the button below to go to the api key page."
-                          link="/keys"
-                          buttonText="Go to Api Keys"
-                          icon={Key}
-                          isSmall={true}
-                          gradientColors={['#FF6B6B', '#4ECDC4']}
-                      />
-                  </Col>
+        <Row>
+          <Col md={4} className="g-4">
+            <Card
+              title="Api key"
+              subtitle="Navigate to the api key page"
+              content="Click the button below to go to the api key page."
+              link="/keys"
+              buttonText="Go to Api Keys"
+              icon={Key}
+              isSmall={true}
+              gradientColors={['#FF6B6B', '#4ECDC4']}
+            />
+          </Col>
           <Col md={4} className="g-4">
             <Card
               title="Diagnostics"

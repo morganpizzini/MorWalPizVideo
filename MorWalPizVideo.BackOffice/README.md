@@ -101,16 +101,19 @@ Login/logout/validate. Sets an `auth_token` HttpOnly Secure SameSite=None cookie
 | POST | `/validate` | `ValidateToken()` | Validates the `auth_token` cookie's signature & expiry. |
 
 #### `UserController` — `api/user`
-Admin user CRUD + bootstrap. `InitUsers` is `[AllowAnonymous]` and used **once** to seed the first admin account; do not expose in production once seeded.
+Admin user CRUD + controlled first-admin bootstrap. The bootstrap endpoint is anonymous at the authentication layer but requires a deployment secret and can run only while no active user has BackOffice access.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
 | GET | `/` | List all admin users. |
 | GET | `/{id}` | Get user by id. |
-| GET | `/init/{username}` *(anon)* | Bootstrap default admin user. |
+| POST | `/bootstrap-admin/{username}` *(secret-gated anon)* | Add existing active user to the `admin` group, create that group when missing, and ensure it contains `canaccessbackoffice`. Requires `X-Bootstrap-Secret`. |
+| GET | `/init/{username}` *(legacy anon)* | Legacy user bootstrap. Do not use for new deployments; disable or remove after migration. |
 | POST | `/` | Create user (`CreateUserRequest`). |
 | PUT | `/{id}` | Update user. |
 | PUT | `/{id}/status` | Activate/deactivate. |
 | DELETE | `/{id}` | Delete user. |
+
+Bootstrap configuration uses `BootstrapSettings:Secret` from protected configuration (environment variable, user secrets, Key Vault, or deployment secret store). Empty secret disables the endpoint. The operation does not create users or passwords, returns `401` for a missing/invalid secret, `404` for an unknown username, and `409` after initial BackOffice access already exists.
 
 #### `ApiKeysController` — `api/apikeys`
 CRUD for service-to-service API keys (model: [`ApiKey`](#52-apikey)). The plaintext key is returned **only at create/regenerate** time. This surface remains BackOffice-only and protected by explicit authenticated admin access. See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md).
