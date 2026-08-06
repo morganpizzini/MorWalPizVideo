@@ -42,6 +42,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
     shortlinks: 'Short Links',
     channels: 'Channels',
     videos: 'Videos',
+    rbac: 'RBAC',
     create: 'Create',
     edit: 'Edit',
   };

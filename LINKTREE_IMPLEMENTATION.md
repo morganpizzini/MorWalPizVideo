@@ -1,115 +1,65 @@
 # Linktree Implementation Summary
 
 ## Overview
-I have successfully extended the MorWalPiz application to support a linktree-like feature for YouTube videos related to matches. The implementation includes both backend API and frontend React components.
+The Linktree public feature remains active and has been aligned with the current architecture:
 
-## Backend Implementation
+- BackOffice no longer exposes YouTube-link management mutations.
+- Public Linktree now resolves link targets with URL-first priority.
+- Legacy `youTubeVideoId` is kept only as fallback compatibility data.
 
-### 1. Models Extended
-- **YouTubeVideoLink** (`MorWalPizVideo.Models/Models/YouTubeVideoLink.cs`)
-  - Content creator name
-  - YouTube video ID
-  - Generated image name
-  - ShortLink object with LinkType.YouTubeVideo
+## Current Backend Surface
 
-- **Match Model** (`MorWalPizVideo.Models/Models/Match.cs`)
-  - Added `YouTubeVideoLinks` array property
-  - Helper methods: `AddYouTubeVideoLink`, `RemoveYouTubeVideoLink`, `UpdateYouTubeVideoLink`
+Controller: `MorWalPizVideo.BackOffice/Controllers/YouTubeVideoLinksController.cs`
 
-### 2. Services Created
-- **ImageGenerationService** (`MorWalPizVideo.BackOffice/Services/ImageGenerationService.cs`)
-  - Generates unique creator images using text rendering
-  - Handles blob storage operations
-  - Reuses existing font infrastructure
+- `GET /api/YouTubeVideoLinks/{matchId}/links`
+  - Returns creator link cards for the requested match.
+  - Response shape includes: `shortLinkUrl`, `shortLinkCode`, `shortLinkTarget`, `directVideoUrl`, and legacy `youTubeVideoId`.
+- `GET /api/YouTubeVideoLinks/image/{imageName}`
+  - Returns creator image bytes (`image/png`) when available.
 
-- **IImageGenerationService** Interface
-  - `GenerateCreatorImageAsync` - Creates images for creators
-  - `GetExistingImageAsync` - Retrieves existing images
+Removed from active API scope:
 
-### 3. API Controller
-- **YouTubeVideoLinksController** (`MorWalPizVideo.BackOffice/Controllers/YouTubeVideoLinksController.cs`)
-  - `POST /api/YouTubeVideoLinks/create` - Creates new video links
-  - `GET /api/YouTubeVideoLinks/{matchId}/links` - Gets all links for a match
-  - `DELETE /api/YouTubeVideoLinks/{matchId}/links/{videoId}` - Removes links
-  - `GET /api/YouTubeVideoLinks/image/{imageName}` - Serves creator images
+- `POST /api/YouTubeVideoLinks/create`
+- `DELETE /api/YouTubeVideoLinks/{matchId}/links/{videoId}`
 
-### 4. DTOs
-- **CreateYouTubeVideoLinkRequest** - Input for creating links
-- **YouTubeVideoLinkResponse** - API response format
+## Link Target Resolution Order
 
-## Frontend Implementation
+Public Linktree client now resolves target URLs in this order:
 
-### 1. Service Layer
-- **linktree.js** (`morwalpizvideo.client/src/services/linktree.js`)
-  - `getMatchLinktree(matchId)` - Fetches video links
-  - `getMatch(matchId)` - Fetches match data
-  - `getCreatorImage(imageName)` - Returns image URL
+1. `shortLinkUrl`
+2. `/sl/{shortLinkCode}`
+3. `directVideoUrl`
+4. `https://www.youtube.com/watch?v={youTubeVideoId}` (legacy fallback)
 
-### 2. React Components
-- **Linktree Component** (`morwalpizvideo.client/src/routes/linktree.jsx`)
-  - Displays match information
-  - Shows video links as cards
-  - Handles clicks to open YouTube videos
-  - Fallback to initials if image fails
+This is implemented in:
 
-- **Loader** (`morwalpizvideo.client/src/routes/linktree.loader.js`)
-  - Loads match and video links data
-  - Error handling for missing data
+- `frontend/morwalpizvideo.client/src/routes/linktree.tsx`
 
-### 3. Styling
-- **linktree.scss** (`morwalpizvideo.client/src/routes/linktree.scss`)
-  - Mobile-responsive design
-  - Hover effects and animations
-  - Linktree-like visual appearance
+## Frontend Integration
 
-### 4. Routing
-- **Route Added**: `/linktree/:matchId`
-- Integrated into main React Router configuration
+Service and loader:
 
-## Usage
+- `frontend/morwalpizvideo.client/src/services/linktree.ts`
+- `frontend/morwalpizvideo.client/src/routes/linktree.loader.ts`
 
-### Creating Video Links (API)
-```javascript
-POST /api/YouTubeVideoLinks/create
-{
-  "matchId": "match123",
-  "contentCreatorName": "PewDiePie",
-  "youTubeVideoId": "dQw4w9WgXcQ",
-  "fontStyle": "Arial",
-  "fontSize": 48,
-  "textColor": "#FFFFFF",
-  "outlineColor": "#000000",
-  "outlineThickness": 2
-}
-```
+Route:
 
-### Accessing Linktree (Frontend)
-- URL: `/linktree/{matchId}`
-- Example: `/linktree/match123`
+- `/linktree/:matchId`
 
-### Features
-- ✅ Automatic image generation for creators
-- ✅ Short link creation and tracking
-- ✅ Mobile-responsive design
-- ✅ Error handling and fallbacks
-- ✅ SEO-friendly with meta tags
-- ✅ Accessibility support (keyboard navigation)
-- ✅ Analytics tracking ready
+Behavior:
 
-## Key Technical Decisions
+- Match metadata and link cards are loaded in parallel.
+- Cards are keyboard-accessible.
+- Creator image fallback to initials remains in place.
 
-1. **Image Generation**: Reused existing font rendering system for consistency
-2. **Short Links**: Each video gets its own trackable short link
-3. **Responsive Design**: Mobile-first approach with proper breakpoints
-4. **Error Handling**: Graceful fallbacks for missing images/data
-5. **Performance**: Images are cached in blob storage
-6. **SEO**: Proper meta tags and semantic HTML
+## Contracts and Types
 
-## Demo
-A visual demonstration is available in `LinktreeDemo.html` showing the expected UI behavior and styling.
+Updated response contract/type now treats `youTubeVideoId` as optional fallback:
 
-## Dependencies
-- Existing MorWalPiz infrastructure
-- ImageSharp for image generation
-- React Router for routing
-- Bootstrap for base styling
+- `MorWalPiz.Contracts/DTOs/YouTubeVideoLinkResponse.cs`
+- `frontend/fe-packages/models/src/youTubeVideoLink.ts`
+
+## Notes
+
+- Existing persisted records with only `youTubeVideoId` continue to work.
+- New UX and routing assume shortlink/direct-url first, without breaking older data.

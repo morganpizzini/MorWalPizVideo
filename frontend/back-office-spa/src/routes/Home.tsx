@@ -12,7 +12,8 @@ import {
     Settings,
     Key,
   List
-  ,Activity
+  ,Activity,
+  ShieldCheck
 } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -45,6 +46,18 @@ const Home: React.FC = () => {
               icon={Activity}
               isSmall={true}
               gradientColors={['#4facfe', '#00f2fe']}
+            />
+          </Col>
+          <Col md={4} className="g-4">
+            <Card
+              title="RBAC"
+              subtitle="Utenti, gruppi e permessi"
+              content="Gestisci gruppi MongoDB, membership utente e permessi diretti/in eredità."
+              link="/rbac"
+              buttonText="Apri RBAC"
+              icon={ShieldCheck}
+              isSmall={true}
+              gradientColors={['#36d1dc', '#5b86e5']}
             />
           </Col>
           <Col md={4} className="g-4">

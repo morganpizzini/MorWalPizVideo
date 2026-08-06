@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services;
 using RuntimeHealthCheckService = Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-[Authorize(Roles = "admin")]
+[AllowUser("admin", "contributor")]
 public sealed class DiagnosticsController : ApplicationControllerBase
 {
     private readonly RuntimeHealthCheckService _healthChecks;

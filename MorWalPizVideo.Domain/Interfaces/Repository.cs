@@ -430,6 +430,29 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class UserGroupRepository : BaseRepository<UserGroup>, IUserGroupRepository
+    {
+        public UserGroupRepository(IMongoDatabase database) : base(database, DbCollections.UserGroups)
+        {
+        }
+
+        public async Task<UserGroup?> GetByCodeAsync(string code)
+        {
+            var normalizedCode = code.Trim().ToLowerInvariant();
+            return await _collection.Find(group => group.Code.ToLower() == normalizedCode).FirstOrDefaultAsync();
+        }
+
+        public async Task<IList<UserGroup>> GetByIdsAsync(IList<string> groupIds)
+        {
+            if (groupIds.Count == 0)
+            {
+                return [];
+            }
+
+            return await _collection.Find(group => groupIds.Contains(group.Id)).ToListAsync();
+        }
+    }
+
     public class LoginAttemptRepository : BaseRepository<LoginAttempt>, ILoginAttemptRepository
     {
         public LoginAttemptRepository(IMongoDatabase database) : base(database, DbCollections.LoginAttempts)

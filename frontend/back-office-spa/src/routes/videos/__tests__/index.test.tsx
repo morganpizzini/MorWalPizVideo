@@ -43,26 +43,14 @@ describe('Videos Index', () => {
     await renderComponent();
     expect(screen.getByText('Importa Video')).toBeInTheDocument();
     expect(screen.getByText('Traduci Video')).toBeInTheDocument();
-    expect(screen.getByText('Crea Root Video')).toBeInTheDocument();
   });
 
-  it('renders the Crea Sub-Video card', async () => {
+  it('does not render obsolete video management cards', async () => {
     await renderComponent();
-    expect(screen.getByText('Crea Sub-Video')).toBeInTheDocument();
-  });
-
-  it('renders the Converti in Root card', async () => {
-    await renderComponent();
-    expect(screen.getByText('Converti in Root')).toBeInTheDocument();
-  });
-
-  it('renders the Cambia Thumbnail card', async () => {
-    await renderComponent();
-    expect(screen.getByText('Cambia Thumbnail')).toBeInTheDocument();
-  });
-
-  it('renders the YouTube Video Links card', async () => {
-    await renderComponent();
-    expect(screen.getByText('YouTube Video Links')).toBeInTheDocument();
+    expect(screen.queryByText('Crea Root Video')).not.toBeInTheDocument();
+    expect(screen.queryByText('Crea Sub-Video')).not.toBeInTheDocument();
+    expect(screen.queryByText('Converti in Root')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cambia Thumbnail')).not.toBeInTheDocument();
+    expect(screen.queryByText('YouTube Video Links')).not.toBeInTheDocument();
   });
 });

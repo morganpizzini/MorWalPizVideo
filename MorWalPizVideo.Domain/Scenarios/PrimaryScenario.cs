@@ -18,6 +18,8 @@ public class PrimaryScenario : BaseScenario
     public const string StandaloneShortLinkCode = "test1";
     public const string MatchShortLinkCode = "match1";
     public const string ChannelShortLinkCode = "channel1";
+    public const string AdminGroupId = "700000000000000000000001";
+    public const string ContributorGroupId = "700000000000000000000002";
 
     private static readonly DateTime CreatedAt = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -101,7 +103,9 @@ public class PrimaryScenario : BaseScenario
                 Salt = AdminPasswordSalt,
                 IsActive = true,
                 Role = "admin",
-                CanAccessBackoffice = true
+                CanAccessBackoffice = true,
+                DirectPermissions = [AuthorizationPermissionKeys.CanAccessBackoffice],
+                GroupIds = [AdminGroupId]
             },
             new User
             {
@@ -111,7 +115,33 @@ public class PrimaryScenario : BaseScenario
                 Email = "test-user@example.test",
                 IsActive = true,
                 Role = "user",
-                CanAccessBackoffice = true
+                CanAccessBackoffice = true,
+                DirectPermissions = [AuthorizationPermissionKeys.CanAccessBackoffice],
+                GroupIds = [ContributorGroupId]
+            }
+        ]);
+
+        Set("userGroups",
+        [
+            new UserGroup
+            {
+                Id = AdminGroupId,
+                CreationDateTime = CreatedAt,
+                Code = AuthorizationGroupCodes.Admin,
+                Name = "Administrators",
+                Description = "BackOffice administrators",
+                IsActive = true,
+                Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
+            },
+            new UserGroup
+            {
+                Id = ContributorGroupId,
+                CreationDateTime = CreatedAt,
+                Code = AuthorizationGroupCodes.Contributor,
+                Name = "Contributors",
+                Description = "BackOffice contributors",
+                IsActive = true,
+                Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
             }
         ]);
 

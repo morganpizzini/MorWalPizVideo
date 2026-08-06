@@ -74,7 +74,7 @@ const Component: React.FC = () => {
             <Card.Body>
               <Row>
                 <Col sm={3}><strong>Match ID:</strong></Col>
-                <Col sm={9}><code>{match.matchId}</code></Col>
+                <Col sm={9}><code>{match.matchId || match.id}</code></Col>
               </Row>
               <hr />
               <Row>

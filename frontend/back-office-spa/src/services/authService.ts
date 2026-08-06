@@ -11,6 +11,11 @@ interface LoginResponse {
   user: UserInfo;
 }
 
+interface AuthValidationResponse {
+  userId: string;
+  effectivePermissions: string[];
+}
+
 class AuthService {
   private readonly USER_KEY = 'auth_user';
 
@@ -85,15 +90,28 @@ class AuthService {
   }
 
   // Validate the session cookie with the backend
-  async validateToken(): Promise<boolean> {
+  async validateSession(): Promise<AuthValidationResponse | null> {
     try {
       const response = await post('/api/auth/validate', {});
-      return response !== null && response !== undefined && !response.errors;
+      if (response === null || response === undefined || response.errors || !response.userId) {
+        return null;
+      }
+
+      return {
+        userId: response.userId,
+        effectivePermissions: Array.isArray(response.effectivePermissions)
+          ? response.effectivePermissions.map((permission: string) => permission.trim().toLowerCase())
+          : [],
+      };
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  async validateToken(): Promise<boolean> {
+    return (await this.validateSession()) !== null;
   }
 }
 
 export const authService = new AuthService();
-export type { UserInfo, LoginResponse };
+export type { AuthValidationResponse, UserInfo, LoginResponse };

@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Models.Models;
@@ -27,9 +28,27 @@ public record User : BaseEntity
     [BsonElement("role")]
     public string Role { get; init; } = "User";
 
+    /// <summary>Direct permission keys assigned to this user (lowercase invariant).</summary>
+    [BsonElement("directPermissions")]
+    public List<string> DirectPermissions { get; init; } = new();
+
+    /// <summary>Group IDs this user belongs to.</summary>
+    [BsonElement("groupIds")]
+    public List<string> GroupIds { get; init; } = new();
+
     /// <summary>Flag to grant access to the BackOffice admin interface.</summary>
     [BsonElement("canAccessBackoffice")]
     public bool CanAccessBackoffice { get; init; } = false;
+
+    /// <summary>
+    /// Legacy compatibility bridge: expose canAccessBackoffice as a canonical permission.
+    /// New authorization should use DirectPermissions + Groups.
+    /// </summary>
+    [BsonIgnore]
+    public bool HasLegacyBackOfficePermission =>
+        CanAccessBackoffice ||
+        DirectPermissions.Any(permission =>
+            string.Equals(permission, AuthorizationPermissionKeys.CanAccessBackoffice, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>List of Web Push subscription endpoints/keys for browser push notifications.</summary>
     [BsonElement("pushSubscriptions")]

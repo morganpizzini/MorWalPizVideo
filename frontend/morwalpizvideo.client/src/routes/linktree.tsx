@@ -3,21 +3,45 @@ import { Helmet } from "react-helmet-async";
 import { getCreatorImage } from "@services/linktree";
 import "./linktree.scss";
 
-interface VideoLinkItem { contentCreatorName: string; shortLinkCode?: string; youTubeVideoId?: string; imageName?: string }
+interface VideoLinkItem {
+    contentCreatorName: string;
+    shortLinkUrl?: string;
+    shortLinkCode?: string;
+    directVideoUrl?: string;
+    youTubeVideoId?: string;
+    imageName?: string;
+}
 interface MatchInfo { title?: string; description?: string }
 
 export default function Linktree() {
     const { match, videoLinks } = useLoaderData() as { match: MatchInfo; videoLinks: VideoLinkItem[] };
 
-    const handleVideoLinkClick = (videoLink: VideoLinkItem) => {
-        // Track click analytics if needed
-        console.log(`Clicked on ${videoLink.contentCreatorName}'s video`);
-        
-        // Open the short link or YouTube video
+    const resolveTargetUrl = (videoLink: VideoLinkItem): string | null => {
+        if (videoLink.shortLinkUrl) {
+            return videoLink.shortLinkUrl;
+        }
+
         if (videoLink.shortLinkCode) {
-            window.open(`/sl/${videoLink.shortLinkCode}`, '_blank');
-        } else {
-            window.open(`https://www.youtube.com/watch?v=${videoLink.youTubeVideoId}`, '_blank');
+            return `/sl/${videoLink.shortLinkCode}`;
+        }
+
+        if (videoLink.directVideoUrl) {
+            return videoLink.directVideoUrl;
+        }
+
+        // Legacy fallback for existing data that only stores YouTubeVideoId.
+        if (videoLink.youTubeVideoId) {
+            return `https://www.youtube.com/watch?v=${videoLink.youTubeVideoId}`;
+        }
+
+        return null;
+    };
+
+    const handleVideoLinkClick = (videoLink: VideoLinkItem) => {
+        console.log(`Clicked on ${videoLink.contentCreatorName}'s video`);
+        const targetUrl = resolveTargetUrl(videoLink);
+        if (targetUrl) {
+            window.open(targetUrl, '_blank');
         }
     };
 
@@ -59,7 +83,10 @@ export default function Linktree() {
                             <p>Torna più tardi per vedere i contenuti dei creator!</p>
                         </div>
                     ) : (
-                        videoLinks.map((videoLink: VideoLinkItem, index: number) => (
+                        videoLinks.map((videoLink: VideoLinkItem, index: number) => {
+                            const targetUrl = resolveTargetUrl(videoLink);
+
+                            return (
                             <div
                                 key={index}
                                 className="video-link"
@@ -78,10 +105,7 @@ export default function Linktree() {
                                         <div className="creator-name">
                                             {videoLink.contentCreatorName}
                                         </div>
-                                        <div className="video-info">
-                                            <span className="youtube-icon">📺</span>
-                                            Guarda su YouTube
-                                        </div>
+                                        <div className="video-info">Apri contenuto</div>
                                     </div>
                                     
                                     {videoLink.imageName ? (
@@ -109,15 +133,15 @@ export default function Linktree() {
                                     </div>
                                 </div>
                                 
-                                {videoLink.shortLinkCode && (
+                                {targetUrl && (
                                     <div className="short-link-info">
                                         <span className="short-link">
-                                            morwal.tv/sl/{videoLink.shortLinkCode}
+                                            {videoLink.shortLinkUrl || (videoLink.shortLinkCode ? `morwal.tv/sl/${videoLink.shortLinkCode}` : targetUrl)}
                                         </span>
                                     </div>
                                 )}
                             </div>
-                        ))
+                        )})
                     )}
                 </div>
                 

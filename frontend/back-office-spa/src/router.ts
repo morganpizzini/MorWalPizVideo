@@ -5,11 +5,8 @@ import { protectedRoutes } from './router/routes';
 import { authService } from './services/authService';
 
 async function authLoader() {
-  if (!authService.isAuthenticated()) {
-    return redirect('/login');
-  }
-  const isValid = await authService.validateToken();
-  if (!isValid) {
+  const session = await authService.validateSession();
+  if (!session) {
     localStorage.removeItem('auth_user');
     return redirect('/login');
   }

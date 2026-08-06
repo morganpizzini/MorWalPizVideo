@@ -24,9 +24,20 @@ public sealed class DiagnosticsTests : IClassFixture<BackOfficeWebApplicationFac
     }
 
     [Fact]
-    public async Task Diagnostics_is_forbidden_to_contributors()
+    public async Task Diagnostics_allows_contributors()
     {
         using var client = CreateClient("contributor");
+
+        var response = await client.GetAsync("/api/Diagnostics");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Diagnostics_is_forbidden_when_neither_group_nor_permission_matches()
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", "no-access-user");
 
         var response = await client.GetAsync("/api/Diagnostics");
 

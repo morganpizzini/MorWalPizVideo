@@ -65,15 +65,13 @@ This document tracks the remaining files that need to be updated to use apiServi
 - `src/routes/videos/edit/action.ts`
 - `src/routes/videos/import/loader.ts`
 - `src/routes/videos/import/action.ts`
-- `src/routes/videos/create-root/loader.ts`
-- `src/routes/videos/create-root/action.ts`
-- `src/routes/videos/create-sub-video/loader.ts`
-- `src/routes/videos/create-sub-video/action.ts`
-- `src/routes/videos/convert-to-root/loader.ts`
-- `src/routes/videos/convert-to-root/action.ts`
-- `src/routes/videos/swap-thumbnail/loader.ts`
-- `src/routes/videos/swap-thumbnail/action.ts`
 - `src/routes/videos/translate/action.ts`
+
+Obsolete and retired video routes:
+- `src/routes/videos/create-root/*`
+- `src/routes/videos/create-sub-video/*`
+- `src/routes/videos/convert-to-root/*`
+- `src/routes/videos/swap-thumbnail/*`
 
 ### Images
 - `src/routes/images/upload/loader.ts`

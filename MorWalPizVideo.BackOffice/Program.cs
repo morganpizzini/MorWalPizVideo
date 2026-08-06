@@ -10,6 +10,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
@@ -18,6 +19,7 @@ using MorWalPizVideo.BackOffice.Services.Factories;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
@@ -275,6 +277,10 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, AllowUserPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, AllowUserAuthorizationHandler>();
+builder.Services.AddScoped<IUserAuthorizationEvaluator, UserAuthorizationEvaluator>();
+builder.Services.AddScoped<IUserAccessResolver, UserAccessResolver>();
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -332,6 +338,7 @@ if (enableMock)
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
     builder.Services.AddScoped<IUserRepository, UserMockRepository>();
+    builder.Services.AddScoped<IUserGroupRepository, UserGroupMockRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptMockRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>(); // Example for
 
@@ -407,6 +414,7 @@ else
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IUserGroupRepository, UserGroupRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();

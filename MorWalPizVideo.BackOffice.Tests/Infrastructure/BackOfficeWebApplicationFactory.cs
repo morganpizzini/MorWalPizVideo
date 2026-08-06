@@ -110,14 +110,30 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
+        var userId = "test-user-id";
+        if (Request.Headers.TryGetValue("X-Test-UserId", out var headerUserId) && !string.IsNullOrWhiteSpace(headerUserId))
+        {
+            userId = headerUserId.ToString();
+        }
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, "test-user"),
-            new(ClaimTypes.NameIdentifier, "test-user-id")
+            new(ClaimTypes.NameIdentifier, userId)
         };
         if (Request.Headers.TryGetValue("X-Test-Role", out var role) && !string.IsNullOrWhiteSpace(role))
         {
             claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+        }
+
+        if (Request.Headers.TryGetValue("X-Test-Permissions", out var permissionsHeader) && !string.IsNullOrWhiteSpace(permissionsHeader))
+        {
+            foreach (var permission in permissionsHeader
+                .ToString()
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                claims.Add(new Claim("permission", permission));
+            }
         }
 
         var identity = new ClaimsIdentity(claims, "Test");

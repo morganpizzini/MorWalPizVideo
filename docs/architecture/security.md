@@ -42,6 +42,25 @@ BackOffice uses JWT bearer and can read a secure cookie. Implemented browser pos
 
 The SPA stores display-only user information in local storage; the browser JWT remains in the HttpOnly cookie.
 
+## BackOffice RBAC
+
+BackOffice authorization uses `AllowUserAttribute` with dynamic policy resolution and evaluates access using a normalized lowercase model:
+
+- Real MongoDB `userGroups` documents (`UserGroup`) define reusable group codes and permission keys.
+- Each user can belong to multiple groups via `User.GroupIds`.
+- Users can have direct permission keys via `User.DirectPermissions`.
+- Effective permissions are: direct permissions union active-group permissions.
+- Legacy `User.CanAccessBackoffice` is treated as canonical permission key `canaccessbackoffice` for backward compatibility.
+
+`[AllowUser(...)]` semantics are OR-based and support both syntaxes:
+
+- `[AllowUser("admin", "contributor")]`: authorize when the principal has one of the required group codes OR one of the same permission keys.
+- `[AllowUser("canAccessBackOffice")]`: authorize when the principal has the required permission directly, inherited from a group, or supplied as an equivalent claim.
+
+Token normalization uses `ToLowerInvariant()` semantics to keep group and permission matching case-insensitive and stable across persisted data and claims.
+
+The BackOffice SPA `/rbac` route has a route-level guard that calls the authenticated `/api/auth/validate` flow and checks the returned effective-permission union. The server response is authoritative; `localStorage.auth_user` is display-only and cannot grant access. A valid session without canonical `canaccessbackoffice` is redirected to `/`, while an invalid session is redirected to `/login`. The API remains protected independently by `AllowUser`.
+
 ## API-Key Authentication
 
 API keys support VideoImporter, InsightScanner, and selected machine workflows. Store only secure hashes, show raw keys once, enforce expiry and revocation, rate-limit using shared state when scaled horizontally, and trust forwarded client IP headers only behind configured proxies.
@@ -88,4 +107,4 @@ Reject lookalike suffixes. Configure AllowedHosts and forwarded-header trusted n
 
 ## Security Verification
 
-Required tests include authorization matrices, CSRF, CORS, cookie tampering, cross-cart denial, expired/revoked credentials, unsafe redirects, hidden storage keys, private Blob access, SAS expiry, rate limits, and secret-scanner CI gates.
+Required tests include authorization matrices, CSRF, CORS, cookie tampering, cookie-backed validation effective-permission responses, SPA RBAC route allow/deny cases, cross-cart denial, expired/revoked credentials, unsafe redirects, hidden storage keys, private Blob access, SAS expiry, rate limits, and secret-scanner CI gates.

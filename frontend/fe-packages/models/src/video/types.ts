@@ -74,25 +74,6 @@ export interface VideoImportRequest {
   categories: string[];
 }
 
-export interface SwapRootThumbnailRequest {
-  currentVideoId: string;
-  newVideoId: string;
-}
-
-export interface RootCreationRequest {
-  videoId: string;
-  title: string;
-  description: string;
-  url: string;
-  categories: string[];
-}
-
-export interface SubVideoCrationRequest {
-  matchId: string;
-  videoId: string;
-  categories: string[];
-}
-
 export interface Compilation {
   id?: string;
   title: string;

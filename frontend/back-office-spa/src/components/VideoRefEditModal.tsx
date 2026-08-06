@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
 import { VideoRef, CategoryRef } from '../models/video/types';
 
+type CategoryWithFallbackId = CategoryRef & { categoryId?: string };
+
+const getCategoryId = (category: CategoryWithFallbackId): string =>
+  category.id ?? category.categoryId ?? '';
+
 interface VideoRefEditModalProps {
   show: boolean;
   videoRef: VideoRef | null;
@@ -21,7 +26,11 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
 
   useEffect(() => {
     if (videoRef) {
-      setCategories(videoRef.categories);
+      const normalizedCategories = (videoRef.categories as CategoryWithFallbackId[]).map(category => ({
+        id: getCategoryId(category),
+        title: category.title,
+      }));
+      setCategories(normalizedCategories.filter(category => category.id.length > 0));
     }
   }, [videoRef]);
 
@@ -29,12 +38,12 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
   const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const categoryId = e.target.value;
     if (e.target.checked) {
-      const category = availableCategories.find(cat => cat.id === categoryId);
+      const category = availableCategories.find(cat => getCategoryId(cat as CategoryWithFallbackId) === categoryId);
       if (category) {
-        setCategories([...categories, category]);
+        setCategories([...categories, { id: getCategoryId(category as CategoryWithFallbackId), title: category.title }]);
       }
     } else {
-      setCategories(categories.filter(cat => cat.id !== categoryId));
+      setCategories(categories.filter(cat => getCategoryId(cat as CategoryWithFallbackId) !== categoryId));
     }
   };
 
@@ -83,7 +92,8 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
             <div className="mb-2 d-flex gap-1 flex-wrap">
               {categories.length > 0 ? (
                 categories.map((cat, idx) => {
-                  const isInAvailableList = availableCategories.some(availCat => availCat.id === cat.id);
+                  const selectedCategoryId = getCategoryId(cat as CategoryWithFallbackId);
+                  const isInAvailableList = availableCategories.some(availCat => getCategoryId(availCat as CategoryWithFallbackId) === selectedCategoryId);
                   return (
                     <Badge
                       key={idx}
@@ -104,12 +114,12 @@ const VideoRefEditModal: React.FC<VideoRefEditModalProps> = ({
               {availableCategories.length > 0 ? (
                 availableCategories.map(cat => (
                   <Form.Check
-                    key={cat.id}
+                    key={getCategoryId(cat as CategoryWithFallbackId)}
                     type="checkbox"
-                    id={`category-${cat.id}`}
+                    id={`category-${getCategoryId(cat as CategoryWithFallbackId)}`}
                     label={cat.title}
-                    value={cat.id}
-                    checked={categories.some(selectedCat => selectedCat.id === cat.id)}
+                    value={getCategoryId(cat as CategoryWithFallbackId)}
+                    checked={categories.some(selectedCat => getCategoryId(selectedCat as CategoryWithFallbackId) === getCategoryId(cat as CategoryWithFallbackId))}
                     onChange={handleCategoryChange}
                     className="mb-2"
                   />

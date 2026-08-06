@@ -29,16 +29,3 @@ Scenario: Update an existing video
 Scenario: Update a non-existent video
     When I update a video with ID "nonexistent-video-id"
     Then the response should be Not Found
-
-Scenario: Swap thumbnail of a root match
-    Given a root match exists in the system
-    When I swap the thumbnail to a new video id
-    Then the response should be No Content
-
-Scenario: Swap thumbnail of a non-existent match
-    When I swap the thumbnail for match id "nonexistent-match-id"
-    Then the response should be Bad Request
-
-Scenario: Create a root match
-    When I create a root match with video id "root-test-video-1" and title "Root Test"
-    Then the response should be No Content

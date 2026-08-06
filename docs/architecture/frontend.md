@@ -44,6 +44,8 @@ Target authentication is secure HttpOnly cookie based. Local-storage JWT support
 
 Administrative capabilities, including API-key and digital-artifact management, belong only here.
 
+RBAC management is owned by this SPA and the BackOffice API. The `/rbac` route loader validates the HttpOnly-cookie session through `/api/auth/validate` and requires canonical `canaccessbackoffice` in the server-resolved effective permission union. Cached `localStorage.auth_user` is display-only; denied sessions redirect to `/` and invalid sessions to `/login`.
+
 ## Public Application
 
 - React 19 with SSR, PWA behavior, SEO, analytics, and public routes.
@@ -86,4 +88,4 @@ The shop deployment currently uses inconsistent variable names and must be align
 
 ## Testing
 
-BackOffice SPA and Shooting ITA use Vitest, Testing Library, and jsdom. Add focused route/action/service tests for changed behavior. The public and shop applications need test coverage before their contracts become release gates.
+BackOffice SPA and Shooting ITA use Vitest, Testing Library, and jsdom. Add focused route/action/service tests for changed behavior. BackOffice RBAC coverage includes route allow/deny cases, while the BackOffice test project covers the cookie validation contract. The public and shop applications need test coverage before their contracts become release gates.

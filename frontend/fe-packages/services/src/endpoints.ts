@@ -29,10 +29,6 @@ const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
 const CONFIGURATIONS = `${baseEndpoint}/configurations`;
 const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
 const VIDEOS_IMPORT = `${VIDEOS}/ImportVideo`;
-const VIDEOS_IMPORT_SUB = `${VIDEOS}/ImportSubCreation`;
-const VIDEOS_ROOT_CREATION = `${VIDEOS}/RootCreation`;
-const VIDEOS_CONVERT_TO_ROOT = `${VIDEOS}/ConvertIntoRoot`;
-const VIDEOS_SWAP_THUMBNAIL = `${VIDEOS}/SwapThumbnailId`;
 const VIDEOS_TRANSLATE = `${VIDEOS}/translate`;
 const IMAGE_UPLOAD = `${baseEndpoint}/ImageUpload/upload`;
 const IMAGE_UPLOAD_MULTIPLE = `${baseEndpoint}/ImageUpload/upload-multiple`;
@@ -55,6 +51,15 @@ const APIKEYS = `${baseEndpoint}/apikeys`;
 const APIKEYS_DETAIL = `${APIKEYS}/{id}`;
 const APIKEYS_TOGGLE = `${APIKEYS}/{id}/toggle`;
 const APIKEYS_REGENERATE = `${APIKEYS}/{id}/regenerate`;
+
+// RBAC endpoints
+const RBAC = `${baseEndpoint}/rbac`;
+const RBAC_USERS = `${RBAC}/users`;
+const RBAC_USER_PERMISSIONS = `${RBAC}/users/{id}/permissions`;
+const RBAC_USER_GROUPS = `${RBAC}/users/{id}/groups`;
+const RBAC_GROUPS = `${RBAC}/groups`;
+const RBAC_GROUPS_DETAIL = `${RBAC_GROUPS}/{id}`;
+const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
 
 export default {
 
@@ -87,10 +92,6 @@ export default {
     CONFIGURATIONS,
     CONFIGURATIONS_DETAIL,
     VIDEOS_IMPORT,
-    VIDEOS_IMPORT_SUB,
-    VIDEOS_ROOT_CREATION,
-    VIDEOS_CONVERT_TO_ROOT,
-    VIDEOS_SWAP_THUMBNAIL,
     VIDEOS_TRANSLATE,
     IMAGE_UPLOAD,
     IMAGE_UPLOAD_MULTIPLE,
@@ -109,6 +110,13 @@ export default {
     APIKEYS_DETAIL,
     APIKEYS_TOGGLE,
     APIKEYS_REGENERATE,
+    RBAC,
+    RBAC_USERS,
+    RBAC_USER_PERMISSIONS,
+    RBAC_USER_GROUPS,
+    RBAC_GROUPS,
+    RBAC_GROUPS_DETAIL,
+    RBAC_GROUP_PERMISSIONS,
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

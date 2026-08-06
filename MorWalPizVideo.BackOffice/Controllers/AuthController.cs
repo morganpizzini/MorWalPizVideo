@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Security;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -17,17 +18,20 @@ public class AuthController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
     private readonly IRateLimitingService _rateLimitingService;
+    private readonly IUserAccessResolver _userAccessResolver;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IUserRepository userRepository,
         IJwtService jwtService,
         IRateLimitingService rateLimitingService,
+        IUserAccessResolver userAccessResolver,
         ILogger<AuthController> logger)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
         _rateLimitingService = rateLimitingService;
+        _userAccessResolver = userAccessResolver;
         _logger = logger;
     }
 
@@ -150,7 +154,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("validate")]
     [RequireCookieAntiforgery]
-    public IActionResult ValidateToken()
+    public async Task<IActionResult> ValidateToken()
     {
         var token = Request.Cookies["auth_token"];
         if (string.IsNullOrEmpty(token))
@@ -165,7 +169,15 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid token" });
         }
 
-        return Ok(new { userId });
+        var accessProfile = await _userAccessResolver.ResolveAsync(userId);
+
+        return Ok(new
+        {
+            userId,
+            effectivePermissions = accessProfile?.EffectivePermissions
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? []
+        });
     }
 
     private string GetClientIpAddress()

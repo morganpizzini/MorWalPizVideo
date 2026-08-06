@@ -27,12 +27,6 @@ import VideoDetail from '../../routes/videos/detail';
 import VideoEdit from '../../routes/videos/edit';
 import ImportVideo from '../../routes/videos/import';
 import TranslateVideo from '../../routes/videos/translate';
-import CreateRoot from '../../routes/videos/create-root';
-import CreateSubVideo from '../../routes/videos/create-sub-video';
-import SwapThumbnail from '../../routes/videos/swap-thumbnail';
-import ConvertToRoot from '../../routes/videos/convert-to-root';
-import YouTubeLinksComponent from '../../routes/videos/youtube-links/Component';
-import youTubeLinksLoader from '../../routes/videos/youtube-links/loader';
 
 import ImagesHome from '../../routes/images/index';
 import ImageUpload from '../../routes/images/upload';
@@ -78,6 +72,8 @@ import ApiKeys from '../../routes/apiKeys/index';
 import ApiKeyDetail from '../../routes/apiKeys/detail';
 import ApiKeyForm from '../../routes/apiKeys/form';
 import Diagnostics from '../../routes/diagnostics';
+import RbacManagement from '../../routes/rbac';
+import { requireBackOfficeAccess } from '../guards';
 
 /**
  * Protected routes (require authentication)
@@ -92,6 +88,12 @@ export const protectedRoutes: RouteConfig[] = [
   },
 
   { path: 'diagnostics', Component: Diagnostics, errorElement: createErrorElement() },
+  {
+    path: 'rbac',
+    loader: requireBackOfficeAccess,
+    Component: RbacManagement,
+    errorElement: createErrorElement(),
+  },
   
   // Calendar Events
   createRouteGroup('calendarevents', {
@@ -237,11 +239,6 @@ export const protectedRoutes: RouteConfig[] = [
       { index: true, path: '', loader: Videos.loader, Component: Videos.Component },
       { path: 'import', Component: ImportVideo.Component, loader: ImportVideo.loader, action: ImportVideo.Action },
       { path: 'translate', Component: TranslateVideo.Component, action: TranslateVideo.Action },
-      { path: 'create-root', Component: CreateRoot.Component, loader: CreateRoot.loader, action: CreateRoot.action },
-      { path: 'create-sub-video', Component: CreateSubVideo.Component, loader: CreateSubVideo.loader, action: CreateSubVideo.action },
-      { path: 'swap-thumbnail', Component: SwapThumbnail.Component, action: SwapThumbnail.Action, loader: SwapThumbnail.Loader },
-      { path: 'convert-to-root', action: ConvertToRoot.Action, loader: ConvertToRoot.Loader, Component: ConvertToRoot.Component },
-      { path: 'youtube-links', loader: youTubeLinksLoader, Component: YouTubeLinksComponent },
       {
         path: ':id',
         Component: Outlet,

@@ -21,7 +21,7 @@ const ChannelLinks: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -34,7 +34,7 @@ const ChannelLinks: React.FC = () => {
         cell: info => info.getValue(),
       },
       {
-        accessorKey: 'yTChannelId',
+        accessorKey: 'channelId',
         header: 'YT Channel ID',
         cell: info => info.getValue(),
       },

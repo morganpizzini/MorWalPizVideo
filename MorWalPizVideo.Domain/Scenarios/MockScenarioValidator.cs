@@ -1,4 +1,5 @@
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Domain.Scenarios;
@@ -146,7 +147,12 @@ internal static class MockScenarioValidator
         var administrators = users
             .Where(user => string.Equals(user.Username, "MorWalPiz", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        if (administrators.Count != 1 || !administrators[0].IsActive || !administrators[0].CanAccessBackoffice ||
+        var adminHasBackofficePermission = administrators.Count == 1 &&
+            (administrators[0].CanAccessBackoffice ||
+             (administrators[0].DirectPermissions ?? [])
+                .Any(permission => string.Equals(permission, AuthorizationPermissionKeys.CanAccessBackoffice, StringComparison.OrdinalIgnoreCase)));
+
+        if (administrators.Count != 1 || !administrators[0].IsActive || !adminHasBackofficePermission ||
             !string.Equals(administrators[0].Role, "admin", StringComparison.OrdinalIgnoreCase))
         {
             errors.Add("The scenario must contain one active MorWalPiz BackOffice administrator.");

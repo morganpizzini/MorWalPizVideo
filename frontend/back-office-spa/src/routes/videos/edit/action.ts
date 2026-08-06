@@ -13,6 +13,14 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     }
   }
 
+  if (values.videoRefs && typeof values.videoRefs === 'string') {
+    try {
+      values.videoRefs = JSON.parse(values.videoRefs as string);
+    } catch (e) {
+      // If parsing fails, keep as is
+    }
+  }
+
   try {
     const response = await put(ComposeUrl(endpoints.VIDEOS_DETAIL, { videoId: params.id! }), values);
 

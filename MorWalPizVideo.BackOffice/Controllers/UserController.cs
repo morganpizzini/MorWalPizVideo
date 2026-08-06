@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -15,7 +16,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [AllowUser("admin", "contributor")]
     public class UserController : ApplicationControllerBase
     {
         private readonly DataService _dataService;

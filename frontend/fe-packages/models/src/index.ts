@@ -72,7 +72,6 @@ export type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from './sponsor';
 // YouTube Video Link exports
 export type {
   YouTubeVideoLink,
-  CreateYouTubeVideoLinkRequest,
   YouTubeVideoLinkResponse,
 } from './youTubeVideoLink';
 
@@ -88,9 +87,6 @@ export type {
   Match,
   Compilation,
   VideoImportRequest,
-  SwapRootThumbnailRequest,
-  RootCreationRequest,
-  SubVideoCrationRequest,
   VideoTranslateRequest,
   ReviewDetails,
   VideoCategory,

@@ -76,7 +76,7 @@ const ChannelDetail: React.FC = () => {
             <strong>Channel Name:</strong> {entity.channelName}
           </p>
           <p>
-            <strong>YouTube Channel ID:</strong> {entity.yTChannelId}
+            <strong>YouTube Channel ID:</strong> {entity.channelId}
           </p>
         </Modal.Body>
         <Modal.Footer>

@@ -3,9 +3,6 @@
 import { post } from '@morwalpizvideo/services';
 import {
   VideoImportRequest,
-  SwapRootThumbnailRequest,
-  RootCreationRequest,
-  SubVideoCrationRequest,
   ReviewDetails,
 } from '@morwalpizvideo/models';
 
@@ -18,26 +15,6 @@ export const VideoService = {
   // Import a video
   importVideo: async (request: VideoImportRequest): Promise<void> => {
     await post(`/api/Video/ImportVideo`, request);
-  },
-
-  // Convert a video to root
-  convertToRoot: async (request: RootCreationRequest): Promise<void> => {
-    await post(`/api/Video/ConvertIntoRoot`, request);
-  },
-
-  // Swap thumbnail URL
-  swapThumbnailUrl: async (request: SwapRootThumbnailRequest): Promise<void> => {
-    await post(`/api/Video/SwapThumbnailId`, request);
-  },
-
-  // Create a root video
-  createRoot: async (request: RootCreationRequest): Promise<void> => {
-    await post(`/api/Video/RootCreation`, request);
-  },
-
-  // Create a sub-video
-  createSubVideo: async (request: SubVideoCrationRequest): Promise<void> => {
-    await post(`/api/Video/ImportSubCreation`, request);
   },
 
   // Get review details

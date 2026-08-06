@@ -1,26 +1,21 @@
 export interface YouTubeVideoLink {
   contentCreatorName: string;
-  youTubeVideoId: string;
+  // Legacy fallback when short link fields are not available.
+  youTubeVideoId?: string;
   imageName: string;
+  shortLinkUrl?: string;
   shortLinkCode?: string;
   shortLinkTarget?: string;
-}
-
-export interface CreateYouTubeVideoLinkRequest {
-  matchId: string;
-  contentCreatorName: string;
-  youTubeVideoId: string;
-  fontStyle: string;
-  fontSize: number;
-  textColor: string;
-  outlineColor: string;
-  outlineThickness: number;
+  directVideoUrl?: string;
 }
 
 export interface YouTubeVideoLinkResponse {
   contentCreatorName: string;
-  youTubeVideoId: string;
+  // Legacy fallback when short link fields are not available.
+  youTubeVideoId?: string;
   imageName: string;
+  shortLinkUrl?: string;
   shortLinkCode?: string;
   shortLinkTarget?: string;
+  directVideoUrl?: string;
 }

@@ -32,6 +32,7 @@
         public const string Categories = "categories";
         public const string Configurations = "configurations";
         public const string Users = "users";
+        public const string UserGroups = "userGroups";
         public const string LoginAttempts = "loginAttempts";
         public const string ApiKeys = "apiKeys";
 

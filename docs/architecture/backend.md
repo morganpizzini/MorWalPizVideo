@@ -57,6 +57,9 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 - BackOffice browser clients use that cookie only; the SPA does not persist or emit a JWT Bearer token.
 - Selected machine endpoints use the `ApiKey` scheme.
 - Anonymous access must be explicit and limited to genuine bootstrap/login/submission cases.
+- `POST /api/auth/validate` preserves its existing `userId` response and additively returns normalized `effectivePermissions`, resolved from direct permissions union active `UserGroup` memberships. This cookie-backed response is the SPA route-guard authority; localStorage is never an authorization source.
+- RBAC owns Mongo `UserGroup` documents and the many-to-many relationship represented by user `GroupIds`. Legacy `Role` and `CanAccessBackoffice` data remain readable, with the latter mapped to canonical lowercase `canaccessbackoffice`.
+- `AllowUser` supports `group:` and `perm:` tokens as well as unprefixed OR semantics, and all group/permission comparisons use lowercase invariant normalization.
 
 ### ServerAPI
 

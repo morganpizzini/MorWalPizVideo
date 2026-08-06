@@ -33,14 +33,6 @@ public class VideosStepDefinitions
         _context.ExistingVideoId = items.First().Id;
     }
 
-    [Given(@"a root match exists in the system")]
-    public async Task GivenARootMatchExistsInTheSystem()
-    {
-        var items = await _matchRepository.GetItemsAsync(x => !x.IsLink);
-        items.Should().NotBeEmpty("mock data should provide at least one root match");
-        _context.ExistingRootMatchId = items.First().Id;
-    }
-
     [When(@"I request all videos")]
     public async Task WhenIRequestAllVideos()
     {
@@ -92,39 +84,6 @@ public class VideosStepDefinitions
             Categories = Array.Empty<string>()
         };
         _context.Response = await _client.PutAsJsonAsync($"/api/Videos/{id}", body);
-    }
-
-    [When(@"I swap the thumbnail to a new video id")]
-    public async Task WhenISwapTheThumbnailToANewVideoId()
-    {
-        _context.ExistingRootMatchId.Should().NotBeNullOrEmpty();
-        var body = new
-        {
-            CurrentVideoId = _context.ExistingRootMatchId,
-            NewVideoId = "swap-target-video-id"
-        };
-        _context.Response = await _client.PostAsJsonAsync("/api/Videos/SwapThumbnailId", body);
-    }
-
-    [When(@"I swap the thumbnail for match id ""(.*)""")]
-    public async Task WhenISwapTheThumbnailForMatchId(string id)
-    {
-        var body = new { CurrentVideoId = id, NewVideoId = "any" };
-        _context.Response = await _client.PostAsJsonAsync("/api/Videos/SwapThumbnailId", body);
-    }
-
-    [When(@"I create a root match with video id ""(.*)"" and title ""(.*)""")]
-    public async Task WhenICreateARootMatchWith(string videoId, string title)
-    {
-        var body = new
-        {
-            VideoId = videoId,
-            Title = title,
-            Description = "Root description",
-            Url = $"root-url-{videoId}",
-            Categories = new[] { "1" }
-        };
-        _context.Response = await _client.PostAsJsonAsync("/api/Videos/RootCreation", body);
     }
 
     [Then(@"the response should contain a list of videos")]

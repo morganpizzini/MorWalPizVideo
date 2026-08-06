@@ -212,6 +212,30 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return UserRepository.VerifyPassword(password, user.PasswordHash, user.Salt) ? user : null;
         }
     }
+
+    public class UserGroupMockRepository : BaseMockRepository<UserGroup>, IUserGroupRepository
+    {
+        public UserGroupMockRepository(IMockScenario scenario) : base(scenario, "userGroups")
+        {
+        }
+
+        public async Task<UserGroup?> GetByCodeAsync(string code)
+        {
+            var normalizedCode = code.Trim().ToLowerInvariant();
+            return (await GetItemsAsync(group => group.Code.ToLower() == normalizedCode)).FirstOrDefault();
+        }
+
+        public async Task<IList<UserGroup>> GetByIdsAsync(IList<string> groupIds)
+        {
+            if (groupIds.Count == 0)
+            {
+                return [];
+            }
+
+            return await GetItemsAsync(group => groupIds.Contains(group.Id));
+        }
+    }
+
     public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
     {
         public LoginAttemptMockRepository(IMockScenario scenario) : base(scenario, "loginAttempts")

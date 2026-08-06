@@ -49,6 +49,15 @@ Implemented (2026-08-02):
 - ShortLinks: `FakeAuthenticationHandler` registration is now gated by `Development` + `EnableDev` (previously unconditional); redirect endpoint remains anonymous.
 - Authorization regression tests added in `MorWalPizVideo.BackOffice.Tests/Features/AuthorizationPolicyTests.cs`.
 
+Implemented (2026-08-06):
+
+- BackOffice RBAC management API under `api/rbac` supports MongoDB `UserGroup` CRUD, multi-group user membership, direct user permissions, and normalized effective-permission resolution.
+- `AllowUser` dynamic policy supports both group-style and permission-style declarations with OR semantics (`group OR permission`), including `[AllowUser("admin","contributor")]` and `[AllowUser("canAccessBackOffice")]`.
+- Legacy `CanAccessBackoffice` remains backward-compatible and is mapped to canonical permission key `canaccessbackoffice`.
+- BackOffice SPA includes an RBAC management section for users/groups/permissions/memberships.
+- `POST /api/auth/validate` additively returns normalized effective permissions resolved from the cookie session; the SPA `/rbac` route guard requires canonical `canaccessbackoffice` from that response. LocalStorage remains display-only, and the guard redirects denied sessions to `/` without changing existing routes or cookie/CSRF behavior.
+- Focused BackOffice tests cover authorization matrix and RBAC CRUD assignment scenarios.
+
 Deferred (not yet implemented):
 
 - **Anonymous cart cookie**: the shop cart is still keyed by a route `customerId`, with no opaque server-controlled cookie. Requires new cookie-issuance/consumption design plus frontend changes; out of scope for the authorization-wiring migration to avoid breaking the deployed shop contract.

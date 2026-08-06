@@ -133,7 +133,7 @@ The admin routes are the explicit BackOffice boundary for digital artifact manag
 ### 3.2 Video Domain
 
 #### `VideosController` — `api/videos`
-Core surface for managing the YouTube content tree (root collections + sub-videos).
+Core surface for managing the YouTube content catalog.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
 | GET | `/` | List every `YouTubeContent`. |
@@ -141,10 +141,6 @@ Core surface for managing the YouTube content tree (root collections + sub-video
 | PUT | `/{id}` | Update editable metadata. |
 | POST | `/Translate` | Batch-translate the titles/descriptions of the given video ids via Azure Translator. |
 | POST | `/ImportVideo` | Import a single YouTube video by id (fetches metadata + thumbnail). |
-| POST | `/ConvertIntoRoot` | Promote an existing video to a root `YouTubeContent` collection. |
-| POST | `/SwapThumbnailId` | Change the `ThumbnailVideoId` driving a collection's poster. |
-| POST | `/RootCreation` | Create a new root collection from scratch. |
-| POST | `/ImportSubCreation` | Attach a new sub-video to an existing root. |
 | POST | `/{id}/refresh-youtube` | Re-pull stats from the YouTube Data API for one item. |
 | POST | `/{id}/publish-social` | Push the video to the configured social channels (`PublishSocialRequest`). |
 
@@ -158,7 +154,11 @@ CRUD for content categories used to tag videos / events / collections.
 Curated playlist-like groupings of `VideoRef` (model: [`Compilation`](#54-content-grouping)).
 
 #### `YouTubeVideoLinksController` — `api/youtubevideolinks`
-Cross-promotion links from a `match` (sponsored/contracted video) to other creators' YouTube videos. Also serves the creator profile image.
+Read-only linktree data source for public linktree cards plus creator image serving.
+| Verb | Route | Purpose |
+| ---- | ----- | ------- |
+| GET | `/{matchId}/links` | Return linktree items for a match (short link and direct URL fields included when present). |
+| GET | `/image/{imageName}` | Serve creator profile image. |
 
 #### `PublishScheduleController` — `api/publishschedule`
 Scheduled publication entries (a `VideoId` × date × message × query-link list).

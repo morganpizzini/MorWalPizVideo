@@ -103,4 +103,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId);
     }
     public interface IUserRequestRepository : IRepository<UserRequest> { }
+
+    public interface IUserGroupRepository : IRepository<UserGroup>
+    {
+        Task<UserGroup?> GetByCodeAsync(string code);
+        Task<IList<UserGroup>> GetByIdsAsync(IList<string> groupIds);
+    }
 }

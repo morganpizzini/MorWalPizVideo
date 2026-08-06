@@ -34,7 +34,7 @@ Contains all protected routes organized by feature:
 - Short Links
 - Channels
 - Categories
-- Videos (with sub-routes: import, translate, create-root, etc.)
+- Videos (with sub-routes: import, translate, detail/edit)
 - Images
 - MorWalPiz Configurations
 - Product Categories
@@ -79,6 +79,6 @@ createRouteGroup('newfeature', {
 ## Route Naming Conventions
 
 - Use lowercase paths (e.g., `productcategories`, not `ProductCategories`)
-- Use hyphens for multi-word paths in action routes (e.g., `create-root`)
+- Use hyphens for multi-word paths in action routes (e.g., `upload-multiple`)
 - Use camelCase for parameter names (e.g., `:productId`, `:categoryId`)
 - Keep route paths consistent with the URL structure

@@ -1,7 +1,7 @@
 import { get, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 export function getMatchLinktree(matchId: string) {
-    return get(ComposeUrl(frontendEndpoints.YOUTUBE_VIDEO_LINKS_DETAIL, { matchId }));
+    return get(ComposeUrl(frontendEndpoints.LINKTREE_DETAIL, { matchId }));
 }
 
 export function getMatch(matchId: string) {
@@ -9,5 +9,5 @@ export function getMatch(matchId: string) {
 }
 
 export function getCreatorImage(imageName: string) {
-    return ComposeUrl(frontendEndpoints.YOUTUBE_VIDEO_LINKS_IMAGE, { imageName });
+    return ComposeUrl(frontendEndpoints.LINKTREE_IMAGE, { imageName });
 }

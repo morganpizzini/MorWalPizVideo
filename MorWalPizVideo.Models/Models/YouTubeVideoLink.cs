@@ -23,14 +23,30 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("shortLink")]
         public ShortLink? ShortLink { get; init; }
 
+        [DataMember]
+        [BsonElement("shortLinkUrl")]
+        public string? ShortLinkUrl { get; init; }
+
+        [DataMember]
+        [BsonElement("directVideoUrl")]
+        public string? DirectVideoUrl { get; init; }
+
         public YouTubeVideoLink() { }
 
-        public YouTubeVideoLink(string contentCreatorName, string youtubeVideoId, string imageName, ShortLink? shortLink = null)
+        public YouTubeVideoLink(
+            string contentCreatorName,
+            string youtubeVideoId,
+            string imageName,
+            ShortLink? shortLink = null,
+            string? shortLinkUrl = null,
+            string? directVideoUrl = null)
         {
             ContentCreatorName = contentCreatorName;
             YouTubeVideoId = youtubeVideoId;
             ImageName = imageName;
             ShortLink = shortLink;
+            ShortLinkUrl = shortLinkUrl;
+            DirectVideoUrl = directVideoUrl;
         }
     }
 }

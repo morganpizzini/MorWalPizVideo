@@ -32,10 +32,15 @@ const SPONSORS = `${baseEndpoint}/sponsors`;
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
 
-// YouTube Video Links (Linktree)
-const YOUTUBE_VIDEO_LINKS = `${baseEndpoint}/YouTubeVideoLinks`;
-const YOUTUBE_VIDEO_LINKS_DETAIL = `${YOUTUBE_VIDEO_LINKS}/{matchId}/links`;
-const YOUTUBE_VIDEO_LINKS_IMAGE = `${YOUTUBE_VIDEO_LINKS}/image/{imageName}`;
+// Linktree
+const LINKTREE = `${baseEndpoint}/YouTubeVideoLinks`;
+const LINKTREE_DETAIL = `${LINKTREE}/{matchId}/links`;
+const LINKTREE_IMAGE = `${LINKTREE}/image/{imageName}`;
+
+// Legacy aliases kept for compatibility with existing consumers.
+const YOUTUBE_VIDEO_LINKS = LINKTREE;
+const YOUTUBE_VIDEO_LINKS_DETAIL = LINKTREE_DETAIL;
+const YOUTUBE_VIDEO_LINKS_IMAGE = LINKTREE_IMAGE;
 
 // API Keys (for public client admin features)
 const APIKEYS = `${baseEndpoint}/apikeys`;
@@ -55,6 +60,9 @@ export default {
     PRODUCTS,
     SPONSORS,
     CONFIGURATION_STREAM,
+    LINKTREE,
+    LINKTREE_DETAIL,
+    LINKTREE_IMAGE,
     YOUTUBE_VIDEO_LINKS,
     YOUTUBE_VIDEO_LINKS_DETAIL,
     YOUTUBE_VIDEO_LINKS_IMAGE,
