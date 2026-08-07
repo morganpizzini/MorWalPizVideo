@@ -97,12 +97,12 @@ public sealed class DiagnosticsTests : IClassFixture<BackOfficeWebApplicationFac
         Assert.Contains("[REDACTED]", problem.Message);
     }
 
-    private HttpClient CreateClient(string? role = null)
+    private HttpClient CreateClient(string? permission = null)
     {
         var client = _factory.CreateClient();
-        if (role is not null)
+        if (permission is not null)
         {
-            client.DefaultRequestHeaders.Add("X-Test-Role", role);
+            client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
         }
 
         return client;

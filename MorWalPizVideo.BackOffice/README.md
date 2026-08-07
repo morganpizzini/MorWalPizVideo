@@ -57,9 +57,14 @@ The admin Web API powering the MorWalPizVideo platform. It exposes the managemen
 | ------ | ---------------- | ----- |
 | **JWT Bearer** (default) | Every controller inheriting [`ApplicationControllerBase`](../MorWalPizVideo.MvcHelpers/Controllers/ApplicationControllerBase.cs) — it carries `[Authorize]` at the class level. | Token read from `Authorization: Bearer …` **or** from the HttpOnly cookie `auth_token` (set by `/api/auth/login`). |
 | **API Key** | Controllers/actions decorated `[ApiKeyAuth]` (notably `ChatController`). | Header `X-API-Key`. Hashed (SHA-256) at rest, rate-limited, optional IP whitelist + expiry. Managed via `/api/apikeys` and remains BackOffice-only. |
-| **Anonymous** | Endpoints explicitly tagged `[AllowAnonymous]` (login, public form submission, user request submission, `/api/user/init/{username}` bootstrap). | |
+| **Anonymous** | Endpoints explicitly tagged `[AllowAnonymous]` (login, public form submission, user request submission, `/api/user/bootstrap-admin/{username}` bootstrap). | |
 
 See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md) and [docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md](../docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md) (HttpOnly cookies, PBKDF2-SHA256 100k iterations, HSTS, CORS with credentials).
+
+BackOffice user-management security model:
+- User mutations (create/update/delete/status/password reset/set) are restricted to `group:admin`.
+- Self-service profile endpoints are available to authenticated BackOffice users: `/api/user/me`, `/api/user/me` (PUT), `/api/user/me/password`.
+- Authorization grants are resolved from groups and permissions, not role claims.
 
 ### 2.2 Feature Flags (`Microsoft.FeatureManagement`)
 Configured under `FeatureManagement` in `appsettings*.json`.
@@ -101,17 +106,21 @@ Login/logout/validate. Sets an `auth_token` HttpOnly Secure SameSite=None cookie
 | POST | `/validate` | `ValidateToken()` | Validates the `auth_token` cookie's signature & expiry. |
 
 #### `UserController` — `api/user`
-Admin user CRUD + controlled first-admin bootstrap. The bootstrap endpoint is anonymous at the authentication layer but requires a deployment secret and can run only while no active user has BackOffice access.
+Admin user lifecycle + self-service profile endpoints + controlled first-admin bootstrap. The bootstrap endpoint is anonymous at the authentication layer but requires a deployment secret and can run only while no active user has BackOffice access. The BackOffice SPA surfaces these admin lifecycle operations inside the protected `/rbac` screen alongside groups and direct permissions.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
-| GET | `/` | List all admin users. |
+| GET | `/` | List all users visible to BackOffice administrators. |
 | GET | `/{id}` | Get user by id. |
 | POST | `/bootstrap-admin/{username}` *(secret-gated anon)* | Add existing active user to the `admin` group, create that group when missing, and ensure it contains `canaccessbackoffice`. Requires `X-Bootstrap-Secret`. |
-| GET | `/init/{username}` *(legacy anon)* | Legacy user bootstrap. Do not use for new deployments; disable or remove after migration. |
 | POST | `/` | Create user (`CreateUserRequest`). |
 | PUT | `/{id}` | Update user. |
 | PUT | `/{id}/status` | Activate/deactivate. |
+| PUT | `/{id}/password/reset` | Admin reset/set a managed user's password. |
+| PUT | `/{id}/password/set` | Alias of password reset for admin tooling compatibility. |
 | DELETE | `/{id}` | Delete user. |
+| GET | `/me` | Get the authenticated user's own profile. |
+| PUT | `/me` | Update the authenticated user's username/email. |
+| PUT | `/me/password` | Change the authenticated user's password with current-password verification. |
 
 Bootstrap configuration uses `BootstrapSettings:Secret` from protected configuration (environment variable, user secrets, Key Vault, or deployment secret store). Empty secret disables the endpoint. The operation does not create users or passwords, returns `401` for a missing/invalid secret, `404` for an unknown username, and `409` after initial BackOffice access already exists.
 

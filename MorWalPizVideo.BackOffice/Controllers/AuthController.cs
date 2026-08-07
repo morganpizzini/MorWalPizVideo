@@ -5,6 +5,7 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Models.Constraints;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -88,6 +89,17 @@ public class AuthController : ControllerBase
             {
                 message = "Account is disabled",
                 remainingAttempts = rateLimitResult.RemainingAttempts - 1
+            });
+        }
+
+        var accessProfile = await _userAccessResolver.ResolveAsync(user.Id);
+        if (accessProfile?.EffectivePermissions.Contains(AuthorizationPermissionKeys.CanAccessBackoffice) != true)
+        {
+            await _rateLimitingService.RecordLoginAttemptAsync(ipAddress, request.Username, false, userAgent, "Missing backoffice permission");
+
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "You do not have access to the backoffice"
             });
         }
 

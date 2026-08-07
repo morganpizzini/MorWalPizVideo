@@ -413,20 +413,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public static bool VerifyPassword(string password, string hash, string salt)
         {
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, Convert.FromBase64String(salt), 100000, HashAlgorithmName.SHA256);
-            var testHash = Convert.ToBase64String(pbkdf2.GetBytes(256));
-            return testHash == hash;
+            return PasswordHashing.VerifyPassword(password, hash, salt);
         }
 
         public static string HashPassword(string password, out string salt)
         {
-            using var rng = RandomNumberGenerator.Create();
-            var saltBytes = new byte[32];
-            rng.GetBytes(saltBytes);
-            salt = Convert.ToBase64String(saltBytes);
-
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 100000, HashAlgorithmName.SHA256);
-            return Convert.ToBase64String(pbkdf2.GetBytes(256));
+            return PasswordHashing.HashPassword(password, out salt);
         }
     }
 

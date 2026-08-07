@@ -78,7 +78,7 @@ Owns consistent telemetry, service discovery, resilience, and health endpoint co
 
 ### BackOffice SPA
 
-Owns authenticated management screens and uses loaders/actions/fetchers. API-key administration and the RBAC management UI belong here exclusively. The `/rbac` route guard consumes effective permissions from the BackOffice cookie-validation flow; localStorage is not an authority. The BackOffice API owns `UserGroup` persistence, user group memberships, direct permissions, effective-permission union, legacy `Role`/`CanAccessBackoffice` compatibility, and `AllowUser` enforcement.
+Owns authenticated management screens and uses loaders/actions/fetchers. API-key administration plus the RBAC and admin user-management UI belong here exclusively. The `/rbac` route guard consumes effective permissions from the BackOffice cookie-validation flow; localStorage is not an authority. The BackOffice API owns `UserGroup` persistence, user group memberships, direct permissions, effective-permission union, legacy `Role`/`CanAccessBackoffice` compatibility, admin user lifecycle endpoints, and `AllowUser` enforcement.
 
 ### Public Application
 

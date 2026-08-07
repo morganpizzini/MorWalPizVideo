@@ -1,25 +1,22 @@
-using Azure.Core;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
-using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
-using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
+using System.Security.Claims;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AllowUser("admin", "contributor")]
+    [AllowUser("perm:" + AuthorizationPermissionKeys.CanAccessBackoffice)]
     public class UserController : ApplicationControllerBase
     {
         private readonly DataService _dataService;
@@ -150,6 +147,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPost]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
         public async Task<ActionResult<object>> CreateUser([FromBody] CreateUserRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) ||
@@ -166,9 +164,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return BadRequest("User with this username or email already exists.");
             }
 
-            // Generate salt and hash password
-            var salt = GenerateSalt();
-            var passwordHash = HashPassword(request.Password, salt);
+            var passwordHash = PasswordHashing.HashPassword(request.Password, out var salt);
 
             var user = new User
             {
@@ -186,12 +182,38 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}")]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request)
         {
             var existingUser = await _dataService.GetUser(id);
             if (existingUser == null)
             {
                 return NotFound();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Username) || !string.IsNullOrWhiteSpace(request.Email))
+            {
+                var users = await _dataService.FetchUsers();
+                if (!string.IsNullOrWhiteSpace(request.Username) &&
+                    users.Any(user => user.Id != existingUser.Id &&
+                                      string.Equals(user.Username, request.Username.Trim(), StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("User with this username already exists.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.Email) &&
+                    users.Any(user => user.Id != existingUser.Id &&
+                                      string.Equals(user.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("User with this email already exists.");
+                }
+            }
+
+            var passwordHash = existingUser.PasswordHash;
+            var salt = existingUser.Salt;
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                passwordHash = PasswordHashing.HashPassword(request.NewPassword, out salt);
             }
 
             // Since User is a record, create a new instance with updated values
@@ -201,8 +223,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email : existingUser.Email,
                 Role = !string.IsNullOrWhiteSpace(request.Role) ? request.Role : existingUser.Role,
                 IsActive = request.IsActive ?? existingUser.IsActive,
-                PasswordHash = !string.IsNullOrWhiteSpace(request.NewPassword) ? HashPassword(request.NewPassword, GenerateSalt()) : existingUser.PasswordHash,
-                Salt = !string.IsNullOrWhiteSpace(request.NewPassword) ? GenerateSalt() : existingUser.Salt
+                PasswordHash = passwordHash,
+                Salt = salt
             };
 
             await _dataService.UpdateUser(updatedUser);
@@ -211,6 +233,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpDelete("{id}")]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
         public async Task<IActionResult> DeleteUser(string id)
         {
             var user = await _dataService.GetUser(id);
@@ -224,6 +247,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}/status")]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
         public async Task<IActionResult> UpdateUserStatus(string id, [FromBody] UpdateUserStatusRequest request)
         {
             var user = await _dataService.GetUser(id);
@@ -238,21 +262,134 @@ namespace MorWalPizVideo.BackOffice.Controllers
             return NoContent();
         }
 
-        private static string GenerateSalt()
+        [HttpPut("{id}/password/reset")]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        public async Task<IActionResult> ResetUserPassword(string id, [FromBody] ResetUserPasswordRequest request)
         {
-            var saltBytes = new byte[32];
-            using (var rng = RandomNumberGenerator.Create())
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
             {
-                rng.GetBytes(saltBytes);
+                return BadRequest("New password is required.");
             }
-            return Convert.ToBase64String(saltBytes);
+
+            var user = await _dataService.GetUser(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var passwordHash = PasswordHashing.HashPassword(request.NewPassword, out var salt);
+            await _dataService.UpdateUser(user with
+            {
+                PasswordHash = passwordHash,
+                Salt = salt
+            });
+
+            return NoContent();
         }
 
-        private static string HashPassword(string password, string salt)
+        [HttpPut("{id}/password/set")]
+        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        public Task<IActionResult> SetUserPassword(string id, [FromBody] ResetUserPasswordRequest request)
         {
-            var saltBytes = Convert.FromBase64String(salt);
-            var hashBytes = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, 10000, HashAlgorithmName.SHA256, 32);
-            return Convert.ToBase64String(hashBytes);
+            return ResetUserPassword(id, request);
+        }
+
+        [HttpGet("me")]
+        public async Task<ActionResult<UserContract>> GetProfile()
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(currentUserId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _dataService.GetUser(currentUserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(ContractUtils.Convert(user));
+        }
+
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateOwnProfileRequest request)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(currentUserId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _dataService.GetUser(currentUserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Username) && string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest("At least one field is required.");
+            }
+
+            var users = await _dataService.FetchUsers();
+            if (!string.IsNullOrWhiteSpace(request.Username) &&
+                users.Any(existing => existing.Id != user.Id &&
+                                      string.Equals(existing.Username, request.Username.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return BadRequest("User with this username already exists.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Email) &&
+                users.Any(existing => existing.Id != user.Id &&
+                                      string.Equals(existing.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return BadRequest("User with this email already exists.");
+            }
+
+            var updatedUser = user with
+            {
+                Username = !string.IsNullOrWhiteSpace(request.Username) ? request.Username.Trim() : user.Username,
+                Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : user.Email,
+            };
+
+            await _dataService.UpdateUser(updatedUser);
+            return NoContent();
+        }
+
+        [HttpPut("me/password")]
+        public async Task<IActionResult> ChangeOwnPassword([FromBody] ChangeOwnPasswordRequest request)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(currentUserId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _dataService.GetUser(currentUserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest("Current password and new password are required.");
+            }
+
+            if (!PasswordHashing.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.Salt))
+            {
+                return BadRequest("Current password is invalid.");
+            }
+
+            var newHash = PasswordHashing.HashPassword(request.NewPassword, out var newSalt);
+            await _dataService.UpdateUser(user with
+            {
+                PasswordHash = newHash,
+                Salt = newSalt
+            });
+
+            return NoContent();
         }
     }
 
@@ -277,5 +414,22 @@ namespace MorWalPizVideo.BackOffice.Controllers
     public class UpdateUserStatusRequest
     {
         public bool IsActive { get; set; }
+    }
+
+    public class ResetUserPasswordRequest
+    {
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class UpdateOwnProfileRequest
+    {
+        public string? Username { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public class ChangeOwnPasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

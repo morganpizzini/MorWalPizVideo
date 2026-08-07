@@ -52,6 +52,15 @@ const APIKEYS_DETAIL = `${APIKEYS}/{id}`;
 const APIKEYS_TOGGLE = `${APIKEYS}/{id}/toggle`;
 const APIKEYS_REGENERATE = `${APIKEYS}/{id}/regenerate`;
 
+// BackOffice user profile endpoints
+const USERS = `${baseEndpoint}/user`;
+const USER_DETAIL = `${USERS}/{id}`;
+const USER_STATUS = `${USER_DETAIL}/status`;
+const USER_PASSWORD_RESET = `${USER_DETAIL}/password/reset`;
+const USER_PASSWORD_SET = `${USER_DETAIL}/password/set`;
+const USER_ME = `${baseEndpoint}/user/me`;
+const USER_ME_PASSWORD = `${USER_ME}/password`;
+
 // RBAC endpoints
 const RBAC = `${baseEndpoint}/rbac`;
 const RBAC_USERS = `${RBAC}/users`;
@@ -110,6 +119,13 @@ export default {
     APIKEYS_DETAIL,
     APIKEYS_TOGGLE,
     APIKEYS_REGENERATE,
+    USERS,
+    USER_DETAIL,
+    USER_STATUS,
+    USER_PASSWORD_RESET,
+    USER_PASSWORD_SET,
+    USER_ME,
+    USER_ME_PASSWORD,
     RBAC,
     RBAC_USERS,
     RBAC_USER_PERMISSIONS,

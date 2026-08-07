@@ -84,11 +84,6 @@ public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessRes
     var effectivePermissions = profile?.EffectivePermissions.ToHashSet(StringComparer.OrdinalIgnoreCase) ??
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    foreach (var role in principal.FindAll(ClaimTypes.Role))
-    {
-      groupCodes.Add(UserAccessResolver.Normalize(role.Value));
-    }
-
     foreach (var permissionClaim in principal.FindAll("permission"))
     {
       effectivePermissions.Add(UserAccessResolver.Normalize(permissionClaim.Value));

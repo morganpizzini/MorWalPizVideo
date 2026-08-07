@@ -73,6 +73,7 @@ import ApiKeyDetail from '../../routes/apiKeys/detail';
 import ApiKeyForm from '../../routes/apiKeys/form';
 import Diagnostics from '../../routes/diagnostics';
 import RbacManagement from '../../routes/rbac';
+import Profile from '../../routes/profile';
 import { requireBackOfficeAccess } from '../guards';
 
 /**
@@ -88,6 +89,7 @@ export const protectedRoutes: RouteConfig[] = [
   },
 
   { path: 'diagnostics', Component: Diagnostics, errorElement: createErrorElement() },
+  { path: 'profile', Component: Profile.Component, errorElement: createErrorElement() },
   {
     path: 'rbac',
     loader: requireBackOfficeAccess,

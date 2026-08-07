@@ -308,14 +308,6 @@ public class RbacController(
         .ToList();
 
     var groupCodes = NormalizeMany(activeGroups.Select(group => group.Code));
-    var legacyRole = Normalize(user.Role);
-    if (!string.IsNullOrWhiteSpace(legacyRole))
-    {
-      groupCodes = groupCodes
-          .Concat([legacyRole])
-          .Distinct(StringComparer.OrdinalIgnoreCase)
-          .ToList();
-    }
 
     var effectivePermissions = directPermissions
         .Concat(activeGroups.SelectMany(group => group.Permissions))

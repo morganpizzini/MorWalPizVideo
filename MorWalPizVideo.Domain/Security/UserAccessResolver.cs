@@ -51,12 +51,6 @@ public sealed class UserAccessResolver(
         .Where(value => !string.IsNullOrWhiteSpace(value))
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    var legacyRole = Normalize(user.Role);
-    if (!string.IsNullOrWhiteSpace(legacyRole))
-    {
-      groupCodes.Add(legacyRole);
-    }
-
     var inheritedPermissions = activeGroups
         .SelectMany(group => group.Permissions)
         .Select(Normalize)

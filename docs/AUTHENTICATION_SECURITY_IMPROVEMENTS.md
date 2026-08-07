@@ -10,6 +10,19 @@ The authentication system has been upgraded with three priority levels of securi
 
 ## Implemented Improvements
 
+### 2026-08 Security Follow-up
+
+- User mutations under `/api/user` are admin-only (`group:admin`) while authenticated BackOffice users retain self-service profile endpoints:
+  - `GET /api/user/me`
+  - `PUT /api/user/me`
+  - `PUT /api/user/me/password` (requires current password validation)
+- The BackOffice SPA `/rbac` screen now owns the admin user-management UI for create/update, activation, and password reset/set flows, reusing the existing cookie + CSRF client behavior.
+- Admin-managed password operations are available at:
+  - `PUT /api/user/{id}/password/reset`
+  - `PUT /api/user/{id}/password/set` (alias with the same behavior)
+- Authorization grants are group/permission-based; role claims are no longer emitted in BackOffice JWT tokens.
+- Password hashing now standardizes new hashes to PBKDF2-SHA256 (100k iterations, 32-byte output) while verification remains compatible with legacy 256-byte PBKDF2 hashes.
+
 ### Priority 1: HttpOnly Cookie-Based Authentication
 
 **Problem**: Storing JWT tokens in `localStorage` makes them vulnerable to XSS (Cross-Site Scripting) attacks. Any malicious JavaScript code injected into the page can access and exfiltrate the token.
@@ -69,11 +82,12 @@ The authentication system has been upgraded with three priority levels of securi
 
 #### Changes
 
-**File: `MorWalPizVideo.Domain/Interfaces/Repository.cs`**
-- `VerifyPassword()`: Updated from 10,000 to 100,000 iterations
-- `HashPassword()`: Updated from 10,000 to 100,000 iterations
-- Added explicit `HashAlgorithmName.SHA256` parameter
-- Both methods now use:
+**File: `MorWalPizVideo.Domain/Security/PasswordHashing.cs`**
+- Uses PBKDF2-SHA256 with 100,000 iterations for all new hashes
+- Verifies against the stored hash length to preserve compatibility with legacy records
+- Standardized new hash output length to 32 bytes
+- Maintains compatibility with legacy 256-byte PBKDF2 hashes
+- Uses:
   ```csharp
   new Rfc2898DeriveBytes(password, salt, 100000, HashAlgorithmName.SHA256)
   ```

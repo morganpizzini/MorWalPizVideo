@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { redirect } from 'react-router';
+import { authLoader } from '../router';
 import { authService } from '../services/authService';
 import { requireBackOfficeAccess } from './guards';
 
@@ -27,5 +28,15 @@ describe('BackOffice route guards', () => {
     });
 
     await expect(requireBackOfficeAccess()).resolves.toEqual(redirect('/'));
+  });
+
+  it('redirects the shell route away from users without the canonical permission', async () => {
+    localStorage.setItem('auth_user', JSON.stringify({ role: 'viewer' }));
+    vi.spyOn(authService, 'validateSession').mockResolvedValue({
+      userId: 'user-without-access',
+      effectivePermissions: [],
+    });
+
+    await expect(authLoader()).resolves.toEqual(redirect('/'));
   });
 });

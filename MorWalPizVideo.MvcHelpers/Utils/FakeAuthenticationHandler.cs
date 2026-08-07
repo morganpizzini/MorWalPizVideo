@@ -26,8 +26,7 @@ namespace MorWalPizVideo.MvcHelpers.Utils
             var claims = new[]
             {
             new Claim(ClaimTypes.Name, "FakeUser"),
-            new Claim(ClaimTypes.NameIdentifier, "fake-user-id"),
-            new Claim(ClaimTypes.Role, "Admin")
+            new Claim(ClaimTypes.NameIdentifier, "fake-user-id")
         };
 
             var identity = new ClaimsIdentity(claims, "FakeScheme");

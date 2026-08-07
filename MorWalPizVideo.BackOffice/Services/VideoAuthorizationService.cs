@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 
@@ -13,25 +15,19 @@ public interface IVideoAuthorizationService
 }
 
 public sealed class VideoAuthorizationService(
-    IUserRepository userRepository,
+    IUserAccessResolver userAccessResolver,
     IUserChannelOwnerRepository userChannelOwnerRepository) : IVideoAuthorizationService
 {
     public async Task<bool> IsAdminAsync(ClaimsPrincipal principal)
     {
-        if (principal.IsInRole("Admin"))
-        {
-            return true;
-        }
-
         var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userId))
         {
             return false;
         }
 
-        var user = await userRepository.GetItemAsync(userId);
-         return user is { IsActive: true } &&
-             string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+        var profile = await userAccessResolver.ResolveAsync(userId);
+        return profile?.GroupCodes.Contains(AuthorizationGroupCodes.Admin, StringComparer.OrdinalIgnoreCase) == true;
     }
 
     public async Task<bool> CanAccessAsync(ClaimsPrincipal principal, YouTubeContent match)

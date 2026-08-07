@@ -2,8 +2,12 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -51,6 +55,48 @@ public sealed class CookieAntiforgeryTests : IClassFixture<BackOfficeWebApplicat
     Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
     Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
     Assert.Contains("samesite=none", cookie, StringComparison.OrdinalIgnoreCase);
+  }
+
+  [Fact]
+  public async Task Login_without_backoffice_permission_is_rejected_before_setting_cookie()
+  {
+    var username = $"no-backoffice-{Guid.NewGuid():N}";
+    var password = "Secret123!";
+    var userId = $"user-{Guid.NewGuid():N}";
+
+    using (var scope = _factory.Services.CreateScope())
+    {
+      var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+      var groupRepository = scope.ServiceProvider.GetRequiredService<IUserGroupRepository>();
+      var groupId = $"group-{Guid.NewGuid():N}";
+
+      await groupRepository.AddItemAsync(new UserGroup
+      {
+        Id = groupId,
+        Code = "basic-users",
+        Name = "Basic Users",
+        IsActive = true,
+        Permissions = []
+      });
+
+      var passwordHash = UserRepository.HashPassword(password, out var salt);
+      await userRepository.AddItemAsync(new User
+      {
+        Id = userId,
+        Username = username,
+        Email = $"{username}@example.test",
+        PasswordHash = passwordHash,
+        Salt = salt,
+        IsActive = true,
+        GroupIds = [groupId]
+      });
+    }
+
+    using var client = CreateClient();
+    using var response = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    Assert.DoesNotContain(response.Headers, header => header.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase));
   }
 
   [Fact]

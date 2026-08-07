@@ -152,8 +152,7 @@ internal static class MockScenarioValidator
              (administrators[0].DirectPermissions ?? [])
                 .Any(permission => string.Equals(permission, AuthorizationPermissionKeys.CanAccessBackoffice, StringComparison.OrdinalIgnoreCase)));
 
-        if (administrators.Count != 1 || !administrators[0].IsActive || !adminHasBackofficePermission ||
-            !string.Equals(administrators[0].Role, "admin", StringComparison.OrdinalIgnoreCase))
+        if (administrators.Count != 1 || !administrators[0].IsActive || !adminHasBackofficePermission)
         {
             errors.Add("The scenario must contain one active MorWalPiz BackOffice administrator.");
         }

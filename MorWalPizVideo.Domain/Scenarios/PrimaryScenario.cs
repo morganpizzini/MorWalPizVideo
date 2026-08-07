@@ -1,4 +1,5 @@
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using System.Security.Cryptography;
@@ -85,12 +86,7 @@ public class PrimaryScenario : BaseScenario
                 LinkType.CustomUrl)
         ]);
 
-        var passwordHash = Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(
-            AdminPassword,
-            Convert.FromBase64String(AdminPasswordSalt),
-            100000,
-            HashAlgorithmName.SHA256,
-            256));
+        var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);
         Set("users",
         [
             new User

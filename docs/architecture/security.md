@@ -65,7 +65,7 @@ The BackOffice SPA `/rbac` route has a route-level guard that calls the authenti
 
 `POST /api/user/bootstrap-admin/{username}` is an operational bootstrap endpoint. It is anonymous only because no authenticated administrator exists yet; it still requires `X-Bootstrap-Secret` matching protected `BootstrapSettings:Secret` configuration. Empty configuration disables the endpoint. The endpoint accepts only an existing active username, creates or repairs the `admin` group with `canaccessbackoffice`, and assigns that group membership. It refuses to run after any active user already has BackOffice access, including legacy `CanAccessBackoffice`, direct permission, or active-group permission. It never creates a user or predictable password.
 
-Operators must remove or rotate the bootstrap secret after first use. The legacy `/api/user/init/{username}` route remains compatibility-only and must not be used for new administrator provisioning.
+Operators must remove or rotate the bootstrap secret after first use. The supported bootstrap path is `/api/user/bootstrap-admin/{username}` with the deployment secret header; no legacy `init` route should be documented or used for new administrator provisioning.
 
 ## API-Key Authentication
 

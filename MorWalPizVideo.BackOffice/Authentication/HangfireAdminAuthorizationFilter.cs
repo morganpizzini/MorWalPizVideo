@@ -1,14 +1,35 @@
-using System.Security.Claims;
 using Hangfire.Dashboard;
+using Microsoft.Extensions.DependencyInjection;
+using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Models.Constraints;
+using System.Security.Claims;
 
 namespace MorWalPizVideo.BackOffice.Authentication;
 
 public sealed class HangfireAdminAuthorizationFilter : IDashboardAuthorizationFilter
 {
-  public bool Authorize(DashboardContext context) => IsAdmin(context.GetHttpContext().User);
+  public bool Authorize(DashboardContext context)
+  {
+    var httpContext = context.GetHttpContext();
+    return IsAdminAsync(httpContext.User, httpContext.RequestServices.GetRequiredService<IUserAccessResolver>())
+      .GetAwaiter()
+      .GetResult();
+  }
 
-  public static bool IsAdmin(ClaimsPrincipal user) =>
-      user.Identity?.IsAuthenticated == true &&
-      user.FindAll(ClaimTypes.Role).Any(claim =>
-          string.Equals(claim.Value, "admin", StringComparison.OrdinalIgnoreCase));
+  public static async Task<bool> IsAdminAsync(ClaimsPrincipal user, IUserAccessResolver accessResolver)
+  {
+    if (user.Identity?.IsAuthenticated != true)
+    {
+      return false;
+    }
+
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+      return false;
+    }
+
+    var profile = await accessResolver.ResolveAsync(userId);
+    return profile?.GroupCodes.Contains(AuthorizationGroupCodes.Admin, StringComparer.OrdinalIgnoreCase) == true;
+  }
 }

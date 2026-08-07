@@ -63,7 +63,11 @@ const Header: React.FC = () => {
                     <strong>{currentUser?.username || currentUser?.email || 'User'}</strong>
                   </Dropdown.Header>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={handleLogout}>
+                  <Dropdown.Item as={Link} to="/profile" role="menuitem">
+                    Profile
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={handleLogout} role="menuitem">
                     🚪 Logout
                   </Dropdown.Item>
                 </Dropdown.Menu>

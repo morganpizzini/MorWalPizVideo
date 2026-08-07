@@ -11,6 +11,9 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Configuration;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.Models.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -76,20 +79,45 @@ public sealed class HangfireConfigurationTests : IClassFixture<BackOfficeWebAppl
   }
 
   [Theory]
-  [InlineData(true, "admin", true)]
-  [InlineData(true, "Admin", true)]
-  [InlineData(true, "editor", false)]
-  [InlineData(false, "admin", false)]
-  public void Dashboard_requires_authenticated_admin_role(
+  [InlineData(true, true)]
+  [InlineData(true, false)]
+  [InlineData(false, true)]
+  public async Task Dashboard_requires_authenticated_admin_group(
       bool authenticated,
-      string role,
-      bool expected)
+      bool hasAdminGroup)
   {
+    var userId = Guid.NewGuid().ToString("N");
     var identity = new ClaimsIdentity(
-        [new Claim(ClaimTypes.Role, role)],
+        [new Claim(ClaimTypes.NameIdentifier, userId)],
         authenticated ? "Test" : null);
     var principal = new ClaimsPrincipal(identity);
 
-    Assert.Equal(expected, HangfireAdminAuthorizationFilter.IsAdmin(principal));
+    var resolver = new TestUserAccessResolver(hasAdminGroup, userId);
+    var result = await HangfireAdminAuthorizationFilter.IsAdminAsync(principal, resolver);
+
+    Assert.Equal(authenticated && hasAdminGroup, result);
+  }
+
+  private sealed class TestUserAccessResolver(bool hasAdminGroup, string expectedUserId) : IUserAccessResolver
+  {
+    public Task<UserAccessProfile?> ResolveAsync(string userId)
+    {
+      if (!string.Equals(userId, expectedUserId, StringComparison.Ordinal))
+      {
+        return Task.FromResult<UserAccessProfile?>(null);
+      }
+
+      var groups = hasAdminGroup
+          ? new HashSet<string>([AuthorizationGroupCodes.Admin], StringComparer.OrdinalIgnoreCase)
+          : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+      var profile = new UserAccessProfile(
+          new User { Id = userId, IsActive = true },
+          groups,
+          new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+          new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+      return Task.FromResult<UserAccessProfile?>(profile);
+    }
   }
 }
