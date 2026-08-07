@@ -11,7 +11,7 @@ describe('BackOffice route guards', () => {
   });
 
   it('allows an authenticated session with the canonical permission', async () => {
-    localStorage.setItem('auth_user', JSON.stringify({ role: 'viewer' }));
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'user-with-access' }));
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-with-access',
       effectivePermissions: ['canaccessbackoffice'],
@@ -21,7 +21,7 @@ describe('BackOffice route guards', () => {
   });
 
   it('redirects an authenticated session without the canonical permission', async () => {
-    localStorage.setItem('auth_user', JSON.stringify({ role: 'admin' }));
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'user-without-access' }));
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-without-access',
       effectivePermissions: [],
@@ -31,7 +31,7 @@ describe('BackOffice route guards', () => {
   });
 
   it('redirects the shell route away from users without the canonical permission', async () => {
-    localStorage.setItem('auth_user', JSON.stringify({ role: 'viewer' }));
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'user-without-access' }));
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-without-access',
       effectivePermissions: [],

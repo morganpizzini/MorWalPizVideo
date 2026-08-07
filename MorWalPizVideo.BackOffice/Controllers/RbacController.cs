@@ -321,7 +321,6 @@ public class RbacController(
       Id = user.Id,
       Username = user.Username,
       Email = user.Email,
-      Role = user.Role,
       IsActive = user.IsActive,
       LastLogin = user.LastLogin,
       GroupIds = userGroupIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),

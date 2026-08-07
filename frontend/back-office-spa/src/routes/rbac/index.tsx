@@ -6,7 +6,6 @@ interface RbacUserSummary {
   id: string;
   username: string;
   email: string;
-  role: string;
   isActive: boolean;
   lastLogin?: string | null;
   groupIds: string[];
@@ -37,7 +36,6 @@ interface GroupFormState {
 interface UserFormState {
   username: string;
   email: string;
-  role: string;
   isActive: boolean;
 }
 
@@ -72,7 +70,6 @@ export default function RbacManagementPage() {
     username: '',
     email: '',
     password: '',
-    role: 'User',
     isActive: true,
   });
   const [newGroup, setNewGroup] = useState<GroupFormState>({
@@ -115,7 +112,6 @@ export default function RbacManagementPage() {
             {
               username: user.username,
               email: user.email,
-              role: user.role,
               isActive: user.isActive,
             },
           ])
@@ -172,7 +168,6 @@ export default function RbacManagementPage() {
         username: newUser.username.trim(),
         email: newUser.email.trim(),
         password: newUser.password,
-        role: newUser.role.trim(),
         isActive: newUser.isActive,
       });
 
@@ -180,7 +175,6 @@ export default function RbacManagementPage() {
         username: '',
         email: '',
         password: '',
-        role: 'User',
         isActive: true,
       });
       setSuccess('Utente creato.');
@@ -206,7 +200,6 @@ export default function RbacManagementPage() {
       await put(ComposeUrl(endpoints.USER_DETAIL, { id: encodeURIComponent(userId) }), {
         username: draft.username.trim(),
         email: draft.email.trim(),
-        role: draft.role.trim(),
         isActive: draft.isActive,
       });
 
@@ -428,18 +421,6 @@ export default function RbacManagementPage() {
               </Form.Group>
             </Col>
             <Col md={2}>
-              <Form.Group controlId="create-user-role">
-                <Form.Label>Role</Form.Label>
-                <Form.Control
-                  value={newUser.role}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, role: event.target.value }))
-                  }
-                  placeholder="User"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
               <Form.Group controlId="create-user-password">
                 <Form.Label>Password</Form.Label>
                 <Form.Control
@@ -644,7 +625,6 @@ export default function RbacManagementPage() {
             <thead>
               <tr>
                 <th>Account</th>
-                <th>Role</th>
                 <th>Active</th>
                 <th>Groups</th>
                 <th>Direct permissions</th>
@@ -696,19 +676,6 @@ export default function RbacManagementPage() {
                       <div className="text-muted small mt-2">
                         Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'never'}
                       </div>
-                    </td>
-                    <td>
-                      <Form.Control
-                        size="sm"
-                        aria-label={`Role for ${user.username}`}
-                        value={userDraft.role}
-                        onChange={(event) =>
-                          setUserEditDraft((current) => ({
-                            ...current,
-                            [user.id]: { ...userDraft, role: event.target.value },
-                          }))
-                        }
-                      />
                     </td>
                     <td>
                       <Form.Check

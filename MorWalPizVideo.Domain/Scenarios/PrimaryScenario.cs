@@ -98,7 +98,6 @@ public class PrimaryScenario : BaseScenario
                 PasswordHash = passwordHash,
                 Salt = AdminPasswordSalt,
                 IsActive = true,
-                Role = "admin",
                 CanAccessBackoffice = true,
                 DirectPermissions = [AuthorizationPermissionKeys.CanAccessBackoffice],
                 GroupIds = [AdminGroupId]
@@ -110,7 +109,6 @@ public class PrimaryScenario : BaseScenario
                 Username = "test-user",
                 Email = "test-user@example.test",
                 IsActive = true,
-                Role = "user",
                 CanAccessBackoffice = true,
                 DirectPermissions = [AuthorizationPermissionKeys.CanAccessBackoffice],
                 GroupIds = [ContributorGroupId]

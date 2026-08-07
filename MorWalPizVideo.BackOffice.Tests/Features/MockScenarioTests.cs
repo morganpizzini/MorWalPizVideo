@@ -19,7 +19,6 @@ public class MockScenarioTests
             .Single(user => user.Username == "MorWalPiz");
         Assert.True(administrator.IsActive);
         Assert.True(administrator.CanAccessBackoffice);
-        Assert.Equal("admin", administrator.Role, ignoreCase: true);
 
         var added = await firstRepository.AddItemAsync(new User
         {

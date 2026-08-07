@@ -53,7 +53,6 @@ namespace MorWalPiz.Contracts
                 Id = entity.Id,
                 Username = entity.Username,
                 Email = entity.Email,
-                Role = entity.Role,
                 IsActive = entity.IsActive,
                 LastLogin = entity.LastLogin
             };

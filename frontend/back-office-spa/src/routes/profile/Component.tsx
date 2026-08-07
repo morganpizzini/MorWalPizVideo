@@ -7,7 +7,6 @@ interface UserProfile {
   id: string;
   username: string;
   email: string;
-  role: string;
 }
 
 export default function ProfilePage() {
@@ -57,7 +56,6 @@ export default function ProfilePage() {
           id: next.id,
           username: next.username,
           email: next.email,
-          role: next.role,
         });
       }
 

@@ -134,8 +134,7 @@ public class AuthController : ControllerBase
             {
                 Id = user.Id!,
                 Username = user.Username,
-                Email = user.Email,
-                Role = user.Role
+                Email = user.Email
             }
         });
     }
@@ -240,5 +239,4 @@ public record UserInfo
     public string Id { get; init; } = string.Empty;
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
-    public string Role { get; init; } = string.Empty;
 }

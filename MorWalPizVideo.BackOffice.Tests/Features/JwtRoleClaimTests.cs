@@ -26,8 +26,7 @@ public class JwtRoleClaimTests
         {
             Id = "user-1",
             Username = "user-1",
-            Email = "user-1@example.test",
-            Role = "admin"
+            Email = "user-1@example.test"
         });
 
         var parsed = new JwtSecurityTokenHandler().ReadJwtToken(token);

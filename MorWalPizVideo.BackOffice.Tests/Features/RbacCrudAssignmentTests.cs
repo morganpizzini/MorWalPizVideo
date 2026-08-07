@@ -100,17 +100,12 @@ public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplica
     Assert.Contains(groupB.Id, managedUserAfterDelete.GroupIds);
   }
 
-  private HttpClient CreateClient(string? userId = null, string? role = null, string? permissions = null)
+  private HttpClient CreateClient(string? userId = null, string? permissions = null)
   {
     var client = _factory.CreateClient();
     if (!string.IsNullOrWhiteSpace(userId))
     {
       client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
-    }
-
-    if (!string.IsNullOrWhiteSpace(role))
-    {
-      client.DefaultRequestHeaders.Add("X-Test-Role", role);
     }
 
     if (!string.IsNullOrWhiteSpace(permissions))

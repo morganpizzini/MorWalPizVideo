@@ -31,7 +31,6 @@ const rbacUsers = [
     id: 'u1',
     username: 'mario',
     email: 'mario@example.test',
-    role: 'Editor',
     isActive: true,
     lastLogin: null,
     groupIds: ['g1'],
@@ -87,7 +86,6 @@ describe('RBAC management page', () => {
     await screen.findByDisplayValue('mario');
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'luigi' } });
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'luigi@example.test' } });
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Reviewer' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'TempPass!42' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -96,7 +94,6 @@ describe('RBAC management page', () => {
         username: 'luigi',
         email: 'luigi@example.test',
         password: 'TempPass!42',
-        role: 'Reviewer',
         isActive: true,
       });
     });
@@ -111,14 +108,12 @@ describe('RBAC management page', () => {
 
     fireEvent.change(scoped.getByLabelText(/username for mario/i), { target: { value: 'mario-admin' } });
     fireEvent.change(scoped.getByLabelText(/email for mario/i), { target: { value: 'mario-admin@example.test' } });
-    fireEvent.change(scoped.getByLabelText(/role for mario/i), { target: { value: 'Admin' } });
     fireEvent.click(scoped.getByRole('button', { name: 'Save user' }));
 
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith(ComposeUrl(endpoints.USER_DETAIL, { id: 'u1' }), {
         username: 'mario-admin',
         email: 'mario-admin@example.test',
-        role: 'Admin',
         isActive: true,
       });
     });

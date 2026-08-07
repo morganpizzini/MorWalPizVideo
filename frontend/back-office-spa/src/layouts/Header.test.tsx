@@ -34,7 +34,6 @@ describe('Header', () => {
       id: 'user-1',
       username: 'tester',
       email: 'tester@example.test',
-      role: 'viewer',
     } as any);
   });
 

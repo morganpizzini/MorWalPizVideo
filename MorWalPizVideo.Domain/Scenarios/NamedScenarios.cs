@@ -33,8 +33,7 @@ public sealed class AuthorizationScenario : PrimaryScenario
                 CreationDateTime = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
                 Username = "inactive-user",
                 Email = "inactive-user@example.test",
-                IsActive = false,
-                Role = "user"
+                IsActive = false
             }
         }).Concat(Read<User>("users")));
     }

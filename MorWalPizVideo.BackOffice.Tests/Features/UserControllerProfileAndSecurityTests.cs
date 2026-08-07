@@ -8,6 +8,7 @@ using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -61,10 +62,10 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
     }
 
     [Fact]
-    public async Task Role_only_user_is_denied_when_group_and_permission_are_missing()
+    public async Task User_without_group_or_permission_is_denied()
     {
-        var roleOnlyUserId = await SeedRoleOnlyUserAsync();
-        using var client = CreateClient(roleOnlyUserId);
+        var userId = await SeedUserWithoutAccessAsync();
+        using var client = CreateClient(userId);
 
         var response = await client.GetAsync("/api/User/me");
 
@@ -236,16 +237,15 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
             PasswordHash = hash,
             Salt = salt,
             IsActive = true,
-            GroupIds = [groupId],
-            Role = isAdmin ? "admin" : "contributor"
+            GroupIds = [groupId]
         });
 
         return userId;
     }
 
-    private async Task<string> SeedRoleOnlyUserAsync()
+    private async Task<string> SeedUserWithoutAccessAsync()
     {
-        var userId = $"role-only-{Guid.NewGuid():N}";
+        var userId = $"no-access-{Guid.NewGuid():N}";
 
         using var scope = _factory.Services.CreateScope();
         var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
@@ -254,12 +254,11 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
         await userRepository.AddItemAsync(new User
         {
             Id = userId,
-            Username = $"role-only-{Guid.NewGuid():N}",
-            Email = $"role-only-{Guid.NewGuid():N}@example.test",
+            Username = $"no-access-{Guid.NewGuid():N}",
+            Email = $"no-access-{Guid.NewGuid():N}@example.test",
             PasswordHash = hash,
             Salt = salt,
-            IsActive = true,
-            Role = "admin"
+            IsActive = true
         });
 
         return userId;

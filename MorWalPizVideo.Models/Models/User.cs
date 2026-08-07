@@ -25,9 +25,6 @@ public record User : BaseEntity
     [BsonElement("isActive")]
     public bool IsActive { get; init; } = true;
 
-    [BsonElement("role")]
-    public string Role { get; init; } = "User";
-
     /// <summary>Direct permission keys assigned to this user (lowercase invariant).</summary>
     [BsonElement("directPermissions")]
     public List<string> DirectPermissions { get; init; } = new();

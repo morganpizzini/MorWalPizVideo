@@ -26,7 +26,6 @@ describe('Profile route', () => {
       id: 'u1',
       username: 'mario',
       email: 'mario@example.test',
-      role: 'viewer',
     });
   });
 

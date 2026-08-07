@@ -16,9 +16,6 @@ public class RbacUserSummaryContract
   public string Email { get; set; } = string.Empty;
 
   [DataMember]
-  public string Role { get; set; } = string.Empty;
-
-  [DataMember]
   public bool IsActive { get; set; }
 
   [DataMember]

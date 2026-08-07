@@ -20,9 +20,10 @@ public class ShortLinksStepDefinitions
     public ShortLinksStepDefinitions(BackOfficeWebApplicationFactory factory, TestScenarioContext context)
     {
         _client = factory.CreateClient();
-        _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+        _client.DefaultRequestHeaders.Add("X-Test-UserId", "100000000000000000000001");
+        _client.DefaultRequestHeaders.Add("X-Test-Permissions", "canaccessbackoffice");
         _context = context;
-        
+
         // Access the same repository instances used by the web application
         _ytChannelRepository = factory.YTChannelRepository!;
         _matchRepository = factory.MatchRepository!;
@@ -48,7 +49,7 @@ public class ShortLinksStepDefinitions
     public async Task GivenAStandaloneShortLinkExists()
     {
         var existing = (await _shortLinkRepository.GetItemsAsync()).FirstOrDefault();
-        if(existing == null)
+        if (existing == null)
         {
             throw new Exception("No short links found in the repository. Ensure mock data is seeded correctly.");
         }
@@ -84,7 +85,7 @@ public class ShortLinksStepDefinitions
     [When(@"I delete the short link")]
     public async Task WhenIDeleteTheShortLink()
     {
-        _context.CreatedShortLinkId.Should().NotBeNullOrEmpty("A short link must be created before deletion");        
+        _context.CreatedShortLinkId.Should().NotBeNullOrEmpty("A short link must be created before deletion");
         _context.Response = await _client.DeleteAsync($"/api/ShortLinks/{_context.CreatedShortLinkId}");
     }
 
@@ -153,12 +154,12 @@ public class ShortLinksStepDefinitions
         _context.Response.Should().NotBeNull();
         var links = await _context.Response!.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>();
         links.Should().NotBeNull();
-        
+
         // Verify that at least one short link has LinkType = 0 (YouTubeVideo from matches)
-        var hasYouTubeVideoLinks = links!.Any(link => 
-            link.ContainsKey("linkType") && 
+        var hasYouTubeVideoLinks = links!.Any(link =>
+            link.ContainsKey("linkType") &&
             link["linkType"].ToString() == "0");
-        
+
         hasYouTubeVideoLinks.Should().BeTrue("Response should contain short links from matches with LinkType.YouTubeVideo");
     }
 
@@ -168,12 +169,12 @@ public class ShortLinksStepDefinitions
         _context.Response.Should().NotBeNull();
         var links = await _context.Response!.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>();
         links.Should().NotBeNull();
-        
+
         // Verify that at least one short link has LinkType = 1 (YouTubeChannel from channels)
-        var hasYouTubeChannelLinks = links!.Any(link => 
-            link.ContainsKey("linkType") && 
+        var hasYouTubeChannelLinks = links!.Any(link =>
+            link.ContainsKey("linkType") &&
             link["linkType"].ToString() == "1");
-        
+
         hasYouTubeChannelLinks.Should().BeTrue("Response should contain short links from channels with LinkType.YouTubeChannel");
     }
 
@@ -181,7 +182,7 @@ public class ShortLinksStepDefinitions
     public async Task GivenAMatchWithEmbeddedShortLinkExists()
     {
         var match = (await _matchRepository.GetItemsAsync(x => x.ShortLinks.Length > 0)).FirstOrDefault();
-        if(match == null)
+        if (match == null)
         {
             throw new Exception("No match with embedded short links found in the repository. Ensure mock data is seeded correctly.");
         }
@@ -194,11 +195,11 @@ public class ShortLinksStepDefinitions
     {
         var result = (await _ytChannelRepository.GetItemsAsync(x => x.ShortLinks.Length > 0)).FirstOrDefault();
 
-        if(result == null)
+        if (result == null)
         {
             throw new Exception("No channels with embedded short links found in the repository. Ensure mock data is seeded correctly.");
         }
-        
+
         _context.EmbeddedShortLinkId = result.ShortLinks[0].Code;
     }
 
@@ -219,7 +220,7 @@ public class ShortLinksStepDefinitions
     public async Task GivenAChannelExistsForShortLinkCreation()
     {
         var entity = (await _ytChannelRepository.GetItemsAsync()).FirstOrDefault();
-        if(entity== null)
+        if (entity == null)
         {
             throw new Exception("No channels found in the repository. Ensure mock data is seeded correctly.");
         }
@@ -248,7 +249,7 @@ public class ShortLinksStepDefinitions
     {
         _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
         _context.TestMatchId.Should().NotBeNullOrEmpty();
-        
+
         var updateRequest = new
         {
             Target = _context.TestMatchId,
@@ -272,7 +273,7 @@ public class ShortLinksStepDefinitions
     public async Task WhenICreateAShortLinkForTheMatch()
     {
         _context.TestMatchId.Should().NotBeNullOrEmpty();
-        
+
         var request = new
         {
             Target = _context.TestMatchId,
@@ -282,7 +283,7 @@ public class ShortLinksStepDefinitions
         };
 
         _context.Response = await _client.PostAsJsonAsync("/api/ShortLinks", request);
-        
+
         if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
             var responseContent = await _context.Response.Content.ReadAsStringAsync();
@@ -294,7 +295,7 @@ public class ShortLinksStepDefinitions
     public async Task WhenICreateAShortLinkForTheChannel()
     {
         _context.TestChannelId.Should().NotBeNullOrEmpty();
-        
+
         var request = new
         {
             Target = _context.TestChannelId,
@@ -304,7 +305,7 @@ public class ShortLinksStepDefinitions
         };
 
         _context.Response = await _client.PostAsJsonAsync("/api/ShortLinks", request);
-        
+
         if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
             var responseContent = await _context.Response.Content.ReadAsStringAsync();
@@ -317,7 +318,7 @@ public class ShortLinksStepDefinitions
     {
         _context.Response.Should().NotBeNull();
         _context.Response!.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         // Verify the update by fetching the short link again
         var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -327,7 +328,7 @@ public class ShortLinksStepDefinitions
     public async Task ThenTheShortLinkShouldBeRemovedFromTheMatch()
     {
         _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        
+
         // Verify deletion by trying to fetch the short link again
         var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -337,7 +338,7 @@ public class ShortLinksStepDefinitions
     public async Task ThenTheShortLinkShouldBeRemovedFromTheChannel()
     {
         _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        
+
         // Verify deletion by trying to fetch the short link again
         var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -347,11 +348,11 @@ public class ShortLinksStepDefinitions
     public async Task ThenTheShortLinkShouldHaveLinkTypeYouTubeVideo()
     {
         _context.CreatedShortLinkId.Should().NotBeNullOrEmpty();
-        
+
         // Fetch the created short link and verify LinkType
         var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.CreatedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var shortLink = await verifyResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         shortLink.Should().NotBeNull();
         shortLink!.Should().ContainKey("linkType");
@@ -362,12 +363,12 @@ public class ShortLinksStepDefinitions
     public async Task ThenTheShortLinkShouldHaveLinkTypeYouTubeChannel()
     {
         _context.CreatedShortLinkId.Should().NotBeNullOrEmpty();
-        
-        
+
+
         // Fetch the created short link and verify LinkType
         var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.CreatedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var shortLink = await verifyResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         shortLink.Should().NotBeNull();
         shortLink!.Should().ContainKey("linkType");

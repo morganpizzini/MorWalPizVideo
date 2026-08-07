@@ -172,13 +172,17 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Email = request.Email,
                 PasswordHash = passwordHash,
                 Salt = salt,
-                Role = string.IsNullOrWhiteSpace(request.Role) ? "User" : request.Role,
                 IsActive = request.IsActive ?? true
             };
 
             await _dataService.SaveUser(user);
+            var createdUser = await _dataService.GetUserByUsername(request.Username);
+            if (createdUser is null)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "User creation failed.");
+            }
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ContractUtils.Convert(user));
+            return Created($"/api/User/{createdUser.Id}", ContractUtils.Convert(createdUser));
         }
 
         [HttpPut("{id}")]
@@ -221,7 +225,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 Username = !string.IsNullOrWhiteSpace(request.Username) ? request.Username : existingUser.Username,
                 Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email : existingUser.Email,
-                Role = !string.IsNullOrWhiteSpace(request.Role) ? request.Role : existingUser.Role,
                 IsActive = request.IsActive ?? existingUser.IsActive,
                 PasswordHash = passwordHash,
                 Salt = salt
@@ -398,7 +401,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string? Role { get; set; }
         public bool? IsActive { get; set; }
     }
 
@@ -406,7 +408,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         public string? Username { get; set; }
         public string? Email { get; set; }
-        public string? Role { get; set; }
         public bool? IsActive { get; set; }
         public string? NewPassword { get; set; }
     }
