@@ -499,6 +499,7 @@ if (enableSwagger)
 
         // Apply security requirements based on endpoint metadata
         options.OperationFilter<SecurityRequirementsOperationFilter>();
+        options.OperationFilter<BootstrapAdminHeaderOperationFilter>();
     });
 }
 
