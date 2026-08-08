@@ -308,6 +308,7 @@ builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopManagementService, ShopManagementService>();
 builder.Services.AddScoped<IInsightsService, InsightsService>();
 builder.Services.AddScoped<ILinksService, LinksService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 if (enableMock)
 {

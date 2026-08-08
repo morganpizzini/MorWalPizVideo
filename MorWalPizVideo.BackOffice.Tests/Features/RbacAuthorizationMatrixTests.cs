@@ -18,7 +18,7 @@ public sealed class RbacAuthorizationMatrixTests : IClassFixture<BackOfficeWebAp
   }
 
   [Fact]
-  public async Task Rbac_endpoint_allows_user_with_inherited_canaccessbackoffice_permission()
+  public async Task Rbac_endpoint_allows_user_with_inherited_backoffice_access_permission()
   {
     var userId = $"rbac-inherited-{Guid.NewGuid():N}";
     var groupId = $"rbac-group-{Guid.NewGuid():N}";
@@ -40,7 +40,7 @@ public sealed class RbacAuthorizationMatrixTests : IClassFixture<BackOfficeWebAp
           Code = "rbac-inherited",
           Name = "Rbac Inherited",
           IsActive = true,
-          Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
+          Permissions = [AuthorizationPermissionKeys.BackofficeAccess]
         });
 
     using var client = CreateClient(userId: userId);
@@ -51,9 +51,9 @@ public sealed class RbacAuthorizationMatrixTests : IClassFixture<BackOfficeWebAp
   }
 
   [Fact]
-  public async Task AllowUser_any_token_allows_matching_permission_when_group_is_missing()
+  public async Task AllowUser_manageall_permission_allows_group_restricted_endpoint()
   {
-    using var client = CreateClient(permissions: "admin");
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.BackofficeManageAll);
 
     var response = await client.GetAsync("/api/Diagnostics");
 

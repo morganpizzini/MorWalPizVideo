@@ -93,7 +93,7 @@ public class AuthController : ControllerBase
         }
 
         var accessProfile = await _userAccessResolver.ResolveAsync(user.Id);
-        if (accessProfile?.EffectivePermissions.Contains(AuthorizationPermissionKeys.CanAccessBackoffice) != true)
+        if (accessProfile?.EffectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess) != true)
         {
             await _rateLimitingService.RecordLoginAttemptAsync(ipAddress, request.Username, false, userAgent, "Missing backoffice permission");
 

@@ -150,7 +150,7 @@ internal static class MockScenarioValidator
         var adminHasBackofficePermission = administrators.Count == 1 &&
             (administrators[0].CanAccessBackoffice ||
              (administrators[0].DirectPermissions ?? [])
-                .Any(permission => string.Equals(permission, AuthorizationPermissionKeys.CanAccessBackoffice, StringComparison.OrdinalIgnoreCase)));
+                .Any(permission => string.Equals(permission, AuthorizationPermissionKeys.BackofficeAccess, StringComparison.OrdinalIgnoreCase)));
 
         if (administrators.Count != 1 || !administrators[0].IsActive || !adminHasBackofficePermission)
         {

@@ -1,7 +1,7 @@
 import { redirect } from 'react-router';
 import { authService } from '../services/authService';
 
-export const CAN_ACCESS_BACKOFFICE = 'canaccessbackoffice';
+export const CAN_ACCESS_BACKOFFICE = 'backoffice.access';
 
 export async function requireBackOfficeAccess() {
   const session = await authService.validateSession();

@@ -36,7 +36,7 @@ const rbacUsers = [
     groupIds: ['g1'],
     groupCodes: ['admin'],
     directPermissions: ['videos.write'],
-    effectivePermissions: ['canaccessbackoffice', 'videos.write'],
+    effectivePermissions: ['backoffice.access', 'videos.update'],
     canAccessBackoffice: true,
   },
 ];
@@ -48,7 +48,7 @@ const rbacGroups = [
     name: 'Administrators',
     description: 'Admin group',
     isActive: true,
-    permissions: ['canaccessbackoffice'],
+    permissions: ['backoffice.access'],
     memberCount: 1,
   },
   {
@@ -102,7 +102,7 @@ describe('RBAC management page', () => {
   it('updates user details and active status with admin endpoints', async () => {
     render(<RbacManagementPage />);
 
-    const row = (await screen.findByText('canaccessbackoffice')).closest('tr');
+    const row = (await screen.findByText('backoffice.access')).closest('tr');
     expect(row).not.toBeNull();
     const scoped = within(row as HTMLElement);
 
@@ -131,7 +131,7 @@ describe('RBAC management page', () => {
   it('invokes both admin password actions', async () => {
     render(<RbacManagementPage />);
 
-    const row = (await screen.findByText('canaccessbackoffice')).closest('tr');
+    const row = (await screen.findByText('backoffice.access')).closest('tr');
     expect(row).not.toBeNull();
     const scoped = within(row as HTMLElement);
 
@@ -157,7 +157,7 @@ describe('RBAC management page', () => {
   it('preserves RBAC group and direct-permission saves', async () => {
     render(<RbacManagementPage />);
 
-    const row = (await screen.findByText('canaccessbackoffice')).closest('tr');
+    const row = (await screen.findByText('backoffice.access')).closest('tr');
     expect(row).not.toBeNull();
     const scoped = within(row as HTMLElement);
 

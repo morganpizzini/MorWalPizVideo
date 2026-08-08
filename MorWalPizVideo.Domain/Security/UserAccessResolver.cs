@@ -40,7 +40,7 @@ public sealed class UserAccessResolver(
 
     if (user.CanAccessBackoffice)
     {
-      directPermissions.Add(AuthorizationPermissionKeys.CanAccessBackoffice);
+      directPermissions.Add(AuthorizationPermissionKeys.BackofficeAccess);
     }
 
     var groups = await userGroupRepository.GetByIdsAsync(user.GroupIds ?? []);
@@ -59,6 +59,11 @@ public sealed class UserAccessResolver(
     var effectivePermissions = directPermissions
         .Union(inheritedPermissions, StringComparer.OrdinalIgnoreCase)
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    if (effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll))
+    {
+      effectivePermissions.Add(AuthorizationPermissionKeys.BackofficeAccess);
+    }
 
     return new UserAccessProfile(user, groupCodes, directPermissions, effectivePermissions);
   }

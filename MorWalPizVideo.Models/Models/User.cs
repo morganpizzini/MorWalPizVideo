@@ -38,14 +38,14 @@ public record User : BaseEntity
     public bool CanAccessBackoffice { get; init; } = false;
 
     /// <summary>
-    /// Legacy compatibility bridge: expose canAccessBackoffice as a canonical permission.
+    /// Exposes the persisted access flag through the canonical permission profile.
     /// New authorization should use DirectPermissions + Groups.
     /// </summary>
     [BsonIgnore]
     public bool HasLegacyBackOfficePermission =>
         CanAccessBackoffice ||
         DirectPermissions.Any(permission =>
-            string.Equals(permission, AuthorizationPermissionKeys.CanAccessBackoffice, StringComparison.OrdinalIgnoreCase));
+            string.Equals(permission, AuthorizationPermissionKeys.BackofficeAccess, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>List of Web Push subscription endpoints/keys for browser push notifications.</summary>
     [BsonElement("pushSubscriptions")]

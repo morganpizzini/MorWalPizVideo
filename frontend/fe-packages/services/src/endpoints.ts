@@ -69,6 +69,8 @@ const RBAC_USER_GROUPS = `${RBAC}/users/{id}/groups`;
 const RBAC_GROUPS = `${RBAC}/groups`;
 const RBAC_GROUPS_DETAIL = `${RBAC_GROUPS}/{id}`;
 const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
+const DASHBOARD_SUMMARY = `${baseEndpoint}/dashboard/summary`;
+const DASHBOARD_VIDEO_PUBLICATIONS = `${baseEndpoint}/dashboard/video-publications`;
 
 export default {
 
@@ -133,6 +135,8 @@ export default {
     RBAC_GROUPS,
     RBAC_GROUPS_DETAIL,
     RBAC_GROUP_PERMISSIONS,
+    DASHBOARD_SUMMARY,
+    DASHBOARD_VIDEO_PUBLICATIONS,
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

@@ -17,6 +17,23 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            var matches = await _collection
+                .Find(Builders<YouTubeContent>.Filter.And(
+                    Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false),
+                    Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs,
+                        video => video.PublishedAt >= fromInclusive && video.PublishedAt < toExclusive)))
+                .ToListAsync();
+
+            return matches
+                .SelectMany(match => match.VideoRefs ?? [])
+                .Where(video => video.PublishedAt >= fromInclusive && video.PublishedAt < toExclusive)
+                .Select(video => new VideoPublication(video.YoutubeId, video.Title, video.PublishedAt))
+                .OrderBy(video => video.PublishedAt)
+                .ToList();
+        }
+
         public async Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds)
         {
             var filter = Builders<YouTubeContent>.Filter.Eq(x => x.CreatorUserId, userId);

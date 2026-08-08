@@ -35,7 +35,7 @@ public sealed class AuthValidationTests : IClassFixture<BackOfficeWebApplication
         Code = "backoffice-users",
         Name = "BackOffice Users",
         IsActive = true,
-        Permissions = ["canaccessbackoffice"]
+        Permissions = ["backoffice.access"]
       });
       await userRepository.AddItemAsync(new User
       {
@@ -72,7 +72,7 @@ public sealed class AuthValidationTests : IClassFixture<BackOfficeWebApplication
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     var validation = await response.Content.ReadFromJsonAsync<AuthValidationResponse>();
     Assert.Equal(userId, validation!.UserId);
-    Assert.Contains("canaccessbackoffice", validation.EffectivePermissions);
+    Assert.Contains("backoffice.access", validation.EffectivePermissions);
   }
 
   private sealed record CsrfResponse(string Token);

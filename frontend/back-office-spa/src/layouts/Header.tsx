@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
+import { Menu, Bell } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { authService } from '../services/authService';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -38,23 +43,24 @@ const Header: React.FC = () => {
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
-      <Container>
-        <Navbar.Brand as={Link} to="/">
-          BO MorWalPiz
-        </Navbar.Brand>
+    <Navbar className="admin-header" expand="false">
+      <Container fluid>
+        <div className="d-flex align-items-center gap-3">
+          <Button variant="link" className="header-icon-button d-lg-none" onClick={onToggleSidebar} aria-label="Open navigation">
+            <Menu size={21} />
+          </Button>
+          <Navbar.Brand as={Link} to="/">MorWalPiz Admin</Navbar.Brand>
+        </div>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
-
-          </Nav>
-
-          {/* Authentication Status in Header */}
           <Nav className="ms-auto">
             {isAuthenticated ? (
-              <Dropdown align="end">
-                <Dropdown.Toggle variant="outline-light" id="user-dropdown">
-                  <span className="text-success me-2">●</span>
+              <div className="d-flex align-items-center gap-2">
+                <Button variant="link" className="header-icon-button" aria-label="Notifications">
+                  <Bell size={18} />
+                </Button>
+                <Dropdown align="end">
+                <Dropdown.Toggle variant="light" id="user-dropdown">
                   {currentUser?.username || currentUser?.email || 'User'}
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
@@ -68,17 +74,18 @@ const Header: React.FC = () => {
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item onClick={handleLogout} role="menuitem">
-                    🚪 Logout
+                    Logout
                   </Dropdown.Item>
                 </Dropdown.Menu>
-              </Dropdown>
+                </Dropdown>
+              </div>
             ) : (
               <Button
-                variant="outline-light"
+                variant="outline-primary"
                 size="sm"
                 onClick={handleLogin}
               >
-                🔑 Login
+                Login
               </Button>
             )}
           </Nav>

@@ -17,6 +17,7 @@ interface AuthValidationResponse {
 
 class AuthService {
   private readonly USER_KEY = 'auth_user';
+  private effectivePermissions: string[] = [];
 
   constructor() {
     // Redirect to login on 401 responses (unless on auth endpoints)
@@ -37,6 +38,10 @@ class AuthService {
     const userStr = localStorage.getItem(this.USER_KEY);
 
     return userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null;
+  }
+
+  getPermissions(): string[] {
+    return this.effectivePermissions;
   }
 
   // Quick UI check based on locally cached user info; the auth cookie is the real authority
@@ -96,11 +101,14 @@ class AuthService {
         return null;
       }
 
+      const effectivePermissions = Array.isArray(response.effectivePermissions)
+        ? response.effectivePermissions.map((permission: string) => permission.trim().toLowerCase())
+        : [];
+      this.effectivePermissions = effectivePermissions;
+
       return {
         userId: response.userId,
-        effectivePermissions: Array.isArray(response.effectivePermissions)
-          ? response.effectivePermissions.map((permission: string) => permission.trim().toLowerCase())
-          : [],
+        effectivePermissions,
       };
     } catch {
       return null;

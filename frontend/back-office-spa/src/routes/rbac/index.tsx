@@ -499,7 +499,7 @@ export default function RbacManagementPage() {
                 onChange={(event) =>
                   setNewGroup((current) => ({ ...current, permissionsCsv: event.target.value }))
                 }
-                placeholder="canaccessbackoffice, diagnostics.read"
+                placeholder="backoffice.access, diagnostics.view"
               />
             </Col>
             <Col md={2} className="d-flex align-items-end">

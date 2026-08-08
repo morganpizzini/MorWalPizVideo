@@ -16,7 +16,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AllowUser("perm:" + AuthorizationPermissionKeys.CanAccessBackoffice)]
+    [AllowUser("perm:" + AuthorizationPermissionKeys.BackofficeAccess)]
     public class UserController : ApplicationControllerBase
     {
         private readonly DataService _dataService;
@@ -82,13 +82,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 user.IsActive &&
                 (user.CanAccessBackoffice ||
                  user.DirectPermissions.Contains(
-                     AuthorizationPermissionKeys.CanAccessBackoffice,
+                     AuthorizationPermissionKeys.BackofficeAccess,
                      StringComparer.OrdinalIgnoreCase) ||
                  (user.GroupIds ?? []).Any(groupId =>
                      groupsById.TryGetValue(groupId, out var group) &&
                      group.IsActive &&
                      group.Permissions.Contains(
-                         AuthorizationPermissionKeys.CanAccessBackoffice,
+                         AuthorizationPermissionKeys.BackofficeAccess,
                          StringComparer.OrdinalIgnoreCase))));
 
             if (hasBackofficeUser)
@@ -117,17 +117,17 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Name = "Administrators",
                     Description = "Initial platform administrators.",
                     IsActive = true,
-                    Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
+                    Permissions = [AuthorizationPermissionKeys.BackofficeAccess]
                 });
             }
             else if (!adminGroup.Permissions.Contains(
-                         AuthorizationPermissionKeys.CanAccessBackoffice,
+                         AuthorizationPermissionKeys.BackofficeAccess,
                          StringComparer.OrdinalIgnoreCase))
             {
                 adminGroup = adminGroup with
                 {
                     Permissions = adminGroup.Permissions
-                        .Append(AuthorizationPermissionKeys.CanAccessBackoffice)
+                        .Append(AuthorizationPermissionKeys.BackofficeAccess)
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList()
                 };

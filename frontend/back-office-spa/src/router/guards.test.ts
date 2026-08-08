@@ -14,7 +14,7 @@ describe('BackOffice route guards', () => {
     localStorage.setItem('auth_user', JSON.stringify({ id: 'user-with-access' }));
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-with-access',
-      effectivePermissions: ['canaccessbackoffice'],
+      effectivePermissions: ['backoffice.access'],
     });
 
     await expect(requireBackOfficeAccess()).resolves.toBeNull();

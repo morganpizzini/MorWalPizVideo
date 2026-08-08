@@ -11,7 +11,7 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AllowUser(AuthorizationPermissionKeys.CanAccessBackoffice)]
+[AllowUser(AuthorizationPermissionKeys.BackofficeAccess)]
 public class RbacController(
     IUserRepository userRepository,
     IUserGroupRepository userGroupRepository) : ControllerBase
@@ -46,7 +46,7 @@ public class RbacController(
     var updatedUser = user with
     {
       DirectPermissions = normalizedPermissions,
-      CanAccessBackoffice = normalizedPermissions.Contains(AuthorizationPermissionKeys.CanAccessBackoffice, StringComparer.OrdinalIgnoreCase)
+      CanAccessBackoffice = normalizedPermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess, StringComparer.OrdinalIgnoreCase)
     };
 
     await userRepository.UpdateItemAsync(updatedUser);
@@ -296,7 +296,7 @@ public class RbacController(
     if (user.CanAccessBackoffice)
     {
       directPermissions = directPermissions
-          .Concat([AuthorizationPermissionKeys.CanAccessBackoffice])
+          .Concat([AuthorizationPermissionKeys.BackofficeAccess])
           .Distinct(StringComparer.OrdinalIgnoreCase)
           .ToList();
     }
@@ -327,7 +327,7 @@ public class RbacController(
       GroupCodes = groupCodes,
       DirectPermissions = directPermissions,
       EffectivePermissions = effectivePermissions,
-      CanAccessBackoffice = effectivePermissions.Contains(AuthorizationPermissionKeys.CanAccessBackoffice, StringComparer.OrdinalIgnoreCase)
+      CanAccessBackoffice = effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess, StringComparer.OrdinalIgnoreCase)
     };
   }
 

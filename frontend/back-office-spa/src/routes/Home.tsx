@@ -1,236 +1,65 @@
-import React from 'react';
-import Card from '../components/Card';
-import { Container, Row, Col } from 'react-bootstrap';
-import {
-  Link,
-  Folder,
-  ExternalLink,
-  Tv,
-  Video,
-  Image,
-  Calendar,
-  Settings,
-  Key,
-  List
-  , Activity,
-  ShieldCheck
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Alert, Badge, Button, Col, Row, Spinner, Table } from 'react-bootstrap';
+import { Activity, ExternalLink, Link as LinkIcon, LogIn, PlaySquare, Users } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { endpoints, get } from '@morwalpizvideo/services';
 
-const Home: React.FC = () => {
-  return (
-    <>
-      <h1>BackOffice MorWalPiz</h1>
-      <p className="text-muted">Seleziona un opzione per proseguire</p>
-      <hr />
-      <Container>
-        <Row>
-          <Col md={4} className="g-4">
-            <Card
-              title="Api key"
-              subtitle="Navigate to the api key page"
-              content="Click the button below to go to the api key page."
-              link="/keys"
-              buttonText="Go to Api Keys"
-              icon={Key}
-              isSmall={true}
-              gradientColors={['#FF6B6B', '#4ECDC4']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Diagnostics"
-              subtitle="Salute e problemi recenti"
-              content="Ispeziona lo stato corrente del backend e gli errori live recenti."
-              link="/diagnostics"
-              buttonText="Apri Diagnostics"
-              icon={Activity}
-              isSmall={true}
-              gradientColors={['#4facfe', '#00f2fe']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="RBAC"
-              subtitle="Utenti, gruppi e permessi"
-              content="Gestisci gruppi MongoDB, membership utente e permessi diretti/in eredità."
-              link="/rbac"
-              buttonText="Apri RBAC"
-              icon={ShieldCheck}
-              isSmall={true}
-              gradientColors={['#36d1dc', '#5b86e5']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Querylinks Page"
-              subtitle="Navigate to the querylinks page"
-              content="Click the button below to go to the querylinks page."
-              link="/querylinks"
-              buttonText="Go to Querylinks"
-              icon={Link}
-              isSmall={true}
-              gradientColors={['#FF6B6B', '#4ECDC4']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Categories Page"
-              subtitle="Navigate to the categories page"
-              content="Click the button below to go to the categories page."
-              link="/categories"
-              buttonText="Go to Categories"
-              isSmall={true}
-              icon={Folder}
-              gradientColors={['#45B7D1', '#96CEB4']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Shortlinks Page"
-              subtitle="Navigate to the shortlinks page"
-              content="Click the button below to go to the shortlink page."
-              link="/shortlinks"
-              buttonText="Go to Shortlinks"
-              icon={ExternalLink}
-              isSmall={true}
-              gradientColors={['#667eea', '#764ba2']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Channel Page"
-              subtitle="Navigate to the channel page"
-              content="Click the button below to go to the channel page."
-              link="/channels"
-              buttonText="Go to Channel"
-              icon={Tv}
-              isSmall={true}
-              gradientColors={['#f093fb', '#f5576c']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Videos Page"
-              subtitle="Gestione dei Video"
-              content="Crea, importa o converti i tuoi video YouTube con facilità."
-              link="/videos"
-              buttonText="Gestisci Video"
-              icon={Video}
-              isSmall={true}
-              gradientColors={['#43e97b', '#38f9d7']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Images Page"
-              subtitle="Gestione delle Immagini"
-              content="Carica e gestisci le immagini per i tuoi contenuti con facilità."
-              link="/images"
-              buttonText="Gestisci Immagini"
-              icon={Image}
-              isSmall={true}
-              gradientColors={['#fa709a', '#fee140']}
-            />
-          </Col>          <Col md={4} className="g-4">
-            <Card
-              title="Calendar events"
-              subtitle="Gestione degli eventi a calendario"
-              content="Carica e gestisci gli eventi a calendario"
-              link="/calendarEvents"
-              buttonText="Gestisci Eventi"
-              icon={Calendar}
-              isSmall={true}
-              gradientColors={['#a8edea', '#fed6e3']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Configurations"
-              subtitle="Gestione delle configurazioni"
-              content="Gestisci le configurazioni di sistema e dell'applicazione"
-              link="/morwalpizconfigurations"
-              buttonText="Gestisci Configurazioni"
-              icon={Settings}
-              isSmall={true}
-              gradientColors={['#ffecd2', '#fcb69f']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Products"
-              subtitle="Gestione dei prodotti"
-              content="Gestisci i prodotti che appariranno nel frontend"
-              link="/products"
-              buttonText="Gestisci prodotti"
-              icon={Settings}
-              isSmall={true}
-              gradientColors={['#ffecd2', '#fcb69f']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Product categories"
-              subtitle="Gestione delle categorie prodotti"
-              content="Gestisci le categorie prodotti che appariranno nel frontend"
-              link="/productCategories"
-              buttonText="Gestisci categorie prodotti"
-              icon={Settings}
-              isSmall={true}
-              gradientColors={['#ffecd2', '#fcb69f']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Sponsor"
-              subtitle="Gestione degli sponsor"
-              content="Gestisci gli sponsor dell'applicazione"
-              link="/sponsors"
-              buttonText="Gestisci Sponsor"
-              icon={Settings}
-              isSmall={true}
-              gradientColors={['#ffecd2', '#fcb69f']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Compilations"
-              subtitle="Gestione delle raccolte video"
-              content="Crea e gestisci raccolte di video YouTube organizzate per tema"
-              link="/compilations"
-              buttonText="Gestisci Compilations"
-              icon={List}
-              isSmall={true}
-              gradientColors={['#a18cd1', '#fbc2eb']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Custom Forms"
-              subtitle="Gestione delle forms"
-              content="Crea e gestisci le domande e risposte anonime"
-              link="/customforms"
-              buttonText="Gestisci Forms"
-              icon={List}
-              isSmall={true}
-              gradientColors={['#a18cd1', '#fbc2eb']}
-            />
-          </Col>
-          <Col md={4} className="g-4">
-            <Card
-              title="Insights"
-              subtitle="Gestione della ricerca contenuti"
-              content="Trova gli insights più rilevanti riguardo i contenuti per Youtube e social"
-              link="/insights"
-              buttonText="Gestisci Insights"
-              icon={List}
-              isSmall={true}
-              gradientColors={['#a18cd1', '#fbc2eb']}
-            />
-          </Col>
-        </Row>
-      </Container>
-    </>
-  );
-};
+interface DashboardSummary {
+  totalShortLinks: number;
+  totalShortLinkClicks: number;
+  lastBackOfficeLoginAt: string | null;
+  activeUsers: number;
+  publishedVideos: number;
+  activeForms: number;
+  formResponses: number;
+  pendingInsights: number;
+  generatedAt: string;
+}
 
-export default Home;
+interface PublicationVideo { id: string; title: string; publishedAt: string; }
+interface PublicationDay { date: string; count: number; videos: PublicationVideo[]; }
+
+function formatDate(value: string | null): string {
+  return value ? new Date(value).toLocaleString('it-IT') : 'Nessun accesso registrato';
+}
+
+function Kpi({ title, value, detail, icon: Icon }: { title: string; value: string | number; detail: string; icon: typeof Activity }) {
+  return <div className="dashboard-kpi"><div className="d-flex justify-content-between align-items-start"><div><div className="text-muted small">{title}</div><div className="fs-3 fw-semibold mt-2">{value}</div></div><div className="dashboard-kpi-icon"><Icon size={20} /></div></div><div className="text-muted small mt-3">{detail}</div></div>;
+}
+
+export default function Home() {
+  const navigate = useNavigate();
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [publications, setPublications] = useState<PublicationDay[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      get(endpoints.DASHBOARD_SUMMARY) as Promise<DashboardSummary>,
+      get(endpoints.DASHBOARD_VIDEO_PUBLICATIONS, { days: '21' }) as Promise<PublicationDay[]>,
+    ]).then(([nextSummary, nextPublications]) => {
+      if (!cancelled) { setSummary(nextSummary); setPublications(nextPublications); }
+    }).catch(() => { if (!cancelled) setError('Impossibile caricare i dati della dashboard.'); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (error) return <Alert variant="danger">{error}</Alert>;
+  if (!summary) return <div className="d-flex justify-content-center py-5"><Spinner /></div>;
+
+  const chartData = publications.map(day => ({ ...day, label: new Date(day.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) }));
+  const recentVideos = publications.flatMap(day => day.videos).slice(-8).reverse();
+
+  return <>
+    <div className="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><h1 className="h3 mb-1">Dashboard</h1><p className="text-muted mb-0">Panoramica operativa degli ultimi dati disponibili.</p></div><Badge bg="light" text="dark">Aggiornata {formatDate(summary.generatedAt)}</Badge></div>
+    <Row className="g-3 mb-4">
+      <Col sm={6} xl={3}><Kpi title="Click short link" value={summary.totalShortLinkClicks.toLocaleString('it-IT')} detail={`${summary.totalShortLinks} link gestiti`} icon={LinkIcon} /></Col>
+      <Col sm={6} xl={3}><Kpi title="Ultimo accesso BackOffice" value={summary.lastBackOfficeLoginAt ? new Date(summary.lastBackOfficeLoginAt).toLocaleDateString('it-IT') : '-'} detail={formatDate(summary.lastBackOfficeLoginAt)} icon={LogIn} /></Col>
+      <Col sm={6} xl={3}><Kpi title="Video pubblicati" value={summary.publishedVideos} detail="Finestra mobile di 21 giorni" icon={PlaySquare} /></Col>
+      <Col sm={6} xl={3}><Kpi title="Utenti attivi" value={summary.activeUsers} detail={`${summary.activeForms} form attivi`} icon={Users} /></Col>
+    </Row>
+    <Row className="g-3"><Col xl={8}><section className="dashboard-panel"><div className="d-flex justify-content-between align-items-start mb-3"><div><h2 className="h5 mb-1">Pubblicazione video</h2><p className="text-muted small mb-0">Video caricati nel BackOffice ordinati per <code>PublishedAt</code>.</p></div><Badge bg="primary">21 giorni</Badge></div><div style={{ width: '100%', height: 320 }}><ResponsiveContainer><BarChart data={chartData} onClick={event => { const day = chartData.find(item => item.label === event?.activeLabel); const video = day?.videos[0]; if (video) navigate(`/videos/${video.id}`); }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 12 }} /><YAxis allowDecimals={false} /><Tooltip formatter={value => [value ?? 0, 'Video']} /><Bar dataKey="count" fill="#2f6f8f" radius={[4, 4, 0, 0]} cursor="pointer" /></BarChart></ResponsiveContainer></div></section></Col><Col xl={4}><section className="dashboard-panel"><div className="d-flex justify-content-between align-items-center mb-3"><h2 className="h5 mb-0">Stato operativo</h2><Activity size={18} /></div><div className="d-flex justify-content-between py-2 border-bottom"><span>Risposte form</span><strong>{summary.formResponses}</strong></div><div className="d-flex justify-content-between py-2 border-bottom"><span>Insights in attesa</span><strong>{summary.pendingInsights}</strong></div><div className="d-flex justify-content-between py-2"><span>Ultimi 21 giorni</span><strong>{summary.publishedVideos} video</strong></div></section></Col></Row>
+    <section className="dashboard-panel mt-3"><div className="d-flex justify-content-between align-items-center mb-3"><h2 className="h5 mb-0">Pubblicazioni recenti</h2><Button variant="outline-primary" size="sm" onClick={() => navigate('/videos')}>Apri video <ExternalLink size={14} /></Button></div><Table responsive hover className="mb-0 align-middle"><thead><tr><th>Video</th><th>Data pubblicazione</th><th>Giorno</th></tr></thead><tbody>{recentVideos.map(video => <tr key={`${video.id}-${video.publishedAt}`} onClick={() => navigate(`/videos/${video.id}`)} style={{ cursor: 'pointer' }}><td>{video.title || video.id}</td><td>{formatDate(video.publishedAt)}</td><td>{new Date(video.publishedAt).toLocaleDateString('it-IT')}</td></tr>)}</tbody></Table></section>
+  </>;
+}

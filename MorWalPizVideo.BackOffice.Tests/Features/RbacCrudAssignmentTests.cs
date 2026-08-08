@@ -31,7 +31,7 @@ public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplica
       IsActive = true
     });
 
-    using var adminClient = CreateClient(permissions: "canaccessbackoffice");
+    using var adminClient = CreateClient(permissions: "backoffice.access");
 
     var createGroupAResponse = await adminClient.PostAsJsonAsync("/api/Rbac/groups", new UpsertRbacGroupRequestContract
     {
@@ -71,7 +71,7 @@ public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplica
         $"/api/Rbac/users/{managedUserId}/permissions",
         new UpdateUserDirectPermissionsRequestContract
         {
-          Permissions = ["canAccessBackOffice", "reports.read"]
+          Permissions = ["backoffice.access", "reports.read"]
         });
     Assert.Equal(HttpStatusCode.NoContent, assignDirectPermissionsResponse.StatusCode);
 
@@ -85,7 +85,7 @@ public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplica
     Assert.Contains("articles.write", managedUser.EffectivePermissions);
     Assert.Contains("comments.moderate", managedUser.EffectivePermissions);
     Assert.Contains("reports.read", managedUser.EffectivePermissions);
-    Assert.Contains("canaccessbackoffice", managedUser.EffectivePermissions);
+    Assert.Contains("backoffice.access", managedUser.EffectivePermissions);
     Assert.True(managedUser.CanAccessBackoffice);
 
     var deleteGroupResponse = await adminClient.DeleteAsync($"/api/Rbac/groups/{groupA.Id}");

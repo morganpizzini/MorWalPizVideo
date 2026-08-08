@@ -69,6 +69,8 @@ public interface IUserAuthorizationEvaluator
 
 public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessResolver) : IUserAuthorizationEvaluator
 {
+  private const string ManageAllPermission = "backoffice.manageall";
+
   public async Task<bool> IsAuthorizedAsync(ClaimsPrincipal principal, IReadOnlyList<AllowUserToken> requiredTokens)
   {
     if (requiredTokens.Count == 0)
@@ -95,6 +97,11 @@ public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessRes
       {
         effectivePermissions.Add(UserAccessResolver.Normalize(value));
       }
+    }
+
+    if (effectivePermissions.Contains(ManageAllPermission))
+    {
+      return true;
     }
 
     return requiredTokens.Any(token => IsTokenSatisfied(token, groupCodes, effectivePermissions));

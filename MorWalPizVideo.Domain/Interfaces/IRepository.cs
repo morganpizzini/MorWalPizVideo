@@ -15,12 +15,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
+        Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive);
         Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
         Task<long> CountPublicAsync(bool includePrivate);
         Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate);
         Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate);
     }
+
+    public sealed record VideoPublication(string VideoId, string Title, DateTime PublishedAt);
     public interface IProductRepository : IRepository<Product>
     {
         Task<IList<Product>> GetPublicOrderedAsync(int skip, int take);

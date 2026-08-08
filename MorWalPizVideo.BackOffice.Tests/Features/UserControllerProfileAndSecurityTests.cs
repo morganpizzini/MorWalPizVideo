@@ -225,7 +225,7 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
             Code = isAdmin ? AuthorizationGroupCodes.Admin : AuthorizationGroupCodes.Contributor,
             Name = isAdmin ? "Admins" : "Contributors",
             IsActive = true,
-            Permissions = [AuthorizationPermissionKeys.CanAccessBackoffice]
+            Permissions = [AuthorizationPermissionKeys.BackofficeAccess]
         });
 
         var hash = PasswordHashing.HashPassword(password, out var salt);

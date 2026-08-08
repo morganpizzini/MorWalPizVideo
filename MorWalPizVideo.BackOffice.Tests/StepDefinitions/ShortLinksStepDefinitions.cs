@@ -21,7 +21,7 @@ public class ShortLinksStepDefinitions
     {
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Add("X-Test-UserId", "100000000000000000000001");
-        _client.DefaultRequestHeaders.Add("X-Test-Permissions", "canaccessbackoffice");
+        _client.DefaultRequestHeaders.Add("X-Test-Permissions", "backoffice.access");
         _context = context;
 
         // Access the same repository instances used by the web application

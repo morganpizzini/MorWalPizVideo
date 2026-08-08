@@ -42,6 +42,7 @@ Excluded:
 15. [Technical Debt](technical-debt.md)
 16. [Future Improvements](future-improvements.md)
 17. [Refactoring Roadmap](refactoring-roadmap.md)
+18. [BackOffice Admin Dashboard](admin-dashboard.md)
 
 ## Architectural Baseline
 
