@@ -22,7 +22,7 @@ export async function authLoader() {
     return permissionResult;
   }
 
-  const response = await get(endpoints.CHANNELS);
+  const response = await get(endpoints.CHANNELS_ACCESSIBLE);
   const channels = requireChannelPayload<unknown>(response, 'Unable to load accessible channels');
   if (!Array.isArray(channels)) {
     throw new Response('Unable to load accessible channels', { status: 502 });

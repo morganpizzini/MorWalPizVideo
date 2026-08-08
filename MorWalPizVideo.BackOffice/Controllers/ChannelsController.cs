@@ -49,6 +49,14 @@ public class ChannelsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> GetChannels()
     {
+        var entities = await _dataService.GetChannels();
+        return Ok(entities.Select(ContractUtils.Convert));
+    }
+
+    [HttpGet("accessible")]
+    [AllowUser(AuthorizationPermissionKeys.BackofficeAccess)]
+    public async Task<IActionResult> GetAccessibleChannels()
+    {
         var entities = await channelContextResolver.GetAccessibleChannelsAsync(User);
         return Ok(entities.Select(ContractUtils.Convert));
     }

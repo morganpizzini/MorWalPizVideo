@@ -67,7 +67,7 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 
 ### Channel tenancy
 
-BackOffice channel selection is explicit. `GET /api/channels` returns the channels accessible to the effective identity; scoped resources require `X-Channel-Id`. The scope middleware returns `400` with `channel_context_required` when the header is missing, and `404` with `channel_context_unavailable` when the channel is unknown or inaccessible. API-key principals are additionally restricted to their persisted `ApiKey.ChannelId`; a binding mismatch is `404`.
+BackOffice channel selection is explicit. `GET /api/channels/accessible` returns the channels accessible to the effective identity (owned channels for contributors, full access for administrators); scoped resources require `X-Channel-Id`. `GET /api/channels` is the global channel catalog and requires channel-management permissions. The scope middleware returns `400` with `channel_context_required` when the header is missing, and `404` with `channel_context_unavailable` when the channel is unknown or inaccessible. API-key principals are additionally restricted to their persisted `ApiKey.ChannelId`; a binding mismatch is `404`.
 
 `ChannelsController`'s `GetChannel`/`UpdateChannel`/`RemoveChannel` manage the channel identified by the route `id` itself, so they authorize via `IVideoAuthorizationService.CanManageChannelAsync` (role or ownership of that channel) instead of `RequireChannelScope`/`X-Channel-Id`. User channel assignment (`PUT /api/rbac/users/{id}/channels`) is restricted to `backoffice.manageall` and is blocked during impersonation.
 

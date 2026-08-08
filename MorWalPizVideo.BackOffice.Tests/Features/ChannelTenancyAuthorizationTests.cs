@@ -47,6 +47,49 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
   }
 
   [Fact]
+  public async Task Channels_endpoint_returns_the_global_catalog_for_channels_view_permission()
+  {
+    var firstChannel = await AddChannelAsync($"global-first-{Guid.NewGuid():N}");
+    var secondChannel = await AddChannelAsync($"global-second-{Guid.NewGuid():N}");
+    using var client = CreateClient(AuthorizationPermissionKeys.ChannelsView);
+
+    var response = await client.GetAsync("/api/Channels");
+    var payload = await response.Content.ReadFromJsonAsync<List<ChannelContract>>();
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.NotNull(payload);
+    Assert.Contains(payload!, channel => channel.ChannelId == firstChannel.ChannelId);
+    Assert.Contains(payload!, channel => channel.ChannelId == secondChannel.ChannelId);
+  }
+
+  [Fact]
+  public async Task Accessible_channels_endpoint_returns_owned_channels_for_backoffice_access_only_users()
+  {
+    var ownedChannel = await AddChannelAsync($"owned-accessible-{Guid.NewGuid():N}");
+    var unownedChannel = await AddChannelAsync($"unowned-accessible-{Guid.NewGuid():N}");
+    await AddOwnerAsync("test-user-id", ownedChannel.ChannelId);
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeAccess);
+
+    var response = await client.GetAsync("/api/Channels/accessible");
+    var payload = await response.Content.ReadFromJsonAsync<List<ChannelContract>>();
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.NotNull(payload);
+    Assert.Contains(payload!, channel => channel.ChannelId == ownedChannel.ChannelId);
+    Assert.DoesNotContain(payload!, channel => channel.ChannelId == unownedChannel.ChannelId);
+  }
+
+  [Fact]
+  public async Task Global_channels_endpoint_denies_backoffice_access_only_users()
+  {
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeAccess);
+
+    var response = await client.GetAsync("/api/Channels");
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+  }
+
+  [Fact]
   public async Task Owner_can_read_update_and_delete_a_channel_without_the_selected_channel_header()
   {
     var ownedChannel = await AddChannelAsync($"owner-managed-{Guid.NewGuid():N}");

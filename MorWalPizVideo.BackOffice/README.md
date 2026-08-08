@@ -68,7 +68,7 @@ BackOffice user-management security model:
 
 ### 2.2 Channel tenancy and selected-channel model
 
-`GET /api/channels` returns the channels accessible to the effective identity. The BackOffice SPA keeps one selected channel in its selector and sends it as `X-Channel-Id` to scoped resources. The selection is cleared or replaced with the first accessible channel when it becomes stale; no accessible channels is a valid empty state.
+`GET /api/channels/accessible` returns the channels accessible to the effective identity for the BackOffice selector. `GET /api/channels` remains the global channel catalog for channel-management flows. The BackOffice SPA keeps one selected channel in its selector and sends it as `X-Channel-Id` to scoped resources. The selection is cleared or replaced with the first accessible channel when it becomes stale; no accessible channels is a valid empty state.
 
 Scoped resources include videos, categories, images, calendar events, compilations, short links, query links, insights, dashboard data, and API-key management. A missing header is `400`; an unknown or inaccessible channel is `404`. API keys are channel-bound and cannot use impersonation. Administrators may select any channel, while ordinary users receive their owned channels.
 

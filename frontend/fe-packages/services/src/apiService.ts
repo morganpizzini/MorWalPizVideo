@@ -47,8 +47,12 @@ const scopedBackOfficePrefixes = [
 ];
 
 function isScopedBackOfficeRequest(url: string): boolean {
-    const normalizedUrl = url.split('?')[0].toLowerCase();
-    if (normalizedUrl === '/api/channels' || normalizedUrl === 'api/channels') {
+    const pathWithoutQuery = url.split('?')[0].toLowerCase();
+    const normalizedUrl = pathWithoutQuery.startsWith('/')
+        ? pathWithoutQuery
+        : `/${pathWithoutQuery}`;
+
+    if (normalizedUrl === '/api/channels' || normalizedUrl === '/api/channels/accessible') {
         return false;
     }
 

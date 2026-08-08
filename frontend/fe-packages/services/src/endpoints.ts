@@ -25,6 +25,7 @@ const COMPILATIONS_BY_URL = `${baseEndpoint}/compilations/{url}`;
 const CALENDAREVENTS = `${baseEndpoint}/calendarEvents`;
 const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/{title}`;
 const CHANNELS = `${baseEndpoint}/channels`;
+const CHANNELS_ACCESSIBLE = `${CHANNELS}/accessible`;
 const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
 const CONFIGURATIONS = `${baseEndpoint}/configurations`;
 const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
@@ -101,6 +102,7 @@ export default {
     CALENDAREVENTS,
     CALENDAREVENTS_DETAIL,
     CHANNELS,
+    CHANNELS_ACCESSIBLE,
     CHANNELS_DETAIL,
     CONFIGURATIONS,
     CONFIGURATIONS_DETAIL,

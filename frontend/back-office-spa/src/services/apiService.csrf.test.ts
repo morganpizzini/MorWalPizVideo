@@ -82,34 +82,41 @@ describe('shared API client CSRF integration', () => {
     await expect(Delete('/api/channels/channel-one')).rejects.toBe(networkError);
   });
 
-  it('sends the selected channel header for detail routes but not the channel collection', async () => {
+  it('sends the selected channel header for scoped routes and skips channel collection endpoints', async () => {
     setSelectedChannelId('channel-one');
     setRequestCredentialsMode('omit');
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ data: [] })));
     vi.stubGlobal('fetch', fetchMock);
 
+    await get('api/videos');
     await get('/api/channels/channel-one');
     await put('/api/channels/channel-one', { channelName: 'Updated channel' });
     await Delete('/api/channels/channel-one');
     await get('/api/channels');
+    await get('/api/channels/accessible');
 
-    expect(fetchMock.mock.calls.slice(0, 3).map(([url]) => url)).toEqual([
+    expect(fetchMock.mock.calls.slice(0, 4).map(([url]) => url)).toEqual([
+      '/api/videos',
       '/api/channels/channel-one',
       '/api/channels/channel-one',
       '/api/channels/channel-one',
     ]);
-    expect(fetchMock.mock.calls.slice(0, 3).map(([, request]) => (request as RequestInit).method)).toEqual([
+    expect(fetchMock.mock.calls.slice(0, 4).map(([, request]) => (request as RequestInit).method)).toEqual([
+      'GET',
       'GET',
       'PUT',
       'DELETE',
     ]);
 
-    for (const [, request] of fetchMock.mock.calls.slice(0, 3)) {
+    for (const [, request] of fetchMock.mock.calls.slice(0, 4)) {
       expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
     }
 
-    const collectionHeaders = new Headers((fetchMock.mock.calls[3][1] as RequestInit).headers);
+    const collectionHeaders = new Headers((fetchMock.mock.calls[4][1] as RequestInit).headers);
     expect(collectionHeaders.has('X-Channel-Id')).toBe(false);
+
+    const accessibleCollectionHeaders = new Headers((fetchMock.mock.calls[5][1] as RequestInit).headers);
+    expect(accessibleCollectionHeaders.has('X-Channel-Id')).toBe(false);
   });
 
   it('uses the HttpOnly cookie instead of localStorage or a browser bearer header', async () => {
