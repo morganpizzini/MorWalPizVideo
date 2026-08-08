@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+
 public class CreateShortLinkRequest
 {
     [Required]
@@ -225,7 +226,7 @@ public class ShortLinksController : ApplicationControllerBase
     {
         // Search across all sources to find the existing short link
         var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(request.Id);
-        
+
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
         {
             return NotFound("Short link not found");
@@ -235,19 +236,20 @@ public class ShortLinksController : ApplicationControllerBase
         {
             return Forbid();
         }
-        
-        var existingQueryLink = 
+
+        var existingQueryLink =
             await _linksService.GetQueryLinksAsync(request.Body.QueryLinkIds);
 
         if (!IsSafeShortLinkTarget(request.Body.Target, request.Body.LinkType))
         {
             return BadRequest("Target must be a safe URL or supported reference");
         }
-        
-        var updatedShortLink = existingShortLink with { 
-            Target = request.Body.Target, 
-            QueryLinks = existingQueryLink, 
-            LinkType = request.Body.LinkType 
+
+        var updatedShortLink = existingShortLink with
+        {
+            Target = request.Body.Target,
+            QueryLinks = existingQueryLink,
+            LinkType = request.Body.LinkType
         };
 
         // All link types now converge on the canonical standalone collection (ADR-004): links still
@@ -265,7 +267,7 @@ public class ShortLinksController : ApplicationControllerBase
                 updatedShortLink.ChannelId = null;
                 await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
                 break;
-                
+
             case LinkType.YouTubeChannel:
                 var existingChannel = await _contentService.FindChannelAsync(request.Body.Target);
                 if (existingChannel == null || existingChannel.ChannelId != HttpContext.GetChannelContext().ChannelId ||
@@ -278,7 +280,7 @@ public class ShortLinksController : ApplicationControllerBase
                 updatedShortLink.ContentId = null;
                 await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
                 break;
-                
+
             default:
                 if (request.Body.LinkType == LinkType.CustomUrl && !IsSafeAbsoluteHttpUrl(request.Body.Target))
                 {
@@ -303,7 +305,7 @@ public class ShortLinksController : ApplicationControllerBase
     {
         // Search across all sources to find the short link
         var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(id);
-        
+
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
             return NotFound("Short link not found");
 
@@ -507,7 +509,7 @@ public class ShortLinksController : ApplicationControllerBase
         return !target.Any(char.IsWhiteSpace);
     }
 
-   
+
     /// <summary>
     /// Removes a short link from its source location.
     /// </summary>

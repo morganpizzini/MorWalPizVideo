@@ -124,9 +124,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
                 calendarEvent = calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId };
                 await _dataService.SaveCalendarEvent(calendarEvent);
-                
+
                 _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
-                
+
                 return CreatedAtAction(nameof(GetByTitle), new { title = calendarEvent.Title }, ContractUtils.Convert(calendarEvent));
             }
             catch (Exception ex)
@@ -180,7 +180,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("End date must be after start date");
                 }
 
-                
+
 
                 if (await _dataService.GetCalendarEventByTitle(calendarEvent.Title, HttpContext.GetChannelContext().ChannelId) is null &&
                     string.IsNullOrWhiteSpace(calendarEvent.Id))
@@ -189,9 +189,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 await _dataService.UpdateCalendarEvent(calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId }, HttpContext.GetChannelContext().ChannelId);
-                
+
                 _logger.LogInformation("Calendar event updated: {Id} - {Title}", id, calendarEvent.Title);
-                
+
                 return Ok(ContractUtils.Convert(calendarEvent));
             }
             catch (Exception ex)
@@ -222,9 +222,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 await _dataService.DeleteCalendarEvent(id, HttpContext.GetChannelContext().ChannelId);
-                
+
                 _logger.LogInformation("Calendar event deleted: {Id}", id);
-                
+
                 return NoContent();
             }
             catch (Exception ex)

@@ -67,6 +67,7 @@ const RBAC_USERS = `${RBAC}/users`;
 const RBAC_USER_DETAIL = `${RBAC_USERS}/{id}`;
 const RBAC_USER_PERMISSIONS = `${RBAC}/users/{id}/permissions`;
 const RBAC_USER_GROUPS = `${RBAC}/users/{id}/groups`;
+const RBAC_USER_CHANNELS = `${RBAC}/users/{id}/channels`;
 const RBAC_GROUPS = `${RBAC}/groups`;
 const RBAC_GROUPS_DETAIL = `${RBAC_GROUPS}/{id}`;
 const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
@@ -134,6 +135,7 @@ export default {
     RBAC_USER_DETAIL,
     RBAC_USER_PERMISSIONS,
     RBAC_USER_GROUPS,
+    RBAC_USER_CHANNELS,
     RBAC_GROUPS,
     RBAC_GROUPS_DETAIL,
     RBAC_GROUP_PERMISSIONS,

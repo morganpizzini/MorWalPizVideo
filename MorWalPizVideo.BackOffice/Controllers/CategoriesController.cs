@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.BackOffice.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+
 public class CreateCategoryRequest
 {
     public string Title { get; set; } = string.Empty;
@@ -23,7 +24,7 @@ public class UpdateCategoryRequest
 public class CategoriesController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
-    
+
     public CategoriesController(DataService dataService)
     {
         _dataService = dataService;
@@ -82,7 +83,7 @@ public class CategoriesController : ApplicationControllerBase
         var entity = await _dataService.GetCategoryById(id, HttpContext.GetChannelContext().ChannelId);
         if (entity == null)
             return BadRequest("Category not found");
-            
+
         await _dataService.DeleteCategory(id, HttpContext.GetChannelContext().ChannelId);
         return NoContent();
     }

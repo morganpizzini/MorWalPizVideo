@@ -9,6 +9,7 @@ export interface RbacUserSummary {
   directPermissions: string[];
   effectivePermissions: string[];
   canAccessBackoffice: boolean;
+  channelIds: string[];
 }
 
 export interface RbacGroup {

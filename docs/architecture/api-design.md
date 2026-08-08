@@ -66,6 +66,8 @@ Use RFC Problem Details consistently:
 
 BackOffice `GET /api/channels` establishes the accessible-channel list. Requests to scoped resources carry the selected channel in `X-Channel-Id`; the header is required even when the caller is an administrator. Missing header returns `400` with `channel_context_required`. Unknown, inaccessible, and API-key binding mismatches return `404` with `channel_context_unavailable`.
 
+Channel administration itself (`GET`/`PUT`/`DELETE /api/channels/{id}`) is not a channel-scoped resource: it is authorized by role or ownership of the channel identified in the route, and does not require or consult `X-Channel-Id`. A non-owner/non-admin request returns `404` regardless of the header.
+
 The effective impersonated target controls channel and content authorization. API keys carry a persisted channel binding and cannot impersonate. Administrative compilation and short-link management is scoped, while public compilation URL resolution is anonymous and global; public cache keys therefore use the URL, not the administrative channel.
 
 ## Authentication Matrix

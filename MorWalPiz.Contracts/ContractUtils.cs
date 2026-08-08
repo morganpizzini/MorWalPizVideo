@@ -39,12 +39,12 @@ namespace MorWalPiz.Contracts
                 ManagementChannelId = entity.ManagementChannelId
             };
         }
-        public static QueryLinkContract Convert (QueryLink entity)
+        public static QueryLinkContract Convert(QueryLink entity)
         {
             return new QueryLinkContract
             {
                 QueryLinkId = entity.Id,
-                Title =  entity.Title,
+                Title = entity.Title,
                 Value = entity.Value,
                 ChannelId = entity.ChannelId,
             };

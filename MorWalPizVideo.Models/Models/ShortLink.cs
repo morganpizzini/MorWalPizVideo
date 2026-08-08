@@ -8,19 +8,19 @@ namespace MorWalPizVideo.Server.Models
     {
         [EnumMember]
         YouTubeVideo = 0,
-        
+
         [EnumMember]
         YouTubeChannel = 1,
-        
+
         [EnumMember]
         YouTubePlaylist = 2,
-        
+
         [EnumMember]
         Instagram = 3,
-        
+
         [EnumMember]
         Facebook = 4,
-        
+
         [EnumMember]
         CustomUrl = 5
     }
@@ -42,7 +42,7 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("clicksCount")]
         public int ClicksCount { get; set; }
-        
+
         [DataMember]
         [BsonElement("linkType")]
         public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;

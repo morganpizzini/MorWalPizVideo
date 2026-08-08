@@ -13,6 +13,8 @@ vi.mock('@morwalpizvideo/services', () => ({
     RBAC_GROUPS: 'api/rbac/groups',
     RBAC_USER_GROUPS: 'api/rbac/users/{id}/groups',
     RBAC_USER_PERMISSIONS: 'api/rbac/users/{id}/permissions',
+    RBAC_USER_CHANNELS: 'api/rbac/users/{id}/channels',
+    CHANNELS: 'api/channels',
     USER_DETAIL: 'api/user/{id}',
     USER_STATUS: 'api/user/{id}/status',
     USER_PASSWORD_RESET: 'api/user/{id}/password/reset',
@@ -38,7 +40,10 @@ const user = {
   directPermissions: [],
   effectivePermissions: ['backoffice.access'],
   canAccessBackoffice: true,
+  channelIds: [],
 };
+
+const channel = { channelId: 'c1', channelName: 'Channel One', yTChannelId: 'yt1', mine: true };
 
 describe('RBAC lifecycle capabilities', () => {
   beforeEach(() => {
@@ -93,5 +98,29 @@ describe('RBAC lifecycle capabilities', () => {
     expect(screen.getByRole('button', { name: 'Save status' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset password' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete user' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save channel assignments' })).not.toBeInTheDocument();
+  });
+
+  it('hides channel assignment controls for users.permissions.manage without backoffice.manageall', async () => {
+    vi.mocked(get).mockImplementation(async url => url === endpoints.RBAC_GROUPS ? [] : user);
+    render(<RbacUserDetailPage />);
+
+    await screen.findByText('mario');
+    expect(screen.queryByRole('button', { name: 'Save channel assignments' })).not.toBeInTheDocument();
+    expect(get).not.toHaveBeenCalledWith(endpoints.CHANNELS);
+  });
+
+  it('shows channel assignment controls only for a backoffice.manageall holder', async () => {
+    vi.spyOn(authService, 'getPermissions').mockReturnValue(['backoffice.manageall']);
+    vi.mocked(get).mockImplementation(async url => {
+      if (url === endpoints.CHANNELS) return [channel];
+      if (url === endpoints.RBAC_GROUPS) return [];
+      return user;
+    });
+
+    render(<RbacUserDetailPage />);
+
+    expect(await screen.findByRole('button', { name: 'Save channel assignments' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Channel One' })).toBeInTheDocument();
   });
 });

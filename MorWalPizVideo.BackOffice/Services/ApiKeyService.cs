@@ -23,11 +23,11 @@ public class ApiKeyService : IApiKeyService
     }
 
     public async Task<(ApiKey apiKey, string unhashedKey)> CreateApiKeyAsync(
-        string name, 
+        string name,
         string description,
         string channelId,
-        int? rateLimitPerMinute = null, 
-        List<string>? allowedIpAddresses = null, 
+        int? rateLimitPerMinute = null,
+        List<string>? allowedIpAddresses = null,
         DateTime? expiresAt = null)
     {
         var unhashedKey = GenerateApiKey();
@@ -87,7 +87,7 @@ public class ApiKeyService : IApiKeyService
         var bytes = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
-        
+
         // Convert to base64 and make it URL-safe
         return Convert.ToBase64String(bytes)
             .Replace("+", "-")

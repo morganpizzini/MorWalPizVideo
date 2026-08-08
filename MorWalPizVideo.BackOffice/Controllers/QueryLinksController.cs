@@ -9,6 +9,7 @@ using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+
 public class CreateQueryLinkRequest
 {
     [Required]

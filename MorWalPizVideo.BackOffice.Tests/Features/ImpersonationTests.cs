@@ -64,6 +64,14 @@ public sealed class ImpersonationTests : IClassFixture<BackOfficeWebApplicationF
         using var blockedResponse = await client.GetAsync("/api/User/me");
         Assert.Equal(HttpStatusCode.Forbidden, blockedResponse.StatusCode);
 
+        using var blockedChannelAssignmentRequest = JsonRequest(
+            HttpMethod.Put,
+            $"/api/Rbac/users/{targetId}/channels",
+            new { channelIds = new[] { PrimaryScenario.ChannelId } },
+            csrfToken);
+        using var blockedChannelAssignmentResponse = await client.SendAsync(blockedChannelAssignmentRequest);
+        Assert.Equal(HttpStatusCode.Forbidden, blockedChannelAssignmentResponse.StatusCode);
+
         using var replayRequest = JsonRequest(HttpMethod.Post, "/api/impersonation/sessions", new { grant = issue.Grant }, csrfToken);
         using var replayResponse = await client.SendAsync(replayRequest);
         Assert.Equal(HttpStatusCode.Forbidden, replayResponse.StatusCode);

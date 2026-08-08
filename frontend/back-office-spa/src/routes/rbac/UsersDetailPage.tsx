@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Badge, Button, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router';
 import { ComposeUrl, Delete, endpoints, get, put } from '@morwalpizvideo/services';
+import type { Channel } from '@morwalpizvideo/models';
 import { hasPermission, permissions } from '../../authorization/permissions';
 import { authService } from '../../services/authService';
 import { parsePermissions, type RbacGroup, type RbacUserSummary } from './types';
@@ -13,12 +14,17 @@ export default function RbacUserDetailPage() {
   const [groups, setGroups] = useState<RbacGroup[]>([]);
   const [groupIds, setGroupIds] = useState<string[]>([]);
   const [directPermissions, setDirectPermissions] = useState('');
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [channelIds, setChannelIds] = useState<string[]>([]);
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const effectivePermissions = authService.getPermissions();
   const canUpdateUsers = hasPermission(effectivePermissions, [permissions.users.update]);
   const canDeleteUsers = hasPermission(effectivePermissions, [permissions.users.delete]);
   const canManagePermissions = hasPermission(effectivePermissions, [permissions.users.permissionsManage]);
+  const canManageChannelAssignments = effectivePermissions
+    .map(value => value.toLowerCase())
+    .includes(permissions.backoffice.manageAll);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -26,15 +32,21 @@ export default function RbacUserDetailPage() {
       setUser(loadedUser);
       setGroupIds(loadedUser.groupIds);
       setDirectPermissions(loadedUser.directPermissions.join(', '));
+      setChannelIds(loadedUser.channelIds);
 
       if (canManagePermissions) {
         const loadedGroups = await get(endpoints.RBAC_GROUPS) as RbacGroup[];
         setGroups(loadedGroups ?? []);
       }
+
+      if (canManageChannelAssignments) {
+        const loadedChannels = await get(endpoints.CHANNELS) as Channel[];
+        setChannels(loadedChannels ?? []);
+      }
     };
 
     void loadUser();
-  }, [canManagePermissions, id]);
+  }, [canManageChannelAssignments, canManagePermissions, id]);
 
   if (!user) return <p>Loading user...</p>;
   const endpoint = (value: string) => ComposeUrl(value, { id: encodeURIComponent(id) });
@@ -75,6 +87,11 @@ export default function RbacUserDetailPage() {
         <hr /><h2 className="h5">Direct permissions</h2>
         <Form.Control as="textarea" rows={3} value={directPermissions} onChange={event => setDirectPermissions(event.target.value)} aria-label="Direct permissions" />
         <Button className="mt-2" variant="outline-primary" onClick={() => void put(endpoint(endpoints.RBAC_USER_PERMISSIONS), { permissions: parsePermissions(directPermissions) }).then(() => setMessage('Permissions updated.'))}>Save permissions</Button>
+      </section> : null}
+
+      {canManageChannelAssignments ? <section><hr /><h2 className="h5">Channel assignments</h2>
+        <Form.Select multiple value={channelIds} onChange={event => setChannelIds(Array.from(event.target.selectedOptions, option => option.value))} aria-label="Channels">{channels.map(channel => <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>)}</Form.Select>
+        <Button className="mt-2" variant="outline-primary" onClick={() => void put(endpoint(endpoints.RBAC_USER_CHANNELS), { channelIds }).then(() => setMessage('Channel assignments updated.'))}>Save channel assignments</Button>
       </section> : null}
 
       {canUpdateUsers ? <section><hr /><h2 className="h5">Password</h2><Form.Control type="password" value={password} onChange={event => setPassword(event.target.value)} aria-label="New password" /><div className="d-flex gap-2 mt-2"><Button variant="outline-warning" onClick={() => void savePassword('reset')}>Reset password</Button><Button variant="outline-secondary" onClick={() => void savePassword('set')}>Set password</Button></div></section> : null}

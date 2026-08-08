@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
+
 public class AddChannelRequest
 {
     [Required]
@@ -30,12 +31,18 @@ public class ChannelsController : ApplicationControllerBase
     private readonly DataService _dataService;
     private readonly IYTService ytService;
     private readonly IChannelContextResolver channelContextResolver;
+    private readonly IVideoAuthorizationService channelAuthorization;
 
-    public ChannelsController(IYTService _ytService, DataService dataService, IChannelContextResolver channelContextResolver)
+    public ChannelsController(
+        IYTService _ytService,
+        DataService dataService,
+        IChannelContextResolver channelContextResolver,
+        IVideoAuthorizationService channelAuthorization)
     {
         ytService = _ytService;
         _dataService = dataService;
         this.channelContextResolver = channelContextResolver;
+        this.channelAuthorization = channelAuthorization;
     }
 
     [HttpGet]
@@ -47,17 +54,16 @@ public class ChannelsController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
-    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> GetChannel(string id)
     {
-        if (HttpContext.GetChannelContext().ChannelId != id)
+        if (!await channelAuthorization.CanManageChannelAsync(User, id))
         {
             return NotFound();
         }
 
         var existing = await _dataService.GetChannelById(id);
-        if(existing == null)
+        if (existing == null)
         {
             return NotFound();
         }
@@ -77,16 +83,15 @@ public class ChannelsController : ApplicationControllerBase
             return BadRequest("YouTube channel ID is required");
         }
         await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()));
-        
+
         return NoContent();
     }
 
     [HttpPut("{id}")]
-    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> UpdateChannel(string id, UpdateChannelRequest request)
     {
-        if (HttpContext.GetChannelContext().ChannelId != id)
+        if (!await channelAuthorization.CanManageChannelAsync(User, id))
         {
             return NotFound();
         }
@@ -102,11 +107,10 @@ public class ChannelsController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
-    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsDelete, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> RemoveChannel(string id)
     {
-        if (HttpContext.GetChannelContext().ChannelId != id)
+        if (!await channelAuthorization.CanManageChannelAsync(User, id))
         {
             return NotFound();
         }
@@ -117,7 +121,7 @@ public class ChannelsController : ApplicationControllerBase
             return NotFound();
         }
 
-        await _dataService.RemoveChannel(existing.ChannelName);
+        await _dataService.RemoveChannelById(id);
         return NoContent();
     }
 }

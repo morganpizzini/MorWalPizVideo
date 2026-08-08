@@ -13,22 +13,22 @@ namespace MorWalPizVideo.Server.Models
         /// Article or blog post
         /// </summary>
         Article,
-        
+
         /// <summary>
         /// Podcast episode
         /// </summary>
         Podcast,
-        
+
         /// <summary>
         /// Social media post (Twitter, Facebook, etc.)
         /// </summary>
         SocialPost,
-        
+
         /// <summary>
         /// Video script
         /// </summary>
         VideoScript,
-        
+
         /// <summary>
         /// Newsletter content
         /// </summary>

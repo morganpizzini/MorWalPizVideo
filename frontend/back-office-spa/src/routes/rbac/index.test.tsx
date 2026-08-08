@@ -17,13 +17,14 @@ vi.mock('../../services/authService', () => ({
 }));
 
 vi.mock('@morwalpizvideo/services', () => ({
-  endpoints: { USERS: 'api/user', USER_DETAIL: 'api/user/{id}', USER_STATUS: 'api/user/{id}/status', USER_PASSWORD_RESET: 'api/user/{id}/password/reset', USER_PASSWORD_SET: 'api/user/{id}/password/set', RBAC_USER_DETAIL: 'api/rbac/users/{id}', RBAC_USER_PERMISSIONS: 'api/rbac/users/{id}/permissions', RBAC_USER_GROUPS: 'api/rbac/users/{id}/groups', RBAC_GROUPS: 'api/rbac/groups', RBAC_GROUPS_DETAIL: 'api/rbac/groups/{id}' },
+  endpoints: { USERS: 'api/user', USER_DETAIL: 'api/user/{id}', USER_STATUS: 'api/user/{id}/status', USER_PASSWORD_RESET: 'api/user/{id}/password/reset', USER_PASSWORD_SET: 'api/user/{id}/password/set', RBAC_USER_DETAIL: 'api/rbac/users/{id}', RBAC_USER_PERMISSIONS: 'api/rbac/users/{id}/permissions', RBAC_USER_GROUPS: 'api/rbac/users/{id}/groups', RBAC_USER_CHANNELS: 'api/rbac/users/{id}/channels', RBAC_GROUPS: 'api/rbac/groups', RBAC_GROUPS_DETAIL: 'api/rbac/groups/{id}', CHANNELS: 'api/channels' },
   ComposeUrl: (template: string, replacements: Record<string, string>) => template.replace(/\{(.*?)\}/g, (_, key: string) => replacements[key] ?? `{${key}}`),
   get: vi.fn(), post: vi.fn(), put: vi.fn(), Delete: vi.fn(),
 }));
 
-const user = { id: 'u1', username: 'mario', email: 'mario@example.test', isActive: true, lastLogin: null, groupIds: ['g1'], groupCodes: ['admin'], directPermissions: ['videos.view'], effectivePermissions: ['backoffice.access', 'videos.view'], canAccessBackoffice: true };
+const user = { id: 'u1', username: 'mario', email: 'mario@example.test', isActive: true, lastLogin: null, groupIds: ['g1'], groupCodes: ['admin'], directPermissions: ['videos.view'], effectivePermissions: ['backoffice.access', 'videos.view'], canAccessBackoffice: true, channelIds: ['c1'] };
 const group = { id: 'g1', code: 'admin', name: 'Administrators', description: 'Admin group', isActive: true, permissions: ['backoffice.access'], memberCount: 1 };
+const channel = { channelId: 'c1', channelName: 'Channel One', yTChannelId: 'yt1', mine: true };
 
 function renderRoute(path: string, element: React.ReactNode) {
   const router = createMemoryRouter([
@@ -33,7 +34,7 @@ function renderRoute(path: string, element: React.ReactNode) {
 }
 
 describe('RBAC workflows', () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_GROUPS ? [group] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
+  beforeEach(() => { vi.clearAllMocks(); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_GROUPS ? [group] : url === endpoints.CHANNELS ? [channel] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
 
   it('keeps /rbac as a workflow hub', () => {
     render(<RbacManagementPage />);
@@ -57,6 +58,12 @@ describe('RBAC workflows', () => {
     await waitFor(() => expect(put).toHaveBeenCalledWith('api/rbac/users/u1/groups', { groupIds: ['g1'] }));
     fireEvent.change(screen.getByLabelText('Direct permissions'), { target: { value: 'VIDEOS.VIEW, diagnostics.view' } }); fireEvent.click(screen.getByRole('button', { name: 'Save permissions' }));
     await waitFor(() => expect(put).toHaveBeenCalledWith('api/rbac/users/u1/permissions', { permissions: ['videos.view', 'diagnostics.view'] }));
+  });
+
+  it('updates channel assignments from user detail as a backoffice.manageall holder', async () => {
+    renderRoute('/rbac/users/u1', <RbacUserDetailPage />);
+    const channels = await screen.findByLabelText('Channels'); await userEvent.selectOptions(channels, 'c1'); fireEvent.click(screen.getByRole('button', { name: 'Save channel assignments' }));
+    await waitFor(() => expect(put).toHaveBeenCalledWith('api/rbac/users/u1/channels', { channelIds: ['c1'] }));
   });
 
   it('creates, edits and deletes groups with normalized permissions', async () => {

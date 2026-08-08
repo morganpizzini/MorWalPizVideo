@@ -35,6 +35,9 @@ public class RbacUserSummaryContract
 
   [DataMember]
   public bool CanAccessBackoffice { get; set; }
+
+  [DataMember]
+  public List<string> ChannelIds { get; set; } = new();
 }
 
 [DataContract]
@@ -95,4 +98,11 @@ public class UpdateUserGroupMembershipsRequestContract
 {
   [DataMember]
   public List<string> GroupIds { get; set; } = new();
+}
+
+[DataContract]
+public class UpdateUserChannelAssignmentsRequestContract
+{
+  [DataMember]
+  public List<string> ChannelIds { get; set; } = new();
 }

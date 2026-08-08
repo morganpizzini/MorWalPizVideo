@@ -27,7 +27,8 @@ namespace MorWalPizVideo.Server.Services
 
         Task<Competition?> GetCompetitionById(string id);
     }
-    public class MinimalDataService : IGenericDataService {
+    public class MinimalDataService : IGenericDataService
+    {
         protected readonly IYouTubeContentRepository _youTubeContent;
         protected readonly ICompilationRepository _compilationRepository;
         protected readonly ICustomFormRepository _customFormRepository;
@@ -161,7 +162,7 @@ namespace MorWalPizVideo.Server.Services
             IInsightNewsItemRepository insightNewsItemRepository,
             IInsightContentPlanRepository insightContentPlanRepository,
             IInsightSourceCursorRepository insightSourceCursorRepository,
-            ICompetitionRepository competitionRepository): base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository,sponsorRepository,sponsorApplyRepository, competitionRepository)
+            ICompetitionRepository competitionRepository) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;
@@ -379,7 +380,7 @@ namespace MorWalPizVideo.Server.Services
             (await _youTubeContent.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault() ??
             // Then try to find by Id (for collections)
             (await _youTubeContent.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault() ??
-            (await _youTubeContent.GetItemsAsync(x =>x.VideoRefs!=null && x.VideoRefs.Where(x=>!string.IsNullOrEmpty(x.YoutubeId)).Any(a=>a.YoutubeId == matchId))).FirstOrDefault();
+            (await _youTubeContent.GetItemsAsync(x => x.VideoRefs != null && x.VideoRefs.Where(x => !string.IsNullOrEmpty(x.YoutubeId)).Any(a => a.YoutubeId == matchId))).FirstOrDefault();
 
         public async Task SaveMatch(YouTubeContent entity)
         {
@@ -394,7 +395,7 @@ namespace MorWalPizVideo.Server.Services
             await _youTubeContent.AddItemAsync(entity);
         }
 
-        
+
         public Task<IList<YTChannel>> FetchChannels() => _ytChannelRepository.GetItemsAsync();
         public Task<IList<YTChannel>> GetChannels() => _ytChannelRepository.GetItemsAsync();
         public async Task<YTChannel?> FindChannel(string channelName) =>
@@ -427,9 +428,18 @@ namespace MorWalPizVideo.Server.Services
             }
             await _ytChannelRepository.DeleteItemAsync(channel.Id);
         }
+        public async Task RemoveChannelById(string channelId)
+        {
+            var channel = (await _ytChannelRepository.GetItemsAsync(x => x.ChannelId == channelId)).FirstOrDefault();
+            if (channel == null)
+            {
+                return;
+            }
+            await _ytChannelRepository.DeleteItemAsync(channel.Id);
+        }
 
         // Product methods
-        
+
 
         public async Task<Product?> GetProductById(string id) =>
             await _productRepository.GetItemAsync(id);
@@ -496,7 +506,7 @@ namespace MorWalPizVideo.Server.Services
         }
 
         // Sponsor methods
-        
+
 
         public async Task<Sponsor?> GetSponsorById(string id) =>
             await _sponsorRepository.GetItemAsync(id);
@@ -528,7 +538,7 @@ namespace MorWalPizVideo.Server.Services
             await _sponsorRepository.DeleteItemAsync(sponsor.Id);
         }
         public Task<IList<SponsorApply>> GetSponsorApplies() => _sponsorApplyRepository.GetItemsAsync();
-        
+
         public async Task SavePage(Page entity)
         {
             var curentPage = await _pageRepository.GetItemsAsync(x => x.Url == entity.Url);
@@ -552,7 +562,7 @@ namespace MorWalPizVideo.Server.Services
 
         public async Task<MorWalPizConfiguration?> GetConfigurationById(string id) =>
             await _configurationRepository.GetItemAsync(id);
-        
+
 
         public async Task<MorWalPizConfiguration?> GetConfigurationByKey(string key) =>
             (await _configurationRepository.GetItemsAsync(x => x.Key.ToLower() == key.ToLower())).FirstOrDefault();
@@ -783,7 +793,7 @@ namespace MorWalPizVideo.Server.Services
 
 
         public Task<IList<User>> FetchUsers() => _userRepository.GetItemsAsync();
-        public async Task<User?> GetUser(string id) => (await _userRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
+        public Task<User?> GetUser(string id) => _userRepository.GetItemAsync(id);
         public async Task<User?> GetUserByUsername(string userName) => (await _userRepository.GetItemsAsync(x => x.Username.ToLower() == userName.ToLower())).FirstOrDefault();
         public Task UpdateUser(User entity) => _userRepository.UpdateItemAsync(entity);
 
@@ -833,7 +843,7 @@ namespace MorWalPizVideo.Server.Services
             await _customFormRepository.DeleteItemAsync(customForm.Id);
         }
 
-        
+
 
         // InsightTopic methods
         public Task<IList<InsightTopic>> GetInsightTopics() => _insightTopicRepository.GetItemsAsync();
@@ -979,7 +989,7 @@ namespace MorWalPizVideo.Server.Services
         }
 
         // Competition methods
-        
+
 
         public async Task SaveCompetition(Competition entity)
         {

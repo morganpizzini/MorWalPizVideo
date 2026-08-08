@@ -16,13 +16,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         [Required]
         public string Title { get; set; } = string.Empty;
-        
+
         [Required]
         public string Description { get; set; } = string.Empty;
-        
+
         [Required]
         public string Url { get; set; } = string.Empty;
-        
+
         public string[] Videos { get; set; } = [];
     }
 
@@ -30,13 +30,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         [Required]
         public string Title { get; set; } = string.Empty;
-        
+
         [Required]
         public string Description { get; set; } = string.Empty;
-        
+
         [Required]
         public string Url { get; set; } = string.Empty;
-        
+
         public string[] Videos { get; set; } = [];
     }
 
@@ -137,7 +137,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     {
                         // Try to find the video in matches
                         VideoRef? foundVideo = null;
-                        
+
                         foreach (var match in allMatches)
                         {
                             // Check if it's the thumbnail video
@@ -151,7 +151,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                                 }
                                 break;
                             }
-                            
+
                             // Check in VideoRefs
                             foundVideo = match.VideoRefs.FirstOrDefault(vr => vr.YoutubeId == youtubeId);
                             if (foundVideo != null)
@@ -201,9 +201,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 compilation = compilation with { ChannelId = channelId };
 
                 compilation = await _catalogService.SaveCompilationAsync(compilation);
-                
+
                 _logger.LogInformation("Compilation created: {Id} - {Title}", compilation.Id, compilation.Title);
-                
+
                 return Created($"/api/Compilations/{compilation.Id}", ContractUtils.Convert(compilation));
             }
             catch (Exception ex)
@@ -248,7 +248,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     {
                         // Try to find the video in matches
                         VideoRef? foundVideo = null;
-                        
+
                         foreach (var match in allMatches)
                         {
                             // Check if it's the thumbnail video
@@ -262,7 +262,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                                 }
                                 break;
                             }
-                            
+
                             // Check in VideoRefs
                             foundVideo = match.VideoRefs.FirstOrDefault(vr => vr.YoutubeId == youtubeId);
                             if (foundVideo != null)
@@ -313,9 +313,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 };
 
                 await _catalogService.UpdateCompilationAsync(updatedCompilation);
-                
+
                 _logger.LogInformation("Compilation updated: {Id} - {Title}", request.Id, updatedCompilation.Title);
-                
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -342,9 +342,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 await _catalogService.DeleteCompilationAsync(request.Id);
-                
+
                 _logger.LogInformation("Compilation deleted: {Id}", request.Id);
-                
+
                 return NoContent();
             }
             catch (Exception ex)

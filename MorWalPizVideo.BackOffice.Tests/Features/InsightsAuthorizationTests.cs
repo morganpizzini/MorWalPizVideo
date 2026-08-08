@@ -7,50 +7,50 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 
 public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
-    private readonly BackOfficeWebApplicationFactory _factory;
+  private readonly BackOfficeWebApplicationFactory _factory;
 
-    public InsightsAuthorizationTests(BackOfficeWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+  public InsightsAuthorizationTests(BackOfficeWebApplicationFactory factory)
+  {
+    _factory = factory;
+  }
 
-    [Theory]
-    [InlineData(AuthorizationPermissionKeys.InsightsView, HttpStatusCode.OK)]
-    [InlineData(AuthorizationPermissionKeys.InsightsManage, HttpStatusCode.OK)]
-    [InlineData(AuthorizationPermissionKeys.BackofficeManageAll, HttpStatusCode.OK)]
-    [InlineData(AuthorizationPermissionKeys.BackofficeAccess, HttpStatusCode.Forbidden)]
-    public async Task Admin_topic_list_enforces_explicit_insights_permission(string permission, HttpStatusCode expectedStatus)
-    {
-        using var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
-        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+  [Theory]
+  [InlineData(AuthorizationPermissionKeys.InsightsView, HttpStatusCode.OK)]
+  [InlineData(AuthorizationPermissionKeys.InsightsManage, HttpStatusCode.OK)]
+  [InlineData(AuthorizationPermissionKeys.BackofficeManageAll, HttpStatusCode.OK)]
+  [InlineData(AuthorizationPermissionKeys.BackofficeAccess, HttpStatusCode.Forbidden)]
+  public async Task Admin_topic_list_enforces_explicit_insights_permission(string permission, HttpStatusCode expectedStatus)
+  {
+    using var client = _factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
-        var response = await client.GetAsync("/api/Insights/topics/admin");
+    var response = await client.GetAsync("/api/Insights/topics/admin");
 
-        Assert.Equal(expectedStatus, response.StatusCode);
-    }
+    Assert.Equal(expectedStatus, response.StatusCode);
+  }
 
-    [Fact]
-    public async Task Existing_topic_list_remains_api_key_only()
-    {
-        using var cookieClient = _factory.CreateClient();
-        cookieClient.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsView);
-        cookieClient.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+  [Fact]
+  public async Task Existing_topic_list_remains_api_key_only()
+  {
+    using var cookieClient = _factory.CreateClient();
+    cookieClient.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsView);
+    cookieClient.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
-        var response = await cookieClient.GetAsync("/api/Insights/topics");
+    var response = await cookieClient.GetAsync("/api/Insights/topics");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+  }
 
-    [Fact]
-    public async Task Insights_manage_passes_scan_authorization()
-    {
-        using var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsManage);
-        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+  [Fact]
+  public async Task Insights_manage_passes_scan_authorization()
+  {
+    using var client = _factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsManage);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
-        var response = await client.PostAsync("/api/Insights/topics/missing-topic/scan-news", null);
+    var response = await client.PostAsync("/api/Insights/topics/missing-topic/scan-news", null);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
 }

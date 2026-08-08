@@ -15,7 +15,9 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 [BlockImpersonation]
 public class RbacController(
     IUserRepository userRepository,
-    IUserGroupRepository userGroupRepository) : ControllerBase
+    IUserGroupRepository userGroupRepository,
+    IUserChannelOwnerRepository userChannelOwnerRepository,
+    IYTChannelRepository channelRepository) : ControllerBase
 {
   [HttpGet("users")]
   [AllowUser(AuthorizationPermissionKeys.UsersView, AuthorizationPermissionKeys.UsersManage, AuthorizationPermissionKeys.UsersPermissionsManage)]
@@ -24,10 +26,13 @@ public class RbacController(
     var users = await userRepository.GetItemsAsync();
     var groups = await userGroupRepository.GetItemsAsync();
     var groupsById = groups.ToDictionary(group => group.Id, StringComparer.OrdinalIgnoreCase);
+    var channelIdsByUser = (await userChannelOwnerRepository.GetItemsAsync(owner => owner.IsActive))
+        .GroupBy(owner => owner.UserId, StringComparer.Ordinal)
+        .ToDictionary(group => group.Key, group => (IReadOnlyList<string>)group.Select(owner => owner.ChannelId).ToList(), StringComparer.Ordinal);
 
     var result = users
         .OrderBy(user => user.Username)
-        .Select(user => ToUserSummary(user, groupsById))
+        .Select(user => ToUserSummary(user, groupsById, channelIdsByUser.GetValueOrDefault(user.Id, [])))
         .ToList();
 
     return Ok(result);
@@ -45,7 +50,63 @@ public class RbacController(
 
     var groups = await userGroupRepository.GetItemsAsync();
     var groupsById = groups.ToDictionary(group => group.Id, StringComparer.OrdinalIgnoreCase);
-    return Ok(ToUserSummary(user, groupsById));
+    var channelIds = (await userChannelOwnerRepository.GetByUserIdAsync(id)).Select(owner => owner.ChannelId).ToList();
+    return Ok(ToUserSummary(user, groupsById, channelIds));
+  }
+
+  [HttpPut("users/{id}/channels")]
+  [AllowUser(AuthorizationPermissionKeys.BackofficeManageAll)]
+  public async Task<IActionResult> UpdateUserChannelAssignments(
+      string id,
+      [FromBody] UpdateUserChannelAssignmentsRequestContract request)
+  {
+    var user = await userRepository.GetItemAsync(id);
+    if (user is null)
+    {
+      return NotFound();
+    }
+
+    var requestedChannelIds = (request.ChannelIds ?? [])
+        .Where(channelId => !string.IsNullOrWhiteSpace(channelId))
+        .Select(channelId => channelId.Trim())
+        .Distinct(StringComparer.Ordinal)
+        .ToList();
+
+    if (requestedChannelIds.Count > 0)
+    {
+      var existingChannels = await channelRepository.GetItemsAsync(channel => requestedChannelIds.Contains(channel.ChannelId));
+      var existingChannelIds = existingChannels.Select(channel => channel.ChannelId).ToHashSet(StringComparer.Ordinal);
+      var missingChannelIds = requestedChannelIds.Where(channelId => !existingChannelIds.Contains(channelId)).ToList();
+      if (missingChannelIds.Count > 0)
+      {
+        return BadRequest(new { message = "One or more channels do not exist", missingChannelIds });
+      }
+    }
+
+    var requestedSet = requestedChannelIds.ToHashSet(StringComparer.Ordinal);
+    var existingOwnerRecords = await userChannelOwnerRepository.GetItemsAsync(owner => owner.UserId == id);
+    var ownedChannelIds = existingOwnerRecords.Select(owner => owner.ChannelId).ToHashSet(StringComparer.Ordinal);
+
+    foreach (var owner in existingOwnerRecords)
+    {
+      var shouldBeActive = requestedSet.Contains(owner.ChannelId);
+      if (owner.IsActive != shouldBeActive)
+      {
+        await userChannelOwnerRepository.UpdateItemAsync(owner with { IsActive = shouldBeActive });
+      }
+    }
+
+    foreach (var channelId in requestedSet.Where(channelId => !ownedChannelIds.Contains(channelId)))
+    {
+      await userChannelOwnerRepository.AddItemAsync(new UserChannelOwner
+      {
+        UserId = id,
+        ChannelId = channelId,
+        IsActive = true
+      });
+    }
+
+    return NoContent();
   }
 
   [HttpPut("users/{id}/permissions")]
@@ -317,7 +378,8 @@ public class RbacController(
 
   private static RbacUserSummaryContract ToUserSummary(
       User user,
-      IReadOnlyDictionary<string, UserGroup> groupsById)
+      IReadOnlyDictionary<string, UserGroup> groupsById,
+      IReadOnlyList<string> channelIds)
   {
     var directPermissions = NormalizeMany(user.DirectPermissions);
     if (user.CanAccessBackoffice)
@@ -350,7 +412,8 @@ public class RbacController(
       GroupCodes = groupCodes,
       DirectPermissions = directPermissions,
       EffectivePermissions = effectivePermissions.ToList(),
-      CanAccessBackoffice = effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess, StringComparer.OrdinalIgnoreCase)
+      CanAccessBackoffice = effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess, StringComparer.OrdinalIgnoreCase),
+      ChannelIds = channelIds.Distinct(StringComparer.Ordinal).ToList()
     };
   }
 

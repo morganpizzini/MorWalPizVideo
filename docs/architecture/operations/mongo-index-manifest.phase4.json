@@ -6,7 +6,9 @@
       "key": "shortlinks.code.unique",
       "collection": "shortLinks",
       "name": "ux_shortlinks_code_ci",
-      "keys": { "code": 1 },
+      "keys": {
+        "code": 1
+      },
       "unique": true,
       "notes": "Requires duplicate/code-normalization audit before apply."
     },
@@ -14,7 +16,10 @@
       "key": "customformresponses.formid_submittedat_desc",
       "collection": "customFormResponses",
       "name": "ix_customformresponses_formid_submittedat_desc",
-      "keys": { "formId": 1, "submittedAt": -1 },
+      "keys": {
+        "formId": 1,
+        "submittedAt": -1
+      },
       "unique": false,
       "notes": "Optimizes response listing by form."
     },
@@ -22,7 +27,10 @@
       "key": "customformresponses.formid_responseid.unique",
       "collection": "customFormResponses",
       "name": "ux_customformresponses_formid_responseid",
-      "keys": { "formId": 1, "responseId": 1 },
+      "keys": {
+        "formId": 1,
+        "responseId": 1
+      },
       "unique": true,
       "notes": "Supports idempotent dual-write and backfill upserts."
     },
@@ -30,7 +38,10 @@
       "key": "youtubecontent_isprivate_creation_desc",
       "collection": "youtubeContent",
       "name": "ix_youtubecontent_isprivate_creation_desc",
-      "keys": { "isPrivate": 1, "creationDateTime": -1 },
+      "keys": {
+        "isPrivate": 1,
+        "creationDateTime": -1
+      },
       "unique": false,
       "notes": "Supports public matches paging without full scans."
     },
@@ -38,7 +49,9 @@
       "key": "pages_url",
       "collection": "pages",
       "name": "ix_pages_url",
-      "keys": { "url": 1 },
+      "keys": {
+        "url": 1
+      },
       "unique": false,
       "notes": "Supports direct page URL lookup."
     },
@@ -46,7 +59,9 @@
       "key": "compilations_url.unique",
       "collection": "compilations",
       "name": "ux_compilations_url_ci",
-      "keys": { "url": 1 },
+      "keys": {
+        "url": 1
+      },
       "unique": true,
       "notes": "Authoritative name for the global unique normalized compilation URL index. Application normalizes with trim/lowercase; apply manually through the approved Mongo index operation after duplicate audit. Public lookup remains global. Source review does not prove production deployment."
     },
@@ -54,7 +69,10 @@
       "key": "customforms_active_url",
       "collection": "customForms",
       "name": "ix_customforms_active_url",
-      "keys": { "active": 1, "url": 1 },
+      "keys": {
+        "active": 1,
+        "url": 1
+      },
       "unique": false,
       "notes": "Supports active-form filtering and URL lookup."
     },
@@ -62,7 +80,9 @@
       "key": "calendarevents_creation_desc",
       "collection": "calendarEvents",
       "name": "ix_calendarevents_creation_desc",
-      "keys": { "creationDateTime": -1 },
+      "keys": {
+        "creationDateTime": -1
+      },
       "unique": false,
       "notes": "Supports recent event feed with server-side limit."
     }

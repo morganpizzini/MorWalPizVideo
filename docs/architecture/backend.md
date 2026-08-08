@@ -37,6 +37,7 @@ Focused services for content, catalog, shop, forms, insights, links, and publish
 - Updates commonly replace complete documents.
 - Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`) with manifest ownership in `docs/architecture/operations/mongo-index-manifest.phase4.json`.
 - `BsonIgnoreExtraElements` supports additive compatibility for many entities.
+- User lookups must use the repository ID path, which supports legacy BSON `ObjectId` and string `_id` values; do not apply string operators such as `ToLower()` to `User.Id` in Mongo predicates.
 
 Full collection materialization and in-memory sorting/filtering bypass Mongo indexes. New repository methods must push predicates, projections, ordering, limits, and atomic updates into MongoDB.
 
@@ -67,6 +68,8 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 ### Channel tenancy
 
 BackOffice channel selection is explicit. `GET /api/channels` returns the channels accessible to the effective identity; scoped resources require `X-Channel-Id`. The scope middleware returns `400` with `channel_context_required` when the header is missing, and `404` with `channel_context_unavailable` when the channel is unknown or inaccessible. API-key principals are additionally restricted to their persisted `ApiKey.ChannelId`; a binding mismatch is `404`.
+
+`ChannelsController`'s `GetChannel`/`UpdateChannel`/`RemoveChannel` manage the channel identified by the route `id` itself, so they authorize via `IVideoAuthorizationService.CanManageChannelAsync` (role or ownership of that channel) instead of `RequireChannelScope`/`X-Channel-Id`. User channel assignment (`PUT /api/rbac/users/{id}/channels`) is restricted to `backoffice.manageall` and is blocked during impersonation.
 
 The effective impersonated target identity is used for channel ownership and content authorization, while the actor remains the audit and CSRF identity. Administrators can select any channel; normal users are limited to owned channels. Video collaborators retain read access but not mutation access. Compilation management is channel-scoped, but readable videos from other accessible channels may be included. Public compilation URLs are anonymous and globally resolved, so their route and output cache vary by URL rather than administrative channel.
 
