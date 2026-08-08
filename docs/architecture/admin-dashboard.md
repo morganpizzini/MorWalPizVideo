@@ -8,11 +8,13 @@ Current implementation for the BackOffice SPA. The dashboard uses the existing u
 
 `backoffice.access` grants access to the administrative shell and dashboard. Module permissions are lowercase and use the resource-operation form: `<resource>.view`, `<resource>.create`, `<resource>.update`, `<resource>.delete`, and `<resource>.manage`.
 
-Special operations use explicit permissions, for example `videos.import`, `videos.translate`, and `videos.publish`. `backoffice.manageall` is the administrator override and grants every module and operation. No legacy permission aliases are supported.
+The backend expands each declared `<resource>.manage` parent to its explicitly reviewed sibling capabilities. Specialized implications are `users.permissions.manage`, `videos.import`, `videos.translate`, `videos.publish`, `forms.responses.view`, and `insights.scan`. `images.manage` has no update leaf, and `diagnostics.view` remains standalone. Expansion is directional; a leaf does not imply its parent or siblings.
+
+`backoffice.manageall` is the evaluator and frontend administrator override. Its effective-permission expansion adds only `backoffice.access`, not every catalog leaf. No legacy permission aliases are supported.
 
 The mock `MorWalPiz` user belongs to the `admin` group. The group receives `backoffice.access` and `backoffice.manageall`.
 
-The SPA filters navigation using `effectivePermissions` returned by `/api/auth/validate`. This is a presentation concern only: every protected API operation must also enforce its permission server-side.
+The SPA filters navigation using server-expanded `effectivePermissions` returned by `/api/auth/validate` and contains no local hierarchy rules. This is a presentation concern only: every protected API operation must also enforce its permission server-side.
 
 ## Dashboard API
 
@@ -46,11 +48,14 @@ Application styles are imported immediately after Bootstrap in `main.tsx`, so th
 
 Validated on 2026-08-08:
 
-- Focused Vitest coverage passes for `AdminSidebar`, `Header`, and `Home`, including one navigation tree, permission filtering, active state, and close behavior.
-- The complete BackOffice SPA suite passes: 18 files and 85 tests.
-- The checked TypeScript/Vite production build passes. Its generated HTML references an existing combined CSS asset in which application shell rules follow Bootstrap.
-- Static checks of representative login and video routes found no required changes from reconnecting the existing global stylesheet.
-- Repository-wide lint still reports pre-existing findings outside this repair.
+- Focused Vitest coverage passes for `Header`, `AdminSidebar`, route guards, and the video index: 4 files and 16 tests. This includes a valid cookie-authenticated shell with no localStorage display identity.
+- The complete BackOffice SPA suite passes: 20 files and 98 tests.
+- The TypeScript/Vite production build passes. Vite reports the existing warning for a minified router chunk larger than 500 kB.
+- Focused BackOffice authorization coverage passes: 67 tests. Representative Products and ProductCategories read/create HTTP checks verify exact leaves, resource `manage`, global `manageall`, and mismatched-leaf denial; route metadata inventory covers the broader controller surface.
+- The complete `MorWalPizVideo.BackOffice.Tests` run reports 199 passed, 28 failed, and 2 skipped. Twenty-seven existing product, compilation, and query-link scenarios receive `403 Forbidden`; `AdminEditWorkflowTests.Video_update_persists_video_references_submitted_by_edit_form` expects `204 NoContent` and receives `405 MethodNotAllowed`. They are outside this narrow authorization validation update.
+- The BackOffice project build passes.
+
+HTTP authorization tests intentionally remain representative rather than exhaustive for every controller-operation pair. The explicit attribute inventory plus focused RBAC, video, insights, forms, and catalog HTTP tests is the current regression signal; newly added sensitive operations still require a focused HTTP case.
 
 Real-browser viewport inspection was unavailable in the implementation environment because no Playwright package or supported local browser executable was installed. The remaining visual validation is one navigation landmark, no overlap or horizontal overflow, a non-zero chart area, and keyboard-accessible mobile dismissal immediately below and above 992px and at mobile, tablet, and wide-desktop widths.
 

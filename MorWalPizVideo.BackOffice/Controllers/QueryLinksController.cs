@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -30,6 +32,7 @@ public class QueryLinksController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.QueryLinksView, AuthorizationPermissionKeys.QueryLinksManage)]
     public async Task<IActionResult> GetQueryLink()
     {
         var entities = await _dataService.FetchQueryLinks();
@@ -37,6 +40,7 @@ public class QueryLinksController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.QueryLinksView, AuthorizationPermissionKeys.QueryLinksManage)]
     public async Task<IActionResult> GetQueryLink(string id)
     {
         var entities = await _dataService.GetQueryLink(id);
@@ -46,6 +50,7 @@ public class QueryLinksController : ApplicationControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.QueryLinksCreate, AuthorizationPermissionKeys.QueryLinksManage)]
     public async Task<IActionResult> CreateQueryLink(CreateQueryLinkRequest request)
     {
         await _dataService.SaveQueryLink(new QueryLink(request.Title, request.Value));
@@ -53,6 +58,7 @@ public class QueryLinksController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.QueryLinksUpdate, AuthorizationPermissionKeys.QueryLinksManage)]
     public async Task<IActionResult> UpdateQueryLink(BaseRequestId<UpdateQueryLinkRequest> request)
     {
         var entity = await _dataService.GetQueryLink(request.Id);
@@ -66,6 +72,7 @@ public class QueryLinksController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.QueryLinksDelete, AuthorizationPermissionKeys.QueryLinksManage)]
     public async Task<IActionResult> DeleteQueryLink(BaseRequestId request)
     {
         var entity = await _dataService.GetQueryLink(request.Id);

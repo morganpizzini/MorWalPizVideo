@@ -24,6 +24,7 @@ public class VideoChannelAssignmentStepDefinitions
     public VideoChannelAssignmentStepDefinitions(BackOfficeWebApplicationFactory factory, TestScenarioContext context)
     {
         _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Add("X-Test-Permissions", "videos.manage");
         _context = context;
         _matchRepository = factory.MatchRepository!;
         _ytChannelRepository = factory.YTChannelRepository!;

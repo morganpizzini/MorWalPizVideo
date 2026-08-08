@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Models.Models;
@@ -28,6 +30,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all calendar events
         /// </summary>
         [HttpGet]
+        [AllowUser(AuthorizationPermissionKeys.CalendarView, AuthorizationPermissionKeys.CalendarManage)]
         public async Task<ActionResult<IList<CalendarEventContract>>> GetAll()
         {
             try
@@ -46,6 +49,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get calendar event by title
         /// </summary>
         [HttpGet("by-title/{title}")]
+        [AllowUser(AuthorizationPermissionKeys.CalendarView, AuthorizationPermissionKeys.CalendarManage)]
         public async Task<ActionResult<CalendarEventContract>> GetByTitle(string title)
         {
             try
@@ -74,6 +78,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new calendar event
         /// </summary>
         [HttpPost]
+        [AllowUser(AuthorizationPermissionKeys.CalendarCreate, AuthorizationPermissionKeys.CalendarManage)]
         public async Task<ActionResult<CalendarEventContract>> Create([FromBody] CalendarEvent calendarEvent)
         {
             try
@@ -132,6 +137,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Update an existing calendar event
         /// </summary>
         [HttpPut("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CalendarUpdate, AuthorizationPermissionKeys.CalendarManage)]
         public async Task<ActionResult<CalendarEventContract>> Update(string id, [FromBody] CalendarEvent calendarEvent)
         {
             try
@@ -190,6 +196,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Delete a calendar event
         /// </summary>
         [HttpDelete("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CalendarDelete, AuthorizationPermissionKeys.CalendarManage)]
         public async Task<ActionResult> Delete(string id)
         {
             try

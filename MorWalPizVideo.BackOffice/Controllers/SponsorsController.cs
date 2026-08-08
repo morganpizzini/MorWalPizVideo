@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -49,6 +51,7 @@ public class SponsorsController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.SponsorsView, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> GetSponsors()
     {
         var entities = await _dataService.GetSponsors();
@@ -56,6 +59,7 @@ public class SponsorsController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.SponsorsView, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> GetSponsor(string id)
     {
         var entity = await _dataService.GetSponsorById(id);
@@ -65,6 +69,7 @@ public class SponsorsController : ApplicationControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.SponsorsCreate, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> CreateSponsor([FromForm] CreateSponsorRequest request)
     {
         // Validate image
@@ -97,6 +102,7 @@ public class SponsorsController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.SponsorsUpdate, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> UpdateSponsor([FromRoute] string id, [FromForm] UpdateSponsorRequest request)
     {
         var entity = await _dataService.GetSponsorById(id);
@@ -142,6 +148,7 @@ public class SponsorsController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.SponsorsDelete, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> DeleteSponsor(BaseRequestId request)
     {
         var entity = await _dataService.GetSponsorById(request.Id);

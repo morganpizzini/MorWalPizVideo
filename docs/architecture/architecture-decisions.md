@@ -16,6 +16,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-010](adr/ADR-010-domain-and-cors.md) | Canonical domains and least-privilege CORS | Accepted |
 | [ADR-011](adr/ADR-011-email-boundary.md) | Provider-neutral future transactional email boundary | Accepted |
 | [ADR-012](adr/ADR-012-desktop-composition.md) | Incremental Generic Host and MVVM direction for WPF | Accepted |
+| [ADR-014](adr/ADR-014-directional-permission-implications.md) | Domain-owned directional permission implications | Accepted |
 
 ## ADR Process
 

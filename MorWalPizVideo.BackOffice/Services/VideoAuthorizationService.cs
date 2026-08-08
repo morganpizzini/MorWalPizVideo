@@ -27,7 +27,15 @@ public sealed class VideoAuthorizationService(
         }
 
         var profile = await userAccessResolver.ResolveAsync(userId);
-        return profile?.GroupCodes.Contains(AuthorizationGroupCodes.Admin, StringComparer.OrdinalIgnoreCase) == true;
+        if (profile?.GroupCodes.Contains(AuthorizationGroupCodes.Admin, StringComparer.OrdinalIgnoreCase) == true ||
+            profile?.EffectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll, StringComparer.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        return principal.FindAll("permission")
+            .Select(claim => UserAccessResolver.Normalize(claim.Value))
+            .Contains(AuthorizationPermissionKeys.BackofficeManageAll, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<bool> CanAccessAsync(ClaimsPrincipal principal, YouTubeContent match)

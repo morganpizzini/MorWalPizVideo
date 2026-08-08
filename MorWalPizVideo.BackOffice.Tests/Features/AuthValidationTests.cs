@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 
@@ -35,7 +36,12 @@ public sealed class AuthValidationTests : IClassFixture<BackOfficeWebApplication
         Code = "backoffice-users",
         Name = "BackOffice Users",
         IsActive = true,
-        Permissions = ["backoffice.access"]
+        Permissions =
+        [
+          AuthorizationPermissionKeys.BackofficeAccess,
+          AuthorizationPermissionKeys.UsersManage,
+          AuthorizationPermissionKeys.VideosManage
+        ]
       });
       await userRepository.AddItemAsync(new User
       {
@@ -45,7 +51,8 @@ public sealed class AuthValidationTests : IClassFixture<BackOfficeWebApplication
         PasswordHash = "hash",
         Salt = "salt",
         IsActive = true,
-        GroupIds = [groupId]
+        GroupIds = [groupId],
+        DirectPermissions = [AuthorizationPermissionKeys.FormsManage]
       });
     }
 
@@ -72,7 +79,17 @@ public sealed class AuthValidationTests : IClassFixture<BackOfficeWebApplication
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     var validation = await response.Content.ReadFromJsonAsync<AuthValidationResponse>();
     Assert.Equal(userId, validation!.UserId);
-    Assert.Contains("backoffice.access", validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.BackofficeAccess, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersManage, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersView, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersCreate, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersUpdate, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersDelete, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.UsersPermissionsManage, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.VideosImport, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.VideosTranslate, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.VideosPublish, validation.EffectivePermissions);
+    Assert.Contains(AuthorizationPermissionKeys.FormsResponsesView, validation.EffectivePermissions);
   }
 
   private sealed record CsrfResponse(string Token);

@@ -1,60 +1,35 @@
 import React from 'react';
-import { useLoaderData } from 'react-router';
-import Card from '@components/Card';
+import { Link, useLoaderData } from 'react-router';
 import PageHeader from '@components/PageHeader';
 import VideoList from '@components/VideoList';
-import { Row, Col } from 'react-bootstrap';
 import { Match } from '@morwalpizvideo/models';
-import {
-  Download,
-  Languages
-} from 'lucide-react';
+import { Download, Languages } from 'lucide-react';
+import { authService } from '../../../services/authService';
+import { hasPermission, permissions } from '../../../authorization/permissions';
 
 const Component: React.FC = () => {
   const { matches } = useLoaderData() as { matches: Match[] };
-  const features = [
-    {
-      id: 'import',
-      title: 'Importa Video',
-      path: '/videos/import',
-      icon: Download,
-      description: 'Importa un video YouTube nella piattaforma MorWalPiz',
-      gradientColors: ['#667eea', '#764ba2'] as [string, string],
-    },
-    {
-      id: 'translate',
-      title: 'Traduci Video',
-      path: '/videos/translate',
-      icon: Languages,
-      description: 'Traduci i metadati di uno o più video shorts',
-      gradientColors: ['#f093fb', '#f5576c'] as [string, string],
-    }
-  ];
+  const effectivePermissions = authService.getPermissions();
+  const canImport = hasPermission(effectivePermissions, [permissions.videos.import, permissions.videos.manage]);
+  const canTranslate = hasPermission(effectivePermissions, [permissions.videos.translate, permissions.videos.manage]);
 
   return (
     <>
-      <PageHeader title="Gestione Video" />
-
-      <p className="lead text-muted mb-4">
-        Utilizza questa dashboard per gestire i video della piattaforma MorWalPiz. Puoi importare
-        contenuti e tradurre rapidamente i metadati dei video.
-      </p>
-
-      <Row xs={1} md={3} lg={4} className="g-4">
-        {features.map(feature => (
-          <Col key={feature.id}>
-            <Card
-              title={feature.title}
-              content={feature.description}
-              link={feature.path}
-              buttonText={`Vai a ${feature.title}`}
-              icon={feature.icon}
-              isSmall={true}
-              gradientColors={feature.gradientColors}
-            />
-          </Col>
-        ))}
-      </Row>
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <PageHeader title="Videos" />
+        <div className="d-flex flex-wrap gap-2" aria-label="Video actions">
+          {canTranslate ? (
+            <Link to="/videos/translate" className="btn btn-outline-secondary">
+              <Languages size={17} aria-hidden="true" /> Translate
+            </Link>
+          ) : null}
+          {canImport ? (
+            <Link to="/videos/import" className="btn btn-primary">
+              <Download size={17} aria-hidden="true" /> Import
+            </Link>
+          ) : null}
+        </div>
+      </div>
 
       <VideoList matches={matches} />
     </>

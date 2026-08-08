@@ -81,15 +81,50 @@ body {
 }
 
 .header-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   color: #52606d;
   border: 0;
-  padding: 0.35rem;
+  padding: 0;
+}
+
+.header-icon-button::after {
+  display: none;
 }
 
 .admin-content {
   max-width: 1440px;
   margin: 0 auto;
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem);
+}
+
+.rbac-form-width {
+  max-width: 48rem;
+}
+
+.rbac-workflow-link {
+  align-items: center;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  color: inherit;
+  display: flex;
+  gap: 1rem;
+  min-height: 88px;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.rbac-workflow-link:hover {
+  background: var(--bs-tertiary-bg);
+  border-color: var(--bs-primary);
+}
+
+.rbac-workflow-link span,
+.rbac-workflow-link small {
+  display: block;
 }
 
 .admin-sidebar-offcanvas {

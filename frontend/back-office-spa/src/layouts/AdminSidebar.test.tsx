@@ -32,4 +32,22 @@ describe('AdminSidebar', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }));
     expect(onHide).toHaveBeenCalledTimes(2);
   });
+
+  it('shows resource navigation for manage permission and routed catalog modules', () => {
+    vi.mocked(authService.getPermissions).mockReturnValue([
+      'videos.manage',
+      'productcategories.manage',
+      'sponsors.manage',
+      'products.manage',
+      'compilations.manage',
+    ]);
+
+    render(<AdminSidebar show onHide={vi.fn()} />);
+
+    expect(screen.getByRole('link', { name: 'Videos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Product categories' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sponsors' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Products' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Compilations' })).toBeInTheDocument();
+  });
 });

@@ -4,6 +4,7 @@ using MorWalPiz.Contracts.Contracts.Videos;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.DTOs;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
@@ -51,6 +52,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpGet()]
+    [AllowUser(AuthorizationPermissionKeys.VideosView, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Fetch()
     {
         var matches = await GetAuthorizedMatchesAsync();
@@ -58,6 +60,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.VideosView, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Get(BaseRequestId request)
     {
         var match = await FindAuthorizedMatchAsync(request.Id);
@@ -69,6 +72,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Update(string id, [FromBody] VideoUpdateRequest request)
     {
         var existingMatch = await FindAuthorizedMatchAsync(id);
@@ -89,7 +93,8 @@ public class VideosController : ApplicationControllerBase
             Description = request.Description,
             Url = request.Url,
             ThumbnailVideoId = request.ThumbnailVideoId,
-            Categories = categories
+            Categories = categories,
+            VideoRefs = request.VideoRefs ?? existingMatch.VideoRefs
         };
 
         await _contentService.UpdateMatchAsync(updatedMatch);
@@ -102,6 +107,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.VideosDelete, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Delete(string id)
     {
         var match = await FindAuthorizedMatchAsync(id);
@@ -118,6 +124,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPost("Translate")]
+    [AllowUser(AuthorizationPermissionKeys.VideosTranslate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> TranslateShort(IList<string> videoIds)
     {
         foreach (var videoId in videoIds)
@@ -132,6 +139,7 @@ public class VideosController : ApplicationControllerBase
         return NoContent();
     }
     [HttpPost("ImportVideo")]
+    [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
         var creatorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -166,6 +174,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPost("{id}/refresh-youtube")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> RefreshYouTubeData(string id)
     {
         var existingMatch = await FindAuthorizedMatchAsync(id);
@@ -188,6 +197,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPost("{id}/publish-social")]
+    [AllowUser(AuthorizationPermissionKeys.VideosPublish, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> PublishToSocialMedia(string id, [FromBody] PublishSocialRequest request)
     {
         var match = await _contentService.FindMatchAsync(id);
@@ -261,6 +271,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPost("{youtubeId}/channel")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> AssignChannel(string youtubeId, [FromBody] VideoChannelAssignmentPayload payload)
     {
         if (string.IsNullOrWhiteSpace(youtubeId))

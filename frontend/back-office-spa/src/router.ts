@@ -2,8 +2,10 @@ import { createBrowserRouter, redirect } from 'react-router';
 import PrimaryLayout from './layouts/PrimaryLayout';
 import { authRoutes } from './router/routes/auth.routes';
 import { protectedRoutes } from './router/routes';
-import { requireBackOfficeAccess } from './router/guards';
+import { requirePermissions } from './router/guards';
+import { permissions } from './authorization/permissions';
 import { authService } from './services/authService';
+import ForbiddenPage from './routes/forbidden/Component';
 
 export async function authLoader() {
   const session = await authService.validateSession();
@@ -12,7 +14,7 @@ export async function authLoader() {
     return redirect('/login');
   }
 
-  return requireBackOfficeAccess();
+  return requirePermissions([permissions.backoffice.access], session);
 }
 
 /**
@@ -26,6 +28,11 @@ export async function authLoader() {
  */
 export default createBrowserRouter([
   ...authRoutes,
+  {
+    path: '/forbidden',
+    Component: ForbiddenPage,
+    loader: async () => (await authService.validateSession()) ? null : redirect('/login'),
+  },
   {
     path: '/',
     Component: PrimaryLayout,

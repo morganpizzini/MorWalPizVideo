@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { useLoaderData, useRevalidator } from 'react-router';
+import React from 'react';
+import { useLoaderData } from 'react-router';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, ContentType, VideoRef, CategoryRef } from '@morwalpizvideo/models';
-import { patch } from '@morwalpizvideo/services';
-import VideoRefEditModal from '@components/VideoRefEditModal';
+import { Match, ContentType } from '@morwalpizvideo/models';
 
 
 interface Category {
@@ -18,32 +16,7 @@ interface LoaderData {
 }
 
 const Component: React.FC = () => {
-  const { match, categories } = useLoaderData() as LoaderData;
-  const revalidator = useRevalidator();
-  const [showModal, setShowModal] = useState(false);
-  const [selectedVideoRef, setSelectedVideoRef] = useState<VideoRef | null>(null);
-
-  const handleEditVideoRef = (videoRef: VideoRef) => {
-    setSelectedVideoRef(videoRef);
-    setShowModal(true);
-  };
-
-  const handleSaveVideoRef = async (updatedVideoRef: VideoRef) => {
-    try {
-      // Update the video ref via API
-      await patch(`api/videos/${match.id}/videorefs/${updatedVideoRef.youtubeId}`, {
-        categories: updatedVideoRef.categories
-      });
-      setShowModal(false);
-      setSelectedVideoRef(null);
-      // Revalidate to refresh the data
-      revalidator.revalidate();
-    } catch (error) {
-      console.error('Failed to update video ref:', error);
-      alert('Failed to update video reference. Please try again.');
-    } finally {
-    }
-  };
+  const { match } = useLoaderData() as LoaderData;
 
   return (
     <>
@@ -168,13 +141,6 @@ const Component: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleEditVideoRef(videoRef)}
-                        >
-                          Edit
-                        </Button>
                       </div>
                     </div>
                   ))}
@@ -213,16 +179,6 @@ const Component: React.FC = () => {
         </Col>
       </Row>
 
-      <VideoRefEditModal
-        show={showModal}
-        videoRef={selectedVideoRef}
-        onHide={() => setShowModal(false)}
-        onSave={handleSaveVideoRef}
-        availableCategories={categories.map((category: Category): CategoryRef => ({
-          id: category.categoryId,
-          title: category.title,
-        }))}
-      />
     </>
   );
 };

@@ -1,0 +1,9 @@
+import { Button, Form } from 'react-bootstrap';
+import type { RbacGroup } from './types';
+
+export interface GroupDraft { code: string; name: string; description: string; isActive: boolean; permissions: string; }
+interface GroupFormProps { draft: GroupDraft; onChange: (draft: GroupDraft) => void; submitLabel: string; }
+export function toGroupDraft(group: RbacGroup): GroupDraft { return { ...group, permissions: group.permissions.join(', ') }; }
+export default function GroupForm({ draft, onChange, submitLabel }: GroupFormProps) {
+  return <div className="d-grid gap-3"><Form.Group><Form.Label htmlFor="code">Code</Form.Label><Form.Control id="code" value={draft.code} onChange={event => onChange({ ...draft, code: event.target.value })} required /></Form.Group><Form.Group><Form.Label htmlFor="name">Name</Form.Label><Form.Control id="name" value={draft.name} onChange={event => onChange({ ...draft, name: event.target.value })} required /></Form.Group><Form.Group><Form.Label htmlFor="description">Description</Form.Label><Form.Control id="description" value={draft.description} onChange={event => onChange({ ...draft, description: event.target.value })} /></Form.Group><Form.Group><Form.Label htmlFor="permissions">Permissions</Form.Label><Form.Control id="permissions" as="textarea" rows={4} value={draft.permissions} onChange={event => onChange({ ...draft, permissions: event.target.value })} /></Form.Group><Form.Check id="group-active" label="Active" checked={draft.isActive} onChange={event => onChange({ ...draft, isActive: event.target.checked })} /><div><Button type="submit">{submitLabel}</Button></div></div>;
+}

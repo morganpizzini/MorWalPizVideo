@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -48,6 +49,7 @@ public class ShortLinksController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> FetchShortLinks()
     {
         var siteUrl = configuration.GetValue<string>("SiteUrl");
@@ -64,6 +66,7 @@ public class ShortLinksController : ApplicationControllerBase
     }
 
     [HttpGet("{code}")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> GetShortLink(string code)
     {
         var (shortLink, sourceType, owningEntity) = await FindShortLinkAsync(code);
@@ -76,6 +79,7 @@ public class ShortLinksController : ApplicationControllerBase
         return Ok(ContractUtils.Convert(shortLink, $"{siteUrl}"));
     }
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> CreateShortLink(CreateShortLinkRequest request)
     {
         if (request.LinkType is not LinkType.YouTubeVideo and not LinkType.YouTubeChannel && !await _authorization.IsAdminAsync(User))
@@ -194,6 +198,7 @@ public class ShortLinksController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksUpdate, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
         // Search across all sources to find the existing short link
@@ -270,6 +275,7 @@ public class ShortLinksController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksDelete, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> DeleteShortLink(string id)
     {
         // Search across all sources to find the short link

@@ -37,6 +37,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet]
+        [AllowUser(AuthorizationPermissionKeys.UsersView)]
         public async Task<ActionResult<IEnumerable<UserContract>>> GetUsers()
         {
             var users = await _dataService.FetchUsers();
@@ -44,6 +45,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.UsersView)]
         public async Task<ActionResult<UserContract>> GetUser(string id)
         {
             var user = await _dataService.GetUser(id);
@@ -120,6 +122,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Permissions =
                     [
                         AuthorizationPermissionKeys.BackofficeAccess,
+                        AuthorizationPermissionKeys.BackofficeManageAll,
                         AuthorizationPermissionKeys.UsersManage
                     ]
                 });
@@ -129,6 +132,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 var expectedPermissions = new[]
                 {
                     AuthorizationPermissionKeys.BackofficeAccess,
+                    AuthorizationPermissionKeys.BackofficeManageAll,
                     AuthorizationPermissionKeys.UsersManage
                 };
 
@@ -160,7 +164,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPost]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersCreate)]
         public async Task<ActionResult<object>> CreateUser([FromBody] CreateUserRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) ||
@@ -199,7 +203,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}")]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersUpdate)]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request)
         {
             var existingUser = await _dataService.GetUser(id);
@@ -249,7 +253,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpDelete("{id}")]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersDelete)]
         public async Task<IActionResult> DeleteUser(string id)
         {
             var user = await _dataService.GetUser(id);
@@ -263,7 +267,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}/status")]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersUpdate)]
         public async Task<IActionResult> UpdateUserStatus(string id, [FromBody] UpdateUserStatusRequest request)
         {
             var user = await _dataService.GetUser(id);
@@ -279,7 +283,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}/password/reset")]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersUpdate)]
         public async Task<IActionResult> ResetUserPassword(string id, [FromBody] ResetUserPasswordRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.NewPassword))
@@ -304,7 +308,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("{id}/password/set")]
-        [AllowUser("group:" + AuthorizationGroupCodes.Admin)]
+        [AllowUser(AuthorizationPermissionKeys.UsersUpdate)]
         public Task<IActionResult> SetUserPassword(string id, [FromBody] ResetUserPasswordRequest request)
         {
             return ResetUserPassword(id, request);

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -57,6 +59,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all compilations
         /// </summary>
         [HttpGet]
+        [AllowUser(AuthorizationPermissionKeys.CompilationsView, AuthorizationPermissionKeys.CompilationsManage)]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -75,6 +78,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get compilation by ID
         /// </summary>
         [HttpGet("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CompilationsView, AuthorizationPermissionKeys.CompilationsManage)]
         public async Task<IActionResult> GetById(string id)
         {
             try
@@ -103,6 +107,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new compilation
         /// </summary>
         [HttpPost]
+        [AllowUser(AuthorizationPermissionKeys.CompilationsCreate, AuthorizationPermissionKeys.CompilationsManage)]
         public async Task<IActionResult> Create(BaseRequest<CreateCompilationRequest> request)
         {
             try
@@ -184,6 +189,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Update an existing compilation
         /// </summary>
         [HttpPut("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CompilationsUpdate, AuthorizationPermissionKeys.CompilationsManage)]
         public async Task<IActionResult> Update(BaseRequestId<UpdateCompilationRequest> request)
         {
             try
@@ -273,6 +279,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Delete a compilation
         /// </summary>
         [HttpDelete("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CompilationsDelete, AuthorizationPermissionKeys.CompilationsManage)]
         public async Task<IActionResult> Delete(BaseRequestId request)
         {
             try

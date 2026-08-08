@@ -49,21 +49,25 @@ BackOffice authorization uses `AllowUserAttribute` with dynamic policy resolutio
 - Real MongoDB `userGroups` documents (`UserGroup`) define reusable group codes and permission keys.
 - Each user can belong to multiple groups via `User.GroupIds`.
 - Users can have direct permission keys via `User.DirectPermissions`.
-- Effective permissions are: direct permissions union active-group permissions.
-- Legacy `User.CanAccessBackoffice` is treated as canonical permission key `canaccessbackoffice` for backward compatibility.
+- Effective permissions are the normalized, transitive expansion of direct permissions union active-group permissions.
+- Legacy `User.CanAccessBackoffice` is treated as canonical permission key `backoffice.access` for backward compatibility.
+- `users.manage` directionally implies `users.view`, `users.create`, `users.update`, `users.delete`, and `users.permissions.manage`; the parent remains in the effective set. The reverse implication does not exist.
+- Domain-owned permission expansion uses an explicit lowercase-invariant allowlist. Every declared `<resource>.manage` implies its reviewed CRUD siblings; `users.manage` also implies `users.permissions.manage`, `videos.manage` also implies import/translate/publish, `forms.manage` also implies `forms.responses.view`, and `insights.manage` also implies `insights.scan`. `images.manage` has no update implication and `diagnostics.view` is standalone.
+- Implication is one-way: leaves do not grant a parent, siblings, or another resource. For example, `videos.create` does not grant import, `forms.responses.view` does not grant form management, `insights.scan` does not grant CRUD, and `users.permissions.manage` does not grant user lifecycle operations.
+- `backoffice.manageall` remains the global authorization bypass and implies only `backoffice.access`; the expanded effective-permission set does not materialize every catalog leaf.
 
 `[AllowUser(...)]` semantics are OR-based and support both syntaxes:
 
 - `[AllowUser("admin", "contributor")]`: authorize when the principal has one of the required group codes OR one of the same permission keys.
-- `[AllowUser("canAccessBackOffice")]`: authorize when the principal has the required permission directly, inherited from a group, or supplied as an equivalent claim.
+- `[AllowUser("backoffice.access")]`: authorize when the principal has the required permission directly, inherited from a group, implied by another permission, or supplied as an equivalent claim.
 
-Token normalization uses `ToLowerInvariant()` semantics to keep group and permission matching case-insensitive and stable across persisted data and claims.
+Token normalization uses `ToLowerInvariant()` semantics to keep group and permission matching case-insensitive and stable across persisted data and claims. Existing direct and group parent grants gain their implications immediately without a migration.
 
-The BackOffice SPA `/rbac` route has a route-level guard that calls the authenticated `/api/auth/validate` flow and checks the returned effective-permission union. The server response is authoritative; `localStorage.auth_user` is display-only and cannot grant access. A valid session without canonical `canaccessbackoffice` is redirected to `/`, while an invalid session is redirected to `/login`. The API remains protected independently by `AllowUser`.
+The BackOffice SPA `/rbac` route tree uses the effective permissions returned by `/api/auth/validate`. User-list and detail reads require `users.view`; lifecycle mutations require `users.create`, `users.update`, or `users.delete`; group CRUD, memberships, and direct-permission assignments require `users.permissions.manage`. The frontend never expands implications. `users.manage` arrives server-expanded with the reviewed user-administration leaves, and `backoffice.manageall` is the global override. `backoffice.access` grants login and shell entry only and does not authorize RBAC or user administration. The API remains authoritative through `AllowUser`.
 
 ### First-admin bootstrap
 
-`POST /api/user/bootstrap-admin/{username}` is an operational bootstrap endpoint. It is anonymous only because no authenticated administrator exists yet; it still requires `X-Bootstrap-Secret` matching protected `BootstrapSettings:Secret` configuration. Empty configuration disables the endpoint. The endpoint accepts only an existing active username, creates or repairs the `admin` group with `canaccessbackoffice`, and assigns that group membership. It refuses to run after any active user already has BackOffice access, including legacy `CanAccessBackoffice`, direct permission, or active-group permission. It never creates a user or predictable password.
+`POST /api/user/bootstrap-admin/{username}` is an operational bootstrap endpoint. It is anonymous only because no authenticated administrator exists yet; it still requires `X-Bootstrap-Secret` matching protected `BootstrapSettings:Secret` configuration. Empty configuration disables the endpoint. The endpoint accepts only an existing active username, creates or repairs the `admin` group with `backoffice.access`, and assigns that group membership. It refuses to run after any active user already has BackOffice access, including legacy `CanAccessBackoffice`, direct permission, or active-group permission. It never creates a user or predictable password.
 
 Operators must remove or rotate the bootstrap secret after first use. The supported bootstrap path is `/api/user/bootstrap-admin/{username}` with the deployment secret header; no legacy `init` route should be documented or used for new administrator provisioning.
 

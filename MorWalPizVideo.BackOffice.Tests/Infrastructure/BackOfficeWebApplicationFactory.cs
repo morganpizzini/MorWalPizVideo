@@ -25,6 +25,15 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
     public CompilationMockRepository? CompilationRepository => Services.GetRequiredService<ICompilationRepository>() as CompilationMockRepository;
     public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
 
+    public HttpClient CreateClientWithPermissions(params string[] permissions)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add(
+            "X-Test-Permissions",
+            string.Join(',', permissions.Select(permission => permission.ToLowerInvariant())));
+        return client;
+    }
+
     static BackOfficeWebApplicationFactory()
     {
         // Program.cs reads feature flags eagerly during WebApplication.CreateBuilder(),

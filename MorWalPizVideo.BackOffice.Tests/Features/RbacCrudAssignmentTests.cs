@@ -31,7 +31,7 @@ public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplica
       IsActive = true
     });
 
-    using var adminClient = CreateClient(permissions: "backoffice.access");
+    using var adminClient = CreateClient(permissions: "backoffice.manageall");
 
     var createGroupAResponse = await adminClient.PostAsJsonAsync("/api/Rbac/groups", new UpsertRbacGroupRequestContract
     {

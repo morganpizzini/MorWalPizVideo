@@ -4,6 +4,12 @@ import { render } from '../../../test/test-utils';
 import { useLoaderData, useNavigate } from 'react-router';
 import { Match } from '@morwalpizvideo/models';
 
+vi.mock('../../../services/authService', () => ({
+  authService: {
+    getPermissions: vi.fn(() => ['videos.view', 'videos.import', 'videos.translate']),
+  },
+}));
+
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
   return {
@@ -39,10 +45,11 @@ async function renderComponent() {
 }
 
 describe('Videos Index', () => {
-  it('renders the feature cards for video operations', async () => {
+  it('renders compact toolbar actions instead of feature cards', async () => {
     await renderComponent();
-    expect(screen.getByText('Importa Video')).toBeInTheDocument();
-    expect(screen.getByText('Traduci Video')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /import/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /translate/i })).toBeInTheDocument();
+    expect(screen.queryByText(/utilizza questa dashboard/i)).not.toBeInTheDocument();
   });
 
   it('does not render obsolete video management cards', async () => {

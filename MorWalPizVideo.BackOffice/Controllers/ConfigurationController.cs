@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.DTOs;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using System.Threading.Tasks;
@@ -18,6 +20,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsView, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> GetConfigurations()
     {
       var configurations = await _dataService.GetConfigurations();
@@ -25,6 +28,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsView, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> GetConfigurationById(string id)
     {
       var configuration = await _dataService.GetConfigurationById(id);
@@ -35,6 +39,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpGet("key/{key}")]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsView, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> GetConfigurationByKey(string key)
     {
       var configuration = await _dataService.GetConfigurationByKey(key);
@@ -45,6 +50,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsCreate, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> CreateConfiguration([FromBody] CreateConfigurationRequest request)
     {
       var existing = await _dataService.GetConfigurationByKey(request.Key);
@@ -66,6 +72,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsUpdate, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> UpdateConfiguration(string id, [FromBody] UpdateConfigurationRequest request)
     {
       var entity = await _dataService.GetConfigurationById(id);
@@ -97,6 +104,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ConfigurationsDelete, AuthorizationPermissionKeys.ConfigurationsManage)]
     public async Task<IActionResult> DeleteConfiguration(string id)
     {
       var entity = await _dataService.GetConfigurationById(id);

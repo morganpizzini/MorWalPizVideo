@@ -22,13 +22,15 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
     }
 
     [Fact]
-    public async Task User_mutations_are_admin_only()
+    public async Task Backoffice_access_alone_cannot_read_or_mutate_users()
     {
         var contributorUserId = await SeedUserAsync(isAdmin: false);
         var managedUserId = await SeedUserAsync(isAdmin: true);
 
         using var contributorClient = CreateClient(contributorUserId);
 
+        var listResponse = await contributorClient.GetAsync("/api/User");
+        var readResponse = await contributorClient.GetAsync($"/api/User/{managedUserId}");
         var createResponse = await contributorClient.PostAsJsonAsync("/api/User", new CreateUserRequest
         {
             Username = $"created-{Guid.NewGuid():N}",
@@ -53,11 +55,34 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
         });
         var deleteResponse = await contributorClient.DeleteAsync($"/api/User/{managedUserId}");
 
+        Assert.Equal(HttpStatusCode.Forbidden, listResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, readResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, createResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, updateResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, statusResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, resetResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, setResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Permission_manager_without_lifecycle_leaves_cannot_administer_user_lifecycle()
+    {
+        var permissionManagerUserId = await SeedUserAsync(isAdmin: false);
+        var targetUserId = await SeedUserAsync(isAdmin: false);
+        using var client = CreateClient(
+            permissionManagerUserId,
+            AuthorizationPermissionKeys.UsersPermissionsManage);
+
+        var listResponse = await client.GetAsync("/api/User");
+        var updateResponse = await client.PutAsJsonAsync($"/api/User/{targetUserId}", new UpdateUserRequest
+        {
+            Username = "blocked-permission-manager-update"
+        });
+        var deleteResponse = await client.DeleteAsync($"/api/User/{targetUserId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, listResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, updateResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
     }
 
@@ -202,10 +227,15 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
         Assert.Null(await userRepository.AuthenticateAsync(username, "CreatePass123!"));
     }
 
-    private HttpClient CreateClient(string userId)
+    private HttpClient CreateClient(string userId, string? permissions = null)
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        if (!string.IsNullOrWhiteSpace(permissions))
+        {
+            client.DefaultRequestHeaders.Add("X-Test-Permissions", permissions);
+        }
+
         return client;
     }
 
@@ -225,7 +255,9 @@ public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOf
             Code = isAdmin ? AuthorizationGroupCodes.Admin : AuthorizationGroupCodes.Contributor,
             Name = isAdmin ? "Admins" : "Contributors",
             IsActive = true,
-            Permissions = [AuthorizationPermissionKeys.BackofficeAccess]
+            Permissions = isAdmin
+                ? [AuthorizationPermissionKeys.BackofficeAccess, AuthorizationPermissionKeys.UsersManage]
+                : [AuthorizationPermissionKeys.BackofficeAccess]
         });
 
         var hash = PasswordHashing.HashPassword(password, out var salt);

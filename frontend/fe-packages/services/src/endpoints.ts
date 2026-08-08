@@ -64,6 +64,7 @@ const USER_ME_PASSWORD = `${USER_ME}/password`;
 // RBAC endpoints
 const RBAC = `${baseEndpoint}/rbac`;
 const RBAC_USERS = `${RBAC}/users`;
+const RBAC_USER_DETAIL = `${RBAC_USERS}/{id}`;
 const RBAC_USER_PERMISSIONS = `${RBAC}/users/{id}/permissions`;
 const RBAC_USER_GROUPS = `${RBAC}/users/{id}/groups`;
 const RBAC_GROUPS = `${RBAC}/groups`;
@@ -130,6 +131,7 @@ export default {
     USER_ME_PASSWORD,
     RBAC,
     RBAC_USERS,
+    RBAC_USER_DETAIL,
     RBAC_USER_PERMISSIONS,
     RBAC_USER_GROUPS,
     RBAC_GROUPS,

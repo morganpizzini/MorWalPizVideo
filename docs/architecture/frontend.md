@@ -44,7 +44,7 @@ Target authentication is secure HttpOnly cookie based. Local-storage JWT support
 
 Administrative capabilities, including API-key and digital-artifact management, belong only here.
 
-RBAC and admin user management are owned by this SPA and the BackOffice API. The `/rbac` route loader validates the HttpOnly-cookie session through `/api/auth/validate` and requires canonical `canaccessbackoffice` in the server-resolved effective permission union. The screen manages user lifecycle operations, group membership, direct permissions, and admin password reset/set without changing cookie or CSRF behavior. Cached `localStorage.auth_user` is display-only; denied sessions redirect to `/` and invalid sessions to `/login`.
+RBAC and admin user management are owned by this SPA and the BackOffice API. The `/rbac` route tree validates the HttpOnly-cookie session through `/api/auth/validate`: user lists and details require `users.view`, lifecycle mutations require the corresponding `users.create`, `users.update`, or `users.delete` leaf, and groups, memberships, and direct-permission assignments require `users.permissions.manage`. The SPA does not reproduce hierarchy rules; it consumes server-expanded permissions. `users.manage` provides the reviewed user-administration capabilities, while `backoffice.manageall` is the frontend global override. Header controls do not depend on cached display identity or localStorage authorization state; denied sessions redirect to `/forbidden` and invalid sessions to `/login`.
 
 ## Public Application
 

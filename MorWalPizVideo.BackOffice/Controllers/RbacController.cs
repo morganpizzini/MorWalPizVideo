@@ -11,12 +11,12 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AllowUser(AuthorizationPermissionKeys.BackofficeAccess)]
 public class RbacController(
     IUserRepository userRepository,
     IUserGroupRepository userGroupRepository) : ControllerBase
 {
   [HttpGet("users")]
+  [AllowUser(AuthorizationPermissionKeys.UsersView, AuthorizationPermissionKeys.UsersManage, AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<ActionResult<IList<RbacUserSummaryContract>>> GetUsers()
   {
     var users = await userRepository.GetItemsAsync();
@@ -31,7 +31,23 @@ public class RbacController(
     return Ok(result);
   }
 
+  [HttpGet("users/{id}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersView, AuthorizationPermissionKeys.UsersManage, AuthorizationPermissionKeys.UsersPermissionsManage)]
+  public async Task<ActionResult<RbacUserSummaryContract>> GetUser(string id)
+  {
+    var user = await userRepository.GetItemAsync(id);
+    if (user is null)
+    {
+      return NotFound();
+    }
+
+    var groups = await userGroupRepository.GetItemsAsync();
+    var groupsById = groups.ToDictionary(group => group.Id, StringComparer.OrdinalIgnoreCase);
+    return Ok(ToUserSummary(user, groupsById));
+  }
+
   [HttpPut("users/{id}/permissions")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> UpdateUserDirectPermissions(
       string id,
       [FromBody] UpdateUserDirectPermissionsRequestContract request)
@@ -54,6 +70,7 @@ public class RbacController(
   }
 
   [HttpPut("users/{id}/groups")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> UpdateUserGroups(
       string id,
       [FromBody] UpdateUserGroupMembershipsRequestContract request)
@@ -87,6 +104,7 @@ public class RbacController(
   }
 
   [HttpPost("users/{id}/groups/{groupId}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> AddUserToGroup(string id, string groupId)
   {
     var user = await userRepository.GetItemAsync(id);
@@ -111,6 +129,7 @@ public class RbacController(
   }
 
   [HttpDelete("users/{id}/groups/{groupId}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> RemoveUserFromGroup(string id, string groupId)
   {
     var user = await userRepository.GetItemAsync(id);
@@ -128,6 +147,7 @@ public class RbacController(
   }
 
   [HttpGet("groups")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<ActionResult<IList<RbacGroupContract>>> GetGroups()
   {
     var groups = await userGroupRepository.GetItemsAsync();
@@ -151,6 +171,7 @@ public class RbacController(
   }
 
   [HttpGet("groups/{id}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<ActionResult<RbacGroupContract>> GetGroup(string id)
   {
     var group = await userGroupRepository.GetItemAsync(id);
@@ -173,6 +194,7 @@ public class RbacController(
   }
 
   [HttpPost("groups")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<ActionResult<RbacGroupContract>> CreateGroup([FromBody] UpsertRbacGroupRequestContract request)
   {
     var normalizedCode = Normalize(request.Code);
@@ -210,6 +232,7 @@ public class RbacController(
   }
 
   [HttpPut("groups/{id}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> UpdateGroup(string id, [FromBody] UpsertRbacGroupRequestContract request)
   {
     var existingGroup = await userGroupRepository.GetItemAsync(id);
@@ -244,6 +267,7 @@ public class RbacController(
   }
 
   [HttpPut("groups/{id}/permissions")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> UpdateGroupPermissions(
       string id,
       [FromBody] UpdateUserDirectPermissionsRequestContract request)
@@ -263,6 +287,7 @@ public class RbacController(
   }
 
   [HttpDelete("groups/{id}")]
+  [AllowUser(AuthorizationPermissionKeys.UsersPermissionsManage)]
   public async Task<IActionResult> DeleteGroup(string id)
   {
     var group = await userGroupRepository.GetItemAsync(id);
@@ -309,12 +334,8 @@ public class RbacController(
 
     var groupCodes = NormalizeMany(activeGroups.Select(group => group.Code));
 
-    var effectivePermissions = directPermissions
-        .Concat(activeGroups.SelectMany(group => group.Permissions))
-        .Select(Normalize)
-        .Where(value => !string.IsNullOrWhiteSpace(value))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
+    var effectivePermissions = AuthorizationPermissionExpander.Expand(
+      directPermissions.Concat(activeGroups.SelectMany(group => group.Permissions)));
 
     return new RbacUserSummaryContract
     {
@@ -326,7 +347,7 @@ public class RbacController(
       GroupIds = userGroupIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
       GroupCodes = groupCodes,
       DirectPermissions = directPermissions,
-      EffectivePermissions = effectivePermissions,
+      EffectivePermissions = effectivePermissions.ToList(),
       CanAccessBackoffice = effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeAccess, StringComparer.OrdinalIgnoreCase)
     };
   }

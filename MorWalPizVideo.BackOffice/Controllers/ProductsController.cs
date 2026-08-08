@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -48,6 +50,7 @@ public class ProductsController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.ProductsView, AuthorizationPermissionKeys.ProductsManage)]
     public async Task<IActionResult> GetProducts()
     {
         var entities = await _dataService.GetProducts();
@@ -55,6 +58,7 @@ public class ProductsController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductsView, AuthorizationPermissionKeys.ProductsManage)]
     public async Task<IActionResult> GetProduct(string id)
     {
         var entity = await _dataService.GetProductById(id);
@@ -64,6 +68,7 @@ public class ProductsController : ApplicationControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.ProductsCreate, AuthorizationPermissionKeys.ProductsManage)]
     public async Task<IActionResult> CreateProduct(CreateProductRequest request)
     {
         // Fetch and validate categories
@@ -89,6 +94,7 @@ public class ProductsController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductsUpdate, AuthorizationPermissionKeys.ProductsManage)]
     public async Task<IActionResult> UpdateProduct(BaseRequestId<UpdateProductRequest> request)
     {
         var entity = await _dataService.GetProductById(request.Id);
@@ -119,6 +125,7 @@ public class ProductsController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductsDelete, AuthorizationPermissionKeys.ProductsManage)]
     public async Task<IActionResult> DeleteProduct(BaseRequestId request)
     {
         var entity = await _dataService.GetProductById(request.Id);

@@ -4,7 +4,9 @@ using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authentication;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -33,7 +35,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
             return Ok(topics.Select(ContractUtils.Convert));
         }
 
+        [HttpGet("topics/admin")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> GetTopicsForAdmin()
+        {
+            var topics = await _insightsService.GetTopicsAsync();
+            return Ok(topics.Select(ContractUtils.Convert));
+        }
+
         [HttpGet("topics/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetTopicById([FromRoute] string id)
         {
             var topic = await _insightsService.GetTopicByIdAsync(id);
@@ -44,6 +55,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPost("topics")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsCreate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> CreateTopic([FromBody] CreateInsightTopicRequest request)
         {
             var topic = new InsightTopic(
@@ -61,6 +73,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("topics/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> UpdateTopic([FromRoute] string id, [FromBody] UpdateInsightTopicRequest request)
         {
             var existing = await _insightsService.GetTopicByIdAsync(id);
@@ -80,6 +93,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpDelete("topics/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteTopic([FromRoute] string id)
         {
             var existing = await _insightsService.GetTopicByIdAsync(id);
@@ -95,6 +109,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         #region News Discovery
 
         [HttpPost("topics/{id}/scan-news")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ScanNewsForTopic([FromRoute] string id)
         {
             var topic = await _insightsService.GetTopicByIdAsync(id);
@@ -137,6 +152,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// since it is called from the admin SPA.
         /// </summary>
         [HttpPost("topics/{id}/scan-short-content")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ScanShortContentForTopic([FromRoute] string id, [FromBody] ScanShortContentRequest request)
         {
             var topic = await _insightsService.GetTopicByIdAsync(id);
@@ -151,6 +167,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("news")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetAllNews([FromQuery] InsightSourceKind? sourceKind = null)
         {
             var newsItems = await _insightsService.GetNewsItemsAsync();
@@ -164,6 +181,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("topics/{id}/news")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetNewsForTopic([FromRoute] string id, [FromQuery] InsightNewsStatus? status = null, [FromQuery] InsightSourceKind? sourceKind = null)
         {
             var topic = await _insightsService.GetTopicByIdAsync(id);
@@ -186,6 +204,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("news/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetNewsById([FromRoute] string id)
         {
             var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
@@ -196,6 +215,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("news/{id}/review")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ReviewNewsItem([FromRoute] string id, [FromBody] ReviewNewsItemRequest request)
         {
             var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
@@ -219,6 +239,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpDelete("news/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteNewsItem([FromRoute] string id)
         {
             var existing = await _insightsService.GetNewsItemByIdAsync(id);
@@ -234,6 +255,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         #region Content Plans
 
         [HttpPost("content-plans")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsCreate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GenerateContentPlan([FromBody] GenerateContentPlanRequest request)
         {
             var topic = await _insightsService.GetTopicByIdAsync(request.TopicId);
@@ -271,6 +293,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("content-plans")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetAllContentPlans()
         {
             var plans = await _insightsService.GetContentPlansAsync();
@@ -278,6 +301,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("topics/{id}/content-plans")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetContentPlansForTopic([FromRoute] string id)
         {
             var topic = await _insightsService.GetTopicByIdAsync(id);
@@ -289,6 +313,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("content-plans/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetContentPlanById([FromRoute] string id)
         {
             var plan = await _insightsService.GetContentPlanByIdAsync(id);
@@ -299,6 +324,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPut("content-plans/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> UpdateContentPlan([FromRoute] string id, [FromBody] UpdateContentPlanRequest request)
         {
             var existing = await _insightsService.GetContentPlanByIdAsync(id);
@@ -327,6 +353,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpDelete("content-plans/{id}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteContentPlan([FromRoute] string id)
         {
             var existing = await _insightsService.GetContentPlanByIdAsync(id);

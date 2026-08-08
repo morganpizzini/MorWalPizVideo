@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -17,6 +19,7 @@ public class ImageUploadController : ApplicationControllerBase
     }
 
     [HttpPost("upload")]
+    [AllowUser(AuthorizationPermissionKeys.ImagesCreate, AuthorizationPermissionKeys.ImagesManage)]
     public async Task<IActionResult> UploadImage(IFormFile image, string folderName, bool loadInMatchFolder)
     {
         if (image == null || image.Length == 0)
@@ -68,6 +71,7 @@ public class ImageUploadController : ApplicationControllerBase
     }
 
     [HttpPost("upload-multiple")]
+    [AllowUser(AuthorizationPermissionKeys.ImagesCreate, AuthorizationPermissionKeys.ImagesManage)]
     public async Task<IActionResult> UploadImages(IFormFileCollection images, string folderName, bool loadInMatchFolder)
     {
         if (images == null || images.Count == 0)

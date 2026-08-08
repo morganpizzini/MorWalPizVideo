@@ -17,7 +17,7 @@ const BASE_URL = '/api/insights';
  * Topics API
  */
 export const insightsTopicsApi = {
-  getAll: (): Promise<InsightTopic[]> => get(`${BASE_URL}/topics`),
+  getAll: (): Promise<InsightTopic[]> => get(`${BASE_URL}/topics/admin`),
 
   getById: (id: string): Promise<InsightTopic> => get(`${BASE_URL}/topics/${id}`),
 

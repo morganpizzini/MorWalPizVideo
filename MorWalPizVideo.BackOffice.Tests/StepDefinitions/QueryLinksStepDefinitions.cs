@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Models.Constraints;
 using Reqnroll;
 using Xunit;
 
@@ -18,7 +19,7 @@ public class QueryLinksStepDefinitions
 
     public QueryLinksStepDefinitions(BackOfficeWebApplicationFactory factory, TestScenarioContext context)
     {
-        _client = factory.CreateClient();
+        _client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.QueryLinksManage);
         _context = context;
     }
 

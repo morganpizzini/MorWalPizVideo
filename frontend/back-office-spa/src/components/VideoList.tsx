@@ -3,6 +3,9 @@ import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from '
 import { useRevalidator, Link } from 'react-router';
 import { Match } from '../models/video/types';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
+import { ComposeUrl, Delete, endpoints } from '@morwalpizvideo/services';
+import { authService } from '../services/authService';
+import { hasPermission, permissions } from '../authorization/permissions';
 
 interface VideoListProps {
   matches: Match[];
@@ -28,6 +31,10 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<RefreshingState>({});
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const effectivePermissions = authService.getPermissions();
+  const canEdit = hasPermission(effectivePermissions, [permissions.videos.update, permissions.videos.manage]);
+  const canPublish = hasPermission(effectivePermissions, [permissions.videos.publish, permissions.videos.manage]);
+  const canDelete = hasPermission(effectivePermissions, [permissions.videos.delete, permissions.videos.manage]);
 
   const toggleExpand = (matchId: string) => {
     setExpanded(prev => ({
@@ -51,10 +58,14 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
     );
   });
 
-  const handleDelete = (matchId: string) => {
+  const handleDelete = async (matchId: string) => {
     if (window.confirm('Are you sure you want to delete this video content?')) {
-      // TODO: Implement delete functionality
-      console.log('Delete match:', matchId);
+      try {
+        await Delete(ComposeUrl(endpoints.VIDEOS_DETAIL, { videoId: matchId }));
+        revalidator.revalidate();
+      } catch {
+        setRefreshError('Failed to delete video content');
+      }
     }
   };
 
@@ -122,8 +133,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
   };
 
   return (
-    <div className="mt-5">
-      <h3>Existing Videos</h3>
+    <div>
+      <h2 className="h5">Video library</h2>
       <p className="text-muted mb-3">
         {matches.length} YouTube content(s) with {matches.reduce((sum, m) => sum + (m.videoRefs?.length || 0), 0)} total video(s)
       </p>
@@ -144,7 +155,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
         </InputGroup>
       </div>
 
-      <Table striped bordered hover>
+      <Table responsive hover className="align-middle">
         <thead>
           <tr>
             <th style={{ width: '40px' }}></th>
@@ -203,25 +214,19 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                         <Dropdown.Item onClick={() => handleView(match.id)}>
                           View
                         </Dropdown.Item>
-                        <Dropdown.Item onClick={() => handleEdit(match.id)}>
-                          Edit
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={() => handleOpenPublishModal(match.id)}>
-                          Publish to Social
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => handleRefresh(match.id)}
-                          disabled={refreshing[match.id]}
-                        >
-                          {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}
-                        </Dropdown.Item>
-                        <Dropdown.Divider />
-                        <Dropdown.Item
-                          onClick={() => handleDelete(match.id)}
-                          className="text-danger"
-                        >
-                          Delete
-                        </Dropdown.Item>
+                        {canEdit ? <Dropdown.Item onClick={() => handleEdit(match.id)}>Edit</Dropdown.Item> : null}
+                        {canPublish ? <Dropdown.Item onClick={() => handleOpenPublishModal(match.id)}>Publish to Social</Dropdown.Item> : null}
+                        {canEdit ? (
+                          <Dropdown.Item onClick={() => handleRefresh(match.id)} disabled={refreshing[match.id]}>
+                            {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}
+                          </Dropdown.Item>
+                        ) : null}
+                        {canDelete ? <Dropdown.Divider /> : null}
+                        {canDelete ? (
+                          <Dropdown.Item onClick={() => void handleDelete(match.id)} className="text-danger">
+                            Delete
+                          </Dropdown.Item>
+                        ) : null}
                       </Dropdown.Menu>
                     </Dropdown>
                   </td>

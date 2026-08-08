@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using System.ComponentModel.DataAnnotations;
 
@@ -27,6 +29,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysCreate, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> CreateApiKey([FromBody] CreateApiKeyRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -66,6 +69,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysView, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> GetAllApiKeys()
     {
         var apiKeys = await _apiKeyRepository.GetItemsAsync();
@@ -87,6 +91,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysView, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> GetApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
@@ -110,6 +115,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysUpdate, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> UpdateApiKey(string id, [FromBody] UpdateApiKeyRequest request)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
@@ -135,6 +141,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpPost("{id}/toggle")]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysUpdate, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> ToggleApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
@@ -156,6 +163,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpPost("{id}/regenerate")]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysUpdate, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> RegenerateApiKey(string id)
     {
         var oldApiKey = await _apiKeyRepository.GetItemAsync(id);
@@ -187,6 +195,7 @@ public class ApiKeysController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ApiKeysDelete, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> DeleteApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);

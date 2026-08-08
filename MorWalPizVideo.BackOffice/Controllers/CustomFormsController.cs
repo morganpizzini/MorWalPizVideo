@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -64,6 +66,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all custom forms
         /// </summary>
         [HttpGet]
+        [AllowUser(AuthorizationPermissionKeys.FormsView, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<IList<CustomFormContract>>> Fetch()
         {
             try
@@ -88,6 +91,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get custom form by ID
         /// </summary>
         [HttpGet("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.FormsView, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<CustomFormContract>> GetById(BaseRequestId request)
         {
             try
@@ -112,6 +116,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Create a new custom form
         /// </summary>
         [HttpPost]
+        [AllowUser(AuthorizationPermissionKeys.FormsCreate, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<CustomFormContract>> Create(BaseRequest<CreateCustomFormRequest> request)
         {
             try
@@ -172,6 +177,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Update an existing custom form
         /// </summary>
         [HttpPut("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.FormsUpdate, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult> Update(BaseRequestId<UpdateCustomFormRequest> request)
         {
             try
@@ -240,6 +246,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Delete a custom form
         /// </summary>
         [HttpDelete("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.FormsDelete, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult> Delete(BaseRequestId request)
         {
             try
@@ -363,6 +370,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// Get all responses for a form
         /// </summary>
         [HttpGet("{id}/responses")]
+        [AllowUser(AuthorizationPermissionKeys.FormsResponsesView, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<CustomFormResponse[]>> GetResponses(string id)
         {
             try
@@ -389,6 +397,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpGet("{id}/responses/reconcile")]
+        [AllowUser(AuthorizationPermissionKeys.FormsResponsesView, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<FormResponseCountReconciliation>> ReconcileResponses(string id)
         {
             var reconciliation = await _formsService.ReconcileCountsAsync(id);
@@ -401,6 +410,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         }
 
         [HttpPost("responses/backfill")]
+        [AllowUser(AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<FormResponseBackfillBatchResult>> BackfillResponses([FromQuery] string? continuationToken = null, [FromQuery] int batchSize = 50)
         {
             var result = await _formsService.BackfillEmbeddedResponsesAsync(continuationToken, batchSize);

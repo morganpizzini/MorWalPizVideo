@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
@@ -26,6 +28,7 @@ public class CategoriesController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.CategoriesView, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> GetCategories()
     {
         var categories = await _dataService.FetchCategories();
@@ -33,6 +36,7 @@ public class CategoriesController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.CategoriesView, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> GetCategory(string id)
     {
         var category = await _dataService.GetCategoryById(id);
@@ -43,6 +47,7 @@ public class CategoriesController : ApplicationControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.CategoriesCreate, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> CreateCategory(CreateCategoryRequest request)
     {
         var category = new Category(request.Title, request.Description);
@@ -51,6 +56,7 @@ public class CategoriesController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.CategoriesUpdate, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> UpdateCategory(string id, UpdateCategoryRequest request)
     {
         var entity = await _dataService.GetCategoryById(id);
@@ -64,6 +70,7 @@ public class CategoriesController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.CategoriesDelete, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> DeleteCategory(string id)
     {
         var entity = await _dataService.GetCategoryById(id);

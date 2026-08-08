@@ -73,14 +73,19 @@ import ApiKeyDetail from '../../routes/apiKeys/detail';
 import ApiKeyForm from '../../routes/apiKeys/form';
 import Diagnostics from '../../routes/diagnostics';
 import RbacManagement from '../../routes/rbac';
+import RbacUsersPage from '../../routes/rbac/UsersPage';
+import RbacUserCreatePage from '../../routes/rbac/UserCreatePage';
+import RbacUserDetailPage from '../../routes/rbac/UsersDetailPage';
+import RbacUserEditPage from '../../routes/rbac/UserEditPage';
+import RbacGroupsPage from '../../routes/rbac/GroupsPage';
+import RbacGroupCreatePage from '../../routes/rbac/GroupCreatePage';
+import RbacGroupDetailPage from '../../routes/rbac/GroupDetailPage';
+import RbacGroupEditPage from '../../routes/rbac/GroupEditPage';
 import Profile from '../../routes/profile';
-import { requireBackOfficeAccess } from '../guards';
+import { getRoutePermissions } from '../../authorization/permissions';
+import { withActionPermission, withPermission } from '../guards';
 
-/**
- * Protected routes (require authentication)
- * These routes are rendered within the PrimaryLayout component
- */
-export const protectedRoutes: RouteConfig[] = [
+const routeDefinitions: RouteConfig[] = [
   {
     index: true,
     path: '',
@@ -92,9 +97,19 @@ export const protectedRoutes: RouteConfig[] = [
   { path: 'profile', Component: Profile.Component, errorElement: createErrorElement() },
   {
     path: 'rbac',
-    loader: requireBackOfficeAccess,
-    Component: RbacManagement,
+    Component: Outlet,
     errorElement: createErrorElement(),
+    children: [
+      { index: true, path: '', Component: RbacManagement },
+      { path: 'users', Component: RbacUsersPage },
+      { path: 'users/create', Component: RbacUserCreatePage },
+      { path: 'users/:id', Component: RbacUserDetailPage },
+      { path: 'users/:id/edit', Component: RbacUserEditPage },
+      { path: 'groups', Component: RbacGroupsPage },
+      { path: 'groups/create', Component: RbacGroupCreatePage },
+      { path: 'groups/:id', Component: RbacGroupDetailPage },
+      { path: 'groups/:id/edit', Component: RbacGroupEditPage },
+    ],
   },
 
   // Calendar Events
@@ -486,3 +501,20 @@ export const protectedRoutes: RouteConfig[] = [
     ],
   }),
 ];
+
+function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {
+  const currentPath = [parentPath, route.path].filter(Boolean).join('/');
+  const loaderPermissions = getRoutePermissions(currentPath, false);
+  const actionPermissions = getRoutePermissions(currentPath, true);
+  const loader = typeof route.loader === 'function' ? route.loader : undefined;
+  const action = typeof route.action === 'function' ? route.action : undefined;
+
+  return ({
+    ...route,
+    loader: withPermission(loaderPermissions, loader),
+    action: action ? withActionPermission(actionPermissions, action) : undefined,
+    children: route.children?.map(child => protectRoute(child, currentPath)),
+  }) as RouteConfig;
+}
+
+export const protectedRoutes = routeDefinitions.map(route => protectRoute(route));

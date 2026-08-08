@@ -99,6 +99,9 @@ public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessRes
       }
     }
 
+    effectivePermissions = AuthorizationPermissionExpander.Expand(effectivePermissions)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     if (effectivePermissions.Contains(ManageAllPermission))
     {
       return true;

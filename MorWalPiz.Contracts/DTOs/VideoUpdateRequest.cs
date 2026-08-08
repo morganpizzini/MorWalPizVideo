@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.DTOs
 {
@@ -7,10 +8,10 @@ namespace MorWalPizVideo.BackOffice.DTOs
     [Required]
     public string Title { get; set; } = string.Empty;
 
-    [Required]
+    [Required(AllowEmptyStrings = true)]
     public string Description { get; set; } = string.Empty;
 
-    [Required]
+    [Required(AllowEmptyStrings = true)]
     public string Url { get; set; } = string.Empty;
 
     [Required]
@@ -18,5 +19,7 @@ namespace MorWalPizVideo.BackOffice.DTOs
 
     [Required]
     public IList<string> Categories { get; set; } = [];
+
+    public VideoRef[]? VideoRefs { get; set; }
   }
 }

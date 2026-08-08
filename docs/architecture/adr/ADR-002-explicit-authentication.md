@@ -52,10 +52,10 @@ Implemented (2026-08-02):
 Implemented (2026-08-06):
 
 - BackOffice RBAC management API under `api/rbac` supports MongoDB `UserGroup` CRUD, multi-group user membership, direct user permissions, and normalized effective-permission resolution.
-- `AllowUser` dynamic policy supports both group-style and permission-style declarations with OR semantics (`group OR permission`), including `[AllowUser("admin","contributor")]` and `[AllowUser("canAccessBackOffice")]`.
-- Legacy `CanAccessBackoffice` remains backward-compatible and is mapped to canonical permission key `canaccessbackoffice`.
+- `AllowUser` dynamic policy supports both group-style and permission-style declarations with OR semantics (`group OR permission`), including `[AllowUser("admin","contributor")]` and `[AllowUser("backoffice.access")]`.
+- Legacy `CanAccessBackoffice` remains backward-compatible and is mapped to canonical permission key `backoffice.access`.
 - BackOffice SPA includes an RBAC management section for users/groups/permissions/memberships.
-- `POST /api/auth/validate` additively returns normalized effective permissions resolved from the cookie session; the SPA `/rbac` route guard requires canonical `canaccessbackoffice` from that response. LocalStorage remains display-only, and the guard redirects denied sessions to `/` without changing existing routes or cookie/CSRF behavior.
+- `POST /api/auth/validate` additively returns normalized effective permissions resolved from the cookie session. ADR-014 supersedes the original `/rbac` guard token: user reads require `users.view`, lifecycle mutations require their granular `users.*` operation, and groups, memberships, and direct-permission assignments require `users.permissions.manage`. `users.manage` and `backoffice.manageall` provide their documented overrides, while `backoffice.access` is limited to login and shell entry. LocalStorage is neither an authorization source nor required for authenticated shell controls.
 - Focused BackOffice tests cover authorization matrix and RBAC CRUD assignment scenarios.
 
 Deferred (not yet implemented):

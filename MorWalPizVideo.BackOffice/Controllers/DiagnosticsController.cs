@@ -8,7 +8,7 @@ using RuntimeHealthCheckService = Microsoft.Extensions.Diagnostics.HealthChecks.
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
-[AllowUser("group:" + AuthorizationGroupCodes.Admin, "group:" + AuthorizationGroupCodes.Contributor)]
+[AllowUser("group:" + AuthorizationGroupCodes.Admin, "group:" + AuthorizationGroupCodes.Contributor, AuthorizationPermissionKeys.DiagnosticsView)]
 public sealed class DiagnosticsController : ApplicationControllerBase
 {
     private readonly RuntimeHealthCheckService _healthChecks;

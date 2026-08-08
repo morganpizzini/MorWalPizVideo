@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -36,6 +38,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     }
 
     [HttpGet]
+    [AllowUser(AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> GetProductCategories()
     {
         var entities = await _dataService.FetchProductCategories();
@@ -43,6 +46,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> GetProductCategory(string id)
     {
         var entity = await _dataService.GetProductCategoryById(id);
@@ -52,6 +56,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     }
 
     [HttpPost]
+    [AllowUser(AuthorizationPermissionKeys.ProductCategoriesCreate, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> CreateProductCategory(CreateProductCategoryRequest request)
     {
         var category = new ProductCategory(request.Title, request.Description);
@@ -60,6 +65,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     }
 
     [HttpPut("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductCategoriesUpdate, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> UpdateProductCategory(BaseRequestId<UpdateProductCategoryRequest> request)
     {
         var entity = await _dataService.GetProductCategoryById(request.Id);
@@ -77,6 +83,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AllowUser(AuthorizationPermissionKeys.ProductCategoriesDelete, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> DeleteProductCategory(BaseRequestId request)
     {
         var entity = await _dataService.GetProductCategoryById(request.Id);

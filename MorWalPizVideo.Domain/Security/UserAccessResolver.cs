@@ -56,17 +56,11 @@ public sealed class UserAccessResolver(
         .Select(Normalize)
         .Where(value => !string.IsNullOrWhiteSpace(value));
 
-    var effectivePermissions = directPermissions
-        .Union(inheritedPermissions, StringComparer.OrdinalIgnoreCase)
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    if (effectivePermissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll))
-    {
-      effectivePermissions.Add(AuthorizationPermissionKeys.BackofficeAccess);
-    }
+    var effectivePermissions = AuthorizationPermissionExpander.Expand(
+        directPermissions.Union(inheritedPermissions, StringComparer.OrdinalIgnoreCase));
 
     return new UserAccessProfile(user, groupCodes, directPermissions, effectivePermissions);
   }
 
-  public static string Normalize(string? value) => value?.Trim().ToLowerInvariant() ?? string.Empty;
+  public static string Normalize(string? value) => AuthorizationPermissionExpander.Normalize(value);
 }
