@@ -12,9 +12,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive)
+        public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
             => (await GetItemsAsync())
                 .Where(match => !match.IsPrivate)
+            .Where(match => string.IsNullOrWhiteSpace(channelId) || match.OwnerChannelId == channelId || match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))
                 .SelectMany(match => match.VideoRefs ?? [])
                 .Where(video => video.PublishedAt >= fromInclusive && video.PublishedAt < toExclusive)
                 .Select(video => new VideoPublication(video.YoutubeId, video.Title, video.PublishedAt))
@@ -242,6 +243,71 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             }
 
             return await GetItemsAsync(group => groupIds.Contains(group.Id));
+        }
+    }
+
+    public class ImpersonationGrantMockRepository : BaseMockRepository<ImpersonationGrant>, IImpersonationGrantRepository
+    {
+        private static readonly object RedemptionSync = new();
+
+        public ImpersonationGrantMockRepository(IMockScenario scenario) : base(scenario, "impersonationGrants")
+        {
+        }
+
+        public async Task<ImpersonationGrant?> GetByHashAsync(string grantHash)
+            => (await GetItemsAsync(x => x.GrantHash == grantHash)).FirstOrDefault();
+
+        public Task<ImpersonationGrant?> RedeemAsync(string grantHash, string sessionId, DateTime redeemedAt)
+        {
+            lock (RedemptionSync)
+            {
+                var grant = GetItemsAsync(x => x.GrantHash == grantHash &&
+                    x.RedeemedAt == null && x.ExpiresAt > redeemedAt).GetAwaiter().GetResult().FirstOrDefault();
+                if (grant is null)
+                {
+                    return Task.FromResult<ImpersonationGrant?>(null);
+                }
+
+                var redeemed = grant with { RedeemedAt = redeemedAt, SessionId = sessionId };
+                UpdateItemAsync(redeemed).GetAwaiter().GetResult();
+                return Task.FromResult<ImpersonationGrant?>(redeemed);
+            }
+        }
+    }
+
+    public class ImpersonationSessionMockRepository : BaseMockRepository<ImpersonationSession>, IImpersonationSessionRepository
+    {
+        private static readonly object EndSync = new();
+
+        public ImpersonationSessionMockRepository(IMockScenario scenario) : base(scenario, "impersonationSessions")
+        {
+        }
+
+        public async Task<ImpersonationSession?> GetByHashAsync(string sessionHash)
+            => (await GetItemsAsync(x => x.SessionHash == sessionHash)).FirstOrDefault();
+
+        public Task<bool> EndAsync(string sessionHash, DateTime endedAt, string reason)
+        {
+            lock (EndSync)
+            {
+                var session = GetItemsAsync(x => x.SessionHash == sessionHash && x.EndedAt == null)
+                    .GetAwaiter().GetResult().FirstOrDefault();
+                if (session is null)
+                {
+                    return Task.FromResult(false);
+                }
+
+                UpdateItemAsync(session with { EndedAt = endedAt, EndReason = reason })
+                    .GetAwaiter().GetResult();
+                return Task.FromResult(true);
+            }
+        }
+    }
+
+    public class ImpersonationAuditMockRepository : BaseMockRepository<ImpersonationAuditEvent>, IImpersonationAuditRepository
+    {
+        public ImpersonationAuditMockRepository(IMockScenario scenario) : base(scenario, "impersonationAuditEvents")
+        {
         }
     }
 

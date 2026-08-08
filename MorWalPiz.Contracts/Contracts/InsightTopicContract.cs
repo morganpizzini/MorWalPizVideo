@@ -20,4 +20,7 @@ public class InsightTopicContract
 
     [DataMember]
     public string[] PreferredSources { get; set; } = [];
+
+    [DataMember]
+    public string ChannelId { get; set; } = string.Empty;
 }

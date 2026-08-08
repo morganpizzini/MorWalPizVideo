@@ -66,7 +66,15 @@ BackOffice user-management security model:
 - Self-service profile endpoints are available to authenticated BackOffice users: `/api/user/me`, `/api/user/me` (PUT), `/api/user/me/password`.
 - Authorization grants are resolved from groups and permissions, not role claims.
 
-### 2.2 Feature Flags (`Microsoft.FeatureManagement`)
+### 2.2 Channel tenancy and selected-channel model
+
+`GET /api/channels` returns the channels accessible to the effective identity. The BackOffice SPA keeps one selected channel in its selector and sends it as `X-Channel-Id` to scoped resources. The selection is cleared or replaced with the first accessible channel when it becomes stale; no accessible channels is a valid empty state.
+
+Scoped resources include videos, categories, images, calendar events, compilations, short links, query links, insights, dashboard data, and API-key management. A missing header is `400`; an unknown or inaccessible channel is `404`. API keys are channel-bound and cannot use impersonation. Administrators may select any channel, while ordinary users receive their owned channels.
+
+Video owners and collaborators can read a video through an accessible channel, but collaborator access is read-only. Compilation management remains scoped to the selected channel, while a compilation may include videos readable through other accessible channels. Public compilation URLs are anonymous and globally resolved, independent of the administrative channel context. Short-link management remains scoped even though public short-link resolution is global.
+
+### 2.3 Feature Flags (`Microsoft.FeatureManagement`)
 Configured under `FeatureManagement` in `appsettings*.json`.
 
 | Flag | Effect when enabled |

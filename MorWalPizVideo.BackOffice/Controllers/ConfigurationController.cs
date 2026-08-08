@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
+  [BlockImpersonation]
   public class ConfigurationController : ApplicationControllerBase
   {
     private readonly DataService _dataService;

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Models.Models;
@@ -25,6 +26,7 @@ public class VideoChannelAssignmentStepDefinitions
     {
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Add("X-Test-Permissions", "videos.manage");
+        _client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
         _context = context;
         _matchRepository = factory.MatchRepository!;
         _ytChannelRepository = factory.YTChannelRepository!;

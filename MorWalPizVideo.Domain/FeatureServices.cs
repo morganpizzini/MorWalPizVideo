@@ -14,9 +14,11 @@ public interface IContentService
     Task<IList<YouTubeContent>> GetMatchesByIdsAsync(IList<string> ids, bool includePrivate);
     Task<IList<YouTubeContent>> GetAllMatchesAsync();
     Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin);
+    Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string channelId);
     Task<YouTubeContent?> GetMatchByIdAsync(string id);
     Task<YouTubeContent?> FindMatchAsync(string matchId);
     Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin);
+    Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string channelId);
     Task SaveMatchAsync(YouTubeContent entity);
     Task UpdateMatchAsync(YouTubeContent entity);
     Task DeleteMatchAsync(string id);
@@ -84,6 +86,14 @@ public sealed class ContentService(
             .OrderByDescending(x => x.CreationDateTime)];
     }
 
+    public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string channelId)
+    {
+        var matches = await youTubeContentRepository.GetItemsAsync(match =>
+            match.OwnerChannelId == channelId ||
+            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+        return [.. matches.OrderByDescending(x => x.CreationDateTime)];
+    }
+
     public async Task<YouTubeContent?> GetMatchByIdAsync(string id)
         => (await youTubeContentRepository.GetItemsAsync(x => x.Id == id)).FirstOrDefault();
 
@@ -118,6 +128,13 @@ public sealed class ContentService(
     public async Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin)
     {
         var matches = await GetAuthorizedMatchesAsync(userId, isAdmin);
+        return matches.FirstOrDefault(match => match.ThumbnailVideoId == matchId ||
+            match.Id == matchId || match.VideoRefs.Any(video => video.YoutubeId == matchId));
+    }
+
+    public async Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string channelId)
+    {
+        var matches = await GetAuthorizedMatchesAsync(userId, isAdmin, channelId);
         return matches.FirstOrDefault(match => match.ThumbnailVideoId == matchId ||
             match.Id == matchId || match.VideoRefs.Any(video => video.YoutubeId == matchId));
     }
@@ -198,6 +215,7 @@ public sealed class CatalogService(
 
     public async Task<Compilation> SaveCompilationAsync(Compilation entity)
     {
+        entity = entity with { Url = Compilation.NormalizeUrl(entity.Url) };
         var existingCompilation = await compilationRepository.GetItemsAsync(x => x.Id == entity.Id);
         if (existingCompilation.Count > 0)
         {
@@ -215,7 +233,7 @@ public sealed class CatalogService(
             return;
         }
 
-        await compilationRepository.UpdateItemAsync(entity);
+        await compilationRepository.UpdateItemAsync(entity with { Url = Compilation.NormalizeUrl(entity.Url) });
     }
 
     public async Task DeleteCompilationAsync(string id)
@@ -231,7 +249,8 @@ public sealed class CatalogService(
 
     public Task<Page?> GetPageByUrlAsync(string url) => pageRepository.GetByUrlAsync(url);
 
-    public Task<Compilation?> GetCompilationByUrlAsync(string url) => compilationRepository.GetByUrlAsync(url);
+    public Task<Compilation?> GetCompilationByUrlAsync(string url)
+        => compilationRepository.GetByUrlAsync(Compilation.NormalizeUrl(url));
 
     public Task<IList<CalendarEvent>> GetRecentCalendarEventsAsync(DateTime fromInclusive, int limit)
         => calendarEventRepository.GetRecentAsync(fromInclusive, limit);
@@ -503,26 +522,26 @@ public sealed class FormsService(
 
 public interface IInsightsService
 {
-    Task<IList<InsightTopic>> GetTopicsAsync();
-    Task<InsightTopic?> GetTopicByIdAsync(string id);
-    Task SaveTopicAsync(InsightTopic topic);
-    Task UpdateTopicAsync(InsightTopic topic);
-    Task DeleteTopicAsync(string id);
-    Task<IList<InsightNewsItem>> GetNewsItemsAsync();
-    Task<IList<InsightNewsItem>> GetNewsItemsByTopicIdAsync(string topicId);
-    Task<InsightNewsItem?> GetNewsItemByIdAsync(string id);
-    Task SaveNewsItemAsync(InsightNewsItem item);
-    Task UpdateNewsItemAsync(InsightNewsItem item);
-    Task DeleteNewsItemAsync(string id);
-    Task<bool> NewsItemExistsBySourceUrlAsync(string sourceUrl);
-    Task<IList<InsightContentPlan>> GetContentPlansAsync();
-    Task<IList<InsightContentPlan>> GetContentPlansByTopicIdAsync(string topicId);
-    Task<InsightContentPlan?> GetContentPlanByIdAsync(string id);
-    Task SaveContentPlanAsync(InsightContentPlan plan);
-    Task UpdateContentPlanAsync(InsightContentPlan plan);
-    Task DeleteContentPlanAsync(string id);
-    Task<InsightSourceCursor?> GetSourceCursorAsync(string topicId, string sourceUrl);
-    Task SaveOrUpdateSourceCursorAsync(InsightSourceCursor cursor);
+    Task<IList<InsightTopic>> GetTopicsAsync(string? channelId = null);
+    Task<InsightTopic?> GetTopicByIdAsync(string id, string? channelId = null);
+    Task SaveTopicAsync(InsightTopic topic, string? channelId = null);
+    Task UpdateTopicAsync(InsightTopic topic, string? channelId = null);
+    Task DeleteTopicAsync(string id, string? channelId = null);
+    Task<IList<InsightNewsItem>> GetNewsItemsAsync(string? channelId = null);
+    Task<IList<InsightNewsItem>> GetNewsItemsByTopicIdAsync(string topicId, string? channelId = null);
+    Task<InsightNewsItem?> GetNewsItemByIdAsync(string id, string? channelId = null);
+    Task SaveNewsItemAsync(InsightNewsItem item, string? channelId = null);
+    Task UpdateNewsItemAsync(InsightNewsItem item, string? channelId = null);
+    Task DeleteNewsItemAsync(string id, string? channelId = null);
+    Task<bool> NewsItemExistsBySourceUrlAsync(string sourceUrl, string? channelId = null);
+    Task<IList<InsightContentPlan>> GetContentPlansAsync(string? channelId = null);
+    Task<IList<InsightContentPlan>> GetContentPlansByTopicIdAsync(string topicId, string? channelId = null);
+    Task<InsightContentPlan?> GetContentPlanByIdAsync(string id, string? channelId = null);
+    Task SaveContentPlanAsync(InsightContentPlan plan, string? channelId = null);
+    Task UpdateContentPlanAsync(InsightContentPlan plan, string? channelId = null);
+    Task DeleteContentPlanAsync(string id, string? channelId = null);
+    Task<InsightSourceCursor?> GetSourceCursorAsync(string topicId, string sourceUrl, string? channelId = null);
+    Task SaveOrUpdateSourceCursorAsync(InsightSourceCursor cursor, string? channelId = null);
     Task<YTChannel?> GetChannelByNameAsync(string channelName);
     Task UpdateChannelAsync(YTChannel channel);
 }
@@ -534,12 +553,15 @@ public sealed class InsightsService(
     IInsightSourceCursorRepository insightSourceCursorRepository,
     IYTChannelRepository ytChannelRepository) : IInsightsService
 {
-    public Task<IList<InsightTopic>> GetTopicsAsync() => insightTopicRepository.GetItemsAsync();
+    public Task<IList<InsightTopic>> GetTopicsAsync(string? channelId = null) =>
+        insightTopicRepository.GetItemsAsync(topic => channelId == null || topic.ChannelId == channelId);
 
-    public Task<InsightTopic?> GetTopicByIdAsync(string id) => insightTopicRepository.GetItemAsync(id);
+    public async Task<InsightTopic?> GetTopicByIdAsync(string id, string? channelId = null) =>
+        (await insightTopicRepository.GetItemsAsync(topic => topic.Id == id && (channelId == null || topic.ChannelId == channelId))).FirstOrDefault();
 
-    public async Task SaveTopicAsync(InsightTopic topic)
+    public async Task SaveTopicAsync(InsightTopic topic, string? channelId = null)
     {
+        topic = channelId == null ? topic : topic with { ChannelId = channelId };
         var existingTopic = await insightTopicRepository.GetItemsAsync(x => x.Title.ToLower() == topic.Title.ToLower());
         if (existingTopic.Count > 0)
         {
@@ -549,20 +571,20 @@ public sealed class InsightsService(
         await insightTopicRepository.AddItemAsync(topic);
     }
 
-    public async Task UpdateTopicAsync(InsightTopic topic)
+    public async Task UpdateTopicAsync(InsightTopic topic, string? channelId = null)
     {
-        var existingTopic = await insightTopicRepository.GetItemsAsync(x => x.Id == topic.Id);
+        var existingTopic = await insightTopicRepository.GetItemsAsync(x => x.Id == topic.Id && (channelId == null || x.ChannelId == channelId));
         if (existingTopic.Count == 0)
         {
             return;
         }
 
-        await insightTopicRepository.UpdateItemAsync(topic);
+        await insightTopicRepository.UpdateItemAsync(channelId == null ? topic : topic with { ChannelId = channelId });
     }
 
-    public async Task DeleteTopicAsync(string id)
+    public async Task DeleteTopicAsync(string id, string? channelId = null)
     {
-        var topic = await insightTopicRepository.GetItemAsync(id);
+        var topic = await GetTopicByIdAsync(id, channelId);
         if (topic == null)
         {
             return;
@@ -571,16 +593,18 @@ public sealed class InsightsService(
         await insightTopicRepository.DeleteItemAsync(topic.Id);
     }
 
-    public Task<IList<InsightNewsItem>> GetNewsItemsAsync() => insightNewsItemRepository.GetItemsAsync();
+    public Task<IList<InsightNewsItem>> GetNewsItemsAsync(string? channelId = null) =>
+        insightNewsItemRepository.GetItemsAsync(item => channelId == null || item.ChannelId == channelId);
 
-    public Task<IList<InsightNewsItem>> GetNewsItemsByTopicIdAsync(string topicId)
-        => insightNewsItemRepository.GetItemsAsync(x => x.TopicId == topicId);
+    public Task<IList<InsightNewsItem>> GetNewsItemsByTopicIdAsync(string topicId, string? channelId = null)
+        => insightNewsItemRepository.GetItemsAsync(x => x.TopicId == topicId && (channelId == null || x.ChannelId == channelId));
 
-    public Task<InsightNewsItem?> GetNewsItemByIdAsync(string id)
-        => insightNewsItemRepository.GetItemAsync(id);
+    public async Task<InsightNewsItem?> GetNewsItemByIdAsync(string id, string? channelId = null)
+        => (await insightNewsItemRepository.GetItemsAsync(x => x.Id == id && (channelId == null || x.ChannelId == channelId))).FirstOrDefault();
 
-    public async Task SaveNewsItemAsync(InsightNewsItem item)
+    public async Task SaveNewsItemAsync(InsightNewsItem item, string? channelId = null)
     {
+        item = channelId == null ? item : item with { ChannelId = channelId };
         var existing = await insightNewsItemRepository.GetItemsAsync(x => x.SourceUrl.ToLower() == item.SourceUrl.ToLower());
         if (existing.Count > 0)
         {
@@ -590,20 +614,20 @@ public sealed class InsightsService(
         await insightNewsItemRepository.AddItemAsync(item);
     }
 
-    public async Task UpdateNewsItemAsync(InsightNewsItem item)
+    public async Task UpdateNewsItemAsync(InsightNewsItem item, string? channelId = null)
     {
-        var existing = await insightNewsItemRepository.GetItemsAsync(x => x.Id == item.Id);
+        var existing = await insightNewsItemRepository.GetItemsAsync(x => x.Id == item.Id && (channelId == null || x.ChannelId == channelId));
         if (existing.Count == 0)
         {
             return;
         }
 
-        await insightNewsItemRepository.UpdateItemAsync(item);
+        await insightNewsItemRepository.UpdateItemAsync(channelId == null ? item : item with { ChannelId = channelId });
     }
 
-    public async Task DeleteNewsItemAsync(string id)
+    public async Task DeleteNewsItemAsync(string id, string? channelId = null)
     {
-        var existing = await insightNewsItemRepository.GetItemAsync(id);
+        var existing = await GetNewsItemByIdAsync(id, channelId);
         if (existing == null)
         {
             return;
@@ -612,22 +636,24 @@ public sealed class InsightsService(
         await insightNewsItemRepository.DeleteItemAsync(existing.Id);
     }
 
-    public async Task<bool> NewsItemExistsBySourceUrlAsync(string sourceUrl)
+    public async Task<bool> NewsItemExistsBySourceUrlAsync(string sourceUrl, string? channelId = null)
     {
-        var existing = await insightNewsItemRepository.GetItemsAsync(x => x.SourceUrl.ToLower() == sourceUrl.ToLower());
+        var existing = await insightNewsItemRepository.GetItemsAsync(x => x.SourceUrl.ToLower() == sourceUrl.ToLower() && (channelId == null || x.ChannelId == channelId));
         return existing.Count > 0;
     }
 
-    public Task<IList<InsightContentPlan>> GetContentPlansAsync() => insightContentPlanRepository.GetItemsAsync();
+    public Task<IList<InsightContentPlan>> GetContentPlansAsync(string? channelId = null) =>
+        insightContentPlanRepository.GetItemsAsync(plan => channelId == null || plan.ChannelId == channelId);
 
-    public Task<IList<InsightContentPlan>> GetContentPlansByTopicIdAsync(string topicId)
-        => insightContentPlanRepository.GetItemsAsync(x => x.TopicId == topicId);
+    public Task<IList<InsightContentPlan>> GetContentPlansByTopicIdAsync(string topicId, string? channelId = null)
+        => insightContentPlanRepository.GetItemsAsync(x => x.TopicId == topicId && (channelId == null || x.ChannelId == channelId));
 
-    public Task<InsightContentPlan?> GetContentPlanByIdAsync(string id)
-        => insightContentPlanRepository.GetItemAsync(id);
+    public async Task<InsightContentPlan?> GetContentPlanByIdAsync(string id, string? channelId = null)
+        => (await insightContentPlanRepository.GetItemsAsync(x => x.Id == id && (channelId == null || x.ChannelId == channelId))).FirstOrDefault();
 
-    public async Task SaveContentPlanAsync(InsightContentPlan plan)
+    public async Task SaveContentPlanAsync(InsightContentPlan plan, string? channelId = null)
     {
+        plan = channelId == null ? plan : plan with { ChannelId = channelId };
         var existing = await insightContentPlanRepository.GetItemsAsync(x => x.Title.ToLower() == plan.Title.ToLower());
         if (existing.Count > 0)
         {
@@ -637,20 +663,20 @@ public sealed class InsightsService(
         await insightContentPlanRepository.AddItemAsync(plan);
     }
 
-    public async Task UpdateContentPlanAsync(InsightContentPlan plan)
+    public async Task UpdateContentPlanAsync(InsightContentPlan plan, string? channelId = null)
     {
-        var existing = await insightContentPlanRepository.GetItemsAsync(x => x.Id == plan.Id);
+        var existing = await insightContentPlanRepository.GetItemsAsync(x => x.Id == plan.Id && (channelId == null || x.ChannelId == channelId));
         if (existing.Count == 0)
         {
             return;
         }
 
-        await insightContentPlanRepository.UpdateItemAsync(plan);
+        await insightContentPlanRepository.UpdateItemAsync(channelId == null ? plan : plan with { ChannelId = channelId });
     }
 
-    public async Task DeleteContentPlanAsync(string id)
+    public async Task DeleteContentPlanAsync(string id, string? channelId = null)
     {
-        var existing = await insightContentPlanRepository.GetItemAsync(id);
+        var existing = await GetContentPlanByIdAsync(id, channelId);
         if (existing == null)
         {
             return;
@@ -659,12 +685,13 @@ public sealed class InsightsService(
         await insightContentPlanRepository.DeleteItemAsync(existing.Id);
     }
 
-    public async Task<InsightSourceCursor?> GetSourceCursorAsync(string topicId, string sourceUrl)
-        => (await insightSourceCursorRepository.GetItemsAsync(x => x.TopicId == topicId && x.SourceUrl == sourceUrl)).FirstOrDefault();
+    public async Task<InsightSourceCursor?> GetSourceCursorAsync(string topicId, string sourceUrl, string? channelId = null)
+        => (await insightSourceCursorRepository.GetItemsAsync(x => x.TopicId == topicId && x.SourceUrl == sourceUrl && (channelId == null || x.ChannelId == channelId))).FirstOrDefault();
 
-    public async Task SaveOrUpdateSourceCursorAsync(InsightSourceCursor cursor)
+    public async Task SaveOrUpdateSourceCursorAsync(InsightSourceCursor cursor, string? channelId = null)
     {
-        var existing = (await insightSourceCursorRepository.GetItemsAsync(x => x.TopicId == cursor.TopicId && x.SourceUrl == cursor.SourceUrl)).FirstOrDefault();
+        cursor = channelId == null ? cursor : cursor with { ChannelId = channelId };
+        var existing = (await insightSourceCursorRepository.GetItemsAsync(x => x.TopicId == cursor.TopicId && x.SourceUrl == cursor.SourceUrl && (channelId == null || x.ChannelId == channelId))).FirstOrDefault();
         if (existing == null)
         {
             await insightSourceCursorRepository.AddItemAsync(cursor);
@@ -686,12 +713,17 @@ public interface ILinksService
     Task<ShortLink?> GetByCodeAsync(string code);
     Task<IList<QueryLink>> GetQueryLinksAsync(IList<string>? ids = null);
     Task<ShortLink> SaveShortLinkAsync(ShortLink entity);
+    Task<bool> IsCodeAvailableAsync(string code, string? excludingId = null);
     Task UpdateShortLinkAsync(ShortLink entity);
     Task DeleteShortLinkAsync(string shortLinkId);
     Task<int> IncrementClicksAsync(string id);
 }
 
-public sealed class LinksService(IShortLinkRepository shortLinkRepository, IQueryLinkRepository queryLinkRepository) : ILinksService
+public sealed class LinksService(
+    IShortLinkRepository shortLinkRepository,
+    IQueryLinkRepository queryLinkRepository,
+    IYouTubeContentRepository contentRepository,
+    IYTChannelRepository channelRepository) : ILinksService
 {
     public Task<IList<ShortLink>> GetShortLinksAsync() => shortLinkRepository.GetItemsAsync();
 
@@ -711,6 +743,30 @@ public sealed class LinksService(IShortLinkRepository shortLinkRepository, IQuer
         }
 
         return await shortLinkRepository.AddItemAsync(normalizedEntity);
+    }
+
+    public async Task<bool> IsCodeAvailableAsync(string code, string? excludingId = null)
+    {
+        var normalizedCode = ShortLink.NormalizeCode(code);
+        if (string.IsNullOrWhiteSpace(normalizedCode))
+        {
+            return false;
+        }
+
+        var standalone = await shortLinkRepository.GetByCodeAsync(normalizedCode);
+        if (standalone is not null && !string.Equals(standalone.Id, excludingId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if ((await contentRepository.GetItemsAsync(match =>
+            match.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Count > 0)
+        {
+            return false;
+        }
+
+        return !(await channelRepository.GetItemsAsync(channel =>
+            channel.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Any();
     }
 
     public async Task UpdateShortLinkAsync(ShortLink entity)

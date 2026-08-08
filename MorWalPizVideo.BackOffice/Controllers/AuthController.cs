@@ -6,6 +6,7 @@ using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
     private readonly IJwtService _jwtService;
     private readonly IRateLimitingService _rateLimitingService;
     private readonly IUserAccessResolver _userAccessResolver;
+    private readonly IImpersonationService _impersonationService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -27,12 +29,14 @@ public class AuthController : ControllerBase
         IJwtService jwtService,
         IRateLimitingService rateLimitingService,
         IUserAccessResolver userAccessResolver,
+        IImpersonationService impersonationService,
         ILogger<AuthController> logger)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
         _rateLimitingService = rateLimitingService;
         _userAccessResolver = userAccessResolver;
+        _impersonationService = impersonationService;
         _logger = logger;
     }
 
@@ -148,10 +152,22 @@ public class AuthController : ControllerBase
 
     [HttpPost("logout")]
     [RequireCookieAntiforgery]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
+        var impersonationToken = Request.Cookies[ImpersonationCookieNames.Session];
+        if (!string.IsNullOrWhiteSpace(impersonationToken))
+        {
+            await _impersonationService.EndSessionAsync(User, impersonationToken);
+        }
+
         // Clear the auth cookie
         Response.Cookies.Delete("auth_token", new CookieOptions
+        {
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Path = "/"
+        });
+        Response.Cookies.Delete(ImpersonationCookieNames.Session, new CookieOptions
         {
             Secure = true,
             SameSite = SameSiteMode.None,
@@ -180,11 +196,20 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid token" });
         }
 
+        var actorUserId = User.FindFirstValue("actor_user_id");
+        if (!string.IsNullOrWhiteSpace(actorUserId))
+        {
+            userId = User.FindFirstValue("target_user_id") ?? userId;
+        }
+
         var accessProfile = await _userAccessResolver.ResolveAsync(userId);
 
         return Ok(new
         {
             userId,
+            actorUserId,
+            targetUserId = actorUserId is null ? null : userId,
+            isImpersonating = actorUserId is not null,
             effectivePermissions = accessProfile?.EffectivePermissions
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray() ?? []

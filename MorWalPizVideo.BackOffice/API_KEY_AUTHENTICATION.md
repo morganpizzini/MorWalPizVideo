@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the API Key authentication system implemented for the MorWalPiz Video BackOffice API. The system enables secure communication between the VideoImporter WinForms application and the BackOffice ChatController endpoints.
+This document describes the API Key authentication system implemented for the MorWalPiz Video BackOffice API. The system enables secure communication between the VideoImporter WinForms application and the BackOffice machine endpoints.
 
 ## Architecture
 
@@ -40,6 +40,14 @@ This document describes the API Key authentication system implemented for the Mo
 - **IP Whitelisting**: Optional IP address restrictions per key
 - **Expiration**: Optional expiration dates for time-limited access
 - **Active/Inactive States**: Keys can be deactivated without deletion
+
+### Channel binding and request scope
+
+- Every managed key is assigned a `channelId` when it is created. The channel comes from the authenticated administrator's selected `X-Channel-Id` context; the create request cannot choose an unrelated channel.
+- Scoped BackOffice resources require `X-Channel-Id`. A missing header returns `400` with `code: channel_context_required`.
+- An unknown channel, an inaccessible channel, or a channel different from the API key's assigned `channelId` returns `404` with `code: channel_context_unavailable`. This intentionally conceals channel access from the caller.
+- An administrator can reassign a key with `PUT /api/apikeys/{id}` and a `channelId` body value after the target channel is validated. Reassignment to a different channel is administrator-only; ordinary channel users cannot move keys across channels.
+- API-key principals cannot use browser impersonation. Reassignment and other key-management operations always resolve the authenticated administrator directly.
 
 ### Rate Limiting
 
@@ -186,7 +194,7 @@ GET /api/apikeys/{id}
 ### Update API Key
 ```
 PUT /api/apikeys/{id}
-Body: { "name": "...", "rateLimitPerMinute": 100, ... }
+Body: { "name": "...", "rateLimitPerMinute": 100, "channelId": "...", ... }
 ```
 
 ### Toggle API Key (Activate/Deactivate)
@@ -262,6 +270,10 @@ DELETE /api/apikeys/{id}
 }
 ```
 Headers: `Retry-After: 60`
+
+### 400/404 - Channel context
+
+Scoped management requests require the `X-Channel-Id` header. Missing context is a `400` response. Unknown, inaccessible, and API-key/channel binding mismatches are `404` responses with the stable code `channel_context_unavailable`.
 
 ## Database Schema
 

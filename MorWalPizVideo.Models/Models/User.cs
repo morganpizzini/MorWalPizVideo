@@ -37,6 +37,10 @@ public record User : BaseEntity
     [BsonElement("canAccessBackoffice")]
     public bool CanAccessBackoffice { get; init; } = false;
 
+    /// <summary>Marks a non-impersonable security account.</summary>
+    [BsonElement("isSecurityAccount")]
+    public bool IsSecurityAccount { get; init; } = false;
+
     /// <summary>
     /// Exposes the persisted access flag through the canonical permission profile.
     /// New authorization should use DirectPermissions + Groups.

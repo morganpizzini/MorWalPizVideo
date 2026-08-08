@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services.Interfaces;
@@ -7,6 +8,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 namespace MorWalPizVideo.BackOffice.Controllers;
 
+[RequireChannelScope]
 public class ImageUploadController : ApplicationControllerBase
 {
     private readonly IBlobService blobServiceClient;

@@ -24,7 +24,8 @@ public class ApiKeyService : IApiKeyService
 
     public async Task<(ApiKey apiKey, string unhashedKey)> CreateApiKeyAsync(
         string name, 
-        string description, 
+        string description,
+        string channelId,
         int? rateLimitPerMinute = null, 
         List<string>? allowedIpAddresses = null, 
         DateTime? expiresAt = null)
@@ -37,6 +38,7 @@ public class ApiKeyService : IApiKeyService
             Key = hashedKey,
             Name = name,
             Description = description,
+            ChannelId = channelId,
             IsActive = true,
             RateLimitPerMinute = rateLimitPerMinute ?? _settings.DefaultRateLimitPerMinute,
             AllowedIpAddresses = allowedIpAddresses ?? new List<string>(),

@@ -20,4 +20,7 @@ public class CompilationContract
 
     [DataMember]
     public VideoRef[] Videos { get; set; } = [];
+
+    [DataMember]
+    public string ChannelId { get; set; } = string.Empty;
 }

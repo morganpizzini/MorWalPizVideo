@@ -48,6 +48,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("preferredSources")]
         public string[] PreferredSources { get; init; } = Array.Empty<string>();
 
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
+
         /// <summary>
         /// Add a seed argument to the topic
         /// </summary>

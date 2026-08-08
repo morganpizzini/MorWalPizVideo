@@ -29,4 +29,7 @@ public class InsightContentPlanContract
 
     [DataMember]
     public DateTime GeneratedAt { get; set; }
+
+    [DataMember]
+    public string ChannelId { get; set; } = string.Empty;
 }

@@ -64,6 +64,7 @@ public class PrimaryScenario : BaseScenario
                 Id = MatchId,
                 CreationDateTime = CreatedAt,
                 CreatorUserId = "test-user-id",
+                OwnerChannelId = ChannelId,
                 ShortLinks = [matchShortLink]
             }
         ]);
@@ -173,6 +174,9 @@ public class PrimaryScenario : BaseScenario
         Set("userRequests", Array.Empty<UserRequest>());
         Set("loginAttempts", Array.Empty<LoginAttempt>());
         Set("apiKeys", Array.Empty<ApiKey>());
+        Set("impersonationGrants", Array.Empty<ImpersonationGrant>());
+        Set("impersonationSessions", Array.Empty<ImpersonationSession>());
+        Set("impersonationAuditEvents", Array.Empty<ImpersonationAuditEvent>());
     }
 
     private static ShortLink CreateShortLink(string id, string code, string target, LinkType linkType) =>

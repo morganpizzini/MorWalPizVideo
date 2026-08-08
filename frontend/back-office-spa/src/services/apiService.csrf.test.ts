@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  Delete,
+  get,
+  put,
   post,
   resetCsrfToken,
   setAuthTokenProvider,
   setCookieOnlyMode,
+  setSelectedChannelId,
   setRequestCredentialsMode,
 } from '@morwalpizvideo/services';
 
@@ -12,6 +16,7 @@ describe('shared API client CSRF integration', () => {
     resetCsrfToken();
     setAuthTokenProvider(() => null);
     setCookieOnlyMode(false);
+    setSelectedChannelId(null);
     setRequestCredentialsMode('include');
   });
 
@@ -67,6 +72,44 @@ describe('shared API client CSRF integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     expect((request.headers as Headers).has('X-CSRF-TOKEN')).toBe(false);
+  });
+
+  it('rethrows network failures from delete requests', async () => {
+    const networkError = new TypeError('Failed to fetch');
+    setRequestCredentialsMode('omit');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(networkError));
+
+    await expect(Delete('/api/channels/channel-one')).rejects.toBe(networkError);
+  });
+
+  it('sends the selected channel header for detail routes but not the channel collection', async () => {
+    setSelectedChannelId('channel-one');
+    setRequestCredentialsMode('omit');
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ data: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await get('/api/channels/channel-one');
+    await put('/api/channels/channel-one', { channelName: 'Updated channel' });
+    await Delete('/api/channels/channel-one');
+    await get('/api/channels');
+
+    expect(fetchMock.mock.calls.slice(0, 3).map(([url]) => url)).toEqual([
+      '/api/channels/channel-one',
+      '/api/channels/channel-one',
+      '/api/channels/channel-one',
+    ]);
+    expect(fetchMock.mock.calls.slice(0, 3).map(([, request]) => (request as RequestInit).method)).toEqual([
+      'GET',
+      'PUT',
+      'DELETE',
+    ]);
+
+    for (const [, request] of fetchMock.mock.calls.slice(0, 3)) {
+      expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
+    }
+
+    const collectionHeaders = new Headers((fetchMock.mock.calls[3][1] as RequestInit).headers);
+    expect(collectionHeaders.has('X-Channel-Id')).toBe(false);
   });
 
   it('uses the HttpOnly cookie instead of localStorage or a browser bearer header', async () => {

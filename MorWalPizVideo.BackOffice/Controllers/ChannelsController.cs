@@ -5,13 +5,18 @@ using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class AddChannelRequest
 {
     [Required]
     public string ChannelName { get; set; } = string.Empty;
+
+    [JsonPropertyName("yTChannelId")]
+    public string? YTChannelId { get; set; }
 }
 
 public class UpdateChannelRequest
@@ -24,25 +29,33 @@ public class ChannelsController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
     private readonly IYTService ytService;
+    private readonly IChannelContextResolver channelContextResolver;
 
-    public ChannelsController(IYTService _ytService, DataService dataService)
+    public ChannelsController(IYTService _ytService, DataService dataService, IChannelContextResolver channelContextResolver)
     {
         ytService = _ytService;
         _dataService = dataService;
+        this.channelContextResolver = channelContextResolver;
     }
 
     [HttpGet]
     [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> GetChannels()
     {
-        var entities = await _dataService.GetChannels();
+        var entities = await channelContextResolver.GetAccessibleChannelsAsync(User);
         return Ok(entities.Select(ContractUtils.Convert));
     }
 
     [HttpGet("{id}")]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> GetChannel(string id)
     {
+        if (HttpContext.GetChannelContext().ChannelId != id)
+        {
+            return NotFound();
+        }
+
         var existing = await _dataService.GetChannelById(id);
         if(existing == null)
         {
@@ -55,21 +68,29 @@ public class ChannelsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ChannelsCreate, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> AddChannel(AddChannelRequest request)
     {
-        var channelId = await ytService.GetChannelId(request.ChannelName);
-        
-        if (channelId == string.Empty)
+        var channelId = request.YTChannelId is null
+            ? await ytService.GetChannelId(request.ChannelName.Trim())
+            : request.YTChannelId.Trim();
+
+        if (string.IsNullOrWhiteSpace(channelId))
         {
-            return BadRequest("Channel not found");
+            return BadRequest("YouTube channel ID is required");
         }
-        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName));
+        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()));
         
         return NoContent();
     }
 
     [HttpPut("{id}")]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
     public async Task<IActionResult> UpdateChannel(string id, UpdateChannelRequest request)
     {
+        if (HttpContext.GetChannelContext().ChannelId != id)
+        {
+            return NotFound();
+        }
+
         var existing = await _dataService.GetChannelById(id);
         if (existing is null)
         {
@@ -80,11 +101,23 @@ public class ChannelsController : ApplicationControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{channelName}")]
+    [HttpDelete("{id}")]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsDelete, AuthorizationPermissionKeys.ChannelsManage)]
-    public async Task<IActionResult> RemoveChannel(string channelName)
+    public async Task<IActionResult> RemoveChannel(string id)
     {
-        await _dataService.RemoveChannel(channelName);
+        if (HttpContext.GetChannelContext().ChannelId != id)
+        {
+            return NotFound();
+        }
+
+        var existing = await _dataService.GetChannelById(id);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        await _dataService.RemoveChannel(existing.ChannelName);
         return NoContent();
     }
 }

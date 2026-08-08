@@ -9,5 +9,8 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("title")] string Title,
         [property: DataMember][property: BsonElement("description")] string Description) : BaseEntity
     {
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
     }
 }

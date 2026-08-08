@@ -24,7 +24,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.Compilations], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> Detail(string url)
         {
-            var compilation = await _catalogService.GetCompilationByUrlAsync(url);
+            var compilation = await _catalogService.GetCompilationByUrlAsync(Compilation.NormalizeUrl(url));
             return compilation == null ? NotFound() : Ok(compilation);
         }
     }

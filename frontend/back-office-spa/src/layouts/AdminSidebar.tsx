@@ -2,6 +2,7 @@ import { Nav, Offcanvas } from 'react-bootstrap';
 import { NavLink } from 'react-router';
 import { authService } from '../services/authService';
 import { adminMenuGroups, canAccessMenuItem } from './adminMenu';
+import { useChannelContext } from '../contexts/ChannelContext';
 
 interface AdminSidebarProps {
   show: boolean;
@@ -10,8 +11,25 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
   const permissions = authService.getPermissions();
+  const { channels, selectedChannelId, selectChannel } = useChannelContext();
   const content = (
     <Nav as="nav" aria-label="Admin navigation" className="flex-column gap-1 px-3 pb-3">
+      <div className="channel-selector mb-3">
+        <label className="sidebar-section-label d-block" htmlFor="channel-selector">Channel</label>
+        <select
+          id="channel-selector"
+          className="form-select form-select-sm"
+          aria-label="Select channel"
+          value={selectedChannelId ?? ''}
+          onChange={event => selectChannel(event.target.value)}
+          disabled={channels.length === 0}
+        >
+          {channels.length === 0 ? <option value="">No accessible channels</option> : null}
+          {channels.map(channel => (
+            <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>
+          ))}
+        </select>
+      </div>
       {adminMenuGroups.map(group => {
         const items = group.items.filter(item => canAccessMenuItem(item, permissions));
         if (items.length === 0) return null;

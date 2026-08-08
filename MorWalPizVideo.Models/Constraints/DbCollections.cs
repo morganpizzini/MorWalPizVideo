@@ -35,6 +35,9 @@
         public const string UserGroups = "userGroups";
         public const string LoginAttempts = "loginAttempts";
         public const string ApiKeys = "apiKeys";
+        public const string ImpersonationGrants = "impersonationGrants";
+        public const string ImpersonationSessions = "impersonationSessions";
+        public const string ImpersonationAuditEvents = "impersonationAuditEvents";
 
         // Insights Collections
         public const string InsightTopics = "insightTopics";

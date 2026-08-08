@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 
@@ -20,7 +21,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
     {
         var channelId = $"channel-{Guid.NewGuid():N}";
         var channel = await _factory.YTChannelRepository!.AddItemAsync(new YTChannel(channelId, "Old name"));
-        using var client = CreateClient(AuthorizationPermissionKeys.ChannelsUpdate);
+        using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, channelId);
 
         var response = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new { channelName = "Updated name" });
         var updated = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
@@ -30,16 +31,35 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
     }
 
     [Fact]
+    public async Task Channel_create_honors_submitted_youtube_channel_id()
+    {
+        var channelId = $"UC{Guid.NewGuid():N}";
+        using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+
+        var response = await client.PostAsJsonAsync("/api/Channels", new
+        {
+            channelName = "Created channel",
+            yTChannelId = $"  {channelId}  "
+        });
+        var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).SingleOrDefault();
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotNull(created);
+        Assert.Equal("Created channel", created!.ChannelName);
+    }
+
+    [Fact]
     public async Task Video_update_persists_video_references_submitted_by_edit_form()
     {
         var videoId = $"video-{Guid.NewGuid():N}";
         var match = YouTubeContent.CreateSingleVideo(videoId, []) with
         {
             CreatorUserId = "test-user-id",
+            OwnerChannelId = PrimaryScenario.ChannelId,
             Title = "Original"
         };
         match = await _factory.MatchRepository!.AddItemAsync(match);
-        using var client = CreateClient(AuthorizationPermissionKeys.VideosUpdate);
+        using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
 
         var response = await client.PutAsJsonAsync($"/api/Videos/{match.Id}", new
         {
@@ -59,10 +79,11 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
         Assert.Equal("owned-channel", Assert.Single(updated!.VideoRefs).ChannelIds.Single());
     }
 
-    private HttpClient CreateClient(string permission)
+    private HttpClient CreateClient(string permission, string channelId)
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
+        client.DefaultRequestHeaders.Add("X-Channel-Id", channelId);
         return client;
     }
 }

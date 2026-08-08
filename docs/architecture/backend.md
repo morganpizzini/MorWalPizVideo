@@ -64,6 +64,12 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 - `backoffice.access` is limited to login and BackOffice entry. RBAC user-list and detail reads require `users.view`; user lifecycle mutations require their corresponding `users.create`, `users.update`, or `users.delete` leaf; group CRUD, memberships, and direct-permission assignments require `users.permissions.manage`. `users.manage` implies these reviewed user-administration capabilities, and `backoffice.manageall` remains the global override.
 - `AllowUser` supports `group:` and `perm:` tokens as well as unprefixed OR semantics, and all group/permission comparisons use lowercase invariant normalization.
 
+### Channel tenancy
+
+BackOffice channel selection is explicit. `GET /api/channels` returns the channels accessible to the effective identity; scoped resources require `X-Channel-Id`. The scope middleware returns `400` with `channel_context_required` when the header is missing, and `404` with `channel_context_unavailable` when the channel is unknown or inaccessible. API-key principals are additionally restricted to their persisted `ApiKey.ChannelId`; a binding mismatch is `404`.
+
+The effective impersonated target identity is used for channel ownership and content authorization, while the actor remains the audit and CSRF identity. Administrators can select any channel; normal users are limited to owned channels. Video collaborators retain read access but not mutation access. Compilation management is channel-scoped, but readable videos from other accessible channels may be included. Public compilation URLs are anonymous and globally resolved, so their route and output cache vary by URL rather than administrative channel.
+
 ### ServerAPI
 
 - Public endpoints must explicitly allow anonymous access.
@@ -88,6 +94,8 @@ Rules:
 - Internal eviction endpoints require authenticated service-to-service calls and must not be public maintenance GET endpoints.
 - Cache failures are logged and observable; mutation success must not silently imply invalidation success.
 - Do not cache authorization-sensitive responses without an explicit vary policy.
+- Scoped BackOffice responses must vary by the authenticated/effective identity and selected channel; the `X-Channel-Id` header is part of the authorization input. Public compilation URL responses are global and must not be partitioned by an administrative channel header.
+- The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. Index creation is an approved manual operation, not a startup action; local source review does not prove production deployment.
 
 ## Background Work
 
@@ -109,6 +117,8 @@ Every HTTP integration uses `IHttpClientFactory`, typed options, resilience from
 ## Error Handling
 
 The target API error contract is RFC Problem Details with stable error codes and field validation. Current strings, anonymous objects, direct exceptions, and inconsistent status bodies should migrate endpoint by endpoint.
+
+For channel scope, the current compatibility contract is explicit: missing `X-Channel-Id` is `400`; unknown, inaccessible, or API-key/channel mismatches are `404` to avoid disclosing tenancy. Clients must not deserialize these error envelopes as domain resources.
 
 ## Observability
 

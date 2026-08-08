@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
@@ -12,6 +13,8 @@ public interface IVideoAuthorizationService
     Task<bool> IsAdminAsync(ClaimsPrincipal principal);
     Task<bool> CanAccessAsync(ClaimsPrincipal principal, YouTubeContent match);
     Task<bool> CanManageChannelAsync(ClaimsPrincipal principal, string channelId);
+    Task<bool> CanReadInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId);
+    Task<bool> CanMutateInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId);
 }
 
 public sealed class VideoAuthorizationService(
@@ -20,7 +23,7 @@ public sealed class VideoAuthorizationService(
 {
     public async Task<bool> IsAdminAsync(ClaimsPrincipal principal)
     {
-        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
         if (string.IsNullOrWhiteSpace(userId))
         {
             return false;
@@ -33,7 +36,7 @@ public sealed class VideoAuthorizationService(
             return true;
         }
 
-        return principal.FindAll("permission")
+        return !principal.HasClaim("impersonation", "true") && principal.FindAll("permission")
             .Select(claim => UserAccessResolver.Normalize(claim.Value))
             .Contains(AuthorizationPermissionKeys.BackofficeManageAll, StringComparer.OrdinalIgnoreCase);
     }
@@ -45,7 +48,7 @@ public sealed class VideoAuthorizationService(
             return true;
         }
 
-        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
         return !string.IsNullOrWhiteSpace(userId) &&
                (string.Equals(match.CreatorUserId, userId, StringComparison.Ordinal) ||
                 (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
@@ -59,8 +62,41 @@ public sealed class VideoAuthorizationService(
             return true;
         }
 
-        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
         return !string.IsNullOrWhiteSpace(userId) &&
+            (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
+                owner.IsActive && owner.ChannelId == channelId);
+    }
+
+    public async Task<bool> CanReadInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId)
+    {
+        if (await IsAdminAsync(principal) || principal.FindFirst("ApiKeyId") is not null)
+        {
+            return match.OwnerChannelId == channelId || match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId));
+        }
+
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
+        var ownsChannel = !string.IsNullOrWhiteSpace(userId) &&
+            (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
+                owner.IsActive && owner.ChannelId == channelId);
+        return ownsChannel && (match.OwnerChannelId == channelId || match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+    }
+
+    public async Task<bool> CanMutateInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId)
+    {
+        if (principal.FindFirst("ApiKeyId") is not null)
+        {
+            return match.OwnerChannelId == channelId;
+        }
+
+        if (await IsAdminAsync(principal))
+        {
+            return true;
+        }
+
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
+        return !string.IsNullOrWhiteSpace(userId) &&
+            match.OwnerChannelId == channelId &&
             (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
                 owner.IsActive && owner.ChannelId == channelId);
     }

@@ -7,6 +7,7 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers
@@ -39,20 +40,24 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public string[] Videos { get; set; } = [];
     }
 
+    [RequireChannelScope]
     public class CompilationsController : ApplicationControllerBase
     {
         private readonly ICatalogService _catalogService;
         private readonly IContentService _contentService;
         private readonly ILogger<CompilationsController> _logger;
+        private readonly IVideoAuthorizationService _videoAuthorization;
 
         public CompilationsController(
             ICatalogService catalogService,
             IContentService contentService,
-            ILogger<CompilationsController> logger)
+            ILogger<CompilationsController> logger,
+            IVideoAuthorizationService videoAuthorization)
         {
             _catalogService = catalogService;
             _contentService = contentService;
             _logger = logger;
+            _videoAuthorization = videoAuthorization;
         }
 
         /// <summary>
@@ -64,7 +69,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var compilations = await _catalogService.GetCompilationsAsync();
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var compilations = (await _catalogService.GetCompilationsAsync())
+                    .Where(compilation => compilation.ChannelId == channelId);
                 return Ok(compilations.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
@@ -89,7 +96,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 var compilation = await _catalogService.GetCompilationByIdAsync(id);
-                if (compilation == null)
+                if (compilation == null || compilation.ChannelId != HttpContext.GetChannelContext().ChannelId)
                 {
                     return NotFound($"Compilation with ID '{id}' not found");
                 }
@@ -113,6 +120,12 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Validate all VideoRefs exist and fetch their data
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var normalizedUrl = Compilation.NormalizeUrl(request.Body.Url);
+                if (await _catalogService.GetCompilationByUrlAsync(normalizedUrl) is not null)
+                {
+                    return Conflict("A compilation with this URL already exists");
+                }
                 VideoRef[] videoRefs = [];
                 if (request.Body.Videos.Length > 0)
                 {
@@ -162,15 +175,30 @@ namespace MorWalPizVideo.BackOffice.Controllers
                         return BadRequest($"The following videos do not exist: {string.Join(", ", invalidVideos)}");
                     }
 
+                    foreach (var videoRef in foundVideoRefs)
+                    {
+                        var source = allMatches.FirstOrDefault(match => match.VideoRefs.Any(video => video.YoutubeId == videoRef.YoutubeId));
+                        if (source is null || !await _videoAuthorization.CanAccessAsync(User, source))
+                        {
+                            invalidVideos.Add(videoRef.YoutubeId);
+                        }
+                    }
+
+                    if (invalidVideos.Count > 0)
+                    {
+                        return BadRequest($"The following videos are not readable in the selected channel: {string.Join(", ", invalidVideos.Distinct())}");
+                    }
+
                     videoRefs = foundVideoRefs.ToArray();
                 }
 
                 var compilation = new Compilation(
                     request.Body.Title,
                     request.Body.Description,
-                    request.Body.Url,
+                    normalizedUrl,
                     videoRefs
                 );
+                compilation = compilation with { ChannelId = channelId };
 
                 compilation = await _catalogService.SaveCompilationAsync(compilation);
                 
@@ -196,12 +224,19 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 // Check if compilation exists
                 var existingCompilation = await _catalogService.GetCompilationByIdAsync(request.Id);
-                if (existingCompilation == null)
+                if (existingCompilation == null || existingCompilation.ChannelId != HttpContext.GetChannelContext().ChannelId)
                 {
                     return NotFound($"Compilation with ID '{request.Id}' not found");
                 }
 
                 // Validate all VideoRefs exist and fetch their data
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var normalizedUrl = Compilation.NormalizeUrl(request.Body.Url);
+                var duplicateUrl = await _catalogService.GetCompilationByUrlAsync(normalizedUrl);
+                if (duplicateUrl is not null && duplicateUrl.Id != existingCompilation.Id)
+                {
+                    return Conflict("A compilation with this URL already exists");
+                }
                 VideoRef[] videoRefs = [];
                 if (request.Body.Videos.Length > 0)
                 {
@@ -251,6 +286,20 @@ namespace MorWalPizVideo.BackOffice.Controllers
                         return BadRequest($"The following videos do not exist: {string.Join(", ", invalidVideos)}");
                     }
 
+                    foreach (var videoRef in foundVideoRefs)
+                    {
+                        var source = allMatches.FirstOrDefault(match => match.VideoRefs.Any(video => video.YoutubeId == videoRef.YoutubeId));
+                        if (source is null || !await _videoAuthorization.CanAccessAsync(User, source))
+                        {
+                            invalidVideos.Add(videoRef.YoutubeId);
+                        }
+                    }
+
+                    if (invalidVideos.Count > 0)
+                    {
+                        return BadRequest($"The following videos are not readable in the selected channel: {string.Join(", ", invalidVideos.Distinct())}");
+                    }
+
                     videoRefs = foundVideoRefs.ToArray();
                 }
 
@@ -258,8 +307,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 {
                     Title = request.Body.Title,
                     Description = request.Body.Description,
-                    Url = request.Body.Url,
-                    Videos = videoRefs
+                    Url = normalizedUrl,
+                    Videos = videoRefs,
+                    ChannelId = channelId
                 };
 
                 await _catalogService.UpdateCompilationAsync(updatedCompilation);
@@ -286,7 +336,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 // Check if compilation exists
                 var existingCompilation = await _catalogService.GetCompilationByIdAsync(request.Id);
-                if (existingCompilation == null)
+                if (existingCompilation == null || existingCompilation.ChannelId != HttpContext.GetChannelContext().ChannelId)
                 {
                     return NotFound($"Compilation with ID '{request.Id}' not found");
                 }
@@ -303,5 +353,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return StatusCode(500, "An error occurred while deleting the compilation");
             }
         }
+
     }
 }

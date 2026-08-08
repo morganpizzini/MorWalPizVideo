@@ -176,6 +176,7 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.Path = "/";
 });
+builder.Services.AddHttpContextAccessor();
 
 var facebookSettings = builder.Configuration
         .GetSection("FacebookSettings")
@@ -281,6 +282,9 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, AllowUserPolicyProvi
 builder.Services.AddScoped<IAuthorizationHandler, AllowUserAuthorizationHandler>();
 builder.Services.AddScoped<IUserAuthorizationEvaluator, UserAuthorizationEvaluator>();
 builder.Services.AddScoped<IUserAccessResolver, UserAccessResolver>();
+builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authentication.IClaimsTransformation, ImpersonationClaimsTransformation>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -303,6 +307,7 @@ builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<IVideoAuthorizationService, VideoAuthorizationService>();
+builder.Services.AddScoped<IChannelContextResolver, ChannelContextResolver>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopManagementService, ShopManagementService>();
@@ -340,6 +345,9 @@ if (enableMock)
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
     builder.Services.AddScoped<IUserRepository, UserMockRepository>();
     builder.Services.AddScoped<IUserGroupRepository, UserGroupMockRepository>();
+    builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantMockRepository>();
+    builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionMockRepository>();
+    builder.Services.AddScoped<IImpersonationAuditRepository, ImpersonationAuditMockRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptMockRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>(); // Example for
 
@@ -416,6 +424,9 @@ else
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IUserGroupRepository, UserGroupRepository>();
+    builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantRepository>();
+    builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionRepository>();
+    builder.Services.AddScoped<IImpersonationAuditRepository, ImpersonationAuditRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
@@ -619,8 +630,10 @@ else
 
 app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<ImpersonationHardBlockMiddleware>();
 app.UseMiddleware<CookieAntiforgeryMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<ChannelScopeMiddleware>();
 
 app.MapControllers();
 

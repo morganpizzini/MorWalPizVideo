@@ -59,6 +59,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("channelId")]
         public string? ChannelId { get; set; }
 
+        [DataMember]
+        [BsonElement("managementChannelId")]
+        public string? ManagementChannelId { get; set; }
+
         [BsonIgnore]
         public string QueryString => QueryLinks != null ? string.Join("&", QueryLinks.Select(ql => ql.Value)) : string.Empty;
     }

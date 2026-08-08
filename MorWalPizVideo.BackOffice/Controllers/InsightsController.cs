@@ -6,12 +6,14 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
+    [RequireChannelScope]
     public class InsightsController : ApplicationControllerBase
     {
         private readonly IInsightsService _insightsService;
@@ -25,13 +27,15 @@ namespace MorWalPizVideo.BackOffice.Controllers
             _insightIngestionService = insightIngestionService;
         }
 
+        private string SelectedChannelId => HttpContext.GetChannelContext().ChannelId;
+
         #region Topics
 
         [HttpGet("topics")]
         [ApiKeyAuth]
         public async Task<IActionResult> GetTopics()
         {
-            var topics = await _insightsService.GetTopicsAsync();
+            var topics = await _insightsService.GetTopicsAsync(SelectedChannelId);
             return Ok(topics.Select(ContractUtils.Convert));
         }
 
@@ -39,7 +43,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetTopicsForAdmin()
         {
-            var topics = await _insightsService.GetTopicsAsync();
+            var topics = await _insightsService.GetTopicsAsync(SelectedChannelId);
             return Ok(topics.Select(ContractUtils.Convert));
         }
 
@@ -47,7 +51,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetTopicById([FromRoute] string id)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
@@ -68,7 +72,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Id = Guid.NewGuid().ToString()
             };
 
-            await _insightsService.SaveTopicAsync(topic);
+            await _insightsService.SaveTopicAsync(topic, SelectedChannelId);
             return CreatedAtAction(nameof(GetTopicById), new { id = topic.Id }, ContractUtils.Convert(topic));
         }
 
@@ -76,7 +80,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> UpdateTopic([FromRoute] string id, [FromBody] UpdateInsightTopicRequest request)
         {
-            var existing = await _insightsService.GetTopicByIdAsync(id);
+            var existing = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (existing == null)
                 return NotFound();
 
@@ -88,7 +92,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 PreferredSources = request.PreferredSources ?? existing.PreferredSources
             };
 
-            await _insightsService.UpdateTopicAsync(updated);
+            await _insightsService.UpdateTopicAsync(updated, SelectedChannelId);
             return Ok(ContractUtils.Convert(updated));
         }
 
@@ -96,11 +100,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteTopic([FromRoute] string id)
         {
-            var existing = await _insightsService.GetTopicByIdAsync(id);
+            var existing = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (existing == null)
                 return NotFound();
 
-            await _insightsService.DeleteTopicAsync(id);
+            await _insightsService.DeleteTopicAsync(id, SelectedChannelId);
             return NoContent();
         }
 
@@ -112,7 +116,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ScanNewsForTopic([FromRoute] string id)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
@@ -121,7 +125,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
             // Save discovered news items
             foreach (var newsItem in discoveredNews)
             {
-                await _insightsService.SaveNewsItemAsync(newsItem);
+                await _insightsService.SaveNewsItemAsync(newsItem, SelectedChannelId);
             }
 
             // Rank the items
@@ -138,7 +142,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [ApiKeyAuth]
         public async Task<IActionResult> ManualScanTopic([FromRoute] string id, [FromBody] ManualScanRequest request)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
@@ -155,7 +159,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ScanShortContentForTopic([FromRoute] string id, [FromBody] ScanShortContentRequest request)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
@@ -170,7 +174,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetAllNews([FromQuery] InsightSourceKind? sourceKind = null)
         {
-            var newsItems = await _insightsService.GetNewsItemsAsync();
+            var newsItems = await _insightsService.GetNewsItemsAsync(SelectedChannelId);
 
             if (sourceKind.HasValue)
             {
@@ -184,11 +188,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetNewsForTopic([FromRoute] string id, [FromQuery] InsightNewsStatus? status = null, [FromQuery] InsightSourceKind? sourceKind = null)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
-            var newsItems = await _insightsService.GetNewsItemsByTopicIdAsync(id);
+            var newsItems = await _insightsService.GetNewsItemsByTopicIdAsync(id, SelectedChannelId);
 
             if (status.HasValue)
             {
@@ -207,7 +211,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetNewsById([FromRoute] string id)
         {
-            var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
+            var newsItem = await _insightsService.GetNewsItemByIdAsync(id, SelectedChannelId);
             if (newsItem == null)
                 return NotFound();
 
@@ -218,7 +222,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> ReviewNewsItem([FromRoute] string id, [FromBody] ReviewNewsItemRequest request)
         {
-            var newsItem = await _insightsService.GetNewsItemByIdAsync(id);
+            var newsItem = await _insightsService.GetNewsItemByIdAsync(id, SelectedChannelId);
             if (newsItem == null)
                 return NotFound();
 
@@ -234,7 +238,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 updated = updated.UpdateStarRating(request.StarRating.Value);
             }
 
-            await _insightsService.UpdateNewsItemAsync(updated);
+            await _insightsService.UpdateNewsItemAsync(updated, SelectedChannelId);
             return Ok(ContractUtils.Convert(updated));
         }
 
@@ -242,11 +246,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteNewsItem([FromRoute] string id)
         {
-            var existing = await _insightsService.GetNewsItemByIdAsync(id);
+            var existing = await _insightsService.GetNewsItemByIdAsync(id, SelectedChannelId);
             if (existing == null)
                 return NotFound();
 
-            await _insightsService.DeleteNewsItemAsync(id);
+            await _insightsService.DeleteNewsItemAsync(id, SelectedChannelId);
             return NoContent();
         }
 
@@ -258,14 +262,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsCreate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GenerateContentPlan([FromBody] GenerateContentPlanRequest request)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(request.TopicId);
+            var topic = await _insightsService.GetTopicByIdAsync(request.TopicId, SelectedChannelId);
             if (topic == null)
                 return NotFound("Topic not found");
 
             // Verify all news items exist
             foreach (var newsItemId in request.NewsItemIds)
             {
-                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId);
+                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId, SelectedChannelId);
                 if (newsItem == null)
                     return NotFound($"News item {newsItemId} not found");
             }
@@ -276,16 +280,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 request.ContentType,
                 request.TargetPlatforms);
 
-            await _insightsService.SaveContentPlanAsync(contentPlan);
+            await _insightsService.SaveContentPlanAsync(contentPlan, SelectedChannelId);
 
             // Mark news items as generated
             foreach (var newsItemId in request.NewsItemIds)
             {
-                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId);
+                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId, SelectedChannelId);
                 if (newsItem != null)
                 {
                     var updated = newsItem.UpdateStatus(InsightNewsStatus.Generated);
-                    await _insightsService.UpdateNewsItemAsync(updated);
+                    await _insightsService.UpdateNewsItemAsync(updated, SelectedChannelId);
                 }
             }
 
@@ -296,7 +300,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetAllContentPlans()
         {
-            var plans = await _insightsService.GetContentPlansAsync();
+            var plans = await _insightsService.GetContentPlansAsync(SelectedChannelId);
             return Ok(plans.Select(ContractUtils.Convert));
         }
 
@@ -304,11 +308,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetContentPlansForTopic([FromRoute] string id)
         {
-            var topic = await _insightsService.GetTopicByIdAsync(id);
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
             if (topic == null)
                 return NotFound();
 
-            var plans = await _insightsService.GetContentPlansByTopicIdAsync(id);
+            var plans = await _insightsService.GetContentPlansByTopicIdAsync(id, SelectedChannelId);
             return Ok(plans.Select(ContractUtils.Convert));
         }
 
@@ -316,7 +320,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GetContentPlanById([FromRoute] string id)
         {
-            var plan = await _insightsService.GetContentPlanByIdAsync(id);
+            var plan = await _insightsService.GetContentPlanByIdAsync(id, SelectedChannelId);
             if (plan == null)
                 return NotFound();
 
@@ -327,7 +331,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsUpdate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> UpdateContentPlan([FromRoute] string id, [FromBody] UpdateContentPlanRequest request)
         {
-            var existing = await _insightsService.GetContentPlanByIdAsync(id);
+            var existing = await _insightsService.GetContentPlanByIdAsync(id, SelectedChannelId);
             if (existing == null)
                 return NotFound();
 
@@ -348,7 +352,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 updated = updated with { TargetPlatforms = request.TargetPlatforms };
             }
 
-            await _insightsService.UpdateContentPlanAsync(updated);
+            await _insightsService.UpdateContentPlanAsync(updated, SelectedChannelId);
             return Ok(ContractUtils.Convert(updated));
         }
 
@@ -356,11 +360,11 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsDelete, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> DeleteContentPlan([FromRoute] string id)
         {
-            var existing = await _insightsService.GetContentPlanByIdAsync(id);
+            var existing = await _insightsService.GetContentPlanByIdAsync(id, SelectedChannelId);
             if (existing == null)
                 return NotFound();
 
-            await _insightsService.DeleteContentPlanAsync(id);
+            await _insightsService.DeleteContentPlanAsync(id, SelectedChannelId);
             return NoContent();
         }
 

@@ -17,13 +17,20 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive)
+        public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
         {
-            var matches = await _collection
-                .Find(Builders<YouTubeContent>.Filter.And(
+            var filter = Builders<YouTubeContent>.Filter.And(
                     Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false),
                     Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs,
-                        video => video.PublishedAt >= fromInclusive && video.PublishedAt < toExclusive)))
+                        video => video.PublishedAt >= fromInclusive && video.PublishedAt < toExclusive));
+            if (!string.IsNullOrWhiteSpace(channelId))
+            {
+                filter &= Builders<YouTubeContent>.Filter.Or(
+                    Builders<YouTubeContent>.Filter.Eq(x => x.OwnerChannelId, channelId),
+                    Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs, video => video.ChannelIds.Contains(channelId)));
+            }
+
+            var matches = await _collection.Find(filter)
                 .ToListAsync();
 
             return matches
@@ -460,6 +467,60 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             }
 
             return await _collection.Find(group => groupIds.Contains(group.Id)).ToListAsync();
+        }
+    }
+
+    public class ImpersonationGrantRepository : BaseRepository<ImpersonationGrant>, IImpersonationGrantRepository
+    {
+        public ImpersonationGrantRepository(IMongoDatabase database) : base(database, DbCollections.ImpersonationGrants)
+        {
+        }
+
+        public Task<ImpersonationGrant?> GetByHashAsync(string grantHash)
+            => _collection.Find(x => x.GrantHash == grantHash).FirstOrDefaultAsync();
+
+        public Task<ImpersonationGrant?> RedeemAsync(string grantHash, string sessionId, DateTime redeemedAt)
+        {
+            var filter = Builders<ImpersonationGrant>.Filter.And(
+                Builders<ImpersonationGrant>.Filter.Eq(x => x.GrantHash, grantHash),
+                Builders<ImpersonationGrant>.Filter.Eq(x => x.RedeemedAt, null),
+                Builders<ImpersonationGrant>.Filter.Gt(x => x.ExpiresAt, redeemedAt));
+            var update = Builders<ImpersonationGrant>.Update
+                .Set(x => x.RedeemedAt, redeemedAt)
+                .Set(x => x.SessionId, sessionId);
+            return _collection.FindOneAndUpdateAsync(
+                filter,
+                update,
+                new FindOneAndUpdateOptions<ImpersonationGrant> { ReturnDocument = ReturnDocument.After });
+        }
+    }
+
+    public class ImpersonationSessionRepository : BaseRepository<ImpersonationSession>, IImpersonationSessionRepository
+    {
+        public ImpersonationSessionRepository(IMongoDatabase database) : base(database, DbCollections.ImpersonationSessions)
+        {
+        }
+
+        public Task<ImpersonationSession?> GetByHashAsync(string sessionHash)
+            => _collection.Find(x => x.SessionHash == sessionHash).FirstOrDefaultAsync();
+
+        public async Task<bool> EndAsync(string sessionHash, DateTime endedAt, string reason)
+        {
+            var filter = Builders<ImpersonationSession>.Filter.And(
+                Builders<ImpersonationSession>.Filter.Eq(x => x.SessionHash, sessionHash),
+                Builders<ImpersonationSession>.Filter.Eq(x => x.EndedAt, null));
+            var update = Builders<ImpersonationSession>.Update
+                .Set(x => x.EndedAt, endedAt)
+                .Set(x => x.EndReason, reason);
+            var result = await _collection.UpdateOneAsync(filter, update);
+            return result.ModifiedCount == 1;
+        }
+    }
+
+    public class ImpersonationAuditRepository : BaseRepository<ImpersonationAuditEvent>, IImpersonationAuditRepository
+    {
+        public ImpersonationAuditRepository(IMongoDatabase database) : base(database, DbCollections.ImpersonationAuditEvents)
+        {
         }
     }
 

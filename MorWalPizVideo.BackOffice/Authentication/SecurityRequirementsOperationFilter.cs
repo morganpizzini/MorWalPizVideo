@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi;
+using MorWalPizVideo.BackOffice.Services;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MorWalPizVideo.BackOffice.Authentication;
@@ -34,6 +35,20 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
         if (!hasAuthorize && !hasApiKeyAuth)
         {
             return; // No authorization required
+        }
+
+        if (context.MethodInfo.DeclaringType?.GetCustomAttributes(true).OfType<RequireChannelScopeAttribute>().Any() == true ||
+            context.MethodInfo.GetCustomAttributes(true).OfType<RequireChannelScopeAttribute>().Any())
+        {
+            operation.Parameters ??= new List<IOpenApiParameter>();
+            operation.Parameters.Add(new OpenApiParameter
+            {
+                Name = ChannelContextConstants.HeaderName,
+                In = ParameterLocation.Header,
+                Required = true,
+                Description = "External YouTube channel identifier used to scope this BackOffice operation.",
+                Schema = new OpenApiSchema { Type = JsonSchemaType.String }
+            });
         }
 
         operation.Security = new List<OpenApiSecurityRequirement>();

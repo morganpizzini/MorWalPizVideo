@@ -5,6 +5,7 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
@@ -18,6 +19,7 @@ using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
+[RequireChannelScope]
 public class VideosController : ApplicationControllerBase
 {
     private readonly IContentService _contentService;
@@ -75,7 +77,7 @@ public class VideosController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Update(string id, [FromBody] VideoUpdateRequest request)
     {
-        var existingMatch = await FindAuthorizedMatchAsync(id);
+        var existingMatch = await FindManageableMatchAsync(id);
         if (existingMatch == null)
         {
             return NotFound("Video not found");
@@ -110,7 +112,7 @@ public class VideosController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.VideosDelete, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Delete(string id)
     {
-        var match = await FindAuthorizedMatchAsync(id);
+        var match = await FindManageableMatchAsync(id);
         if (match == null)
         {
             return NotFound();
@@ -129,7 +131,7 @@ public class VideosController : ApplicationControllerBase
     {
         foreach (var videoId in videoIds)
         {
-            if (await FindAuthorizedMatchAsync(videoId) == null)
+            if (await FindManageableMatchAsync(videoId) == null)
             {
                 return NotFound("Video not found");
             }
@@ -142,7 +144,7 @@ public class VideosController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Import(VideoImportRequest request)
     {
-        var creatorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var creatorUserId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
         if (string.IsNullOrWhiteSpace(creatorUserId))
         {
             return Unauthorized();
@@ -153,9 +155,11 @@ public class VideosController : ApplicationControllerBase
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
 
+        var channelContext = HttpContext.GetChannelContext();
         var importedMatch = YouTubeContent.CreateSingleVideo(request.VideoId, categories) with
         {
-            CreatorUserId = creatorUserId
+            CreatorUserId = creatorUserId,
+            OwnerChannelId = channelContext.ChannelId
         };
         await _contentService.SaveMatchAsync(importedMatch);
 
@@ -177,14 +181,14 @@ public class VideosController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> RefreshYouTubeData(string id)
     {
-        var existingMatch = await FindAuthorizedMatchAsync(id);
+        var existingMatch = await FindManageableMatchAsync(id);
         if (existingMatch == null)
         {
             return NotFound("Video not found");
         }
 
         var updatedMatch = await externalDataService.RefreshMatch(id);
-        if (updatedMatch == null || !await authorization.CanAccessAsync(User, updatedMatch))
+        if (updatedMatch == null || !await authorization.CanMutateInChannelAsync(User, updatedMatch, HttpContext.GetChannelContext().ChannelId))
         {
             return NotFound("Video not found");
         }
@@ -200,8 +204,8 @@ public class VideosController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.VideosPublish, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> PublishToSocialMedia(string id, [FromBody] PublishSocialRequest request)
     {
-        var match = await _contentService.FindMatchAsync(id);
-        if (match == null || !await authorization.CanAccessAsync(User, match))
+        var match = await FindManageableMatchAsync(id);
+        if (match == null)
         {
             return NotFound("Video not found");
         }
@@ -289,13 +293,14 @@ public class VideosController : ApplicationControllerBase
             return BadRequest(new { error = $"Unknown channelId '{payload.ChannelId}'" });
         }
 
-        if (!await authorization.CanManageChannelAsync(User, payload.ChannelId))
+        if (!await authorization.CanManageChannelAsync(User, payload.ChannelId) ||
+            payload.ChannelId != HttpContext.GetChannelContext().ChannelId)
         {
             return NotFound(new { error = $"Video '{youtubeId}' was not found" });
         }
 
         var existingMatch = await _contentService.FindMatchAsync(youtubeId);
-        if (existingMatch != null && !await authorization.CanAccessAsync(User, existingMatch))
+        if (existingMatch != null && !await authorization.CanMutateInChannelAsync(User, existingMatch, HttpContext.GetChannelContext().ChannelId))
         {
             return NotFound(new { error = $"Video '{youtubeId}' was not found" });
         }
@@ -335,19 +340,28 @@ public class VideosController : ApplicationControllerBase
 
     private async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
         return string.IsNullOrWhiteSpace(userId)
             ? []
-            : await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User));
+            : await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User), HttpContext.GetChannelContext().ChannelId);
     }
 
     private async Task<YouTubeContent?> FindAuthorizedMatchAsync(string id)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
         return string.IsNullOrWhiteSpace(userId)
             ? null
-            : await _contentService.FindAuthorizedMatchAsync(id, userId, await authorization.IsAdminAsync(User));
+                : await _contentService.FindAuthorizedMatchAsync(id, userId, await authorization.IsAdminAsync(User), HttpContext.GetChannelContext().ChannelId);
     }
+
+            private async Task<YouTubeContent?> FindManageableMatchAsync(string id)
+            {
+            var match = await FindAuthorizedMatchAsync(id);
+            return match is not null && await authorization.CanMutateInChannelAsync(
+                User, match, HttpContext.GetChannelContext().ChannelId)
+                ? match
+                : null;
+            }
 
     /// <summary>
     /// Auto-creates a shortlink for a video (similar to ShortLinksController logic).

@@ -44,4 +44,7 @@ public class YouTubeContentContract
 
     [DataMember]
     public string CreatorUserId { get; set; } = string.Empty;
+
+    [DataMember]
+    public string OwnerChannelId { get; set; } = string.Empty;
 }

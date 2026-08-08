@@ -68,6 +68,14 @@ body {
   padding: 0.5rem 0.8rem;
 }
 
+.channel-selector .form-select {
+  background-color: #243342;
+  border-color: #526273;
+  color: #fff;
+  margin: 0 0.8rem;
+  width: calc(100% - 1.6rem);
+}
+
 .admin-main {
   min-width: 0;
   flex: 1;

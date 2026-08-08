@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.Domain.Security;
 
 namespace MorWalPizVideo.BackOffice.Authorization;
@@ -78,7 +79,7 @@ public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessRes
       return false;
     }
 
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+    var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
     var profile = await userAccessResolver.ResolveAsync(userId ?? string.Empty);
 
     var groupCodes = profile?.GroupCodes.ToHashSet(StringComparer.OrdinalIgnoreCase) ??
@@ -86,16 +87,19 @@ public sealed class UserAuthorizationEvaluator(IUserAccessResolver userAccessRes
     var effectivePermissions = profile?.EffectivePermissions.ToHashSet(StringComparer.OrdinalIgnoreCase) ??
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    foreach (var permissionClaim in principal.FindAll("permission"))
+    if (!principal.HasClaim("impersonation", "true"))
     {
-      effectivePermissions.Add(UserAccessResolver.Normalize(permissionClaim.Value));
-    }
-
-    foreach (var permissionClaim in principal.FindAll("permissions"))
-    {
-      foreach (var value in permissionClaim.Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+      foreach (var permissionClaim in principal.FindAll("permission"))
       {
-        effectivePermissions.Add(UserAccessResolver.Normalize(value));
+        effectivePermissions.Add(UserAccessResolver.Normalize(permissionClaim.Value));
+      }
+
+      foreach (var permissionClaim in principal.FindAll("permissions"))
+      {
+        foreach (var value in permissionClaim.Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+          effectivePermissions.Add(UserAccessResolver.Normalize(value));
+        }
       }
     }
 

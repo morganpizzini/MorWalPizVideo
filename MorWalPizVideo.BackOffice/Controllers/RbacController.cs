@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
@@ -11,6 +12,7 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[BlockImpersonation]
 public class RbacController(
     IUserRepository userRepository,
     IUserGroupRepository userGroupRepository) : ControllerBase

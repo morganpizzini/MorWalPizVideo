@@ -28,4 +28,7 @@ public record ApiKey : BaseEntity
 
     [BsonElement("allowedIpAddresses")]
     public List<string> AllowedIpAddresses { get; init; } = new();
+
+    [BsonElement("channelId")]
+    public string? ChannelId { get; init; }
 }

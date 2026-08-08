@@ -62,6 +62,12 @@ Use RFC Problem Details consistently:
 - 429 rate limited.
 - 500 unexpected failure without sensitive detail.
 
+### Channel scope contract
+
+BackOffice `GET /api/channels` establishes the accessible-channel list. Requests to scoped resources carry the selected channel in `X-Channel-Id`; the header is required even when the caller is an administrator. Missing header returns `400` with `channel_context_required`. Unknown, inaccessible, and API-key binding mismatches return `404` with `channel_context_unavailable`.
+
+The effective impersonated target controls channel and content authorization. API keys carry a persisted channel binding and cannot impersonate. Administrative compilation and short-link management is scoped, while public compilation URL resolution is anonymous and global; public cache keys therefore use the URL, not the administrative channel.
+
 ## Authentication Matrix
 
 | Surface | Scheme |
@@ -73,6 +79,8 @@ Use RFC Problem Details consistently:
 | Future customer endpoints | Dedicated customer policy |
 | Internal cache invalidation | Authenticated service identity |
 | Short-link redirect | Anonymous |
+
+API-key management is authenticated with the administrator's BackOffice principal. Creation binds the key to the selected channel; only an administrator may reassign it to another existing channel.
 
 ## Shop Contract
 

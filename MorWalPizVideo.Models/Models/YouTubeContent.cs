@@ -79,6 +79,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("creatorUserId")]
         public string CreatorUserId { get; init; } = string.Empty;
 
+        [DataMember]
+        [BsonElement("ownerChannelId")]
+        public string OwnerChannelId { get; init; } = string.Empty;
+
         // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]
         public bool IsLink => ContentType == YoutubeContentType.SingleVideo;

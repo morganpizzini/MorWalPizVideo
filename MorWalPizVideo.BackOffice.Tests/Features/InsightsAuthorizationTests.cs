@@ -1,5 +1,6 @@
 using System.Net;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -22,6 +23,7 @@ public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebAppl
     {
         using var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
+        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
         var response = await client.GetAsync("/api/Insights/topics/admin");
 
@@ -33,6 +35,7 @@ public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebAppl
     {
         using var cookieClient = _factory.CreateClient();
         cookieClient.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsView);
+        cookieClient.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
         var response = await cookieClient.GetAsync("/api/Insights/topics");
 
@@ -44,6 +47,7 @@ public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebAppl
     {
         using var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsManage);
+        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
         var response = await client.PostAsync("/api/Insights/topics/missing-topic/scan-news", null);
 

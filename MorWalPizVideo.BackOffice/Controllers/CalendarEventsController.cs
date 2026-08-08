@@ -7,12 +7,14 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [RequireChannelScope]
     public class CalendarEventsController : ControllerBase
     {
         private readonly DataService _dataService;
@@ -35,7 +37,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var events = await _dataService.GetCalendarEvents();
+                var events = await _dataService.GetCalendarEvents(HttpContext.GetChannelContext().ChannelId);
                 return Ok(events.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
@@ -59,7 +61,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("Title cannot be empty");
                 }
 
-                var calendarEvent = await _dataService.GetCalendarEventByTitle(title);
+                var calendarEvent = await _dataService.GetCalendarEventByTitle(title, HttpContext.GetChannelContext().ChannelId);
                 if (calendarEvent == null)
                 {
                     return NotFound($"Calendar event with title '{title}' not found");
@@ -120,6 +122,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return Conflict($"Calendar event with title '{calendarEvent.Title}' already exists");
                 }
 
+                calendarEvent = calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId };
                 await _dataService.SaveCalendarEvent(calendarEvent);
                 
                 _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
@@ -179,7 +182,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
                 
 
-                await _dataService.UpdateCalendarEvent(calendarEvent);
+                if (await _dataService.GetCalendarEventByTitle(calendarEvent.Title, HttpContext.GetChannelContext().ChannelId) is null &&
+                    string.IsNullOrWhiteSpace(calendarEvent.Id))
+                {
+                    return NotFound("Calendar event not found");
+                }
+
+                await _dataService.UpdateCalendarEvent(calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId }, HttpContext.GetChannelContext().ChannelId);
                 
                 _logger.LogInformation("Calendar event updated: {Id} - {Title}", id, calendarEvent.Title);
                 
@@ -206,7 +215,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("ID is required");
                 }
 
-                await _dataService.DeleteCalendarEvent(id);
+                if (await _dataService.GetCalendarEvents(HttpContext.GetChannelContext().ChannelId) is var events &&
+                    events.All(calendarEvent => calendarEvent.Id != id))
+                {
+                    return NotFound("Calendar event not found");
+                }
+
+                await _dataService.DeleteCalendarEvent(id, HttpContext.GetChannelContext().ChannelId);
                 
                 _logger.LogInformation("Calendar event deleted: {Id}", id);
                 

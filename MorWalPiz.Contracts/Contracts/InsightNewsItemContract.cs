@@ -53,4 +53,7 @@ public class InsightNewsItemContract
 
     [DataMember]
     public string Sentiment { get; set; } = string.Empty;
+
+    [DataMember]
+    public string ChannelId { get; set; } = string.Empty;
 }

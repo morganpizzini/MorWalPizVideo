@@ -36,7 +36,7 @@ public sealed class DashboardService(
 {
     private const int DefaultPublicationDays = 21;
 
-    public async Task<DashboardSummaryResponse> GetSummaryAsync()
+    public async Task<DashboardSummaryResponse> GetSummaryAsync(string channelId)
     {
         var users = await userRepository.GetItemsAsync(user => user.IsActive);
         var groups = await userGroupRepository.GetItemsAsync(group => group.IsActive);
@@ -52,12 +52,13 @@ public sealed class DashboardService(
                 (permissions.Contains(AuthorizationPermissionKeys.BackofficeAccess) ||
                  permissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll))));
 
-        var shortLinks = await shortLinkRepository.GetItemsAsync();
+        var shortLinks = await shortLinkRepository.GetItemsAsync(shortLink =>
+            shortLink.ManagementChannelId == channelId || shortLink.ChannelId == channelId);
         var forms = await customFormRepository.GetActiveAsync();
         var responseCounts = await Task.WhenAll(forms.Select(form =>
             customFormResponseRepository.CountByFormIdAsync(form.Id)));
-        var insights = await insightNewsItemRepository.GetItemsAsync();
-        var publications = await GetVideoPublicationsAsync(DefaultPublicationDays);
+        var insights = await insightNewsItemRepository.GetItemsAsync(item => item.ChannelId == channelId);
+        var publications = await GetVideoPublicationsAsync(DefaultPublicationDays, channelId);
 
         return new DashboardSummaryResponse(
             shortLinks.Count,
@@ -71,13 +72,13 @@ public sealed class DashboardService(
             DateTime.UtcNow);
     }
 
-    public async Task<IReadOnlyList<VideoPublicationDayResponse>> GetVideoPublicationsAsync(int days)
+    public async Task<IReadOnlyList<VideoPublicationDayResponse>> GetVideoPublicationsAsync(int days, string channelId)
     {
         var safeDays = Math.Clamp(days, 1, 21);
         var today = DateTime.UtcNow.Date;
         var fromInclusive = today.AddDays(-(safeDays - 1));
         var toExclusive = today.AddDays(1);
-        var publications = await youTubeContentRepository.GetPublicationsAsync(fromInclusive, toExclusive);
+        var publications = await youTubeContentRepository.GetPublicationsAsync(fromInclusive, toExclusive, channelId);
 
         return publications
             .GroupBy(publication => publication.PublishedAt.ToUniversalTime().Date)

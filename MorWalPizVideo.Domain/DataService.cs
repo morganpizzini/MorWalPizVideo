@@ -58,6 +58,8 @@ namespace MorWalPizVideo.Server.Services
         }
         public async Task<IList<BioLink>> GetBioLinks() => [.. (await _bioLinkRepository.GetItemsAsync(x => x.Enable)).OrderBy(x => x.Order)];
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
+        public Task<IList<CalendarEvent>> GetCalendarEvents(string channelId) =>
+            _calendarEventRepository.GetItemsAsync(x => x.ChannelId == channelId);
 
         public Task<IList<MorWalPizConfiguration>> FetchConfigurationByKeys(IList<string> keys)
         {
@@ -621,10 +623,14 @@ namespace MorWalPizVideo.Server.Services
 
         // Category methods
         public Task<IList<Category>> FetchCategories(IList<string>? ids = null) => _categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
+        public Task<IList<Category>> FetchCategories(IList<string>? ids, string channelId) =>
+            _categoryRepository.GetItemsAsync(x => x.ChannelId == channelId && (ids == null || ids.Contains(x.Id)));
 
 
         public async Task<Category?> GetCategoryById(string id) =>
             await _categoryRepository.GetItemAsync(id);
+        public async Task<Category?> GetCategoryById(string id, string channelId) =>
+            (await _categoryRepository.GetItemsAsync(x => x.Id == id && x.ChannelId == channelId)).FirstOrDefault();
 
         public async Task SaveCategory(Category entity)
         {
@@ -644,6 +650,12 @@ namespace MorWalPizVideo.Server.Services
             await _categoryRepository.UpdateItemAsync(entity);
         }
 
+        public async Task UpdateCategory(Category entity, string channelId)
+        {
+            if ((await _categoryRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).Count > 0)
+                await _categoryRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+        }
+
         public async Task DeleteCategory(string categoryId)
         {
             var category = (await _categoryRepository.GetItemsAsync(x => x.Id == categoryId)).FirstOrDefault();
@@ -653,8 +665,17 @@ namespace MorWalPizVideo.Server.Services
             await _categoryRepository.DeleteItemAsync(category.Id);
         }
 
+        public async Task DeleteCategory(string categoryId, string channelId)
+        {
+            var category = (await _categoryRepository.GetItemsAsync(x => x.Id == categoryId && x.ChannelId == channelId)).FirstOrDefault();
+            if (category != null)
+                await _categoryRepository.DeleteItemAsync(category.Id);
+        }
+
         public async Task<CalendarEvent?> GetCalendarEventByTitle(string title) =>
             (await _calendarEventRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
+        public async Task<CalendarEvent?> GetCalendarEventByTitle(string title, string channelId) =>
+            (await _calendarEventRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower() && x.ChannelId == channelId)).FirstOrDefault();
 
         public async Task SaveCalendarEvent(CalendarEvent entity)
         {
@@ -674,9 +695,21 @@ namespace MorWalPizVideo.Server.Services
             await _calendarEventRepository.UpdateItemAsync(entity);
         }
 
+        public async Task UpdateCalendarEvent(CalendarEvent entity, string channelId)
+        {
+            if ((await _calendarEventRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).Count > 0)
+                await _calendarEventRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+        }
+
         public async Task DeleteCalendarEvent(string calendarEventId)
         {
             await _calendarEventRepository.DeleteItemAsync(calendarEventId);
+        }
+
+        public async Task DeleteCalendarEvent(string calendarEventId, string channelId)
+        {
+            if ((await _calendarEventRepository.GetItemsAsync(x => x.Id == calendarEventId && x.ChannelId == channelId)).FirstOrDefault() is { } entity)
+                await _calendarEventRepository.DeleteItemAsync(entity.Id);
         }
 
         // Compilation methods
@@ -713,11 +746,15 @@ namespace MorWalPizVideo.Server.Services
 
         // QueryLink methods
         public Task<IList<QueryLink>> FetchQueryLinks(IList<string>? ids = null) => _queryLinkRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
+        public Task<IList<QueryLink>> FetchQueryLinks(IList<string>? ids, string channelId) =>
+            _queryLinkRepository.GetItemsAsync(x => x.ChannelId == channelId && (ids == null || ids.Contains(x.Id)));
         public async Task<QueryLink?> GetQueryLink(string queryLinkId)
         {
             var queryLink = (await _queryLinkRepository.GetItemsAsync(x => x.Id == queryLinkId)).FirstOrDefault();
             return queryLink;
         }
+        public async Task<QueryLink?> GetQueryLink(string queryLinkId, string channelId) =>
+            (await _queryLinkRepository.GetItemsAsync(x => x.Id == queryLinkId && x.ChannelId == channelId)).FirstOrDefault();
         public async Task<QueryLink?> GetQueryLinkByTitle(string title) =>
             (await _queryLinkRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
 

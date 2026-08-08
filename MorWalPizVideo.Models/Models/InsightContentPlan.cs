@@ -110,6 +110,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("generatedAt")]
         public DateTime GeneratedAt { get; init; }
 
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
+
         /// <summary>
         /// Add a target platform
         /// </summary>

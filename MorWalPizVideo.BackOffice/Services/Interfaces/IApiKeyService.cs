@@ -4,7 +4,7 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces;
 
 public interface IApiKeyService
 {
-    Task<(ApiKey apiKey, string unhashedKey)> CreateApiKeyAsync(string name, string description, int? rateLimitPerMinute = null, List<string>? allowedIpAddresses = null, DateTime? expiresAt = null);
+    Task<(ApiKey apiKey, string unhashedKey)> CreateApiKeyAsync(string name, string description, string channelId, int? rateLimitPerMinute = null, List<string>? allowedIpAddresses = null, DateTime? expiresAt = null);
     Task<ApiKey?> ValidateApiKeyAsync(string key);
     string HashApiKey(string key);
     string GenerateApiKey();

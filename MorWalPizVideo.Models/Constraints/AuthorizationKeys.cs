@@ -4,6 +4,7 @@ public static class AuthorizationPermissionKeys
 {
   public const string BackofficeAccess = "backoffice.access";
   public const string BackofficeManageAll = "backoffice.manageall";
+  public const string BackofficeImpersonate = "backoffice.impersonate";
 
   public const string UsersView = "users.view";
   public const string UsersManage = "users.manage";

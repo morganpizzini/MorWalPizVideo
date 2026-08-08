@@ -20,6 +20,7 @@ namespace MorWalPiz.Contracts
                 CategoryId = entity.Id,
                 Title = entity.Title,
                 Description = entity.Description,
+                ChannelId = entity.ChannelId,
             };
         }
         public static ShortLinkContract Convert(ShortLink entity, string endpointBasePath)
@@ -34,7 +35,8 @@ namespace MorWalPiz.Contracts
                 ClicksCount = entity.ClicksCount,
                 LinkType = entity.LinkType,
                 ContentId = entity.ContentId,
-                ChannelId = entity.ChannelId
+                ChannelId = entity.ChannelId,
+                ManagementChannelId = entity.ManagementChannelId
             };
         }
         public static QueryLinkContract Convert (QueryLink entity)
@@ -44,6 +46,7 @@ namespace MorWalPiz.Contracts
                 QueryLinkId = entity.Id,
                 Title =  entity.Title,
                 Value = entity.Value,
+                ChannelId = entity.ChannelId,
             };
         }
         public static UserContract Convert(User entity)
@@ -63,6 +66,7 @@ namespace MorWalPiz.Contracts
             {
                 Id = entity.Id,
                 ChannelId = entity.ChannelId,
+                YTChannelId = entity.ChannelId,
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos.Select(Convert).ToArray(),
                 Mine = entity.Mine
@@ -105,7 +109,8 @@ namespace MorWalPiz.Contracts
                 Title = entity.Title,
                 Description = entity.Description,
                 Url = entity.Url,
-                Videos = entity.Videos
+                Videos = entity.Videos,
+                ChannelId = entity.ChannelId
             };
         }
         public static CalendarEventContract Convert(CalendarEvent entity)
@@ -119,7 +124,8 @@ namespace MorWalPiz.Contracts
                 EndDate = entity.EndDate,
                 Categories = entity.Categories,
                 MatchId = entity.MatchId,
-                MatchUrl = entity.MatchUrl
+                MatchUrl = entity.MatchUrl,
+                ChannelId = entity.ChannelId
             };
         }
         public static ConfigurationContract Convert(MorWalPizConfiguration entity)
@@ -154,7 +160,8 @@ namespace MorWalPiz.Contracts
                 Title = entity.Title,
                 Description = entity.Description,
                 SeedArguments = entity.SeedArguments,
-                PreferredSources = entity.PreferredSources
+                PreferredSources = entity.PreferredSources,
+                ChannelId = entity.ChannelId
             };
         }
         public static InsightNewsItemContract Convert(InsightNewsItem entity)
@@ -176,7 +183,8 @@ namespace MorWalPiz.Contracts
                 AnalysisReason = entity.AnalysisReason,
                 SourceKind = entity.SourceKind,
                 CommentExcerpt = entity.CommentExcerpt,
-                Sentiment = entity.Sentiment
+                Sentiment = entity.Sentiment,
+                ChannelId = entity.ChannelId
             };
         }
         public static InsightContentPlanContract Convert(InsightContentPlan entity)
@@ -190,7 +198,8 @@ namespace MorWalPiz.Contracts
                 Outline = entity.Outline,
                 GeneratedFromNewsItemIds = entity.GeneratedFromNewsItemIds,
                 TargetPlatforms = entity.TargetPlatforms,
-                GeneratedAt = entity.GeneratedAt
+                GeneratedAt = entity.GeneratedAt,
+                ChannelId = entity.ChannelId
             };
         }
         public static PublishScheduleContract Convert(PublishSchedule entity)
@@ -244,7 +253,8 @@ namespace MorWalPiz.Contracts
                 YouTubeVideoLinks = entity.YouTubeVideoLinks,
                 ShortLinks = entity.ShortLinks,
                 IsPrivate = entity.IsPrivate,
-                CreatorUserId = entity.CreatorUserId
+                CreatorUserId = entity.CreatorUserId,
+                OwnerChannelId = entity.OwnerChannelId
             };
         }
         public static ProductContract Convert(Product entity)

@@ -12,12 +12,17 @@ namespace MorWalPiz.Contracts.Contracts
         public string Title { get; set; } = string.Empty;
         [DataMember]
         public string Description { get; set; } = string.Empty;
+
+        [DataMember]
+        public string ChannelId { get; set; } = string.Empty;
     }
     public class QueryLinkContract
     {
         public string QueryLinkId { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
+
+        public string ChannelId { get; set; } = string.Empty;
     }
     [DataContract]
     public class ShortLinkContract
@@ -50,5 +55,8 @@ namespace MorWalPiz.Contracts.Contracts
 
         [DataMember]
         public string? ChannelId { get; set; }
+
+        [DataMember]
+        public string? ManagementChannelId { get; set; }
     }
 }

@@ -11,6 +11,8 @@ namespace MorWalPizVideo.Server.Models
     [DataContract]
     public record Compilation : BaseEntity
     {
+        public static string NormalizeUrl(string? url) => (url ?? string.Empty).Trim().ToLowerInvariant();
+
         [JsonConstructor]
         public Compilation(string title, string description, string url, VideoRef[] videos)
         {
@@ -35,5 +37,9 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("videos")]
         public VideoRef[] Videos { get; init; } = Array.Empty<VideoRef>();
+
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
     }
 }

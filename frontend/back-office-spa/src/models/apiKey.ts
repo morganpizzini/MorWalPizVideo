@@ -13,6 +13,7 @@ export interface ApiKeyDto {
   lastUsedAt: string | null;
   expiresAt: string | null;
   createdAt: string;
+  channelId: string | null;
 }
 
 export interface CreateApiKeyRequest {
@@ -21,6 +22,7 @@ export interface CreateApiKeyRequest {
   rateLimitPerMinute?: number;
   allowedIpAddresses?: string[];
   expiresAt?: string;
+  channelId?: string;
 }
 
 export interface CreateApiKeyResponse {
@@ -32,6 +34,7 @@ export interface CreateApiKeyResponse {
   allowedIpAddresses: string[];
   expiresAt: string | null;
   createdAt: string;
+  channelId: string | null;
   message: string;
 }
 
@@ -41,6 +44,7 @@ export interface UpdateApiKeyRequest {
   rateLimitPerMinute?: number;
   allowedIpAddresses?: string[];
   expiresAt?: string;
+  channelId?: string;
 }
 
 export interface ToggleApiKeyResponse {

@@ -29,4 +29,7 @@ public class CalendarEventContract
 
     [DataMember]
     public string MatchUrl { get; set; } = string.Empty;
+
+    [DataMember]
+    public string ChannelId { get; set; } = string.Empty;
 }

@@ -1,4 +1,7 @@
 import { createBrowserRouter, redirect } from 'react-router';
+import { endpoints, get, selectFirstAccessibleChannel } from '@morwalpizvideo/services';
+import type { Channel } from './models/channel';
+import { requireChannelPayload } from './routes/channels/response';
 import PrimaryLayout from './layouts/PrimaryLayout';
 import { authRoutes } from './router/routes/auth.routes';
 import { protectedRoutes } from './router/routes';
@@ -14,7 +17,20 @@ export async function authLoader() {
     return redirect('/login');
   }
 
-  return requirePermissions([permissions.backoffice.access], session);
+  const permissionResult = requirePermissions([permissions.backoffice.access], session);
+  if (permissionResult instanceof Response) {
+    return permissionResult;
+  }
+
+  const response = await get(endpoints.CHANNELS);
+  const channels = requireChannelPayload<unknown>(response, 'Unable to load accessible channels');
+  if (!Array.isArray(channels)) {
+    throw new Response('Unable to load accessible channels', { status: 502 });
+  }
+
+  const accessibleChannels = channels as Channel[];
+  const selectedChannelId = selectFirstAccessibleChannel(accessibleChannels);
+  return { session, channels: accessibleChannels, selectedChannelId };
 }
 
 /**

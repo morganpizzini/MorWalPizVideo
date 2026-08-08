@@ -43,12 +43,12 @@
       "notes": "Supports direct page URL lookup."
     },
     {
-      "key": "compilations_url",
+      "key": "compilations_url.unique",
       "collection": "compilations",
-      "name": "ix_compilations_url",
+      "name": "ux_compilations_url_ci",
       "keys": { "url": 1 },
-      "unique": false,
-      "notes": "Supports direct compilation URL lookup."
+      "unique": true,
+      "notes": "Authoritative name for the global unique normalized compilation URL index. Application normalizes with trim/lowercase; apply manually through the approved Mongo index operation after duplicate audit. Public lookup remains global. Source review does not prove production deployment."
     },
     {
       "key": "customforms_active_url",

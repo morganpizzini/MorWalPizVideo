@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
@@ -17,6 +18,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [AllowUser("perm:" + AuthorizationPermissionKeys.BackofficeAccess)]
+    [BlockImpersonation]
     public class UserController : ApplicationControllerBase
     {
         private readonly DataService _dataService;

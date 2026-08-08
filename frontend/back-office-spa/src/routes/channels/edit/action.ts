@@ -1,6 +1,7 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
 import { UpdateChannelDTO } from '@/models';
+import { channelActionError, getChannelApiError } from '../response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const values = Object.fromEntries(await request.formData()) as UpdateChannelDTO;
@@ -17,10 +18,13 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   try {
-    await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: params.id! }), values);
+    const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: params.id! }), values);
+    if (getChannelApiError(response)) {
+      return channelActionError(response, 'Unable to update channel');
+    }
+
     return data({ success: true }, { status: 200 });
   } catch (error) {
-    errors['generics'] = ['API error found'];
-    return data({ success: false, errors }, { status: 500 });
+    return channelActionError(error, 'Unable to update channel');
   }
 }

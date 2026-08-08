@@ -47,6 +47,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("lastScanAt")]
         public DateTime LastScanAt { get; init; }
 
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
+
         public InsightSourceCursor UpdateCursor(string? postId, string? postUrl, DateTime scanAt) =>
             this with
             {

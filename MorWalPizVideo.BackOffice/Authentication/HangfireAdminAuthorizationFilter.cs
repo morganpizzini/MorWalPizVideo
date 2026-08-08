@@ -23,7 +23,7 @@ public sealed class HangfireAdminAuthorizationFilter : IDashboardAuthorizationFi
       return false;
     }
 
-    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(user);
     if (string.IsNullOrWhiteSpace(userId))
     {
       return false;

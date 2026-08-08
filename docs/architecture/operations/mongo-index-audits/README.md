@@ -39,6 +39,8 @@ Notes:
 - Apply is idempotent (`skipped_existing` for already present indexes).
 - Indexes are never created at startup.
 - Keep backups and rollback notes with each apply record.
+- `compilations_url.unique` is named `ux_compilations_url_ci` in the authoritative phase 4 manifest and enforces global uniqueness for normalized public compilation URLs.
+- `shortlinks.code.unique` remains a global uniqueness requirement for public short-link resolution. Neither index is claimed as deployed by this repository documentation; production status requires an audit/apply result and explain evidence.
 
 ## Committed Phase 4 baseline sample
 

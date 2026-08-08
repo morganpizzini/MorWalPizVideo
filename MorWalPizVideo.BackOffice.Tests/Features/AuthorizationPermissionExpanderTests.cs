@@ -53,7 +53,7 @@ public sealed class AuthorizationPermissionExpanderTests
   }
 
   [Fact]
-  public void Backoffice_manageall_only_materializes_access_and_preserves_global_permission()
+  public void Backoffice_manageall_materializes_access_and_impersonate_and_preserves_global_permission()
   {
     var expanded = AuthorizationPermissionExpander.Expand(
         [AuthorizationPermissionKeys.BackofficeManageAll]);
@@ -62,7 +62,8 @@ public sealed class AuthorizationPermissionExpanderTests
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
           AuthorizationPermissionKeys.BackofficeManageAll,
-          AuthorizationPermissionKeys.BackofficeAccess
+          AuthorizationPermissionKeys.BackofficeAccess,
+          AuthorizationPermissionKeys.BackofficeImpersonate
         },
         expanded);
   }

@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace MorWalPiz.Contracts.Contracts;
 
@@ -10,6 +11,10 @@ public class ChannelContract
 
     [DataMember]
     public string ChannelId { get; set; } = string.Empty;
+
+    [DataMember]
+    [JsonPropertyName("yTChannelId")]
+    public string YTChannelId { get; set; } = string.Empty;
 
     [DataMember]
     public string ChannelName { get; set; } = string.Empty;

@@ -15,7 +15,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
-        Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive);
+        Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null);
         Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
         Task<long> CountPublicAsync(bool includePrivate);
@@ -112,4 +112,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<UserGroup?> GetByCodeAsync(string code);
         Task<IList<UserGroup>> GetByIdsAsync(IList<string> groupIds);
     }
+
+    public interface IImpersonationGrantRepository : IRepository<ImpersonationGrant>
+    {
+        Task<ImpersonationGrant?> GetByHashAsync(string grantHash);
+        Task<ImpersonationGrant?> RedeemAsync(string grantHash, string sessionId, DateTime redeemedAt);
+    }
+
+    public interface IImpersonationSessionRepository : IRepository<ImpersonationSession>
+    {
+        Task<ImpersonationSession?> GetByHashAsync(string sessionHash);
+        Task<bool> EndAsync(string sessionHash, DateTime endedAt, string reason);
+    }
+
+    public interface IImpersonationAuditRepository : IRepository<ImpersonationAuditEvent>;
 }

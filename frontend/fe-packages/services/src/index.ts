@@ -2,7 +2,16 @@
 
 // API Service exports
 export { default as apiService } from './apiService';
-export { resetCsrfToken, setAuthTokenProvider, setCookieOnlyMode, setRequestCredentialsMode, setUnauthorizedHandler } from './apiService';
+export {
+    getSelectedChannelId,
+    resetCsrfToken,
+    selectFirstAccessibleChannel,
+    setAuthTokenProvider,
+    setCookieOnlyMode,
+    setRequestCredentialsMode,
+    setSelectedChannelId,
+    setUnauthorizedHandler
+} from './apiService';
 
 // Export individual HTTP methods
 export { get, post, put, patch, Delete, postFormData, getFile, call } from './apiService';

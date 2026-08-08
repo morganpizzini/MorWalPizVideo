@@ -65,6 +65,12 @@ Token normalization uses `ToLowerInvariant()` semantics to keep group and permis
 
 The BackOffice SPA `/rbac` route tree uses the effective permissions returned by `/api/auth/validate`. User-list and detail reads require `users.view`; lifecycle mutations require `users.create`, `users.update`, or `users.delete`; group CRUD, memberships, and direct-permission assignments require `users.permissions.manage`. The frontend never expands implications. `users.manage` arrives server-expanded with the reviewed user-administration leaves, and `backoffice.manageall` is the global override. `backoffice.access` grants login and shell entry only and does not authorize RBAC or user administration. The API remains authoritative through `AllowUser`.
 
+## BackOffice Impersonation
+
+Impersonation is disabled by default through `FeatureManagement:EnableImpersonation`. When enabled, `POST /api/impersonation/grants` issues a single-use opaque grant to an operator with `backoffice.impersonate`; `backoffice.manageall` implies that permission. `POST /api/impersonation/sessions` redeems the grant for a separate HttpOnly, Secure, `SameSite=None` session cookie, and `DELETE /api/impersonation/sessions/current` ends it. Cookie-backed unsafe requests require `X-CSRF-TOKEN`, including grant issue, redemption, and session termination. Sessions and grants expire within 10 minutes, and grants are stored and redeemed atomically by hash.
+
+The actor remains the authenticated primary identity for CSRF and audit purposes while authorization and content ownership resolve the explicit target identity. Targets must be active BackOffice users and cannot be security accounts, administrators, or users with `backoffice.manageall`. User/password, API-key, RBAC, and configuration operations are hard-blocked during impersonation; ordinary content operations use the target's effective permissions. API-key principals cannot issue, redeem, or inherit browser impersonation sessions. Audit events keep actor, target, and session identifiers separate and never store raw grants or session tokens.
+
 ### First-admin bootstrap
 
 `POST /api/user/bootstrap-admin/{username}` is an operational bootstrap endpoint. It is anonymous only because no authenticated administrator exists yet; it still requires `X-Bootstrap-Secret` matching protected `BootstrapSettings:Secret` configuration. Empty configuration disables the endpoint. The endpoint accepts only an existing active username, creates or repairs the `admin` group with `backoffice.access`, and assigns that group membership. It refuses to run after any active user already has BackOffice access, including legacy `CanAccessBackoffice`, direct permission, or active-group permission. It never creates a user or predictable password.
@@ -74,6 +80,10 @@ Operators must remove or rotate the bootstrap secret after first use. The suppor
 ## API-Key Authentication
 
 API keys support VideoImporter, InsightScanner, and selected machine workflows. Store only secure hashes, show raw keys once, enforce expiry and revocation, rate-limit using shared state when scaled horizontally, and trust forwarded client IP headers only behind configured proxies.
+
+Managed keys have a persisted `channelId`. Scoped BackOffice resources require `X-Channel-Id`; missing context is `400 channel_context_required`, while unknown, inaccessible, or key/channel mismatches are `404 channel_context_unavailable`. Creation binds a key to the selected channel, and only an administrator can reassign it to another existing channel. API-key principals are excluded from browser impersonation.
+
+The effective impersonated target identity is used for ordinary content/channel authorization, while the primary actor remains the audit and CSRF identity. Administrators can select any channel; normal users can select only owned channels. Video collaborators can read but not mutate shared videos. Compilation management and other BackOffice resources remain scoped, but public compilation URLs and short-link redirects are anonymous global lookups. Scoped responses and caches must include channel and effective-identity authorization inputs; public URL caches must remain global.
 
 ## Public And Cart Security
 

@@ -198,6 +198,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("sentiment")]
         public string Sentiment { get; init; } = string.Empty;
 
+        [DataMember]
+        [BsonElement("channelId")]
+        public string ChannelId { get; init; } = string.Empty;
+
         /// <summary>
         /// Update the status of the news item
         /// </summary>

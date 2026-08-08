@@ -27,6 +27,57 @@ type CredentialsMode = RequestCredentials;
 let requestCredentialsMode: CredentialsMode = 'include';
 let csrfTokenPromise: Promise<string> | null = null;
 let cookieOnlyMode = false;
+const selectedChannelStorageKey = 'backoffice.selectedChannelId';
+let selectedChannelId: string | null = typeof window !== 'undefined'
+    ? window.localStorage.getItem(selectedChannelStorageKey)
+    : null;
+
+const scopedBackOfficePrefixes = [
+    '/api/videos',
+    '/api/categories',
+    '/api/channels',
+    '/api/imageupload',
+    '/api/calendarevents',
+    '/api/compilations',
+    '/api/shortlinks',
+    '/api/querylinks',
+    '/api/insights',
+    '/api/dashboard',
+    '/api/apikeys'
+];
+
+function isScopedBackOfficeRequest(url: string): boolean {
+    const normalizedUrl = url.split('?')[0].toLowerCase();
+    if (normalizedUrl === '/api/channels' || normalizedUrl === 'api/channels') {
+        return false;
+    }
+
+    return scopedBackOfficePrefixes.some(prefix =>
+        normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`));
+}
+
+export function getSelectedChannelId(): string | null {
+    return selectedChannelId;
+}
+
+export function setSelectedChannelId(channelId: string | null): void {
+    selectedChannelId = channelId?.trim() || null;
+    if (typeof window !== 'undefined') {
+        if (selectedChannelId) {
+            window.localStorage.setItem(selectedChannelStorageKey, selectedChannelId);
+        } else {
+            window.localStorage.removeItem(selectedChannelStorageKey);
+        }
+    }
+}
+
+export function selectFirstAccessibleChannel(channels: readonly { channelId: string }[]): string | null {
+    const selected = channels.some(channel => channel.channelId === selectedChannelId)
+        ? selectedChannelId
+        : channels[0]?.channelId ?? null;
+    setSelectedChannelId(selected);
+    return selected;
+}
 
 /**
  * Register an authentication token provider
@@ -225,6 +276,10 @@ export async function call(url: string, method: string, body: any, overrideHeade
         headers.append("Authorization", `Bearer ${token}`);
     }
 
+    if (isScopedBackOfficeRequest(url) && selectedChannelId) {
+        headers.set('X-Channel-Id', selectedChannelId);
+    }
+
     const isUnsafeMethod = !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method.toUpperCase());
     const isAnonymousAuthRequest = url.includes('/api/auth/login') || url.includes('/api/auth/csrf');
     if (requestCredentialsMode === 'include' && isUnsafeMethod && !token && !isAnonymousAuthRequest) {
@@ -299,7 +354,12 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             } else {
                                 errorMessages.push(parsedResponse);
                             }
-                            break;
+                            return {
+                                errors: errorMessages,
+                                status: response.status,
+                                channelContextError: parsedResponse?.code === 'channel_context_required' ||
+                                    parsedResponse?.code === 'channel_context_unavailable'
+                            };
                         }
                     case 401:
                         {
@@ -326,17 +386,31 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             break;
                         }
                     case 404:
-                        errorMessages.push({ api: "Not found" });
-                        break;
+                        {
+                            try {
+                                const parsedResponse = await response.json();
+                                if (parsedResponse?.code === 'channel_context_unavailable') {
+                                    return {
+                                        errors: [parsedResponse.message ?? "The selected channel is not accessible"],
+                                        status: response.status,
+                                        channelContextError: true
+                                    };
+                                }
+                            } catch {
+                            }
+                            errorMessages.push({ api: "Not found" });
+                            break;
+                        }
                     default:
                         errorMessages.push("An unexpected error occurred");
                 }
-                return {
-                    errors: errorMessages
-                };
+                return { errors: errorMessages, status: response.status };
             }
         })
-        .catch(error => { console.log("api error", error) });
+        .catch(error => {
+            console.log("api error", error);
+            throw error;
+        });
 }
 
 // ==================== Product API Services ====================

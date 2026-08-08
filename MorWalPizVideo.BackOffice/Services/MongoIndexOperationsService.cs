@@ -63,10 +63,11 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Name: "ix_pages_url",
             Keys: new BsonDocument("url", 1)),
         new(
-            Key: "compilations_url",
+            Key: "compilations_url.unique",
             Collection: DbCollections.Compilations,
-            Name: "ix_compilations_url",
-            Keys: new BsonDocument("url", 1)),
+            Name: "ux_compilations_url_ci",
+            Keys: new BsonDocument("url", 1),
+            Unique: true),
         new(
             Key: "customforms_active_url",
             Collection: DbCollections.CustomForms,

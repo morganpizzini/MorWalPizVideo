@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Services.Interfaces;
 using Reqnroll;
 using Xunit;
@@ -22,6 +23,7 @@ public class VideosStepDefinitions
     {
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Add("X-Test-Permissions", "videos.manage");
+        _client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
         _context = context;
         _matchRepository = factory.MatchRepository!;
     }

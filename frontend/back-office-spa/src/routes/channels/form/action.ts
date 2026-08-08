@@ -1,16 +1,20 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import type { CreateChannelDTO } from '@morwalpizvideo/models';
+import { channelActionError, getChannelApiError } from '../response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const values = Object.fromEntries(await request.formData());
   const errors: Record<string, string> = {};
   const { id } = params;
+  const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
+  const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
 
-  if (!values.channelName || (values.channelName as string).trim().length === 0) {
+  if (!channelName) {
     errors['channelName'] = 'Channel name cannot be empty';
   }
 
-  if (!id && (!values.yTChannelId || (values.yTChannelId as string).trim().length === 0)) {
+  if (!id && !yTChannelId) {
     errors['yTChannelId'] = 'YouTube Channel ID cannot be empty';
   }
 
@@ -20,18 +24,25 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   try {
     if (id) {
-      await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), {
+      const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), {
         channelId: id,
-        channelName: values.channelName,
+        channelName,
       });
+      if (getChannelApiError(response)) {
+        return channelActionError(response, 'Unable to update channel');
+      }
     } else {
-      await post(endpoints.CHANNELS, {
-        channelName: values.channelName,
-        yTChannelId: values.yTChannelId,
-      });
+      const payload: Pick<CreateChannelDTO, 'channelName' | 'yTChannelId'> = {
+        channelName,
+        yTChannelId,
+      };
+      const response = await post(endpoints.CHANNELS, payload);
+      if (getChannelApiError(response)) {
+        return channelActionError(response, 'Unable to create channel');
+      }
     }
     return data({ success: true }, { status: id ? 200 : 201 });
   } catch (error) {
-    return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });
+    return channelActionError(error, id ? 'Unable to update channel' : 'Unable to create channel');
   }
 }

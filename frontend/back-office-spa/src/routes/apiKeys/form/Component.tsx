@@ -5,6 +5,9 @@ import { ApiKeyDto, CreateApiKeyResponse } from '../../../models/apiKey';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
+import { useChannelContext } from '../../../contexts/ChannelContext';
+import { authService } from '../../../services/authService';
+import { permissions } from '../../../authorization/permissions';
 
 const ApiKeyForm: React.FC = () => {
   const existingApiKey = useLoaderData() as ApiKeyDto | null;
@@ -18,6 +21,9 @@ const ApiKeyForm: React.FC = () => {
   const [allowedIpAddresses, setAllowedIpAddresses] = useState(
     existingApiKey?.allowedIpAddresses?.join('\n') || ''
   );
+  const { channels, selectedChannelId } = useChannelContext();
+  const canReassignChannel = authService.getPermissions().includes(permissions.apikeys.manage);
+  const [channelId, setChannelId] = useState(existingApiKey?.channelId ?? selectedChannelId ?? '');
   
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [newApiKey, setNewApiKey] = useState<string>('');
@@ -48,6 +54,9 @@ const ApiKeyForm: React.FC = () => {
       formData.append('expiresAt', expiresAt);
     }
     formData.append('allowedIpAddresses', allowedIpAddresses);
+    if (isEditMode && canReassignChannel && channelId) {
+      formData.append('channelId', channelId);
+    }
 
     fetcher.submit(formData, { method: 'post' });
   };
@@ -202,6 +211,17 @@ const ApiKeyForm: React.FC = () => {
               </Button>
             </div>
           </Form.Group>
+
+          {isEditMode && canReassignChannel && channels.length > 0 && (
+            <Form.Group className="mb-3">
+              <Form.Label>Bound channel</Form.Label>
+              <Form.Select value={channelId} onChange={event => setChannelId(event.target.value)} disabled={busy}>
+                {channels.map(channel => (
+                  <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleCloseModal}>

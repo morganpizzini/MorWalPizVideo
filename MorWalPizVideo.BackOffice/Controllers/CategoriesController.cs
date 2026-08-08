@@ -4,6 +4,7 @@ using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 public class CreateCategoryRequest
@@ -18,6 +19,7 @@ public class UpdateCategoryRequest
     public string Description { get; set; } = string.Empty;
 }
 
+[RequireChannelScope]
 public class CategoriesController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
@@ -31,7 +33,8 @@ public class CategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.CategoriesView, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> GetCategories()
     {
-        var categories = await _dataService.FetchCategories();
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var categories = await _dataService.FetchCategories(null, channelId);
         return Ok(categories.Select(ContractUtils.Convert));
     }
 
@@ -39,7 +42,7 @@ public class CategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.CategoriesView, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> GetCategory(string id)
     {
-        var category = await _dataService.GetCategoryById(id);
+        var category = await _dataService.GetCategoryById(id, HttpContext.GetChannelContext().ChannelId);
         if (category == null)
             return NotFound("Category not found");
 
@@ -50,7 +53,10 @@ public class CategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.CategoriesCreate, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> CreateCategory(CreateCategoryRequest request)
     {
-        var category = new Category(request.Title, request.Description);
+        var category = new Category(request.Title, request.Description)
+        {
+            ChannelId = HttpContext.GetChannelContext().ChannelId
+        };
         await _dataService.SaveCategory(category);
         return NoContent();
     }
@@ -59,12 +65,12 @@ public class CategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.CategoriesUpdate, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> UpdateCategory(string id, UpdateCategoryRequest request)
     {
-        var entity = await _dataService.GetCategoryById(id);
+        var entity = await _dataService.GetCategoryById(id, HttpContext.GetChannelContext().ChannelId);
         if (entity == null)
             return BadRequest("Category not found");
 
         entity = entity with { Title = request.Title, Description = request.Description };
-        await _dataService.UpdateCategory(entity);
+        await _dataService.UpdateCategory(entity, HttpContext.GetChannelContext().ChannelId);
 
         return NoContent();
     }
@@ -73,11 +79,11 @@ public class CategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.CategoriesDelete, AuthorizationPermissionKeys.CategoriesManage)]
     public async Task<IActionResult> DeleteCategory(string id)
     {
-        var entity = await _dataService.GetCategoryById(id);
+        var entity = await _dataService.GetCategoryById(id, HttpContext.GetChannelContext().ChannelId);
         if (entity == null)
             return BadRequest("Category not found");
             
-        await _dataService.DeleteCategory(id);
+        await _dataService.DeleteCategory(id, HttpContext.GetChannelContext().ChannelId);
         return NoContent();
     }
 }

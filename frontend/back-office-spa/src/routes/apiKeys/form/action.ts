@@ -1,5 +1,8 @@
 import { ActionFunctionArgs, redirect } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import { getSelectedChannelId } from '@morwalpizvideo/services';
+import { authService } from '../../../services/authService';
+import { permissions } from '../../../authorization/permissions';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
@@ -9,6 +12,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const rateLimitPerMinute = parseInt(formData.get('rateLimitPerMinute') as string, 10);
   const expiresAt = formData.get('expiresAt') as string;
   const allowedIpAddressesStr = formData.get('allowedIpAddresses') as string;
+  const requestedChannelId = (formData.get('channelId') as string | null)?.trim() || getSelectedChannelId();
 
   if (!name) {
     return {
@@ -39,17 +43,34 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     description: description || '',
     rateLimitPerMinute,
     expiresAt: expiresAt || null,
-    allowedIpAddresses
+    allowedIpAddresses,
+    ...(id && authService.getPermissions().includes(permissions.apikeys.manage) && requestedChannelId
+      ? { channelId: requestedChannelId }
+      : {})
   };
 
   try {
     if (id) {
       // Update existing API key
-      await put(ComposeUrl(endpoints.APIKEYS_DETAIL, { id: encodeURIComponent(id) }), { ...payload, id });
+      const response = await put(ComposeUrl(endpoints.APIKEYS_DETAIL, { id: encodeURIComponent(id) }), { ...payload, id });
+      if (response?.errors) {
+        return {
+          success: false,
+          errors: { generics: response.errors.map((error: unknown) => String(error)) },
+          channelContextError: response.channelContextError === true,
+        };
+      }
       return redirect('/keys');
     } else {
       // Create new API key - returns the unhashed key
-        const response = await post(endpoints.APIKEYS, payload);
+      const response = await post(endpoints.APIKEYS, payload);
+      if (response?.errors) {
+        return {
+          success: false,
+          errors: { generics: response.errors.map((error: unknown) => String(error)) },
+          channelContextError: response.channelContextError === true,
+        };
+      }
       // Return the response with the new key to display it
       return {
         success: true,

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using System.ComponentModel.DataAnnotations;
@@ -12,20 +15,28 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize] // Requires JWT authentication; BackOffice-only API-key administration
+[BlockImpersonation]
+[RequireChannelScope]
 public class ApiKeysController : ControllerBase
 {
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IApiKeyService _apiKeyService;
     private readonly ILogger<ApiKeysController> _logger;
+    private readonly IYTChannelRepository _channelRepository;
+    private readonly IVideoAuthorizationService _videoAuthorization;
 
     public ApiKeysController(
         IApiKeyRepository apiKeyRepository,
         IApiKeyService apiKeyService,
-        ILogger<ApiKeysController> logger)
+        ILogger<ApiKeysController> logger,
+        IYTChannelRepository channelRepository,
+        IVideoAuthorizationService videoAuthorization)
     {
         _apiKeyRepository = apiKeyRepository;
         _apiKeyService = apiKeyService;
         _logger = logger;
+        _channelRepository = channelRepository;
+        _videoAuthorization = videoAuthorization;
     }
 
     [HttpPost]
@@ -37,6 +48,8 @@ public class ApiKeysController : ControllerBase
             return BadRequest(new { message = "Name is required" });
         }
 
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+
         // Check if name already exists
         var existingKey = await _apiKeyRepository.GetByNameAsync(request.Name);
         if (existingKey != null)
@@ -47,6 +60,7 @@ public class ApiKeysController : ControllerBase
         var (apiKey, unhashedKey) = await _apiKeyService.CreateApiKeyAsync(
             request.Name,
             request.Description ?? string.Empty,
+            channelId,
             request.RateLimitPerMinute,
             request.AllowedIpAddresses,
             request.ExpiresAt
@@ -64,6 +78,7 @@ public class ApiKeysController : ControllerBase
             AllowedIpAddresses = apiKey.AllowedIpAddresses,
             ExpiresAt = apiKey.ExpiresAt,
             CreatedAt = apiKey.CreationDateTime,
+            ChannelId = apiKey.ChannelId,
             Message = "IMPORTANT: Save this key securely. It will not be shown again."
         });
     }
@@ -72,7 +87,10 @@ public class ApiKeysController : ControllerBase
     [AllowUser(AuthorizationPermissionKeys.ApiKeysView, AuthorizationPermissionKeys.ApiKeysManage)]
     public async Task<IActionResult> GetAllApiKeys()
     {
-        var apiKeys = await _apiKeyRepository.GetItemsAsync();
+        var channelContext = HttpContext.GetChannelContext();
+        var apiKeys = await _apiKeyRepository.GetItemsAsync(key =>
+            key.ChannelId == channelContext.ChannelId ||
+            (channelContext.IsAdmin && string.IsNullOrWhiteSpace(key.ChannelId)));
         
         var response = apiKeys.Select(k => new ApiKeyDto
         {
@@ -84,7 +102,8 @@ public class ApiKeysController : ControllerBase
             AllowedIpAddresses = k.AllowedIpAddresses,
             LastUsedAt = k.LastUsedAt,
             ExpiresAt = k.ExpiresAt,
-            CreatedAt = k.CreationDateTime
+            CreatedAt = k.CreationDateTime,
+            ChannelId = k.ChannelId
         }).ToList();
 
         return Ok(response);
@@ -95,7 +114,7 @@ public class ApiKeysController : ControllerBase
     public async Task<IActionResult> GetApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
-        if (apiKey == null)
+        if (apiKey == null || !CanAccessApiKey(apiKey))
         {
             return NotFound(new { message = "API key not found" });
         }
@@ -110,7 +129,8 @@ public class ApiKeysController : ControllerBase
             AllowedIpAddresses = apiKey.AllowedIpAddresses,
             LastUsedAt = apiKey.LastUsedAt,
             ExpiresAt = apiKey.ExpiresAt,
-            CreatedAt = apiKey.CreationDateTime
+            CreatedAt = apiKey.CreationDateTime,
+            ChannelId = apiKey.ChannelId
         });
     }
 
@@ -119,9 +139,30 @@ public class ApiKeysController : ControllerBase
     public async Task<IActionResult> UpdateApiKey(string id, [FromBody] UpdateApiKeyRequest request)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
-        if (apiKey == null)
+        if (apiKey == null || !CanAccessApiKey(apiKey))
         {
             return NotFound(new { message = "API key not found" });
+        }
+
+        var channelContext = HttpContext.GetChannelContext();
+        var targetChannelId = apiKey.ChannelId;
+        if (request.ChannelId is not null)
+        {
+            targetChannelId = request.ChannelId.Trim();
+            if (string.IsNullOrWhiteSpace(targetChannelId))
+            {
+                return BadRequest(new { message = "ChannelId cannot be empty" });
+            }
+
+            if ((await _channelRepository.GetItemsAsync(channel => channel.ChannelId == targetChannelId)).Count == 0)
+            {
+                return NotFound(new { message = "Channel not found" });
+            }
+
+            if (!channelContext.IsAdmin && targetChannelId != channelContext.ChannelId)
+            {
+                return NotFound(new { message = "Channel not found" });
+            }
         }
 
         var updatedKey = apiKey with
@@ -130,7 +171,8 @@ public class ApiKeysController : ControllerBase
             Description = request.Description ?? apiKey.Description,
             RateLimitPerMinute = request.RateLimitPerMinute ?? apiKey.RateLimitPerMinute,
             AllowedIpAddresses = request.AllowedIpAddresses ?? apiKey.AllowedIpAddresses,
-            ExpiresAt = request.ExpiresAt ?? apiKey.ExpiresAt
+            ExpiresAt = request.ExpiresAt ?? apiKey.ExpiresAt,
+            ChannelId = targetChannelId
         };
 
         await _apiKeyRepository.UpdateItemAsync(updatedKey);
@@ -145,7 +187,7 @@ public class ApiKeysController : ControllerBase
     public async Task<IActionResult> ToggleApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
-        if (apiKey == null)
+        if (apiKey == null || !CanAccessApiKey(apiKey))
         {
             return NotFound(new { message = "API key not found" });
         }
@@ -167,7 +209,7 @@ public class ApiKeysController : ControllerBase
     public async Task<IActionResult> RegenerateApiKey(string id)
     {
         var oldApiKey = await _apiKeyRepository.GetItemAsync(id);
-        if (oldApiKey == null)
+        if (oldApiKey == null || !CanAccessApiKey(oldApiKey))
         {
             return NotFound(new { message = "API key not found" });
         }
@@ -199,7 +241,7 @@ public class ApiKeysController : ControllerBase
     public async Task<IActionResult> DeleteApiKey(string id)
     {
         var apiKey = await _apiKeyRepository.GetItemAsync(id);
-        if (apiKey == null)
+        if (apiKey == null || !CanAccessApiKey(apiKey))
         {
             return NotFound(new { message = "API key not found" });
         }
@@ -209,6 +251,12 @@ public class ApiKeysController : ControllerBase
         _logger.LogInformation("API key deleted: {KeyName} by user {User}", apiKey.Name, User.Identity?.Name);
 
         return Ok(new { message = "API key deleted successfully" });
+    }
+
+    private bool CanAccessApiKey(ApiKey apiKey)
+    {
+        var context = HttpContext.GetChannelContext();
+        return context.IsAdmin || apiKey.ChannelId == context.ChannelId;
     }
 }
 
@@ -232,6 +280,7 @@ public record CreateApiKeyResponse
     public int RateLimitPerMinute { get; init; }
     public List<string> AllowedIpAddresses { get; init; } = new();
     public DateTime? ExpiresAt { get; init; }
+    public string? ChannelId { get; init; }
     public DateTime CreatedAt { get; init; }
     public string Message { get; init; } = string.Empty;
 }
@@ -243,6 +292,7 @@ public record UpdateApiKeyRequest
     public int? RateLimitPerMinute { get; init; }
     public List<string>? AllowedIpAddresses { get; init; }
     public DateTime? ExpiresAt { get; init; }
+    public string? ChannelId { get; init; }
 }
 
 public record ApiKeyDto
@@ -256,4 +306,5 @@ public record ApiKeyDto
     public DateTime? LastUsedAt { get; init; }
     public DateTime? ExpiresAt { get; init; }
     public DateTime CreatedAt { get; init; }
+    public string? ChannelId { get; init; }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -132,6 +133,8 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
         {
             client.DefaultRequestHeaders.Add("X-Test-Permissions", permissions);
         }
+
+        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
         return client;
     }

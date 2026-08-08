@@ -9,7 +9,8 @@ public static class AuthorizationPermissionExpander
       {
         [AuthorizationPermissionKeys.BackofficeManageAll] =
         [
-          AuthorizationPermissionKeys.BackofficeAccess
+          AuthorizationPermissionKeys.BackofficeAccess,
+          AuthorizationPermissionKeys.BackofficeImpersonate
         ],
         [AuthorizationPermissionKeys.UsersManage] =
         [

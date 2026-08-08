@@ -5,6 +5,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import { Channel } from '@morwalpizvideo/models';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
+import GenericErrorList from '@components/GenericErrorList';
 
 const ChannelDetail: React.FC = () => {
   const entity = useLoaderData<Channel>();
@@ -15,11 +16,8 @@ const ChannelDetail: React.FC = () => {
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
-  const result =
-    fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
-      ? fetcher.data
-      : null;
+  const errors = fetcher.data?.errors;
+  const result = fetcher.data?.success ? fetcher.data : null;
 
   useEffect(() => {
     if (!result) return;
@@ -58,6 +56,7 @@ const ChannelDetail: React.FC = () => {
         editLink={`/channels/${entity.channelId}/edit`}
         deleteCallback={handleDelete}
       />
+      <GenericErrorList errors={errors?.generics} />
       <DetailPanel title="Dettagli dell'entità">
         <p>
           <strong>Channel Name:</strong> {entity.channelName}

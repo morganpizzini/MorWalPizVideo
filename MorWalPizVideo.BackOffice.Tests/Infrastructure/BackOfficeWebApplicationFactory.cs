@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
@@ -31,6 +32,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
         client.DefaultRequestHeaders.Add(
             "X-Test-Permissions",
             string.Join(',', permissions.Select(permission => permission.ToLowerInvariant())));
+        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
         return client;
     }
 
@@ -64,6 +66,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["FeatureManagement:EnableHangFire"] = "false",
                 ["FeatureManagement:EnableCors"] = "false",
+                ["FeatureManagement:EnableImpersonation"] = "true",
                 ["SiteUrl"] = "http://localhost/",
                 // JWT settings required for authentication services
                 ["JwtSettings:Secret"] = "test-secret-key-for-testing-purposes-only-min-32-chars",
@@ -95,6 +98,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
             // Add test authentication
             services.AddAuthentication("Test")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
+            services.AddScoped<IClaimsTransformation, ImpersonationClaimsTransformation>();
         });
 
         builder.UseEnvironment("Test");
@@ -106,19 +110,23 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
 /// </summary>
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    private readonly IApiKeyService apiKeyService;
+
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
-        UrlEncoder encoder)
+        UrlEncoder encoder,
+        IApiKeyService apiKeyService)
         : base(options, logger, encoder)
     {
+        this.apiKeyService = apiKeyService;
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (Request.Headers.ContainsKey("X-Test-Anonymous"))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
         var userId = "test-user-id";
@@ -147,10 +155,23 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             }
         }
 
+        if (Request.Headers.TryGetValue("X-Test-ApiKey", out var apiKeyHeader) &&
+            !string.IsNullOrWhiteSpace(apiKeyHeader.FirstOrDefault()))
+        {
+            var apiKey = await apiKeyService.ValidateApiKeyAsync(apiKeyHeader.First()!);
+            if (apiKey is null)
+            {
+                return AuthenticateResult.Fail("Invalid test API key");
+            }
+
+            claims.Add(new Claim("ApiKeyId", apiKey.Id!));
+            claims.Add(new Claim("ApiKeyName", apiKey.Name));
+        }
+
         var identity = new ClaimsIdentity(claims, "Test");
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, "Test");
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 }
