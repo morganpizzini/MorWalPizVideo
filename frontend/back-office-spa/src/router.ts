@@ -17,7 +17,7 @@ export async function authLoader() {
     return redirect('/login');
   }
 
-  const permissionResult = requirePermissions([permissions.backoffice.access], session);
+  const permissionResult = await requirePermissions([permissions.backoffice.access], session);
   if (permissionResult instanceof Response) {
     return permissionResult;
   }

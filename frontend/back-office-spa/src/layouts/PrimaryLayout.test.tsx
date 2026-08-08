@@ -7,6 +7,7 @@ vi.mock('react-router', async () => {
   return {
     ...actual,
     Outlet: () => <section>Route content</section>,
+    useLoaderData: () => ({ channels: [] }),
   };
 });
 
