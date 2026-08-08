@@ -60,23 +60,23 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) =>
                   <Bell size={18} />
                 </Button>
                 <Dropdown align="end">
-                <Dropdown.Toggle variant="light" id="user-dropdown">
-                  {currentUser?.username || currentUser?.email || 'User'}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Header>
-                    <small className="text-muted">Logged in as:</small><br />
-                    <strong>{currentUser?.username || currentUser?.email || 'User'}</strong>
-                  </Dropdown.Header>
-                  <Dropdown.Divider />
-                  <Dropdown.Item as={Link} to="/profile" role="menuitem">
-                    Profile
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item onClick={handleLogout} role="menuitem">
-                    Logout
-                  </Dropdown.Item>
-                </Dropdown.Menu>
+                  <Dropdown.Toggle variant="light" id="user-dropdown">
+                    {currentUser?.username || currentUser?.email || 'User'}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Header>
+                      <small className="text-muted">Logged in as:</small><br />
+                      <strong>{currentUser?.username || currentUser?.email || 'User'}</strong>
+                    </Dropdown.Header>
+                    <Dropdown.Divider />
+                    <Dropdown.Item as={Link} to="/profile" role="menuitem">
+                      Profile
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={handleLogout} role="menuitem">
+                      Logout
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
                 </Dropdown>
               </div>
             ) : (

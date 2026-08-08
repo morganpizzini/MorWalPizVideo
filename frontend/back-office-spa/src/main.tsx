@@ -1,11 +1,11 @@
 // filepath: c:\Users\morga\OneDrive\Desktop\MorWalPizVideo\BackOfficeSPA\back-office-spa\src\main.tsx
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './index.css';
 import { createRoot } from 'react-dom/client';
 import { ToastProvider } from './components/ToastNotification';
 import { setCookieOnlyMode } from '@morwalpizvideo/services';
 
 setCookieOnlyMode(true);
-
 
 // Load runtime environment configuration (injected by Docker entrypoint)
 // This dynamically loads /env-config.js to avoid Vite trying to bundle it

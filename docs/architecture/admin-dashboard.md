@@ -30,9 +30,29 @@ Videos without a valid `PublishedAt` are excluded. Historical click analytics an
 
 - `PrimaryLayout` composes header, responsive sidebar, breadcrumbs, content outlet, and footer.
 - `adminMenu.ts` is the single navigation catalog and associates every module with a permission.
-- `AdminSidebar` hides unauthorized items and uses Bootstrap responsive offcanvas behavior.
+- `AdminSidebar` renders one permission-filtered navigation tree inside one Bootstrap `Offcanvas` with `responsive="lg"`.
 - `Home` renders KPI panels, the 21-day Recharts publication chart, operational values, and clickable recent publications.
 - Existing CRUD routes and `GenericTable` remain the module implementation surface.
+
+### Responsive shell
+
+Below Bootstrap's `lg` breakpoint (992px), the sidebar is an overlay opened by the header menu button. The Offcanvas close button and each navigation link close it, preserving keyboard focus and dismissal behavior supplied by React-Bootstrap.
+
+At 992px and above, the same Offcanvas becomes a persistent 248px flex item. The main column uses its remaining width and `min-width: 0` to prevent the dashboard grid and responsive tables from forcing horizontal shell overflow. No second desktop navigation tree is rendered.
+
+Application styles are imported immediately after Bootstrap in `main.tsx`, so the shell, sidebar, dashboard panels, and responsive sizing rules participate in the production cascade.
+
+## Frontend validation
+
+Validated on 2026-08-08:
+
+- Focused Vitest coverage passes for `AdminSidebar`, `Header`, and `Home`, including one navigation tree, permission filtering, active state, and close behavior.
+- The complete BackOffice SPA suite passes: 18 files and 85 tests.
+- The checked TypeScript/Vite production build passes. Its generated HTML references an existing combined CSS asset in which application shell rules follow Bootstrap.
+- Static checks of representative login and video routes found no required changes from reconnecting the existing global stylesheet.
+- Repository-wide lint still reports pre-existing findings outside this repair.
+
+Real-browser viewport inspection was unavailable in the implementation environment because no Playwright package or supported local browser executable was installed. The remaining visual validation is one navigation landmark, no overlap or horizontal overflow, a non-zero chart area, and keyboard-accessible mobile dismissal immediately below and above 992px and at mobile, tablet, and wide-desktop widths.
 
 ## Test requirements
 

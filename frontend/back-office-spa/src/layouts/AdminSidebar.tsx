@@ -11,7 +11,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
   const permissions = authService.getPermissions();
   const content = (
-    <Nav className="flex-column gap-1 px-3 pb-3">
+    <Nav as="nav" aria-label="Admin navigation" className="flex-column gap-1 px-3 pb-3">
       {adminMenuGroups.map(group => {
         const items = group.items.filter(item => canAccessMenuItem(item, permissions));
         if (items.length === 0) return null;
@@ -21,7 +21,13 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
             {items.map(item => {
               const Icon = item.icon;
               return (
-                <Nav.Link as={NavLink} to={item.path} end={item.path === '/'} key={item.path} onClick={onHide}>
+                <Nav.Link
+                  as={NavLink}
+                  to={item.path}
+                  end={item.path === '/'}
+                  key={item.path}
+                  onClick={onHide}
+                >
                   <Icon size={17} aria-hidden="true" />
                   <span>{item.label}</span>
                 </Nav.Link>
@@ -34,14 +40,16 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
   );
 
   return (
-    <>
-      <aside className="admin-sidebar d-none d-lg-flex flex-column">{content}</aside>
-      <Offcanvas show={show} onHide={onHide} responsive="lg" className="admin-sidebar-offcanvas">
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>MorWalPiz Admin</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">{content}</Offcanvas.Body>
-      </Offcanvas>
-    </>
+    <Offcanvas
+      show={show}
+      onHide={onHide}
+      responsive="lg"
+      className="admin-sidebar admin-sidebar-offcanvas"
+    >
+      <Offcanvas.Header closeButton>
+        <Offcanvas.Title>MorWalPiz Admin</Offcanvas.Title>
+      </Offcanvas.Header>
+      <Offcanvas.Body className="p-0">{content}</Offcanvas.Body>
+    </Offcanvas>
   );
 }

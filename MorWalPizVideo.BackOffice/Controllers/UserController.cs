@@ -117,21 +117,34 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Name = "Administrators",
                     Description = "Initial platform administrators.",
                     IsActive = true,
-                    Permissions = [AuthorizationPermissionKeys.BackofficeAccess]
+                    Permissions =
+                    [
+                        AuthorizationPermissionKeys.BackofficeAccess,
+                        AuthorizationPermissionKeys.UsersManage
+                    ]
                 });
             }
-            else if (!adminGroup.Permissions.Contains(
-                         AuthorizationPermissionKeys.BackofficeAccess,
-                         StringComparer.OrdinalIgnoreCase))
+            else
             {
-                adminGroup = adminGroup with
+                var expectedPermissions = new[]
                 {
-                    Permissions = adminGroup.Permissions
-                        .Append(AuthorizationPermissionKeys.BackofficeAccess)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList()
+                    AuthorizationPermissionKeys.BackofficeAccess,
+                    AuthorizationPermissionKeys.UsersManage
                 };
-                await _userGroupRepository.UpdateItemAsync(adminGroup);
+
+                var normalizedPermissions = adminGroup.Permissions
+                    .Concat(expectedPermissions)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (normalizedPermissions.Count != adminGroup.Permissions.Count)
+                {
+                    adminGroup = adminGroup with
+                    {
+                        Permissions = normalizedPermissions
+                    };
+                    await _userGroupRepository.UpdateItemAsync(adminGroup);
+                }
             }
 
             if (!(user.GroupIds ?? []).Contains(adminGroup.Id, StringComparer.OrdinalIgnoreCase))
