@@ -62,6 +62,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPost("bootstrap-admin/{username}")]
         public async Task<IActionResult> BootstrapAdmin(string username)
         {
+            var requiredAdminPermissions = new[]
+            {
+                AuthorizationPermissionKeys.BackofficeAccess,
+                AuthorizationPermissionKeys.BackofficeManageAll,
+                AuthorizationPermissionKeys.UsersManage
+            };
+
             var configuredSecret = _configuration["BootstrapSettings:Secret"];
             var suppliedSecret = Request.Headers["X-Bootstrap-Secret"].ToString();
             if (string.IsNullOrWhiteSpace(configuredSecret) ||
@@ -78,26 +85,6 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
 
             var users = await _dataService.FetchUsers();
-            var groups = await _userGroupRepository.GetItemsAsync();
-            var groupsById = groups.ToDictionary(group => group.Id, StringComparer.OrdinalIgnoreCase);
-            var hasBackofficeUser = users.Any(user =>
-                user.IsActive &&
-                (user.CanAccessBackoffice ||
-                 user.DirectPermissions.Contains(
-                     AuthorizationPermissionKeys.BackofficeAccess,
-                     StringComparer.OrdinalIgnoreCase) ||
-                 (user.GroupIds ?? []).Any(groupId =>
-                     groupsById.TryGetValue(groupId, out var group) &&
-                     group.IsActive &&
-                     group.Permissions.Contains(
-                         AuthorizationPermissionKeys.BackofficeAccess,
-                         StringComparer.OrdinalIgnoreCase))));
-
-            if (hasBackofficeUser)
-            {
-                return Conflict(new { message = "Initial admin bootstrap is already complete." });
-            }
-
             var user = users.FirstOrDefault(candidate =>
                 string.Equals(candidate.Username, username.Trim(), StringComparison.OrdinalIgnoreCase));
             if (user is null)
@@ -119,32 +106,21 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Name = "Administrators",
                     Description = "Initial platform administrators.",
                     IsActive = true,
-                    Permissions =
-                    [
-                        AuthorizationPermissionKeys.BackofficeAccess,
-                        AuthorizationPermissionKeys.BackofficeManageAll,
-                        AuthorizationPermissionKeys.UsersManage
-                    ]
+                    Permissions = requiredAdminPermissions.ToList()
                 });
             }
             else
             {
-                var expectedPermissions = new[]
-                {
-                    AuthorizationPermissionKeys.BackofficeAccess,
-                    AuthorizationPermissionKeys.BackofficeManageAll,
-                    AuthorizationPermissionKeys.UsersManage
-                };
-
                 var normalizedPermissions = adminGroup.Permissions
-                    .Concat(expectedPermissions)
+                    .Concat(requiredAdminPermissions)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                if (normalizedPermissions.Count != adminGroup.Permissions.Count)
+                if (!adminGroup.IsActive || normalizedPermissions.Count != adminGroup.Permissions.Count)
                 {
                     adminGroup = adminGroup with
                     {
+                        IsActive = true,
                         Permissions = normalizedPermissions
                     };
                     await _userGroupRepository.UpdateItemAsync(adminGroup);
@@ -159,8 +135,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 });
             }
 
-            _logger.LogInformation("Initial admin group assigned to user {Username}", user.Username);
-            return Ok(new { username = user.Username, group = AuthorizationGroupCodes.Admin });
+            _logger.LogInformation("Admin bootstrap compliance ensured for user {Username}", user.Username);
+            return Ok(new
+            {
+                username = user.Username,
+                group = AuthorizationGroupCodes.Admin,
+                requiredPermissions = requiredAdminPermissions
+            });
         }
 
         [HttpPost]

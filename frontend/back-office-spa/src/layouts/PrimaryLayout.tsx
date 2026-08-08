@@ -11,7 +11,7 @@ const PrimaryLayout: React.FC = () => {
   return (
     <div className="admin-shell">
       <AdminSidebar show={sidebarOpen} onHide={() => setSidebarOpen(false)} />
-      <div className="admin-main">
+      <div className="admin-main admin-main-layout">
         <Header onToggleSidebar={() => setSidebarOpen(open => !open)} />
         <main className="admin-content">
           <Breadcrumbs />
