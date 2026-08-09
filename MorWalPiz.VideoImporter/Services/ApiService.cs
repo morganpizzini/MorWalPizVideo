@@ -9,7 +9,7 @@ namespace MorWalPiz.VideoImporter.Services
 {
     public interface IApiServiceFactory
     {
-        ApiService Create(string apiEndpoint, string? apiKey = null);
+        ApiService Create(string apiEndpoint, string? apiKey = null, string? channelId = null);
     }
 
     public sealed class ApiServiceFactory : IApiServiceFactory
@@ -21,13 +21,17 @@ namespace MorWalPiz.VideoImporter.Services
             _httpClientFactory = httpClientFactory;
         }
 
-        public ApiService Create(string apiEndpoint, string? apiKey = null)
+        public ApiService Create(string apiEndpoint, string? apiKey = null, string? channelId = null)
         {
             var httpClient = _httpClientFactory.CreateClient("BackOffice");
             httpClient.BaseAddress = new Uri(apiEndpoint);
             if (!string.IsNullOrEmpty(apiKey))
             {
                 httpClient.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+            }
+            if (!string.IsNullOrWhiteSpace(channelId))
+            {
+                httpClient.DefaultRequestHeaders.Add("X-Channel-Id", channelId);
             }
 
             return new ApiService(httpClient);

@@ -16,6 +16,15 @@ public class RbacUserSummaryContract
   public string Email { get; set; } = string.Empty;
 
   [DataMember]
+  public string FirstName { get; set; } = string.Empty;
+
+  [DataMember]
+  public string LastName { get; set; } = string.Empty;
+
+  [DataMember]
+  public string Phone { get; set; } = string.Empty;
+
+  [DataMember]
   public bool IsActive { get; set; }
 
   [DataMember]
@@ -63,6 +72,22 @@ public class RbacGroupContract
 
   [DataMember]
   public int MemberCount { get; set; }
+
+  [DataMember]
+  public List<RbacGroupMemberContract> Members { get; set; } = new();
+}
+
+[DataContract]
+public class RbacGroupMemberContract
+{
+  [DataMember]
+  public string Id { get; set; } = string.Empty;
+
+  [DataMember]
+  public string Username { get; set; } = string.Empty;
+
+  [DataMember]
+  public string Email { get; set; } = string.Empty;
 }
 
 [DataContract]

@@ -844,7 +844,7 @@ namespace MorWalPiz.VideoImporter.Services
                 }
 
                 // Call translation API
-                var apiService = App.ApiServiceFactory.Create(apiSettings.ApiEndpoint);
+                var apiService = App.ApiServiceFactory.Create(apiSettings.ApiEndpoint, apiSettings.ApiKey, App.ApiSettings.ChannelId);
                 var translations = await apiService.TranslateVideoContentAsync(
                     originalTitle,
                     originalDescription,

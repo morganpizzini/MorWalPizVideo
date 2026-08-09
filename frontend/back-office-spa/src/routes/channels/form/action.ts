@@ -1,6 +1,5 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
-import type { CreateChannelDTO } from '@morwalpizvideo/models';
 import { channelActionError, getChannelApiError } from '../response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
@@ -9,6 +8,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
   const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
   const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
+  const socialProvider = typeof values.socialProvider === 'string' ? values.socialProvider.toLowerCase() : '';
+  const socialHandler = typeof values.socialHandler === 'string' ? values.socialHandler.trim() : '';
+  const socials = socialProvider && socialHandler ? [{ provider: socialProvider, handler: socialHandler }] : [];
 
   if (!channelName) {
     errors['channelName'] = 'Channel name cannot be empty';
@@ -27,14 +29,16 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), {
         channelId: id,
         channelName,
+        socials,
       });
       if (getChannelApiError(response)) {
         return channelActionError(response, 'Unable to update channel');
       }
     } else {
-      const payload: Pick<CreateChannelDTO, 'channelName' | 'yTChannelId'> = {
+      const payload = {
         channelName,
         yTChannelId,
+        socials,
       };
       const response = await post(endpoints.CHANNELS, payload);
       if (getChannelApiError(response)) {

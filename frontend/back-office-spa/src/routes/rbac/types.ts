@@ -2,6 +2,9 @@ export interface RbacUserSummary {
   id: string;
   username: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
   isActive: boolean;
   lastLogin?: string | null;
   groupIds: string[];
@@ -20,6 +23,13 @@ export interface RbacGroup {
   isActive: boolean;
   permissions: string[];
   memberCount: number;
+  members?: RbacGroupMember[];
+}
+
+export interface RbacGroupMember {
+  id: string;
+  username: string;
+  email: string;
 }
 
 export function parsePermissions(input: string): string[] {

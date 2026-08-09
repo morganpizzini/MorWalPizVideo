@@ -40,7 +40,7 @@ namespace MorWalPiz.VideoImporter.Views
             InitializeComponent();
             DataContext = this;
 
-            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey);
+            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.ApiSettings.ChannelId);
         }
 
         private async void TranslateButton_Click(object sender, RoutedEventArgs e)

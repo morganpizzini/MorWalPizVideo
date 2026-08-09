@@ -23,5 +23,18 @@ public class ChannelContract
     public bool Mine { get; set; }
 
     [DataMember]
+    public List<ChannelSocialContract> Socials { get; set; } = [];
+
+    [DataMember]
     public ChannelVideoContract[] Videos { get; set; } = [];
+}
+
+[DataContract]
+public class ChannelSocialContract
+{
+    [DataMember]
+    public string Provider { get; set; } = string.Empty;
+
+    [DataMember]
+    public string Handler { get; set; } = string.Empty;
 }

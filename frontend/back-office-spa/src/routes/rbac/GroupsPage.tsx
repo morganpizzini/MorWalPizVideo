@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Table } from 'react-bootstrap';
 import { Link } from 'react-router';
-import { endpoints, get } from '@morwalpizvideo/services';
+import { ComposeUrl, Delete, endpoints, get } from '@morwalpizvideo/services';
 import type { RbacGroup } from './types';
 
 export default function RbacGroupsPage() {
@@ -26,7 +26,7 @@ export default function RbacGroupsPage() {
         <tbody>{groups.map(group => (
           <tr key={group.id}>
             <td>{group.code}</td><td>{group.name}</td><td>{group.isActive ? 'Active' : 'Inactive'}</td><td>{group.memberCount}</td>
-            <td className="text-end"><Link className="btn btn-sm btn-outline-primary" to={`/rbac/groups/${group.id}`}>View</Link></td>
+            <td className="text-end"><Link className="btn btn-sm btn-outline-primary me-2" to={`/rbac/groups/${group.id}/edit`}>Edit</Link><button type="button" className="btn btn-sm btn-outline-danger" onClick={() => { if (window.confirm('Delete this group?')) void Delete(ComposeUrl(endpoints.RBAC_GROUPS_DETAIL, { id: group.id })).then(() => setGroups(current => current.filter(item => item.id !== group.id))); }}>Delete</button></td>
           </tr>
         ))}</tbody>
       </Table>

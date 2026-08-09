@@ -4,5 +4,6 @@ namespace MorWalPiz.VideoImporter.Models
   {
     public string ApiEndpoint { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
+    public string ChannelId { get; set; } = string.Empty;
   }
 }

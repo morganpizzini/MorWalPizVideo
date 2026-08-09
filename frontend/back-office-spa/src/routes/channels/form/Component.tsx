@@ -15,6 +15,8 @@ const ChannelForm: React.FC = () => {
   const [channelName, setChannelName] = useState(entity?.channelName || '');
   const [yTChannelId, setYTChannelId] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [socialProvider, setSocialProvider] = useState('');
+  const [socialHandler, setSocialHandler] = useState('');
 
   const navigate = useNavigate();
   const toast = useToast();
@@ -30,6 +32,8 @@ const ChannelForm: React.FC = () => {
   useEffect(() => {
     if (entity) {
       setChannelName(entity.channelName);
+      const social = entity.socials?.[0];
+      if (social) { setSocialProvider(social.provider); setSocialHandler(social.handler); }
     }
   }, [entity]);
 
@@ -62,7 +66,7 @@ const ChannelForm: React.FC = () => {
     if (!isEditMode) {
       payload.yTChannelId = yTChannelId;
     }
-    fetcher.submit(payload, { method: 'post', action: location.pathname });
+    fetcher.submit({ ...payload, socialProvider, socialHandler }, { method: 'post', action: location.pathname });
   };
 
   return (
@@ -95,6 +99,9 @@ const ChannelForm: React.FC = () => {
             <FieldError error={errors?.yTChannelId} />
           </Form.Group>
         )}
+
+        <Form.Group controlId="formSocialProvider" className="mb-3"><Form.Label>Social provider</Form.Label><Form.Select name="socialProvider" value={socialProvider} onChange={e => setSocialProvider(e.target.value)}><option value="">None</option><option value="instagram">Instagram</option><option value="youtube">YouTube</option><option value="reddit">Reddit</option><option value="x">X</option><option value="patreon">Patreon</option></Form.Select></Form.Group>
+        <Form.Group controlId="formSocialHandler" className="mb-3"><Form.Label>Social handler</Form.Label><Form.Control name="socialHandler" value={socialHandler} onChange={e => setSocialHandler(e.target.value)} disabled={!socialProvider} placeholder="Handle or public identifier" /></Form.Group>
 
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           {isEditMode ? 'Save Changes' : 'Create'}

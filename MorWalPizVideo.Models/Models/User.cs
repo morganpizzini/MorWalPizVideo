@@ -13,6 +13,15 @@ public record User : BaseEntity
     [BsonElement("email")]
     public string Email { get; init; } = string.Empty;
 
+    [BsonElement("firstName")]
+    public string FirstName { get; init; } = string.Empty;
+
+    [BsonElement("lastName")]
+    public string LastName { get; init; } = string.Empty;
+
+    [BsonElement("phone")]
+    public string Phone { get; init; } = string.Empty;
+
     [BsonElement("passwordHash")]
     public string PasswordHash { get; init; } = string.Empty;
 

@@ -42,6 +42,10 @@ namespace MorWalPiz.InsightScanner
                         {
                             client.DefaultRequestHeaders.Add("X-API-Key", settings.ApiKey);
                         }
+                        if (!string.IsNullOrWhiteSpace(settings.ChannelId))
+                        {
+                            client.DefaultRequestHeaders.Add("X-Channel-Id", settings.ChannelId);
+                        }
                     });
                     services.AddSingleton<HybridInsightScanner>(_ =>
                         new HybridInsightScanner([new LightFetchSourceScanStrategy()]));

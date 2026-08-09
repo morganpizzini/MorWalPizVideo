@@ -42,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) =>
             <Dropdown.Menu>
               <Dropdown.Header>
                 <small className="text-muted">Logged in as:</small><br />
-                <strong>Authenticated user</strong>
+                <strong>{authService.getUser()?.username ?? 'Authenticated user'}</strong>
               </Dropdown.Header>
               <Dropdown.Divider />
               <Dropdown.Item as={Link} to="/profile" role="menuitem">

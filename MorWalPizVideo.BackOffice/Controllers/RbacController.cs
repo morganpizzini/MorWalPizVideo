@@ -244,6 +244,11 @@ public class RbacController(
     }
 
     var users = await userRepository.GetItemsAsync();
+    var members = users
+      .Where(user => (user.GroupIds ?? []).Contains(group.Id, StringComparer.OrdinalIgnoreCase))
+      .Select(user => new RbacGroupMemberContract { Id = user.Id, Username = user.Username, Email = user.Email })
+      .OrderBy(user => user.Username)
+      .ToList();
     return Ok(new RbacGroupContract
     {
       Id = group.Id,
@@ -253,6 +258,7 @@ public class RbacController(
       IsActive = group.IsActive,
       Permissions = NormalizeMany(group.Permissions),
       MemberCount = users.Count(user => (user.GroupIds ?? []).Contains(group.Id, StringComparer.OrdinalIgnoreCase))
+      ,Members = members
     });
   }
 
@@ -406,6 +412,9 @@ public class RbacController(
       Id = user.Id,
       Username = user.Username,
       Email = user.Email,
+      FirstName = user.FirstName,
+      LastName = user.LastName,
+      Phone = user.Phone,
       IsActive = user.IsActive,
       LastLogin = user.LastLogin,
       GroupIds = userGroupIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),

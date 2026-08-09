@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Footer from './Footer';
 import Header from './Header';
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import Breadcrumbs from '@components/Breadcrumbs';
 import AdminSidebar from './AdminSidebar';
 import { ChannelProvider } from '../contexts/ChannelContext';
@@ -14,7 +14,12 @@ interface AuthLoaderData {
 
 const PrimaryLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
   const { channels } = useLoaderData() as AuthLoaderData;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
   return (
     <ChannelProvider channels={channels}>

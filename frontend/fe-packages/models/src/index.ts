@@ -11,7 +11,7 @@ export type {
 export type { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categories';
 
 // Channel exports
-export type { Channel, CreateChannelDTO, UpdateChannelDTO } from './channel';
+export type { Channel, ChannelSocial, CreateChannelDTO, UpdateChannelDTO } from './channel';
 
 // Configuration exports
 export type {

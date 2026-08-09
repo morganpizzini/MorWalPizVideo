@@ -13,7 +13,10 @@ export type Channel = Readonly<{
 
   /** YouTube channel identifier */
   yTChannelId: string;
+  socials?: readonly ChannelSocial[];
 }>;
+
+export type ChannelSocial = Readonly<{ provider: string; handler: string }>;
 
 /**
  * Type for creating a new channel (all fields required except id which may be generated)

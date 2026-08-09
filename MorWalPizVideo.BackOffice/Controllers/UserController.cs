@@ -170,6 +170,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 Username = request.Username,
                 Email = request.Email,
+                FirstName = request.FirstName?.Trim() ?? string.Empty,
+                LastName = request.LastName?.Trim() ?? string.Empty,
+                Phone = request.Phone?.Trim() ?? string.Empty,
                 PasswordHash = passwordHash,
                 Salt = salt,
                 IsActive = request.IsActive ?? true
@@ -225,6 +228,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 Username = !string.IsNullOrWhiteSpace(request.Username) ? request.Username : existingUser.Username,
                 Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email : existingUser.Email,
+                FirstName = request.FirstName is not null ? request.FirstName.Trim() : existingUser.FirstName,
+                LastName = request.LastName is not null ? request.LastName.Trim() : existingUser.LastName,
+                Phone = request.Phone is not null ? request.Phone.Trim() : existingUser.Phone,
                 IsActive = request.IsActive ?? existingUser.IsActive,
                 PasswordHash = passwordHash,
                 Salt = salt
@@ -354,6 +360,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
             {
                 Username = !string.IsNullOrWhiteSpace(request.Username) ? request.Username.Trim() : user.Username,
                 Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : user.Email,
+                FirstName = request.FirstName is not null ? request.FirstName.Trim() : user.FirstName,
+                LastName = request.LastName is not null ? request.LastName.Trim() : user.LastName,
+                Phone = request.Phone is not null ? request.Phone.Trim() : user.Phone,
             };
 
             await _dataService.UpdateUser(updatedUser);
@@ -401,6 +410,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
         public bool? IsActive { get; set; }
     }
 
@@ -408,6 +420,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         public string? Username { get; set; }
         public string? Email { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
         public bool? IsActive { get; set; }
         public string? NewPassword { get; set; }
     }
@@ -426,6 +441,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         public string? Username { get; set; }
         public string? Email { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
     }
 
     public class ChangeOwnPasswordRequest

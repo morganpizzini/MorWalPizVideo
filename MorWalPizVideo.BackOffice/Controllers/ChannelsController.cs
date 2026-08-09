@@ -18,12 +18,22 @@ public class AddChannelRequest
 
     [JsonPropertyName("yTChannelId")]
     public string? YTChannelId { get; set; }
+
+    public List<ChannelSocialRequest> Socials { get; set; } = [];
 }
 
 public class UpdateChannelRequest
 {
     [Required]
     public string ChannelName { get; set; } = string.Empty;
+
+    public List<ChannelSocialRequest> Socials { get; set; } = [];
+}
+
+public class ChannelSocialRequest
+{
+    public string Provider { get; set; } = string.Empty;
+    public string Handler { get; set; } = string.Empty;
 }
 
 public class ChannelsController : ApplicationControllerBase
@@ -90,7 +100,9 @@ public class ChannelsController : ApplicationControllerBase
         {
             return BadRequest("YouTube channel ID is required");
         }
-        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()));
+        var socials = NormalizeSocials(request.Socials);
+        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()) { Socials = socials });
 
         return NoContent();
     }
@@ -110,7 +122,9 @@ public class ChannelsController : ApplicationControllerBase
             return NotFound();
         }
 
-        await _dataService.UpdateChannel(existing with { ChannelName = request.ChannelName.Trim() });
+        var socials = NormalizeSocials(request.Socials);
+        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        await _dataService.UpdateChannel(existing with { ChannelName = request.ChannelName.Trim(), Socials = socials });
         return NoContent();
     }
 
@@ -131,5 +145,18 @@ public class ChannelsController : ApplicationControllerBase
 
         await _dataService.RemoveChannelById(id);
         return NoContent();
+    }
+
+    private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)
+    {
+        var allowed = new[] { "instagram", "youtube", "reddit", "x", "patreon" };
+        var result = new List<ChannelSocial>();
+        foreach (var request in requests ?? [])
+        {
+            var provider = request.Provider.Trim().ToLowerInvariant();
+            if (!allowed.Contains(provider, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(request.Handler)) return null;
+            result.Add(new ChannelSocial { Provider = provider, Handler = request.Handler.Trim() });
+        }
+        return result.GroupBy(s => s.Provider, StringComparer.Ordinal).Select(g => g.Last()).ToList();
     }
 }

@@ -99,6 +99,7 @@ namespace MorWalPiz.VideoImporter
         {
             var configuredApiEndpoint = configuration["ApiEndpoint"] ?? configuration["BackOffice:ApiEndpoint"];
             var configuredApiKey = configuration["ApiKey"] ?? configuration["BackOffice:ApiKey"];
+            var configuredChannelId = configuration["ChannelId"] ?? configuration["BackOffice:ChannelId"];
             using var context = databaseService.CreateContext();
             var settings = context.Settings.FirstOrDefault();
 
@@ -109,7 +110,10 @@ namespace MorWalPiz.VideoImporter
                     : settings?.ApiEndpoint ?? string.Empty,
                 ApiKey = !string.IsNullOrWhiteSpace(configuredApiKey)
                     ? configuredApiKey
-                    : settings?.ApiKey ?? string.Empty
+                    : settings?.ApiKey ?? string.Empty,
+                ChannelId = !string.IsNullOrWhiteSpace(configuredChannelId)
+                    ? configuredChannelId
+                    : settings?.ChannelId ?? string.Empty
             };
         }
 

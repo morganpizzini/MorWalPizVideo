@@ -7,12 +7,18 @@ interface UserProfile {
   id: string;
   username: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
 }
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +39,7 @@ export default function ProfilePage() {
       setProfile(loadedProfile);
       setUsername(loadedProfile.username ?? '');
       setEmail(loadedProfile.email ?? '');
+      setFirstName(loadedProfile.firstName ?? ''); setLastName(loadedProfile.lastName ?? ''); setPhone(loadedProfile.phone ?? '');
     } catch {
       setError('Impossibile caricare il profilo.');
     } finally {
@@ -47,10 +54,10 @@ export default function ProfilePage() {
     setSuccess(null);
 
     try {
-      await put(endpoints.USER_ME, { username, email });
+      await put(endpoints.USER_ME, { username, email, firstName, lastName, phone });
 
       if (profile) {
-        const next = { ...profile, username, email };
+        const next = { ...profile, username, email, firstName, lastName, phone };
         setProfile(next);
         authService.setUser({
           id: next.id,
@@ -111,6 +118,10 @@ export default function ProfilePage() {
                     required
                   />
                 </Form.Group>
+
+                <Form.Group className="mb-3" controlId="profile-first-name"><Form.Label>First name</Form.Label><Form.Control value={firstName} onChange={event => setFirstName(event.target.value)} /></Form.Group>
+                <Form.Group className="mb-3" controlId="profile-last-name"><Form.Label>Last name</Form.Label><Form.Control value={lastName} onChange={event => setLastName(event.target.value)} /></Form.Group>
+                <Form.Group className="mb-3" controlId="profile-phone"><Form.Label>Phone</Form.Label><Form.Control value={phone} onChange={event => setPhone(event.target.value)} /></Form.Group>
 
                 <Form.Group className="mb-3" controlId="profile-email">
                   <Form.Label>Email</Form.Label>

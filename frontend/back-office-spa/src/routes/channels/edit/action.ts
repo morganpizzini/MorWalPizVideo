@@ -4,7 +4,7 @@ import { UpdateChannelDTO } from '@/models';
 import { channelActionError, getChannelApiError } from '../response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
-  const values = Object.fromEntries(await request.formData()) as UpdateChannelDTO;
+  const values = Object.fromEntries(await request.formData()) as unknown as UpdateChannelDTO;
   const errors: Record<string, string | string[]> = {};
 
   // Validate fields

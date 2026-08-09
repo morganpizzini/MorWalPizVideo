@@ -10,6 +10,9 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("channelName")] string ChannelName) : BaseEntity
     {
         [DataMember]
+        [BsonElement("socials")]
+        public List<ChannelSocial> Socials { get; init; } = [];
+        [DataMember]
         [BsonElement("mine")]
         public bool Mine { get; init; }
 
@@ -48,6 +51,19 @@ namespace MorWalPizVideo.Server.Models
         {
             return ShortLinks.FirstOrDefault(sl => sl.MatchesCode(code));
         }
+    }
+
+    [BsonIgnoreExtraElements]
+    [DataContract]
+    public record ChannelSocial
+    {
+        [DataMember]
+        [BsonElement("provider")]
+        public string Provider { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("handler")]
+        public string Handler { get; init; } = string.Empty;
     }
 
     [BsonIgnoreExtraElements]
