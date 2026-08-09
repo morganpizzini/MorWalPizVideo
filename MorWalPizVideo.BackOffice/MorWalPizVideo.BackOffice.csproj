@@ -9,6 +9,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="MorWalPizVideo.BackOffice.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
 		<PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.Hangfire" Version="9.0.0" />

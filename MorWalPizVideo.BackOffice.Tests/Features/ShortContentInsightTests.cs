@@ -1,6 +1,7 @@
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Server.Models;
+using Microsoft.SemanticKernel;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -55,5 +56,22 @@ public class ShortContentInsightTests
       Assert.Equal("vid-1", item.PostId);
       Assert.StartsWith("https://www.youtube.com/watch?v=vid-1", item.SourceUrl);
     });
+  }
+
+  [Fact]
+  public void Comments_prompt_is_accepted_by_semantic_kernel_parser()
+  {
+    var topic = new InsightTopic(
+        title: "Dynamic Sport Shooting",
+        description: "IPSC/IDPA news and content",
+        seedArguments: new[] { "IPSC" },
+        preferredSources: Array.Empty<string>());
+    var comments = "[1] Autore: viewer\nCommento: \"Use {these braces}\"\nData: 2026-08-09T00:00:00.0000000Z\n\nNew line";
+
+    var prompt = InsightAgentService.BuildCommentsPrompt(topic, "Match recap", "IPSC", comments);
+
+    var function = KernelFunctionFactory.CreateFromPrompt(prompt);
+
+    Assert.NotNull(function);
   }
 }

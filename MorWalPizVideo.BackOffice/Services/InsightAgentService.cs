@@ -287,25 +287,7 @@ Respond as JSON with:
             var commentsBlock = string.Join("\n\n", comments.Select((c, i) =>
                 $"[{i + 1}] Autore: {c.Author}\nCommento: {c.Text}\nData: {c.PublishedAt:O}"));
 
-            var prompt = @$"
-Analizza i seguenti commenti raccolti su un video YouTube intitolato '{videoTitle}', relativo al topic '{topic.Title}' ({seedArgumentsString}):
-
-COMMENTI:
-{commentsBlock}
-
-Per ogni commento individua se contiene un'idea o uno spunto per un potenziale nuovo contenuto correlato al topic.
-Rispondi come JSON con questa struttura:
-{{{{
-  ""ideas"": [
-    {{{{
-      ""commentIndex"": numero_indice_commento,
-      ""sentiment"": ""positivo/negativo/neutro"",
-      ""idea"": ""descrizione dell'idea per il contenuto"",
-      ""commentExcerpt"": ""parte del commento che ha ispirato l'idea""
-    }}}}
-  ]
-}}}}
-Se nessun commento contiene idee, restituisci un array 'ideas' vuoto.";
+            var prompt = BuildCommentsPrompt(topic, videoTitle, seedArgumentsString, commentsBlock);
 
             var trimmedPrompt = PrettifyString(prompt);
 
@@ -347,6 +329,33 @@ Se nessun commento contiene idee, restituisci un array 'ideas' vuoto.";
             }
 
             return newsItems;
+        }
+
+        internal static string BuildCommentsPrompt(
+            InsightTopic topic,
+            string videoTitle,
+            string seedArgumentsString,
+            string commentsBlock)
+        {
+            return @$"
+Analizza i seguenti commenti raccolti su un video YouTube intitolato '{videoTitle}', relativo al topic '{topic.Title}' ({seedArgumentsString}):
+
+COMMENTI:
+{commentsBlock}
+
+Per ogni commento individua se contiene un'idea o uno spunto per un potenziale nuovo contenuto correlato al topic.
+Rispondi come JSON con questa struttura:
+{{
+  ""ideas"": [
+    {{
+      ""commentIndex"": numero_indice_commento,
+      ""sentiment"": ""positivo/negativo/neutro"",
+      ""idea"": ""descrizione dell'idea per il contenuto"",
+      ""commentExcerpt"": ""parte del commento che ha ispirato l'idea""
+    }}
+  ]
+}}
+Se nessun commento contiene idee, restituisci un array 'ideas' vuoto.";
         }
 
         private string PrettifyString(string s)
