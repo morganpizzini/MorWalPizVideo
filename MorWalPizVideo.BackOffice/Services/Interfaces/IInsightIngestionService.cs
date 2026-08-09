@@ -15,6 +15,7 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces
     /// Fetches new YouTube comments for a channel since the last processed comment per video,
     /// derives ShortContent ideas/hints via AI analysis and persists them as insight items for the topic.
     /// </summary>
-    Task<ScanShortContentResponseDto> ProcessShortContentScanAsync(InsightTopic topic, string channelName, int videos, int commentsNumber);
+    Task<ScanShortContentResponseDto> ProcessShortContentScanAsync(InsightTopic topic, string channelName, int videos, int commentsNumber, string? channelId = null);
+    Task<ScanShortContentResponseDto> AnalyzeCommentsAsync(InsightTopic topic, AnalyzeInsightCommentsRequest request, string selectedChannelId);
   }
 }

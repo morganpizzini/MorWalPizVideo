@@ -15,7 +15,10 @@ export type Channel = Readonly<{
   yTChannelId: string;
   mine: boolean;
   socials?: readonly ChannelSocial[];
+  videos?: readonly ChannelVideo[];
 }>;
+
+export type ChannelVideo = Readonly<{ videoId: string; title: string; lastCommentDate?: string }>;
 
 export type ChannelSocial = Readonly<{ provider: string; handler: string }>;
 

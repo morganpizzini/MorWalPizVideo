@@ -247,7 +247,7 @@ AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF impo
 Content-planning suite: AI agent–driven topic monitoring → news scanning → content plan generation. `InsightNewsItem` is a single shared collection for both AI-discovered news (`Content`) and YouTube-comment-derived ideas (`ShortContent`), distinguished by the `sourceKind` field.
 | Resource | Endpoints |
 | -------- | --------- |
-| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news`, `POST /topics/{id}/scan-short-content` |
+| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news`, `POST /topics/{id}/scan-short-content`, `POST /topics/{id}/analyze-comments` |
 | News items (`InsightNewsItem`) | `GET /news?sourceKind=`, `GET /topics/{id}/news?status=&sourceKind=`, `GET /news/{id}`, `PUT /news/{id}/review`, `DELETE /news/{id}` |
 | Content plans (`InsightContentPlan`) | `POST /content-plans`, `GET /content-plans`, `GET /topics/{id}/content-plans`, `GET /content-plans/{id}`, `PUT /content-plans/{id}`, `DELETE /content-plans/{id}` |
 

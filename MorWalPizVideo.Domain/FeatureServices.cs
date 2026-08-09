@@ -543,6 +543,7 @@ public interface IInsightsService
     Task<InsightSourceCursor?> GetSourceCursorAsync(string topicId, string sourceUrl, string? channelId = null);
     Task SaveOrUpdateSourceCursorAsync(InsightSourceCursor cursor, string? channelId = null);
     Task<YTChannel?> GetChannelByNameAsync(string channelName);
+    Task<YTChannel?> GetChannelByIdAsync(string channelId);
     Task UpdateChannelAsync(YTChannel channel);
 }
 
@@ -703,6 +704,9 @@ public sealed class InsightsService(
 
     public async Task<YTChannel?> GetChannelByNameAsync(string channelName)
         => (await ytChannelRepository.GetItemsAsync(x => x.ChannelName == channelName)).FirstOrDefault();
+
+    public async Task<YTChannel?> GetChannelByIdAsync(string channelId)
+        => (await ytChannelRepository.GetItemsAsync(x => x.ChannelId == channelId)).FirstOrDefault();
 
     public Task UpdateChannelAsync(YTChannel channel) => ytChannelRepository.UpdateItemAsync(channel);
 }

@@ -9,6 +9,8 @@ import type {
   GenerateContentPlanRequest,
   UpdateContentPlanRequest,
   InsightNewsStatus,
+  AnalyzeInsightCommentsRequest,
+  AnalyzeInsightCommentsResponse,
 } from '@morwalpizvideo/models';
 
 const BASE_URL = '/api/insights';
@@ -39,6 +41,9 @@ export const insightsTopicsApi = {
 
   getContentPlans: (id: string): Promise<InsightContentPlan[]> =>
     get(`${BASE_URL}/topics/${id}/content-plans`),
+
+  analyzeComments: (id: string, data: AnalyzeInsightCommentsRequest): Promise<AnalyzeInsightCommentsResponse> =>
+    post(`${BASE_URL}/topics/${id}/analyze-comments`, data),
 };
 
 /**

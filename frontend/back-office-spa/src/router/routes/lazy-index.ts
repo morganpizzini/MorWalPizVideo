@@ -115,7 +115,9 @@ const routeDefinitions: RouteConfig[] = [
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/customForms/detail')), feature('edit', () => import('../../routes/customForms/form'))] },
   ]),
   group('insights', () => import('../../routes/insights/index'), [
-    indexFeature('', () => import('../../routes/insights/index')),
+    indexFeature('', () => import('../../routes/insights/landing')),
+    feature('topics', () => import('../../routes/insights/index')),
+    feature('comments', () => import('../../routes/insights/comments')),
     feature('create', () => import('../../routes/insights/form')),
     feature('news/:newsId', () => import('../../routes/insights/news')),
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/insights/detail')), feature('edit', () => import('../../routes/insights/form')), actionFeature('scan-news', () => import('../../routes/insights/scan-news/action'))] },

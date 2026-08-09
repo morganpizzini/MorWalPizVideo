@@ -27,4 +27,19 @@ namespace MorWalPiz.Contracts.DTOs
     public List<string> CreatedNewsItemIds { get; set; } = new();
     public List<string> Errors { get; set; } = new();
   }
+
+  public enum InsightCommentSourceType
+  {
+    StoredChannel,
+    StoredVideo,
+    DirectVideoId
+  }
+
+  public class AnalyzeInsightCommentsRequest
+  {
+    public InsightCommentSourceType SourceType { get; set; }
+    public string ChannelId { get; set; } = string.Empty;
+    public string VideoId { get; set; } = string.Empty;
+    public int CommentsNumber { get; set; } = 20;
+  }
 }

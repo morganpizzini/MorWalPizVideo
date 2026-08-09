@@ -97,3 +97,23 @@ export interface UpdateContentPlanRequest {
   outline?: string;
   targetPlatforms?: string[];
 }
+
+export enum InsightCommentSourceType {
+  StoredChannel = 0,
+  StoredVideo = 1,
+  DirectVideoId = 2,
+}
+
+export interface AnalyzeInsightCommentsRequest {
+  sourceType: InsightCommentSourceType;
+  channelId?: string;
+  videoId?: string;
+  commentsNumber: number;
+}
+
+export interface AnalyzeInsightCommentsResponse {
+  videosProcessed: number;
+  commentsAnalyzed: number;
+  createdNewsItemIds: string[];
+  errors: string[];
+}

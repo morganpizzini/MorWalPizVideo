@@ -11,7 +11,7 @@ export type {
 export type { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categories';
 
 // Channel exports
-export type { Channel, ChannelSocial, CreateChannelDTO, UpdateChannelDTO } from './channel';
+export type { Channel, ChannelSocial, ChannelVideo, CreateChannelDTO, UpdateChannelDTO } from './channel';
 
 // Configuration exports
 export type {
@@ -131,6 +131,7 @@ export {
   InsightNewsStatus,
   ContentPlanType,
   InsightSourceKind,
+  InsightCommentSourceType,
 } from './insights';
 
 export type {
@@ -142,4 +143,6 @@ export type {
   ReviewNewsItemRequest,
   GenerateContentPlanRequest,
   UpdateContentPlanRequest,
+  AnalyzeInsightCommentsRequest,
+  AnalyzeInsightCommentsResponse,
 } from './insights';

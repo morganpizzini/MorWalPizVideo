@@ -84,6 +84,9 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (module === 'insights' && segments.includes('scan-news')) {
     return [permissions.insights.scan, permissions.insights.manage];
   }
+  if (module === 'insights' && (segments.includes('comments') || segments.includes('analyze-comments'))) {
+    return [permissions.insights.scan, permissions.insights.manage];
+  }
   if (segments.includes('create')) return [resource.create, resource.manage];
   if (segments.includes('edit') || segments.some(segment => segment.startsWith(':') && action)) {
     return [resource.update, resource.manage];

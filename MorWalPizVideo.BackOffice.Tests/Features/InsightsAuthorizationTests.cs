@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
@@ -52,5 +53,21 @@ public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebAppl
     var response = await client.PostAsync("/api/Insights/topics/missing-topic/scan-news", null);
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Theory]
+  [InlineData(AuthorizationPermissionKeys.InsightsScan, HttpStatusCode.NotFound)]
+  [InlineData(AuthorizationPermissionKeys.InsightsView, HttpStatusCode.Forbidden)]
+  public async Task Comment_analysis_requires_scan_permission(string permission, HttpStatusCode expectedStatus)
+  {
+    using var client = _factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync(
+        "/api/Insights/topics/missing-topic/analyze-comments",
+        new { sourceType = 2, videoId = "adhoc-video", commentsNumber = 20 });
+
+    Assert.Equal(expectedStatus, response.StatusCode);
   }
 }

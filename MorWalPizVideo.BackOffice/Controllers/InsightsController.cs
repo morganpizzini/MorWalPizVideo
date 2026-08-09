@@ -166,7 +166,26 @@ namespace MorWalPizVideo.BackOffice.Controllers
             if (string.IsNullOrWhiteSpace(request.ChannelName))
                 return BadRequest("ChannelName is required");
 
-            var result = await _insightIngestionService.ProcessShortContentScanAsync(topic, request.ChannelName, request.Videos, request.CommentsNumber);
+            var result = await _insightIngestionService.ProcessShortContentScanAsync(topic, request.ChannelName, request.Videos, request.CommentsNumber, SelectedChannelId);
+            return Ok(result);
+        }
+
+        [HttpPost("topics/{id}/analyze-comments")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> AnalyzeComments([FromRoute] string id, [FromBody] AnalyzeInsightCommentsRequest request)
+        {
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
+            if (topic == null)
+                return NotFound();
+
+            if (request.SourceType != InsightCommentSourceType.DirectVideoId && string.IsNullOrWhiteSpace(request.ChannelId))
+                return BadRequest("ChannelId is required for a stored channel source");
+            if (request.SourceType != InsightCommentSourceType.DirectVideoId && request.ChannelId != SelectedChannelId)
+                return NotFound();
+            if (request.SourceType != InsightCommentSourceType.StoredChannel && string.IsNullOrWhiteSpace(request.VideoId))
+                return BadRequest("VideoId is required for a video source");
+
+            var result = await _insightIngestionService.AnalyzeCommentsAsync(topic, request, SelectedChannelId);
             return Ok(result);
         }
 
