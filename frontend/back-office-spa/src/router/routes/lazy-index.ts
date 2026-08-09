@@ -117,6 +117,7 @@ const routeDefinitions: RouteConfig[] = [
   group('insights', () => import('../../routes/insights/index'), [
     indexFeature('', () => import('../../routes/insights/landing')),
     feature('topics', () => import('../../routes/insights/index')),
+    feature('topics/create', () => import('../../routes/insights/form')),
     feature('comments', () => import('../../routes/insights/comments')),
     feature('create', () => import('../../routes/insights/form')),
     feature('news/:newsId', () => import('../../routes/insights/news')),
