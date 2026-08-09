@@ -50,6 +50,9 @@ describe('Profile route', () => {
       expect(put).toHaveBeenCalledWith(endpoints.USER_ME, {
         username: 'mario-updated',
         email: 'mario-updated@example.test',
+        firstName: '',
+        lastName: '',
+        phone: '',
       });
     });
     expect(await screen.findByText('Profilo aggiornato con successo.')).toBeInTheDocument();

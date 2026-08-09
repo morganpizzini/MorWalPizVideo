@@ -17,7 +17,7 @@ vi.mock('../../services/authService', () => ({
 }));
 
 vi.mock('@morwalpizvideo/services', () => ({
-  endpoints: { USERS: 'api/user', USER_DETAIL: 'api/user/{id}', USER_STATUS: 'api/user/{id}/status', USER_PASSWORD_RESET: 'api/user/{id}/password/reset', USER_PASSWORD_SET: 'api/user/{id}/password/set', RBAC_USER_DETAIL: 'api/rbac/users/{id}', RBAC_USER_PERMISSIONS: 'api/rbac/users/{id}/permissions', RBAC_USER_GROUPS: 'api/rbac/users/{id}/groups', RBAC_USER_CHANNELS: 'api/rbac/users/{id}/channels', RBAC_GROUPS: 'api/rbac/groups', RBAC_GROUPS_DETAIL: 'api/rbac/groups/{id}', CHANNELS: 'api/channels' },
+  endpoints: { USERS: 'api/user', USER_DETAIL: 'api/user/{id}', USER_STATUS: 'api/user/{id}/status', USER_PASSWORD_RESET: 'api/user/{id}/password/reset', USER_PASSWORD_SET: 'api/user/{id}/password/set', RBAC_USER_DETAIL: 'api/rbac/users/{id}', RBAC_USERS: 'api/rbac/users', RBAC_USER_PERMISSIONS: 'api/rbac/users/{id}/permissions', RBAC_USER_GROUPS: 'api/rbac/users/{id}/groups', RBAC_USER_CHANNELS: 'api/rbac/users/{id}/channels', RBAC_GROUPS: 'api/rbac/groups', RBAC_GROUPS_DETAIL: 'api/rbac/groups/{id}', CHANNELS: 'api/channels' },
   ComposeUrl: (template: string, replacements: Record<string, string>) => template.replace(/\{(.*?)\}/g, (_, key: string) => replacements[key] ?? `{${key}}`),
   get: vi.fn(), post: vi.fn(), put: vi.fn(), Delete: vi.fn(),
 }));
@@ -34,7 +34,7 @@ function renderRoute(path: string, element: React.ReactNode) {
 }
 
 describe('RBAC workflows', () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_GROUPS ? [group] : url === endpoints.CHANNELS ? [channel] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
+  beforeEach(() => { vi.clearAllMocks(); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_USERS ? [user] : url === endpoints.RBAC_GROUPS ? [group] : url === endpoints.CHANNELS ? [channel] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
 
   it('keeps /rbac as a workflow hub', () => {
     render(<RbacManagementPage />);

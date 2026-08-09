@@ -15,6 +15,7 @@ vi.mock('react-router', async () => {
 
 vi.mock('../services/authService', () => ({
   authService: {
+    getUser: vi.fn(() => null),
     logout: vi.fn(),
   },
 }));
