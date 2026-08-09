@@ -71,13 +71,13 @@ namespace MorWalPiz.Contracts
                 ChannelId = entity.ChannelId,
                 YTChannelId = entity.ChannelId,
                 ChannelName = entity.ChannelName,
-                Videos = entity.Videos.Select(Convert).ToArray(),
+                Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
                 Mine = entity.Mine,
-                Socials = entity.Socials.Select(s => new ChannelSocialContract
+                Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {
                     Provider = s.Provider,
                     Handler = s.Handler
-                }).ToList()
+                }).ToList() ?? []
             };
         }
         public static ChannelVideoContract Convert(YouTubeVideo entity)
