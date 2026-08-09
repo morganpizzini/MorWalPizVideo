@@ -1,4 +1,5 @@
 using MorWalPiz.Contracts.DTOs;
+using MongoDB.Bson;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
@@ -83,7 +84,7 @@ namespace MorWalPizVideo.BackOffice.Services
                 analysisReason: classification.Reason
             )
             {
-              Id = Guid.NewGuid().ToString()
+              Id = ObjectId.GenerateNewId().ToString()
             };
 
             await _insightsService.SaveNewsItemAsync(newsItem);
@@ -94,7 +95,7 @@ namespace MorWalPizVideo.BackOffice.Services
           if (candidatePosts.Count > 0)
           {
             var newest = candidatePosts[0];
-            var updatedCursor = (cursor ?? new InsightSourceCursor(topic.Id, source.SourceUrl) { Id = Guid.NewGuid().ToString() })
+            var updatedCursor = (cursor ?? new InsightSourceCursor(topic.Id, source.SourceUrl) { Id = ObjectId.GenerateNewId().ToString() })
                 .UpdateCursor(newest.PostId, newest.PostUrl, DateTime.UtcNow);
 
             await _insightsService.SaveOrUpdateSourceCursorAsync(updatedCursor);

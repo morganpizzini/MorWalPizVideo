@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPiz.Contracts.Contracts;
@@ -69,7 +70,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 preferredSources: request.PreferredSources ?? Array.Empty<string>()
             )
             {
-                Id = Guid.NewGuid().ToString()
+                Id = ObjectId.GenerateNewId().ToString()
             };
 
             await _insightsService.SaveTopicAsync(topic, SelectedChannelId);
