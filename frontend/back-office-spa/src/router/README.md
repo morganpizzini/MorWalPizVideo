@@ -10,7 +10,8 @@ router/
 ├── types.ts            # TypeScript type definitions for routes
 ├── utils.ts            # Utility functions for route creation
 └── routes/             # Route configuration modules
-    ├── index.ts        # Protected routes (main application routes)
+    ├── index.ts        # Public protectedRoutes export
+    ├── lazy-index.ts   # Lazy protected route registry
     └── auth.routes.ts  # Authentication routes (login)
 ```
 
@@ -27,8 +28,13 @@ Provides utility functions for creating routes:
 ### `routes/auth.routes.ts`
 Contains authentication-related routes (login page) that are accessible without authentication.
 
+### `routes/lazy-index.ts`
+Contains all protected routes organized by feature. Feature components and their loader/action modules are loaded through React Router's `lazy` route-module contract, so Vite emits static route assets instead of placing every feature in the initial router chunk.
+
 ### `routes/index.ts`
-Contains all protected routes organized by feature:
+Re-exports the protected route registry for the main router. Keep this public export stable when adding routes.
+
+Protected routes include:
 - Calendar Events
 - Query Links
 - Short Links
@@ -60,9 +66,10 @@ The main router file combines:
 
 To add new routes:
 
-1. Add the route configuration to `routes/index.ts` in the `protectedRoutes` array
+1. Add the route configuration to `routes/lazy-index.ts` in the `routeDefinitions` array
 2. Use the `createRouteGroup()` utility for consistent structure
-3. Follow the existing pattern for detail/edit/create sub-routes
+3. Use `feature()` or `indexFeature()` with a dynamic import for route modules
+4. Keep permission wrapping in `protectRoute`; do not attach unguarded loaders/actions directly to the main router
 
 Example:
 ```typescript

@@ -3,87 +3,74 @@ import Home from '../../routes/Home';
 import { createErrorElement, createRouteGroup } from '../utils';
 import type { RouteConfig } from '../types';
 
-// Import route modules using default imports (they export { Component, action, loader } as default)
-import QueryLinks from '../../routes/queryLinks/index';
-import QueryLinkDetail from '../../routes/queryLinks/detail';
-import QueryLinkEdit from '../../routes/queryLinks/edit';
-import QueryLinkCreate from '../../routes/queryLinks/create';
-
-import ShortLinks from '../../routes/shortLinks/index';
-import ShortLinkDetail from '../../routes/shortLinks/detail';
-import ShortLinkForm from '../../routes/shortLinks/form';
-
-import ChannelLinks from '../../routes/channels/index';
-import ChannelDetail from '../../routes/channels/detail';
-import ChannelForm from '../../routes/channels/form';
-
-import Categories from '../../routes/categories/index';
-import CategoryDetail from '../../routes/categories/detail';
-import CategoryEdit from '../../routes/categories/edit';
-import CategoryCreate from '../../routes/categories/create';
-
-import Videos from '../../routes/videos/index';
-import VideoDetail from '../../routes/videos/detail';
-import VideoEdit from '../../routes/videos/edit';
-import ImportVideo from '../../routes/videos/import';
-import TranslateVideo from '../../routes/videos/translate';
-
-import ImagesHome from '../../routes/images/index';
-import ImageUpload from '../../routes/images/upload';
-import MultipleImageUpload from '../../routes/images/upload-multiple';
-
-import CalendarEvents from '../../routes/calendarEvents/index';
-import CalendarEventDetail from '../../routes/calendarEvents/detail';
-import CalendarEventEdit from '../../routes/calendarEvents/edit';
-import CalendarEventCreate from '../../routes/calendarEvents/create';
-
-import MorWalPizConfigurations from '../../routes/morwalpizconfigurations/index';
-import MorWalPizConfigurationDetail from '../../routes/morwalpizconfigurations/detail';
-import MorWalPizConfigurationEdit from '../../routes/morwalpizconfigurations/edit';
-import MorWalPizConfigurationCreate from '../../routes/morwalpizconfigurations/create';
-
-// Import with namespace for components that use named exports
-import * as ProductCategories from '../../routes/productCategories/index';
-import ProductCategoryForm from '../../routes/productCategories/form';
-
-import * as Sponsors from '../../routes/sponsors/index';
-import * as SponsorCreate from '../../routes/sponsors/create';
-import * as SponsorEdit from '../../routes/sponsors/edit';
-
-import * as Products from '../../routes/products/index';
-import * as ProductDetail from '../../routes/products/detail';
-import ProductForm from '../../routes/products/form';
-
-import Compilations from '../../routes/compilations/index';
-import CompilationDetail from '../../routes/compilations/detail';
-import CompilationForm from '../../routes/compilations/form';
-
-import CustomForms from '../../routes/customForms/index';
-import CustomFormDetail from '../../routes/customForms/detail';
-import CustomFormForm from '../../routes/customForms/form';
-
-import Insights from '../../routes/insights/index';
-import InsightDetail from '../../routes/insights/detail';
-import InsightForm from '../../routes/insights/form';
-import InsightNews from '../../routes/insights/news';
-import scanNewsAction from '../../routes/insights/scan-news/action';
-
-import ApiKeys from '../../routes/apiKeys/index';
-import ApiKeyDetail from '../../routes/apiKeys/detail';
-import ApiKeyForm from '../../routes/apiKeys/form';
-import Diagnostics from '../../routes/diagnostics';
-import RbacManagement from '../../routes/rbac';
-import RbacUsersPage from '../../routes/rbac/UsersPage';
-import RbacUserCreatePage from '../../routes/rbac/UserCreatePage';
-import RbacUserDetailPage from '../../routes/rbac/UsersDetailPage';
-import RbacUserEditPage from '../../routes/rbac/UserEditPage';
-import RbacGroupsPage from '../../routes/rbac/GroupsPage';
-import RbacGroupCreatePage from '../../routes/rbac/GroupCreatePage';
-import RbacGroupDetailPage from '../../routes/rbac/GroupDetailPage';
-import RbacGroupEditPage from '../../routes/rbac/GroupEditPage';
-import Profile from '../../routes/profile';
 import { getRoutePermissions } from '../../authorization/permissions';
 import { withActionPermission, withPermission } from '../guards';
+import { protectedRoutes as lazyProtectedRoutes } from './lazy-index';
+
+const legacyRouteModule = {} as any;
+const QueryLinks = legacyRouteModule;
+const QueryLinkDetail = legacyRouteModule;
+const QueryLinkEdit = legacyRouteModule;
+const QueryLinkCreate = legacyRouteModule;
+const ShortLinks = legacyRouteModule;
+const ShortLinkDetail = legacyRouteModule;
+const ShortLinkForm = legacyRouteModule;
+const ChannelLinks = legacyRouteModule;
+const ChannelDetail = legacyRouteModule;
+const ChannelForm = legacyRouteModule;
+const Categories = legacyRouteModule;
+const CategoryDetail = legacyRouteModule;
+const CategoryEdit = legacyRouteModule;
+const CategoryCreate = legacyRouteModule;
+const Videos = legacyRouteModule;
+const VideoDetail = legacyRouteModule;
+const VideoEdit = legacyRouteModule;
+const ImportVideo = legacyRouteModule;
+const TranslateVideo = legacyRouteModule;
+const ImagesHome = legacyRouteModule;
+const ImageUpload = legacyRouteModule;
+const MultipleImageUpload = legacyRouteModule;
+const CalendarEvents = legacyRouteModule;
+const CalendarEventDetail = legacyRouteModule;
+const CalendarEventEdit = legacyRouteModule;
+const CalendarEventCreate = legacyRouteModule;
+const MorWalPizConfigurations = legacyRouteModule;
+const MorWalPizConfigurationDetail = legacyRouteModule;
+const MorWalPizConfigurationEdit = legacyRouteModule;
+const MorWalPizConfigurationCreate = legacyRouteModule;
+const ProductCategories = legacyRouteModule;
+const ProductCategoryForm = legacyRouteModule;
+const Sponsors = legacyRouteModule;
+const SponsorCreate = legacyRouteModule;
+const SponsorEdit = legacyRouteModule;
+const Products = legacyRouteModule;
+const ProductDetail = legacyRouteModule;
+const ProductForm = legacyRouteModule;
+const Compilations = legacyRouteModule;
+const CompilationDetail = legacyRouteModule;
+const CompilationForm = legacyRouteModule;
+const CustomForms = legacyRouteModule;
+const CustomFormDetail = legacyRouteModule;
+const CustomFormForm = legacyRouteModule;
+const Insights = legacyRouteModule;
+const InsightDetail = legacyRouteModule;
+const InsightForm = legacyRouteModule;
+const InsightNews = legacyRouteModule;
+const scanNewsAction = legacyRouteModule;
+const ApiKeys = legacyRouteModule;
+const ApiKeyDetail = legacyRouteModule;
+const ApiKeyForm = legacyRouteModule;
+const Diagnostics = legacyRouteModule;
+const RbacManagement = legacyRouteModule;
+const RbacUsersPage = legacyRouteModule;
+const RbacUserCreatePage = legacyRouteModule;
+const RbacUserDetailPage = legacyRouteModule;
+const RbacUserEditPage = legacyRouteModule;
+const RbacGroupsPage = legacyRouteModule;
+const RbacGroupCreatePage = legacyRouteModule;
+const RbacGroupDetailPage = legacyRouteModule;
+const RbacGroupEditPage = legacyRouteModule;
+const Profile = legacyRouteModule;
 
 const routeDefinitions: RouteConfig[] = [
   {
@@ -517,4 +504,7 @@ function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {
   }) as RouteConfig;
 }
 
-export const protectedRoutes = routeDefinitions.map(route => protectRoute(route));
+export const protectedRoutes = lazyProtectedRoutes;
+
+void routeDefinitions;
+void protectRoute;
