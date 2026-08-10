@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Badge, Button, Tabs, Tab, Form } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher } from 'react-router';
-import { InsightTopic, InsightNewsItem, InsightContentPlan, InsightNewsStatus, InsightSourceKind, ContentPlanType } from '@morwalpizvideo/models';
+import { InsightTopic, InsightNewsItem, InsightContentPlan, InsightNewsStatus, InsightSourceKind, ContentPlanType, InsightTopicCreationMode } from '@morwalpizvideo/models';
 import { insightsContentPlansApi, insightsTopicsApi } from '@morwalpizvideo/services';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -20,6 +20,7 @@ const InsightTopicDetail: React.FC = () => {
   const [targetPlatforms, setTargetPlatforms] = useState<string[]>([]);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const hasCommentDerivedInsights = newsItems.some(item => item.sourceKind === InsightSourceKind.ShortContent);
+  const isCommentAnalysisTopic = topic.creationMode === InsightTopicCreationMode.YouTubeCommentAnalysis || hasCommentDerivedInsights;
   const toast = useToast();
   const fetcher = useFetcher();
 
@@ -156,7 +157,7 @@ const InsightTopicDetail: React.FC = () => {
           <Card>
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>Discovered News</span>
-              {!hasCommentDerivedInsights && (
+              {!isCommentAnalysisTopic && (
                 <Button
                   variant="primary"
                   size="sm"

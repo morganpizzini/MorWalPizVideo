@@ -9,7 +9,8 @@ namespace MorWalPizVideo.Server.Contracts
             return new Video(contract.Id,contract.Snippet.Title, contract.Snippet.Description.TrimDescription(), int.Parse(contract.Statistics.ViewCount),
                 int.Parse(contract.Statistics.LikeCount),
                 int.Parse(contract.Statistics.CommentCount),
-                contract.Snippet.PublishedAt, contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration, Array.Empty<CategoryRef>());
+                    contract.Snippet.PublishedAt, contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration,
+                    Array.Empty<CategoryRef>(), contract.Snippet.ChannelId);
         }
     }
     public record SponsorRequest([Required]string Name, [Required][EmailAddress] string Email, [Required][MinLength(10)] string Description, [Required] string Token) { }
@@ -20,7 +21,7 @@ namespace MorWalPizVideo.Server.Contracts
     public record ItemResponse(string Id, SnippetResponse Snippet, ContentDetailResponse ContentDetails, StatisticsResponse Statistics) 
     {
     }
-    public record SnippetResponse(DateTime PublishedAt,string Title,string Description,Dictionary<string, ThumbnailResponse> Thumbnails)
+    public record SnippetResponse(DateTime PublishedAt,string Title,string Description,Dictionary<string, ThumbnailResponse> Thumbnails, string ChannelId = "")
     {
     }
     public record ThumbnailResponse(string Url,int Width,int Height)

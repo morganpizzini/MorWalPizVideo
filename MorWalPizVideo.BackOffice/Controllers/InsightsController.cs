@@ -22,12 +22,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
         private readonly IInsightsService _insightsService;
         private readonly IInsightAgentService _insightAgentService;
         private readonly IInsightIngestionService _insightIngestionService;
+        private readonly IInsightCommentAnalysisService _commentAnalysisService;
 
-        public InsightsController(IInsightsService insightsService, IInsightAgentService insightAgentService, IInsightIngestionService insightIngestionService)
+        public InsightsController(IInsightsService insightsService, IInsightAgentService insightAgentService, IInsightIngestionService insightIngestionService, IInsightCommentAnalysisService commentAnalysisService)
         {
             _insightsService = insightsService;
             _insightAgentService = insightAgentService;
             _insightIngestionService = insightIngestionService;
+            _commentAnalysisService = commentAnalysisService;
         }
 
         private string SelectedChannelId => HttpContext.GetChannelContext().ChannelId;
@@ -72,7 +74,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 preferredSources: request.PreferredSources ?? Array.Empty<string>()
             )
             {
-                Id = ObjectId.GenerateNewId().ToString()
+                Id = ObjectId.GenerateNewId().ToString(),
+                CreationMode = request.CreationMode
             };
 
             await _insightsService.SaveTopicAsync(topic, SelectedChannelId);
@@ -185,11 +188,37 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return BadRequest("ChannelId is required for a stored channel source");
             if (request.SourceType != InsightCommentSourceType.DirectVideoId && request.ChannelId != SelectedChannelId)
                 return NotFound();
+            if (request.SourceType == InsightCommentSourceType.DirectVideoId && !string.IsNullOrWhiteSpace(request.ChannelId) && request.ChannelId != SelectedChannelId)
+                return NotFound();
             if (request.SourceType != InsightCommentSourceType.StoredChannel && string.IsNullOrWhiteSpace(request.VideoId))
                 return BadRequest("VideoId is required for a video source");
 
-            var result = await _insightIngestionService.AnalyzeCommentsAsync(topic, request, SelectedChannelId);
+            var result = await _commentAnalysisService.EnqueueOrRunAsync(topic, request, SelectedChannelId);
             return Ok(result);
+        }
+
+        [HttpGet("topics/{id}/analyze-comments/{runId}")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> GetCommentAnalysisRun([FromRoute] string id, [FromRoute] string runId)
+        {
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
+            if (topic == null)
+                return NotFound();
+
+            var run = await _commentAnalysisService.GetRunAsync(runId, SelectedChannelId);
+            return run?.TopicId == id ? Ok(run) : NotFound();
+        }
+
+        [HttpPost("topics/{id}/analyze-comments/{runId}/reschedule")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsScan, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> RescheduleCommentAnalysis([FromRoute] string id, [FromRoute] string runId)
+        {
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
+            if (topic == null)
+                return NotFound();
+
+            var run = await _commentAnalysisService.RescheduleAsync(runId, SelectedChannelId);
+            return run?.TopicId == id ? Ok(run) : NotFound();
         }
 
         [HttpGet("news")]
@@ -442,6 +471,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public string Description { get; set; } = string.Empty;
         public string[]? SeedArguments { get; set; }
         public string[]? PreferredSources { get; set; }
+        public InsightTopicCreationMode CreationMode { get; set; } = InsightTopicCreationMode.General;
     }
 
     public class UpdateInsightTopicRequest

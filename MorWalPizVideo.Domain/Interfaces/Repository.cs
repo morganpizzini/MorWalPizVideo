@@ -397,6 +397,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class InsightCommentAnalysisRunRepository : BaseRepository<InsightCommentAnalysisRun>, IInsightCommentAnalysisRunRepository
+    {
+        public InsightCommentAnalysisRunRepository(IMongoDatabase database) : base(database, DbCollections.InsightCommentAnalysisRuns)
+        {
+        }
+    }
+
     public class CompetitionRepository : BaseRepository<Competition>, ICompetitionRepository
     {
         public CompetitionRepository(IMongoDatabase database) : base(database, DbCollections.Competitions)

@@ -1,3 +1,4 @@
+import { InsightTopic, InsightTopicCreationMode } from '@morwalpizvideo/models';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
 import { useNavigate, useFetcher, useLoaderData, useParams, useSearchParams } from 'react-router';
@@ -5,13 +6,15 @@ import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
-import { InsightTopic } from '@morwalpizvideo/models';
 
 const InsightTopicForm: React.FC = () => {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const isEditMode = !!params.id;
   const existingTopic = useLoaderData<InsightTopic | null>();
+  const creationMode = searchParams.get('returnTo')?.includes('/insights/comments')
+    ? InsightTopicCreationMode.YouTubeCommentAnalysis
+    : InsightTopicCreationMode.General;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -68,6 +71,7 @@ const InsightTopicForm: React.FC = () => {
       seedArguments: JSON.stringify(seedArguments),
       preferredSources: JSON.stringify(preferredSources),
       id: isEditMode ? params.id : undefined,
+      creationMode: isEditMode ? undefined : String(creationMode),
     };
 
     const formData = new FormData();

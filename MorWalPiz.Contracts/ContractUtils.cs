@@ -169,7 +169,8 @@ namespace MorWalPiz.Contracts
                 Description = entity.Description,
                 SeedArguments = entity.SeedArguments,
                 PreferredSources = entity.PreferredSources,
-                ChannelId = entity.ChannelId
+                ChannelId = entity.ChannelId,
+                CreationMode = entity.CreationMode
             };
         }
         public static InsightNewsItemContract Convert(InsightNewsItem entity)

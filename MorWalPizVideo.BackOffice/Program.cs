@@ -369,6 +369,7 @@ if (enableMock)
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemMockRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanMockRepository>();
     builder.Services.AddScoped<IInsightSourceCursorRepository, InsightSourceCursorMockRepository>();
+    builder.Services.AddScoped<IInsightCommentAnalysisRunRepository, InsightCommentAnalysisRunMockRepository>();
 
     // Shooting ITA repositories (Mock)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
@@ -445,6 +446,7 @@ else
     builder.Services.AddScoped<IInsightNewsItemRepository, InsightNewsItemRepository>();
     builder.Services.AddScoped<IInsightContentPlanRepository, InsightContentPlanRepository>();
     builder.Services.AddScoped<IInsightSourceCursorRepository, InsightSourceCursorRepository>();
+    builder.Services.AddScoped<IInsightCommentAnalysisRunRepository, InsightCommentAnalysisRunRepository>();
 
     // Shooting ITA repositories (Production)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
@@ -476,6 +478,9 @@ else
 }
 
 builder.Services.AddScoped<IInsightIngestionService, InsightIngestionService>();
+builder.Services.AddScoped<IInsightCommentAnalysisService, InsightCommentAnalysisService>();
+builder.Services.AddScoped<IInsightCommentAnalysisScheduler>(provider =>
+    new InsightCommentAnalysisScheduler(provider.GetService<IBackgroundJobClient>()));
 
 if (enableSwagger)
 {

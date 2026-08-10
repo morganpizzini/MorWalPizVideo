@@ -534,6 +534,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class InsightCommentAnalysisRunMockRepository : BaseMockRepository<InsightCommentAnalysisRun>, IInsightCommentAnalysisRunRepository
+    {
+        public InsightCommentAnalysisRunMockRepository(IMockScenario scenario) : base(scenario, "insightCommentAnalysisRuns")
+        {
+        }
+    }
+
     public class CompetitionMockRepository : BaseMockRepository<Competition>, ICompetitionRepository
     {
         public CompetitionMockRepository(IMockScenario scenario) : base(scenario, "competitions")

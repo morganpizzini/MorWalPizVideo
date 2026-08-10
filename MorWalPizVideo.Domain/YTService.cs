@@ -232,6 +232,7 @@ namespace MorWalPizVideo.Server.Services
                 {
                     VideoId = videoId,
                     Title = videoTitle,
+                    UploaderChannelId = searchResult.Snippet.ChannelId,
                     Comments = new List<CommentInfo>()
                 };
 
@@ -247,12 +248,14 @@ namespace MorWalPizVideo.Server.Services
                     {
                         var topLevelComment = comment.Snippet.TopLevelComment;
                         var author = topLevelComment.Snippet.AuthorDisplayName;
+                        var authorChannelId = topLevelComment.Snippet.AuthorChannelId?.Value ?? string.Empty;
                         var text = topLevelComment.Snippet.TextDisplay;
                         var publishedAt = topLevelComment.Snippet.PublishedAt.GetValueOrDefault();
 
                         videoWithComments.Comments.Add(new CommentInfo
                         {
                             Author = author,
+                            AuthorChannelId = authorChannelId,
                             Text = text.ParseHTMLString(),
                             PublishedAt = publishedAt
                         });

@@ -85,6 +85,8 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using the App Service managed identity through `DefaultAzureCredential`. Production startup fails if the provider cannot load or required settings are missing. |
 | `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
 
+YouTube comment analysis is submitted from the existing Insights comments page. Each request is stored in the channel-scoped `insightCommentAnalysisRuns` collection with only the topic/source/request context required for a later manual reschedule. When `EnableHangFire` is enabled and Hangfire is available, the request is queued and the SPA polls its status. When Hangfire is disabled or unavailable, the API explicitly uses the synchronous analysis fallback. Runs transition through `Pending`, `Running`, `Completed`, or terminal `Rejected`; failed runs are not retried automatically. An authorized user can use the run's reschedule action to create a new request from the saved context. Comment bodies and transient author identity are never persisted in the run record.
+
 ### 2.3 Health Checks
 Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (dev) `/alive`. Hangfire storage and processing probes are registered only when `EnableHangFire` is enabled. Full details in [HEALTH_CHECKS.md](HEALTH_CHECKS.md).
 

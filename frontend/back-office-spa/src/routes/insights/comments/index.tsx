@@ -3,7 +3,7 @@ import { Alert, Button, Form } from 'react-bootstrap';
 import { Link } from 'react-router';
 import { get, endpoints, insightsTopicsApi } from '@morwalpizvideo/services';
 import type { Channel, InsightTopic, AnalyzeInsightCommentsResponse } from '@morwalpizvideo/models';
-import { InsightCommentSourceType, InsightSourceKind } from '@morwalpizvideo/models';
+import { InsightCommentAnalysisRunStatus, InsightCommentSourceType, InsightSourceKind } from '@morwalpizvideo/models';
 
 export default function InsightCommentsPage() {
   const [topics, setTopics] = useState<InsightTopic[]>([]);
@@ -18,6 +18,14 @@ export default function InsightCommentsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!result?.runId || result.status === InsightCommentAnalysisRunStatus.Completed || result.status === InsightCommentAnalysisRunStatus.Rejected) return;
+    const poll = window.setInterval(() => {
+      void insightsTopicsApi.getCommentAnalysisRun(topicId, result.runId).then(setResult).catch(() => undefined);
+    }, 2000);
+    return () => window.clearInterval(poll);
+  }, [result?.runId, result?.status, topicId]);
 
   useEffect(() => {
     void Promise.all([insightsTopicsApi.getAll(), get(endpoints.CHANNELS_ACCESSIBLE)]).then(([loadedTopics, loadedChannels]) => {
@@ -53,10 +61,14 @@ export default function InsightCommentsPage() {
       {sourceType === InsightCommentSourceType.StoredVideo ? <Form.Group><Form.Label htmlFor="insight-video">YouTube video ID</Form.Label><Form.Select id="insight-video" value={videoId} onChange={event => setVideoId(event.target.value)} required><option value="">Select a stored video</option>{(channels.find(channel => channel.channelId === channelId)?.videos ?? []).map(video => <option key={video.videoId} value={video.videoId}>{video.title || video.videoId}</option>)}</Form.Select></Form.Group> : null}
       {sourceType === InsightCommentSourceType.DirectVideoId ? <Form.Group><Form.Label htmlFor="insight-direct-video">Direct YouTube video ID</Form.Label><Form.Control id="insight-direct-video" value={videoId} onChange={event => setVideoId(event.target.value)} required /></Form.Group> : null}
       {sourceType === InsightCommentSourceType.StoredVideo ? <Form.Text className="text-muted">The video is analyzed through YouTube; stored channel metadata is used when available.</Form.Text> : null}
-      <Form.Group><Form.Label htmlFor="insight-comments-number">Comments per video</Form.Label><Form.Control id="insight-comments-number" type="number" min={1} max={100} value={commentsNumber} onChange={event => setCommentsNumber(Number(event.target.value))} required /></Form.Group>
+      <Form.Group><Form.Label htmlFor="insight-comments-number">Comments per video</Form.Label><Form.Control id="insight-comments-number" type="number" min={1} max={200} value={commentsNumber} onChange={event => setCommentsNumber(Number(event.target.value))} required /></Form.Group>
       <div><Button type="submit" disabled={submitting || topics.length === 0}>{submitting ? 'Analyzing...' : 'Analyze comments'}</Button></div>
     </Form>
-    {result ? <Alert variant="success" className="mt-3">Analyzed {result.commentsAnalyzed} comments across {result.videosProcessed} video(s). {result.createdNewsItemIds.length} insight(s) created.<br /><Link to={`/insights/${topicId}`}>View persisted insights for this topic</Link></Alert> : null}
+    {result ? <Alert variant={result.status === InsightCommentAnalysisRunStatus.Rejected ? 'danger' : result.status === InsightCommentAnalysisRunStatus.Completed ? 'success' : 'info'} className="mt-3">
+      {result.status === InsightCommentAnalysisRunStatus.Pending || result.status === InsightCommentAnalysisRunStatus.Running ? 'Comment analysis is pending.' : null}
+      {result.status === InsightCommentAnalysisRunStatus.Completed ? <>Analyzed {result.commentsAnalyzed} comments across {result.videosProcessed} video(s). {result.createdNewsItemCount} insight(s) created.<br /><Link to={`/insights/${topicId}`}>View persisted insights for this topic</Link></> : null}
+      {result.status === InsightCommentAnalysisRunStatus.Rejected ? <><div>{result.rejectionReason || 'Comment analysis was rejected.'}</div><Button size="sm" className="mt-2" onClick={() => void insightsTopicsApi.rescheduleCommentAnalysis(topicId, result.runId).then(setResult)}>Reschedule</Button></> : null}
+    </Alert> : null}
     {!result && !submitting && topics.length === 0 ? <Alert variant="info" className="mt-3">Create a topic before analyzing comments.</Alert> : null}
   </div>;
 }

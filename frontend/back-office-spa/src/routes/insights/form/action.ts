@@ -10,6 +10,7 @@ export default async function action({ request, params }: LoaderFunctionArgs) {
   const description = formData.get('description') as string;
   const seedArgumentsJson = formData.get('seedArguments') as string;
   const preferredSourcesJson = formData.get('preferredSources') as string;
+  const creationMode = Number(formData.get('creationMode') ?? 0);
 
   const seedArguments = seedArgumentsJson ? JSON.parse(seedArgumentsJson) : [];
   const preferredSources = preferredSourcesJson ? JSON.parse(preferredSourcesJson) : [];
@@ -40,6 +41,7 @@ export default async function action({ request, params }: LoaderFunctionArgs) {
         description,
         seedArguments,
         preferredSources,
+        creationMode,
       };
       await insightsTopicsApi.create(createRequest);
     }

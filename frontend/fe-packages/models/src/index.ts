@@ -132,6 +132,8 @@ export {
   ContentPlanType,
   InsightSourceKind,
   InsightCommentSourceType,
+  InsightTopicCreationMode,
+  InsightCommentAnalysisRunStatus,
 } from './insights';
 
 export type {

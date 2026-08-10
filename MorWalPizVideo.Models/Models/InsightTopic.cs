@@ -4,6 +4,12 @@ using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.Server.Models
 {
+    public enum InsightTopicCreationMode
+    {
+        General = 0,
+        YouTubeCommentAnalysis = 1
+    }
+
     /// <summary>
     /// Represents a topic of interest for discovering news and generating content
     /// </summary>
@@ -51,6 +57,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("channelId")]
         public string ChannelId { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("creationMode")]
+        public InsightTopicCreationMode CreationMode { get; init; } = InsightTopicCreationMode.General;
 
         /// <summary>
         /// Add a seed argument to the topic

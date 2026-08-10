@@ -12,12 +12,14 @@ namespace MorWalPizVideo.Server.Contracts
   {
     public string VideoId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public string UploaderChannelId { get; set; } = string.Empty;
     public List<CommentInfo> Comments { get; set; } = new();
   }
 
   public class CommentInfo
   {
     public string Author { get; set; } = string.Empty;
+    public string AuthorChannelId { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public DateTime PublishedAt { get; set; }
   }

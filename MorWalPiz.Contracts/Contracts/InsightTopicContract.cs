@@ -23,4 +23,7 @@ public class InsightTopicContract
 
     [DataMember]
     public string ChannelId { get; set; } = string.Empty;
+
+    [DataMember]
+    public InsightTopicCreationMode CreationMode { get; set; }
 }

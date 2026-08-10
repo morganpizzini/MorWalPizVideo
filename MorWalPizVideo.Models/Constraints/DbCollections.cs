@@ -44,6 +44,7 @@
         public const string InsightNewsItems = "insightNewsItems";
         public const string InsightContentPlans = "insightContentPlans";
         public const string InsightSourceCursors = "insightSourceCursors";
+        public const string InsightCommentAnalysisRuns = "insightCommentAnalysisRuns";
 
         // Shop Collections
         public const string DigitalProducts = "digitalProducts";

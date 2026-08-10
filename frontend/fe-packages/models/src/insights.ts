@@ -23,6 +23,18 @@ export enum InsightSourceKind {
   ShortContent = 1,
 }
 
+export enum InsightTopicCreationMode {
+  General = 0,
+  YouTubeCommentAnalysis = 1,
+}
+
+export enum InsightCommentAnalysisRunStatus {
+  Pending = 0,
+  Running = 1,
+  Completed = 2,
+  Rejected = 3,
+}
+
 export interface InsightTopic {
   id: string;
   title: string;
@@ -30,6 +42,7 @@ export interface InsightTopic {
   seedArguments: string[];
   preferredSources: string[];
   creationDateTime: string;
+  creationMode?: InsightTopicCreationMode;
 }
 
 export interface InsightNewsItem {
@@ -73,6 +86,7 @@ export interface CreateInsightTopicRequest {
   description: string;
   seedArguments?: string[];
   preferredSources?: string[];
+  creationMode?: InsightTopicCreationMode;
 }
 
 export interface UpdateInsightTopicRequest {
@@ -113,11 +127,17 @@ export interface AnalyzeInsightCommentsRequest {
   channelId?: string;
   videoId?: string;
   commentsNumber: number;
+  excludeUploaderComments?: boolean;
 }
 
 export interface AnalyzeInsightCommentsResponse {
+  runId: string;
+  status: InsightCommentAnalysisRunStatus;
+  queued: boolean;
   videosProcessed: number;
   commentsAnalyzed: number;
   createdNewsItemIds: string[];
   errors: string[];
+  createdNewsItemCount: number;
+  rejectionReason: string;
 }

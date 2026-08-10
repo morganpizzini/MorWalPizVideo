@@ -30,13 +30,6 @@ namespace MorWalPiz.Contracts.DTOs
     public List<string> Errors { get; set; } = new();
   }
 
-  public enum InsightCommentSourceType
-  {
-    StoredChannel,
-    StoredVideo,
-    DirectVideoId
-  }
-
   public class AnalyzeInsightCommentsRequest
   {
     public InsightCommentSourceType SourceType { get; set; }
@@ -44,5 +37,16 @@ namespace MorWalPiz.Contracts.DTOs
     public string ChannelId { get; set; } = string.Empty;
     public string VideoId { get; set; } = string.Empty;
     public int CommentsNumber { get; set; } = 20;
+    /// <summary>When true, comments authored by the video's uploader are excluded before applying CommentsNumber. Defaults to true.</summary>
+    public bool ExcludeUploaderComments { get; set; } = true;
+  }
+
+  public class AnalyzeInsightCommentsResponse : ScanShortContentResponseDto
+  {
+    public string RunId { get; set; } = string.Empty;
+    public InsightCommentAnalysisRunStatus Status { get; set; }
+    public bool Queued { get; set; }
+    public int CreatedNewsItemCount { get; set; }
+    public string RejectionReason { get; set; } = string.Empty;
   }
 }

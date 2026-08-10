@@ -1,6 +1,10 @@
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Contracts;
+using MorWalPizVideo.Server.Services;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 
@@ -36,6 +40,59 @@ public class ShortContentInsightTests
         sourceKind: InsightSourceKind.ShortContent);
 
     Assert.Equal("video-1", item.EffectiveVideoId);
+  }
+
+  [Fact]
+  public void Analyze_comments_request_defaults_to_excluding_uploader_comments()
+  {
+    var request = JsonSerializer.Deserialize<AnalyzeInsightCommentsRequest>("{\"sourceType\":2,\"videoId\":\"video-1\"}");
+
+    Assert.True(request!.ExcludeUploaderComments);
+  }
+
+  [Fact]
+  public void Comment_filter_excludes_uploader_and_applies_limit_after_filtering()
+  {
+    var comments = new[]
+    {
+      new CommentInfo { Author = "uploader", AuthorChannelId = "owner", Text = "self" },
+      new CommentInfo { Author = "viewer-1", AuthorChannelId = "viewer-1", Text = "first" },
+      new CommentInfo { Author = "unknown", Text = "missing identity" },
+      new CommentInfo { Author = "viewer-2", AuthorChannelId = "viewer-2", Text = "second" }
+    };
+
+    var retained = InsightCommentFilter.Retain(comments, "owner", 2, excludeUploaderComments: true);
+
+    Assert.Equal(new[] { "first", "missing identity" }, retained.Select(comment => comment.Text));
+  }
+
+  [Fact]
+  public void Comment_filter_includes_uploader_when_exclusion_is_disabled()
+  {
+    var comments = new[]
+    {
+      new CommentInfo { Author = "uploader", AuthorChannelId = "owner", Text = "self" },
+      new CommentInfo { Author = "viewer", AuthorChannelId = "viewer", Text = "viewer" }
+    };
+
+    var retained = InsightCommentFilter.Retain(comments, "owner", 2, excludeUploaderComments: false);
+
+    Assert.Equal(new[] { "self", "viewer" }, retained.Select(comment => comment.Text));
+  }
+
+  [Fact]
+  public void YouTube_insight_deduplication_predicate_renders_persisted_current_and_legacy_fields()
+  {
+    var predicate = InsightsService.BuildYouTubeInsightDeduplicationPredicate("topic", "channel", "video-1", "https://youtube.com/watch?v=video-1");
+    var filter = new ExpressionFilterDefinition<InsightNewsItem>(predicate);
+    var rendered = filter.Render(new RenderArgs<InsightNewsItem>(
+        BsonSerializer.LookupSerializer<InsightNewsItem>(),
+        BsonSerializer.SerializerRegistry));
+
+    var renderedText = rendered.ToString();
+    Assert.Contains("videoId", renderedText);
+    Assert.Contains("postId", renderedText);
+    Assert.DoesNotContain("EffectiveVideoId", renderedText);
   }
 
   [Fact]

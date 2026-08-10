@@ -555,6 +555,16 @@ public sealed class InsightsService(
     IInsightSourceCursorRepository insightSourceCursorRepository,
     IYTChannelRepository ytChannelRepository) : IInsightsService
 {
+    public static System.Linq.Expressions.Expression<Func<InsightNewsItem, bool>> BuildYouTubeInsightDeduplicationPredicate(
+        string topicId,
+        string channelId,
+        string videoId,
+        string sourceUrl) =>
+        item => item.TopicId == topicId &&
+            item.ChannelId == channelId &&
+            (item.VideoId == videoId || (item.VideoId == string.Empty && item.PostId == videoId)) &&
+            item.SourceUrl.ToLower() == sourceUrl.ToLower();
+
     public Task<IList<InsightTopic>> GetTopicsAsync(string? channelId = null) =>
         insightTopicRepository.GetItemsAsync(topic => channelId == null || topic.ChannelId == channelId);
 
@@ -619,11 +629,9 @@ public sealed class InsightsService(
     public async Task<InsightNewsItem> UpsertYouTubeInsightAsync(InsightNewsItem item, string? channelId = null)
     {
         item = channelId == null ? item : item with { ChannelId = channelId };
-        var existing = await insightNewsItemRepository.GetItemsAsync(x =>
-            x.TopicId == item.TopicId &&
-            x.ChannelId == item.ChannelId &&
-            x.EffectiveVideoId == item.EffectiveVideoId &&
-            x.SourceUrl.ToLower() == item.SourceUrl.ToLower());
+        var videoId = string.IsNullOrWhiteSpace(item.VideoId) ? item.PostId : item.VideoId;
+        var existing = await insightNewsItemRepository.GetItemsAsync(BuildYouTubeInsightDeduplicationPredicate(
+            item.TopicId, item.ChannelId, videoId, item.SourceUrl));
 
         var current = existing.FirstOrDefault();
         if (current == null)

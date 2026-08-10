@@ -145,10 +145,11 @@ namespace MorWalPizVideo.BackOffice.Services
         var existingVideo = processedVideos.FirstOrDefault(v => v.VideoId == videoWithComments.VideoId);
         var lastCommentDate = existingVideo?.LastCommentDate ?? DateTime.MinValue;
 
-        var newComments = videoWithComments.Comments
-            .Where(c => c.PublishedAt > lastCommentDate)
-            .Select(c => new VideoCommentDto { Author = c.Author, Text = c.Text, PublishedAt = c.PublishedAt })
-            .ToList();
+        var newComments = InsightCommentFilter.Retain(
+          videoWithComments.Comments.Where(c => c.PublishedAt > lastCommentDate),
+          videoWithComments.UploaderChannelId,
+          commentCount,
+          excludeUploaderComments: true);
 
         if (newComments.Count == 0)
           continue;
@@ -211,9 +212,12 @@ namespace MorWalPizVideo.BackOffice.Services
         if (channel == null) return response;
         var comments = await _ytService.GetChannelComments(channel.ChannelId, 10, commentCount, showVideo: true);
         var videoMetadata = await FetchVideoMetadataAsync(comments.Videos.Select(video => video.VideoId));
-        videos.AddRange(comments.Videos.Select(video => (video.VideoId, video.Title, channel.ChannelName,
-          videoMetadata.GetValueOrDefault(video.VideoId)?.Description ?? string.Empty,
-          (IList<VideoCommentDto>)video.Comments.Select(comment => new VideoCommentDto { Author = comment.Author, Text = comment.Text, PublishedAt = comment.PublishedAt }).ToList())));
+        videos.AddRange(comments.Videos.Select(video =>
+          (video.VideoId,
+           video.Title,
+           channel.ChannelName,
+           videoMetadata.GetValueOrDefault(video.VideoId)?.Description ?? string.Empty,
+          (IList<VideoCommentDto>)InsightCommentFilter.Retain(video.Comments, video.UploaderChannelId, commentCount, request.ExcludeUploaderComments))));
       }
       else
       {
@@ -223,13 +227,11 @@ namespace MorWalPizVideo.BackOffice.Services
         var metadata = await FetchVideoMetadataAsync(new[] { request.VideoId });
         var video = metadata.GetValueOrDefault(request.VideoId);
         title = string.IsNullOrWhiteSpace(title) ? video?.Title ?? request.VideoId : title;
-        var comments = await _ytService.GetVideoComments(request.VideoId, commentCount);
-        var mappedComments = comments.Items.Select(item => new VideoCommentDto
-        {
-          Author = item.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
-          Text = item.Snippet.TopLevelComment.Snippet.TextDisplay,
-          PublishedAt = item.Snippet.TopLevelComment.Snippet.PublishedAt.GetValueOrDefault()
-        }).ToList();
+        var mappedComments = await FetchVideoCommentsAsync(
+          request.VideoId,
+          commentCount,
+          video?.ChannelId,
+          request.ExcludeUploaderComments);
         videos.Add((request.VideoId, title, channel?.ChannelName ?? "YouTube", video?.Description ?? string.Empty, mappedComments));
       }
 
@@ -247,6 +249,36 @@ namespace MorWalPizVideo.BackOffice.Services
         response.VideosProcessed++;
       }
       return response;
+    }
+
+    private async Task<List<VideoCommentDto>> FetchVideoCommentsAsync(
+        string videoId,
+        int commentCount,
+        string? uploaderChannelId,
+        bool excludeUploaderComments)
+    {
+      var retainedComments = new List<VideoCommentDto>();
+      string? pageToken = null;
+
+      do
+      {
+        var page = await _ytService.GetVideoComments(videoId, MaxCommentsPerVideo, pageToken);
+        retainedComments.AddRange(page.Items
+            .Where(item => !excludeUploaderComments || !InsightCommentFilter.IsUploaderComment(
+                item.Snippet.TopLevelComment.Snippet.AuthorChannelId?.Value,
+                uploaderChannelId))
+            .Select(item => new VideoCommentDto
+            {
+              Author = item.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
+              Text = item.Snippet.TopLevelComment.Snippet.TextDisplay,
+              PublishedAt = item.Snippet.TopLevelComment.Snippet.PublishedAt.GetValueOrDefault()
+            }));
+
+        pageToken = page.NextPageToken;
+      }
+      while (retainedComments.Count < commentCount && !string.IsNullOrWhiteSpace(pageToken));
+
+      return retainedComments.Take(commentCount).ToList();
     }
 
     private async Task<Dictionary<string, Video>> FetchVideoMetadataAsync(IEnumerable<string> videoIds)

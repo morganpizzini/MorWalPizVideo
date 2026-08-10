@@ -59,6 +59,12 @@ export const insightsTopicsApi = {
   analyzeComments: (id: string, data: AnalyzeInsightCommentsRequest): Promise<AnalyzeInsightCommentsResponse> =>
     post(`${BASE_URL}/topics/${id}/analyze-comments`, data).then(requireSuccessfulResponse),
 
+  getCommentAnalysisRun: (topicId: string, runId: string) =>
+    get(`${BASE_URL}/topics/${topicId}/analyze-comments/${runId}`).then(requireSuccessfulResponse) as Promise<AnalyzeInsightCommentsResponse>,
+
+  rescheduleCommentAnalysis: (topicId: string, runId: string) =>
+    post(`${BASE_URL}/topics/${topicId}/analyze-comments/${runId}/reschedule`, {}).then(requireSuccessfulResponse) as Promise<AnalyzeInsightCommentsResponse>,
+
   exportCsv: (id: string): Promise<Blob> => getFile(`${BASE_URL}/topics/${id}/export`),
 };
 
