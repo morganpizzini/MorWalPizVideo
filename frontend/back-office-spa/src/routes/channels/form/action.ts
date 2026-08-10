@@ -8,9 +8,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
   const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
   const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
-  const socialProvider = typeof values.socialProvider === 'string' ? values.socialProvider.toLowerCase() : '';
-  const socialHandler = typeof values.socialHandler === 'string' ? values.socialHandler.trim() : '';
-  const socials = socialProvider && socialHandler ? [{ provider: socialProvider, handler: socialHandler }] : [];
+  const shortLinkUrl = typeof values.shortLinkUrl === 'string' ? values.shortLinkUrl.trim() : '';
+  const socials = parseSocials(values.socials);
 
   if (!channelName) {
     errors['channelName'] = 'Channel name cannot be empty';
@@ -18,6 +17,10 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   if (!id && !yTChannelId) {
     errors['yTChannelId'] = 'YouTube Channel ID cannot be empty';
+  }
+
+  if (socials === null) {
+    errors['socials'] = 'Social entries must be valid provider and handler pairs';
   }
 
   if (Object.keys(errors).length > 0) {
@@ -29,7 +32,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), {
         channelId: id,
         channelName,
-        socials,
+        shortLinkUrl,
+        socials: socials ?? [],
       });
       if (getChannelApiError(response)) {
         return channelActionError(response, 'Unable to update channel');
@@ -38,7 +42,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       const payload = {
         channelName,
         yTChannelId,
-        socials,
+        shortLinkUrl,
+        socials: socials ?? [],
       };
       const response = await post(endpoints.CHANNELS, payload);
       if (getChannelApiError(response)) {
@@ -48,5 +53,26 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     return data({ success: true }, { status: id ? 200 : 201 });
   } catch (error) {
     return channelActionError(error, id ? 'Unable to update channel' : 'Unable to create channel');
+  }
+}
+
+function parseSocials(value: FormDataEntryValue | undefined): { provider: string; handler: string }[] | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return null;
+
+    return parsed
+      .filter((social): social is { provider: string; handler: string } =>
+        typeof social === 'object' && social !== null &&
+        'provider' in social && typeof social.provider === 'string' &&
+        'handler' in social && typeof social.handler === 'string')
+      .map(social => ({ provider: social.provider.toLowerCase().trim(), handler: social.handler.trim() }))
+      .filter(social => social.provider && social.handler);
+  } catch {
+    return null;
   }
 }

@@ -4,7 +4,7 @@ import { useNavigate, useFetcher, useLoaderData, useParams } from 'react-router'
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
-import { Channel } from '@morwalpizvideo/models';
+import { Channel, ChannelSocial } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 
 const ChannelForm: React.FC = () => {
@@ -14,9 +14,9 @@ const ChannelForm: React.FC = () => {
 
   const [channelName, setChannelName] = useState(entity?.channelName || '');
   const [yTChannelId, setYTChannelId] = useState('');
+  const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [socialProvider, setSocialProvider] = useState('');
-  const [socialHandler, setSocialHandler] = useState('');
+  const [socials, setSocials] = useState<ChannelSocial[]>([]);
 
   const navigate = useNavigate();
   const toast = useToast();
@@ -32,8 +32,8 @@ const ChannelForm: React.FC = () => {
   useEffect(() => {
     if (entity) {
       setChannelName(entity.channelName);
-      const social = entity.socials?.[0];
-      if (social) { setSocialProvider(social.provider); setSocialHandler(social.handler); }
+      setShortLinkUrl(entity.shortLinkUrl ?? '');
+      setSocials(entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ?? []);
     }
   }, [entity]);
 
@@ -66,7 +66,16 @@ const ChannelForm: React.FC = () => {
     if (!isEditMode) {
       payload.yTChannelId = yTChannelId;
     }
-    fetcher.submit({ ...payload, socialProvider, socialHandler }, { method: 'post', action: location.pathname });
+    fetcher.submit(
+      { ...payload, shortLinkUrl, socials: JSON.stringify(socials) },
+      { method: 'post', action: location.pathname }
+    );
+  };
+
+  const updateSocial = (index: number, field: keyof ChannelSocial, value: string) => {
+    setSocials(current => current.map((social, socialIndex) =>
+      socialIndex === index ? { ...social, [field]: value } : social
+    ));
   };
 
   return (
@@ -100,8 +109,27 @@ const ChannelForm: React.FC = () => {
           </Form.Group>
         )}
 
-        <Form.Group controlId="formSocialProvider" className="mb-3"><Form.Label>Social provider</Form.Label><Form.Select name="socialProvider" value={socialProvider} onChange={e => setSocialProvider(e.target.value)}><option value="">None</option><option value="instagram">Instagram</option><option value="youtube">YouTube</option><option value="reddit">Reddit</option><option value="x">X</option><option value="patreon">Patreon</option></Form.Select></Form.Group>
-        <Form.Group controlId="formSocialHandler" className="mb-3"><Form.Label>Social handler</Form.Label><Form.Control name="socialHandler" value={socialHandler} onChange={e => setSocialHandler(e.target.value)} disabled={!socialProvider} placeholder="Handle or public identifier" /></Form.Group>
+        <Form.Group controlId="formShortLinkUrl" className="mb-3">
+          <Form.Label>Short link base URL</Form.Label>
+          <Form.Control type="url" value={shortLinkUrl} onChange={e => setShortLinkUrl(e.target.value)} placeholder="https://example.com/sl" />
+        </Form.Group>
+
+        <Form.Label>Socials</Form.Label>
+        {socials.map((social, index) => (
+          <div className="d-flex gap-2 mb-2" key={`${social.provider}-${index}`}>
+            <Form.Select aria-label={`Social provider ${index + 1}`} value={social.provider} onChange={e => updateSocial(index, 'provider', e.target.value)}>
+              <option value="">Select provider</option>
+              <option value="instagram">Instagram</option>
+              <option value="youtube">YouTube</option>
+              <option value="reddit">Reddit</option>
+              <option value="x">X</option>
+              <option value="patreon">Patreon</option>
+            </Form.Select>
+            <Form.Control aria-label={`Social handler ${index + 1}`} value={social.handler} onChange={e => updateSocial(index, 'handler', e.target.value)} placeholder="Handle or public identifier" />
+            <Button type="button" variant="outline-danger" aria-label={`Remove social ${index + 1}`} onClick={() => setSocials(current => current.filter((_, socialIndex) => socialIndex !== index))}>Remove</Button>
+          </div>
+        ))}
+        <Button type="button" variant="outline-secondary" className="mb-3" onClick={() => setSocials(current => [...current, { provider: '', handler: '' }])}>Add social</Button>
 
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           {isEditMode ? 'Save Changes' : 'Create'}

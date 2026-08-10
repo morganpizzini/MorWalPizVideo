@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -27,16 +28,23 @@ public class YouTubeVideoLinksController : ApplicationControllerBase
                 return NotFound($"Match with ID {matchId} not found");
             }
 
-            var response = match.YouTubeVideoLinks?.Select(link => new YouTubeVideoLinkResponse
+            var channel = string.IsNullOrWhiteSpace(match.OwnerChannelId)
+                ? null
+                : await _dataService.GetChannelById(match.OwnerChannelId);
+            var response = new List<YouTubeVideoLinkResponse>();
+            foreach (var link in match.YouTubeVideoLinks ?? Array.Empty<YouTubeVideoLink>())
             {
-                ContentCreatorName = link.ContentCreatorName,
-                YouTubeVideoId = link.YouTubeVideoId,
-                ImageName = link.ImageName,
-                ShortLinkUrl = ResolveShortLinkUrl(link.ShortLinkUrl),
-                ShortLinkCode = link.ShortLink?.Code,
-                ShortLinkTarget = link.ShortLink?.Target,
-                DirectVideoUrl = link.DirectVideoUrl
-            }).ToList() ?? new List<YouTubeVideoLinkResponse>();
+                response.Add(new YouTubeVideoLinkResponse
+                {
+                    ContentCreatorName = link.ContentCreatorName,
+                    YouTubeVideoId = link.YouTubeVideoId,
+                    ImageName = link.ImageName,
+                    ShortLinkUrl = ResolveShortLinkUrl(link, channel),
+                    ShortLinkCode = link.ShortLink?.Code,
+                    ShortLinkTarget = link.ShortLink?.Target,
+                    DirectVideoUrl = link.DirectVideoUrl
+                });
+            }
 
             return Ok(response);
         }
@@ -65,13 +73,14 @@ public class YouTubeVideoLinksController : ApplicationControllerBase
         }
     }
 
-    private static string? ResolveShortLinkUrl(string? shortLinkUrl)
+    private static string? ResolveShortLinkUrl(YouTubeVideoLink link, YTChannel? channel)
     {
-        if (string.IsNullOrWhiteSpace(shortLinkUrl))
+        var code = link.ShortLink?.Code;
+        if (!string.IsNullOrWhiteSpace(channel?.ShortLinkUrl) && !string.IsNullOrWhiteSpace(code))
         {
-            return null;
+            return $"{channel.ShortLinkUrl.TrimEnd('/')}/{code.TrimStart('/')}";
         }
 
-        return shortLinkUrl;
+        return string.IsNullOrWhiteSpace(link.ShortLinkUrl) ? null : link.ShortLinkUrl;
     }
 }

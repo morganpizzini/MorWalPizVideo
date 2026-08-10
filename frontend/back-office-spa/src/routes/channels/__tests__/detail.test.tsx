@@ -20,6 +20,11 @@ const mockChannel: Channel = {
   channelName: 'MorWalPiz',
   yTChannelId: 'UC12345',
   mine: false,
+  shortLinkUrl: 'https://morwalpiz.com/sl',
+  socials: [
+    { provider: 'instagram', handler: '@morwalpiz' },
+    { provider: 'x', handler: 'morwalpiz' },
+  ],
 };
 
 const mockFetcher = {
@@ -55,6 +60,14 @@ async function renderComponent() {
 }
 
 describe('Channel Detail', () => {
+  it('renders the short-link base and every social entry', async () => {
+    await renderComponent();
+
+    expect(screen.getByText('https://morwalpiz.com/sl')).toBeInTheDocument();
+    expect(screen.getByText('instagram: @morwalpiz')).toBeInTheDocument();
+    expect(screen.getByText('x: morwalpiz')).toBeInTheDocument();
+  });
+
   it('renders delete API errors and keeps the confirmation modal open', async () => {
     const { refresh } = await renderComponent();
 

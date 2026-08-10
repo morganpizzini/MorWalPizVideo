@@ -64,6 +64,19 @@ const ChannelDetail: React.FC = () => {
         <p>
           <strong>YouTube Channel ID:</strong> {entity.yTChannelId}
         </p>
+        <p>
+          <strong>Short link base URL:</strong> {entity.shortLinkUrl || 'Not configured'}
+        </p>
+        <div>
+          <strong>Socials:</strong>
+          {entity.socials?.length ? (
+            <ul>
+              {entity.socials.map((social, index) => (
+                <li key={`${social.provider}-${index}`}>{social.provider}: {social.handler}</li>
+              ))}
+            </ul>
+          ) : <span> None configured</span>}
+        </div>
       </DetailPanel>
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>

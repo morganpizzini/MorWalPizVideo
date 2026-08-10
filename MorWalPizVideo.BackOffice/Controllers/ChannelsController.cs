@@ -19,6 +19,8 @@ public class AddChannelRequest
     [JsonPropertyName("yTChannelId")]
     public string? YTChannelId { get; set; }
 
+    public string? ShortLinkUrl { get; set; }
+
     public List<ChannelSocialRequest> Socials { get; set; } = [];
 }
 
@@ -26,6 +28,8 @@ public class UpdateChannelRequest
 {
     [Required]
     public string ChannelName { get; set; } = string.Empty;
+
+    public string? ShortLinkUrl { get; set; }
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
 }
@@ -100,9 +104,14 @@ public class ChannelsController : ApplicationControllerBase
         {
             return BadRequest("YouTube channel ID is required");
         }
+        var shortLinkUrl = NormalizeShortLinkUrl(request.ShortLinkUrl);
+        if (shortLinkUrl is null)
+        {
+            return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
+        }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
-        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()) { Socials = socials });
+        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()) { ShortLinkUrl = shortLinkUrl, Socials = socials });
 
         return NoContent();
     }
@@ -122,9 +131,14 @@ public class ChannelsController : ApplicationControllerBase
             return NotFound();
         }
 
+        var shortLinkUrl = NormalizeShortLinkUrl(request.ShortLinkUrl);
+        if (shortLinkUrl is null)
+        {
+            return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
+        }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
-        await _dataService.UpdateChannel(existing with { ChannelName = request.ChannelName.Trim(), Socials = socials });
+        await _dataService.UpdateChannel(existing with { ChannelName = request.ChannelName.Trim(), ShortLinkUrl = shortLinkUrl, Socials = socials });
         return NoContent();
     }
 
@@ -158,5 +172,22 @@ public class ChannelsController : ApplicationControllerBase
             result.Add(new ChannelSocial { Provider = provider, Handler = request.Handler.Trim() });
         }
         return result.GroupBy(s => s.Provider, StringComparer.Ordinal).Select(g => g.Last()).ToList();
+    }
+
+    private static string? NormalizeShortLinkUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+        {
+            return null;
+        }
+
+        return uri.AbsoluteUri.TrimEnd('/');
     }
 }

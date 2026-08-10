@@ -85,4 +85,33 @@ describe('channel route error handling', () => {
 
     await expect(indexLoader()).rejects.toMatchObject({ status: 400 });
   });
+
+  it('round-trips multiple socials and the short-link base through the update action', async () => {
+    vi.mocked(put).mockResolvedValue({} as never);
+
+    await formAction({
+      request: formRequest({
+        channelName: 'Updated',
+        shortLinkUrl: 'https://morwalpiz.com/sl',
+        socials: JSON.stringify([
+          { provider: 'Instagram', handler: '@morwalpiz' },
+          { provider: 'X', handler: 'morwalpiz' },
+        ]),
+      }),
+      params: { id: 'channel-one' },
+    } as never);
+
+    expect(put).toHaveBeenCalledWith(
+      '/api/channels/channel-one',
+      {
+        channelId: 'channel-one',
+        channelName: 'Updated',
+        shortLinkUrl: 'https://morwalpiz.com/sl',
+        socials: [
+          { provider: 'instagram', handler: '@morwalpiz' },
+          { provider: 'x', handler: 'morwalpiz' },
+        ],
+      }
+    );
+  });
 });
