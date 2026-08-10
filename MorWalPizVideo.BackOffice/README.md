@@ -235,6 +235,8 @@ Admin CRUD for product categories.
 
 ### 3.6 AI / Insights / Utilities
 
+Comment analysis accepts an optional `sourceKind` describing the analyzed video, not the generated insight: `Content` is for long-form or context-heavy videos and `ShortContent` is for short-form videos. Legacy requests that omit it resolve to `ShortContent`; the dedicated short-content scan always uses `ShortContent`. AI comment affinity scores are stored in `AIRelevanceScore`, normalized to `[0,1]`; missing, invalid, or non-finite values fall back to `0.5`, while numeric values outside the range are clamped.
+
 #### `ChatController` — `api/chat` *(API key)*
 AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF importer.
 | Verb | Route | Purpose |
@@ -247,9 +249,11 @@ AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF impo
 Content-planning suite: AI agent–driven topic monitoring → news scanning → content plan generation. `InsightNewsItem` is a single shared collection for both AI-discovered news (`Content`) and YouTube-comment-derived ideas (`ShortContent`), distinguished by the `sourceKind` field.
 | Resource | Endpoints |
 | -------- | --------- |
-| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news`, `POST /topics/{id}/scan-short-content`, `POST /topics/{id}/analyze-comments` |
+| Topics (`InsightTopic`) | `GET /topics`, `GET /topics/{id}`, `GET /topics/{id}/export`, `POST /topics`, `PUT /topics/{id}`, `DELETE /topics/{id}`, `POST /topics/{id}/scan-news`, `POST /topics/{id}/scan-short-content`, `POST /topics/{id}/analyze-comments` |
 | News items (`InsightNewsItem`) | `GET /news?sourceKind=`, `GET /topics/{id}/news?status=&sourceKind=`, `GET /news/{id}`, `PUT /news/{id}/review`, `DELETE /news/{id}` |
 | Content plans (`InsightContentPlan`) | `POST /content-plans`, `GET /content-plans`, `GET /topics/{id}/content-plans`, `GET /content-plans/{id}`, `PUT /content-plans/{id}`, `DELETE /content-plans/{id}` |
+
+The BackOffice SPA exports a topic from its detail page with `GET /topics/{id}/export`. The UTF-8 CSV has one stable header row and separate topic, news, and content-plan rows; values containing commas, quotes, or line breaks are RFC 4180 escaped. Content plans can be generated only from multiple or single `Accepted` news items belonging to the selected channel and topic.
 
 Implemented through `IInsightAgentService` (`InsightAgentService` in prod, `MockInsightAgentService` in mock) and `IInsightIngestionService` (dedup/cursor pipeline, also used by `POST /topics/{id}/manual-scan`). `POST /topics/{id}/scan-short-content` fetches new YouTube comments per video since the last processed comment (tracked on the `YTChannel`), derives ShortContent ideas via AI, and persists them as `InsightNewsItem` records — replacing the retired `ScraperController`. It uses standard backoffice authentication (JWT/cookie), same as the rest of this controller, since it is called from the admin SPA.
 

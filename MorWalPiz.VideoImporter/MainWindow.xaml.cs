@@ -276,6 +276,7 @@ namespace MorWalPiz.VideoImporter
                     {
                         FileName = Path.GetFileName(filePath),
                         FilePath = filePath,
+                        ThumbnailFilePath = FindThumbnailFilePath(filePath),
                         IsSelected = false,
                         PublishDate = publishDate,
                         PublishTime = publishTime,
@@ -303,6 +304,7 @@ namespace MorWalPiz.VideoImporter
                         {
                             FileName = Path.GetFileName(filePath),
                             FilePath = filePath,
+                            ThumbnailFilePath = FindThumbnailFilePath(filePath),
                             IsSelected = false,
                             PublishDate = publishDate,
                             PublishTime = publishTime,
@@ -314,6 +316,24 @@ namespace MorWalPiz.VideoImporter
                     }
                 }
             }
+        }
+
+        private static string FindThumbnailFilePath(string videoFilePath)
+        {
+            var basePath = Path.Combine(
+                Path.GetDirectoryName(videoFilePath) ?? string.Empty,
+                Path.GetFileNameWithoutExtension(videoFilePath));
+
+            foreach (var extension in new[] { ".jpg", ".jpeg", ".png" })
+            {
+                var thumbnailPath = basePath + extension;
+                if (File.Exists(thumbnailPath))
+                {
+                    return thumbnailPath;
+                }
+            }
+
+            return string.Empty;
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
@@ -664,6 +684,18 @@ namespace MorWalPiz.VideoImporter
                         foreach (var failedUpload in uploadResults.Where(r => !r.Success))
                         {
                             resultMessage += $"\n- {failedUpload.FileName}: {failedUpload.ErrorMessage}";
+                        }
+                    }
+
+                    var warningResults = uploadResults
+                        .Where(upload => upload.Success && !string.IsNullOrWhiteSpace(upload.WarningMessage))
+                        .ToList();
+                    if (warningResults.Count > 0)
+                    {
+                        resultMessage += "\n\nAvvisi:";
+                        foreach (var uploadWithWarning in warningResults)
+                        {
+                            resultMessage += $"\n- {uploadWithWarning.FileName}: {uploadWithWarning.WarningMessage}";
                         }
                     }
 
@@ -1030,6 +1062,7 @@ namespace MorWalPiz.VideoImporter
                 Tags = original.Tags,
                 FileName = original.FileName,
                 FilePath = original.FilePath,
+                ThumbnailFilePath = original.ThumbnailFilePath,
                 IsSelected = original.IsSelected,
                 EditedCleanFileName = original.EditedCleanFileName,
                 Title = original.Title,
@@ -1084,6 +1117,7 @@ namespace MorWalPiz.VideoImporter
     {
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
+        public string ThumbnailFilePath { get; set; } = string.Empty;
         
         private bool _isSelected;
         public bool IsSelected 

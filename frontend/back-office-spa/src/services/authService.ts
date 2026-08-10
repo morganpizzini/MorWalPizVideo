@@ -18,6 +18,7 @@ interface AuthValidationResponse {
 class AuthService {
   private readonly USER_KEY = 'auth_user';
   private effectivePermissions: string[] = [];
+  private validationPromise: Promise<AuthValidationResponse | null> | null = null;
 
   constructor() {
     // Redirect to login on 401 responses (unless on auth endpoints)
@@ -73,6 +74,7 @@ class AuthService {
 
     // Store user info only on successful login; the auth cookie is set by the server
     resetCsrfToken();
+    this.validationPromise = null;
     this.setUser(response.user);
 
     return response;
@@ -89,12 +91,23 @@ class AuthService {
     } finally {
       // Always clear local storage
       localStorage.removeItem(this.USER_KEY);
+      this.validationPromise = null;
+      this.effectivePermissions = [];
       resetCsrfToken();
     }
   }
 
   // Validate the session cookie with the backend
   async validateSession(): Promise<AuthValidationResponse | null> {
+    if (this.validationPromise) {
+      return this.validationPromise;
+    }
+
+    this.validationPromise = this.validateSessionCore();
+    return this.validationPromise;
+  }
+
+  private async validateSessionCore(): Promise<AuthValidationResponse | null> {
     try {
       const response = await post('/api/auth/validate', {});
       if (response === null || response === undefined || response.errors || !response.userId) {

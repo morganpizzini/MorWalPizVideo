@@ -11,6 +11,8 @@ using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using System.Globalization;
+using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers
 {
@@ -258,6 +260,17 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 updated = updated.UpdateStarRating(request.StarRating.Value);
             }
 
+            var effectiveReason = request.Reason ?? updated.ReviewReason;
+            if ((updated.Status == InsightNewsStatus.Accepted || updated.Status == InsightNewsStatus.Rejected) && string.IsNullOrWhiteSpace(effectiveReason))
+            {
+                return BadRequest("A reason is required when accepting or rejecting a news item.");
+            }
+
+            if (request.Reason != null)
+            {
+                updated = updated with { ReviewReason = request.Reason.Trim() };
+            }
+
             await _insightsService.UpdateNewsItemAsync(updated, SelectedChannelId);
             return Ok(ContractUtils.Convert(updated));
         }
@@ -282,16 +295,24 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.InsightsCreate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GenerateContentPlan([FromBody] GenerateContentPlanRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.TopicId) || request.NewsItemIds.Count == 0 || request.TargetPlatforms.Count == 0)
+                return BadRequest("Topic, at least one news item, and at least one target platform are required.");
+
             var topic = await _insightsService.GetTopicByIdAsync(request.TopicId, SelectedChannelId);
             if (topic == null)
                 return NotFound("Topic not found");
 
-            // Verify all news items exist
+            var selectedNewsItems = new List<InsightNewsItem>();
             foreach (var newsItemId in request.NewsItemIds)
             {
                 var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId, SelectedChannelId);
                 if (newsItem == null)
                     return NotFound($"News item {newsItemId} not found");
+                if (newsItem.TopicId != request.TopicId)
+                    return NotFound($"News item {newsItemId} not found for this topic");
+                if (newsItem.Status != InsightNewsStatus.Accepted)
+                    return BadRequest($"News item {newsItemId} must be accepted before generating a content plan.");
+                selectedNewsItems.Add(newsItem);
             }
 
             var contentPlan = await _insightAgentService.GenerateContentPlanAsync(
@@ -303,17 +324,39 @@ namespace MorWalPizVideo.BackOffice.Controllers
             await _insightsService.SaveContentPlanAsync(contentPlan, SelectedChannelId);
 
             // Mark news items as generated
-            foreach (var newsItemId in request.NewsItemIds)
+            foreach (var newsItem in selectedNewsItems)
             {
-                var newsItem = await _insightsService.GetNewsItemByIdAsync(newsItemId, SelectedChannelId);
-                if (newsItem != null)
-                {
-                    var updated = newsItem.UpdateStatus(InsightNewsStatus.Generated);
-                    await _insightsService.UpdateNewsItemAsync(updated, SelectedChannelId);
-                }
+                var updated = newsItem.UpdateStatus(InsightNewsStatus.Generated);
+                await _insightsService.UpdateNewsItemAsync(updated, SelectedChannelId);
             }
 
             return CreatedAtAction(nameof(GetContentPlanById), new { id = contentPlan.Id }, ContractUtils.Convert(contentPlan));
+        }
+
+        [HttpGet("topics/{id}/export")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> ExportTopic([FromRoute] string id)
+        {
+            var topic = await _insightsService.GetTopicByIdAsync(id, SelectedChannelId);
+            if (topic == null)
+                return NotFound();
+
+            var newsItems = await _insightsService.GetNewsItemsByTopicIdAsync(id, SelectedChannelId);
+            var contentPlans = await _insightsService.GetContentPlansByTopicIdAsync(id, SelectedChannelId);
+            var headers = new[] { "recordType", "topicId", "topicTitle", "topicDescription", "seedArguments", "preferredSources", "newsId", "newsTitle", "newsSummary", "newsStatus", "newsSourceUrl", "newsSourceName", "newsSourceKind", "newsAiRelevanceScore", "newsStarRating", "planId", "planTitle", "planType", "planOutline", "planTargetPlatforms" };
+            var rows = new List<string[]> { headers };
+            rows.Add(new[] { "topic", topic.Id ?? id, topic.Title, topic.Description, string.Join("; ", topic.SeedArguments), string.Join("; ", topic.PreferredSources), "", "", "", "", "", "", "", "", "", "", "", "", "", "" });
+            rows.AddRange(newsItems.Select(item => new[] { "news", id, "", "", "", "", item.Id ?? "", item.Title, item.Summary, item.Status.ToString(), item.SourceUrl, item.SourceName, item.SourceKind.ToString(), item.AIRelevanceScore.ToString(CultureInfo.InvariantCulture), item.StarRating.ToString(CultureInfo.InvariantCulture), "", "", "", "", "" }));
+            rows.AddRange(contentPlans.Select(plan => new[] { "contentPlan", id, "", "", "", "", "", "", "", "", "", "", "", "", "", plan.Id ?? "", plan.Title, plan.Type.ToString(), plan.Outline, string.Join("; ", plan.TargetPlatforms) }));
+
+            var csv = string.Join("\r\n", rows.Select(row => string.Join(",", row.Select(EscapeCsv)))) + "\r\n";
+            return File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", $"insight-topic-{id}.csv");
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            var escaped = value.Replace("\"", "\"\"");
+            return escaped.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0 ? $"\"{escaped}\"" : escaped;
         }
 
         [HttpGet("content-plans")]
@@ -413,6 +456,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         public InsightNewsStatus? Status { get; set; }
         public int? StarRating { get; set; }
+        public string? Reason { get; set; }
     }
 
     public class GenerateContentPlanRequest

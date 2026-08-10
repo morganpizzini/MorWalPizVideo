@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
-import { useNavigate, useFetcher, useLoaderData, useParams } from 'react-router';
+import { useNavigate, useFetcher, useLoaderData, useParams, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -9,6 +9,7 @@ import { InsightTopic } from '@morwalpizvideo/models';
 
 const InsightTopicForm: React.FC = () => {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const isEditMode = !!params.id;
   const existingTopic = useLoaderData<InsightTopic | null>();
 
@@ -51,7 +52,7 @@ const InsightTopicForm: React.FC = () => {
         `Topic ${isEditMode ? 'updated' : 'created'} successfully`,
         { variant: 'success' }
       );
-      navigate('/insights');
+      navigate(searchParams.get('returnTo') || '/insights');
     }
   }, [result, navigate, isEditMode]);
 

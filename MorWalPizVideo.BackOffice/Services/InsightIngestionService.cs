@@ -159,12 +159,13 @@ namespace MorWalPizVideo.BackOffice.Services
         try
         {
           var newsItems = await _insightAgentService.AnalyzeVideoCommentsAsync(
-              topic, videoWithComments.VideoId, videoWithComments.Title, videoUrl, channel.ChannelName, newComments);
+              topic, videoWithComments.VideoId, videoWithComments.Title, videoUrl, channel.ChannelName, newComments,
+              InsightSourceKind.ShortContent);
 
           foreach (var newsItem in newsItems)
           {
-            await _insightsService.SaveNewsItemAsync(newsItem, channelId ?? topic.ChannelId);
-            response.CreatedNewsItemIds.Add(newsItem.Id);
+            var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(newsItem, channelId ?? topic.ChannelId);
+            response.CreatedNewsItemIds.Add(persistedItem.Id);
           }
 
           response.VideosProcessed++;
@@ -198,6 +199,7 @@ namespace MorWalPizVideo.BackOffice.Services
     public async Task<ScanShortContentResponseDto> AnalyzeCommentsAsync(InsightTopic topic, AnalyzeInsightCommentsRequest request, string selectedChannelId)
     {
       var response = new ScanShortContentResponseDto();
+      var sourceKind = request.SourceKind ?? InsightSourceKind.ShortContent;
       var commentCount = request.CommentsNumber > 0 ? Math.Min(request.CommentsNumber, MaxCommentsPerVideo) : DefaultCommentsPerVideo;
       var videos = new List<(string Id, string Title, string ChannelName, IList<VideoCommentDto> Comments)>();
 
@@ -232,11 +234,11 @@ namespace MorWalPizVideo.BackOffice.Services
         if (video.Comments.Count == 0) continue;
         response.CommentsAnalyzed += video.Comments.Count;
         var items = await _insightAgentService.AnalyzeVideoCommentsAsync(topic, video.Id, video.Title,
-          $"https://www.youtube.com/watch?v={video.Id}", video.ChannelName, video.Comments);
+          $"https://www.youtube.com/watch?v={video.Id}", video.ChannelName, video.Comments, sourceKind);
         foreach (var item in items)
         {
-          await _insightsService.SaveNewsItemAsync(item, selectedChannelId);
-          response.CreatedNewsItemIds.Add(item.Id);
+          var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(item, selectedChannelId);
+          response.CreatedNewsItemIds.Add(persistedItem.Id);
         }
         response.VideosProcessed++;
       }

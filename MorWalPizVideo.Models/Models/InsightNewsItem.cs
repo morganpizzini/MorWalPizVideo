@@ -71,7 +71,9 @@ namespace MorWalPizVideo.Server.Models
             DateTime? discoveredAt = null,
             string? platformSource = null,
             string? postId = null,
+            string? videoId = null,
             string? analysisReason = null,
+            string? reviewReason = null,
             InsightSourceKind sourceKind = InsightSourceKind.Content,
             string? commentExcerpt = null,
             string? sentiment = null)
@@ -87,7 +89,9 @@ namespace MorWalPizVideo.Server.Models
             DiscoveredAt = discoveredAt ?? DateTime.UtcNow;
             PlatformSource = platformSource ?? string.Empty;
             PostId = postId ?? string.Empty;
+            VideoId = videoId ?? string.Empty;
             AnalysisReason = analysisReason ?? string.Empty;
+            ReviewReason = reviewReason ?? string.Empty;
             SourceKind = sourceKind;
             CommentExcerpt = commentExcerpt ?? string.Empty;
             Sentiment = sentiment ?? string.Empty;
@@ -170,12 +174,24 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("postId")]
         public string PostId { get; init; } = string.Empty;
 
+        [DataMember]
+        [BsonElement("videoId")]
+        public string VideoId { get; init; } = string.Empty;
+
+        [BsonIgnore]
+        [JsonIgnore]
+        public string EffectiveVideoId => string.IsNullOrWhiteSpace(VideoId) ? PostId : VideoId;
+
         /// <summary>
         /// AI reasoning for why this post was classified as news
         /// </summary>
         [DataMember]
         [BsonElement("analysisReason")]
         public string AnalysisReason { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("reviewReason")]
+        public string ReviewReason { get; init; } = string.Empty;
 
         /// <summary>
         /// Which insight pipeline produced this item (content vs. ShortContent), sharing the same collection

@@ -1,4 +1,4 @@
-import { get, post, put, Delete } from './apiService';
+import { get, post, put, Delete, getFile } from './apiService';
 import type {
   InsightTopic,
   InsightNewsItem,
@@ -15,65 +15,81 @@ import type {
 
 const BASE_URL = '/api/insights';
 
+function requireSuccessfulResponse<T>(response: T): T {
+  const payload = response as T & { errors?: unknown[]; status?: number };
+  if (payload && Array.isArray(payload.errors)) {
+    const message = payload.errors
+      .map(error => typeof error === 'string' ? error : JSON.stringify(error))
+      .join(', ') || 'The insights request failed.';
+    throw new Error(message);
+  }
+
+  return response;
+}
+
 /**
  * Topics API
  */
 export const insightsTopicsApi = {
-  getAll: (): Promise<InsightTopic[]> => get(`${BASE_URL}/topics/admin`),
+  getAll: async (): Promise<InsightTopic[]> => requireSuccessfulResponse(await get(`${BASE_URL}/topics/admin`)),
 
-  getById: (id: string): Promise<InsightTopic> => get(`${BASE_URL}/topics/${id}`),
+  getById: async (id: string): Promise<InsightTopic> => requireSuccessfulResponse(await get(`${BASE_URL}/topics/${id}`)),
 
-  create: (data: CreateInsightTopicRequest): Promise<InsightTopic> =>
-    post(`${BASE_URL}/topics`, data),
+  create: async (data: CreateInsightTopicRequest): Promise<InsightTopic> =>
+    requireSuccessfulResponse(await post(`${BASE_URL}/topics`, data)),
 
-  update: (id: string, data: UpdateInsightTopicRequest): Promise<InsightTopic> =>
-    put(`${BASE_URL}/topics/${id}`, data),
+  update: async (id: string, data: UpdateInsightTopicRequest): Promise<InsightTopic> =>
+    requireSuccessfulResponse(await put(`${BASE_URL}/topics/${id}`, data)),
 
-  delete: (id: string): Promise<void> => Delete(`${BASE_URL}/topics/${id}`),
+  delete: async (id: string): Promise<void> => { requireSuccessfulResponse(await Delete(`${BASE_URL}/topics/${id}`)); },
 
-  scanNews: (id: string): Promise<InsightNewsItem[]> =>
-    post(`${BASE_URL}/topics/${id}/scan-news`, {}),
+  scanNews: async (id: string): Promise<InsightNewsItem[]> =>
+    requireSuccessfulResponse(await post(`${BASE_URL}/topics/${id}/scan-news`, {})),
 
   getNews: (id: string, status?: InsightNewsStatus): Promise<InsightNewsItem[]> => {
     const url = status !== undefined ? `${BASE_URL}/topics/${id}/news` : `${BASE_URL}/topics/${id}/news`;
-    return status !== undefined ? get(url, { status }) : get(url);
+    return status !== undefined
+      ? get(url, { status }).then(requireSuccessfulResponse)
+      : get(url).then(requireSuccessfulResponse);
   },
 
   getContentPlans: (id: string): Promise<InsightContentPlan[]> =>
-    get(`${BASE_URL}/topics/${id}/content-plans`),
+    get(`${BASE_URL}/topics/${id}/content-plans`).then(requireSuccessfulResponse),
 
   analyzeComments: (id: string, data: AnalyzeInsightCommentsRequest): Promise<AnalyzeInsightCommentsResponse> =>
-    post(`${BASE_URL}/topics/${id}/analyze-comments`, data),
+    post(`${BASE_URL}/topics/${id}/analyze-comments`, data).then(requireSuccessfulResponse),
+
+  exportCsv: (id: string): Promise<Blob> => getFile(`${BASE_URL}/topics/${id}/export`),
 };
 
 /**
  * News Items API
  */
 export const insightsNewsApi = {
-  getAll: (): Promise<InsightNewsItem[]> => get(`${BASE_URL}/news`),
+  getAll: (): Promise<InsightNewsItem[]> => get(`${BASE_URL}/news`).then(requireSuccessfulResponse),
 
-  getById: (id: string): Promise<InsightNewsItem> => get(`${BASE_URL}/news/${id}`),
+  getById: (id: string): Promise<InsightNewsItem> => get(`${BASE_URL}/news/${id}`).then(requireSuccessfulResponse),
 
   review: (id: string, data: ReviewNewsItemRequest): Promise<InsightNewsItem> =>
-    put(`${BASE_URL}/news/${id}/review`, data),
+    put(`${BASE_URL}/news/${id}/review`, data).then(requireSuccessfulResponse),
 
-  delete: (id: string): Promise<void> => Delete(`${BASE_URL}/news/${id}`),
+  delete: async (id: string): Promise<void> => { requireSuccessfulResponse(await Delete(`${BASE_URL}/news/${id}`)); },
 };
 
 /**
  * Content Plans API
  */
 export const insightsContentPlansApi = {
-  getAll: (): Promise<InsightContentPlan[]> => get(`${BASE_URL}/content-plans`),
+  getAll: (): Promise<InsightContentPlan[]> => get(`${BASE_URL}/content-plans`).then(requireSuccessfulResponse),
 
   getById: (id: string): Promise<InsightContentPlan> =>
-    get(`${BASE_URL}/content-plans/${id}`),
+    get(`${BASE_URL}/content-plans/${id}`).then(requireSuccessfulResponse),
 
   generate: (data: GenerateContentPlanRequest): Promise<InsightContentPlan> =>
-    post(`${BASE_URL}/content-plans`, data),
+    post(`${BASE_URL}/content-plans`, data).then(requireSuccessfulResponse),
 
   update: (id: string, data: UpdateContentPlanRequest): Promise<InsightContentPlan> =>
-    put(`${BASE_URL}/content-plans/${id}`, data),
+    put(`${BASE_URL}/content-plans/${id}`, data).then(requireSuccessfulResponse),
 
-  delete: (id: string): Promise<void> => Delete(`${BASE_URL}/content-plans/${id}`),
+  delete: async (id: string): Promise<void> => { requireSuccessfulResponse(await Delete(`${BASE_URL}/content-plans/${id}`)); },
 };

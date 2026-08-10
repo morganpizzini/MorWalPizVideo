@@ -1,5 +1,7 @@
 namespace MorWalPiz.Contracts.DTOs
 {
+  using MorWalPizVideo.Server.Models;
+
   /// <summary>
   /// A single comment collected from a YouTube video, pending AI analysis for ShortContent ideas.
   /// </summary>
@@ -38,6 +40,7 @@ namespace MorWalPiz.Contracts.DTOs
   public class AnalyzeInsightCommentsRequest
   {
     public InsightCommentSourceType SourceType { get; set; }
+    public InsightSourceKind? SourceKind { get; set; }
     public string ChannelId { get; set; } = string.Empty;
     public string VideoId { get; set; } = string.Empty;
     public int CommentsNumber { get; set; } = 20;

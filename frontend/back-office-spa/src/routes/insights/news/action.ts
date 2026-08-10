@@ -17,10 +17,12 @@ export default async function action({ request, params }: LoaderFunctionArgs) {
 
   const starRating = parseInt(formData.get('starRating') as string);
   const status = parseInt(formData.get('status') as string);
+  const reason = (formData.get('reason') as string | null) ?? undefined;
 
   const reviewRequest: ReviewNewsItemRequest = {
     starRating,
     status,
+    reason,
   };
 
   try {

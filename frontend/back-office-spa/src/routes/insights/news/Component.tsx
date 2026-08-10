@@ -10,6 +10,7 @@ const InsightNewsReview: React.FC = () => {
   const newsItem = useLoaderData<InsightNewsItem>();
   const [starRating, setStarRating] = useState(newsItem.starRating);
   const [status, setStatus] = useState(newsItem.status);
+  const [reason, setReason] = useState(newsItem.reviewReason);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
@@ -42,6 +43,7 @@ const InsightNewsReview: React.FC = () => {
       {
         starRating: starRating.toString(),
         status: status.toString(),
+        reason,
       },
       {
         method: 'post',
@@ -93,6 +95,7 @@ const InsightNewsReview: React.FC = () => {
               </span>
             </div>
           )}
+          {newsItem.reviewReason ? <div className="mb-3"><strong>Review reason:</strong> {newsItem.reviewReason}</div> : null}
         </Card.Body>
       </Card>
 
@@ -137,6 +140,12 @@ const InsightNewsReview: React.FC = () => {
                 />
               </div>
             </Form.Group>
+            {(status === InsightNewsStatus.Accepted || status === InsightNewsStatus.Rejected) && (
+              <Form.Group className="mt-3">
+                <Form.Label>Reason</Form.Label>
+                <Form.Control as="textarea" rows={3} value={reason} onChange={event => setReason(event.target.value)} required />
+              </Form.Group>
+            )}
           </Card.Body>
         </Card>
 

@@ -1,6 +1,7 @@
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Server.Models;
+using System.Text.Json;
 using Microsoft.SemanticKernel;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -23,7 +24,22 @@ public class ShortContentInsightTests
   }
 
   [Fact]
-  public async Task AnalyzeVideoCommentsAsync_tags_derived_ideas_as_short_content()
+  public void Legacy_comment_insight_uses_post_id_as_video_id_fallback()
+  {
+    var item = new InsightNewsItem(
+        topicId: "topic-1",
+        title: "Legacy comment insight",
+        summary: "summary",
+        sourceUrl: "https://youtube.com/watch?v=video-1",
+        sourceName: "YouTube",
+        postId: "video-1",
+        sourceKind: InsightSourceKind.ShortContent);
+
+    Assert.Equal("video-1", item.EffectiveVideoId);
+  }
+
+  [Fact]
+  public async Task AnalyzeVideoCommentsAsync_preserves_fields_and_uses_selected_source_kind()
   {
     var service = new MockInsightAgentService();
     var topic = new InsightTopic(
@@ -46,16 +62,47 @@ public class ShortContentInsightTests
         videoTitle: "Match Recap",
         videoUrl: "https://www.youtube.com/watch?v=vid-1",
         channelName: "Test Channel",
-        comments: comments);
+        comments: comments,
+        sourceKind: InsightSourceKind.Content);
 
     Assert.NotEmpty(results);
     Assert.All(results, item =>
     {
-      Assert.Equal(InsightSourceKind.ShortContent, item.SourceKind);
+      Assert.Equal(InsightSourceKind.Content, item.SourceKind);
       Assert.Equal("YouTube", item.PlatformSource);
       Assert.Equal("vid-1", item.PostId);
+      Assert.Equal("vid-1", item.VideoId);
+      Assert.Equal("neutro", item.Sentiment);
+      Assert.Equal("You should cover the new holster rules", item.CommentExcerpt);
+      Assert.Equal(item.CommentExcerpt, item.AnalysisReason);
+      Assert.InRange(item.AIRelevanceScore, 0.65, 0.85);
       Assert.StartsWith("https://www.youtube.com/watch?v=vid-1", item.SourceUrl);
     });
+  }
+
+  [Fact]
+  public async Task AnalyzeVideoCommentsAsync_omitted_source_kind_defaults_to_short_content()
+  {
+    var service = new MockInsightAgentService();
+    var topic = new InsightTopic("Topic", "Description", Array.Empty<string>(), Array.Empty<string>()) { Id = "topic-1" };
+    var results = await service.AnalyzeVideoCommentsAsync(topic, "vid-1", "Title", "https://youtube.com/watch?v=vid-1", "Channel",
+      new[] { new VideoCommentDto { Text = "Idea", PublishedAt = DateTime.UtcNow } });
+
+    Assert.All(results, item => Assert.Equal(InsightSourceKind.ShortContent, item.SourceKind));
+  }
+
+  [Theory]
+  [InlineData(null, 0.5)]
+  [InlineData("0", 0)]
+  [InlineData("1.5", 1)]
+  [InlineData("-0.2", 0)]
+  [InlineData("\"invalid\"", 0.5)]
+  public void Relevance_score_is_fallback_or_clamped(string? jsonValue, double expected)
+  {
+    using var document = jsonValue == null ? null : JsonDocument.Parse(jsonValue);
+    var value = document?.RootElement;
+
+    Assert.Equal(expected, InsightAgentService.NormalizeRelevanceScore(value));
   }
 
   [Fact]

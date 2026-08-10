@@ -43,7 +43,13 @@ public class InsightNewsItemContract
     public string PostId { get; set; } = string.Empty;
 
     [DataMember]
+    public string VideoId { get; set; } = string.Empty;
+
+    [DataMember]
     public string AnalysisReason { get; set; } = string.Empty;
+
+    [DataMember]
+    public string ReviewReason { get; set; } = string.Empty;
 
     [DataMember]
     public InsightSourceKind SourceKind { get; set; }

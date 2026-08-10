@@ -7,6 +7,7 @@ namespace MorWalPiz.VideoImporter.Models
     public string ApiEndpoint { get; set; }= string.Empty; // Endpoint API predefinito
     public string? ApiKey { get; set; }// Chiave API predefinita
     public string ApplicationName { get; set; } = string.Empty;
+    public string ChannelId { get; set; } = string.Empty;
 
     // Multi-tenant support
     public int TenantId { get; set; }

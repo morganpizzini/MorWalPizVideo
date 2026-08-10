@@ -47,7 +47,9 @@ export interface InsightNewsItem {
   creationDateTime: string;
   platformSource: string;
   postId: string;
+  videoId: string;
   analysisReason: string;
+  reviewReason: string;
   sourceKind: InsightSourceKind;
   commentExcerpt: string;
   sentiment: string;
@@ -83,6 +85,7 @@ export interface UpdateInsightTopicRequest {
 export interface ReviewNewsItemRequest {
   status?: InsightNewsStatus;
   starRating?: number;
+  reason?: string;
 }
 
 export interface GenerateContentPlanRequest {
@@ -106,6 +109,7 @@ export enum InsightCommentSourceType {
 
 export interface AnalyzeInsightCommentsRequest {
   sourceType: InsightCommentSourceType;
+  sourceKind?: InsightSourceKind;
   channelId?: string;
   videoId?: string;
   commentsNumber: number;

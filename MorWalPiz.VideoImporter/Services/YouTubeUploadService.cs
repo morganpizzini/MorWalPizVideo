@@ -363,6 +363,21 @@ namespace MorWalPiz.VideoImporter.Services
                         }
                         else
                         {
+                            try
+                            {
+                                if (string.IsNullOrWhiteSpace(result.YouTubeId))
+                                {
+                                    throw new InvalidOperationException("ID YouTube non restituito dopo il caricamento del video");
+                                }
+
+                                await UploadThumbnailAsync(video, result.YouTubeId, operationKey, cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                result.WarningMessage = AppendWarning(result.WarningMessage,
+                                    $"Video caricato con successo ma errore nel caricamento della miniatura: {ex.Message}");
+                            }
+
                             // Report progress: processing translations
                             progressCallback?.Invoke(new UploadProgressInfo
                             {
@@ -419,7 +434,8 @@ namespace MorWalPiz.VideoImporter.Services
                                 // Log dell'errore ma senza interrompere il flusso principale
                                 Console.WriteLine($"Errore nell'aggiornamento delle traduzioni: {ex.Message}");
                                 // Imposta un warning nel risultato ma mantieni il successo dell'upload
-                                result.WarningMessage = $"Video caricato con successo ma errore nell'aggiornamento delle traduzioni: {ex.Message}";
+                                result.WarningMessage = AppendWarning(result.WarningMessage,
+                                    $"Video caricato con successo ma errore nell'aggiornamento delle traduzioni: {ex.Message}");
 
                                 progressCallback?.Invoke(new UploadProgressInfo
                                 {
@@ -534,6 +550,58 @@ namespace MorWalPiz.VideoImporter.Services
                 // Log error to console but don't interrupt the upload process
                 Console.WriteLine($"Errore durante il logging API: {ex.Message}");
             }
+        }
+
+        private async Task UploadThumbnailAsync(VideoFile video, string youtubeVideoId, string operationKey, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(video.ThumbnailFilePath))
+            {
+                throw new FileNotFoundException("Miniatura locale non configurata");
+            }
+
+            if (!File.Exists(video.ThumbnailFilePath))
+            {
+                throw new FileNotFoundException("Il file della miniatura non esiste", video.ThumbnailFilePath);
+            }
+
+            var mimeType = GetImageMimeType(video.ThumbnailFilePath);
+            using var thumbnailStream = new FileStream(video.ThumbnailFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var thumbnailRequest = _youtubeService.Thumbnails.Set(youtubeVideoId, thumbnailStream, mimeType);
+
+            LogApiCall("ThumbnailSet", video.FileName,
+                new { VideoId = youtubeVideoId, ThumbnailFilePath = video.ThumbnailFilePath, MimeType = mimeType },
+                null, "About to upload video thumbnail to YouTube");
+
+            var uploadResponse = await _operationExecutor.ExecuteAsync(
+                $"thumbnail:{operationKey}",
+                uploadCancellationToken => thumbnailRequest.UploadAsync(uploadCancellationToken),
+                cancellationToken);
+
+            if (uploadResponse.Status != UploadStatus.Completed)
+            {
+                throw uploadResponse.Exception ?? new InvalidOperationException("Caricamento miniatura fallito");
+            }
+
+            LogApiCall("ThumbnailSet", video.FileName, null,
+                new { Success = true, VideoId = youtubeVideoId, UploadStatus = uploadResponse.Status.ToString() },
+                "Video thumbnail upload completed");
+        }
+
+        private static string GetImageMimeType(string filePath)
+        {
+            return Path.GetExtension(filePath).ToLowerInvariant() switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _ => throw new InvalidDataException("La miniatura deve essere un file JPG, JPEG o PNG")
+            };
+        }
+
+        private static string AppendWarning(string existingWarning, string warning)
+        {
+            return string.IsNullOrWhiteSpace(existingWarning)
+                ? warning
+                : $"{existingWarning}\n{warning}";
         }
 
         /// <summary>

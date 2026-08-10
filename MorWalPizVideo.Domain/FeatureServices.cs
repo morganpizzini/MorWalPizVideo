@@ -531,6 +531,7 @@ public interface IInsightsService
     Task<IList<InsightNewsItem>> GetNewsItemsByTopicIdAsync(string topicId, string? channelId = null);
     Task<InsightNewsItem?> GetNewsItemByIdAsync(string id, string? channelId = null);
     Task SaveNewsItemAsync(InsightNewsItem item, string? channelId = null);
+    Task<InsightNewsItem> UpsertYouTubeInsightAsync(InsightNewsItem item, string? channelId = null);
     Task UpdateNewsItemAsync(InsightNewsItem item, string? channelId = null);
     Task DeleteNewsItemAsync(string id, string? channelId = null);
     Task<bool> NewsItemExistsBySourceUrlAsync(string sourceUrl, string? channelId = null);
@@ -613,6 +614,33 @@ public sealed class InsightsService(
         }
 
         await insightNewsItemRepository.AddItemAsync(item);
+    }
+
+    public async Task<InsightNewsItem> UpsertYouTubeInsightAsync(InsightNewsItem item, string? channelId = null)
+    {
+        item = channelId == null ? item : item with { ChannelId = channelId };
+        var existing = await insightNewsItemRepository.GetItemsAsync(x =>
+            x.TopicId == item.TopicId &&
+            x.ChannelId == item.ChannelId &&
+            x.EffectiveVideoId == item.EffectiveVideoId &&
+            x.SourceUrl.ToLower() == item.SourceUrl.ToLower());
+
+        var current = existing.FirstOrDefault();
+        if (current == null)
+        {
+            await insightNewsItemRepository.AddItemAsync(item);
+            return item;
+        }
+
+        var refreshed = item with
+        {
+            Id = current.Id,
+            Status = current.Status,
+            StarRating = current.StarRating,
+            ReviewReason = current.ReviewReason
+        };
+        await insightNewsItemRepository.UpdateItemAsync(refreshed);
+        return refreshed;
     }
 
     public async Task UpdateNewsItemAsync(InsightNewsItem item, string? channelId = null)

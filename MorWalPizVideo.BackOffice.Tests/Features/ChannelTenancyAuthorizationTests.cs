@@ -10,6 +10,7 @@ using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using Xunit;
+using MorWalPiz.Contracts.Contracts;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
