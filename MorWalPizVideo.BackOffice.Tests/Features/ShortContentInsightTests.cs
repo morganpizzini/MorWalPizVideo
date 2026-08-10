@@ -3,6 +3,8 @@ using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Contracts;
 using MorWalPizVideo.Server.Services;
+using MorWalPiz.Contracts.Contracts;
+using ContractsContractUtils = MorWalPiz.Contracts.ContractUtils;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using System.Text.Json;
@@ -131,6 +133,9 @@ public class ShortContentInsightTests
       Assert.Equal("vid-1", item.VideoId);
       Assert.Equal("neutro", item.Sentiment);
       Assert.Equal("You should cover the new holster rules", item.CommentExcerpt);
+      Assert.Single(item.SourceComments);
+      Assert.Equal("You should cover the new holster rules", item.SourceComments[0].FullText);
+      Assert.Equal(item.CommentExcerpt, item.SourceComments[0].HighlightText);
       Assert.Equal(item.CommentExcerpt, item.AnalysisReason);
       Assert.InRange(item.AIRelevanceScore, 0.65, 0.85);
       Assert.StartsWith("https://www.youtube.com/watch?v=vid-1", item.SourceUrl);
@@ -204,5 +209,46 @@ public class ShortContentInsightTests
     var function = KernelFunctionFactory.CreateFromPrompt(prompt);
 
     Assert.NotNull(function);
+  }
+
+  [Fact]
+  public void Condensation_prompt_requires_distinct_actionable_scopes()
+  {
+    var topic = new InsightTopic("Topic", "Description", Array.Empty<string>(), Array.Empty<string>());
+    var candidates = new[]
+    {
+      new InsightNewsItem("topic-1", "Gun comparison", "Compare models", "https://youtube.com/watch?v=one", "YouTube", sourceKind: InsightSourceKind.ShortContent),
+      new InsightNewsItem("topic-1", "Beretta customization", "Test modifications", "https://youtube.com/watch?v=two", "YouTube", sourceKind: InsightSourceKind.ShortContent)
+    };
+
+    var prompt = InsightAgentService.BuildCondensationPrompt(topic, candidates);
+
+    Assert.Contains("Keep distinct ideas separate", prompt);
+    Assert.Contains("distinct scopes", prompt);
+    Assert.Contains("Gun comparison", prompt);
+    Assert.Contains("Beretta customization", prompt);
+  }
+
+  [Fact]
+  public void Insight_news_contract_round_trips_all_source_comment_fields()
+  {
+    var sourceComment = new InsightSourceComment
+    {
+      FullText = "Full comment text",
+      HighlightText = "comment text",
+      Author = "viewer",
+      PublishedAt = DateTime.UtcNow
+    };
+    var item = new InsightNewsItem("topic-1", "Idea", "Summary", "https://youtube.com/watch?v=one", "YouTube",
+      sourceKind: InsightSourceKind.ShortContent, sourceComments: new[] { sourceComment }) { Id = "item-1" };
+
+    var contract = ContractsContractUtils.Convert(item);
+    var roundTripped = JsonSerializer.Deserialize<InsightNewsItemContract>(JsonSerializer.Serialize(contract));
+
+    Assert.NotNull(roundTripped);
+    var persistedComment = Assert.Single(roundTripped!.SourceComments);
+    Assert.Equal(sourceComment.FullText, persistedComment.FullText);
+    Assert.Equal(sourceComment.HighlightText, persistedComment.HighlightText);
+    Assert.Equal(sourceComment.Author, persistedComment.Author);
   }
 }

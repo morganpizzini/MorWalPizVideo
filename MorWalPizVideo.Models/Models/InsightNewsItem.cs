@@ -76,7 +76,8 @@ namespace MorWalPizVideo.Server.Models
             string? reviewReason = null,
             InsightSourceKind sourceKind = InsightSourceKind.Content,
             string? commentExcerpt = null,
-            string? sentiment = null)
+            string? sentiment = null,
+            IReadOnlyList<InsightSourceComment>? sourceComments = null)
         {
             TopicId = topicId;
             Title = title;
@@ -95,6 +96,7 @@ namespace MorWalPizVideo.Server.Models
             SourceKind = sourceKind;
             CommentExcerpt = commentExcerpt ?? string.Empty;
             Sentiment = sentiment ?? string.Empty;
+            SourceComments = sourceComments?.ToArray() ?? [];
         }
 
         /// <summary>
@@ -213,6 +215,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("sentiment")]
         public string Sentiment { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("sourceComments")]
+        public IReadOnlyList<InsightSourceComment> SourceComments { get; init; } = [];
 
         [DataMember]
         [BsonElement("channelId")]

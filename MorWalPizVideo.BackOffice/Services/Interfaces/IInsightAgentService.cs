@@ -53,6 +53,8 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces
             IList<VideoCommentDto> comments,
             InsightSourceKind sourceKind = InsightSourceKind.ShortContent,
             string description = "");
+
+        Task<IList<InsightNewsItem>> CondenseCommentNewsAsync(InsightTopic topic, IList<InsightNewsItem> candidates);
     }
 
     /// <summary>

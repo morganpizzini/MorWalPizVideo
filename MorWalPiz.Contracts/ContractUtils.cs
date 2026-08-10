@@ -73,6 +73,7 @@ namespace MorWalPiz.Contracts
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
                 Mine = entity.Mine,
+                ShortLinkUrl = entity.ShortLinkUrl,
                 Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {
                     Provider = s.Provider,
@@ -195,7 +196,8 @@ namespace MorWalPiz.Contracts
                 SourceKind = entity.SourceKind,
                 CommentExcerpt = entity.CommentExcerpt,
                 Sentiment = entity.Sentiment,
-                ChannelId = entity.ChannelId
+                ChannelId = entity.ChannelId,
+                SourceComments = entity.SourceComments
             };
         }
         public static InsightContentPlanContract Convert(InsightContentPlan entity)

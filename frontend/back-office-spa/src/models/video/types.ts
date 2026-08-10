@@ -61,6 +61,7 @@ export interface Match {
   videos?: Video[];
   creationDateTime?: string;
   shortLinks?: ShortLink[];
+  ownerChannelId?: string;
   creatorUserId: string;
 }
 

@@ -14,6 +14,7 @@ export type Channel = Readonly<{
   /** YouTube channel identifier */
   yTChannelId: string;
   mine: boolean;
+  shortLinkUrl?: string;
   socials?: readonly ChannelSocial[];
   videos?: readonly ChannelVideo[];
 }>;

@@ -15,9 +15,9 @@ import type {
 
 const BASE_URL = '/api/insights';
 
-function requireSuccessfulResponse<T>(response: T): T {
+export function requireSuccessfulResponse<T>(response: T): T {
   const payload = response as T & { errors?: unknown[]; status?: number };
-  if (payload && Array.isArray(payload.errors)) {
+  if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) {
     const message = payload.errors
       .map(error => typeof error === 'string' ? error : JSON.stringify(error))
       .join(', ') || 'The insights request failed.';

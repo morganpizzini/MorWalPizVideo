@@ -2,7 +2,8 @@ import React from 'react';
 import { useLoaderData } from 'react-router';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, ContentType } from '@morwalpizvideo/models';
+import { Match, ContentType, Channel } from '@morwalpizvideo/models';
+import { composeShortLinkUrl } from '@components/VideoList';
 
 
 interface Category {
@@ -12,11 +13,13 @@ interface Category {
 
 interface LoaderData {
   match: Match;
+  channels: Channel[];
   categories: Category[];
 }
 
 const Component: React.FC = () => {
-  const { match } = useLoaderData() as LoaderData;
+  const { match, channels } = useLoaderData() as LoaderData;
+  const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
 
   return (
     <>
@@ -128,6 +131,15 @@ const Component: React.FC = () => {
                         <div className="flex-grow-1">
                           <div><strong>YouTube ID:</strong></div>
                           <code className="text-primary">{videoRef.youtubeId}</code>
+                          {(() => {
+                            const shortLinkUrl = composeShortLinkUrl(channel?.shortLinkUrl, match.shortLinks?.find(link => link.target === videoRef.youtubeId)?.code);
+                            return shortLinkUrl ? (
+                              <div className="mt-1 d-flex align-items-center gap-2">
+                                <a href={shortLinkUrl} target="_blank" rel="noopener noreferrer" className="text-truncate">{shortLinkUrl}</a>
+                                <Button size="sm" variant="outline-secondary" onClick={() => void navigator.clipboard.writeText(shortLinkUrl)}>Copy short link</Button>
+                              </div>
+                            ) : null;
+                          })()}
                           <div className="mt-1 d-flex gap-1 flex-wrap">
                             {videoRef.categories && videoRef.categories.length > 0 ? (
                               videoRef.categories.map((cat, catIdx) => (

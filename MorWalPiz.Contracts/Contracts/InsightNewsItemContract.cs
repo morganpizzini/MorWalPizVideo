@@ -62,4 +62,7 @@ public class InsightNewsItemContract
 
     [DataMember]
     public string ChannelId { get; set; } = string.Empty;
+
+    [DataMember]
+    public IReadOnlyList<InsightSourceComment> SourceComments { get; set; } = [];
 }

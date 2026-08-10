@@ -328,13 +328,78 @@ Respond as JSON with:
                     analysisReason: idea.CommentExcerpt,
                     sourceKind: sourceKind,
                     commentExcerpt: idea.CommentExcerpt,
-                    sentiment: idea.Sentiment)
+                    sentiment: idea.Sentiment,
+                    sourceComments: idea.CommentIndex > 0 && idea.CommentIndex <= comments.Count
+                        ? new[] { new InsightSourceComment
+                        {
+                            FullText = comments[idea.CommentIndex - 1].Text,
+                            HighlightText = idea.CommentExcerpt,
+                            Author = comments[idea.CommentIndex - 1].Author,
+                            PublishedAt = comments[idea.CommentIndex - 1].PublishedAt
+                        } }
+                        : [])
                 {
                     Id = ObjectId.GenerateNewId().ToString()
                 });
             }
 
             return newsItems;
+        }
+
+        public async Task<IList<InsightNewsItem>> CondenseCommentNewsAsync(InsightTopic topic, IList<InsightNewsItem> candidates)
+        {
+            if (candidates.Count < 2)
+                return candidates;
+
+            var prompt = BuildCondensationPrompt(topic, candidates);
+
+#pragma warning disable SKEXP0010
+            var executionSettings = new AzureOpenAIPromptExecutionSettings { ResponseFormat = typeof(CommentNewsCondensationResponse) };
+#pragma warning restore SKEXP0010
+            var result = await _kernel.InvokePromptAsync(PrettifyString(prompt), new KernelArguments(executionSettings));
+            var response = JsonSerializer.Deserialize<CommentNewsCondensationResponse>(result.ToString(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (response?.Groups == null || response.Groups.Count == 0)
+                return candidates;
+
+            var condensed = new List<InsightNewsItem>();
+            var assignedIndexes = new HashSet<int>();
+            foreach (var group in response.Groups)
+            {
+                var members = group.CandidateIndexes.Distinct().Where(index => index >= 0 && index < candidates.Count).Select(index => candidates[index]).ToList();
+                if (members.Count == 0) continue;
+                foreach (var index in group.CandidateIndexes.Where(index => index >= 0 && index < candidates.Count))
+                    assignedIndexes.Add(index);
+                var first = members[0];
+                condensed.Add(first with
+                {
+                    Title = string.IsNullOrWhiteSpace(group.Title) ? first.Title : group.Title,
+                    Summary = string.IsNullOrWhiteSpace(group.Summary) ? first.Summary : group.Summary,
+                    AIRelevanceScore = NormalizeRelevanceScore(group.RelevanceScore),
+                    SourceComments = members.SelectMany(item => item.SourceComments).ToList()
+                });
+            }
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                if (!assignedIndexes.Contains(index))
+                    condensed.Add(candidates[index]);
+            }
+            return condensed.Count == 0 ? candidates : condensed;
+        }
+
+        internal static string BuildCondensationPrompt(InsightTopic topic, IList<InsightNewsItem> candidates)
+        {
+            var candidateBlock = string.Join("\n\n", candidates.Select((item, index) =>
+                $"[{index}] Idea: {item.Title}\nSummary: {item.Summary}\nSource comments: {string.Join(" | ", item.SourceComments.Select(comment => comment.FullText))}"));
+            return $"""
+                You are consolidating YouTube comment-derived content ideas for topic '{topic.Title}'.
+                Merge candidates only when they describe the same actionable scope. Keep distinct ideas separate.
+                A gun comparison and Beretta customization/testing are distinct scopes and must never merge merely because both match the topic.
+                Return JSON with groups. Each group must contain candidateIndexes, title, summary, and relevanceScore.
+                Every candidate index must appear exactly once.
+
+                CANDIDATES:
+                {candidateBlock}
+                """;
         }
 
         internal static string BuildCommentsPrompt(
@@ -383,7 +448,7 @@ Il relevanceScore deve essere sempre compreso tra 0 e 1. Se nessun commento cont
                 .Replace('\r', '\n')
                 .Trim();
 
-            return normalized.Length <= 2000 ? normalized : normalized[..2000];
+            return normalized.Length <= 4000 ? normalized : normalized[..4000];
         }
 
         internal static double NormalizeRelevanceScore(JsonElement? value)
@@ -463,6 +528,19 @@ Il relevanceScore deve essere sempre compreso tra 0 e 1. Se nessun commento cont
             public string Sentiment { get; set; } = "neutro";
             public string Idea { get; set; } = string.Empty;
             public string CommentExcerpt { get; set; } = string.Empty;
+            public JsonElement? RelevanceScore { get; set; }
+        }
+
+        private class CommentNewsCondensationResponse
+        {
+            public List<CommentNewsCondensationGroup> Groups { get; set; } = new();
+        }
+
+        private class CommentNewsCondensationGroup
+        {
+            public List<int> CandidateIndexes { get; set; } = new();
+            public string Title { get; set; } = string.Empty;
+            public string Summary { get; set; } = string.Empty;
             public JsonElement? RelevanceScore { get; set; }
         }
     }
@@ -687,7 +765,14 @@ This is a mock outline. In production, this would be generated by AI based on ac
                     analysisReason: comment.Text,
                     sourceKind: sourceKind,
                     commentExcerpt: comment.Text,
-                    sentiment: "neutro")
+                    sentiment: "neutro",
+                    sourceComments: new[] { new InsightSourceComment
+                    {
+                        FullText = comment.Text,
+                        HighlightText = comment.Text,
+                        Author = comment.Author,
+                        PublishedAt = comment.PublishedAt
+                    } })
                 {
                     Id = ObjectId.GenerateNewId().ToString()
                 });
@@ -695,5 +780,8 @@ This is a mock outline. In production, this would be generated by AI based on ac
 
             return Task.FromResult<IList<InsightNewsItem>>(newsItems);
         }
+
+        public Task<IList<InsightNewsItem>> CondenseCommentNewsAsync(InsightTopic topic, IList<InsightNewsItem> candidates) =>
+            Task.FromResult(candidates);
     }
 }

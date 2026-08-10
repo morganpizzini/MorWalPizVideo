@@ -139,6 +139,7 @@ namespace MorWalPizVideo.BackOffice.Services
       var channelComments = await _ytService.GetChannelComments(channel.ChannelId, videoCount, commentCount, showVideo: true);
       var processedVideos = channel.Videos?.ToList() ?? new List<YouTubeVideo>();
       var videoMetadata = await FetchVideoMetadataAsync(channelComments.Videos.Select(video => video.VideoId));
+      var candidates = new List<InsightNewsItem>();
 
       foreach (var videoWithComments in channelComments.Videos)
       {
@@ -165,11 +166,7 @@ namespace MorWalPizVideo.BackOffice.Services
               InsightSourceKind.ShortContent,
               videoMetadata.GetValueOrDefault(videoWithComments.VideoId)?.Description ?? string.Empty);
 
-          foreach (var newsItem in newsItems)
-          {
-            var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(newsItem, channelId ?? topic.ChannelId);
-            response.CreatedNewsItemIds.Add(persistedItem.Id);
-          }
+          candidates.AddRange(newsItems);
 
           response.VideosProcessed++;
 
@@ -192,6 +189,13 @@ namespace MorWalPizVideo.BackOffice.Services
           // Leave this video's cursor untouched so its unanalyzed comments are retried on the next scan.
           response.Errors.Add($"{videoWithComments.VideoId}: {ex.Message}");
         }
+      }
+
+      var condensedCandidates = await _insightAgentService.CondenseCommentNewsAsync(topic, candidates);
+      foreach (var item in condensedCandidates.OrderByDescending(item => item.AIRelevanceScore))
+      {
+        var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(item, channelId ?? topic.ChannelId);
+        response.CreatedNewsItemIds.Add(persistedItem.Id);
       }
 
       await _insightsService.UpdateChannelAsync(channel with { Videos = processedVideos });
@@ -235,18 +239,21 @@ namespace MorWalPizVideo.BackOffice.Services
         videos.Add((request.VideoId, title, channel?.ChannelName ?? "YouTube", video?.Description ?? string.Empty, mappedComments));
       }
 
+      var candidates = new List<InsightNewsItem>();
       foreach (var video in videos)
       {
         if (video.Comments.Count == 0) continue;
         response.CommentsAnalyzed += video.Comments.Count;
         var items = await _insightAgentService.AnalyzeVideoCommentsAsync(topic, video.Id, video.Title,
           $"https://www.youtube.com/watch?v={video.Id}", video.ChannelName, video.Comments, sourceKind, video.Description);
-        foreach (var item in items)
-        {
-          var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(item, selectedChannelId);
-          response.CreatedNewsItemIds.Add(persistedItem.Id);
-        }
+        candidates.AddRange(items);
         response.VideosProcessed++;
+      }
+      var condensedCandidates = await _insightAgentService.CondenseCommentNewsAsync(topic, candidates);
+      foreach (var item in condensedCandidates.OrderByDescending(item => item.AIRelevanceScore))
+      {
+        var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(item, selectedChannelId);
+        response.CreatedNewsItemIds.Add(persistedItem.Id);
       }
       return response;
     }

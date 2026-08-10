@@ -8,7 +8,7 @@ import { authService } from '../../../services/authService';
 import { hasPermission, permissions } from '../../../authorization/permissions';
 
 const Component: React.FC = () => {
-  const { matches } = useLoaderData() as { matches: Match[] };
+  const { matches, channels } = useLoaderData() as { matches: Match[]; channels: import('@morwalpizvideo/models').Channel[] };
   const effectivePermissions = authService.getPermissions();
   const canImport = hasPermission(effectivePermissions, [permissions.videos.import, permissions.videos.manage]);
   const canTranslate = hasPermission(effectivePermissions, [permissions.videos.translate, permissions.videos.manage]);
@@ -31,7 +31,7 @@ const Component: React.FC = () => {
         </div>
       </div>
 
-      <VideoList matches={matches} />
+      <VideoList matches={matches} channels={channels} />
     </>
   );
 };

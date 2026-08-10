@@ -23,6 +23,9 @@ public class ChannelContract
     public bool Mine { get; set; }
 
     [DataMember]
+    public string ShortLinkUrl { get; set; } = string.Empty;
+
+    [DataMember]
     public List<ChannelSocialContract> Socials { get; set; } = [];
 
     [DataMember]

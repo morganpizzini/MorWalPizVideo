@@ -12,6 +12,28 @@ interface LoaderData {
   contentPlans: InsightContentPlan[];
 }
 
+export const COMMENT_PREVIEW_LENGTH = 200;
+
+export function getCommentPreview(text: string, expanded: boolean): string {
+  return expanded ? text : text.slice(0, COMMENT_PREVIEW_LENGTH);
+}
+
+export function getCommentTextParts(fullText: string, highlightText: string, expanded: boolean): [string, string, string] | undefined {
+  if (!expanded || !highlightText) return undefined;
+  const highlightStart = fullText.indexOf(highlightText);
+  return highlightStart >= 0
+    ? [fullText.slice(0, highlightStart), highlightText, fullText.slice(highlightStart + highlightText.length)]
+    : undefined;
+}
+
+export function orderInsightNewsItems(newsItems: InsightNewsItem[]): InsightNewsItem[] {
+  const statusPriority = (status: InsightNewsStatus) => status === InsightNewsStatus.Accepted ? 0 : status === InsightNewsStatus.Pending || status === InsightNewsStatus.AutoDetected ? 1 : 2;
+  return [...newsItems].sort((left, right) =>
+    statusPriority(left.status) - statusPriority(right.status) ||
+    right.aiRelevanceScore - left.aiRelevanceScore ||
+    new Date(right.discoveredAt).getTime() - new Date(left.discoveredAt).getTime());
+}
+
 const InsightTopicDetail: React.FC = () => {
   const { topic, newsItems, contentPlans } = useLoaderData<LoaderData>();
   const [scanning, setScanning] = useState(false);
@@ -24,8 +46,21 @@ const InsightTopicDetail: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
 
-  const acceptedNews = newsItems.filter(item => item.status === InsightNewsStatus.Accepted);
+  const orderedNewsItems = orderInsightNewsItems(newsItems);
+  const acceptedNews = orderedNewsItems.filter(item => item.status === InsightNewsStatus.Accepted);
   const availablePlatforms = ['YouTube', 'Instagram', 'TikTok', 'Newsletter'];
+
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const renderSourceComment = (item: InsightNewsItem) => item.sourceComments?.map((comment, index) => {
+    const expanded = expandedComments[`${item.id}-${index}`];
+    const visibleText = getCommentPreview(comment.fullText, expanded);
+    const textParts = getCommentTextParts(comment.fullText, comment.highlightText, expanded);
+    return <div key={`${item.id}-comment-${index}`} className="mb-2">
+      <small className="text-muted">{comment.author}</small>
+      <div>{textParts ? <>{textParts[0]}<strong>{textParts[1]}</strong>{textParts[2]}</> : visibleText}{!expanded && comment.fullText.length > COMMENT_PREVIEW_LENGTH ? '...' : null}</div>
+      {comment.fullText.length > 200 ? <Button variant="link" size="sm" className="p-0" onClick={() => setExpandedComments(current => ({ ...current, [`${item.id}-${index}`]: !expanded }))}>{expanded ? 'Show less' : 'Show more'}</Button> : null}
+    </div>;
+  });
 
   const generateContentPlan = async () => {
     if (selectedNewsIds.length === 0 || targetPlatforms.length === 0) return;
@@ -180,7 +215,7 @@ const InsightTopicDetail: React.FC = () => {
               </Card.Body></Card>}
               {newsItems.length > 0 ? (
                 <div className="d-flex flex-column gap-3">
-                  {newsItems.map(item => (
+                  {orderedNewsItems.map(item => (
                     <Card key={item.id} className="border">
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-start mb-2">
@@ -194,6 +229,7 @@ const InsightTopicDetail: React.FC = () => {
                           {getStatusBadge(item.status)}
                         </div>
                         <p className="mb-2">{item.summary}</p>
+                        {item.sourceComments?.length ? <div className="mb-2"><small className="text-muted">Source comments</small>{renderSourceComment(item)}</div> : null}
                         <div className="d-flex justify-content-between align-items-center">
                           <div>
                             <small className="text-muted">

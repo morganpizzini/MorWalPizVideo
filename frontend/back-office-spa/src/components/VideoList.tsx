@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import { useRevalidator, Link } from 'react-router';
 import { Match } from '../models/video/types';
+import type { Channel } from '@morwalpizvideo/models';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
 import { ComposeUrl, Delete, endpoints } from '@morwalpizvideo/services';
 import { authService } from '../services/authService';
@@ -9,6 +10,7 @@ import { hasPermission, permissions } from '../authorization/permissions';
 
 interface VideoListProps {
   matches: Match[];
+  channels: Channel[];
 }
 
 interface ExpandedState {
@@ -19,7 +21,12 @@ interface RefreshingState {
   [key: string]: boolean;
 }
 
-const VideoList: React.FC<VideoListProps> = ({ matches }) => {
+export function composeShortLinkUrl(baseUrl: string | undefined, code: string | undefined): string | undefined {
+  if (!baseUrl || !code) return undefined;
+  return `${baseUrl.replace(/\/+$/, '')}/${code.replace(/^\/+/, '')}`;
+}
+
+const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
   const revalidator = useRevalidator();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,12 +212,11 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                     <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>
                   </td>
                   <td>
-                    <Dropdown>
+                    <Dropdown data-bs-boundary="window">
                       <Dropdown.Toggle variant="outline-primary" size="sm" id={`dropdown-${match.id}`}>
                         Actions
                       </Dropdown.Toggle>
-
-                      <Dropdown.Menu>
+                      <Dropdown.Menu renderOnMount popperConfig={{ strategy: 'fixed' }}>
                         <Dropdown.Item onClick={() => handleView(match.id)}>
                           View
                         </Dropdown.Item>
@@ -239,6 +245,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                     const videoShortLink = match.shortLinks?.find(
                       sl => sl.target === videoRef.youtubeId
                     );
+                    const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
+                    const shortLinkUrl = composeShortLinkUrl(channel?.shortLinkUrl, videoShortLink?.code);
 
                     return (
                       <tr key={`${match.id}-${videoRef.youtubeId}`} className="table-light">
@@ -268,10 +276,10 @@ const VideoList: React.FC<VideoListProps> = ({ matches }) => {
                           <div className="d-flex align-items-center gap-2">
                             {videoShortLink ? (
                               <>
-                                <Badge bg="success" className="d-flex align-items-center gap-1">
-                                  <i className="bi bi-link-45deg"></i>
-                                  {videoShortLink.code}
-                                </Badge>
+                                {shortLinkUrl ? <>
+                                  <a href={shortLinkUrl} target="_blank" rel="noopener noreferrer" className="text-truncate" style={{ maxWidth: '180px' }}>{shortLinkUrl}</a>
+                                  <Button size="sm" variant="outline-secondary" onClick={() => void navigator.clipboard.writeText(shortLinkUrl)} title="Copy short link">Copy</Button>
+                                </> : <Badge bg="success">{videoShortLink.code}</Badge>}
                                 <Link
                                   to={`/shortlinks/${videoShortLink.code}/edit?videoId=${videoRef.youtubeId}`}
                                   className="btn btn-sm btn-outline-primary"

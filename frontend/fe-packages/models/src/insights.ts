@@ -66,6 +66,14 @@ export interface InsightNewsItem {
   sourceKind: InsightSourceKind;
   commentExcerpt: string;
   sentiment: string;
+  sourceComments?: InsightSourceComment[];
+}
+
+export interface InsightSourceComment {
+  fullText: string;
+  highlightText: string;
+  author: string;
+  publishedAt: string;
 }
 
 export interface InsightContentPlan {
