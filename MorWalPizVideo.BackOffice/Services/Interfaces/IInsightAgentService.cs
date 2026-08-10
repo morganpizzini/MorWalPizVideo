@@ -51,7 +51,8 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces
             string videoUrl,
             string channelName,
             IList<VideoCommentDto> comments,
-            InsightSourceKind sourceKind = InsightSourceKind.ShortContent);
+            InsightSourceKind sourceKind = InsightSourceKind.ShortContent,
+            string description = "");
     }
 
     /// <summary>

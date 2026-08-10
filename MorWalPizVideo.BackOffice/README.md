@@ -237,6 +237,8 @@ Admin CRUD for product categories.
 
 Comment analysis accepts an optional `sourceKind` describing the analyzed video, not the generated insight: `Content` is for long-form or context-heavy videos and `ShortContent` is for short-form videos. Legacy requests that omit it resolve to `ShortContent`; the dedicated short-content scan always uses `ShortContent`. AI comment affinity scores are stored in `AIRelevanceScore`, normalized to `[0,1]`; missing, invalid, or non-finite values fall back to `0.5`, while numeric values outside the range are clamped.
 
+AI comment analysis also receives the YouTube video title and description as transient context alongside the topic, seed arguments, source kind, and comments. The description is limited to 4,000 characters for the prompt, is never persisted or returned by the insights API, and an empty description is used when metadata retrieval fails so analysis can continue.
+
 #### `ChatController` — `api/chat` *(API key)*
 AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF importer.
 | Verb | Route | Purpose |

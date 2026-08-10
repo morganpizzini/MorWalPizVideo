@@ -121,4 +121,31 @@ public class ShortContentInsightTests
 
     Assert.NotNull(function);
   }
+
+  [Fact]
+  public void Comments_prompt_includes_bounded_transient_video_description_context()
+  {
+    var topic = new InsightTopic("Topic", "Description", new[] { "IPSC" }, Array.Empty<string>());
+    var description = new string('x', 4_100);
+
+    var prompt = InsightAgentService.BuildCommentsPrompt(
+        topic, "Match recap", "IPSC", "[1] Commento: idea", description, InsightSourceKind.Content);
+
+    Assert.Contains("Descrizione video (contesto transitorio, non persistente):", prompt);
+    Assert.Contains("Source kind: Content", prompt);
+    Assert.Contains(new string('x', 4_000), prompt);
+    Assert.DoesNotContain(new string('x', 4_001), prompt);
+  }
+
+  [Fact]
+  public void Empty_video_description_keeps_comments_prompt_valid()
+  {
+    var topic = new InsightTopic("Topic", "Description", Array.Empty<string>(), Array.Empty<string>());
+
+    var prompt = InsightAgentService.BuildCommentsPrompt(topic, "Title", "", "comments", "");
+
+    var function = KernelFunctionFactory.CreateFromPrompt(prompt);
+
+    Assert.NotNull(function);
+  }
 }

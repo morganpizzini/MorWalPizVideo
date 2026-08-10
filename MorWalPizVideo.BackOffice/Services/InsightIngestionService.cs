@@ -138,6 +138,7 @@ namespace MorWalPizVideo.BackOffice.Services
 
       var channelComments = await _ytService.GetChannelComments(channel.ChannelId, videoCount, commentCount, showVideo: true);
       var processedVideos = channel.Videos?.ToList() ?? new List<YouTubeVideo>();
+      var videoMetadata = await FetchVideoMetadataAsync(channelComments.Videos.Select(video => video.VideoId));
 
       foreach (var videoWithComments in channelComments.Videos)
       {
@@ -160,7 +161,8 @@ namespace MorWalPizVideo.BackOffice.Services
         {
           var newsItems = await _insightAgentService.AnalyzeVideoCommentsAsync(
               topic, videoWithComments.VideoId, videoWithComments.Title, videoUrl, channel.ChannelName, newComments,
-              InsightSourceKind.ShortContent);
+              InsightSourceKind.ShortContent,
+              videoMetadata.GetValueOrDefault(videoWithComments.VideoId)?.Description ?? string.Empty);
 
           foreach (var newsItem in newsItems)
           {
@@ -201,14 +203,16 @@ namespace MorWalPizVideo.BackOffice.Services
       var response = new ScanShortContentResponseDto();
       var sourceKind = request.SourceKind ?? InsightSourceKind.ShortContent;
       var commentCount = request.CommentsNumber > 0 ? Math.Min(request.CommentsNumber, MaxCommentsPerVideo) : DefaultCommentsPerVideo;
-      var videos = new List<(string Id, string Title, string ChannelName, IList<VideoCommentDto> Comments)>();
+      var videos = new List<(string Id, string Title, string ChannelName, string Description, IList<VideoCommentDto> Comments)>();
 
       if (request.SourceType == InsightCommentSourceType.StoredChannel)
       {
         var channel = await _insightsService.GetChannelByIdAsync(request.ChannelId);
         if (channel == null) return response;
         var comments = await _ytService.GetChannelComments(channel.ChannelId, 10, commentCount, showVideo: true);
+        var videoMetadata = await FetchVideoMetadataAsync(comments.Videos.Select(video => video.VideoId));
         videos.AddRange(comments.Videos.Select(video => (video.VideoId, video.Title, channel.ChannelName,
+          videoMetadata.GetValueOrDefault(video.VideoId)?.Description ?? string.Empty,
           (IList<VideoCommentDto>)video.Comments.Select(comment => new VideoCommentDto { Author = comment.Author, Text = comment.Text, PublishedAt = comment.PublishedAt }).ToList())));
       }
       else
@@ -216,8 +220,8 @@ namespace MorWalPizVideo.BackOffice.Services
         if (string.IsNullOrWhiteSpace(request.VideoId)) return response;
         var channel = string.IsNullOrWhiteSpace(request.ChannelId) ? null : await _insightsService.GetChannelByIdAsync(request.ChannelId);
         var title = channel?.Videos.FirstOrDefault(video => video.VideoId == request.VideoId)?.Title ?? string.Empty;
-        var metadata = await _ytService.FetchFromYoutube(new[] { request.VideoId });
-        var video = metadata.FirstOrDefault();
+        var metadata = await FetchVideoMetadataAsync(new[] { request.VideoId });
+        var video = metadata.GetValueOrDefault(request.VideoId);
         title = string.IsNullOrWhiteSpace(title) ? video?.Title ?? request.VideoId : title;
         var comments = await _ytService.GetVideoComments(request.VideoId, commentCount);
         var mappedComments = comments.Items.Select(item => new VideoCommentDto
@@ -226,7 +230,7 @@ namespace MorWalPizVideo.BackOffice.Services
           Text = item.Snippet.TopLevelComment.Snippet.TextDisplay,
           PublishedAt = item.Snippet.TopLevelComment.Snippet.PublishedAt.GetValueOrDefault()
         }).ToList();
-        videos.Add((request.VideoId, title, channel?.ChannelName ?? "YouTube", mappedComments));
+        videos.Add((request.VideoId, title, channel?.ChannelName ?? "YouTube", video?.Description ?? string.Empty, mappedComments));
       }
 
       foreach (var video in videos)
@@ -234,7 +238,7 @@ namespace MorWalPizVideo.BackOffice.Services
         if (video.Comments.Count == 0) continue;
         response.CommentsAnalyzed += video.Comments.Count;
         var items = await _insightAgentService.AnalyzeVideoCommentsAsync(topic, video.Id, video.Title,
-          $"https://www.youtube.com/watch?v={video.Id}", video.ChannelName, video.Comments, sourceKind);
+          $"https://www.youtube.com/watch?v={video.Id}", video.ChannelName, video.Comments, sourceKind, video.Description);
         foreach (var item in items)
         {
           var persistedItem = await _insightsService.UpsertYouTubeInsightAsync(item, selectedChannelId);
@@ -243,6 +247,30 @@ namespace MorWalPizVideo.BackOffice.Services
         response.VideosProcessed++;
       }
       return response;
+    }
+
+    private async Task<Dictionary<string, Video>> FetchVideoMetadataAsync(IEnumerable<string> videoIds)
+    {
+      var distinctVideoIds = videoIds
+          .Where(videoId => !string.IsNullOrWhiteSpace(videoId))
+          .Distinct(StringComparer.Ordinal)
+          .Take(MaxVideosPerScan)
+          .ToList();
+
+      if (distinctVideoIds.Count == 0)
+        return new Dictionary<string, Video>(StringComparer.Ordinal);
+
+      try
+      {
+        var metadata = await _ytService.FetchFromYoutube(distinctVideoIds);
+        return metadata
+            .Where(video => !string.IsNullOrWhiteSpace(video.YoutubeId))
+            .ToDictionary(video => video.YoutubeId, StringComparer.Ordinal);
+      }
+      catch
+      {
+        return new Dictionary<string, Video>(StringComparer.Ordinal);
+      }
     }
   }
 }
