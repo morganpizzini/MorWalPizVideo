@@ -40,13 +40,16 @@ public class PrimaryScenario : BaseScenario
         var matchShortLink = CreateShortLink(
             "400000000000000000000002",
             MatchShortLinkCode,
-            MatchId,
+            VideoId,
             LinkType.YouTubeVideo);
         var channelShortLink = CreateShortLink(
             "400000000000000000000003",
             ChannelShortLinkCode,
             ChannelId,
-            LinkType.YouTubeChannel);
+            LinkType.YouTubeChannel) with
+        {
+            ChannelId = ChannelId
+        };
 
         Set("categories", [category]);
         Set("matches",
@@ -75,8 +78,7 @@ public class PrimaryScenario : BaseScenario
                 Id = "500000000000000000000001",
                 Mine = true,
                 CreationDateTime = CreatedAt,
-                Videos = [new YouTubeVideo { VideoId = VideoId, Title = video.Title }],
-                ShortLinks = [channelShortLink]
+                Videos = [new YouTubeVideo { VideoId = VideoId, Title = video.Title }]
             }
         ]);
         Set("shortLinks",
@@ -85,7 +87,8 @@ public class PrimaryScenario : BaseScenario
                 "400000000000000000000001",
                 StandaloneShortLinkCode,
                 "https://example.test/scenario",
-                LinkType.CustomUrl)
+                LinkType.CustomUrl),
+            channelShortLink
         ]);
 
         var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);

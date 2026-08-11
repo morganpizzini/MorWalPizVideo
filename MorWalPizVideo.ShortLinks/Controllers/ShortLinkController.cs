@@ -12,36 +12,42 @@ namespace MorWalPizVideo.Shortlinks.Controllers
     {
         private IShortLinkDataService _shortlinkDataService;
         private readonly IMorWalPizCache cache;
+        private readonly IConfiguration configuration;
 
-        public ShortLinkController(IShortLinkDataService shortlinkDataService, IMorWalPizCache memoryCache)
+        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration)
         {
             cache = memoryCache;
-            _shortlinkDataService = shortlinkDataService;
+            _shortlinkDataService = shortLinkDataService;
+            this.configuration = configuration;
         }
 
         private async Task<(ShortLink? shortLink, bool isCanonical)> FindShortLinkInContent(string code)
         {
             var normalizedCode = ShortLink.NormalizeCode(code);
 
-            // Canonical-first (ADR-004): new short links are created directly in the standalone
-            // collection, resolved here with a single indexed lookup.
             var canonical = await _shortlinkDataService.GetShortLinkByCode(normalizedCode);
-            if (canonical != null)
+            if (canonical is not null && canonical.LinkType != LinkType.YouTubeVideo)
             {
                 return (canonical, true);
             }
 
-            // Legacy fallback: short links embedded before the canonical migration.
-            var youtubeContents = await FetchMatches();
-            var shortLink = youtubeContents.SelectMany(x => x.ShortLinks).FirstOrDefault(sl => sl.MatchesCode(normalizedCode));
-            if (shortLink != null)
+            var channelId = configuration["YouTubeChannelId"]?.Trim();
+            if (string.IsNullOrWhiteSpace(channelId))
             {
-                return (shortLink, false);
+                return (null, false);
             }
 
-            var channels = await FetchChannels();
-            shortLink = channels.SelectMany(x => x.ShortLinks).FirstOrDefault(sl => sl.MatchesCode(normalizedCode));
-            return (shortLink, false);
+            var youtubeContents = await FetchMatches();
+            var match = youtubeContents
+                .Where(content => content.OwnerChannelId == channelId ||
+                    content.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal)))
+                .SelectMany(content => content.ShortLinks
+                    .Where(link => link.LinkType == LinkType.YouTubeVideo && link.MatchesCode(normalizedCode))
+                    .Select(link => (link, content)))
+                .FirstOrDefault(candidate => candidate.content.VideoRefs.Any(video =>
+                    video.YoutubeId == candidate.link.Target));
+
+            return match.link is null ? (null, false) : (match.link, false);
         }
 
         private async Task UpdateShortLinkClickCount(string code, bool isCanonical, ShortLink shortLink)
@@ -55,21 +61,17 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             var updatedShortLink = shortLink with { ClicksCount = shortLink.ClicksCount + 1 };
 
-            // Find which entity contains this shortlink and update it
             var youtubeContents = await FetchMatchesWithoutCache();
-            var existing = youtubeContents.FirstOrDefault(x => x.ShortLinks.Any(sl => sl.MatchesCode(code)));
+            var channelId = configuration["YouTubeChannelId"]?.Trim();
+            var existing = youtubeContents.FirstOrDefault(x =>
+                !string.IsNullOrWhiteSpace(channelId) &&
+                (x.OwnerChannelId == channelId || x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal))) &&
+                x.ShortLinks.Any(sl => sl.LinkType == LinkType.YouTubeVideo && sl.MatchesCode(code) &&
+                    x.VideoRefs.Any(video => video.YoutubeId == sl.Target)));
             if(existing != null)
             {
                 var updatedContent = existing.UpdateShortLink(code, updatedShortLink);
                 await _shortlinkDataService.UpdateYouTubeContent(updatedContent);
-                return;
-            }
-
-            var channels = await FetchChannelsWithoutCache();
-            var existingChannel = channels.FirstOrDefault(x => x.ShortLinks.Any(sl => sl.MatchesCode(code)));
-            if(existingChannel != null) {
-                var updatedChannel = existingChannel.UpdateShortLink(code, updatedShortLink);
-                await _shortlinkDataService.UpdateYTChannel(updatedChannel);
                 return;
             }
         }
@@ -95,7 +97,13 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             // Handle "last" special case - always YouTube video
             if (videoShortLink.ToLower() == "last")
             {
-                var lastMatch = (await FetchMatches()).FirstOrDefault();
+                var channelId = configuration["YouTubeChannelId"]?.Trim();
+                if (string.IsNullOrWhiteSpace(channelId))
+                    return NotFound();
+
+                var lastMatch = (await FetchMatches()).FirstOrDefault(content =>
+                    content.OwnerChannelId == channelId ||
+                    content.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal)));
                 if (lastMatch == null)
                     return BadRequest("last match cannot found");
 
@@ -235,9 +243,13 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
                 case LinkType.YouTubeVideo:
                 default:                    // For YouTube videos, we need to look up the actual video data
-                    var existingMatch = (await FetchMatches()).FirstOrDefault(x => 
-                        (x.ContentType == YoutubeContentType.SingleVideo && x.ThumbnailVideoId == shortLink.Target) || 
-                        (x.VideoRefs != null && x.VideoRefs.Any(v => v.YoutubeId == shortLink.Target)));
+                    var channelId = configuration["YouTubeChannelId"]?.Trim();
+                    var existingMatch = string.IsNullOrWhiteSpace(channelId)
+                        ? null
+                        : (await FetchMatches()).FirstOrDefault(x =>
+                            (x.OwnerChannelId == channelId || x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal))) &&
+                            x.ShortLinks.Any(link => link.MatchesCode(shortLink.Code) && link.LinkType == LinkType.YouTubeVideo) &&
+                            x.VideoRefs.Any(v => v.YoutubeId == shortLink.Target));
                     
                     if (existingMatch == null)
                         return BadRequest("Video not found");

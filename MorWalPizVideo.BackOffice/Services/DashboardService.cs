@@ -52,8 +52,22 @@ public sealed class DashboardService(
                 (permissions.Contains(AuthorizationPermissionKeys.BackofficeAccess) ||
                  permissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll))));
 
-        var shortLinks = await shortLinkRepository.GetItemsAsync(shortLink =>
-            shortLink.ManagementChannelId == channelId || shortLink.ChannelId == channelId);
+        var standaloneLinks = await shortLinkRepository.GetItemsAsync(shortLink =>
+            shortLink.LinkType != LinkType.YouTubeVideo &&
+            (shortLink.ManagementChannelId == channelId || shortLink.ChannelId == channelId));
+        var scopedMatches = await youTubeContentRepository.GetItemsAsync(match =>
+            match.OwnerChannelId == channelId ||
+            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+        var embeddedVideoLinks = scopedMatches
+            .SelectMany(match => match.ShortLinks.Where(link =>
+                link.LinkType == LinkType.YouTubeVideo &&
+                match.VideoRefs.Any(video => video.YoutubeId == link.Target)))
+            .ToList();
+        var shortLinks = standaloneLinks
+            .Concat(embeddedVideoLinks)
+            .GroupBy(link => link.NormalizedCode, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
         var forms = await customFormRepository.GetActiveAsync();
         var responseCounts = await Task.WhenAll(forms.Select(form =>
             customFormResponseRepository.CountByFormIdAsync(form.Id)));

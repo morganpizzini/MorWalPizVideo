@@ -211,11 +211,10 @@ public class VideosController : ApplicationControllerBase
         }
 
         // Get the shortlink for this video
-        var shortLink = (await _linksService.GetShortLinksAsync())
-            .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo &&
-                                 x.ContentId == match.Id &&
-                                 x.Target == id &&
-                                 string.IsNullOrEmpty(x.QueryString));
+        var shortLink = match.ShortLinks.FirstOrDefault(x =>
+            x.LinkType == LinkType.YouTubeVideo &&
+            x.Target == id &&
+            string.IsNullOrEmpty(x.QueryString));
 
         if (shortLink == null)
         {
@@ -374,10 +373,8 @@ public class VideosController : ApplicationControllerBase
             return null;
         }
 
-        // Check if a canonical shortlink already exists for this video (ADR-004: standalone aggregate).
-        var existingShortLink = (await _linksService.GetShortLinksAsync())
+        var existingShortLink = existingMatch.ShortLinks
             .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo
-                && x.ContentId == existingMatch.Id
                 && x.Target == videoId
                 && string.IsNullOrEmpty(x.QueryString));
 
@@ -389,17 +386,16 @@ public class VideosController : ApplicationControllerBase
         // Generate unique shortlink code
         var shortLinkCode = await CalculateShortLinkAsync();
 
-        // Create new canonical shortlink referencing the owning match instead of embedding it.
         var newShortLink = new ShortLink(shortLinkCode, videoId, Array.Empty<QueryLink>())
         {
-            LinkType = LinkType.YouTubeVideo,
-            ContentId = existingMatch.Id
+            LinkType = LinkType.YouTubeVideo
         };
 
-        await _linksService.SaveShortLinkAsync(newShortLink);
+        await _contentService.UpdateMatchAsync(existingMatch.AddShortLink(newShortLink));
 
-        // Reset shortlink cache
         await client.ResetCache(CacheKeys.ShortLinks);
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(ApiTagCacheKeys.Matches);
 
         return BuildShortLinkUrl(newShortLink.Code);
     }
@@ -416,7 +412,11 @@ public class VideosController : ApplicationControllerBase
     private async Task<string> CalculateShortLinkAsync()
     {
         var shortlinks = await _linksService.GetShortLinksAsync();
-        var sl = shortlinks.Select(x => x.Code.ToLower()).ToList();
+        var matches = await _contentService.GetAllMatchesAsync();
+        var sl = shortlinks.Select(x => x.NormalizedCode)
+            .Concat(matches.SelectMany(match => match.ShortLinks).Select(x => x.NormalizedCode))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         return GetUniqueValue(sl);
 

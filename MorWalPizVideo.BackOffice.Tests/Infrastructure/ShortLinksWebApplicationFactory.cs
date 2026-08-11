@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using MorWalPizVideo.Domain.Scenarios;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
@@ -27,7 +28,8 @@ public sealed class ShortLinksWebApplicationFactory : WebApplicationFactory<MorW
                 ["FeatureManagement:EnableDev"] = "true",
                 ["FeatureManagement:EnableSwagger"] = "false",
                 ["FeatureManagement:EnableKeyVault"] = "false",
-                ["FeatureManagement:EnableCache"] = "false"
+                ["FeatureManagement:EnableCache"] = "false",
+                ["YouTubeChannelId"] = PrimaryScenario.ChannelId
             });
         });
     }

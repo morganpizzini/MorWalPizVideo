@@ -5,11 +5,11 @@
 
 ## Context
 
-Short links are being moved from embedded match/channel fields to a standalone collection. New management writes use the standalone aggregate, but the current BackOffice management controller still reads legacy embedded links as a compatibility fallback and migrates them when updated or deleted. Public resolution is global and must not depend on an administrative channel selection.
+Short links use two ownership paths during the current migration. YouTube video links remain embedded on the owning match so they can be resolved from the match's video references, while channel and generic links use the standalone collection. BackOffice management is channel-scoped. Public resolution is global for standalone links, while embedded YouTube video resolution is restricted to the configured public YouTube channel.
 
 ## Decision
 
-The target model is a canonical standalone aggregate with a normalized globally unique code, validated absolute HTTP/HTTPS destination, optional internal content/channel reference, structured query data, status, audit metadata, and atomic total count. The standalone record is authoritative for new writes and public global resolution; legacy embedded reads remain until migration/backfill is completed.
+The standalone record is canonical for channel and generic links, with a normalized globally unique code, validated absolute HTTP/HTTPS destination, optional channel reference, structured query data, status, audit metadata, and atomic total count. YouTube video links are canonical on the owning match for now; their target must match a referenced video. The standalone collection remains indexed and authoritative for its link types, while embedded video reads remain an intentional compatibility and ownership path.
 
 ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. Detailed visits use a separate collection with an approved retention policy.
 
@@ -21,12 +21,12 @@ ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. 
 
 ## Consequences
 
-New writes use the standalone collection and enforce safe absolute HTTP/HTTPS destinations for generic short links. Public resolution is a global indexed lookup for canonical records, with legacy fallback still required for embedded records. BackOffice listing and mutation are channel-scoped, including legacy embedded links; public resolution and redirect URLs are not.
+Channel and generic writes use the standalone collection and enforce safe absolute HTTP/HTTPS destinations for generic short links. Video writes update the owning match and invalidate match and shortlink caches. Public resolution uses an indexed lookup for standalone records; embedded video resolution scans only content associated with the configured public channel. BackOffice listing and mutation remain channel-scoped.
 
 ## Migration And Rollback
 
-Create the global unique normalized-code index after duplicate audit, use the standalone collection for new writes, and validate channel-scoped management authorization. Migration/backfill and removal of the legacy embedded fallback remain operational work; do not claim standalone-only resolution until that work is complete.
+Create and maintain the global unique normalized-code index for standalone records, validate channel-scoped management authorization, and preserve the embedded video path until a reviewed migration moves video ownership without breaking public URLs or click counts. Do not claim standalone-only resolution until that migration and its backfill are complete.
 
 ## Validation
 
-The current behavior is validated for canonical writes, global public resolution, scoped management, and the legacy compatibility path. Remaining work is operational: duplicate audit, index application, migration/backfill, and evidence that the fallback can be removed.
+The current behavior is validated for standalone and embedded mock-scenario resolution, click counting, channel scoping, canonical writes, and scoped management. Remaining work is operational: duplicate audit, index application, video-link migration/backfill, and evidence that the embedded path can be removed.

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using Reqnroll;
 using Xunit;
@@ -190,19 +191,20 @@ public class ShortLinksStepDefinitions
         }
         _context.EmbeddedShortLinkId = match.ShortLinks[0].Code;
         _context.TestMatchId = match.Id;
+        _context.AssignSourceChannelId = match.VideoRefs.First(video => video.YoutubeId == match.ShortLinks[0].Target).YoutubeId;
     }
 
     [Given(@"a channel with embedded short link exists")]
     public async Task GivenAChannelWithEmbeddedShortLinkExists()
     {
-        var result = (await _ytChannelRepository.GetItemsAsync(x => x.ShortLinks.Length > 0)).FirstOrDefault();
+        var result = (await _shortLinkRepository.GetItemsAsync(x => x.LinkType == LinkType.YouTubeChannel)).FirstOrDefault();
 
         if (result == null)
         {
-            throw new Exception("No channels with embedded short links found in the repository. Ensure mock data is seeded correctly.");
+            throw new Exception("No standalone channel short links found in the repository. Ensure mock data is seeded correctly.");
         }
 
-        _context.EmbeddedShortLinkId = result.ShortLinks[0].Code;
+        _context.EmbeddedShortLinkId = result.Code;
     }
 
     [Given(@"a match exists for short link creation")]
@@ -214,8 +216,9 @@ public class ShortLinksStepDefinitions
             throw new Exception("No channels found in the repository. Ensure mock data is seeded correctly.");
         }
         // In mock mode, matches are pre-seeded
-        // Store a known match ID for testing
+        // Video shortlink targets use the YouTube video ID, not the match document ID.
         _context.TestMatchId = entity.Id;
+        _context.AssignSourceChannelId = entity.VideoRefs.First().YoutubeId;
     }
 
     [Given(@"a channel exists for short link creation")]
@@ -254,7 +257,7 @@ public class ShortLinksStepDefinitions
 
         var updateRequest = new
         {
-            Target = _context.TestMatchId,
+            Target = _context.AssignSourceChannelId,
             LinkType = 0, // Keep as YouTubeVideo
             QueryLinkIds = Array.Empty<string>()
         };
@@ -278,7 +281,7 @@ public class ShortLinksStepDefinitions
 
         var request = new
         {
-            Target = _context.TestMatchId,
+            Target = _context.AssignSourceChannelId,
             LinkType = 0, // YouTubeVideo
             QueryLinkIds = Array.Empty<string>(),
             Message = ""
