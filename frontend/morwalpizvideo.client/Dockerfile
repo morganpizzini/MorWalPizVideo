@@ -62,7 +62,8 @@ COPY --from=builder /app/morwalpizvideo.client/dist-ssr  ./dist-ssr
 # Copy the SSR server entry point
 COPY morwalpizvideo.client/server.mjs ./
 
-# Expose the Node.js SSR server port
-EXPOSE 3000
+# Azure Web App routes traffic to the port configured for the container.
+ENV PORT=80
+EXPOSE 80
 
 CMD ["node", "server.mjs"]

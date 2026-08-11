@@ -3,6 +3,11 @@
 globalThis.window = globalThis.window ?? {
     location: { href: '', pathname: '/', hostname: 'localhost', protocol: 'https:', host: 'localhost' },
     ENV: {},
+    localStorage: {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+    },
     confirm: () => false,
     dispatchEvent: () => false,
     addEventListener: () => {},
