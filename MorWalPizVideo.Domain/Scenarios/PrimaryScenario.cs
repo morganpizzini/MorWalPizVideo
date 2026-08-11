@@ -15,7 +15,7 @@ public class PrimaryScenario : BaseScenario
     public const string AdminUserId = "100000000000000000000001";
     public const string MatchId = "200000000000000000000001";
     public const string VideoId = "scenario-video-1";
-    public const string ChannelId = ContentConstants.MorWalPizYouTubeChannelId;
+    public const string ChannelId = "UCQRMDE-gxoD43w2q-QCVmIA";
     public const string StandaloneShortLinkCode = "test1";
     public const string MatchShortLinkCode = "match1";
     public const string ChannelShortLinkCode = "channel1";

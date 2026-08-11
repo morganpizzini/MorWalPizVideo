@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using MorWalPizVideo.Domain.Scenarios;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
@@ -31,7 +32,8 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["FeatureManagement:EnableCache"] = "false",
                 ["FeatureManagement:EnableOutputCache"] = "false",
-                ["FeatureManagement:EnableCors"] = "false"
+                ["FeatureManagement:EnableCors"] = "false",
+                ["YouTubeChannelId"] = PrimaryScenario.ChannelId
             });
         });
     }

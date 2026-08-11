@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.Configuration;
 using MorWalPizVideo.Domain;
-using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Responses;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
+using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
@@ -15,13 +16,16 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly IBlobService _blobService;
         private readonly IContentService _contentService;
+        private readonly IConfiguration _configuration;
         public MatchesController(IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
             IBlobService blobService,
-            IContentService contentService) : base(_dataService, _memoryCache)
+            IContentService contentService,
+            IConfiguration configuration) : base(_dataService, _memoryCache)
         {
             _blobService = blobService;
             _contentService = contentService;
+            _configuration = configuration;
         }
 
         [OutputCache(Tags = [CacheKeys.Matches])]
@@ -29,15 +33,21 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> Index(int skip = 0, int take = 23)
         {
             var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+            {
+                return Ok(new BaseResponse<IList<YouTubeContent>>([], 0, string.Empty));
+            }
+
             var normalChannel = (await _contentService.GetChannelsAsync())
-                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == ContentConstants.MorWalPizYouTubeChannelId);
+                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == channelId);
             if (normalChannel == null)
             {
                 return Ok(new BaseResponse<IList<YouTubeContent>>([], 0, string.Empty));
             }
 
-            var count = await _contentService.CountPublicMatchesForChannelAsync(ContentConstants.MorWalPizYouTubeChannelId, includePrivate: isAuthenticated);
-            var entities = await _contentService.GetPublicMatchesForChannelAsync(ContentConstants.MorWalPizYouTubeChannelId, includePrivate: isAuthenticated, skip: skip, take: take);
+            var count = await _contentService.CountPublicMatchesForChannelAsync(channelId, includePrivate: isAuthenticated);
+            var entities = await _contentService.GetPublicMatchesForChannelAsync(channelId, includePrivate: isAuthenticated, skip: skip, take: take);
             var next = skip > 0 ? take * skip : take;
             return Ok(new BaseResponse<IList<YouTubeContent>>(entities, count, $"skip={next}&take={take}"));
         }
@@ -67,10 +77,18 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         private async Task<bool> IsCanonicalChannelMatchAsync(YouTubeContent match)
         {
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+            {
+                return false;
+            }
+
             var normalChannel = (await _contentService.GetChannelsAsync())
-                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == ContentConstants.MorWalPizYouTubeChannelId);
-            return normalChannel != null && match.VideoRefs.Any(video => video.ChannelIds.Contains(ContentConstants.MorWalPizYouTubeChannelId));
+                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == channelId);
+            return normalChannel != null && match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId));
         }
+
+        private string? GetYouTubeChannelId() => _configuration["YouTubeChannelId"]?.Trim();
 
     }
 }
