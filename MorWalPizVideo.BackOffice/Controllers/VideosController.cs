@@ -159,7 +159,8 @@ public class VideosController : ApplicationControllerBase
         var importedMatch = YouTubeContent.CreateSingleVideo(request.VideoId, categories) with
         {
             CreatorUserId = creatorUserId,
-            OwnerChannelId = channelContext.ChannelId
+            OwnerChannelId = channelContext.ChannelId,
+            VideoRefs = [new VideoRef(request.VideoId, categories, channelIds: [channelContext.ChannelId])]
         };
         await _contentService.SaveMatchAsync(importedMatch);
 
@@ -175,6 +176,162 @@ public class VideosController : ApplicationControllerBase
         await client.ReloadCache();
 
         return NoContent();
+    }
+
+    [HttpGet("import-candidates")]
+    [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> ImportCandidates([FromQuery] VideoImportCandidatesRequest request)
+    {
+        var channelContext = HttpContext.GetChannelContext();
+        if (!string.Equals(channelContext.ChannelId, request.ChannelId, StringComparison.Ordinal) ||
+            !await authorization.CanManageChannelAsync(User, request.ChannelId))
+        {
+            return NotFound();
+        }
+
+        var matches = await _contentService.GetAllMatchesAsync();
+        var importedIds = matches
+            .SelectMany(match => new[] { match.ContentId }.Concat(match.VideoRefs.Select(video => video.YoutubeId)))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var startDate = request.StartDate.Kind == DateTimeKind.Local
+            ? request.StartDate.ToUniversalTime().Date
+            : request.StartDate.Date;
+        var candidates = await yTService.FetchVideosSince(
+            request.ChannelId,
+            DateTime.SpecifyKind(startDate, DateTimeKind.Utc));
+
+        return Ok(candidates
+            .Select(candidate => new VideoImportCandidateResponse(
+                candidate.Id.VideoId,
+                candidate.Snippet?.Title ?? string.Empty,
+                candidate.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime ?? DateTime.MinValue,
+                importedIds.Contains(candidate.Id.VideoId)))
+            .ToArray());
+    }
+
+    [HttpGet("import-targets")]
+    [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> ImportTargets()
+    {
+        var matches = await _contentService.GetAllMatchesAsync();
+        var targets = new List<YouTubeContent>();
+        foreach (var match in matches)
+        {
+            if (await authorization.CanAccessAsync(User, match))
+            {
+                targets.Add(match);
+            }
+        }
+
+        return Ok(targets.Select(match => new
+        {
+            contentId = match.ContentId,
+            title = match.Title,
+            videoCount = match.VideoRefs.Length
+        }));
+    }
+
+    [HttpPost("bulk-import")]
+    [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> BulkImport(VideoBulkImportRequest request)
+    {
+        var creatorUserId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
+        if (string.IsNullOrWhiteSpace(creatorUserId))
+        {
+            return Unauthorized();
+        }
+
+        var categories = (await _contentService.GetCategoriesAsync(request.Categories))
+            .Select(category => new CategoryRef(category.Id, category.Title))
+            .ToArray();
+        if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
+        {
+            return BadRequest(new { error = "One or more categories were not found" });
+        }
+
+        var target = string.IsNullOrWhiteSpace(request.TargetContentId)
+            ? null
+            : (await _contentService.GetAllMatchesAsync())
+                .FirstOrDefault(match => string.Equals(match.ContentId, request.TargetContentId, StringComparison.Ordinal));
+        if (!string.IsNullOrWhiteSpace(request.TargetContentId) &&
+            (target is null || !await authorization.CanAccessAsync(User, target)))
+        {
+            return NotFound(new { error = "Target content was not found" });
+        }
+
+        var allMatches = await _contentService.GetAllMatchesAsync();
+        var importedIds = allMatches
+            .SelectMany(match => new[] { match.ContentId }.Concat(match.VideoRefs.Select(video => video.YoutubeId)))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+        var results = new List<VideoBulkImportItemResponse>();
+
+        foreach (var videoId in request.VideoIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal))
+        {
+            if (importedIds.Contains(videoId))
+            {
+                results.Add(new(videoId, "skipped"));
+                continue;
+            }
+
+            try
+            {
+                var videos = await yTService.FetchFromYoutube([videoId]);
+                var video = videos.FirstOrDefault();
+                if (video is null)
+                {
+                    results.Add(new(videoId, "error", "YouTube video metadata was not found"));
+                    continue;
+                }
+
+                var videoRef = new VideoRef(
+                    video.YoutubeId,
+                    categories,
+                    video.Title,
+                    video.Description,
+                    video.PublishedAt,
+                    [HttpContext.GetChannelContext().ChannelId]);
+
+                if (target is not null)
+                {
+                    var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
+                    await _contentService.UpdateMatchAsync(updatedTarget);
+                    target = updatedTarget;
+                }
+                else
+                {
+                    var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
+                    {
+                        CreatorUserId = creatorUserId,
+                        OwnerChannelId = HttpContext.GetChannelContext().ChannelId,
+                        VideoRefs = [videoRef],
+                        Title = video.Title,
+                        Description = video.Description,
+                        CreationDateTime = video.PublishedAt
+                    };
+                    await _contentService.SaveMatchAsync(importedMatch);
+                    await CreateVideoShortLinkAsync(videoId);
+                }
+
+                importedIds.Add(videoId);
+                results.Add(new(videoId, "imported"));
+            }
+            catch (Exception exception)
+            {
+                results.Add(new(videoId, "error", exception.Message));
+            }
+        }
+
+        if (results.Any(result => result.Status == "imported"))
+        {
+            await client.ResetCache(CacheKeys.Matches);
+            await client.PurgeCache(ApiTagCacheKeys.Matches);
+            await client.ReloadCache();
+        }
+
+        return Ok(results);
     }
 
     [HttpPost("{id}/refresh-youtube")]

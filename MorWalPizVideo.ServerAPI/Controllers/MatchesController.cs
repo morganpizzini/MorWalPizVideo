@@ -40,7 +40,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             }
 
             var normalChannel = (await _contentService.GetChannelsAsync())
-                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == channelId);
+                .FirstOrDefault(channel => channel.ChannelId == channelId);
             if (normalChannel == null)
             {
                 return Ok(new BaseResponse<IList<YouTubeContent>>([], 0, string.Empty));
@@ -84,7 +84,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             }
 
             var normalChannel = (await _contentService.GetChannelsAsync())
-                .FirstOrDefault(channel => channel.Mine && channel.ChannelId == channelId);
+                .FirstOrDefault(channel => channel.ChannelId == channelId);
             return normalChannel != null && match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId));
         }
 

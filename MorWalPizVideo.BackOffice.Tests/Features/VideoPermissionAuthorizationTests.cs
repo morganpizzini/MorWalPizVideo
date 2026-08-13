@@ -92,6 +92,48 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
   }
 
   [Fact]
+  public async Task Single_video_import_assigns_the_selected_channel_to_the_video_reference()
+  {
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosImport);
+    var videoId = $"import-{Guid.NewGuid():N}";
+
+    var response = await client.PostAsJsonAsync(
+        "/api/Videos/ImportVideo",
+      new { videoId, categories = new[] { "300000000000000000000001" } });
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    var importedMatch = (await _factory.MatchRepository!.GetItemsAsync())
+        .Single(match => match.ContentId == videoId);
+
+    Assert.Equal(PrimaryScenario.ChannelId, importedMatch.OwnerChannelId);
+    Assert.Contains(PrimaryScenario.ChannelId, importedMatch.VideoRefs.Single().ChannelIds);
+  }
+
+  [Fact]
+  public async Task Bulk_video_import_endpoints_require_import_permission()
+  {
+    using var deniedClient = CreateClient();
+    using var importClient = CreateClient(permissions: AuthorizationPermissionKeys.VideosImport);
+
+    var deniedCandidates = await deniedClient.GetAsync($"/api/Videos/import-candidates?channelId={PrimaryScenario.ChannelId}&startDate=2026-01-01");
+    var allowedTargets = await importClient.GetAsync("/api/Videos/import-targets");
+
+    Assert.Equal(HttpStatusCode.Forbidden, deniedCandidates.StatusCode);
+    Assert.NotEqual(HttpStatusCode.Forbidden, allowedTargets.StatusCode);
+    Assert.NotEqual(HttpStatusCode.Unauthorized, allowedTargets.StatusCode);
+  }
+
+  [Fact]
+  public async Task Candidate_discovery_cannot_cross_the_selected_channel_scope()
+  {
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosImport);
+
+    var response = await client.GetAsync("/api/Videos/import-candidates?channelId=another-channel&startDate=2026-01-01");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task Videos_manage_passes_specialized_operation_authorization()
   {
     using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosManage);

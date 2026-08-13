@@ -76,7 +76,6 @@ public class PrimaryScenario : BaseScenario
             new YTChannel(ChannelId, "Scenario channel")
             {
                 Id = "500000000000000000000001",
-                Mine = true,
                 CreationDateTime = CreatedAt,
                 Videos = [new YouTubeVideo { VideoId = VideoId, Title = video.Title }]
             }

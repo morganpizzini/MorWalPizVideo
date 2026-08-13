@@ -59,7 +59,7 @@ public class CategoriesController : ApplicationControllerBase
             ChannelId = HttpContext.GetChannelContext().ChannelId
         };
         await _dataService.SaveCategory(category);
-        return NoContent();
+        return Ok(ContractUtils.Convert(category));
     }
 
     [HttpPut("{id}")]

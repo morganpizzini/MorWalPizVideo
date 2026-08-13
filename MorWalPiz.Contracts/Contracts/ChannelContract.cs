@@ -20,9 +20,6 @@ public class ChannelContract
     public string ChannelName { get; set; } = string.Empty;
 
     [DataMember]
-    public bool Mine { get; set; }
-
-    [DataMember]
     public string ShortLinkUrl { get; set; } = string.Empty;
 
     [DataMember]

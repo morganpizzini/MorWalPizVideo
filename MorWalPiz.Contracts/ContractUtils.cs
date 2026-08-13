@@ -72,7 +72,6 @@ namespace MorWalPiz.Contracts
                 YTChannelId = entity.ChannelId,
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
-                Mine = entity.Mine,
                 ShortLinkUrl = entity.ShortLinkUrl,
                 Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {

@@ -24,6 +24,7 @@ namespace MorWalPizVideo.Server.Services
         Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null);
         Task<string> GetChannelId(string channelName);
         Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true);
+        Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true);
     }
     public class YTServiceMock : IYTService
     {
@@ -38,6 +39,8 @@ namespace MorWalPizVideo.Server.Services
             => Task.FromResult(new CommentThreadListResponse());
         public Task<string> GetChannelId(string channelName) => Task.FromResult(string.Empty);
         public Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true)
+            => Task.FromResult<IList<SearchResult>>(new List<SearchResult>());
+        public virtual Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true)
             => Task.FromResult<IList<SearchResult>>(new List<SearchResult>());
     }
 
@@ -200,6 +203,54 @@ namespace MorWalPizVideo.Server.Services
                 .ToList();
 
             return videos.Where(x => x.Id.Kind == "youtube#video" && resultVideoIds.Contains(x.Id.VideoId)).ToList();
+        }
+
+        public async Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true)
+        {
+            var startDate = DateTime.SpecifyKind(startDateUtc.Date, DateTimeKind.Utc);
+            var candidates = new List<SearchResult>();
+            string? pageToken = null;
+
+            do
+            {
+                var searchRequest = _youtubeAuthService.Search.List("snippet");
+                searchRequest.ChannelId = channelId;
+                searchRequest.Type = "video";
+                searchRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
+                searchRequest.MaxResults = 50;
+                searchRequest.PageToken = pageToken;
+
+                var searchResponse = await searchRequest.ExecuteAsync();
+                var pageItems = searchResponse.Items ?? [];
+                candidates.AddRange(pageItems.Where(item =>
+                    string.Equals(item.Snippet?.ChannelId, channelId, StringComparison.Ordinal) &&
+                    item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date >= startDate));
+
+                pageToken = searchResponse.NextPageToken;
+                if (pageItems.Any(item => item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date < startDate))
+                {
+                    break;
+                }
+            }
+            while (!string.IsNullOrEmpty(pageToken));
+
+            var videoIds = candidates.Select(item => item.Id.VideoId).ToList();
+            if (videoIds.Count == 0)
+            {
+                return candidates;
+            }
+
+            var items = await GetYouTubeVideo(videoIds, "contentDetails");
+            var resultVideoIds = items.Where(video =>
+                    showVideo
+                        ? XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds >= 120
+                        : XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120)
+                .Select(video => video.Id)
+                .ToHashSet(StringComparer.Ordinal);
+
+            return candidates
+                .Where(item => item.Id.Kind == "youtube#video" && resultVideoIds.Contains(item.Id.VideoId))
+                .ToList();
         }
 
         public async Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null)

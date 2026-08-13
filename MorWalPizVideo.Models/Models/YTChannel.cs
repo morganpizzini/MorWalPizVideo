@@ -13,10 +13,6 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("socials")]
         public List<ChannelSocial> Socials { get; init; } = [];
         [DataMember]
-        [BsonElement("mine")]
-        public bool Mine { get; init; }
-
-        [DataMember]
         [BsonElement("shortLinkUrl")]
         public string ShortLinkUrl { get; init; } = string.Empty;
 
