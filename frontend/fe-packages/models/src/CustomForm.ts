@@ -18,6 +18,7 @@ export interface QuestionOption {
 
 // Base question interface
 export interface CustomFormQuestion {
+  _t?: 'OpenQuestion' | 'MultipleChoiceQuestion' | 'SingleChoiceQuestion';
   questionId: string;
   questionText: string;
   questionType: QuestionType;
@@ -44,6 +45,7 @@ export type AnyQuestion = OpenQuestion | MultipleChoiceQuestion | SingleChoiceQu
 
 // Base answer interface
 export interface CustomFormAnswer {
+  _t?: 'OpenAnswer' | 'MultipleChoiceAnswer' | 'SingleChoiceAnswer';
   questionId: string;
   answerType: AnswerType;
 }

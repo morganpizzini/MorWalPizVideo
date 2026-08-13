@@ -13,6 +13,7 @@ export { PepperboxTopBar } from './components/PepperboxTopBar.js';
 export { CategoryBanner } from './components/CategoryBanner.js';
 export { CategoryVideoRow } from './components/CategoryVideoRow.js';
 export { VideoPlayer } from './components/VideoPlayer.js';
+export { CustomFormRenderer } from './components/CustomFormRenderer.js';
 
 // Utils
 export { prefersReducedMotion, onPrefersReducedMotionChange } from './utils/prefersReducedMotion.js';
@@ -44,3 +45,4 @@ export type { PepperboxTopBarProps } from './components/PepperboxTopBar.js';
 export type { CategoryBannerProps } from './components/CategoryBanner.js';
 export type { CategoryVideoRowProps } from './components/CategoryVideoRow.js';
 export type { VideoPlayerProps } from './components/VideoPlayer.js';
+export type { CustomFormRendererProps } from './components/CustomFormRenderer.js';

@@ -2,15 +2,15 @@
  * CustomForms API service
  */
 
-import { get, post, endpoints, ComposeUrl } from '@morwalpizvideo/services';
-import type { CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
+import { getActiveCustomForms, getCustomFormByUrl as fetchCustomFormByUrl, submitCustomFormResponse } from '@morwalpizvideo/services';
+import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
 
 /**
  * Get all active custom forms
  * @returns {Promise<CustomForm[]>} Array of active forms
  */
 export async function getActiveForms(): Promise<CustomForm[]> {
-  return get(endpoints.CUSTOMFORMS_ACTIVE);
+  return getActiveCustomForms();
 }
 
 /**
@@ -19,7 +19,7 @@ export async function getActiveForms(): Promise<CustomForm[]> {
  * @returns {Promise<CustomForm>} The form data
  */
 export async function getCustomFormByUrl(url: string): Promise<CustomForm> {
-  return get(ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url }));
+  return fetchCustomFormByUrl(url);
 }
 
 /**
@@ -28,6 +28,6 @@ export async function getCustomFormByUrl(url: string): Promise<CustomForm> {
  * @param {Array} answers - Array of answers
  * @returns {Promise<CustomFormResponse>} The response data
  */
-export async function submitFormResponse(formId: string, answers: any[]): Promise<CustomFormResponse> {
-  return post(ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, { customFormId: formId }), { answers });
+export async function submitFormResponse(formId: string, answers: AnyAnswer[]): Promise<CustomFormResponse> {
+  return submitCustomFormResponse(formId, answers);
 }

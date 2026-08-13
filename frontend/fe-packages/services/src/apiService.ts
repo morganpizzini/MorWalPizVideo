@@ -2,6 +2,32 @@ import endpoints, { ComposeUrl } from './endpoints';
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvideo/models';
 import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
+import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
+
+function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
+    switch (answer.answerType) {
+        case 0:
+            return 'OpenAnswer';
+        case 1:
+            return 'MultipleChoiceAnswer';
+        case 2:
+            return 'SingleChoiceAnswer';
+    }
+}
+
+function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
+    return answers.map(answer => ({ ...answer, _t: answer._t ?? answerDiscriminator(answer) }));
+}
+
+export const getActiveCustomForms = (): Promise<CustomForm[]> => get(endpoints.CUSTOMFORMS_ACTIVE);
+
+export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
+    get(ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }));
+
+export const submitCustomFormResponse = (formId: string, answers: AnyAnswer[]): Promise<CustomFormResponse> =>
+    post(ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, { customFormId: encodeURIComponent(formId) }), {
+        answers: serializeFormAnswers(answers)
+    });
 
 /**
  * Auth token provider function type

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeShortLinkUrl } from './VideoList';
+import { composeShortLinkUrl, shouldShowMainUrl } from './VideoList';
 
 describe('composeShortLinkUrl', () => {
   it('normalizes slashes around the channel base and code', () => {
@@ -17,5 +17,15 @@ describe('composeShortLinkUrl', () => {
     const url = composeShortLinkUrl(channel.shortLinkUrl, shortLink.code);
 
     expect(url).toBe('https://morwalpiz.com/sl/video-1');
+  });
+});
+
+describe('shouldShowMainUrl', () => {
+  it('hides the canonical content URL for a single video reference', () => {
+    expect(shouldShowMainUrl(1)).toBe(false);
+  });
+
+  it('keeps the canonical content URL for multiple references', () => {
+    expect(shouldShowMainUrl(2)).toBe(true);
   });
 });

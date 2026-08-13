@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLoaderData } from 'react-router';
+import { CustomFormRenderer } from '@morwalpiz/layout';
+import type { AnyAnswer, CustomForm as CustomFormModel } from '@morwalpizvideo/models';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { submitFormResponse } from '../services/customForms';
 import ReactGA from 'react-ga4';
 
@@ -20,7 +23,7 @@ interface FormQuestion { questionId: string; questionText: string; questionType:
 interface CustomFormData { id: string; url: string; title: string; description?: string; questions: FormQuestion[] }
 interface AnswerEntry { questionId: string; answerType: number; textResponse?: string; selectedOptionIds?: string[]; selectedOptionId?: string }
 
-export default function CustomForm() {
+export function LegacyCustomForm() {
   const { form } = useLoaderData() as { form: CustomFormData };
   const [answers, setAnswers] = useState<Record<string, AnswerEntry>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,7 +103,7 @@ export default function CustomForm() {
     setIsSubmitting(true);
 
     try {
-      await submitFormResponse(form.id, answersArray);
+      await submitFormResponse(form.id, answersArray as AnyAnswer[]);
       setIsSubmitted(true);
       
       // Track form submission
@@ -252,6 +255,25 @@ export default function CustomForm() {
               </form>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CustomFormPage() {
+  const { form } = useLoaderData() as { form: CustomFormModel };
+  const { executeRecaptcha } = useGoogleReCaptcha();
+
+  return (
+    <div className="container my-5">
+      <div className="row justify-content-center">
+        <div className="col-md-8">
+          <CustomFormRenderer
+            form={form}
+            getRecaptchaToken={async () => executeRecaptcha ? executeRecaptcha('customForm') : null}
+            onSubmit={async (answers: AnyAnswer[]) => { await submitFormResponse(form.id, answers); }}
+          />
         </div>
       </div>
     </div>

@@ -36,6 +36,7 @@ export {
     updateSponsorWithImage,
     deleteSponsor
 } from './apiService';
+export { getActiveCustomForms, getCustomFormByUrl, submitCustomFormResponse } from './apiService';
 
 // Endpoints exports
 export { default as endpoints } from './endpoints';

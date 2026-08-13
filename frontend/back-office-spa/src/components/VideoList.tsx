@@ -26,6 +26,10 @@ export function composeShortLinkUrl(baseUrl: string | undefined, code: string | 
   return `${baseUrl.replace(/\/+$/, '')}/${code.replace(/^\/+/, '')}`;
 }
 
+export function shouldShowMainUrl(videoRefCount: number): boolean {
+  return videoRefCount !== 1;
+}
+
 const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
   const revalidator = useRevalidator();
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -200,13 +204,13 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                     </div>
                   </td>
                   <td>
-                    {match.url ? (
+                    {shouldShowMainUrl(match.videoRefs?.length || 0) && (match.url ? (
                       <a href={`https://morwalpiz.com/matches/${match.url}`} target="_blank" rel="noopener noreferrer" className="text-truncate d-block" style={{ maxWidth: '150px' }}>
                         {match.url}
                       </a>
                     ) : (
                       <em className="text-muted">No URL</em>
-                    )}
+                    ))}
                   </td>
                   <td>
                     <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>

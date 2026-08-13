@@ -4,10 +4,13 @@ import {
     useGoogleReCaptcha
 } from 'react-google-recaptcha-v3';
 import { useFetcher } from "react-router";
+import { CustomFormRenderer } from '@morwalpiz/layout';
+import type { AnyAnswer, CustomForm, OpenAnswer } from '@morwalpizvideo/models';
+import { askForSponsor } from '@services/sponsors';
 
 interface SponsorItem { title: string; imgSrc: string; url: string }
 
-export default function Sponsors() {
+export function LegacySponsors() {
     const { sponsors } = useLoaderData() as { sponsors: SponsorItem[] };
     let fetcher = useFetcher();
     let busy = fetcher.state !== "idle";
@@ -79,6 +82,39 @@ export default function Sponsors() {
                             </div>
                         </div>
                     </fetcher.Form>
+                </div>
+            </div>
+        </>
+    );
+}
+
+function getOpenText(answer: AnyAnswer | undefined): string {
+    return answer && 'textResponse' in answer ? (answer as OpenAnswer).textResponse : '';
+}
+
+export default function Sponsors() {
+    const { sponsors, form } = useLoaderData() as { sponsors: SponsorItem[]; form: CustomForm };
+    const { executeRecaptcha } = useGoogleReCaptcha();
+
+    return (
+        <>
+            <h1 className="text-center mb-3">SPONSORS</h1>
+            <div className="row text-center mb-5">
+                {sponsors.map(sponsor => <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
+                    <img className="mw-100" src={sponsor.imgSrc} alt={sponsor.title} />
+                    <Link to={sponsor.url} target="_blank" rel="noopener noreferrer" className="stretched-link" aria-label={sponsor.title}></Link>
+                </div>)}
+            </div>
+            <div className="row">
+                <div className="col-12 offset-md-8 col-md-4 bg-light p-3">
+                    <CustomFormRenderer
+                        form={form}
+                        getRecaptchaToken={async () => executeRecaptcha ? executeRecaptcha('sponsorForm') : null}
+                        onSubmit={async (answers, recaptchaToken) => {
+                            const [name, email, description] = answers.map(getOpenText);
+                            await askForSponsor(name, email, description, recaptchaToken ?? '');
+                        }}
+                    />
                 </div>
             </div>
         </>
