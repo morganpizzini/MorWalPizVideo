@@ -5,6 +5,7 @@ namespace MorWalPizVideo.Models.Constraints
     {
         public const string BioLinks = "biolinks";
         public const string ShortLinks = "shortlinks";
+        public const string QuickLinks = "quicklinks";
         public const string Matches = "matches";
         public const string Channels = "channels";
         public const string ConfigurationStream = "stream";

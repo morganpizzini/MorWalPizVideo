@@ -1,35 +1,41 @@
-import Root from "./root";
+import Root from "./layout/root";
 import ErrorPage from "../error-page";
 import ErrorPageRoot from "../error-page-root";
-import Bio from "./bio";
-import Matches from "./matches";
-import Pages from "./pages";
-import Links from "./links";
-import Accessories from "./accessories";
-import Sponsors from "./sponsors";
-import Calendar from "./calendar";
-import SponsorVideo from "./sponsors-video";
-import Index from "./index";
-import Compilations from "./compilations";
-import CustomForm from "./customForm";
-import bioLoader from "./bio.loader";
-import matchLoader from "./matches.loader";
-import pageLoader from "./pages.loader";
-import accessoryLoader from "./accessories.loader";
-import sponsorsLoader from "./sponsors.loader";
-import sponsorsAction from "./sponsors.action";
-import calendarLoader from "./calendar.loader";
-import streamLoader from "./stream.loader";
-import linktreeLoader from "./linktree.loader";
-import compilationsLoader from "./compilations.loader";
-import customFormLoader from "./customForm.loader";
-import CookiePolicy from "./cookie-policy";
-import Bluetooth from "./bluetooth";
-import Stream from "./stream";
-import Linktree from "./linktree";
+import Bio from "./bio/Component";
+import Matches from "./matches/Component";
+import Pages from "./pages/Component";
+import Links from "./links/Component";
+import Accessories from "./accessories/Component";
+import Sponsors from "./sponsors/Component";
+import Calendar from "./calendar/Component";
+import SponsorVideo from "./system/sponsors-video";
+import Index from "./home/Component";
+import Compilations from "./compilations/Component";
+import CustomForm from "./customForms/Component";
+import bioLoader from "./bio/loader";
+import matchLoader from "./matches/loader";
+import pageLoader from "./pages/loader";
+import accessoryLoader from "./accessories/loader";
+import sponsorsLoader from "./sponsors/loader";
+import sponsorsAction from "./sponsors/action";
+import calendarLoader from "./calendar/loader";
+import streamLoader from "./stream/loader";
+import compilationsLoader from "./compilations/loader";
+import customFormLoader from "./customForms/loader";
+import CookiePolicy from "./system/cookie-policy";
+import Bluetooth from "./system/bluetooth";
+import Stream from "./stream/Component";
+import QuickLinks from "./quickLinks/Component";
+import quickLinksLoader from "./quickLinks/loader";
 import type { RouteObject } from "react-router";
 
 export const routes: RouteObject[] = [
+    {
+        path: "/quick-links/:url",
+        loader: quickLinksLoader,
+        element: <QuickLinks />,
+        errorElement: <ErrorPageRoot />,
+    },
     {
         path: "bio",
         loader: bioLoader,
@@ -106,11 +112,6 @@ export const routes: RouteObject[] = [
                         path: "stream",
                         loader: streamLoader,
                         element: <Stream />,
-                    },
-                    {
-                        path: "linktree/:matchId",
-                        loader: linktreeLoader,
-                        element: <Linktree />,
                     },
                 ],
             },

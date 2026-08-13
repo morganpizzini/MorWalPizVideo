@@ -54,6 +54,11 @@ const routeDefinitions: RouteConfig[] = [
     feature('create', () => import('../../routes/queryLinks/create')),
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/queryLinks/detail')), feature('edit', () => import('../../routes/queryLinks/edit'))] },
   ]),
+  group('quicklinks', () => import('../../routes/quickLinks/index'), [
+    indexFeature('', () => import('../../routes/quickLinks/index')),
+    feature('create', () => import('../../routes/quickLinks/form')),
+    { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/quickLinks/detail')), feature('edit', () => import('../../routes/quickLinks/form'))] },
+  ]),
   group('shortlinks', () => import('../../routes/shortLinks/index'), [
     indexFeature('', () => import('../../routes/shortLinks/index')),
     feature('create', () => import('../../routes/shortLinks/form')),

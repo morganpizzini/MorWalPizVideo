@@ -59,6 +59,7 @@ export const adminMenuGroups: AdminMenuGroup[] = [
     items: [
       { label: 'Short links', path: '/shortlinks', permissions: [permissions.shortlinks.view, permissions.shortlinks.manage], icon: Link },
       { label: 'Query links', path: '/querylinks', permissions: [permissions.querylinks.view, permissions.querylinks.manage], icon: Link },
+      { label: 'QuickLinks', path: '/quicklinks', permissions: [permissions.quicklinks.view, permissions.quicklinks.manage], icon: Link },
       { label: 'Forms', path: '/customforms', permissions: [permissions.forms.view, permissions.forms.manage], icon: FileText },
       { label: 'Insights', path: '/insights', permissions: [permissions.insights.view, permissions.insights.manage], icon: Activity },
     ],

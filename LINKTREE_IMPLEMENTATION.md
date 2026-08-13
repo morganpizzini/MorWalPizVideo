@@ -1,65 +1,45 @@
-# Linktree Implementation Summary
+# QuickLinks Implementation Summary
 
 ## Overview
-The Linktree public feature remains active and has been aligned with the current architecture:
+The public Linktree-style feature is now represented by the generic QuickLinks model:
 
-- BackOffice no longer exposes YouTube-link management mutations.
-- Public Linktree now resolves link targets with URL-first priority.
-- Legacy `youTubeVideoId` is kept only as fallback compatibility data.
+- BackOffice manages one stable QuickLinks ID while administrators edit the slug, display metadata, and ordered links.
+- The public page is anonymous, standalone, and available at `/quick-links/:url`.
+- Supported link kinds are External, Telegram, Instagram, Facebook, and Video.
 
 ## Current Backend Surface
 
-Controller: `MorWalPizVideo.BackOffice/Controllers/YouTubeVideoLinksController.cs`
+BackOffice controller: `MorWalPizVideo.BackOffice/Controllers/QuickLinksController.cs`
 
-- `GET /api/YouTubeVideoLinks/{matchId}/links`
-  - Returns creator link cards for the requested match.
-  - Response shape includes: `shortLinkUrl`, `shortLinkCode`, `shortLinkTarget`, `directVideoUrl`, and legacy `youTubeVideoId`.
-- `GET /api/YouTubeVideoLinks/image/{imageName}`
-  - Returns creator image bytes (`image/png`) when available.
+- `GET /api/QuickLinks`
+- `GET /api/QuickLinks/{id}`
+- `POST /api/QuickLinks`
+- `PUT /api/QuickLinks/{id}`
+- `DELETE /api/QuickLinks/{id}`
 
-Removed from active API scope:
+Public controller: `MorWalPizVideo.ServerAPI/Controllers/QuickLinksController.cs`
 
-- `POST /api/YouTubeVideoLinks/create`
-- `DELETE /api/YouTubeVideoLinks/{matchId}/links/{videoId}`
-
-## Link Target Resolution Order
-
-Public Linktree client now resolves target URLs in this order:
-
-1. `shortLinkUrl`
-2. `/sl/{shortLinkCode}`
-3. `directVideoUrl`
-4. `https://www.youtube.com/watch?v={youTubeVideoId}` (legacy fallback)
-
-This is implemented in:
-
-- `frontend/morwalpizvideo.client/src/routes/linktree.tsx`
+- `GET /api/QuickLinks/{url}`
+  - Anonymous read of a normalized shortlink slug.
+  - Output-cache tags use the centralized lowercase QuickLinks cache keys.
 
 ## Frontend Integration
 
 Service and loader:
 
-- `frontend/morwalpizvideo.client/src/services/linktree.ts`
-- `frontend/morwalpizvideo.client/src/routes/linktree.loader.ts`
+- `frontend/morwalpizvideo.client/src/services/quickLinks.ts`
+- `frontend/morwalpizvideo.client/src/routes/quickLinks/loader.ts`
 
 Route:
 
-- `/linktree/:matchId`
+- `/quick-links/:url`
 
 Behavior:
 
-- Match metadata and link cards are loaded in parallel.
-- Cards are keyboard-accessible.
-- Creator image fallback to initials remains in place.
+- The page renders title, optional subtitle, ordered links, and optional title/subtitle/label/provider/icon/image metadata.
+- Links are normal anchors with safe `_blank` and `noopener noreferrer` handling.
+- The route is outside the Root shell, so it has no public menu, header, footer, or match-specific legacy behavior.
 
 ## Contracts and Types
 
-Updated response contract/type now treats `youTubeVideoId` as optional fallback:
-
-- `MorWalPiz.Contracts/DTOs/YouTubeVideoLinkResponse.cs`
-- `frontend/fe-packages/models/src/youTubeVideoLink.ts`
-
-## Notes
-
-- Existing persisted records with only `youTubeVideoId` continue to work.
-- New UX and routing assume shortlink/direct-url first, without breaking older data.
+The shared contract and model are defined in `MorWalPiz.Contracts/Contracts/QuickLinksContract.cs` and `frontend/fe-packages/models/src/quickLinks.ts`.

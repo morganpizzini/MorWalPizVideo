@@ -66,6 +66,10 @@ export type { QueryLink, CreateQueryLinkDTO, UpdateQueryLinkDTO } from './queryL
 export type { ShortLink, CreateShortLinkDTO, UpdateShortLinkDTO } from './shortLink';
 export { LinkType } from './shortLink';
 
+// QuickLinks exports
+export { QuickLinkKind } from './quickLinks';
+export type { QuickLink, QuickLinks, CreateQuickLinksDTO, UpdateQuickLinksDTO } from './quickLinks';
+
 // Sponsor exports
 export type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from './sponsor';
 

@@ -291,6 +291,42 @@ namespace MorWalPiz.Contracts
                 CreationDateTime = entity.CreationDateTime
             };
         }
+        public static QuickLinksContract Convert(QuickLinks entity)
+        {
+            return new QuickLinksContract
+            {
+                Id = entity.Id,
+                Title = entity.Title,
+                Subtitle = entity.Subtitle,
+                Url = entity.Url,
+                Links = entity.Links.Select(Convert).ToArray(),
+                CreationDateTime = entity.CreationDateTime
+            };
+        }
+        public static QuickLinksPublicContract ConvertPublic(QuickLinks entity)
+        {
+            return new QuickLinksPublicContract
+            {
+                Title = entity.Title,
+                Subtitle = entity.Subtitle,
+                Url = entity.Url,
+                Links = entity.Links.Select(Convert).ToArray()
+            };
+        }
+        private static QuickLinkContract Convert(QuickLink link)
+        {
+            return new QuickLinkContract
+            {
+                Kind = link.Kind,
+                TargetUrl = link.TargetUrl,
+                Title = link.Title,
+                Subtitle = link.Subtitle,
+                Label = link.Label,
+                ImageUrl = link.ImageUrl,
+                Icon = link.Icon,
+                Provider = link.Provider
+            };
+        }
         public static DigitalProductContract Convert(DigitalProduct entity)
         {
             return new DigitalProductContract

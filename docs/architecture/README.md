@@ -72,7 +72,7 @@ The following remain useful history but are not the whole-system authority:
 - `docs/GITHUB_PRODUCTION_DEPLOYMENT.md`
 - `docs/SHOOTING_ITA_PHASE4_ADVANCED_FEATURES.md`
 - `implementation_plan.md`
-- `LINKTREE_IMPLEMENTATION.md`
+- `LINKTREE_IMPLEMENTATION.md` (QuickLinks public route and API)
 - `memory-bank/systemPatterns.md`
 - `memory-bank/techContext.md`
 

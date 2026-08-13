@@ -8,6 +8,7 @@ export const permissions = {
   calendar: resourcePermissions('calendar'),
   shortlinks: resourcePermissions('shortlinks'),
   querylinks: resourcePermissions('querylinks'),
+  quicklinks: resourcePermissions('quicklinks'),
   forms: resourcePermissions('forms'),
   insights: { ...resourcePermissions('insights'), scan: 'insights.scan' },
   apikeys: resourcePermissions('apikeys'),
@@ -43,6 +44,7 @@ type StandardResource = ReturnType<typeof resourcePermissions>;
 const routeResources: Record<string, StandardResource> = {
   calendarevents: permissions.calendar,
   querylinks: permissions.querylinks,
+  quicklinks: permissions.quicklinks,
   shortlinks: permissions.shortlinks,
   channels: permissions.channels,
   categories: permissions.categories,

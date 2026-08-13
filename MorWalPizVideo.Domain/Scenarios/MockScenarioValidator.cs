@@ -31,6 +31,7 @@ internal static class MockScenarioValidator
         ValidateIds(scenario.Read<Compilation>("compilations"), "compilations", errors);
         ValidateIds(scenario.Read<BioLink>("bioLinks"), "bioLinks", errors);
         ValidateIds(scenario.Read<ShortLink>("shortLinks"), "shortLinks", errors);
+        ValidateIds(scenario.Read<QuickLinks>("quickLinks"), "quickLinks", errors);
         ValidateIds(scenario.Read<YTChannel>("ytchannels"), "ytchannels", errors);
         ValidateIds(scenario.Read<MorWalPizConfiguration>("configurations"), "configurations", errors);
         ValidateIds(scenario.Read<CustomForm>("customForms"), "customForms", errors);

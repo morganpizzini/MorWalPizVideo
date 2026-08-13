@@ -214,6 +214,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class QuickLinksRepository(IMongoDatabase database)
+        : BaseRepository<QuickLinks>(database, DbCollections.QuickLinks), IQuickLinksRepository
+    {
+        public Task<QuickLinks?> GetByUrlAsync(string url)
+            => _collection.Find(entity => entity.Url == QuickLinks.NormalizeUrl(url)).FirstOrDefaultAsync();
+    }
+
     public class ConfigurationRepository : BaseRepository<MorWalPizConfiguration>, IConfigurationRepository
     {
         public ConfigurationRepository(IMongoDatabase database) : base(database, DbCollections.Configurations)

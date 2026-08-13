@@ -3,6 +3,7 @@ import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvide
 import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
 import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
+import type { QuickLinks, CreateQuickLinksDTO, UpdateQuickLinksDTO } from '@morwalpizvideo/models';
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -67,6 +68,7 @@ const scopedBackOfficePrefixes = [
     '/api/compilations',
     '/api/shortlinks',
     '/api/querylinks',
+    '/api/quicklinks',
     '/api/insights',
     '/api/dashboard',
     '/api/apikeys'
@@ -431,6 +433,27 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             errorMessages.push({ api: "Not found" });
                             break;
                         }
+                    case 409:
+                        {
+                            const rawResponse = await response.text();
+                            try {
+                                const parsedResponse = JSON.parse(rawResponse);
+                                if (typeof parsedResponse === 'object' && parsedResponse !== null) {
+                                    for (const key in parsedResponse) {
+                                        if (Array.isArray(parsedResponse[key])) {
+                                            errorMessages.push(...parsedResponse[key]);
+                                        } else {
+                                            errorMessages.push(parsedResponse[key]);
+                                        }
+                                    }
+                                } else if (parsedResponse) {
+                                    errorMessages.push(parsedResponse);
+                                }
+                            } catch {
+                                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+                            }
+                            return { errors: errorMessages, status: response.status };
+                        }
                     default:
                         errorMessages.push("An unexpected error occurred");
                 }
@@ -476,6 +499,21 @@ export const updateProductCategory = (id: string, data: UpdateProductCategoryDTO
 
 export const deleteProductCategory = (id: string) =>
     Delete(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
+
+// ==================== QuickLinks API Services ====================
+
+export const fetchQuickLinks = (): Promise<QuickLinks[]> => get(endpoints.QUICKLINKS);
+
+export const getQuickLinks = (id: string): Promise<QuickLinks> =>
+    get(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
+
+export const createQuickLinks = (data: CreateQuickLinksDTO) => post(endpoints.QUICKLINKS, data);
+
+export const updateQuickLinks = (id: string, data: UpdateQuickLinksDTO) =>
+    put(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }), data);
+
+export const deleteQuickLinks = (id: string) =>
+    Delete(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
 
 // ==================== Sponsor API Services ====================
 
@@ -525,6 +563,13 @@ const apiService = {
     createProductCategory,
     updateProductCategory,
     deleteProductCategory,
+
+    // QuickLinks services
+    fetchQuickLinks,
+    getQuickLinks,
+    createQuickLinks,
+    updateQuickLinks,
+    deleteQuickLinks,
 
     // Sponsor services
     fetchSponsors,

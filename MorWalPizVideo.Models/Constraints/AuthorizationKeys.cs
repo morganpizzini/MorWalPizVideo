@@ -51,6 +51,12 @@ public static class AuthorizationPermissionKeys
   public const string ShortLinksUpdate = "shortlinks.update";
   public const string ShortLinksDelete = "shortlinks.delete";
 
+  public const string QuickLinksView = "quicklinks.view";
+  public const string QuickLinksManage = "quicklinks.manage";
+  public const string QuickLinksCreate = "quicklinks.create";
+  public const string QuickLinksUpdate = "quicklinks.update";
+  public const string QuickLinksDelete = "quicklinks.delete";
+
   public const string QueryLinksView = "querylinks.view";
   public const string QueryLinksManage = "querylinks.manage";
   public const string QueryLinksCreate = "querylinks.create";

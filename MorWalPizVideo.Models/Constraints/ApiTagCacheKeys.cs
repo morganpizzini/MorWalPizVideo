@@ -9,5 +9,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Pages = "tag-pages";
         public const string CalendarEvents = "tag-calendarevents";
         public const string BioLinks = "tag-biolinks";
+        public const string QuickLinks = "tag-quicklinks";
     }
 }

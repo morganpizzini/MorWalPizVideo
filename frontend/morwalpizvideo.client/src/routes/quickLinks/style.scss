@@ -1,0 +1,118 @@
+.quick-links-page {
+    min-height: 100vh;
+    padding: 3rem 1.25rem;
+    color: #18232d;
+    background: linear-gradient(145deg, #f3f1e8 0%, #e5edf0 48%, #d5e0dc 100%);
+}
+
+.quick-links-content {
+    width: min(100%, 40rem);
+    margin: 0 auto;
+}
+
+.quick-links-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.quick-links-kicker {
+    margin: 0 0 0.75rem;
+    color: #ab4b2c;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.quick-links-header h1 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    line-height: 1.05;
+}
+
+.quick-links-subtitle {
+    max-width: 32rem;
+    margin: 1rem auto 0;
+    color: #52616b;
+    line-height: 1.6;
+}
+
+.quick-links-list {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.quick-links-link {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-height: 4.5rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(24, 35, 45, 0.12);
+    border-radius: 0.5rem;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 0.75rem 2rem rgba(24, 35, 45, 0.08);
+    text-decoration: none;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.quick-links-link:hover,
+.quick-links-link:focus-visible {
+    border-color: #ab4b2c;
+    box-shadow: 0 1rem 2.25rem rgba(24, 35, 45, 0.14);
+    transform: translateY(-2px);
+}
+
+.quick-links-image,
+.quick-links-icon {
+    display: grid;
+    flex: 0 0 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 0.35rem;
+    object-fit: cover;
+}
+
+.quick-links-icon {
+    color: #ab4b2c;
+    background: #f1d8ca;
+    font-size: 1.25rem;
+}
+
+.quick-links-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+}
+
+.quick-links-title {
+    font-weight: 700;
+}
+
+.quick-links-description,
+.quick-links-label,
+.quick-links-provider {
+    overflow: hidden;
+    color: #52616b;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quick-links-arrow {
+    margin-left: auto;
+    color: #ab4b2c;
+    font-size: 1.2rem;
+}
+
+@media (max-width: 34rem) {
+    .quick-links-page {
+        padding-top: 2rem;
+    }
+}

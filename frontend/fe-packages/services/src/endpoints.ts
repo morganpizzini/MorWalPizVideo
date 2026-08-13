@@ -8,6 +8,8 @@ const QUERYLINKS = `${baseEndpoint}/querylinks`;
 const QUERYLINKS_DETAIL = `${QUERYLINKS}/{querylinkId}`;
 const SHORTLINKS = `${baseEndpoint}/shortlinks`;
 const SHORTLINKS_DETAIL = `${SHORTLINKS}/{querylinkId}`;
+const QUICKLINKS = `${baseEndpoint}/quicklinks`;
+const QUICKLINKS_DETAIL = `${QUICKLINKS}/{quickLinksId}`;
 const PRODUCTS = `${baseEndpoint}/products`;
 const PRODUCTS_DETAIL = `${PRODUCTS}/{productId}`;
 const PRODUCTCATEGORIES = `${baseEndpoint}/productcategories`;
@@ -86,6 +88,8 @@ export default {
     QUERYLINKS_DETAIL,
     SHORTLINKS,
     SHORTLINKS_DETAIL,
+    QUICKLINKS,
+    QUICKLINKS_DETAIL,
     PRODUCTS,
     PRODUCTS_DETAIL,
     PRODUCTCATEGORIES,

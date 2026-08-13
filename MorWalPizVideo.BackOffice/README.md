@@ -175,8 +175,20 @@ CRUD for content categories used to tag videos / events / collections.
 #### `CompilationsController` — `api/compilations`
 Curated playlist-like groupings of `VideoRef` (model: [`Compilation`](#54-content-grouping)).
 
+#### `QuickLinksController` — `api/quicklinks`
+Manages generic standalone link pages. Each page keeps a stable admin ID while its normalized public slug, title, subtitle, ordered links, and optional display metadata remain editable.
+| Verb | Route | Purpose |
+| ---- | ----- | ------- |
+| GET | `/` | List QuickLinks pages. |
+| GET | `/{id}` | Fetch one page by stable ID. |
+| POST | `/` | Create a page after slug, kind, and safe-target validation. |
+| PUT | `/{id}` | Update editable page metadata and ordered links. |
+| DELETE | `/{id}` | Delete a page. |
+
+The anonymous ServerAPI read surface is `GET /api/quicklinks/{url}`. The public client renders it at `/quick-links/:url` outside the Root shell.
+
 #### `YouTubeVideoLinksController` — `api/youtubevideolinks`
-Read-only linktree data source for public linktree cards plus creator image serving.
+Separate read-only historical link source; it is not used by the public QuickLinks route.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
 | GET | `/{matchId}/links` | Return linktree items for a match (short link and direct URL fields included when present). |

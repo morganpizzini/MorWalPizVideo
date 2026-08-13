@@ -64,6 +64,13 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.ShortLinksUpdate,
           AuthorizationPermissionKeys.ShortLinksDelete
         ],
+        [AuthorizationPermissionKeys.QuickLinksManage] =
+        [
+          AuthorizationPermissionKeys.QuickLinksView,
+          AuthorizationPermissionKeys.QuickLinksCreate,
+          AuthorizationPermissionKeys.QuickLinksUpdate,
+          AuthorizationPermissionKeys.QuickLinksDelete
+        ],
         [AuthorizationPermissionKeys.QueryLinksManage] =
         [
           AuthorizationPermissionKeys.QueryLinksView,

@@ -54,6 +54,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
         Task<int> IncrementClicksAsync(string id);
     }
+    public interface IQuickLinksRepository : IRepository<QuickLinks>
+    {
+        Task<QuickLinks?> GetByUrlAsync(string url);
+    }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
     public interface ICategoryRepository : IRepository<Category>
     {

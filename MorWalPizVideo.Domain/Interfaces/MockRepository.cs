@@ -193,6 +193,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class QuickLinksMockRepository(IMockScenario scenario)
+        : BaseMockRepository<QuickLinks>(scenario, "quickLinks"), IQuickLinksRepository
+    {
+        public async Task<QuickLinks?> GetByUrlAsync(string url)
+        {
+            var normalizedUrl = QuickLinks.NormalizeUrl(url);
+            return (await GetItemsAsync(entity => entity.Url == normalizedUrl)).FirstOrDefault();
+        }
+    }
+
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
     {
         public CategoryMockRepository(IMockScenario scenario) : base(scenario, "categories")
