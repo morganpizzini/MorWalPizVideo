@@ -221,6 +221,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => _collection.Find(entity => entity.Url == QuickLinks.NormalizeUrl(url)).FirstOrDefaultAsync();
     }
 
+    public sealed class ChannelNewsRepository(IMongoDatabase database)
+        : BaseRepository<ChannelNews>(database, DbCollections.ChannelNews), IChannelNewsRepository
+    {
+    }
+
     public class ConfigurationRepository : BaseRepository<MorWalPizConfiguration>, IConfigurationRepository
     {
         public ConfigurationRepository(IMongoDatabase database) : base(database, DbCollections.Configurations)

@@ -6,6 +6,7 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -47,10 +48,11 @@ public sealed class QuickLinksController(IQuickLinksService quickLinksService, I
     }
 
     [HttpPost]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.QuickLinksCreate, AuthorizationPermissionKeys.QuickLinksManage)]
     public async Task<IActionResult> Create(QuickLinksRequest request)
     {
-        var entity = ToEntity(request);
+        var entity = ToEntity(request, HttpContext.GetChannelContext().ChannelId);
         var validationErrors = QuickLinksService.Validate(entity);
         if (validationErrors.Count > 0)
             return BadRequest(validationErrors);
@@ -63,14 +65,15 @@ public sealed class QuickLinksController(IQuickLinksService quickLinksService, I
     }
 
     [HttpPut("{id}")]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.QuickLinksUpdate, AuthorizationPermissionKeys.QuickLinksManage)]
     public async Task<IActionResult> Update(BaseRequestId<QuickLinksRequest> request)
     {
         var entity = await quickLinksService.GetByIdAsync(request.Id);
-        if (entity is null)
+        if (entity is null || entity.ChannelId != HttpContext.GetChannelContext().ChannelId)
             return NotFound();
 
-        var updated = ToEntity(request.Body) with { Id = entity.Id, CreationDateTime = entity.CreationDateTime };
+        var updated = ToEntity(request.Body, entity.ChannelId) with { Id = entity.Id, CreationDateTime = entity.CreationDateTime };
         var validationErrors = QuickLinksService.Validate(updated);
         if (validationErrors.Count > 0)
             return BadRequest(validationErrors);
@@ -83,11 +86,12 @@ public sealed class QuickLinksController(IQuickLinksService quickLinksService, I
     }
 
     [HttpDelete("{id}")]
+    [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.QuickLinksDelete, AuthorizationPermissionKeys.QuickLinksManage)]
     public async Task<IActionResult> Delete(BaseRequestId request)
     {
         var entity = await quickLinksService.GetByIdAsync(request.Id);
-        if (entity is null)
+        if (entity is null || entity.ChannelId != HttpContext.GetChannelContext().ChannelId)
             return NotFound();
 
         await quickLinksService.DeleteAsync(entity.Id);
@@ -95,8 +99,11 @@ public sealed class QuickLinksController(IQuickLinksService quickLinksService, I
         return NoContent();
     }
 
-    private static QuickLinks ToEntity(QuickLinksRequest request)
-        => new(request.Title, request.Subtitle, request.Url, request.Links.Select(ToEntity).ToArray());
+    private static QuickLinks ToEntity(QuickLinksRequest request, string channelId)
+        => new(request.Title, request.Subtitle, request.Url, request.Links.Select(ToEntity).ToArray())
+        {
+            ChannelId = channelId
+        };
 
     private static QuickLink ToEntity(QuickLinkRequest request)
         => new(request.Kind, request.TargetUrl, request.Title, request.Subtitle, request.Label,

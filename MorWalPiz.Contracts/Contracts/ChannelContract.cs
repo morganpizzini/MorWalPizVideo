@@ -23,6 +23,13 @@ public class ChannelContract
     public string ShortLinkUrl { get; set; } = string.Empty;
 
     [DataMember]
+    [JsonPropertyName("isSHIT")]
+    public bool IsSHIT { get; set; }
+
+    [DataMember]
+    public string ChannelLogoUrl { get; set; } = string.Empty;
+
+    [DataMember]
     public List<ChannelSocialContract> Socials { get; set; } = [];
 
     [DataMember]

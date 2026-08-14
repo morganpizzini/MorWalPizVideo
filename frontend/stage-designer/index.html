@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,42 +9,48 @@
     <title>IPSC Stage Designer</title>
     <link rel="stylesheet" href="index.css">
 </head>
+
 <body>
     <!-- Top Toolbar -->
     <div class="toolbar">
         <div class="toolbar-section">
             <button class="tool-btn active" data-tool="select" title="Select/Move">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
                 </svg>
             </button>
             <button class="tool-btn" data-tool="draw" title="Draw Freehand">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    <path
+                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                 </svg>
             </button>
             <button class="tool-btn" data-tool="line" title="Draw Straight Lines">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 3h2v2H3V3m4 0h2v2H7V3m4 0h2v2h-2V3m4 0h2v2h-2V3m4 0h2v2h-2V3M3 7h2v2H3V7m4 0h2v2H7V7m4 0h2v2h-2V7m4 0h2v2h-2V7m4 0h2v2h-2V7m-8 4h2v2h-2v-2m-4 0h2v2H7v-2m-4 0h2v2H3v-2m8 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2M3 15h2v2H3v-2m4 0h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2M3 19h2v2H3v-2m4 0h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2z"/>
+                    <path
+                        d="M3 3h2v2H3V3m4 0h2v2H7V3m4 0h2v2h-2V3m4 0h2v2h-2V3m4 0h2v2h-2V3M3 7h2v2H3V7m4 0h2v2H7V7m4 0h2v2h-2V7m4 0h2v2h-2V7m4 0h2v2h-2V7m-8 4h2v2h-2v-2m-4 0h2v2H7v-2m-4 0h2v2H3v-2m8 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2M3 15h2v2H3v-2m4 0h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2M3 19h2v2H3v-2m4 0h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2z" />
                 </svg>
             </button>
             <button class="tool-btn" data-tool="fill" title="Fill Area">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.59-.59 1.54 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/>
+                    <path
+                        d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.59-.59 1.54 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z" />
                 </svg>
             </button>
             <button class="tool-btn" data-tool="eraser" title="Eraser">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-6.36-6.36-3.54 3.53Z"/>
+                    <path
+                        d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-6.36-6.36-3.54 3.53Z" />
                 </svg>
             </button>
             <button class="tool-btn" data-tool="ruler" title="Measure Distance">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z"/>
+                    <path
+                        d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z" />
                 </svg>
             </button>
         </div>
-        
+
         <div class="toolbar-section">
             <div class="color-picker-container">
                 <input type="color" id="colorPicker" value="#000000" title="Line Color">
@@ -55,17 +62,20 @@
         <div class="toolbar-section">
             <button class="tool-btn" id="undoBtn" title="Undo (Ctrl+Z)">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+                    <path
+                        d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
                 </svg>
             </button>
             <button class="tool-btn" id="gridToggle" title="Toggle Grid">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/>
+                    <path
+                        d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z" />
                 </svg>
             </button>
             <button class="tool-btn" id="snapToggle" title="Snap to Grid">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    <path
+                        d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
                 </svg>
             </button>
         </div>
@@ -121,10 +131,11 @@
     <div class="canvas-container">
         <button class="fab" id="objectLibraryBtn" title="Object Library">
             <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
+                <path
+                    d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" />
             </svg>
         </button>
-        
+
         <div class="zoom-controls">
             <button class="zoom-btn" id="zoomIn">+</button>
             <button class="zoom-btn" id="zoomReset">100%</button>
@@ -132,7 +143,17 @@
         </div>
 
         <div class="scale-display" id="scaleDisplay">Scale: 1:50 (1px = 0.1m)</div>
-        
+        <div class="partialize-control" id="partializeControl" hidden>
+            <strong>partialize</strong>
+            <select id="partializeMode" aria-label="partialize">
+                <option value="full">full</option>
+                <option value="bottomHidden">bottom hidden</option>
+                <option value="leftOnly">left only</option>
+                <option value="centerOnly">center only</option>
+                <option value="rightOnly">right only</option>
+            </select>
+        </div>
+
         <canvas id="mainCanvas"></canvas>
     </div>
 
@@ -141,19 +162,19 @@
         <div class="panel-header">
             <button class="toggle-btn" id="togglePanel">
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
                 </svg>
             </button>
             <div class="stage-tabs" id="stageTabs"></div>
             <button class="add-stage-btn" id="addStage">+ Stage</button>
         </div>
-        
+
         <div class="panel-content" id="panelContent">
             <div class="stage-info-header">
                 <h4>Stage Information</h4>
                 <button class="collapse-info-btn" id="collapseInfoBtn" title="Collapse/Expand">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
                     </svg>
                 </button>
             </div>
@@ -166,30 +187,44 @@
                     <label for="stageNotes">Notes:</label>
                     <textarea id="stageNotes" placeholder="Add notes (round count, time limits, etc.)"></textarea>
                 </div>
+                <div class="dimension-fields">
+                    <div class="form-group">
+                        <label for="stageWidth">Width (m)</label>
+                        <input type="number" id="stageWidth" min="0.01" step="0.01" placeholder="e.g. 25">
+                    </div>
+                    <div class="form-group">
+                        <label for="stageHeight">Height (m)</label>
+                        <input type="number" id="stageHeight" min="0.01" step="0.01" placeholder="e.g. 15">
+                    </div>
+                </div>
+                <p class="dimension-feedback" id="dimensionFeedback" role="status"></p>
             </div>
-            
+
             <div class="action-buttons">
                 <button class="action-btn" id="exportJson">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/>
+                        <path
+                            d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z" />
                     </svg>
                     Export JSON
                 </button>
                 <button class="action-btn" id="importJson">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6-.67l2.59 2.58L17 12.5l-5-5-5 5 1.41 1.41L11 11.33V21h2v-9.67z"/>
+                        <path
+                            d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6-.67l2.59 2.58L17 12.5l-5-5-5 5 1.41 1.41L11 11.33V21h2v-9.67z" />
                     </svg>
                     Import JSON
                 </button>
                 <button class="action-btn" id="exportImage">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        <path
+                            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                     </svg>
                     Export Image
                 </button>
                 <button class="action-btn danger" id="deleteStage">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                     </svg>
                     Delete Stage
                 </button>
@@ -202,4 +237,5 @@
 
     <script src="index.js"></script>
 </body>
+
 </html>

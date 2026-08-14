@@ -1,9 +1,12 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -72,6 +75,214 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
     });
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Channel_create_persists_isSHIT()
+  {
+    var channelId = $"UC{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = "Shooting channel",
+      yTChannelId = channelId,
+      isSHIT = true
+    });
+    var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.True(created.IsSHIT);
+  }
+
+  [Fact]
+  public async Task Channel_mutations_invalidate_all_public_shooting_ita_cache_tags()
+  {
+    var channelId = $"UC{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    var expectedResetKeys = new[] { CacheKeys.Channels, CacheKeys.Matches, CacheKeys.QuickLinks, CacheKeys.ChannelNews };
+    var expectedPurgedTags = new[] { CacheKeys.Channels, CacheKeys.Matches, CacheKeys.QuickLinks, ApiTagCacheKeys.ChannelNews };
+
+    _factory.CrossApiService.Clear();
+    var createResponse = await client.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = "Cache test channel",
+      yTChannelId = channelId
+    });
+    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
+    Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+
+    _factory.CrossApiService.Clear();
+    var updateResponse = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    {
+      channelName = "Cache test Shooting channel",
+      isSHIT = true
+    });
+    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
+    Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+
+    _factory.CrossApiService.Clear();
+    var deleteResponse = await client.DeleteAsync($"/api/Channels/{channelId}");
+    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+  }
+
+  [Fact]
+  public async Task Channel_logo_upload_remove_and_invalid_upload_preserve_channel_and_cache_contracts()
+  {
+    var channelId = $"channel-logo-{Guid.NewGuid():N}";
+    await _factory.YTChannelRepository!.AddItemAsync(new YTChannel(channelId, "Logo channel"));
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, channelId);
+    var expectedResetKeys = new[] { CacheKeys.Channels, CacheKeys.Matches, CacheKeys.QuickLinks, CacheKeys.ChannelNews };
+    var expectedPurgedTags = new[] { CacheKeys.Channels, CacheKeys.Matches, CacheKeys.QuickLinks, ApiTagCacheKeys.ChannelNews };
+
+    await using var png = await CreatePngAsync(1000, 600);
+    using var upload = new MultipartFormDataContent();
+    var pngContent = new ByteArrayContent(png.ToArray());
+    pngContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+    upload.Add(pngContent, "logo", "channel-logo.png");
+
+    _factory.CrossApiService.Clear();
+    var uploadResponse = await client.PostAsync($"/api/Channels/{channelId}/logo", upload);
+    var uploaded = (await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
+    Assert.NotNull(uploaded);
+    Assert.NotEmpty(uploaded!.ChannelLogoStorageKey);
+    Assert.StartsWith("mock://blob/channel-logos/", uploaded.ChannelLogoUrl, StringComparison.Ordinal);
+    Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+
+    _factory.CrossApiService.Clear();
+    using var invalidUpload = new MultipartFormDataContent();
+    var invalidContent = new ByteArrayContent("not-an-image"u8.ToArray());
+    invalidContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+    invalidUpload.Add(invalidContent, "logo", "invalid.png");
+    var invalidResponse = await client.PostAsync($"/api/Channels/{channelId}/logo", invalidUpload);
+    var afterInvalidUpload = (await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.BadRequest, invalidResponse.StatusCode);
+    Assert.Equal(uploaded.ChannelLogoStorageKey, afterInvalidUpload!.ChannelLogoStorageKey);
+    Assert.Equal(uploaded.ChannelLogoUrl, afterInvalidUpload.ChannelLogoUrl);
+    Assert.Empty(_factory.CrossApiService.ResetKeys);
+    Assert.Empty(_factory.CrossApiService.PurgedTags);
+
+    _factory.CrossApiService.Clear();
+    var removeResponse = await client.DeleteAsync($"/api/Channels/{channelId}/logo");
+    var removed = (await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
+    Assert.Equal(string.Empty, removed!.ChannelLogoStorageKey);
+    Assert.Equal(string.Empty, removed.ChannelLogoUrl);
+    Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+  }
+
+  private static async Task<MemoryStream> CreatePngAsync(int width, int height)
+  {
+    var stream = new MemoryStream();
+    using var image = new Image<Rgba32>(width, height);
+    await image.SaveAsPngAsync(stream);
+    stream.Position = 0;
+    return stream;
+  }
+
+  [Fact]
+  public async Task QuickLinks_create_uses_channel_scope_and_rejects_global_duplicate_slug()
+  {
+    var slug = $"links-{Guid.NewGuid():N}";
+    using var primaryClient = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    var firstResponse = await primaryClient.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "Primary links",
+      url = slug,
+      links = Array.Empty<object>()
+    });
+    var first = (await _factory.QuickLinksRepository!.GetItemsAsync()).Single(link => link.Url == slug);
+
+    var secondChannelId = $"channel-{Guid.NewGuid():N}";
+    await _factory.YTChannelRepository!.AddItemAsync(new YTChannel(secondChannelId, "Second channel"));
+    using var secondClient = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, secondChannelId);
+    var duplicateResponse = await secondClient.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "Duplicate links",
+      url = slug,
+      links = Array.Empty<object>()
+    });
+
+    Assert.Equal(HttpStatusCode.NoContent, firstResponse.StatusCode);
+    Assert.Equal(PrimaryScenario.ChannelId, first.ChannelId);
+    Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+  }
+
+  [Fact]
+  public async Task QuickLinks_create_allows_multiple_linktrees_for_one_channel()
+  {
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    var firstSlug = $"links-one-{Guid.NewGuid():N}";
+    var secondSlug = $"links-two-{Guid.NewGuid():N}";
+
+    var firstResponse = await client.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "First links",
+      url = firstSlug,
+      links = Array.Empty<object>()
+    });
+    var secondResponse = await client.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "Second links",
+      url = secondSlug,
+      links = Array.Empty<object>()
+    });
+
+    var linktrees = (await _factory.QuickLinksRepository!.GetItemsAsync())
+      .Where(link => link.ChannelId == PrimaryScenario.ChannelId)
+      .ToList();
+
+    Assert.Equal(HttpStatusCode.NoContent, firstResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, secondResponse.StatusCode);
+    Assert.Contains(linktrees, link => link.Url == firstSlug);
+    Assert.Contains(linktrees, link => link.Url == secondSlug);
+  }
+
+  [Fact]
+  public async Task QuickLinks_update_and_delete_require_the_persisted_channel_owner()
+  {
+    var slug = $"links-owner-{Guid.NewGuid():N}";
+    using var ownerClient = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    await ownerClient.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "Owned links",
+      url = slug,
+      links = Array.Empty<object>()
+    });
+    var linktree = (await _factory.QuickLinksRepository!.GetItemsAsync()).Single(link => link.Url == slug);
+
+    var otherChannelId = $"channel-{Guid.NewGuid():N}";
+    await _factory.YTChannelRepository!.AddItemAsync(new YTChannel(otherChannelId, "Other channel"));
+    using var missingScopeClient = _factory.CreateClient();
+    missingScopeClient.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.BackofficeManageAll);
+    using var otherChannelClient = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, otherChannelId);
+
+    var missingScopeResponse = await missingScopeClient.DeleteAsync($"/api/QuickLinks/{linktree.Id}");
+    var updateResponse = await otherChannelClient.PutAsJsonAsync($"/api/QuickLinks/{linktree.Id}", new
+    {
+      title = "Unauthorized update",
+      url = $"updated-{Guid.NewGuid():N}",
+      links = Array.Empty<object>()
+    });
+    var deleteResponse = await otherChannelClient.DeleteAsync($"/api/QuickLinks/{linktree.Id}");
+    var persisted = await _factory.QuickLinksRepository.GetItemAsync(linktree.Id);
+
+    Assert.Equal(HttpStatusCode.BadRequest, missingScopeResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NotFound, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
+    Assert.NotNull(persisted);
+    Assert.Equal("Owned links", persisted!.Title);
+    Assert.Equal(PrimaryScenario.ChannelId, persisted.ChannelId);
   }
 
   [Fact]

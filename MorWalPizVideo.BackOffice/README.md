@@ -169,6 +169,21 @@ Core surface for managing the YouTube content catalog.
 #### `ChannelsController` — `api/channels`
 Manage tracked YouTube channels ([`YTChannel`](#510-channels-and-creator-tracking)).
 
+#### `ChannelNewsController` — `api/channelnews`
+Channel-scoped editorial CRUD. `POST /` and `PUT /{id}` accept `ChannelNewsRequest`; `POST /{id}/status` accepts `ChannelNewsStatusRequest`; all responses use `ChannelNewsContract`. `GET /` and `GET /{id}` require the channel-news view/manage permission, while mutations require the corresponding create/update/delete/manage permission. The selected `X-Channel-Id` is validated server-side.
+
+| Verb | Route | Purpose |
+| ---- | ----- | ------- |
+| GET | `/` or `/{id}` | List or read admin ChannelNews for the selected channel. |
+| POST | `/` | Create draft, scheduled, published, or archived news. Scheduled items require UTC publication time. |
+| PUT | `/{id}` | Update editorial fields; HTML is allowlist-sanitized before persistence. |
+| POST | `/{id}/status` | Validate and transition status; scheduled transitions require publication time. |
+| POST | `/{id}/images` | Upload up to 10 total images as multipart `files`; server decode/resizes proportionally with no upscaling and long side <=1920. |
+| DELETE | `/{id}/images/{imageIndex}` | Delete an ordered image and its blob. |
+| DELETE | `/{id}` | Delete the news item. |
+
+The BackOffice SPA provides a native `contentEditable` WYSIWYG editor, hidden HTML form submission, ordered image previews/metadata, upload errors, and image deletion. No application byte-size limit is added. Public Shooting ITA output is anonymous at `/api/shit/channelnews` and `/api/shit/channelnews/{id-or-slug}`; it filters to `IsSHIT` channels and published/due scheduled items, excludes storage/admin fields, and falls back to `/images/logo-150.png` when a channel logo is absent. Channel logo PNG upload/removal is independent of channel JSON mutation, so a logo failure is reported without rolling back `IsSHIT` or presentation fields. All affected mutations reset `CacheKeys.ChannelNews` internally and purge the lowercase `ApiTagCacheKeys.ChannelNews` output tag.
+
 #### `CategoriesController` — `api/categories`
 CRUD for content categories used to tag videos / events / collections.
 

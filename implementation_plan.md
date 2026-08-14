@@ -1,65 +1,25 @@
-# Shooting ITA Implementation Plan
+# ChannelNews Implementation Plan
 
-## 1. Architectural Overview
+## Canonical behavior
 
-The new "Shooting ITA" ecosystem will seamlessly integrate with the existing `MorWalPizVideo.Backoffice` infrastructure. The system consists of two major components:
-1.  **ASP.NET Core API Gateway (Backend):** Built upon the existing generic repository patterns and Web API infrastructure.
-2.  **React 19 PWA (Frontend):** A localized frontend specifically for external users and competitors.
+`ChannelNews` is a channel-scoped editorial aggregate with title, subtitle, sanitized HTML body, slug, ordered images (maximum 10), status (`Draft`, `Scheduled`, `Published`, `Archived`), UTC publication time, display order, and audit timestamps. Scheduled visibility is evaluated at read time; no background job is required.
 
-## 2. Data Models (MongoDB)
+`MorWalPizVideo.Models` owns the entity, status, image metadata, collection name, `CacheKeys.ChannelNews` reset identity, and lowercase `ApiTagCacheKeys.ChannelNews` output tag. `MorWalPizVideo.Domain` owns repositories, normalization, and HTML allowlist sanitization. `MorWalPiz.Contracts` owns admin/public contracts. BackOffice owns authenticated channel-scoped mutations and media lifecycle; ServerAPI owns the anonymous public feed.
 
-We will extend the `MorWalPizVideo.Models` project. Since the application uses MongoDB as its primary datastore through generic repositories (`BaseRepository<T>`), our models must derive from `BaseEntity`.
+## Routes and contracts
 
-### 2.1 Identity and Organization
--   **`User` (Existing/Extended):** Needs properties referencing associations with particular matches or generic authentication parameters for the Web PWA.
--   **`YTChannel` (Existing):** Many-to-many references need optimization.
--   **`ChannelUserRole`:** A mapping entity to link users to channels with specific permissions.
+BackOffice routes are `/api/ChannelNews`, `/api/ChannelNews/{id}`, `/api/ChannelNews/{id}/status`, `/api/ChannelNews/{id}/images`, and `/api/ChannelNews/{id}/images/{imageIndex}`. CRUD and status requests use `ChannelNewsRequest` and `ChannelNewsStatusRequest`; responses use `ChannelNewsContract`, whose image metadata includes public URL, content type, dimensions, alt text, and display order. The SPA uses the selected `X-Channel-Id`; server authorization and tenancy remain authoritative.
 
-### 2.2 Competition & Stage Hub
--   **`Competition` (New):** Represents a shooting match. Contains embedded metadata (dates, locations, rules).
--   **`Stage` (Embedded or New Document):** Detailed description of a match stage. Given MongoDB's document nature, stages could be an array within the `Competition` document (`List<Stage> Stages`) if bounded in size (e.g., maximum 20-30 stages per match).
+The public routes are `/api/shit/channelnews` and `/api/shit/channelnews/{id-or-slug}`. Only `IsSHIT` channels and `Published` or due `Scheduled` items are returned. `ChannelNewsPublicContract` includes channel identity/logo, sanitized HTML, ordered public image metadata, and publication data, but never storage keys or admin timestamps. Missing channel logos use `/images/logo-150.png`.
 
-## 3. Backend (MorWalPizVideo.ServerAPI)
+## WYSIWYG and media rules
 
-### 3.1 Authentication
--   Implement a unified JWT-based Authentication scheme across both specific custom back-offices and the public PWA.
--   Leverage existing `ShopAuthController` architectural patterns to cleanly decouple user management.
+The BackOffice form uses a native `contentEditable` WYSIWYG surface with a small formatting toolbar and submits its HTML through the existing form action. The server allowlist sanitizer is always applied before persistence and public output; client editing is not a security boundary.
 
-### 3.2 Caching & Background Jobs
--   **Redis Cache:** Implement `IDistributedCache` for frequent queries, effectively using `MorWalPizVideo.Models.Constraints.CacheKeys`.
--   **Hangfire:** Incorporate Hangfire into `MorWalPizVideo.ServerAPI` for scheduling background jobs like asynchronous score processing, video generation alerts, or bulk email notifications.
+Images are selected in the SPA, previewed in server order with metadata, uploaded in batches, and deleted by index. The server decodes and resizes without cropping, distortion, or upscaling: the long side is at most 1920px (landscape bound 1920x1080, portrait bound 1080x1920). There is no application byte-size limit; transport/blob limits remain operational concerns. Channel logos are independent PNG uploads, proportionally resized to a maximum 500px width without upscaling. A logo failure does not roll back channel `IsSHIT` or other channel presentation changes.
 
-### 3.3 Analytics via Aggregation Framework
--   Use MongoDB driver's Aggregation Framework inside dedicated API controllers (e.g., `CompetitionsController`) to calculate match stats (`BsonDocument` projections, grouping).
+## Cache and validation
 
-## 4. Frontend (React 19 PWA)
+ChannelNews mutations reset the internal `CacheKeys.ChannelNews` entry and purge the public `ApiTagCacheKeys.ChannelNews` tag. Channel create/update/delete, `IsSHIT`, logo, and presentation mutations reset their normal channel/match/quick-link keys plus the ChannelNews reset key and purge the corresponding public tag, including `ApiTagCacheKeys.ChannelNews`.
 
-### 4.1 Technology Stack
--   **Framework:** React 19 using Vite.
--   **Styling:** Tailwind CSS.
--   **State/Data Fetching:** React Router loaders/actions patterns combined with `@morwalpizvideo/services`.
--   **PWA:** Establish a structured `manifest.json` and a Service Worker instance registered on application startup.
-
-### 4.2 Web Push APIs
--   The Service worker must listen to standard `push` events.
--   Backend will emit push notifications formatted with unified payload structures indicating competition score updates or match time changes.
-
-## 5. Development Phases
-
-**Phase 1: Backend Domain Expansion**
-- Create models (`Competition.cs`, `Stage.cs`) in `MorWalPizVideo.Models/Models`.
-- Update `DbCollections.cs`.
-- Create corresponding generic repositories.
-
-**Phase 2: API Implementation**
-- Expose CRUD endpoints in `MorWalPizVideo.ServerAPI` (e.g., `CompetitionsController`, `HangfireEndpoints`).
-- Integrate Redis caching decorators.
-
-**Phase 3: Frontend PWA Setup ("shooting-ita-frontend")**
-- Scaffold React 19 UI with Tailwind.
-- Connect existing shared service libraries.
-- Construct the Service Worker code manually for caching and Push Notifications.
-
-**Phase 4: Integrations**
-- Link Hangfire job processing to Web Push trigger endpoints.
-- Establish many-to-many YT Channel association UI.
+Focused coverage covers sanitization, dimensions/count, logo validation, public filtering/fallback, BackOffice authorization/tenancy/status/media, cache identities, contracts, and SPA form/editor/image rendering. Affected builds and focused tests are the completion checks; unrelated baseline warnings/failures are reported rather than changed.

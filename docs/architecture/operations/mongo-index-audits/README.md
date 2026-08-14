@@ -29,7 +29,8 @@ Body:
   "approvalToken": "apply-approved-indexes",
   "approvedKeys": [
     "shortlinks.code.unique",
-    "customformresponses.formid_responseid.unique"
+    "customformresponses.formid_responseid.unique",
+    "quicklinks_url.unique"
   ]
 }
 ```
@@ -40,7 +41,10 @@ Notes:
 - Indexes are never created at startup.
 - Keep backups and rollback notes with each apply record.
 - `compilations_url.unique` is named `ux_compilations_url_ci` in the authoritative phase 4 manifest and enforces global uniqueness for normalized public compilation URLs.
-- `shortlinks.code.unique` remains a global uniqueness requirement for public short-link resolution. Neither index is claimed as deployed by this repository documentation; production status requires an audit/apply result and explain evidence.
+- `quicklinks_url.unique` is named `ux_quicklinks_url_ci` in the authoritative phase 4 manifest and enforces global uniqueness for normalized QuickLinks slugs across channel owners. Audit duplicates after trim, surrounding-slash removal, and lowercase normalization before applying it.
+- `shortlinks.code.unique` remains a global uniqueness requirement for public short-link resolution. Manifest inclusion is not deployment evidence; production status for any unique index requires a duplicate audit, audit/apply results, and explain evidence from that environment.
+
+The committed 2026-08-03 sample outputs are historical local verification artifacts and do not establish that `quicklinks_url.unique` has been audited or deployed. Capture a new environment-specific audit and apply record when rolling out the QuickLinks index.
 
 ## Committed Phase 4 baseline sample
 

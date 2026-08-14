@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.Server.Models
 {
@@ -23,6 +24,19 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("shortLinks")]
         public ShortLink[] ShortLinks { get; init; } = Array.Empty<ShortLink>();
+
+        [DataMember]
+        [BsonElement("isSHIT")]
+        [JsonPropertyName("isSHIT")]
+        public bool IsSHIT { get; init; } = false;
+
+        [DataMember]
+        [BsonElement("channelLogoStorageKey")]
+        public string ChannelLogoStorageKey { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("channelLogoUrl")]
+        public string ChannelLogoUrl { get; init; } = string.Empty;
         
         // Add a shortlink to the collection
         public YTChannel AddShortLink(ShortLink shortLink)

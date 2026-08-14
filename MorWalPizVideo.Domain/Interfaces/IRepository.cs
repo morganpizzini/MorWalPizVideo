@@ -58,6 +58,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         Task<QuickLinks?> GetByUrlAsync(string url);
     }
+    public interface IChannelNewsRepository : IRepository<ChannelNews> { }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
     public interface ICategoryRepository : IRepository<Category>
     {

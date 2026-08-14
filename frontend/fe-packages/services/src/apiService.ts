@@ -4,6 +4,7 @@ import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCateg
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
 import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
 import type { QuickLinks, CreateQuickLinksDTO, UpdateQuickLinksDTO } from '@morwalpizvideo/models';
+import type { ChannelNewsAdmin } from '@morwalpizvideo/models';
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -514,6 +515,33 @@ export const updateQuickLinks = (id: string, data: UpdateQuickLinksDTO) =>
 
 export const deleteQuickLinks = (id: string) =>
     Delete(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
+
+export const fetchChannelNews = (): Promise<ChannelNewsAdmin[]> =>
+    get(endpoints.CHANNEL_NEWS) as Promise<ChannelNewsAdmin[]>;
+
+export const getChannelNews = (id: string): Promise<ChannelNewsAdmin> =>
+    get(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id })) as Promise<ChannelNewsAdmin>;
+
+export const createChannelNews = (payload: Record<string, unknown>) =>
+    post(endpoints.CHANNEL_NEWS, payload);
+
+export const updateChannelNews = (id: string, payload: Record<string, unknown>) =>
+    put(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }), payload);
+
+export const deleteChannelNews = (id: string) =>
+    Delete(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }));
+
+export const updateChannelNewsStatus = (id: string, status: ChannelNewsAdmin['status'], publicationTimeUtc?: string) =>
+    post(ComposeUrl(endpoints.CHANNEL_NEWS_STATUS, { id }), { status, publicationTimeUtc });
+
+export const uploadChannelNewsImages = (id: string, files: readonly File[]) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    return postFormData(ComposeUrl(endpoints.CHANNEL_NEWS_IMAGES, { id }), formData) as Promise<ChannelNewsAdmin>;
+};
+
+export const deleteChannelNewsImage = (id: string, imageIndex: number) =>
+    Delete(ComposeUrl(endpoints.CHANNEL_NEWS_IMAGE_DETAIL, { id, imageIndex: String(imageIndex) })) as Promise<ChannelNewsAdmin>;
 
 // ==================== Sponsor API Services ====================
 

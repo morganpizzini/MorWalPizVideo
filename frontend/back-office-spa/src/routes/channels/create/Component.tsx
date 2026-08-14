@@ -11,6 +11,7 @@ const CreateChannel: React.FC = () => {
   const [model, setModel] = useState<CreateChannelDTO>({
     channelName: '',
     yTChannelId: '',
+    isSHIT: false,
     mine: false,
   });
   const [showModal, setShowModal] = useState(false);
@@ -88,6 +89,14 @@ const CreateChannel: React.FC = () => {
           />
           <FieldError error={errors?.yTChannelId} />
         </Form.Group>
+
+        <Form.Check
+          type="checkbox"
+          id="formIsSHIT"
+          label="Shooting ITA channel"
+          checked={model.isSHIT}
+          onChange={e => setModel({ ...model, isSHIT: e.target.checked })}
+        />
 
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Create

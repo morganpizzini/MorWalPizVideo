@@ -73,11 +73,66 @@ namespace MorWalPiz.Contracts
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
                 ShortLinkUrl = entity.ShortLinkUrl,
+                IsSHIT = entity.IsSHIT,
+                ChannelLogoUrl = entity.ChannelLogoUrl,
                 Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {
                     Provider = s.Provider,
                     Handler = s.Handler
                 }).ToList() ?? []
+            };
+        }
+        public static ChannelNewsContract Convert(ChannelNews entity)
+        {
+            return new ChannelNewsContract
+            {
+                Id = entity.Id,
+                ChannelId = entity.ChannelId,
+                Title = entity.Title,
+                Subtitle = entity.Subtitle,
+                DescriptionHtml = entity.DescriptionHtml,
+                Images = entity.Images.Select(Convert).ToArray(),
+                Slug = entity.Slug,
+                Status = entity.Status,
+                PublicationTimeUtc = entity.PublicationTimeUtc,
+                DisplayOrder = entity.DisplayOrder,
+                CreationDateTime = entity.CreationDateTime,
+                UpdatedDateTime = entity.UpdatedDateTime
+            };
+        }
+        public static ChannelNewsImageContract Convert(ChannelNewsImage entity) => new()
+        {
+            StorageKey = entity.StorageKey,
+            PublicUrl = entity.PublicUrl,
+            ContentType = entity.ContentType,
+            Width = entity.Width,
+            Height = entity.Height,
+            AltText = entity.AltText,
+            DisplayOrder = entity.DisplayOrder
+        };
+        public static ChannelNewsPublicContract ConvertPublic(ChannelNews entity, YTChannel channel, string fallbackLogoUrl)
+        {
+            return new ChannelNewsPublicContract
+            {
+                Id = entity.Id,
+                Slug = entity.Slug,
+                ChannelId = channel.ChannelId,
+                ChannelName = channel.ChannelName,
+                ChannelLogoUrl = string.IsNullOrWhiteSpace(channel.ChannelLogoUrl) ? fallbackLogoUrl : channel.ChannelLogoUrl,
+                Title = entity.Title,
+                Subtitle = entity.Subtitle,
+                DescriptionHtml = entity.DescriptionHtml,
+                Images = entity.Images.Select(image => new ChannelNewsPublicImageContract
+                {
+                    PublicUrl = image.PublicUrl,
+                    ContentType = image.ContentType,
+                    Width = image.Width,
+                    Height = image.Height,
+                    AltText = image.AltText,
+                    DisplayOrder = image.DisplayOrder
+                }).ToArray(),
+                Status = entity.Status,
+                PublicationTimeUtc = entity.PublicationTimeUtc
             };
         }
         public static ChannelVideoContract Convert(YouTubeVideo entity)
@@ -299,6 +354,7 @@ namespace MorWalPiz.Contracts
                 Title = entity.Title,
                 Subtitle = entity.Subtitle,
                 Url = entity.Url,
+                ChannelId = entity.ChannelId,
                 Links = entity.Links.Select(Convert).ToArray(),
                 CreationDateTime = entity.CreationDateTime
             };

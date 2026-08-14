@@ -23,7 +23,7 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     z-index: 100;
 }
 
@@ -34,7 +34,7 @@ body {
 }
 
 .tool-btn {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
     width: 44px;
@@ -53,7 +53,7 @@ body {
 }
 
 .tool-btn:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .tool-btn.active {
@@ -69,7 +69,7 @@ body {
 #fillColorPicker {
     width: 44px;
     height: 44px;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 4px;
     cursor: pointer;
     background: transparent;
@@ -89,7 +89,7 @@ body {
     width: 280px;
     height: 100vh;
     background: white;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
     transition: left 0.3s;
     z-index: 200;
     display: flex;
@@ -148,7 +148,7 @@ body {
 .object-item:hover {
     background: #e9ecef;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .object-preview {
@@ -227,7 +227,7 @@ body {
     background: #3498db;
     color: white;
     border: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     cursor: pointer;
     transition: all 0.2s;
     z-index: 50;
@@ -266,7 +266,7 @@ body {
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.2s;
 }
 
@@ -280,19 +280,39 @@ body {
     position: absolute;
     top: 20px;
     left: 20px;
-    background: rgba(255,255,255,0.95);
+    background: rgba(255, 255, 255, 0.95);
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 12px;
     font-weight: 500;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 50;
+}
+
+.partialize-control {
+    position: absolute;
+    top: 58px;
+    left: 20px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 2px solid #3498db;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+    color: #2c3e50;
+}
+
+.partialize-control select {
+    padding: 4px;
 }
 
 /* Bottom Panel */
 .bottom-panel {
     background: white;
-    box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s;
     z-index: 100;
 }
@@ -329,7 +349,7 @@ body {
 }
 
 .toggle-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .toggle-btn svg {
@@ -347,7 +367,7 @@ body {
 }
 
 .stage-tab {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
     padding: 8px 16px;
@@ -359,7 +379,7 @@ body {
 }
 
 .stage-tab:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .stage-tab.active {
@@ -464,6 +484,21 @@ body {
     font-size: 14px;
 }
 
+.dimension-fields {
+    display: flex;
+    gap: 12px;
+}
+
+.dimension-fields .form-group {
+    flex: 1;
+}
+
+.dimension-feedback {
+    min-height: 18px;
+    color: #c0392b;
+    font-size: 13px;
+}
+
 .form-group textarea {
     min-height: 80px;
     resize: vertical;
@@ -515,67 +550,67 @@ body {
         padding: 4px;
         gap: 4px;
     }
-    
+
     .tool-btn {
         width: 40px;
         height: 40px;
     }
-    
+
     .tool-btn svg {
         width: 20px;
         height: 20px;
     }
-    
+
     #colorPicker,
     #fillColorPicker {
         width: 40px;
         height: 40px;
     }
-    
+
     #lineWidth {
         width: 60px;
     }
-    
+
     .sidebar {
         width: 100%;
         left: -100%;
     }
-    
+
     .zoom-controls {
         top: 10px;
         right: 10px;
         gap: 4px;
     }
-    
+
     .zoom-btn {
         width: 40px;
         height: 40px;
         font-size: 16px;
     }
-    
+
     .scale-display {
         top: 10px;
         left: 10px;
         font-size: 10px;
         padding: 6px 10px;
     }
-    
+
     .fab {
         width: 48px;
         height: 48px;
         bottom: 16px;
         left: 16px;
     }
-    
+
     .fab svg {
         width: 24px;
         height: 24px;
     }
-    
+
     .action-buttons {
         flex-direction: column;
     }
-    
+
     .action-btn {
         min-width: unset;
     }
@@ -585,7 +620,7 @@ body {
     .toolbar-section {
         flex-wrap: wrap;
     }
-    
+
     .panel-content {
         max-height: 250px;
     }
@@ -593,6 +628,7 @@ body {
 
 /* Touch feedback */
 @media (hover: none) and (pointer: coarse) {
+
     .tool-btn:active,
     .zoom-btn:active,
     .action-btn:active {

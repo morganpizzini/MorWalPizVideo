@@ -49,6 +49,7 @@ Never create a unique index before duplicate analysis.
 | `freeAcquisitions` | Unique owner identity plus artifact ID | Idempotent permanent-free acquisition |
 | `freeAcquisitions` | Artifact ID, acquired timestamp descending | Administrative/reporting lookup |
 | `shortLinks` | Unique normalized lowercase code | Global short-code resolution after embedded-link migration |
+| `quickLinks` | Unique normalized lowercase slug | Global QuickLinks page resolution across channel owners after duplicate audit |
 | `shortLinkVisits` | Short-link ID, occurred timestamp descending | Recent visit analysis |
 | `shortLinkVisits` | TTL on occurred timestamp, optional | Only after retention policy approval |
 | `youtubeContent` | Partial unique non-empty URL | Detail lookup after duplicate audit |
@@ -75,6 +76,19 @@ Field names must be confirmed against deployed BSON before creation. Prefer expl
 8. Switch all management writes to the canonical collection.
 9. Observe legacy-read telemetry.
 10. Remove embedded links only after backup and compatibility-window completion.
+
+## QuickLinks Global Slug Rollout
+
+The approved `quicklinks_url.unique` entry creates `ux_quicklinks_url_ci` on `quickLinks.url`. The constraint is global across channel owners; it is not a per-channel uniqueness rule. Runtime normalization is `QuickLinks.NormalizeUrl`: trim whitespace, trim surrounding slashes, then lowercase invariant.
+
+Before applying the index:
+
+1. Audit all existing `quickLinks.url` values using that exact normalization, including records owned by different channels.
+2. Resolve every normalized duplicate deterministically and record the affected IDs; include empty or malformed values in the cleanup report.
+3. Run the authenticated Mongo index audit and approve `quicklinks_url.unique` together with any other approved keys.
+4. Apply during the maintenance window, then repeat the audit and capture URL lookup explain evidence.
+
+The manifest and runtime service define the approved operation but do not prove production deployment. A production rollout is complete only when the duplicate audit, pre/post audit output, apply output, and explain evidence are recorded for that environment.
 
 ## Custom-Form Response Migration
 

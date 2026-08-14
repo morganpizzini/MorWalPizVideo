@@ -29,6 +29,12 @@ const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/{title}`;
 const CHANNELS = `${baseEndpoint}/channels`;
 const CHANNELS_ACCESSIBLE = `${CHANNELS}/accessible`;
 const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
+const CHANNEL_LOGO = `${CHANNELS_DETAIL}/logo`;
+const CHANNEL_NEWS = `${baseEndpoint}/channelnews`;
+const CHANNEL_NEWS_DETAIL = `${CHANNEL_NEWS}/{id}`;
+const CHANNEL_NEWS_STATUS = `${CHANNEL_NEWS_DETAIL}/status`;
+const CHANNEL_NEWS_IMAGES = `${CHANNEL_NEWS_DETAIL}/images`;
+const CHANNEL_NEWS_IMAGE_DETAIL = `${CHANNEL_NEWS_IMAGES}/{imageIndex}`;
 const CONFIGURATIONS = `${baseEndpoint}/configurations`;
 const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
 const VIDEOS_IMPORT = `${VIDEOS}/ImportVideo`;
@@ -109,6 +115,12 @@ export default {
     CHANNELS,
     CHANNELS_ACCESSIBLE,
     CHANNELS_DETAIL,
+    CHANNEL_LOGO,
+    CHANNEL_NEWS,
+    CHANNEL_NEWS_DETAIL,
+    CHANNEL_NEWS_STATUS,
+    CHANNEL_NEWS_IMAGES,
+    CHANNEL_NEWS_IMAGE_DETAIL,
     CONFIGURATIONS,
     CONFIGURATIONS_DETAIL,
     VIDEOS_IMPORT,

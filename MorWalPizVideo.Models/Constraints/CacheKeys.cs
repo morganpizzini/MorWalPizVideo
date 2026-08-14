@@ -20,5 +20,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Customers = "customers";
         public const string Carts = "carts";
         public const string Competitions = "competitions";
+        public const string ChannelNews = "channelnews";
     }
 }

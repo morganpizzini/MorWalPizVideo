@@ -21,6 +21,7 @@ export interface QuickLink {
 
 export interface QuickLinks {
   id?: string;
+  channelId?: string;
   title: string;
   subtitle?: string;
   url: string;
@@ -29,6 +30,7 @@ export interface QuickLinks {
 }
 
 export interface CreateQuickLinksDTO {
+  channelId?: string;
   title: string;
   subtitle?: string;
   url: string;

@@ -18,6 +18,12 @@ const MATCHES_IMAGES = `${MATCHES}/{matchId}/images`;
 
 // Channels (used by the FR-016 video↔channel join)
 const CHANNELS = `${baseEndpoint}/channels`;
+const SHIT_CHANNELS = `${baseEndpoint}/shit/channels`;
+const SHIT_MATCHES = `${baseEndpoint}/shit/matches`;
+const SHIT_QUICK_LINKS = `${baseEndpoint}/shit/quicklinks`;
+const SHIT_QUICK_LINK_DETAIL = `${SHIT_QUICK_LINKS}/{customLinktree}`;
+const SHIT_CHANNEL_NEWS = `${baseEndpoint}/shit/channelnews`;
+const SHIT_CHANNEL_NEWS_DETAIL = `${SHIT_CHANNEL_NEWS}/{idOrSlug}`;
 
 // Pages
 const PAGES = `${baseEndpoint}/pages`;
@@ -49,6 +55,12 @@ export default {
     MATCHES_DETAIL,
     MATCHES_IMAGES,
     CHANNELS,
+    SHIT_CHANNELS,
+    SHIT_MATCHES,
+    SHIT_QUICK_LINKS,
+    SHIT_QUICK_LINK_DETAIL,
+    SHIT_CHANNEL_NEWS,
+    SHIT_CHANNEL_NEWS_DETAIL,
     PAGES,
     PAGES_DETAIL,
     PRODUCTS,

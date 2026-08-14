@@ -25,6 +25,9 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
     public ShortLinkMockRepository? ShortLinkRepository => Services.GetRequiredService<IShortLinkRepository>() as ShortLinkMockRepository;
     public CompilationMockRepository? CompilationRepository => Services.GetRequiredService<ICompilationRepository>() as CompilationMockRepository;
     public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
+    public QuickLinksMockRepository? QuickLinksRepository => Services.GetRequiredService<IQuickLinksRepository>() as QuickLinksMockRepository;
+    public ChannelNewsMockRepository? ChannelNewsRepository => Services.GetRequiredService<IChannelNewsRepository>() as ChannelNewsMockRepository;
+    public RecordingCrossApiService CrossApiService => Services.GetRequiredService<RecordingCrossApiService>();
 
     public HttpClient CreateClientWithPermissions(params string[] permissions)
     {
@@ -84,7 +87,8 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
 
             services.AddScoped<IDiscordService, DiscordServiceMock>();
             services.AddScoped<ITelegramService, TelegramServiceMock>();
-            services.AddScoped<ICrossApiService, MockCrossApiService>();
+            services.AddSingleton<RecordingCrossApiService>();
+            services.AddSingleton<ICrossApiService>(provider => provider.GetRequiredService<RecordingCrossApiService>());
 
             // Remove existing authentication services
             var authDescriptors = services

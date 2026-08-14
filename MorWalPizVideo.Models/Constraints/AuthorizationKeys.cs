@@ -57,6 +57,12 @@ public static class AuthorizationPermissionKeys
   public const string QuickLinksUpdate = "quicklinks.update";
   public const string QuickLinksDelete = "quicklinks.delete";
 
+  public const string ChannelNewsView = "channelnews.view";
+  public const string ChannelNewsManage = "channelnews.manage";
+  public const string ChannelNewsCreate = "channelnews.create";
+  public const string ChannelNewsUpdate = "channelnews.update";
+  public const string ChannelNewsDelete = "channelnews.delete";
+
   public const string QueryLinksView = "querylinks.view";
   public const string QueryLinksManage = "querylinks.manage";
   public const string QueryLinksCreate = "querylinks.create";

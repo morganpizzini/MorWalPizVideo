@@ -2,10 +2,13 @@ import { useLoaderData, useNavigate } from 'react-router-dom';
 import { HeroCarousel, VideoCardRail, type HeroSlide, type VideoCardProps } from '@morwalpiz/layout';
 import { formatRelativeTime } from '@morwalpiz/layout';
 import type { MatchWithChannel } from '../../services/shootingItaVideoService';
+import type { ChannelNews } from '@morwalpizvideo/models';
+import ChannelNewsCarousel from './ChannelNewsCarousel';
 
 interface HomeLoaderData {
     featured: MatchWithChannel[];
     exclusiveRail: MatchWithChannel[];
+    channelNews: ChannelNews[];
 }
 
 function firstYoutubeId(m: MatchWithChannel): string {
@@ -53,6 +56,7 @@ export default function HomeRoute() {
 
     return (
         <>
+            <ChannelNewsCarousel items={data.channelNews} />
             <HeroCarousel slides={data.featured.map(toSlide(goVideo))} />
             <VideoCardRail
                 title="Exclusives"

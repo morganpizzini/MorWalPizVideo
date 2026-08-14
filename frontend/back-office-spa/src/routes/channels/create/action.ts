@@ -9,6 +9,7 @@ export default async function action({ request }: { request: Request }) {
   const yTChannelId = formData.get('yTChannelId');
   const channelNameValue = typeof channelName === 'string' ? channelName.trim() : '';
   const yTChannelIdValue = typeof yTChannelId === 'string' ? yTChannelId.trim() : '';
+  const isSHIT = formData.get('isSHIT') === 'true';
   const errors: Record<string, string | string[]> = {};
 
   // Validate fields
@@ -26,9 +27,10 @@ export default async function action({ request }: { request: Request }) {
   }
 
   try {
-    const payload: Pick<CreateChannelDTO, 'channelName' | 'yTChannelId'> = {
+    const payload: Pick<CreateChannelDTO, 'channelName' | 'yTChannelId' | 'isSHIT'> = {
       channelName: channelNameValue,
       yTChannelId: yTChannelIdValue,
+      isSHIT,
     };
     const response = await post(endpoints.CHANNELS, payload);
     if (getChannelApiError(response)) {

@@ -108,6 +108,7 @@ builder.Services.AddScoped<IFormsService, FormsService>();
 //builder.Services.AddScoped<IInsightsService, InsightsService>();
 builder.Services.AddScoped<ILinksService, LinksService>();
 builder.Services.AddScoped<IQuickLinksService, QuickLinksService>();
+builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 
 if (enableMock)
 {
@@ -124,6 +125,7 @@ if (enableMock)
     builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksMockRepository>();
+    builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
@@ -160,6 +162,7 @@ else
     builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksRepository>();
+    builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();

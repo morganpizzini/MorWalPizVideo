@@ -23,6 +23,7 @@ export interface ChannelWithVideos {
     yTChannelId?: string;
     avatarUrl?: string;
     mine?: boolean;
+    isSHIT?: boolean;
     videos?: Array<{ videoId: string }>;
 }
 
@@ -41,6 +42,7 @@ export interface VideoRefLike {
     description?: string;
     publishedAt?: string;
     thumbnailUrl?: string;
+    channelIds?: string[];
 }
 
 export interface MatchLike {
@@ -71,9 +73,8 @@ export function buildOwnerMap(
 ): Map<string, ChannelBadge> {
     const owners = new Map<string, ChannelBadge>();
 
-    // (b) Legacy: YTChannel.videos[*].videoId → channel
+    // Legacy channel video arrays remain a fallback for older records.
     for (const channel of channels ?? []) {
-        if (!channel.mine || channel.channelId !== MORWALPIZ_CHANNEL_ID) continue;
         const badge: ChannelBadge = {
             channelId: channel.channelId,
             channelName: channel.channelName,
@@ -94,6 +95,12 @@ export function buildOwnerMap(
         });
     }
     for (const match of matches ?? []) {
+        for (const video of match.videoRefs ?? []) {
+            for (const channelId of video.channelIds ?? []) {
+                const badge = byChannelId.get(channelId);
+                if (badge) owners.set(video.youtubeId, badge);
+            }
+        }
         for (const v of match.videos ?? []) {
             if (v?.channelId) {
                 const badge = byChannelId.get(v.channelId);

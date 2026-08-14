@@ -8,7 +8,7 @@ public interface IQuickLinksService
 {
     Task<IList<QuickLinks>> GetAllAsync();
     Task<QuickLinks?> GetByIdAsync(string id);
-    Task<QuickLinks?> GetByUrlAsync(string url);
+    Task<QuickLinks?> GetByUrlAsync(string url, IReadOnlyCollection<string>? channelIds = null);
     Task<bool> IsUrlAvailableAsync(string url, string? excludingId = null);
     Task<QuickLinks> CreateAsync(QuickLinks entity);
     Task UpdateAsync(QuickLinks entity);
@@ -22,8 +22,13 @@ public sealed class QuickLinksService(IQuickLinksRepository repository) : IQuick
 
     public Task<QuickLinks?> GetByIdAsync(string id) => repository.GetItemAsync(id);
 
-    public Task<QuickLinks?> GetByUrlAsync(string url)
-        => repository.GetByUrlAsync(QuickLinks.NormalizeUrl(url));
+    public async Task<QuickLinks?> GetByUrlAsync(string url, IReadOnlyCollection<string>? channelIds = null)
+    {
+        var entity = await repository.GetByUrlAsync(QuickLinks.NormalizeUrl(url));
+        return entity is not null && (channelIds is null || channelIds.Contains(entity.ChannelId, StringComparer.Ordinal))
+            ? entity
+            : null;
+    }
 
     public async Task<bool> IsUrlAvailableAsync(string url, string? excludingId = null)
     {
@@ -42,6 +47,7 @@ public sealed class QuickLinksService(IQuickLinksRepository repository) : IQuick
     public static QuickLinks Normalize(QuickLinks entity)
         => entity with
         {
+            ChannelId = entity.ChannelId.Trim(),
             Title = CleanText(entity.Title, 160),
             Subtitle = CleanText(entity.Subtitle, 300),
             Url = QuickLinks.NormalizeUrl(entity.Url),
@@ -51,6 +57,8 @@ public sealed class QuickLinksService(IQuickLinksRepository repository) : IQuick
     public static IReadOnlyList<string> Validate(QuickLinks entity)
     {
         var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(entity.ChannelId))
+            errors.Add("Channel owner is required.");
         if (string.IsNullOrWhiteSpace(entity.Title) || entity.Title.Trim().Length > 160)
             errors.Add("Title is required and must be at most 160 characters.");
 

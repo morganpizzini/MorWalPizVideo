@@ -27,6 +27,8 @@ import Bluetooth from "./system/bluetooth";
 import Stream from "./stream/Component";
 import QuickLinks from "./quickLinks/Component";
 import quickLinksLoader from "./quickLinks/loader";
+import ChannelNews from "./channelNews/Component";
+import channelNewsLoader from "./channelNews/loader";
 import type { RouteObject } from "react-router";
 
 export const routes: RouteObject[] = [
@@ -34,6 +36,12 @@ export const routes: RouteObject[] = [
         path: "/quick-links/:url",
         loader: quickLinksLoader,
         element: <QuickLinks />,
+        errorElement: <ErrorPageRoot />,
+    },
+    {
+        path: "/channel-news/:idOrSlug",
+        loader: channelNewsLoader,
+        element: <ChannelNews />,
         errorElement: <ErrorPageRoot />,
     },
     {

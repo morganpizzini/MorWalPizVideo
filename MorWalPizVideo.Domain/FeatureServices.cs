@@ -8,6 +8,8 @@ public interface IContentService
 {
     Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, bool includePrivate, int skip, int take);
     Task<int> CountPublicMatchesForChannelAsync(string channelId, bool includePrivate);
+    Task<IList<YouTubeContent>> GetPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate, int skip, int take);
+    Task<int> CountPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate);
     Task<IList<YouTubeContent>> GetMatchesPageAsync(bool includePrivate, int skip, int take);
     Task<int> CountMatchesAsync(bool includePrivate);
     Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate);
@@ -51,6 +53,29 @@ public sealed class ContentService(
         => (await youTubeContentRepository.GetItemsAsync(match =>
             (includePrivate || !match.IsPrivate) &&
             match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))).Count;
+
+    public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate, int skip, int take)
+    {
+        if (channelIds.Count == 0)
+            return [];
+
+        var matches = await youTubeContentRepository.GetItemsAsync(match =>
+            (includePrivate || !match.IsPrivate) &&
+            match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)));
+        return [.. matches.OrderByDescending(match => match.CreationDateTime)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Clamp(take, 1, 200))];
+    }
+
+    public async Task<int> CountPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate)
+    {
+        if (channelIds.Count == 0)
+            return 0;
+
+        return (await youTubeContentRepository.GetItemsAsync(match =>
+            (includePrivate || !match.IsPrivate) &&
+            match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)))).Count;
+    }
 
     public Task<IList<YouTubeContent>> GetMatchesPageAsync(bool includePrivate, int skip, int take)
         => youTubeContentRepository.GetPublicOrderedAsync(includePrivate, skip, take);

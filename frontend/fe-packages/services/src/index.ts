@@ -33,6 +33,14 @@ export {
     createQuickLinks,
     updateQuickLinks,
     deleteQuickLinks,
+    fetchChannelNews,
+    getChannelNews,
+    createChannelNews,
+    updateChannelNews,
+    deleteChannelNews,
+    updateChannelNewsStatus,
+    uploadChannelNewsImages,
+    deleteChannelNewsImage,
     fetchSponsors,
     getSponsor,
     createSponsor,
@@ -78,3 +86,4 @@ export {
 // Video ↔ Channel join (FR-016 / FR-017)
 export { loadChannelMap, buildOwnerMap, resolveOwner, MORWALPIZ_CHANNEL_ID } from './videoChannelMap';
 export type { ChannelBadge, ChannelWithVideos, VideoLike, VideoRefLike, MatchLike } from './videoChannelMap';
+export { getPublicChannelNews, getPublicChannelNewsByIdOrSlug } from './channelNewsService';

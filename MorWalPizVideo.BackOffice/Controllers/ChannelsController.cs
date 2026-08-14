@@ -6,6 +6,7 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.Domain;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
@@ -21,6 +22,9 @@ public class AddChannelRequest
 
     public string? ShortLinkUrl { get; set; }
 
+    [JsonPropertyName("isSHIT")]
+    public bool IsSHIT { get; set; }
+
     public List<ChannelSocialRequest> Socials { get; set; } = [];
 }
 
@@ -30,6 +34,9 @@ public class UpdateChannelRequest
     public string ChannelName { get; set; } = string.Empty;
 
     public string? ShortLinkUrl { get; set; }
+
+    [JsonPropertyName("isSHIT")]
+    public bool IsSHIT { get; set; }
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
 }
@@ -46,17 +53,23 @@ public class ChannelsController : ApplicationControllerBase
     private readonly IYTService ytService;
     private readonly IChannelContextResolver channelContextResolver;
     private readonly IVideoAuthorizationService channelAuthorization;
+    private readonly ICrossApiService crossApiService;
+    private readonly IBlobService blobService;
 
     public ChannelsController(
         IYTService _ytService,
         DataService dataService,
         IChannelContextResolver channelContextResolver,
-        IVideoAuthorizationService channelAuthorization)
+        IVideoAuthorizationService channelAuthorization,
+        ICrossApiService crossApiService,
+        IBlobService blobService)
     {
         ytService = _ytService;
         _dataService = dataService;
         this.channelContextResolver = channelContextResolver;
         this.channelAuthorization = channelAuthorization;
+        this.crossApiService = crossApiService;
+        this.blobService = blobService;
     }
 
     [HttpGet]
@@ -111,7 +124,13 @@ public class ChannelsController : ApplicationControllerBase
         }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
-        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim()) { ShortLinkUrl = shortLinkUrl, Socials = socials });
+        await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim())
+        {
+            ShortLinkUrl = shortLinkUrl,
+            Socials = socials,
+            IsSHIT = request.IsSHIT
+        });
+        await InvalidatePublicShootingItaCachesAsync();
 
         return NoContent();
     }
@@ -138,7 +157,14 @@ public class ChannelsController : ApplicationControllerBase
         }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
-        await _dataService.UpdateChannel(existing with { ChannelName = request.ChannelName.Trim(), ShortLinkUrl = shortLinkUrl, Socials = socials });
+        await _dataService.UpdateChannel(existing with
+        {
+            ChannelName = request.ChannelName.Trim(),
+            ShortLinkUrl = shortLinkUrl,
+            Socials = socials,
+            IsSHIT = request.IsSHIT
+        });
+        await InvalidatePublicShootingItaCachesAsync();
         return NoContent();
     }
 
@@ -158,7 +184,77 @@ public class ChannelsController : ApplicationControllerBase
         }
 
         await _dataService.RemoveChannelById(id);
+        await InvalidatePublicShootingItaCachesAsync();
         return NoContent();
+    }
+
+    [HttpPost("{id}/logo")]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
+    public async Task<IActionResult> UploadLogo(string id, IFormFile logo)
+    {
+        if (!await channelAuthorization.CanManageChannelAsync(User, id))
+            return NotFound();
+        if (logo is null || logo.Length == 0)
+            return BadRequest("A PNG logo is required.");
+
+        var existing = await _dataService.GetChannelById(id);
+        if (existing is null)
+            return NotFound();
+
+        try
+        {
+            await using var input = logo.OpenReadStream();
+            var prepared = await ChannelNewsMediaProcessor.PrepareLogoAsync(input);
+            var storageKey = $"channel-logos/{existing.ChannelId}/{Guid.NewGuid():N}{prepared.Extension}";
+            await blobService.UploadImagesAsync(storageKey, prepared.Content, false);
+            await _dataService.UpdateChannel(existing with
+            {
+                ChannelLogoStorageKey = storageKey,
+                ChannelLogoUrl = blobService.GetImageUrl(storageKey)
+            });
+            await InvalidatePublicShootingItaCachesAsync();
+            return Ok(ContractUtils.Convert(existing with
+            {
+                ChannelLogoStorageKey = storageKey,
+                ChannelLogoUrl = blobService.GetImageUrl(storageKey)
+            }));
+        }
+        catch (Exception exception)
+        {
+            return BadRequest($"The channel logo is not a valid PNG: {exception.Message}");
+        }
+    }
+
+    [HttpDelete("{id}/logo")]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
+    public async Task<IActionResult> RemoveLogo(string id)
+    {
+        if (!await channelAuthorization.CanManageChannelAsync(User, id))
+            return NotFound();
+
+        var existing = await _dataService.GetChannelById(id);
+        if (existing is null)
+            return NotFound();
+
+        await _dataService.UpdateChannel(existing with { ChannelLogoStorageKey = string.Empty, ChannelLogoUrl = string.Empty });
+        if (!string.IsNullOrWhiteSpace(existing.ChannelLogoStorageKey))
+        {
+            await blobService.DeleteImageAsync(existing.ChannelLogoStorageKey);
+        }
+        await InvalidatePublicShootingItaCachesAsync();
+        return NoContent();
+    }
+
+    private async Task InvalidatePublicShootingItaCachesAsync()
+    {
+        await crossApiService.ResetCache(CacheKeys.Channels);
+        await crossApiService.ResetCache(CacheKeys.Matches);
+        await crossApiService.ResetCache(CacheKeys.QuickLinks);
+        await crossApiService.ResetCache(CacheKeys.ChannelNews);
+        await crossApiService.PurgeCache(CacheKeys.Channels);
+        await crossApiService.PurgeCache(CacheKeys.Matches);
+        await crossApiService.PurgeCache(CacheKeys.QuickLinks);
+        await crossApiService.PurgeCache(ApiTagCacheKeys.ChannelNews);
     }
 
     private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)

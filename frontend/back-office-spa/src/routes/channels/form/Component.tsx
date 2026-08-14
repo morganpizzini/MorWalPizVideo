@@ -14,6 +14,7 @@ const ChannelForm: React.FC = () => {
 
   const [channelName, setChannelName] = useState(entity?.channelName || '');
   const [yTChannelId, setYTChannelId] = useState('');
+  const [isSHIT, setIsSHIT] = useState(false);
   const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [socials, setSocials] = useState<ChannelSocial[]>([]);
@@ -32,6 +33,7 @@ const ChannelForm: React.FC = () => {
   useEffect(() => {
     if (entity) {
       setChannelName(entity.channelName);
+      setIsSHIT(entity.isSHIT ?? false);
       setShortLinkUrl(entity.shortLinkUrl ?? '');
       setSocials(entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ?? []);
     }
@@ -62,7 +64,7 @@ const ChannelForm: React.FC = () => {
   };
 
   const confirmSubmit = () => {
-    const payload: Record<string, string> = { channelName };
+    const payload: Record<string, string> = { channelName, isSHIT: String(isSHIT) };
     if (!isEditMode) {
       payload.yTChannelId = yTChannelId;
     }
@@ -113,6 +115,15 @@ const ChannelForm: React.FC = () => {
           <Form.Label>Short link base URL</Form.Label>
           <Form.Control type="url" value={shortLinkUrl} onChange={e => setShortLinkUrl(e.target.value)} placeholder="https://example.com/sl" />
         </Form.Group>
+
+        <Form.Check
+          type="checkbox"
+          id="formIsSHIT"
+          label="Shooting ITA channel"
+          checked={isSHIT}
+          onChange={event => setIsSHIT(event.target.checked)}
+          className="mb-3"
+        />
 
         <Form.Label>Socials</Form.Label>
         {socials.map((social, index) => (

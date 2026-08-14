@@ -69,6 +69,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("url", 1),
             Unique: true),
         new(
+            Key: "quicklinks_url.unique",
+            Collection: DbCollections.QuickLinks,
+            Name: "ux_quicklinks_url_ci",
+            Keys: new BsonDocument("url", 1),
+            Unique: true),
+        new(
             Key: "customforms_active_url",
             Collection: DbCollections.CustomForms,
             Name: "ix_customforms_active_url",

@@ -203,6 +203,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class ChannelNewsMockRepository(IMockScenario scenario)
+        : BaseMockRepository<ChannelNews>(scenario, "channelNews"), IChannelNewsRepository
+    {
+    }
+
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
     {
         public CategoryMockRepository(IMockScenario scenario) : base(scenario, "categories")

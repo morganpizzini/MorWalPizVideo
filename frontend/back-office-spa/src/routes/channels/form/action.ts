@@ -9,6 +9,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
   const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
   const shortLinkUrl = typeof values.shortLinkUrl === 'string' ? values.shortLinkUrl.trim() : '';
+  const isSHIT = values.isSHIT === 'true';
   const socials = parseSocials(values.socials);
 
   if (!channelName) {
@@ -33,6 +34,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelId: id,
         channelName,
         shortLinkUrl,
+        isSHIT,
         socials: socials ?? [],
       });
       if (getChannelApiError(response)) {
@@ -43,6 +45,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelName,
         yTChannelId,
         shortLinkUrl,
+        isSHIT,
         socials: socials ?? [],
       };
       const response = await post(endpoints.CHANNELS, payload);

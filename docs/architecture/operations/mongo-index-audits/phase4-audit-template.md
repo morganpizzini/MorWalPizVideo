@@ -33,7 +33,7 @@ Attach representative explain-plan evidence for:
 - `matches` paging/filter query
 - `customForms` active/by-url query
 - `customFormResponses` by form query
-- `pages` and `compilations` URL lookup queries
+- `pages`, `compilations`, and `quickLinks` URL lookup queries
 
 ## Reconciliation evidence
 

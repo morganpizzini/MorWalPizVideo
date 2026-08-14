@@ -23,6 +23,7 @@ public sealed class QuickLinksContract
     [DataMember] public string Title { get; set; } = string.Empty;
     [DataMember] public string? Subtitle { get; set; }
     [DataMember] public string Url { get; set; } = string.Empty;
+    [DataMember] public string ChannelId { get; set; } = string.Empty;
     [DataMember] public QuickLinkContract[] Links { get; set; } = [];
     [DataMember] public DateTime CreationDateTime { get; set; }
 }

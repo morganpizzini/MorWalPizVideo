@@ -27,7 +27,9 @@ class StageDesigner {
         this.stages = [];
         this.currentStageIndex = 0;
         this.selectedObject = null;
+        this.selectedMeasurement = null;
         this.draggingObject = null;
+        this.draggingMeasurementEndpoint = null;
         this.rotatingObject = false;
         this.rotationStartAngle = 0;
         this.dragRotateHistorySaved = false;
@@ -70,7 +72,7 @@ class StageDesigner {
 
         // Load from localStorage if available
         this.loadFromLocalStorage();
-        
+
         // Restore collapsed state for stage info
         const isCollapsed = localStorage.getItem('ipsc-stage-info-collapsed') === 'true';
         if (isCollapsed) {
@@ -149,7 +151,7 @@ class StageDesigner {
             const collapseBtn = document.getElementById('collapseInfoBtn');
             stageInfo.classList.toggle('collapsed');
             collapseBtn.classList.toggle('collapsed');
-            
+
             // Save collapsed state to localStorage
             const isCollapsed = stageInfo.classList.contains('collapsed');
             localStorage.setItem('ipsc-stage-info-collapsed', isCollapsed);
@@ -173,6 +175,26 @@ class StageDesigner {
                 this.currentStage.notes = e.target.value;
                 this.saveToLocalStorage();
             }
+        });
+
+        ['stageWidth', 'stageHeight'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (!this.currentStage) return;
+                const value = Number(e.target.value);
+                this.currentStage[id === 'stageWidth' ? 'widthMeters' : 'heightMeters'] =
+                    Number.isFinite(value) && value > 0 ? value : null;
+                this.updateStageInfo();
+                this.render();
+                this.saveToLocalStorage();
+            });
+        });
+
+        document.getElementById('partializeMode').addEventListener('change', (e) => {
+            if (!this.selectedObject || !this.isTargetType(this.selectedObject)) return;
+            this.saveStateToHistory();
+            this.selectedObject.visibility = e.target.value;
+            this.render();
+            this.saveToLocalStorage();
         });
 
         // Export/Import
@@ -236,6 +258,12 @@ class StageDesigner {
             if (e.key === 'Delete') {
                 if (this.selectedObject) {
                     this.deleteSelectedObject();
+                } else if (this.selectedMeasurement && this.currentStage) {
+                    this.saveStateToHistory();
+                    this.currentStage.measurements = this.currentStage.measurements.filter(measurement => measurement !== this.selectedMeasurement);
+                    this.selectedMeasurement = null;
+                    this.render();
+                    this.saveToLocalStorage();
                 }
             } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                 e.preventDefault();
@@ -258,6 +286,8 @@ class StageDesigner {
             fills: [],
             objects: [],
             measurements: []
+            , widthMeters: null
+            , heightMeters: null
         };
 
         this.stages.push(newStage);
@@ -312,7 +342,96 @@ class StageDesigner {
         if (this.currentStage) {
             document.getElementById('stageName').value = this.currentStage.name;
             document.getElementById('stageNotes').value = this.currentStage.notes;
+            document.getElementById('stageWidth').value = this.currentStage.widthMeters ?? '';
+            document.getElementById('stageHeight').value = this.currentStage.heightMeters ?? '';
+            const valid = this.hasStageBounds();
+            document.getElementById('dimensionFeedback').textContent = valid ? '' : 'Enter positive width and height to enable the stage boundary.';
+            document.getElementById('stageWidth').setCustomValidity(valid || this.currentStage.widthMeters == null ? '' : 'Width must be positive');
+            document.getElementById('stageHeight').setCustomValidity(valid || this.currentStage.heightMeters == null ? '' : 'Height must be positive');
         }
+        const partializeControl = document.getElementById('partializeControl');
+        const hasTargetSelection = this.selectedObject && this.isTargetType(this.selectedObject);
+        partializeControl.hidden = !hasTargetSelection;
+        if (hasTargetSelection) document.getElementById('partializeMode').value = this.selectedObject.visibility || 'full';
+    }
+
+    normalizeStage(stage, index) {
+        const normalized = {
+            id: stage.id ?? Date.now() + index,
+            name: stage.name || `Stage ${index + 1}`,
+            notes: stage.notes || '',
+            drawings: Array.isArray(stage.drawings) ? stage.drawings : [],
+            fills: Array.isArray(stage.fills) ? stage.fills : [],
+            objects: Array.isArray(stage.objects) ? stage.objects : [],
+            measurements: Array.isArray(stage.measurements) ? stage.measurements : [],
+            widthMeters: Number.isFinite(Number(stage.widthMeters)) && Number(stage.widthMeters) > 0 ? Number(stage.widthMeters) : null,
+            heightMeters: Number.isFinite(Number(stage.heightMeters)) && Number(stage.heightMeters) > 0 ? Number(stage.heightMeters) : null
+        };
+        normalized.objects.forEach((obj, objectIndex) => {
+            obj.id ??= Date.now() + objectIndex;
+            obj.angle = Number.isFinite(Number(obj.angle)) ? Number(obj.angle) : 0;
+            obj.visibility = this.normalizeVisibility(obj.visibility);
+            obj.baseType = obj.baseType || (obj.type?.includes('Target') ? 'target' : obj.type);
+            obj.isNoShoot = Boolean(obj.isNoShoot || obj.type?.startsWith('noShoot'));
+        });
+        normalized.measurements.forEach((measurement, measurementIndex) => {
+            measurement.id ??= Date.now() + measurementIndex;
+        });
+        return normalized;
+    }
+
+    normalizeVisibility(value) {
+        return ['full', 'bottomHidden', 'leftOnly', 'centerOnly', 'rightOnly'].includes(value)
+            ? value
+            : value === 'halfSize' || value === 'bothSides' ? 'centerOnly' : 'full';
+    }
+
+    hasStageBounds() {
+        return Boolean(this.currentStage && this.currentStage.widthMeters > 0 && this.currentStage.heightMeters > 0);
+    }
+
+    getStageBounds() {
+        if (!this.hasStageBounds()) return null;
+        return { left: 0, top: 0, right: this.currentStage.widthMeters * this.pixelsPerMeter, bottom: this.currentStage.heightMeters * this.pixelsPerMeter };
+    }
+
+    getObjectDimensions(obj) {
+        const type = obj.baseType || obj.type;
+        if (type === 'target') {
+            return obj.type === 'halfTarget' ? { width: 5, height: 15 } : { width: obj.type === 'miniTarget' ? 5 : 10, height: obj.type === 'miniTarget' ? 7.5 : 15 };
+        }
+        if (type === 'pepper') return { width: 4, height: 5 };
+        if (type === 'plate') return { width: 4, height: 4 };
+        if (type === 'barricade') return { width: 30, height: 8 };
+        return { width: 10, height: 10 };
+    }
+
+    getObjectCorners(obj, x = obj.x, y = obj.y, angle = obj.angle) {
+        const dimensions = this.getObjectDimensions(obj);
+        const halfWidth = dimensions.width / 2;
+        const halfHeight = dimensions.height / 2;
+        const radians = angle * Math.PI / 180;
+        const cos = Math.cos(radians), sin = Math.sin(radians);
+        return [[-halfWidth, -halfHeight], [halfWidth, -halfHeight], [halfWidth, halfHeight], [-halfWidth, halfHeight]].map(([localX, localY]) => ({
+            x: x + localX * cos - localY * sin,
+            y: y + localX * sin + localY * cos
+        }));
+    }
+
+    objectFitsStage(obj, x = obj.x, y = obj.y, angle = obj.angle) {
+        const bounds = this.getStageBounds();
+        if (!bounds) return true;
+        return this.getObjectCorners(obj, x, y, angle).every(point =>
+            point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.top && point.y <= bounds.bottom);
+    }
+
+    clampObjectToStage(obj, x, y, angle = obj.angle) {
+        if (!this.getStageBounds()) return { x, y };
+        const bounds = this.getStageBounds();
+        const corners = this.getObjectCorners(obj, x, y, angle);
+        const dx = Math.max(bounds.left - Math.min(...corners.map(point => point.x)), 0) - Math.max(Math.max(...corners.map(point => point.x)) - bounds.right, 0);
+        const dy = Math.max(bounds.top - Math.min(...corners.map(point => point.y)), 0) - Math.max(Math.max(...corners.map(point => point.y)) - bounds.bottom, 0);
+        return { x: x + dx, y: y + dy };
     }
 
     updateCanvasCursor() {
@@ -364,6 +483,16 @@ class StageDesigner {
         }
 
         if (this.currentTool === 'select') {
+            const measurementHit = this.getMeasurementHitAt(point.x, point.y);
+            if (measurementHit) {
+                this.selectedMeasurement = measurementHit.measurement;
+                this.selectedObject = null;
+                this.draggingMeasurementEndpoint = measurementHit.endpoint;
+                this.saveStateToHistory();
+                this.render();
+                return;
+            }
+
             // Check if clicking on visibility control buttons first (for targets only)
             if (this.selectedObject && this.isTargetType(this.selectedObject)) {
                 const visibilityClick = this.checkVisibilityControlClick(point.x, point.y);
@@ -396,6 +525,7 @@ class StageDesigner {
             // Check if clicking on object
             const obj = this.getObjectAt(point.x, point.y);
             if (obj) {
+                this.selectedMeasurement = null;
                 this.selectedObject = obj;
                 this.draggingObject = obj;
                 this.dragOffsetX = point.x - obj.x;
@@ -403,12 +533,14 @@ class StageDesigner {
                 this.dragRotateHistorySaved = false; // Will save on first move
             } else {
                 this.selectedObject = null;
+                this.selectedMeasurement = null;
                 // Start panning if not on object
                 if (!touches || touches.length === 1) {
                     this.isPanning = true;
                 }
             }
             this.render();
+            this.updateStageInfo();
         } else if (this.currentTool === 'draw') {
             this.isDrawing = true;
             this.currentPath = [point];
@@ -491,8 +623,15 @@ class StageDesigner {
         } else if (this.rotatingObject && this.selectedObject) {
             const currentAngle = Math.atan2(point.y - this.selectedObject.y, point.x - this.selectedObject.x) * 180 / Math.PI;
             let angleDiff = currentAngle - this.rotationStartAngle;
-            this.selectedObject.angle += angleDiff;
+            const nextAngle = this.selectedObject.angle + angleDiff;
+            if (this.objectFitsStage(this.selectedObject, this.selectedObject.x, this.selectedObject.y, nextAngle)) {
+                this.selectedObject.angle = nextAngle;
+            }
             this.rotationStartAngle = currentAngle;
+            this.render();
+            this.saveToLocalStorage();
+        } else if (this.draggingMeasurementEndpoint && this.selectedMeasurement) {
+            this.selectedMeasurement[this.draggingMeasurementEndpoint] = { ...point };
             this.render();
             this.saveToLocalStorage();
         } else if (this.currentTool === 'select' && this.draggingObject && !this.rotatingObject) {
@@ -501,8 +640,13 @@ class StageDesigner {
                 this.saveStateToHistory();
                 this.dragRotateHistorySaved = true;
             }
-            this.draggingObject.x = point.x - this.dragOffsetX;
-            this.draggingObject.y = point.y - this.dragOffsetY;
+            const candidateX = point.x - this.dragOffsetX;
+            const candidateY = point.y - this.dragOffsetY;
+            const clamped = this.clampObjectToStage(this.draggingObject, candidateX, candidateY);
+            if (this.objectFitsStage(this.draggingObject, clamped.x, clamped.y)) {
+                this.draggingObject.x = clamped.x;
+                this.draggingObject.y = clamped.y;
+            }
             this.render();
             this.saveToLocalStorage();
         } else if (this.currentTool === 'draw' && this.isDrawing) {
@@ -535,6 +679,7 @@ class StageDesigner {
         this.isDrawing = false;
         this.isPanning = false;
         this.draggingObject = null;
+        this.draggingMeasurementEndpoint = null;
         this.rotatingObject = false;
         this.currentPath = [];
 
@@ -543,7 +688,7 @@ class StageDesigner {
             const dx = this.rulerEnd.x - this.rulerStart.x;
             const dy = this.rulerEnd.y - this.rulerStart.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (distance > 5) { // Minimum distance threshold
                 this.saveStateToHistory();
                 this.currentStage.measurements.push({
@@ -618,17 +763,24 @@ class StageDesigner {
 
         for (let i = this.currentStage.objects.length - 1; i >= 0; i--) {
             const obj = this.currentStage.objects[i];
-            const dx = x - obj.x;
-            const dy = y - obj.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (obj.type === 'pepper' && dist <= obj.size) {
-                return obj;
-            } else if (dist <= obj.size * 1.5) {
-                return obj;
-            }
+            const radians = -obj.angle * Math.PI / 180;
+            const localX = (x - obj.x) * Math.cos(radians) - (y - obj.y) * Math.sin(radians);
+            const localY = (x - obj.x) * Math.sin(radians) + (y - obj.y) * Math.cos(radians);
+            const dimensions = this.getObjectDimensions(obj);
+            if (Math.abs(localX) <= dimensions.width / 2 && Math.abs(localY) <= dimensions.height / 2) return obj;
         }
 
+        return null;
+    }
+
+    getMeasurementHitAt(x, y) {
+        const measurements = this.currentStage?.measurements || [];
+        for (let index = measurements.length - 1; index >= 0; index--) {
+            const measurement = measurements[index];
+            if (Math.hypot(x - measurement.start.x, y - measurement.start.y) <= 8) return { measurement, endpoint: 'start' };
+            if (Math.hypot(x - measurement.end.x, y - measurement.end.y) <= 8) return { measurement, endpoint: 'end' };
+            if (this.pointToLineSegmentDistance(x, y, measurement.start.x, measurement.start.y, measurement.end.x, measurement.end.y) <= 5) return { measurement, endpoint: null };
+        }
         return null;
     }
 
@@ -670,36 +822,40 @@ class StageDesigner {
 
     addObjectToCanvas(type, clientX, clientY) {
         const point = this.getCanvasPoint(clientX, clientY);
+        if (!this.hasStageBounds()) {
+            this.updateStageInfo();
+            return;
+        }
 
         // Determine default size and properties based on type
-        let defaultSize = 30;
+        let defaultSize = 10;
         let isNoShoot = false;
         let baseType = type;
 
         // Handle size variants
         if (type === 'halfTarget') {
-            defaultSize = 15;
+            defaultSize = 5;
             baseType = 'target';
         } else if (type === 'miniTarget') {
-            defaultSize = 10;
+            defaultSize = 5;
             baseType = 'target';
         } else if (type === 'pepper' || type === 'plate') {
-            defaultSize = 15;
+            defaultSize = 4;
         }
 
         // Handle no-shoot variants
         if (type === 'noShootTarget') {
             isNoShoot = true;
             baseType = 'target';
-            defaultSize = 30;
+            defaultSize = 10;
         } else if (type === 'noShootPepper') {
             isNoShoot = true;
             baseType = 'pepper';
-            defaultSize = 15;
+            defaultSize = 4;
         } else if (type === 'noShootPlate') {
             isNoShoot = true;
             baseType = 'plate';
-            defaultSize = 15;
+            defaultSize = 4;
         }
 
         this.saveStateToHistory();
@@ -716,6 +872,11 @@ class StageDesigner {
             size: defaultSize
         };
 
+        if (!this.objectFitsStage(obj)) {
+            this.updateStageInfo();
+            return;
+        }
+
         this.currentStage.objects.push(obj);
         document.getElementById('objectLibrary').classList.remove('open');
         this.render();
@@ -729,6 +890,7 @@ class StageDesigner {
         if (index > -1) {
             this.currentStage.objects.splice(index, 1);
             this.selectedObject = null;
+            this.updateStageInfo();
             this.render();
             this.saveToLocalStorage();
         }
@@ -736,7 +898,7 @@ class StageDesigner {
 
     floodFill(x, y) {
         this.saveStateToHistory();
-        
+
         // Simple fill implementation - adds a filled rectangle
         this.currentStage.fills.push({
             x: Math.round(x / this.gridSize) * this.gridSize,
@@ -751,7 +913,7 @@ class StageDesigner {
 
     eraseAt(x, y) {
         const eraseRadius = 20;
-        
+
         // Save state before erasing
         this.saveStateToHistory();
 
@@ -829,6 +991,8 @@ class StageDesigner {
             this.drawGrid();
         }
 
+        this.drawStageBoundary();
+
         // Draw fills
         this.currentStage.fills.forEach(fill => {
             this.ctx.fillStyle = fill.color + '80'; // Add transparency
@@ -879,7 +1043,7 @@ class StageDesigner {
         // Draw persistent measurements
         if (this.currentStage.measurements) {
             this.currentStage.measurements.forEach(measurement => {
-                this.drawRuler(measurement.start, measurement.end);
+                this.drawRuler(measurement.start, measurement.end, measurement === this.selectedMeasurement);
             });
         }
 
@@ -928,6 +1092,49 @@ class StageDesigner {
         }
     }
 
+    drawStageBoundary() {
+        const bounds = this.getStageBounds();
+        if (!bounds) return;
+        this.ctx.save();
+        this.ctx.strokeStyle = '#27ae60';
+        this.ctx.lineWidth = 2 / this.scale;
+        this.ctx.setLineDash([8 / this.scale, 5 / this.scale]);
+        this.ctx.strokeRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+        this.ctx.restore();
+    }
+
+    createTargetPath(ctx, obj) {
+        const width = obj.type === 'halfTarget' || obj.type === 'miniTarget' ? 5 : 10;
+        const height = obj.type === 'miniTarget' ? 7.5 : 15;
+        const halfHeight = obj.type === 'halfTarget' ? height / 2 : height;
+        ctx.beginPath();
+        ctx.moveTo(-width / 2, -halfHeight);
+        ctx.lineTo(width / 2, -halfHeight);
+        ctx.lineTo(width / 2, -halfHeight * 0.55);
+        ctx.lineTo(width * 0.38, -halfHeight * 0.35);
+        ctx.lineTo(width * 0.38, halfHeight);
+        ctx.lineTo(-width * 0.38, halfHeight);
+        ctx.lineTo(-width * 0.38, -halfHeight * 0.35);
+        ctx.lineTo(-width / 2, -halfHeight * 0.55);
+        ctx.closePath();
+    }
+
+    drawPartialMask(ctx, obj) {
+        if (!obj.visibility || obj.visibility === 'full') return;
+        ctx.save();
+        this.createTargetPath(ctx, obj);
+        ctx.clip();
+        ctx.fillStyle = '#000000';
+        const height = obj.type === 'halfTarget' ? 7.5 : 15;
+        const width = obj.type === 'halfTarget' || obj.type === 'miniTarget' ? 5 : 10;
+        const third = width / 3;
+        if (obj.visibility === 'bottomHidden') ctx.fillRect(-width, 0, width * 2, height);
+        if (obj.visibility === 'leftOnly') ctx.fillRect(-width / 2 + third, -height, width, height * 2);
+        if (obj.visibility === 'centerOnly') { ctx.fillRect(-width, -height, third, height * 2); ctx.fillRect(width / 2 - third, -height, third, height * 2); }
+        if (obj.visibility === 'rightOnly') ctx.fillRect(-width / 2, -height, width, height * 2);
+        ctx.restore();
+    }
+
     drawObject(obj) {
         this.ctx.save();
         this.ctx.translate(obj.x, obj.y);
@@ -952,15 +1159,10 @@ class StageDesigner {
         if (baseType === 'pepper' || obj.type === 'pepper' || obj.type === 'noShootPepper') {
             this.ctx.fillStyle = shootColor;
             this.ctx.beginPath();
-            this.ctx.arc(0, 0, obj.size, 0, Math.PI * 2);
+            this.ctx.arc(0, -1, 2, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
-
-            this.ctx.fillStyle = obj.isNoShoot ? '#666' : 'white';
-            this.ctx.font = `${obj.size}px Arial`;
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText('P', 0, 0);
+            this.ctx.fillRect(-0.6, 1, 1.2, 2.5);
         } else if (baseType === 'plate' || obj.type === 'plate' || obj.type === 'noShootPlate') {
             this.ctx.fillStyle = shootColor;
             this.ctx.fillRect(-obj.size * 0.6, -obj.size * 0.6, obj.size * 1.2, obj.size * 1.2);
@@ -971,59 +1173,13 @@ class StageDesigner {
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText('PL', 0, 0);
-        } else if (baseType === 'target' || obj.type === 'target' || obj.type === 'halfTarget' || 
-                   obj.type === 'miniTarget' || obj.type === 'noShootTarget') {
-            // Draw octagon shape (IPSC target)
+        } else if (baseType === 'target' || obj.type === 'target' || obj.type === 'halfTarget' ||
+            obj.type === 'miniTarget' || obj.type === 'noShootTarget') {
             this.ctx.fillStyle = targetColor;
-            this.ctx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                const angle = (i * Math.PI) / 4 - Math.PI / 2;
-                const x = Math.cos(angle) * obj.size * 0.5;
-                const y = Math.sin(angle) * obj.size;
-                if (i === 0) {
-                    this.ctx.moveTo(x, y);
-                } else {
-                    this.ctx.lineTo(x, y);
-                }
-            }
-            this.ctx.closePath();
+            this.createTargetPath(this.ctx, obj);
             this.ctx.fill();
             this.ctx.stroke();
-
-            this.ctx.fillStyle = obj.isNoShoot ? '#666' : 'white';
-            this.ctx.font = `${obj.size}px Arial`;
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText('T', 0, 0);
-
-            // Apply visibility masking for targets
-            if (obj.visibility && obj.visibility !== 'full') {
-                this.ctx.fillStyle = '#000000';
-                const thirdWidth = obj.size / 3;
-                
-                if (obj.visibility === 'bottomHidden') {
-                    // Black rectangle covering bottom half
-                    this.ctx.fillRect(-obj.size * 0.5, 0, obj.size, obj.size);
-                } else if (obj.visibility === 'leftOnly') {
-                    // White left third only - black covers center and right
-                    this.ctx.fillRect(-obj.size * 0.5 + thirdWidth, -obj.size, thirdWidth * 2, obj.size * 2);
-                } else if (obj.visibility === 'centerOnly') {
-                    // White center third only - black covers left and right
-                    this.ctx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth, obj.size * 2);
-                    this.ctx.fillRect(-obj.size * 0.5 + thirdWidth * 2, -obj.size, thirdWidth, obj.size * 2);
-                } else if (obj.visibility === 'rightOnly') {
-                    // White right third only - black covers left and center
-                    this.ctx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth * 2, obj.size * 2);
-                } else if (obj.visibility === 'halfSize') {
-                    // Legacy support - same as centerOnly
-                    this.ctx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth, obj.size * 2);
-                    this.ctx.fillRect(-obj.size * 0.5 + thirdWidth * 2, -obj.size, thirdWidth, obj.size * 2);
-                } else if (obj.visibility === 'bothSides') {
-                    // Legacy support - same as centerOnly
-                    this.ctx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth, obj.size * 2);
-                    this.ctx.fillRect(-obj.size * 0.5 + thirdWidth * 2, -obj.size, thirdWidth, obj.size * 2);
-                }
-            }
+            this.drawPartialMask(this.ctx, obj);
 
             // Angle indicator
             if (obj.angle !== 0 && !obj.isNoShoot) {
@@ -1035,14 +1191,10 @@ class StageDesigner {
             }
         } else if (obj.type === 'barricade') {
             this.ctx.fillStyle = '#8b4513';
-            this.ctx.fillRect(-obj.size, -obj.size * 0.3, obj.size * 2, obj.size * 0.6);
-            this.ctx.strokeRect(-obj.size, -obj.size * 0.3, obj.size * 2, obj.size * 0.6);
+            const dimensions = this.getObjectDimensions(obj);
+            this.ctx.fillRect(-dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height);
+            this.ctx.strokeRect(-dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height);
 
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = `${obj.size * 0.6}px Arial`;
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText('B', 0, 0);
         }
 
         // Rotation handle for selected object
@@ -1058,7 +1210,7 @@ class StageDesigner {
         // Draw visibility control buttons OUTSIDE rotation transform (in screen space)
         if (isSelected && this.isTargetType(obj)) {
             this.ctx.save();
-            
+
             const controlY = obj.y - obj.size - 45;
             const controlX = obj.x - 50;
             const buttonWidth = 18;
@@ -1076,11 +1228,11 @@ class StageDesigner {
 
             buttons.forEach(btn => {
                 const isActive = obj.visibility === btn.mode;
-                
+
                 // Draw button background
                 this.ctx.fillStyle = isActive ? '#3498db' : '#f0f0f0';
                 this.ctx.fillRect(btn.x, controlY, buttonWidth, buttonHeight);
-                
+
                 // Draw button border
                 this.ctx.strokeStyle = isActive ? '#2980b9' : '#ccc';
                 this.ctx.lineWidth = 1 / this.scale;
@@ -1090,7 +1242,7 @@ class StageDesigner {
                 const iconMargin = 2;
                 const iconWidth = buttonWidth - iconMargin * 2;
                 const iconHeight = buttonHeight - iconMargin * 2;
-                
+
                 if (btn.mode === 'full') {
                     // Full white rectangle
                     this.ctx.fillStyle = '#ffffff';
@@ -1126,18 +1278,18 @@ class StageDesigner {
                     this.ctx.fillRect(btn.x + iconMargin + thirdWidth * 2, controlY + iconMargin, thirdWidth, iconHeight);
                 }
             });
-            
+
             this.ctx.restore();
         }
     }
 
-    drawRuler(start, end) {
+    drawRuler(start, end, selected = false) {
         const dx = end.x - start.x;
         const dy = end.y - start.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const meters = (distance / this.pixelsPerMeter).toFixed(2);
 
-        this.ctx.strokeStyle = '#e74c3c';
+        this.ctx.strokeStyle = selected ? '#3498db' : '#e74c3c';
         this.ctx.lineWidth = 2 / this.scale;
         this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
 
@@ -1157,13 +1309,20 @@ class StageDesigner {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'bottom';
         this.ctx.fillText(`${meters}m`, midX, midY - 5 / this.scale);
+        if (selected) {
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.beginPath();
+            this.ctx.arc(start.x, start.y, 5 / this.scale, 0, Math.PI * 2);
+            this.ctx.arc(end.x, end.y, 5 / this.scale, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
     }
 
     saveStateToHistory() {
         // Save current stage state to history
         const stateSnapshot = JSON.parse(JSON.stringify(this.currentStage));
         this.historyStack.push(stateSnapshot);
-        
+
         // Limit history size
         if (this.historyStack.length > this.maxHistorySize) {
             this.historyStack.shift();
@@ -1178,8 +1337,9 @@ class StageDesigner {
         // Restore previous state
         const previousState = this.historyStack.pop();
         this.stages[this.currentStageIndex] = previousState;
-        
+
         this.selectedObject = null;
+        this.selectedMeasurement = null;
         this.render();
         this.saveToLocalStorage();
     }
@@ -1206,7 +1366,8 @@ class StageDesigner {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                this.stages = data.stages;
+                this.stages = (Array.isArray(data.stages) ? data.stages : []).map((stage, index) => this.normalizeStage(stage, index));
+                if (this.stages.length === 0) this.addStage();
                 this.currentStageIndex = 0;
                 this.updateStageTabs();
                 this.updateStageInfo();
@@ -1270,6 +1431,16 @@ class StageDesigner {
             maxY = Math.max(maxY, fill.y + fill.height);
         });
 
+        // Keep an explicitly sized stage visible in the exported image,
+        // including when it contains little or no content.
+        const stageBounds = this.getStageBounds();
+        if (stageBounds) {
+            minX = Math.min(minX, stageBounds.left);
+            minY = Math.min(minY, stageBounds.top);
+            maxX = Math.max(maxX, stageBounds.right);
+            maxY = Math.max(maxY, stageBounds.bottom);
+        }
+
         // Default bounds if no content
         if (minX === Infinity) {
             minX = 0; minY = 0; maxX = 100; maxY = 100;
@@ -1325,97 +1496,15 @@ class StageDesigner {
             exportCtx.stroke();
         });
 
-        // Draw objects (with full rendering for new types)
-        this.currentStage.objects.forEach(obj => {
-            exportCtx.save();
-            exportCtx.translate(obj.x, obj.y);
-            exportCtx.rotate((obj.angle * Math.PI) / 180);
-            exportCtx.strokeStyle = '#2c3e50';
-            exportCtx.lineWidth = 2;
-
-            const baseType = obj.baseType || obj.type;
-            const shootColor = obj.isNoShoot ? '#e8e8e8' : '#3498db';
-            const targetColor = obj.isNoShoot ? '#e8e8e8' : '#d4a373';
-            const textColor = obj.isNoShoot ? '#666' : 'white';
-
-            if (baseType === 'pepper' || obj.type === 'pepper' || obj.type === 'noShootPepper') {
-                exportCtx.fillStyle = shootColor;
-                exportCtx.beginPath();
-                exportCtx.arc(0, 0, obj.size, 0, Math.PI * 2);
-                exportCtx.fill();
-                exportCtx.stroke();
-                exportCtx.fillStyle = textColor;
-                exportCtx.font = `${obj.size}px Arial`;
-                exportCtx.textAlign = 'center';
-                exportCtx.textBaseline = 'middle';
-                exportCtx.fillText('P', 0, 0);
-            } else if (baseType === 'plate' || obj.type === 'plate' || obj.type === 'noShootPlate') {
-                exportCtx.fillStyle = shootColor;
-                exportCtx.fillRect(-obj.size * 0.6, -obj.size * 0.6, obj.size * 1.2, obj.size * 1.2);
-                exportCtx.strokeRect(-obj.size * 0.6, -obj.size * 0.6, obj.size * 1.2, obj.size * 1.2);
-                exportCtx.fillStyle = textColor;
-                exportCtx.font = `${obj.size * 0.6}px Arial`;
-                exportCtx.textAlign = 'center';
-                exportCtx.textBaseline = 'middle';
-                exportCtx.fillText('PL', 0, 0);
-            } else if (baseType === 'target' || obj.type === 'target' || obj.type === 'halfTarget' || 
-                       obj.type === 'miniTarget' || obj.type === 'noShootTarget') {
-                // Draw octagon
-                exportCtx.fillStyle = targetColor;
-                exportCtx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i * Math.PI) / 4 - Math.PI / 2;
-                    const x = Math.cos(angle) * obj.size * 0.5;
-                    const y = Math.sin(angle) * obj.size;
-                    if (i === 0) {
-                        exportCtx.moveTo(x, y);
-                    } else {
-                        exportCtx.lineTo(x, y);
-                    }
-                }
-                exportCtx.closePath();
-                exportCtx.fill();
-                exportCtx.stroke();
-
-                exportCtx.fillStyle = textColor;
-                exportCtx.font = `${obj.size}px Arial`;
-                exportCtx.textAlign = 'center';
-                exportCtx.textBaseline = 'middle';
-                exportCtx.fillText('T', 0, 0);
-
-                // Apply visibility masking
-                if (obj.visibility && obj.visibility !== 'full') {
-                    exportCtx.fillStyle = '#000000';
-                    const thirdWidth = obj.size / 3;
-                    
-                    if (obj.visibility === 'bottomHidden') {
-                        exportCtx.fillRect(-obj.size * 0.5, 0, obj.size, obj.size);
-                    } else if (obj.visibility === 'leftOnly') {
-                        exportCtx.fillRect(-obj.size * 0.5 + thirdWidth, -obj.size, thirdWidth * 2, obj.size * 2);
-                    } else if (obj.visibility === 'centerOnly') {
-                        exportCtx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth, obj.size * 2);
-                        exportCtx.fillRect(-obj.size * 0.5 + thirdWidth * 2, -obj.size, thirdWidth, obj.size * 2);
-                    } else if (obj.visibility === 'rightOnly') {
-                        exportCtx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth * 2, obj.size * 2);
-                    } else if (obj.visibility === 'halfSize' || obj.visibility === 'bothSides') {
-                        // Legacy support
-                        exportCtx.fillRect(-obj.size * 0.5, -obj.size, thirdWidth, obj.size * 2);
-                        exportCtx.fillRect(-obj.size * 0.5 + thirdWidth * 2, -obj.size, thirdWidth, obj.size * 2);
-                    }
-                }
-            } else if (obj.type === 'barricade') {
-                exportCtx.fillStyle = '#8b4513';
-                exportCtx.fillRect(-obj.size, -obj.size * 0.3, obj.size * 2, obj.size * 0.6);
-                exportCtx.strokeRect(-obj.size, -obj.size * 0.3, obj.size * 2, obj.size * 0.6);
-                exportCtx.fillStyle = 'white';
-                exportCtx.font = `${obj.size * 0.6}px Arial`;
-                exportCtx.textAlign = 'center';
-                exportCtx.textBaseline = 'middle';
-                exportCtx.fillText('B', 0, 0);
-            }
-
-            exportCtx.restore();
-        });
+        // Use the interactive renderer so exports keep geometry and partialization identical.
+        const interactiveContext = this.ctx;
+        const interactiveScale = this.scale;
+        this.ctx = exportCtx;
+        this.scale = 1;
+        this.drawStageBoundary();
+        this.currentStage.objects.forEach(obj => this.drawObject(obj));
+        this.scale = interactiveScale;
+        this.ctx = interactiveContext;
 
         // Draw persistent measurements (ruler lines)
         if (this.currentStage.measurements && this.currentStage.measurements.length > 0) {
@@ -1493,7 +1582,8 @@ class StageDesigner {
             const data = localStorage.getItem('ipsc-stages');
             if (data) {
                 const parsed = JSON.parse(data);
-                this.stages = parsed.stages;
+                this.stages = (Array.isArray(parsed.stages) ? parsed.stages : []).map((stage, index) => this.normalizeStage(stage, index));
+                if (this.stages.length === 0) this.addStage();
                 this.currentStageIndex = parsed.currentStageIndex || 0;
                 this.updateStageTabs();
                 this.updateStageInfo();

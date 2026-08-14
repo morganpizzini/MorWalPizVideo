@@ -10,13 +10,15 @@ import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
 import { getMatches } from "@services/matches";
 import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
+import { getPublicChannelNews } from "@morwalpizvideo/services";
+import type { ChannelNews } from "@morwalpizvideo/models";
 interface IndexCategory { title: string }
 interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
 interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
 interface IndexForm { id: string; url: string; title: string }
 interface MatchesResponse { data: IndexMatch[]; count: number; next?: string }
-interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[] }
+interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[]; channelNews: ChannelNews[] }
 
 export default function Index() {
     const [data, setData] = useState<IndexData | null>(null);
@@ -36,14 +38,15 @@ export default function Index() {
         let cancelled = false;
 
         setError(false);
-        Promise.all([getMatches(true), getConfiguration(), getActiveForms()])
-            .then(([response, configuration, activeForms]) => {
+        Promise.all([getMatches(true), getConfiguration(), getActiveForms(), getPublicChannelNews()])
+            .then(([response, configuration, activeForms, channelNews]) => {
                 if (cancelled) return;
                 const matchesResponse = response as MatchesResponse;
                 setData({
                     matches: matchesResponse.data ?? [],
                     configuration: configuration as Record<string, boolean>,
-                    activeForms: activeForms ?? []
+                    activeForms: activeForms ?? [],
+                    channelNews: channelNews ?? []
                 });
             })
             .catch(() => {
@@ -98,7 +101,7 @@ function HomeError({ onRetry }: { onRetry: () => void }) {
 }
 
 function HomeContent({ data, selectedCategories, onToggleCategory }: { data: IndexData; selectedCategories: string[]; onToggleCategory: (category: string) => void }) {
-    const { matches, configuration, activeForms } = data;
+    const { matches, configuration, activeForms, channelNews } = data;
     let firstMatchId: string = '';
     const first = matches[0];
     if (first) {
@@ -186,6 +189,7 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
                             <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
                         </div>
                     </div>
+                    {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
                     <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
                         {allCategories.map((category) => {
                             const includeCategory = availableCategories.includes(category);
@@ -216,6 +220,20 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
             }
 
         </>
+    );
+}
+
+function ChannelNewsBanner({ item }: { item: ChannelNews }) {
+    return (
+        <Link to={`/channel-news/${item.id}`} className="channel-news-banner">
+            <img src={item.channelLogoUrl || "/images/logo-150.png"} alt={item.channelName} className="channel-news-banner__logo" />
+            <span className="channel-news-banner__copy">
+                <span className="channel-news-banner__channel">{item.channelName}</span>
+                <strong>{item.title}</strong>
+                {item.subtitle && <span>{item.subtitle}</span>}
+            </span>
+            <i className="fa fa-arrow-right" aria-hidden="true" />
+        </Link>
     );
 }
 

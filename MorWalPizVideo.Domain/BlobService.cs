@@ -34,6 +34,8 @@ namespace MorWalPizVideo.Domain
         public Task<List<string>> GetImagesInFolderAsync(string folderName, CancellationToken cancellationToken = default);
         public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default);
+        public Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
+        public string GetImageUrl(string filePath, bool loadInMatchFolder = false);
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
     }
@@ -73,6 +75,16 @@ namespace MorWalPizVideo.Domain
 
         public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default)
             => UploadAsync(filePath, stream, cancellationToken);
+
+        public Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
+        {
+            ThrowIfConfigured(cancellationToken);
+            lock (sync)
+                blobs.Remove(filePath);
+            return Task.CompletedTask;
+        }
+
+        public string GetImageUrl(string filePath, bool loadInMatchFolder = false) => $"mock://blob/{filePath}";
 
         public async Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
         {
@@ -169,6 +181,23 @@ namespace MorWalPizVideo.Domain
         public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default)
         {
             return UploadAsync(filePath, stream, containerName, cancellationToken);
+        }
+
+        public async Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
+        {
+            var containerName = loadInMatchFolder ? _options.ContainerName : _options.UploadContainerName;
+            var blobClient = _serviceClient.GetBlobContainerClient(containerName).GetBlobClient(filePath);
+            await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+            _logger.LogInformation(
+                "Deleted blob from container {ContainerName} at path {BlobPath}",
+                containerName,
+                filePath);
+        }
+
+        public string GetImageUrl(string filePath, bool loadInMatchFolder = false)
+        {
+            var containerName = loadInMatchFolder ? _options.ContainerName : _options.UploadContainerName;
+            return _serviceClient.GetBlobContainerClient(containerName).GetBlobClient(filePath).Uri.ToString();
         }
 
         public async Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)

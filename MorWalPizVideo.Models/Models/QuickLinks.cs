@@ -33,5 +33,9 @@ public sealed record QuickLinks(
     [property: DataMember][property: BsonElement("url")] string Url,
     [property: DataMember][property: BsonElement("links")] QuickLink[] Links) : BaseEntity
 {
+    [DataMember]
+    [BsonElement("channelId")]
+    public string ChannelId { get; init; } = string.Empty;
+
     public static string NormalizeUrl(string? url) => (url ?? string.Empty).Trim().Trim('/').ToLowerInvariant();
 }

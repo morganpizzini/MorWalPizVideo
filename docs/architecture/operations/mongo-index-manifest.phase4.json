@@ -66,6 +66,16 @@
       "notes": "Authoritative name for the global unique normalized compilation URL index. Application normalizes with trim/lowercase; apply manually through the approved Mongo index operation after duplicate audit. Public lookup remains global. Source review does not prove production deployment."
     },
     {
+      "key": "quicklinks_url.unique",
+      "collection": "quickLinks",
+      "name": "ux_quicklinks_url_ci",
+      "keys": {
+        "url": 1
+      },
+      "unique": true,
+      "notes": "Global unique normalized QuickLinks slug index across channel owners. Application normalizes with trim, slash trimming, and lowercase; resolve normalized duplicates before approved apply. Source review does not prove production deployment."
+    },
+    {
       "key": "customforms_active_url",
       "collection": "customForms",
       "name": "ix_customforms_active_url",

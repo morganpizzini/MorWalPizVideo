@@ -22,6 +22,15 @@ describe('videoChannelMap', () => {
         expect(map.get('v4')?.channelName).toBe('Two');
     });
 
+    it('uses VideoRef.channelIds as the authoritative ownership relationship', () => {
+        const matches = [
+            { matchId: 'm1', videoRefs: [{ youtubeId: 'v5', channelIds: ['C1'] }] },
+        ];
+        const map = buildOwnerMap(matches, channels);
+
+        expect(map.get('v5')?.channelName).toBe('One');
+    });
+
     it('resolveOwner returns undefined for matches whose first videoRef is unowned', () => {
         const map = buildOwnerMap([], channels);
         const match = { matchId: 'm2', videoRefs: [{ youtubeId: 'unknown' }] };

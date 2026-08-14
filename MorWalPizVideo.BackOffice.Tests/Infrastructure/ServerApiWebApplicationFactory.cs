@@ -1,12 +1,20 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
 public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWalPizVideo.ServerAPI.Program>
 {
+    public YTChannelMockRepository? YTChannelRepository => Services.GetRequiredService<IYTChannelRepository>() as YTChannelMockRepository;
+    public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
+    public QuickLinksMockRepository? QuickLinksRepository => Services.GetRequiredService<IQuickLinksRepository>() as QuickLinksMockRepository;
+    public ChannelNewsMockRepository? ChannelNewsRepository => Services.GetRequiredService<IChannelNewsRepository>() as ChannelNewsMockRepository;
+
     static ServerApiWebApplicationFactory()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
