@@ -199,10 +199,15 @@ public class VideosController : ApplicationControllerBase
         var startDate = request.StartDate.Kind == DateTimeKind.Local
             ? request.StartDate.ToUniversalTime().Date
             : request.StartDate.Date;
+        var endDate = request.EndDate is { } requestedEndDate
+            ? requestedEndDate.Kind == DateTimeKind.Local
+                ? requestedEndDate.ToUniversalTime().Date
+                : requestedEndDate.Date
+            : DateTime.UtcNow.Date;
         var candidates = await yTService.FetchVideosBetween(
             channelContext.ChannelId,
             DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
-            DateTime.SpecifyKind((request.EndDate ?? DateTime.UtcNow).Date, DateTimeKind.Utc));
+            DateTime.SpecifyKind(endDate, DateTimeKind.Utc));
 
         return Ok(candidates
             .Where(candidate => !importedIds.Contains(candidate.Id.VideoId))

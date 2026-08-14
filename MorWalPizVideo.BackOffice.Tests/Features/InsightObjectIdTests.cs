@@ -1,4 +1,5 @@
 using MongoDB.Bson;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
@@ -27,11 +28,10 @@ public sealed class InsightObjectIdTests
         });
 
     response.EnsureSuccessStatusCode();
-    var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+    var body = await response.Content.ReadFromJsonAsync<InsightTopicContract>();
 
     Assert.NotNull(body);
-    Assert.True(body.TryGetValue("id", out var topicId));
-    AssertObjectId(topicId);
+    AssertObjectId(body.Id);
   }
 
   [Fact]
@@ -42,7 +42,10 @@ public sealed class InsightObjectIdTests
         title: "Dynamic Sport Shooting",
         description: "IPSC news and content",
         seedArguments: new[] { "IPSC" },
-        preferredSources: Array.Empty<string>());
+        preferredSources: Array.Empty<string>())
+    {
+      Id = ObjectId.GenerateNewId().ToString()
+    };
 
     var discoveredNews = await service.DiscoverNewsAsync(topic);
     var contentPlan = await service.GenerateContentPlanAsync(
