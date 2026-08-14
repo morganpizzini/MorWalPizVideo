@@ -30,13 +30,14 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   try {
     if (id) {
-      const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), {
+      const payload = {
         channelId: id,
         channelName,
         shortLinkUrl,
-        isSHIT,
         socials: socials ?? [],
-      });
+        ...(typeof values.isSHIT === 'string' ? { isSHIT } : {}),
+      };
+      const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), payload);
       if (getChannelApiError(response)) {
         return channelActionError(response, 'Unable to update channel');
       }
