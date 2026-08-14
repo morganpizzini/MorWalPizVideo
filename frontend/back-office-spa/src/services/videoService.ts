@@ -1,6 +1,6 @@
 // Service for interacting with the Video API endpoints
 
-import { get, post } from '@morwalpizvideo/services';
+import { endpoints, get, post } from '@morwalpizvideo/services';
 import {
   VideoImportRequest,
   ReviewDetails,
@@ -14,11 +14,11 @@ export const VideoService = {
 
   // Import a video
   importVideo: async (request: VideoImportRequest): Promise<void> => {
-    await post(`/api/Video/ImportVideo`, request);
+    await post(endpoints.VIDEOS_IMPORT, request);
   },
 
-  getImportCandidates: async (channelId: string, startDate: string): Promise<ImportCandidate[]> =>
-    get(`/api/Videos/import-candidates?channelId=${encodeURIComponent(channelId)}&startDate=${encodeURIComponent(startDate)}`),
+  getImportCandidates: async (startDate: string, endDate: string): Promise<ImportCandidate[]> =>
+    get(`/api/Videos/import-candidates?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`),
 
   bulkImport: async (request: BulkImportRequest): Promise<BulkImportResult[]> =>
     post('/api/Videos/bulk-import', request),
@@ -43,13 +43,17 @@ export interface ImportCandidate {
   videoId: string;
   title: string;
   publishedAt: string;
-  alreadyImported: boolean;
+  alreadyImported?: boolean;
 }
 
 export interface BulkImportRequest {
-  videoIds: string[];
+  items: BulkImportItem[];
+}
+
+export interface BulkImportItem {
+  videoId: string;
   categories: string[];
-  targetContentId?: string;
+  target?: string;
 }
 
 export interface BulkImportResult {

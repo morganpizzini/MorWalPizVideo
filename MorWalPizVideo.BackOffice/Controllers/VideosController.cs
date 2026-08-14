@@ -183,8 +183,9 @@ public class VideosController : ApplicationControllerBase
     public async Task<IActionResult> ImportCandidates([FromQuery] VideoImportCandidatesRequest request)
     {
         var channelContext = HttpContext.GetChannelContext();
-        if (!string.Equals(channelContext.ChannelId, request.ChannelId, StringComparison.Ordinal) ||
-            !await authorization.CanManageChannelAsync(User, request.ChannelId))
+        if ((!string.IsNullOrWhiteSpace(request.ChannelId) &&
+             !string.Equals(channelContext.ChannelId, request.ChannelId, StringComparison.Ordinal)) ||
+            !await authorization.CanManageChannelAsync(User, channelContext.ChannelId))
         {
             return NotFound();
         }
@@ -198,16 +199,18 @@ public class VideosController : ApplicationControllerBase
         var startDate = request.StartDate.Kind == DateTimeKind.Local
             ? request.StartDate.ToUniversalTime().Date
             : request.StartDate.Date;
-        var candidates = await yTService.FetchVideosSince(
-            request.ChannelId,
-            DateTime.SpecifyKind(startDate, DateTimeKind.Utc));
+        var candidates = await yTService.FetchVideosBetween(
+            channelContext.ChannelId,
+            DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
+            DateTime.SpecifyKind((request.EndDate ?? DateTime.UtcNow).Date, DateTimeKind.Utc));
 
         return Ok(candidates
+            .Where(candidate => !importedIds.Contains(candidate.Id.VideoId))
             .Select(candidate => new VideoImportCandidateResponse(
                 candidate.Id.VideoId,
                 candidate.Snippet?.Title ?? string.Empty,
                 candidate.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime ?? DateTime.MinValue,
-                importedIds.Contains(candidate.Id.VideoId)))
+                false))
             .ToArray());
     }
 
@@ -243,33 +246,28 @@ public class VideosController : ApplicationControllerBase
             return Unauthorized();
         }
 
-        var categories = (await _contentService.GetCategoriesAsync(request.Categories))
-            .Select(category => new CategoryRef(category.Id, category.Title))
-            .ToArray();
-        if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
-        {
-            return BadRequest(new { error = "One or more categories were not found" });
-        }
-
-        var target = string.IsNullOrWhiteSpace(request.TargetContentId)
-            ? null
-            : (await _contentService.GetAllMatchesAsync())
-                .FirstOrDefault(match => string.Equals(match.ContentId, request.TargetContentId, StringComparison.Ordinal));
-        if (!string.IsNullOrWhiteSpace(request.TargetContentId) &&
-            (target is null || !await authorization.CanAccessAsync(User, target)))
-        {
-            return NotFound(new { error = "Target content was not found" });
-        }
-
         var allMatches = await _contentService.GetAllMatchesAsync();
+        var targetsById = allMatches.ToDictionary(match => match.ContentId, StringComparer.Ordinal);
         var importedIds = allMatches
             .SelectMany(match => new[] { match.ContentId }.Concat(match.VideoRefs.Select(video => video.YoutubeId)))
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.Ordinal);
         var results = new List<VideoBulkImportItemResponse>();
 
-        foreach (var videoId in request.VideoIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal))
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var createdTargets = new Dictionary<string, YouTubeContent>(StringComparer.Ordinal);
+        var requestedVideoIds = request.Items
+            .Where(item => !string.IsNullOrWhiteSpace(item.VideoId))
+            .Select(item => item.VideoId.Trim())
+            .ToArray();
+        if (requestedVideoIds.Length != requestedVideoIds.Distinct(StringComparer.Ordinal).Count())
         {
+            return BadRequest(new { error = "A video cannot be selected more than once" });
+        }
+
+        foreach (var item in request.Items.Where(item => !string.IsNullOrWhiteSpace(item.VideoId)))
+        {
+            var videoId = item.VideoId.Trim();
             if (importedIds.Contains(videoId))
             {
                 results.Add(new(videoId, "skipped"));
@@ -278,6 +276,15 @@ public class VideosController : ApplicationControllerBase
 
             try
             {
+                var categories = (await _contentService.GetCategoriesAsync(item.Categories))
+                    .Select(category => new CategoryRef(category.Id, category.Title))
+                    .ToArray();
+                if (categories.Length != item.Categories.Distinct(StringComparer.Ordinal).Count())
+                {
+                    results.Add(new(videoId, "error", "One or more categories were not found"));
+                    continue;
+                }
+
                 var videos = await yTService.FetchFromYoutube([videoId]);
                 var video = videos.FirstOrDefault();
                 if (video is null)
@@ -292,20 +299,31 @@ public class VideosController : ApplicationControllerBase
                     video.Title,
                     video.Description,
                     video.PublishedAt,
-                    [HttpContext.GetChannelContext().ChannelId]);
+                    [channelId]);
 
-                if (target is not null)
+                YouTubeContent? target = null;
+                if (!string.IsNullOrWhiteSpace(item.Target))
                 {
+                    target = createdTargets.GetValueOrDefault(item.Target) ?? targetsById.GetValueOrDefault(item.Target);
+                    if (target is null || !await authorization.CanAccessAsync(User, target))
+                    {
+                        results.Add(new(videoId, "error", "Target content was not found or is not accessible"));
+                        continue;
+                    }
                     var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
                     await _contentService.UpdateMatchAsync(updatedTarget);
-                    target = updatedTarget;
+                    if (createdTargets.ContainsKey(item.Target))
+                    {
+                        createdTargets[item.Target] = updatedTarget;
+                    }
+                    targetsById[item.Target] = updatedTarget;
                 }
                 else
                 {
                     var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
                     {
                         CreatorUserId = creatorUserId,
-                        OwnerChannelId = HttpContext.GetChannelContext().ChannelId,
+                        OwnerChannelId = channelId,
                         VideoRefs = [videoRef],
                         Title = video.Title,
                         Description = video.Description,
@@ -313,6 +331,7 @@ public class VideosController : ApplicationControllerBase
                     };
                     await _contentService.SaveMatchAsync(importedMatch);
                     await CreateVideoShortLinkAsync(videoId);
+                    createdTargets[videoId] = importedMatch;
                 }
 
                 importedIds.Add(videoId);

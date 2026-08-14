@@ -25,6 +25,7 @@ namespace MorWalPizVideo.Server.Services
         Task<string> GetChannelId(string channelName);
         Task<IList<SearchResult>> FetchVideos(string channelId, int count, bool showVideo = true);
         Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true);
+        Task<IList<SearchResult>> FetchVideosBetween(string channelId, DateTime startDateUtc, DateTime endDateUtc, bool showVideo = true);
     }
     public class YTServiceMock : IYTService
     {
@@ -42,6 +43,8 @@ namespace MorWalPizVideo.Server.Services
             => Task.FromResult<IList<SearchResult>>(new List<SearchResult>());
         public virtual Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true)
             => Task.FromResult<IList<SearchResult>>(new List<SearchResult>());
+        public virtual Task<IList<SearchResult>> FetchVideosBetween(string channelId, DateTime startDateUtc, DateTime endDateUtc, bool showVideo = true)
+            => FetchVideosSince(channelId, startDateUtc, showVideo);
     }
 
     public class YTService : IYTService
@@ -152,10 +155,14 @@ namespace MorWalPizVideo.Server.Services
             query["id"] = string.Join(",", videoIds);
             query["key"] = _apiKey;
             string queryString = query.ToString() ?? "";
+            var requestUri = new UriBuilder(_client.BaseAddress ?? throw new InvalidOperationException("YouTube client base address is not configured"))
+            {
+                Query = queryString
+            }.Uri;
 
             var httpResponseMessage = await _operationExecutor.ExecuteAsync(
                 $"videos:{string.Join(',', videoIds.OrderBy(id => id))}",
-                cancellationToken => _client.GetAsync($"?{queryString}", cancellationToken));
+                cancellationToken => _client.GetAsync(requestUri, cancellationToken));
             if (!httpResponseMessage.IsSuccessStatusCode)
                 return videos;
 
@@ -205,9 +212,13 @@ namespace MorWalPizVideo.Server.Services
             return videos.Where(x => x.Id.Kind == "youtube#video" && resultVideoIds.Contains(x.Id.VideoId)).ToList();
         }
 
-        public async Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true)
+        public Task<IList<SearchResult>> FetchVideosSince(string channelId, DateTime startDateUtc, bool showVideo = true)
+            => FetchVideosBetween(channelId, startDateUtc, DateTime.MaxValue, showVideo);
+
+        public async Task<IList<SearchResult>> FetchVideosBetween(string channelId, DateTime startDateUtc, DateTime endDateUtc, bool showVideo = true)
         {
             var startDate = DateTime.SpecifyKind(startDateUtc.Date, DateTimeKind.Utc);
+            var endDate = DateTime.SpecifyKind(endDateUtc.Date, DateTimeKind.Utc);
             var candidates = new List<SearchResult>();
             string? pageToken = null;
 
@@ -224,7 +235,8 @@ namespace MorWalPizVideo.Server.Services
                 var pageItems = searchResponse.Items ?? [];
                 candidates.AddRange(pageItems.Where(item =>
                     string.Equals(item.Snippet?.ChannelId, channelId, StringComparison.Ordinal) &&
-                    item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date >= startDate));
+                    item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date >= startDate &&
+                    item.Snippet.PublishedAtDateTimeOffset?.UtcDateTime.Date <= endDate));
 
                 pageToken = searchResponse.NextPageToken;
                 if (pageItems.Any(item => item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date < startDate))

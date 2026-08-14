@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useLoaderData } from 'react-router';
 import { render } from '../../../../test/test-utils';
 import Component from '../Component';
@@ -19,6 +19,10 @@ vi.mock('../../../../services/videoService', () => ({
   },
 }));
 
+vi.mock('../../../../contexts/ChannelContext', () => ({
+  useChannelContext: () => ({ selectedChannelId: 'channel-1' }),
+}));
+
 beforeEach(() => {
   vi.mocked(useLoaderData).mockReturnValue({
     categories: [{ categoryId: 'cat-1', title: 'Sports' }],
@@ -31,10 +35,11 @@ describe('bulk video import', () => {
   it('renders the authorized channel, date, candidates, and append target', async () => {
     render(<Component />);
 
-    expect(screen.getByLabelText('Authorized channel *')).toHaveValue('channel-1');
     expect(screen.getByLabelText('Published from (UTC) *')).toBeInTheDocument();
-    expect(screen.getByText('Existing collection (2 videos)')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText(/New video/)).toBeInTheDocument());
-    expect(screen.getByLabelText(/Old video/)).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(/New video/));
+    expect(screen.getByText('Append to Existing collection')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Old video/)).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Single import' })).toBeInTheDocument();
   });
 });

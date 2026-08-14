@@ -1,159 +1,120 @@
 import React, { useEffect, useState } from 'react';
 import { useLoaderData } from 'react-router';
-import { Form, Button, Alert, ListGroup } from 'react-bootstrap';
-import { endpoints, get, post, getSelectedChannelId, setSelectedChannelId } from '@morwalpizvideo/services';
-import type { Category, Channel } from '@morwalpizvideo/models';
+import { Alert, Button, Form, ListGroup, Tab, Tabs } from 'react-bootstrap';
+import type { Category } from '@morwalpizvideo/models';
 import GenericErrorList from '@components/GenericErrorList';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
-import { VideoService, type BulkImportResult, type ImportCandidate } from '../../../services/videoService';
-import { LoaderData } from './loader';
+import { useChannelContext } from '../../../contexts/ChannelContext';
+import { VideoService, type BulkImportItem, type BulkImportResult, type ImportCandidate } from '../../../services/videoService';
+import type { LoaderData } from './loader';
+
+interface ImportSelection extends BulkImportItem { selected: boolean; }
+const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const ImportVideo: React.FC = () => {
-  const { categories: initialCategories, channels, targets } = useLoaderData<LoaderData>();
-  const [availableCategories, setAvailableCategories] = useState<Category[]>(initialCategories);
-  const [channelId, setChannelId] = useState(
-    channels.find(channel => channel.channelId === getSelectedChannelId())?.channelId ?? channels[0]?.channelId ?? '',
-  );
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const { categories: initialCategories, targets } = useLoaderData<LoaderData>();
+  const { selectedChannelId } = useChannelContext();
+  const [availableCategories] = useState<Category[]>(initialCategories);
+  const [startDate, setStartDate] = useState(() => { const date = new Date(); date.setMonth(date.getMonth() - 1); return formatDate(date); });
+  const [endDate, setEndDate] = useState(() => formatDate(new Date()));
   const [candidates, setCandidates] = useState<ImportCandidate[]>([]);
-  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [targetContentId, setTargetContentId] = useState('');
-  const [manualTargetContentId, setManualTargetContentId] = useState('');
-  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [selections, setSelections] = useState<Record<string, ImportSelection>>({});
+  const [singleVideoId, setSingleVideoId] = useState('');
+  const [singleCategories, setSingleCategories] = useState<string[]>([]);
   const [results, setResults] = useState<BulkImportResult[]>([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [singleSaving, setSingleSaving] = useState(false);
   const [error, setError] = useState('');
   const toast = useToast();
 
   useEffect(() => {
-    if (!channelId || !startDate) return;
-    setSelectedChannelId(channelId);
+    if (!selectedChannelId || !startDate || !endDate) return;
     let cancelled = false;
-    setLoadingCandidates(true);
-    VideoService.getImportCandidates(channelId, startDate)
-      .then(value => { if (!cancelled) setCandidates(value); })
-      .catch(() => { if (!cancelled) setError('Unable to load YouTube candidates.'); })
+    setLoadingCandidates(true); setError('');
+    VideoService.getImportCandidates(startDate, endDate).then(value => {
+      if (cancelled) return;
+      const newCandidates = value.filter(candidate => !candidate.alreadyImported);
+      setCandidates(newCandidates);
+      setSelections(Object.fromEntries(newCandidates.map(candidate => [candidate.videoId, { videoId: candidate.videoId, categories: [], target: '', selected: false }])));
+    }).catch(() => { if (!cancelled) setError('Unable to load YouTube candidates.'); })
       .finally(() => { if (!cancelled) setLoadingCandidates(false); });
     return () => { cancelled = true; };
-  }, [channelId, startDate]);
+  }, [selectedChannelId, startDate, endDate]);
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (e.target.checked) {
-      setCategories([...categories, value]);
-    } else {
-      setCategories(categories.filter(cat => cat !== value));
-    }
+  const updateSelection = (videoId: string, update: Partial<ImportSelection>) => setSelections(current => ({ ...current, [videoId]: { ...current[videoId], ...update } }));
+  const toggleCategory = (videoId: string, categoryId: string) => {
+    const current = selections[videoId]?.categories ?? [];
+    updateSelection(videoId, { categories: current.includes(categoryId) ? current.filter(id => id !== categoryId) : [...current, categoryId] });
   };
+  const toggleSingleCategory = (categoryId: string) => setSingleCategories(current => current.includes(categoryId) ? current.filter(id => id !== categoryId) : [...current, categoryId]);
 
-  const toggleCandidate = (videoId: string) => {
-    setSelectedVideoIds(current => current.includes(videoId)
-      ? current.filter(id => id !== videoId)
-      : [...current, videoId]);
-  };
-
-  const createCategory = async () => {
-    const title = newCategoryTitle.trim();
-    if (!title) return;
-    try {
-      const category = await post(endpoints.CATEGORIES, { title, description: '' }) as Category;
-      setCategories(current => [...current, category.categoryId]);
-      setNewCategoryTitle('');
-      const refreshed = await get(endpoints.CATEGORIES) as Category[];
-      setAvailableCategories(refreshed);
-    } catch {
-      setError('Unable to create category.');
-    }
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
-    setResults([]);
-    if (!selectedVideoIds.length || !categories.length) {
-      setError('Select at least one candidate and one category.');
-      return;
-    }
+  const handleBulkSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); setError(''); setResults([]);
+    const items = candidates.map(candidate => selections[candidate.videoId]).filter(selection => selection?.selected).map(({ selected, ...item }) => item);
+    if (!items.length || items.some(item => item.categories.length === 0)) { setError('Select at least one candidate and one category for every selected video.'); return; }
     setSaving(true);
-    try {
-      const value = await VideoService.bulkImport({
-        videoIds: selectedVideoIds,
-        categories,
-        targetContentId: manualTargetContentId.trim() || targetContentId || undefined,
-      });
-      setResults(value);
-      setSelectedVideoIds([]);
-      toast.show('Import complete', 'The per-video result is shown below.', { variant: 'success' });
-    } catch {
-      setError('Bulk import failed before results could be returned.');
-    } finally {
-      setSaving(false);
-    }
+    try { setResults(await VideoService.bulkImport({ items })); toast.show('Import complete', 'The per-video result is shown below.', { variant: 'success' }); }
+    catch { setError('Bulk import failed before results could be returned.'); }
+    finally { setSaving(false); }
   };
 
-  return (
-    <>
-      <PageHeader title="Import YouTube videos" />
-      <GenericErrorList errors={error ? [error] : []} />
-      <Form onSubmit={handleSubmit}>
-        <Form.Group className="mb-3" controlId="importChannel">
-          <Form.Label>Authorized channel *</Form.Label>
-          <Form.Select value={channelId} onChange={e => setChannelId(e.target.value)}>
-            {channels.map((channel: Channel) => <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>)}
-          </Form.Select>
-        </Form.Group>
-        <Form.Group className="mb-3" controlId="importStartDate">
-          <Form.Label>Published from (UTC) *</Form.Label>
-          <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-        </Form.Group>
-        <Form.Group className="mb-3" controlId="importCandidates">
-          <Form.Label>Candidates</Form.Label>
+  const handleSingleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); setError('');
+    if (!singleVideoId.trim() || !singleCategories.length) { setError('Enter a video ID and select at least one category.'); return; }
+    setSingleSaving(true);
+    try { await VideoService.importVideo({ videoId: singleVideoId.trim(), categories: singleCategories }); setSingleVideoId(''); toast.show('Import complete', 'The video was imported successfully.', { variant: 'success' }); }
+    catch { setError('Single video import failed.'); }
+    finally { setSingleSaving(false); }
+  };
+
+  const selectedCandidateIds = candidates.filter(candidate => selections[candidate.videoId]?.selected);
+  return <>
+    <PageHeader title="Import YouTube videos" />
+    <GenericErrorList errors={error ? [error] : []} />
+    <Tabs defaultActiveKey="bulk" className="mb-4">
+      <Tab eventKey="bulk" title="Bulk import">
+        <Form onSubmit={handleBulkSubmit}>
+          <div className="row g-3 mb-3">
+            <Form.Group className="col-md-6" controlId="importStartDate"><Form.Label>Published from (UTC) *</Form.Label><Form.Control type="date" value={startDate} onChange={event => setStartDate(event.target.value)} required /></Form.Group>
+            <Form.Group className="col-md-6" controlId="importEndDate"><Form.Label>Published to (UTC) *</Form.Label><Form.Control type="date" value={endDate} onChange={event => setEndDate(event.target.value)} required /></Form.Group>
+          </div>
+          {!selectedChannelId ? <Alert variant="warning">Select an authorized channel from the application menu.</Alert> : null}
           {loadingCandidates ? <Alert variant="light">Loading candidates...</Alert> : null}
+          <Form.Label>Candidates</Form.Label>
           <div className="border rounded p-3">
-            {candidates.map(candidate => (
-              <Form.Check
-                key={candidate.videoId}
-                type="checkbox"
-                id={`candidate-${candidate.videoId}`}
-                label={`${candidate.title || candidate.videoId} (${new Date(candidate.publishedAt).toLocaleDateString()})${candidate.alreadyImported ? ' - already imported' : ''}`}
-                checked={selectedVideoIds.includes(candidate.videoId)}
-                disabled={candidate.alreadyImported}
-                onChange={() => toggleCandidate(candidate.videoId)}
-                className="mb-2"
-              />
-            ))}
+            {candidates.map((candidate, index) => {
+              const selection = selections[candidate.videoId];
+              const previousCandidates = candidates.slice(0, index).filter(previous => selections[previous.videoId]?.selected);
+              return <div key={candidate.videoId} className="border-bottom pb-3 mb-3">
+                <Form.Check id={`candidate-${candidate.videoId}`} label={`${candidate.title || candidate.videoId} (${new Date(candidate.publishedAt).toLocaleDateString()})`} checked={selection?.selected ?? false} onChange={event => updateSelection(candidate.videoId, { selected: event.target.checked })} className="mb-2" />
+                {selection?.selected ? <div className="ms-4">
+                  <Form.Label className="small">Categories *</Form.Label>
+                  <div className="d-flex flex-wrap gap-3 mb-2">{availableCategories.map(category => <Form.Check key={`${candidate.videoId}-${category.categoryId}`} type="checkbox" id={`category-${candidate.videoId}-${category.categoryId}`} label={category.title} checked={selection.categories.includes(category.categoryId)} onChange={() => toggleCategory(candidate.videoId, category.categoryId)} />)}</div>
+                  <Form.Select aria-label={`Target for ${candidate.title || candidate.videoId}`} value={selection.target ?? ''} onChange={event => updateSelection(candidate.videoId, { target: event.target.value })}>
+                    <option value="">Create new YouTubeContent</option>
+                    {targets.map(target => <option key={target.contentId} value={target.contentId}>Append to {target.title || target.contentId}</option>)}
+                    {previousCandidates.map(previous => <option key={previous.videoId} value={previous.videoId}>Append to {previous.title || previous.videoId}</option>)}
+                  </Form.Select>
+                </div> : null}
+              </div>;
+            })}
+            {!candidates.length && !loadingCandidates ? <p className="text-muted mb-0">No new candidates found for this date range.</p> : null}
           </div>
-        </Form.Group>
-        <Form.Group className="mb-3" controlId="importCategories">
-          <Form.Label>Categories *</Form.Label>
-          <div className="border rounded p-3">
-            {availableCategories.map(cat => <Form.Check key={cat.categoryId} type="checkbox" id={`category-${cat.categoryId}`} label={cat.title} value={cat.categoryId} checked={categories.includes(cat.categoryId)} onChange={handleCategoryChange} className="mb-2" />)}
-          </div>
-          <div className="d-flex gap-2 mt-2">
-            <Form.Control value={newCategoryTitle} onChange={e => setNewCategoryTitle(e.target.value)} placeholder="New category title" />
-            <Button type="button" variant="outline-secondary" onClick={createCategory}>Create category</Button>
-          </div>
-        </Form.Group>
-        <Form.Group className="mb-3" controlId="importTarget">
-          <Form.Label>Append to existing content (optional)</Form.Label>
-          <Form.Select value={targetContentId} onChange={e => setTargetContentId(e.target.value)}>
-            <option value="">Create one new YouTubeContent per video</option>
-            {targets.map(target => <option key={target.contentId} value={target.contentId}>{target.title || target.contentId} ({target.videoCount} videos)</option>)}
-          </Form.Select>
-          <Form.Control className="mt-2" value={manualTargetContentId} onChange={e => setManualTargetContentId(e.target.value)} placeholder="Or enter a content ID" />
-        </Form.Group>
-        <div className="d-flex justify-content-end mt-3">
-          <Button variant="success" type="submit" disabled={saving || loadingCandidates || !channelId}>
-            {saving ? 'Importing...' : 'Import selected videos'}
-          </Button>
-        </div>
-      </Form>
-      {results.length ? <ListGroup className="mt-4">{results.map(result => <ListGroup.Item key={result.videoId}><strong>{result.videoId}</strong>: {result.status}{result.error ? ` - ${result.error}` : ''}</ListGroup.Item>)}</ListGroup> : null}
-    </>
-  );
+          <div className="d-flex justify-content-end mt-3"><Button variant="success" type="submit" disabled={saving || loadingCandidates || !selectedChannelId || selectedCandidateIds.length === 0}>{saving ? 'Importing...' : 'Import selected videos'}</Button></div>
+        </Form>
+      </Tab>
+      <Tab eventKey="single" title="Single import">
+        <Form onSubmit={handleSingleSubmit}>
+          <Form.Group className="mb-3" controlId="singleVideoId"><Form.Label>Video ID *</Form.Label><Form.Control value={singleVideoId} onChange={event => setSingleVideoId(event.target.value)} required /></Form.Group>
+          <Form.Group className="mb-3" controlId="singleCategories"><Form.Label>Categories *</Form.Label><div className="d-flex flex-wrap gap-3">{availableCategories.map(category => <Form.Check key={category.categoryId} type="checkbox" id={`single-category-${category.categoryId}`} label={category.title} checked={singleCategories.includes(category.categoryId)} onChange={() => toggleSingleCategory(category.categoryId)} />)}</div></Form.Group>
+          <Button variant="success" type="submit" disabled={singleSaving}>{singleSaving ? 'Importing...' : 'Import video'}</Button>
+        </Form>
+      </Tab>
+    </Tabs>
+    {results.length ? <ListGroup className="mt-4">{results.map(result => <ListGroup.Item key={result.videoId}><strong>{result.videoId}</strong>: {result.status}{result.error ? ` - ${result.error}` : ''}</ListGroup.Item>)}</ListGroup> : null}
+  </>;
 };
 
 export default ImportVideo;
