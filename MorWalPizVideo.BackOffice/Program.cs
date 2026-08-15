@@ -508,7 +508,7 @@ if (enableSwagger)
         // Define API Key security scheme
         options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
         {
-            Name = "X-API-Key",
+            Name = builder.Configuration["ApiKeySettings:HeaderName"] ?? "X-API-Key",
             Type = SecuritySchemeType.ApiKey,
             In = ParameterLocation.Header,
             Description = "API Key for service-to-service authentication. Enter your API key in the text input below."

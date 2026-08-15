@@ -79,6 +79,10 @@ This document describes the API Key authentication system implemented for the Mo
 }
 ```
 
+### Swagger
+
+When Swagger is enabled, `[ApiKeyAuth]` operations expose an operation-level `ApiKey` security requirement. Authorize in Swagger UI with the API key; requests then send the configured `ApiKeySettings:HeaderName` header, which defaults to `X-API-Key`. JWT and anonymous operations retain their own security metadata.
+
 ### VideoImporter Application (app.config)
 
 ```xml

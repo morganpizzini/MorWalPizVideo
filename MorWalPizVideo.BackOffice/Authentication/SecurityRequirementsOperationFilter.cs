@@ -59,7 +59,7 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
             operation.Security.Add(new OpenApiSecurityRequirement
             {
                 {
-                    new OpenApiSecuritySchemeReference("ApiKey", null!, null),
+                    new OpenApiSecuritySchemeReference("ApiKey", context.Document, null),
                     new List<string>()
                 }
             });
@@ -70,7 +70,7 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
             operation.Security.Add(new OpenApiSecurityRequirement
             {
                 {
-                    new OpenApiSecuritySchemeReference("Bearer", null!, null),
+                    new OpenApiSecuritySchemeReference("Bearer", context.Document, null),
                     new List<string>()
                 }
             });
