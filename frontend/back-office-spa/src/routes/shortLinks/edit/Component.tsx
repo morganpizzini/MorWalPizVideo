@@ -70,16 +70,9 @@ const EditShortLink: React.FC = () => {
       // Check if the video exists in matches
       let foundVideo = false;
       for (const match of matches) {
-        if (match.isLink && match.thumbnailUrl === videoIdParam) {
+        if (match.videoRefs.some(video => video.youtubeId === videoIdParam)) {
           foundVideo = true;
           break;
-        }
-        if (!match.isLink && match.videos) {
-          const video = match.videos.find(v => v.youtubeId === videoIdParam);
-          if (video) {
-            foundVideo = true;
-            break;
-          }
         }
       }
 
@@ -188,19 +181,12 @@ const EditShortLink: React.FC = () => {
               >
                 <option value="">Select a video</option>
                 {matches.map(match => (
-                  <React.Fragment key={match.matchId}>
-                    {/* If it's a direct video link */}
-                    {match.isLink && (
-                      <option value={match.thumbnailUrl}>
-                        {match.title || match.thumbnailUrl}
-                      </option>
-                    )}
-                    {/* If it's a collection with multiple videos */}
-                    {!match.isLink && match.videos?.map(video => (
-                      <option key={video.youtubeId} value={video.youtubeId}>
-                        {video.title || video.youtubeId}
-                      </option>
-                    ))}
+                  <React.Fragment key={match.id}>
+                      {match.videoRefs.map(video => (
+                        <option key={video.youtubeId} value={video.youtubeId}>
+                          {video.title || video.youtubeId}
+                        </option>
+                      ))}
                   </React.Fragment>
                 ))}
               </Form.Select>

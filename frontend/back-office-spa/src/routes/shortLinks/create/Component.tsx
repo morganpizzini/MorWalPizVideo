@@ -167,7 +167,7 @@ const CreateShortLink: React.FC = () => {
               >
                 <option value="">Select a video</option>
                 {matches.map(match => (
-                  <React.Fragment key={match.matchId}>
+                  <React.Fragment key={match.id}>
 
                     {match.videoRefs?.map(video => (
                       <option key={video.youtubeId} value={video.youtubeId}>

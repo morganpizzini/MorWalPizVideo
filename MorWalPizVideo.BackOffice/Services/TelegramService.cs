@@ -1,5 +1,6 @@
 ﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.BackOffice.Services.Configuration;
+using MorWalPizVideo.BackOffice.Services.Factories;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
@@ -15,16 +16,19 @@ public class TelegramService : ITelegramService
     private readonly HttpClient client;
     private readonly string channelName;
     private readonly string siteUrl;
-    public TelegramService(IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    public TelegramService(
+        ITelegramHttpClientFactory clientFactory,
+        ITelegramConfigurationService configurationService,
+        IConfiguration configuration)
     {
-        client = _clientFactory.CreateClient(HttpClientNames.Telegram);
-        siteUrl = _configuration["SiteUrl"] ?? string.Empty;
-        if (siteUrl == null)
-            throw new NullReferenceException("SiteUrl is empty");
+        client = clientFactory.CreateClient();
+        siteUrl = configuration["SiteUrl"] ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(siteUrl))
+            throw new InvalidOperationException("SiteUrl is empty");
 
-        channelName = _configuration.GetSection("TelegramSettings").Get<TelegramSettings>()?.ChannelName ?? string.Empty;
-        if (channelName == null)
-            throw new NullReferenceException("Channel name is not found in the configuration file");
+        channelName = configurationService.GetTelegramSettings().ChannelName;
+        if (string.IsNullOrWhiteSpace(channelName))
+            throw new InvalidOperationException("Telegram channel name is not configured");
     }
     public async Task<string> CreatePost(string shortLink, string message)
     {

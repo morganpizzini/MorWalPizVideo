@@ -25,19 +25,19 @@ public class YouTubeContentContract
     public string ThumbnailVideoId { get; set; } = string.Empty;
 
     [DataMember]
-    public VideoRef[] VideoRefs { get; set; } = [];
+    public VideoRefContract[] VideoRefs { get; set; } = [];
 
     [DataMember]
-    public CategoryRef[] Categories { get; set; } = [];
+    public CategoryRefContract[] Categories { get; set; } = [];
 
     [DataMember]
     public YoutubeContentType ContentType { get; set; }
 
     [DataMember]
-    public YouTubeVideoLink[]? YouTubeVideoLinks { get; set; } = [];
+    public YouTubeVideoLinkContract[]? YouTubeVideoLinks { get; set; } = [];
 
     [DataMember]
-    public ShortLink[] ShortLinks { get; set; } = [];
+    public ShortLinkContract[] ShortLinks { get; set; } = [];
 
     [DataMember]
     public bool IsPrivate { get; set; }

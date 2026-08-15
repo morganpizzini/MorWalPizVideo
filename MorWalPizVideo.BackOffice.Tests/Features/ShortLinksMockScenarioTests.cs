@@ -30,7 +30,7 @@ public class ShortLinksMockScenarioTests
     }
 
     [Fact]
-    public async Task Embedded_video_link_resolves_and_increments_the_content_link()
+    public async Task Embedded_video_link_is_not_resolvable()
     {
         await using var factory = new ShortLinksWebApplicationFactory();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -40,11 +40,10 @@ public class ShortLinksMockScenarioTests
 
         var response = await client.GetAsync($"/{PrimaryScenario.MatchShortLinkCode}");
 
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal($"https://www.youtube.com/watch?v={PrimaryScenario.VideoId}", response.Headers.Location?.ToString());
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
         var match = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        Assert.Equal(1, match.ShortLinks.Single().ClicksCount);
+        Assert.Equal(0, match.ShortLinks.Single().ClicksCount);
     }
 
     [Fact]
@@ -69,5 +68,37 @@ public class ShortLinksMockScenarioTests
         var response = await client.GetAsync("/other1");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Canonical_video_link_resolves_without_embedded_data_and_counts_clicks_atomically()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var repository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        await repository.AddItemAsync(new ShortLink("canonical1", PrimaryScenario.VideoId, [])
+        {
+            Id = "400000000000000000000099",
+            LinkType = LinkType.YouTubeVideo,
+            ContentId = PrimaryScenario.MatchId,
+            ManagementChannelId = PrimaryScenario.ChannelId
+        });
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        await matchRepository.UpdateItemAsync(source with { ShortLinks = [] });
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var responses = await Task.WhenAll(client.GetAsync("/canonical1"), client.GetAsync("/canonical1"));
+
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.Redirect, response.StatusCode));
+        Assert.All(responses, response => Assert.Equal(
+            $"https://www.youtube.com/watch?v={PrimaryScenario.VideoId}",
+            response.Headers.Location?.ToString()));
+        var updatedLink = (await repository.GetItemsAsync()).Single(link => link.Code == "canonical1");
+        Assert.Equal(2, updatedLink.ClicksCount);
+        Assert.Empty((await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId).ShortLinks);
     }
 }

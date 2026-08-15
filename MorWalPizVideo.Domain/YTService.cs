@@ -110,11 +110,8 @@ namespace MorWalPizVideo.Server.Services
                 {
                     throw new Exception($"lang {sourceLanguage} not found for video {video.Id} [{video.Snippet.Title}]");
                 }
-                var stringToTranslate = $"{localizedLang.Title} | {localizedLang.Description}";
-                // Traduci titolo e descrizione
-                string[] translatedStrings = []; //(await _translatorService.TranslateTextWithHashtags(stringToTranslate)).Split(" | ");
-                // Aggiungi la traduzione
-                AddTranslationToVideo(video, translatedStrings[0], translatedStrings[1], targetLanguage);
+                throw new NotSupportedException(
+                    "YouTube translation is unavailable because no translation provider is configured.");
             }
         }
 

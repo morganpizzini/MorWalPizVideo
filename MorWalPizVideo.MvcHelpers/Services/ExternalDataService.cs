@@ -1,4 +1,5 @@
 ﻿using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Server.Services
@@ -11,9 +12,9 @@ namespace MorWalPizVideo.Server.Services
   
     public class ExternalDataService : IExternalDataService
     {
-        private readonly DataService _dataService;
+        private readonly IGenericDataService _dataService;
         private readonly IYTService _youtubeService;
-        public ExternalDataService(DataService dataService, IYTService youtubeService)
+        public ExternalDataService(IGenericDataService dataService, IYTService youtubeService)
         {
             _dataService = dataService;
             _youtubeService = youtubeService;

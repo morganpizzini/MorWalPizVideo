@@ -48,7 +48,7 @@ public class BioLinksController : ApplicationControllerBase
         await repository.AddItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
-        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.PurgeCache(CacheKeys.BioLinks);
         return NoContent();
     }
     [HttpPut]
@@ -79,7 +79,7 @@ public class BioLinksController : ApplicationControllerBase
         await repository.UpdateItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
-        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.PurgeCache(CacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -97,7 +97,7 @@ public class BioLinksController : ApplicationControllerBase
         await repository.UpdateItemAsync(entity);
 
         await client.ResetCache(CacheKeys.BioLinks);
-        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.PurgeCache(CacheKeys.BioLinks);
         return NoContent();
     }
 
@@ -112,7 +112,7 @@ public class BioLinksController : ApplicationControllerBase
         await repository.DeleteItemAsync(entity.Id);
 
         await client.ResetCache(CacheKeys.BioLinks);
-        await client.PurgeCache(ApiTagCacheKeys.BioLinks);
+        await client.PurgeCache(CacheKeys.BioLinks);
         return NoContent();
     }
 }

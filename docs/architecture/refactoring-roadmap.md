@@ -57,14 +57,14 @@
 
 ### Implementation Note
 
-The canonical short-link implementation is now in place and validated for the current behavior slice. The core feature is complete; remaining work is operational follow-up such as rollout monitoring, retention/cleanup tuning, and any later removal of legacy compatibility reads.
+The canonical short-link implementation is now in place and validated for the current behavior slice. The core feature is complete; remaining work is operational follow-up such as duplicate audit, idempotent legacy backfill, rollout monitoring, retention/cleanup tuning, and archival field cleanup.
 
 ### Work
 
 - Add canonical link and visit models.
 - Implement destination safety validation.
-- Backfill standalone and embedded links.
-- Deploy canonical-first dual reads.
+- Backfill legacy embedded links into standalone records.
+- Deploy canonical-only reads and management.
 - Create the unique normalized-code index.
 - Switch BackOffice management writes.
 - Use atomic counters and optional retained visit events.
@@ -74,7 +74,7 @@ The canonical short-link implementation is now in place and validated for the cu
 - Every active code resolves from one canonical record.
 - Duplicate codes are impossible.
 - Redirect/query behavior and concurrent counts pass tests.
-- Legacy embedded reads show zero use before removal.
+- Every legacy embedded YouTube link is either reconciled into a standalone record or recorded as an approved archival exception.
 
 ## Phase 4: Persistence And Service Decomposition
 

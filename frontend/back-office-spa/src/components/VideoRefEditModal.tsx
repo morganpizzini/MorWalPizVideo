@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
-import { VideoRef, CategoryRef } from '../models/video/types';
+import type { VideoRef, CategoryRef } from '@morwalpizvideo/models';
 
 type CategoryWithFallbackId = CategoryRef & { categoryId?: string };
 

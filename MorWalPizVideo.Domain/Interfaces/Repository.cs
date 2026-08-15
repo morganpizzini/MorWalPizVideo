@@ -78,6 +78,29 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return await _collection.CountDocumentsAsync(filter);
         }
 
+        public async Task<IList<YouTubeContent>> GetPublicOrderedForChannelAsync(string channelId, int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 200);
+            var filter = Builders<YouTubeContent>.Filter.And(
+                Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false),
+                Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs,
+                    video => video.ChannelIds.Contains(channelId)));
+
+            return await _collection
+                .Find(filter)
+                .SortByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
+        }
+
+        public Task<long> CountPublicForChannelAsync(string channelId)
+            => _collection.CountDocumentsAsync(Builders<YouTubeContent>.Filter.And(
+                Builders<YouTubeContent>.Filter.Eq(x => x.IsPrivate, false),
+                Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs,
+                    video => video.ChannelIds.Contains(channelId))));
+
         public async Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate)
         {
             var filter = Builders<YouTubeContent>.Filter.Eq(x => x.Url, url);

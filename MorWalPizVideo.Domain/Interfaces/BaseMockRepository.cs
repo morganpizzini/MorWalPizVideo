@@ -7,7 +7,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public abstract class BaseMockRepository<T> : IRepository<T> where T : BaseEntity
     {
         protected readonly string _fileName;
-        private readonly IMockScenario scenario;
+        protected readonly IMockScenario scenario;
         protected BaseMockRepository(IMockScenario scenario, string fileName)
         {
             this.scenario = scenario;

@@ -19,6 +19,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
         Task<long> CountPublicAsync(bool includePrivate);
+        Task<IList<YouTubeContent>> GetPublicOrderedForChannelAsync(string channelId, int skip, int take);
+        Task<long> CountPublicForChannelAsync(string channelId);
         Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate);
         Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate);
     }

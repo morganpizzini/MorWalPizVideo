@@ -30,15 +30,15 @@ public class VideosController : ApplicationControllerBase
     private readonly ITelegramService telegramService;
     private readonly IDiscordService discordService;
     private readonly IFacebookService facebookService;
-    private readonly IUserRepository userRepository;
     private readonly IConfiguration configuration;
     private readonly IVideoAuthorizationService authorization;
-    
+    private readonly ILogger<VideosController> logger;
+
     public VideosController(IContentService contentService, ILinksService linksService, ICrossApiService _clientFactory,
         IYTService _yTService, IExternalDataService _externalDataService,
         ITelegramService _telegramService, IDiscordService _discordService,
-        IFacebookService _facebookService, IUserRepository _userRepository,
-        IConfiguration _configuration, IVideoAuthorizationService _authorization)
+        IFacebookService _facebookService, IConfiguration _configuration,
+        IVideoAuthorizationService _authorization, ILogger<VideosController> _logger)
     {
         _contentService = contentService;
         _linksService = linksService;
@@ -48,9 +48,9 @@ public class VideosController : ApplicationControllerBase
         telegramService = _telegramService;
         discordService = _discordService;
         facebookService = _facebookService;
-        userRepository = _userRepository;
         configuration = _configuration;
         authorization = _authorization;
+        logger = _logger;
     }
 
     [HttpGet()]
@@ -87,6 +87,15 @@ public class VideosController : ApplicationControllerBase
         var categories = (await _contentService.GetCategoriesAsync(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
+        if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
+        {
+            return BadRequest("One or more categories were not found");
+        }
+
+        if (request.VideoRefs is not null && !await ValidateVideoReferenceChannelsAsync(existingMatch, request.VideoRefs))
+        {
+            return BadRequest("One or more video channel assignments are invalid or unauthorized");
+        }
 
         // Update the match using immutable record pattern
         var updatedMatch = existingMatch with
@@ -102,7 +111,7 @@ public class VideosController : ApplicationControllerBase
         await _contentService.UpdateMatchAsync(updatedMatch);
 
         await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
 
         return NoContent();
@@ -120,7 +129,7 @@ public class VideosController : ApplicationControllerBase
 
         await _contentService.DeleteMatchAsync(match.Id);
         await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
         return NoContent();
     }
@@ -136,8 +145,18 @@ public class VideosController : ApplicationControllerBase
                 return NotFound("Video not found");
             }
         }
-
-        await yTService.TranslateYoutubeVideo(videoIds);
+        try
+        {
+            await yTService.TranslateYoutubeVideo(videoIds);
+        }
+        catch (NotSupportedException exception)
+        {
+            logger.LogError(exception, "YouTube translation is unavailable");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                error = "translation_unavailable"
+            });
+        }
         return NoContent();
     }
     [HttpPost("ImportVideo")]
@@ -150,29 +169,46 @@ public class VideosController : ApplicationControllerBase
             return Unauthorized();
         }
 
+        var videoId = request.VideoId.Trim();
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var existingMatch = await _contentService.FindMatchAsync(videoId);
+        if (existingMatch is not null)
+        {
+            if (!await authorization.CanMutateInChannelAsync(User, existingMatch, channelId))
+            {
+                return NotFound("Video not found");
+            }
+
+            return Conflict("Video is already imported");
+        }
+
         // Fetch categories and convert to CategoryRef objects
         var categories = (await _contentService.GetCategoriesAsync(request.Categories))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
+        if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
+        {
+            return BadRequest("One or more categories were not found");
+        }
 
-        var channelContext = HttpContext.GetChannelContext();
-        var importedMatch = YouTubeContent.CreateSingleVideo(request.VideoId, categories) with
+        var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
         {
             CreatorUserId = creatorUserId,
-            OwnerChannelId = channelContext.ChannelId,
-            VideoRefs = [new VideoRef(request.VideoId, categories, channelIds: [channelContext.ChannelId])]
+            OwnerChannelId = channelId,
+            VideoRefs = [new VideoRef(videoId, categories, channelIds: [channelId])]
         };
-        await _contentService.SaveMatchAsync(importedMatch);
+        if (!await _contentService.SaveMatchAsync(importedMatch))
+        {
+            return Conflict("Video is already imported");
+        }
 
-        // Populate metadata by calling ExternalDataService.FetchMatches()
-        // This will fetch YouTube metadata and update the VideoRef with title, description, publishedAt
-        await externalDataService.FetchMatches();
+        await externalDataService.RefreshMatch(videoId);
 
         // Auto-create shortlink for the imported video
-        await CreateVideoShortLinkAsync(request.VideoId);
+        await CreateVideoShortLinkAsync(videoId);
 
         await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
 
         return NoContent();
@@ -290,6 +326,18 @@ public class VideosController : ApplicationControllerBase
                     continue;
                 }
 
+                YouTubeContent? target = null;
+                var targetKey = item.Target?.Trim();
+                if (!string.IsNullOrWhiteSpace(targetKey))
+                {
+                    target = createdTargets.GetValueOrDefault(targetKey) ?? targetsById.GetValueOrDefault(targetKey);
+                    if (target is null || !await authorization.CanMutateInChannelAsync(User, target, channelId))
+                    {
+                        results.Add(new(videoId, "error", "Target content was not found or is not accessible"));
+                        continue;
+                    }
+                }
+
                 var videos = await yTService.FetchFromYoutube([videoId]);
                 var video = videos.FirstOrDefault();
                 if (video is null)
@@ -306,22 +354,15 @@ public class VideosController : ApplicationControllerBase
                     video.PublishedAt,
                     [channelId]);
 
-                YouTubeContent? target = null;
-                if (!string.IsNullOrWhiteSpace(item.Target))
+                if (target is not null && !string.IsNullOrWhiteSpace(targetKey))
                 {
-                    target = createdTargets.GetValueOrDefault(item.Target) ?? targetsById.GetValueOrDefault(item.Target);
-                    if (target is null || !await authorization.CanAccessAsync(User, target))
-                    {
-                        results.Add(new(videoId, "error", "Target content was not found or is not accessible"));
-                        continue;
-                    }
                     var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
                     await _contentService.UpdateMatchAsync(updatedTarget);
-                    if (createdTargets.ContainsKey(item.Target))
+                    if (createdTargets.ContainsKey(targetKey))
                     {
-                        createdTargets[item.Target] = updatedTarget;
+                        createdTargets[targetKey] = updatedTarget;
                     }
-                    targetsById[item.Target] = updatedTarget;
+                    targetsById[targetKey] = updatedTarget;
                 }
                 else
                 {
@@ -334,7 +375,11 @@ public class VideosController : ApplicationControllerBase
                         Description = video.Description,
                         CreationDateTime = video.PublishedAt
                     };
-                    await _contentService.SaveMatchAsync(importedMatch);
+                    if (!await _contentService.SaveMatchAsync(importedMatch))
+                    {
+                        results.Add(new(videoId, "skipped"));
+                        continue;
+                    }
                     await CreateVideoShortLinkAsync(videoId);
                     createdTargets[videoId] = importedMatch;
                 }
@@ -344,14 +389,16 @@ public class VideosController : ApplicationControllerBase
             }
             catch (Exception exception)
             {
-                results.Add(new(videoId, "error", exception.Message));
+                logger.LogError(exception, "Bulk video import failed for video {VideoId}, target {Target}, channel {ChannelId}",
+                    videoId, item.Target, channelId);
+                results.Add(new(videoId, "error", "Video import failed"));
             }
         }
 
         if (results.Any(result => result.Status == "imported"))
         {
             await client.ResetCache(CacheKeys.Matches);
-            await client.PurgeCache(ApiTagCacheKeys.Matches);
+            await client.PurgeCache(CacheKeys.Matches);
             await client.ReloadCache();
         }
 
@@ -375,7 +422,7 @@ public class VideosController : ApplicationControllerBase
         }
 
         await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
 
         return Ok(ContractUtils.Convert(updatedMatch));
@@ -391,11 +438,9 @@ public class VideosController : ApplicationControllerBase
             return NotFound("Video not found");
         }
 
-        // Get the shortlink for this video
-        var shortLink = match.ShortLinks.FirstOrDefault(x =>
-            x.LinkType == LinkType.YouTubeVideo &&
-            x.Target == id &&
-            string.IsNullOrEmpty(x.QueryString));
+        var youtubeId = match.VideoRefs.FirstOrDefault(video => video.YoutubeId == id)?.YoutubeId ??
+            (match.ThumbnailVideoId == id ? id : null);
+        var shortLink = youtubeId is null ? null : await _linksService.GetCanonicalVideoShortLinkAsync(match.Id, youtubeId);
 
         if (shortLink == null)
         {
@@ -410,12 +455,14 @@ public class VideosController : ApplicationControllerBase
             var telegramError = await telegramService.CreatePost(shortLink.Code, request.Message);
             if (!string.IsNullOrEmpty(telegramError))
             {
-                errors.Add($"Telegram: {telegramError}");
+                logger.LogWarning("Telegram publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
+                errors.Add("Telegram publishing failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            errors.Add($"Telegram: {ex.Message}");
+            logger.LogError(exception, "Telegram publishing failed for short link {ShortLink}", shortLink.Code);
+            errors.Add("Telegram publishing failed");
         }
 
         // Publish to Discord
@@ -424,12 +471,14 @@ public class VideosController : ApplicationControllerBase
             var discordError = await discordService.CreatePost(shortLink.Code, request.Message);
             if (!string.IsNullOrEmpty(discordError))
             {
-                errors.Add($"Discord: {discordError}");
+                logger.LogWarning("Discord publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
+                errors.Add("Discord publishing failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            errors.Add($"Discord: {ex.Message}");
+            logger.LogError(exception, "Discord publishing failed for short link {ShortLink}", shortLink.Code);
+            errors.Add("Discord publishing failed");
         }
 
         // Publish to Facebook
@@ -438,12 +487,14 @@ public class VideosController : ApplicationControllerBase
             var facebookError = await facebookService.CreatePost(shortLink.Code, request.Message);
             if (!string.IsNullOrEmpty(facebookError))
             {
-                errors.Add($"Facebook: {facebookError}");
+                logger.LogWarning("Facebook publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
+                errors.Add("Facebook publishing failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            errors.Add($"Facebook: {ex.Message}");
+            logger.LogError(exception, "Facebook publishing failed for short link {ShortLink}", shortLink.Code);
+            errors.Add("Facebook publishing failed");
         }
 
         if (errors.Any())
@@ -473,44 +524,80 @@ public class VideosController : ApplicationControllerBase
             return BadRequest(new { error = $"Unknown channelId '{payload.ChannelId}'" });
         }
 
-        if (!await authorization.CanManageChannelAsync(User, payload.ChannelId) ||
-            payload.ChannelId != HttpContext.GetChannelContext().ChannelId)
+        if (!await authorization.CanManageChannelAsync(User, payload.ChannelId))
         {
             return NotFound(new { error = $"Video '{youtubeId}' was not found" });
         }
 
         var existingMatch = await _contentService.FindMatchAsync(youtubeId);
-        if (existingMatch != null && !await authorization.CanMutateInChannelAsync(User, existingMatch, HttpContext.GetChannelContext().ChannelId))
-        {
-            return NotFound(new { error = $"Video '{youtubeId}' was not found" });
-        }
-
-        if (existingMatch is null)
+        if (existingMatch is null || !existingMatch.VideoRefs.Any(video => video.YoutubeId == youtubeId))
         {
             return NotFound(new { error = $"Video '{youtubeId}' was not found in any channel or match" });
         }
 
-        if (existingMatch != null)
+        if (!await authorization.CanMutateInChannelAsync(User, existingMatch, HttpContext.GetChannelContext().ChannelId))
         {
-            var updatedRefs = existingMatch.VideoRefs.Select(video =>
-                video.YoutubeId == youtubeId
-                    ? video with { ChannelIds = video.ChannelIds.Append(payload.ChannelId).Distinct().ToArray() }
-                    : video).ToArray();
-            await _contentService.UpdateMatchAsync(existingMatch with { VideoRefs = updatedRefs });
+            return NotFound(new { error = $"Video '{youtubeId}' was not found" });
         }
 
-        // Ensure on target channel.
-        var targetVideos = targetChannel.Videos?.ToList() ?? new List<YouTubeVideo>();
-        if (!targetVideos.Any(v => v.VideoId == youtubeId))
+        var updatedRefs = existingMatch.VideoRefs.Select(video =>
+            video.YoutubeId == youtubeId
+                ? video with { ChannelIds = video.ChannelIds.Append(payload.ChannelId).Distinct().ToArray() }
+                : video).ToArray();
+        var updatedMatch = existingMatch with { VideoRefs = updatedRefs };
+
+        try
+        {
+            await _contentService.UpdateMatchAsync(updatedMatch);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "AssignChannel failed while updating match {MatchId} for video {YoutubeId} and channel {ChannelId}",
+                existingMatch.Id, youtubeId, payload.ChannelId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                error = "Video channel assignment failed before the target channel was updated",
+                matchUpdated = false,
+                targetChannelUpdated = false
+            });
+        }
+
+        var targetVideos = targetChannel.Videos?.ToList() ?? [];
+        if (!targetVideos.Any(video => video.VideoId == youtubeId))
         {
             targetVideos.Add(new YouTubeVideo { VideoId = youtubeId, LastCommentDate = DateTime.UtcNow });
-            var updatedTarget = targetChannel with { Videos = targetVideos };
-            await _contentService.UpdateChannelAsync(updatedTarget);
+        }
+
+        try
+        {
+            await _contentService.UpdateChannelAsync(targetChannel with { Videos = targetVideos });
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "AssignChannel partially completed after match {MatchId} update; target channel {ChannelId} failed for video {YoutubeId}",
+                existingMatch.Id, payload.ChannelId, youtubeId);
+            try
+            {
+                await client.ResetCache(CacheKeys.Matches);
+                await client.PurgeCache(CacheKeys.Matches);
+            }
+            catch (Exception cacheException)
+            {
+                logger.LogError(cacheException,
+                    "AssignChannel partial failure could not invalidate match cache for {MatchId}",
+                    existingMatch.Id);
+            }
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                error = "Video channel assignment partially completed; reconcile the target channel membership",
+                matchUpdated = true,
+                targetChannelUpdated = false
+            });
         }
 
         await client.ResetCache(CacheKeys.Channels);
         await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
 
         return Ok(new { youtubeId, channelId = payload.ChannelId });
@@ -521,107 +608,104 @@ public class VideosController : ApplicationControllerBase
     private async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync()
     {
         var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
-        return string.IsNullOrWhiteSpace(userId)
-            ? []
-            : await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User), HttpContext.GetChannelContext().ChannelId);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return [];
+        }
+
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var matches = await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User), channelId);
+        var authorizedMatches = new List<YouTubeContent>();
+        foreach (var match in matches)
+        {
+            if (await authorization.CanReadInChannelAsync(User, match, channelId))
+            {
+                authorizedMatches.Add(match);
+            }
+        }
+
+        return await _linksService.MergeCanonicalVideoShortLinksAsync(authorizedMatches);
     }
 
     private async Task<YouTubeContent?> FindAuthorizedMatchAsync(string id)
     {
-        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(User);
-        return string.IsNullOrWhiteSpace(userId)
-            ? null
-                : await _contentService.FindAuthorizedMatchAsync(id, userId, await authorization.IsAdminAsync(User), HttpContext.GetChannelContext().ChannelId);
+        var matches = await GetAuthorizedMatchesAsync();
+        return matches.FirstOrDefault(match => match.ThumbnailVideoId == id ||
+            match.Id == id || match.VideoRefs.Any(video => video.YoutubeId == id));
     }
 
-            private async Task<YouTubeContent?> FindManageableMatchAsync(string id)
+    private async Task<YouTubeContent?> FindManageableMatchAsync(string id)
+    {
+        var match = await FindAuthorizedMatchAsync(id);
+        return match is not null && await authorization.CanMutateInChannelAsync(
+            User, match, HttpContext.GetChannelContext().ChannelId)
+            ? match
+            : null;
+    }
+
+    private async Task<bool> ValidateVideoReferenceChannelsAsync(
+        YouTubeContent existingMatch,
+        IReadOnlyCollection<VideoRef> requestedReferences)
+    {
+        if (requestedReferences
+            .GroupBy(reference => reference.YoutubeId, StringComparer.Ordinal)
+            .Any(group => group.Count() > 1))
+        {
+            return false;
+        }
+
+        var existingReferences = existingMatch.VideoRefs
+            .ToDictionary(reference => reference.YoutubeId, StringComparer.Ordinal);
+        var requestedVideoIds = requestedReferences
+            .Select(reference => reference.YoutubeId)
+            .ToHashSet(StringComparer.Ordinal);
+        var channelIdsToValidate = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var requestedReference in requestedReferences)
+        {
+            if (existingReferences.TryGetValue(requestedReference.YoutubeId, out var existingReference) &&
+                existingReference.ChannelIds.ToHashSet(StringComparer.Ordinal).SetEquals(requestedReference.ChannelIds))
             {
-            var match = await FindAuthorizedMatchAsync(id);
-            return match is not null && await authorization.CanMutateInChannelAsync(
-                User, match, HttpContext.GetChannelContext().ChannelId)
-                ? match
-                : null;
+                continue;
             }
 
-    /// <summary>
-    /// Auto-creates a shortlink for a video (similar to ShortLinksController logic).
-    /// </summary>
+            channelIdsToValidate.UnionWith(requestedReference.ChannelIds);
+            if (existingReferences.TryGetValue(requestedReference.YoutubeId, out existingReference))
+            {
+                channelIdsToValidate.UnionWith(existingReference.ChannelIds);
+            }
+        }
+
+        foreach (var removedReference in existingMatch.VideoRefs.Where(reference =>
+                     !requestedVideoIds.Contains(reference.YoutubeId)))
+        {
+            channelIdsToValidate.UnionWith(removedReference.ChannelIds);
+        }
+
+        foreach (var channelId in channelIdsToValidate)
+        {
+            if (string.IsNullOrWhiteSpace(channelId) ||
+                await _contentService.GetChannelByIdAsync(channelId) is null ||
+                !await authorization.CanManageChannelAsync(User, channelId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private async Task<string?> CreateVideoShortLinkAsync(string videoId)
     {
-        var existingMatch = await _contentService.FindMatchAsync(videoId);
-        if (existingMatch == null)
-        {
-            return null;
-        }
-
-        var existingShortLink = existingMatch.ShortLinks
-            .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo
-                && x.Target == videoId
-                && string.IsNullOrEmpty(x.QueryString));
-
-        if (existingShortLink != null)
-        {
-            return BuildShortLinkUrl(existingShortLink.Code);
-        }
-
-        // Generate unique shortlink code
-        var shortLinkCode = await CalculateShortLinkAsync();
-
-        var newShortLink = new ShortLink(shortLinkCode, videoId, Array.Empty<QueryLink>())
-        {
-            LinkType = LinkType.YouTubeVideo
-        };
-
-        await _contentService.UpdateMatchAsync(existingMatch.AddShortLink(newShortLink));
-
-        await client.ResetCache(CacheKeys.ShortLinks);
-        await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(ApiTagCacheKeys.Matches);
-
-        return BuildShortLinkUrl(newShortLink.Code);
+        var shortLink = await _linksService.EnsureVideoShortLinkAsync(
+            videoId, HttpContext.GetChannelContext().ChannelId);
+        return shortLink is null ? null : BuildShortLinkUrl(shortLink.Code);
     }
 
     private string BuildShortLinkUrl(string code)
     {
         var siteUrl = configuration["SiteUrl"] ?? string.Empty;
         return $"{siteUrl}{code}";
-    }
-
-    /// <summary>
-    /// Generates a unique shortlink code (mirrors ShortLinksController logic).
-    /// </summary>
-    private async Task<string> CalculateShortLinkAsync()
-    {
-        var shortlinks = await _linksService.GetShortLinksAsync();
-        var matches = await _contentService.GetAllMatchesAsync();
-        var sl = shortlinks.Select(x => x.NormalizedCode)
-            .Concat(matches.SelectMany(match => match.ShortLinks).Select(x => x.NormalizedCode))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        return GetUniqueValue(sl);
-
-        string GetUniqueValue(IEnumerable<string> strings)
-        {
-            // Sort and concatenate the input strings
-            string concatenated = string.Join("", strings.OrderBy(s => s));
-
-            // Hash the concatenated string
-            using SHA256 sha256 = SHA256.Create();
-            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(concatenated));
-
-            // Convert hash bytes to a hexadecimal string
-            string hash = Convert.ToHexString(hashBytes);
-
-            // Check if the truncated hash conflicts with inputs
-            string uniqueString = hash.Substring(0, 5).ToLower();
-            while (strings.Contains(uniqueString))
-            {
-                uniqueString = GetUniqueValue([.. strings, uniqueString]);
-            }
-
-            return uniqueString;
-        }
     }
 
     #endregion

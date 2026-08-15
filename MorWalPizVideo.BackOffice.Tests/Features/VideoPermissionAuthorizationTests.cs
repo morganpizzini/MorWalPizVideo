@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -107,6 +108,62 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
 
     Assert.Equal(PrimaryScenario.ChannelId, importedMatch.OwnerChannelId);
     Assert.Contains(PrimaryScenario.ChannelId, importedMatch.VideoRefs.Single().ChannelIds);
+  }
+
+  [Fact]
+  public async Task Single_video_import_reports_existing_video_without_side_effects()
+  {
+    var videoId = $"already-imported-{Guid.NewGuid():N}";
+    var existingMatch = await _factory.MatchRepository!.AddItemAsync(
+        YouTubeContent.CreateSingleVideo(videoId, []) with
+        {
+          CreatorUserId = "test-user-id",
+          OwnerChannelId = PrimaryScenario.ChannelId,
+          VideoRefs = [new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId])]
+        });
+    using var client = CreateClient(
+        userId: "test-user-id",
+        permissions: AuthorizationPermissionKeys.VideosImport);
+
+    var response = await client.PostAsJsonAsync(
+        "/api/Videos/ImportVideo",
+      new { videoId, categories = new[] { "300000000000000000000001" } });
+    var matches = await _factory.MatchRepository.GetItemsAsync(match => match.ContentId == videoId);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    Assert.Single(matches);
+    Assert.Equal(existingMatch.Id, matches.Single().Id);
+  }
+
+  [Fact]
+  public async Task Video_update_rejects_unknown_channel_assignments()
+  {
+    var videoId = $"invalid-channel-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+        YouTubeContent.CreateSingleVideo(videoId, []) with
+        {
+          CreatorUserId = "test-user-id",
+          OwnerChannelId = PrimaryScenario.ChannelId,
+          VideoRefs = [new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId])]
+        });
+    using var client = CreateClient(
+        userId: "test-user-id",
+        permissions: AuthorizationPermissionKeys.VideosUpdate);
+
+    var response = await client.PutAsJsonAsync($"/api/Videos/{match.Id}", new
+    {
+      title = "Updated",
+      description = string.Empty,
+      url = string.Empty,
+      thumbnailVideoId = videoId,
+      categories = Array.Empty<string>(),
+      videoRefs = new[]
+      {
+        new { youtubeId = videoId, categories = Array.Empty<object>(), channelIds = new[] { "unknown-channel" } }
+      }
+    });
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 
   [Fact]

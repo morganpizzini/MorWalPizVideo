@@ -25,9 +25,10 @@ export interface VideoRef {
   youtubeId: string;
   categories: CategoryRef[];
   channelIds: string[];
-  title?: string;
-  description?: string;
-  publishedAt?: string;
+  title: string;
+  description: string;
+  publishedAt: string;
+  creationDateTime: string;
 }
 
 /**
@@ -53,21 +54,19 @@ export interface Video {
  */
 export interface Match {
   id: string;
-  matchId: string;
+  contentId: string;
   title: string;
-  description?: string;
+  description: string;
   url: string;
-  thumbnailVideoId: string; // Previously referred to as thumbnailUrl
+  thumbnailVideoId: string;
   videoRefs: VideoRef[];
   categories: CategoryRef[];
   contentType: ContentType;
-  // Backward compatibility
   isLink: boolean;
-  videos?: Video[];
-  creationDateTime?: string;
-  shortLinks?: ShortLink[];
+  creationDateTime: string;
+  shortLinks: ShortLink[];
   ownerChannelId?: string;
-  creatorUserId: string;
+  creatorUserId?: string;
 }
 
 export interface VideoImportRequest {

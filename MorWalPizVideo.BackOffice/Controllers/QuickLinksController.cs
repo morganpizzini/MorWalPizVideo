@@ -112,6 +112,6 @@ public sealed class QuickLinksController(IQuickLinksService quickLinksService, I
     private async Task InvalidateCachesAsync()
     {
         await crossApiService.ResetCache(CacheKeys.QuickLinks);
-        await crossApiService.PurgeCache(ApiTagCacheKeys.QuickLinks);
+        await crossApiService.PurgeCache(CacheKeys.QuickLinks);
     }
 }

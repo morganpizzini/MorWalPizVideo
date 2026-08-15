@@ -1,5 +1,6 @@
 ﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.BackOffice.Services.Configuration;
+using MorWalPizVideo.BackOffice.Services.Factories;
 
 namespace MorWalPizVideo.BackOffice.Services;
 public class DiscordServiceMock : IDiscordService
@@ -14,16 +15,19 @@ public class DiscordService : IDiscordService
     private readonly HttpClient client;
     private readonly string channelName;
     private readonly string siteUrl;
-    public DiscordService(IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    public DiscordService(
+        IDiscordHttpClientFactory clientFactory,
+        IDiscordConfigurationService configurationService,
+        IConfiguration configuration)
     {
-        client = _clientFactory.CreateClient(HttpClientNames.Discord);
-        siteUrl = _configuration["SiteUrl"] ?? string.Empty;
-        if (siteUrl == null)
-            throw new NullReferenceException("SiteUrl is empty");
+        client = clientFactory.CreateClient();
+        siteUrl = configuration["SiteUrl"] ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(siteUrl))
+            throw new InvalidOperationException("SiteUrl is empty");
 
-        channelName = _configuration.GetSection("DiscordSettings").Get<TelegramSettings>()?.ChannelName ?? string.Empty;
-        if (channelName == null)
-            throw new NullReferenceException("Channel name is not found in the configuration file");
+        channelName = configurationService.GetDiscordSettings().ChannelName;
+        if (string.IsNullOrWhiteSpace(channelName))
+            throw new InvalidOperationException("Discord channel name is not configured");
     }
 
     public async Task<string> CreatePost(string shortLink, string message)

@@ -62,7 +62,11 @@ namespace MorWalPizVideo.Domain
             ThrowIfConfigured(cancellationToken);
             lock (sync)
             {
-                var prefix = folderName.TrimEnd('/') + "/";
+                var normalizedFolder = folderName.Trim().Trim('/');
+                if (normalizedFolder.Length == 0)
+                    return Task.FromResult(new List<string>());
+
+                var prefix = normalizedFolder + "/";
                 return Task.FromResult(blobs.Keys
                     .Where(path => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     .Select(path => $"mock://blob/{path}")
@@ -162,7 +166,12 @@ namespace MorWalPizVideo.Domain
         {
             var blobContainerClient = _serviceClient.GetBlobContainerClient(_options.ContainerName);
             var images = new List<string>();
-            await foreach (var blobItem in blobContainerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: folderName, cancellationToken: cancellationToken))
+            var normalizedFolder = folderName.Trim().Trim('/');
+            if (normalizedFolder.Length == 0)
+                return images;
+
+            var prefix = normalizedFolder + "/";
+            await foreach (var blobItem in blobContainerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: prefix, cancellationToken: cancellationToken))
             {
                 if (blobItem.Properties.ContentType?.StartsWith("image/") == true)
                 {

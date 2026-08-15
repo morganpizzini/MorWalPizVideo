@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
@@ -21,6 +22,53 @@ public class ServerApiMockScenarioTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains(expectedMatchId, content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Public_matches_exclude_private_content_and_preserve_response_contract()
+    {
+        await using var factory = new ServerApiWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var privateUrl = $"private-{Guid.NewGuid():N}";
+        var privateVideoId = $"private-video-{Guid.NewGuid():N}";
+        await factory.MatchRepository!.AddItemAsync(YouTubeContent.CreateSingleVideo(privateVideoId, []) with
+        {
+            Id = $"private-match-{Guid.NewGuid():N}",
+            Url = privateUrl,
+            IsPrivate = true,
+            VideoRefs = [new VideoRef(privateVideoId, channelIds: [PrimaryScenario.ChannelId])]
+        });
+
+        var response = await client.GetAsync("/api/Matches?skip=2&take=2");
+        var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = document.RootElement;
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("skip=4&take=2", root.GetProperty("next").GetString());
+        Assert.DoesNotContain(privateUrl, root.GetProperty("data").GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("isPrivate", root.GetProperty("data").GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("ownerChannelId", root.GetProperty("data").GetRawText(), StringComparison.Ordinal);
+        Assert.True(root.GetProperty("data").GetArrayLength() <= 2);
+        Assert.True(root.TryGetProperty("count", out _));
+    }
+
+    [Fact]
+    public async Task Public_match_detail_and_images_hide_private_content()
+    {
+        await using var factory = new ServerApiWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var privateUrl = $"private-detail-{Guid.NewGuid():N}";
+        var privateVideoId = $"private-detail-video-{Guid.NewGuid():N}";
+        await factory.MatchRepository!.AddItemAsync(YouTubeContent.CreateSingleVideo(privateVideoId, []) with
+        {
+            Id = $"private-detail-match-{Guid.NewGuid():N}",
+            Url = privateUrl,
+            IsPrivate = true,
+            VideoRefs = [new VideoRef(privateVideoId, channelIds: [PrimaryScenario.ChannelId])]
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/Matches/{privateUrl}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/Matches/{privateUrl}/images")).StatusCode);
     }
 
     [Fact]

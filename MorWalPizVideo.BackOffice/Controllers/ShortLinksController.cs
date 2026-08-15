@@ -61,29 +61,25 @@ public class ShortLinksController : ApplicationControllerBase
         var selectedChannelId = HttpContext.GetChannelContext().ChannelId;
         var scopedMatches = matches.Where(match => IsMatchInSelectedChannel(match, selectedChannelId)).ToList();
         var scopedChannels = channels.Where(channel => channel.ChannelId == selectedChannelId).ToList();
-        var embeddedLinks = scopedMatches.SelectMany(match => match.ShortLinks)
+        var canonicalVideoLinks = standaloneLinks
             .Where(link => link.LinkType == LinkType.YouTubeVideo &&
-                matchHasVideoTarget(scopedMatches, link))
+                IsCanonicalVideoInMatches(link, scopedMatches))
             .ToList();
         standaloneLinks = standaloneLinks
-            .Where(link => link.LinkType != LinkType.YouTubeVideo &&
-                IsStandaloneLinkInSelectedChannel(link, selectedChannelId, scopedMatches))
+            .Where(link => (link.LinkType == LinkType.YouTubeVideo
+                    ? canonicalVideoLinks.Contains(link)
+                    : IsStandaloneLinkInSelectedChannel(link, selectedChannelId, scopedMatches)))
             .ToList();
-        var visibleLinks = await FilterAuthorizedLinksAsync(
-            standaloneLinks.Concat(embeddedLinks).ToList(), scopedMatches, scopedChannels);
+        var visibleLinks = await FilterAuthorizedLinksAsync(standaloneLinks, scopedMatches, scopedChannels);
 
         return Ok(visibleLinks.Select(x => ContractUtils.Convert(x, $"{siteUrl}")).ToList());
-
-        static bool matchHasVideoTarget(IEnumerable<YouTubeContent> content, ShortLink link) =>
-            content.Any(match => match.ShortLinks.Any(candidate => candidate.MatchesCode(link.Code)) &&
-                match.VideoRefs.Any(video => video.YoutubeId == link.Target));
     }
 
     [HttpGet("{code}")]
     [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> GetShortLink(string code)
     {
-        var (shortLink, sourceType, owningEntity) = await FindShortLinkAsync(code);
+        var shortLink = await FindShortLinkAsync(code);
 
         if (shortLink == null || !await CanAccessShortLinkAsync(shortLink))
         {
@@ -124,20 +120,18 @@ public class ShortLinksController : ApplicationControllerBase
         {
             case LinkType.YouTubeVideo:
                 var existingMatch = await _contentService.FindMatchAsync(request.Target);
-                if (existingMatch == null || !await _authorization.CanAccessAsync(User, existingMatch))
+                if (existingMatch == null || !await _authorization.CanMutateInChannelAsync(
+                    User, existingMatch, HttpContext.GetChannelContext().ChannelId))
                 {
                     return BadRequest("Match do not exists");
                 }
-                var existingContentShortLink = existingMatch.ShortLinks
-                    .FirstOrDefault(x => x.LinkType == LinkType.YouTubeVideo
-                        && x.Target == newShortLink.Target
-                        && x.QueryString == newShortLink.QueryString);
-                if (existingContentShortLink != null)
+                var ensuredVideoShortLink = await _linksService.EnsureVideoShortLinkAsync(
+                    request.Target, HttpContext.GetChannelContext().ChannelId);
+                if (ensuredVideoShortLink is null)
                 {
-                    return Ok($"{siteUrl}{existingContentShortLink.Code}");
+                    return BadRequest("Match do not exists");
                 }
-                newShortLink.LinkType = LinkType.YouTubeVideo;
-                await _contentService.UpdateMatchAsync(existingMatch.AddShortLink(newShortLink));
+                newShortLink = ensuredVideoShortLink;
                 break;
             case LinkType.YouTubeChannel:
                 var existingChannel = await _contentService.FindChannelAsync(request.Target);
@@ -174,7 +168,7 @@ public class ShortLinksController : ApplicationControllerBase
         if (request.LinkType == LinkType.YouTubeVideo)
         {
             await client.ResetCache(CacheKeys.Matches);
-            await client.PurgeCache(ApiTagCacheKeys.Matches);
+            await client.PurgeCache(CacheKeys.Matches);
         }
 
         if (!string.IsNullOrEmpty(request.Message))
@@ -194,12 +188,8 @@ public class ShortLinksController : ApplicationControllerBase
         async Task<string> CalculateShortLink()
         {
             var shortlinks = await _linksService.GetShortLinksAsync();
-            var matches = await _contentService.GetAllMatchesAsync();
             var sl = shortlinks
                 .Select(x => x.NormalizedCode)
-                .Concat(matches.SelectMany(match => match.ShortLinks)
-                    .Where(x => x.LinkType == LinkType.YouTubeVideo)
-                    .Select(x => x.NormalizedCode))
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
@@ -233,8 +223,7 @@ public class ShortLinksController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ShortLinksUpdate, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
-        // Search across all sources to find the existing short link
-        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(request.Id);
+        var existingShortLink = await FindShortLinkAsync(request.Id);
 
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
         {
@@ -261,28 +250,22 @@ public class ShortLinksController : ApplicationControllerBase
             LinkType = request.Body.LinkType
         };
 
-        // All link types now converge on the canonical standalone collection (ADR-004): links still
-        // embedded on a match/channel are migrated out on update rather than re-embedded.
         switch (request.Body.LinkType)
         {
             case LinkType.YouTubeVideo:
-                var existingMatch = await _contentService.FindMatchAsync(request.Body.Target);
-                if (existingMatch == null || !await _authorization.CanAccessAsync(User, existingMatch))
+                var existingMatch = !string.IsNullOrWhiteSpace(existingShortLink.ContentId)
+                    ? (await _contentService.GetAllMatchesAsync()).FirstOrDefault(match => match.Id == existingShortLink.ContentId)
+                    : await _contentService.FindMatchAsync(request.Body.Target);
+                if (existingMatch == null || !existingMatch.VideoRefs.Any(video => video.YoutubeId == request.Body.Target) ||
+                    !await _authorization.CanMutateInChannelAsync(
+                        User, existingMatch, HttpContext.GetChannelContext().ChannelId))
                 {
                     return BadRequest("Match do not exists");
                 }
                 updatedShortLink.LinkType = LinkType.YouTubeVideo;
                 updatedShortLink.ContentId = existingMatch.Id;
                 updatedShortLink.ChannelId = null;
-                if (sourceType == ShortLinkSourceType.Standalone)
-                {
-                    await _linksService.DeleteShortLinkAsync(existingShortLink.Id);
-                    await _contentService.UpdateMatchAsync(existingMatch.AddShortLink(updatedShortLink));
-                }
-                else
-                {
-                    await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
-                }
+                await _linksService.UpdateShortLinkAsync(updatedShortLink);
                 break;
 
             case LinkType.YouTubeChannel:
@@ -295,7 +278,7 @@ public class ShortLinksController : ApplicationControllerBase
                 updatedShortLink.LinkType = LinkType.YouTubeChannel;
                 updatedShortLink.ChannelId = existingChannel.ChannelId;
                 updatedShortLink.ContentId = null;
-                await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
+                await _linksService.UpdateShortLinkAsync(updatedShortLink);
                 break;
 
             default:
@@ -305,15 +288,15 @@ public class ShortLinksController : ApplicationControllerBase
                 }
                 updatedShortLink.ContentId = null;
                 updatedShortLink.ChannelId = null;
-                await MigrateToCanonicalAsync(existingShortLink.Code, sourceType, owningEntity, updatedShortLink);
+                await _linksService.UpdateShortLinkAsync(updatedShortLink);
                 break;
         }
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
-        if (sourceType == ShortLinkSourceType.Match || request.Body.LinkType == LinkType.YouTubeVideo)
+        if (request.Body.LinkType == LinkType.YouTubeVideo)
         {
             await client.ResetCache(CacheKeys.Matches);
-            await client.PurgeCache(ApiTagCacheKeys.Matches);
+            await client.PurgeCache(CacheKeys.Matches);
         }
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
@@ -325,53 +308,32 @@ public class ShortLinksController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ShortLinksDelete, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> DeleteShortLink(string id)
     {
-        // Search across all sources to find the short link
-        var (existingShortLink, sourceType, owningEntity) = await FindShortLinkAsync(id);
+        var existingShortLink = await FindShortLinkAsync(id);
 
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
             return NotFound("Short link not found");
 
-        await RemoveShortLinkFromSourceAsync(existingShortLink.Code, sourceType, owningEntity);
+        await _linksService.DeleteShortLinkAsync(existingShortLink.Id);
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
-        if (sourceType == ShortLinkSourceType.Match)
-        {
-            await client.ResetCache(CacheKeys.Matches);
-            await client.PurgeCache(ApiTagCacheKeys.Matches);
-        }
-
         return NoContent();
     }
 
     #region Helper Methods
 
-    private enum ShortLinkSourceType { Standalone, Match }
-
-    /// <summary>Finds a short link in the canonical standalone or legacy embedded collections.</summary>
-    private async Task<(ShortLink? shortLink, ShortLinkSourceType sourceType, object? owningEntity)> FindShortLinkAsync(string code)
+    private async Task<ShortLink?> FindShortLinkAsync(string code)
     {
         var selectedChannelId = HttpContext.GetChannelContext().ChannelId;
         var standaloneLink = await _linksService.GetByCodeAsync(code);
-        if (standaloneLink != null && standaloneLink.LinkType != LinkType.YouTubeVideo && IsStandaloneLinkInSelectedChannel(
-                standaloneLink,
-                selectedChannelId,
-                await _contentService.GetAllMatchesAsync()))
+        var matches = await _contentService.GetAllMatchesAsync();
+        if (standaloneLink != null &&
+            (standaloneLink.LinkType != LinkType.YouTubeVideo
+                ? IsStandaloneLinkInSelectedChannel(standaloneLink, selectedChannelId, matches)
+                : IsCanonicalVideoInMatches(standaloneLink, matches.Where(match => IsMatchInSelectedChannel(match, selectedChannelId)))))
         {
-            return (standaloneLink, ShortLinkSourceType.Standalone, null);
+            return standaloneLink;
         }
-
-        var match = (await _contentService.GetAllMatchesAsync())
-            .FirstOrDefault(item => IsMatchInSelectedChannel(item, selectedChannelId) &&
-                                    item.ShortLinks.Any(link => link.LinkType == LinkType.YouTubeVideo &&
-                                        link.MatchesCode(code) && item.VideoRefs.Any(video => video.YoutubeId == link.Target)));
-        if (match != null)
-        {
-            return (match.ShortLinks.First(link => link.LinkType == LinkType.YouTubeVideo &&
-                link.MatchesCode(code) && match.VideoRefs.Any(video => video.YoutubeId == link.Target)),
-                ShortLinkSourceType.Match, match);
-        }
-
-        return (null, ShortLinkSourceType.Standalone, null);
+        return null;
     }
 
     private async Task<IList<ShortLink>> FilterAuthorizedLinksAsync(
@@ -392,8 +354,8 @@ public class ShortLinksController : ApplicationControllerBase
             {
                 var match = matches.FirstOrDefault(candidate =>
                     IsMatchInSelectedChannel(candidate, selectedChannelId) &&
-                    candidate.ShortLinks.Any(candidateLink => candidateLink.MatchesCode(link.Code) &&
-                        candidate.VideoRefs.Any(video => video.YoutubeId == candidateLink.Target)));
+                    link.ContentId == candidate.Id &&
+                    candidate.VideoRefs.Any(video => video.YoutubeId == link.Target));
                 if (match != null && await _authorization.CanAccessAsync(User, match))
                 {
                     visibleLinks.Add(link);
@@ -420,11 +382,9 @@ public class ShortLinksController : ApplicationControllerBase
     {
         var selectedChannelId = HttpContext.GetChannelContext().ChannelId;
         var matches = await _contentService.GetAllMatchesAsync();
-        var isInSelectedChannel = link.LinkType != LinkType.YouTubeVideo &&
-            IsStandaloneLinkInSelectedChannel(link, selectedChannelId, matches) ||
-            matches.Any(match => IsMatchInSelectedChannel(match, selectedChannelId) &&
-                match.ShortLinks.Any(candidate => candidate.LinkType == LinkType.YouTubeVideo &&
-                    candidate.MatchesCode(link.Code) && match.VideoRefs.Any(video => video.YoutubeId == candidate.Target)));
+        var isInSelectedChannel = link.LinkType != LinkType.YouTubeVideo
+            ? IsStandaloneLinkInSelectedChannel(link, selectedChannelId, matches)
+            : IsCanonicalVideoInMatches(link, matches.Where(match => IsMatchInSelectedChannel(match, selectedChannelId)));
         if (!isInSelectedChannel)
         {
             return false;
@@ -445,36 +405,11 @@ public class ShortLinksController : ApplicationControllerBase
             return await _authorization.CanManageChannelAsync(User, selectedChannelId);
         }
 
-        var match = (await _contentService.GetAllMatchesAsync())
-            .FirstOrDefault(item => IsMatchInSelectedChannel(item, selectedChannelId) &&
-                item.ShortLinks.Any(candidate => candidate.LinkType == LinkType.YouTubeVideo &&
-                    candidate.MatchesCode(link.Code) && item.VideoRefs.Any(video => video.YoutubeId == candidate.Target)));
+        var match = matches.FirstOrDefault(item =>
+            IsMatchInSelectedChannel(item, selectedChannelId) &&
+            link.ContentId == item.Id &&
+            item.VideoRefs.Any(video => video.YoutubeId == link.Target));
         return match != null && await _authorization.CanAccessAsync(User, match);
-    }
-
-    private async Task MigrateToCanonicalAsync(string code, ShortLinkSourceType sourceType, object? owningEntity, ShortLink updatedShortLink)
-    {
-        switch (sourceType)
-        {
-            case ShortLinkSourceType.Standalone:
-                await _linksService.UpdateShortLinkAsync(updatedShortLink);
-                break;
-            case ShortLinkSourceType.Match when owningEntity is YouTubeContent match:
-                if (updatedShortLink.LinkType == LinkType.YouTubeVideo &&
-                    match.VideoRefs.Any(video => video.YoutubeId == updatedShortLink.Target))
-                {
-                    await _contentService.UpdateMatchAsync(match.UpdateShortLink(code, updatedShortLink));
-                }
-                else
-                {
-                    await _contentService.UpdateMatchAsync(match.RemoveShortLink(code));
-                    await _linksService.SaveShortLinkAsync(updatedShortLink with
-                    {
-                        ManagementChannelId = HttpContext.GetChannelContext().ChannelId
-                    });
-                }
-                break;
-        }
     }
 
     private static bool IsSafeAbsoluteHttpUrl(string target) =>
@@ -498,6 +433,12 @@ public class ShortLinksController : ApplicationControllerBase
 
         return link.LinkType != LinkType.YouTubeVideo;
     }
+
+    private static bool IsCanonicalVideoInMatches(ShortLink link, IEnumerable<YouTubeContent> matches) =>
+        link.LinkType == LinkType.YouTubeVideo &&
+        !string.IsNullOrWhiteSpace(link.ContentId) &&
+        matches.Any(match => match.Id == link.ContentId &&
+            match.VideoRefs.Any(video => video.YoutubeId == link.Target));
 
     private static bool IsMatchInSelectedChannel(YouTubeContent match, string selectedChannelId) =>
         string.Equals(match.OwnerChannelId, selectedChannelId, StringComparison.Ordinal) ||
@@ -526,33 +467,6 @@ public class ShortLinksController : ApplicationControllerBase
         }
 
         return !target.Any(char.IsWhiteSpace);
-    }
-
-
-    /// <summary>
-    /// Removes a short link from its source location.
-    /// </summary>
-    private async Task RemoveShortLinkFromSourceAsync(string code, ShortLinkSourceType sourceType, object? owningEntity)
-    {
-        if (sourceType == ShortLinkSourceType.Standalone)
-        {
-            var standaloneLink = await _linksService.GetByCodeAsync(code);
-            if (standaloneLink != null)
-            {
-                await _linksService.DeleteShortLinkAsync(standaloneLink.Id);
-            }
-            return;
-        }
-
-        switch (sourceType)
-        {
-            case ShortLinkSourceType.Match when owningEntity is YouTubeContent match:
-                await _contentService.UpdateMatchAsync(match with
-                {
-                    ShortLinks = match.ShortLinks.Where(link => !link.MatchesCode(code)).ToArray()
-                });
-                break;
-        }
     }
 
     #endregion

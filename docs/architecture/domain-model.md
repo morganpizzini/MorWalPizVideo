@@ -8,18 +8,18 @@ The model is persistence-oriented and uses immutable C# records with MongoDB att
 
 ### YouTubeContent
 
-Owns content identity, title/description, URL, thumbnail, categories, video references, linked YouTube videos, privacy/visibility, and currently embedded short links. It supports single-video and collection forms.
+Owns content identity, title/description, URL, thumbnail, categories, video references, linked YouTube videos, and privacy/visibility. It supports single-video and collection forms. YouTube short links are standalone records that reference this aggregate for target validation.
 
 Target boundary:
 
 - Retain video references and content metadata as one aggregate where consistency requires it.
 - Replace `IsPrivate` with additive visibility semantics: Public, RegisteredCustomer, EntitlementRequired.
-- Move short links to their own aggregate.
+- Keep short links in their own standalone aggregate; content only supplies the referenced video identity used for validation.
 - Move UI display conversion out of the persistence entity.
 
 ### YTChannel
 
-Owns channel identity and legacy embedded video/idea information. Short links move out of this aggregate. The relationship between content video references and channel ownership must have one canonical representation.
+Owns channel identity and legacy embedded video/idea information. Short links are not owned or read from this aggregate. The relationship between content video references and channel ownership must have one canonical representation.
 
 ### CustomForm
 

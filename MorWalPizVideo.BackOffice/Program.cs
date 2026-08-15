@@ -303,6 +303,7 @@ builder.Services.AddAuthentication()
 builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSection("InternalServiceSettings"));
 
 builder.Services.AddScoped<DataService>();
+builder.Services.AddScoped<IGenericDataService>(provider => provider.GetRequiredService<DataService>());
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
 builder.Services.AddScoped<IContentService, ContentService>();

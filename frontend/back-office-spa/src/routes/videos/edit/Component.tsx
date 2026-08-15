@@ -85,6 +85,10 @@ const Component: React.FC = () => {
       youtubeId,
       categories: categoriesForVideoRef,
       channelIds: [],
+      title: '',
+      description: '',
+      publishedAt: '',
+      creationDateTime: new Date().toISOString(),
     };
 
     setVideoRefs(prev => [...prev, newVideoRef]);
@@ -429,7 +433,7 @@ const Component: React.FC = () => {
             <Card.Body>
               <div className="mb-2">
                 <strong>Match ID:</strong><br />
-                <code>{match.matchId}</code>
+                <code>{match.id}</code>
               </div>
               <div className="mb-2">
                 <strong>Current Title:</strong><br />

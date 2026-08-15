@@ -1,0 +1,91 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Configuration;
+using MorWalPizVideo.BackOffice.Services.Factories;
+
+namespace MorWalPizVideo.BackOffice.Tests.Services;
+
+public sealed class SocialPublishingServiceTests
+{
+    [Fact]
+    public async Task Telegram_service_uses_configured_factory_client()
+    {
+        var handler = new CapturingHandler();
+        var client = new HttpClient(handler);
+        var service = new TelegramService(
+            new TelegramClientFactory(client),
+            new TelegramConfiguration("telegram-channel"),
+            Configuration("https://site.example/"));
+
+        var result = await service.CreatePost("abc12", "New video");
+
+        Assert.Empty(result);
+        Assert.Equal("https://api.example/telegram/sendMessage", handler.Request!.RequestUri!.ToString());
+        Assert.Contains("New video https://site.example/sl/abc12", await handler.Request.Content!.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Discord_service_uses_configured_factory_client()
+    {
+        var handler = new CapturingHandler();
+        var client = new HttpClient(handler);
+        var service = new DiscordService(
+            new DiscordClientFactory(client),
+            new DiscordConfiguration("discord-channel"),
+            Configuration("https://site.example/"));
+
+        var result = await service.CreatePost("abc12", string.Empty);
+
+        Assert.Empty(result);
+        Assert.Equal("https://api.example/discord/channels/discord-channel/messages", handler.Request!.RequestUri!.ToString());
+        Assert.Contains("Guarda il mio ultimo video: https://site.example/sl/abc12", await handler.Request.Content!.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    private static IConfiguration Configuration(string siteUrl)
+        => new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["SiteUrl"] = siteUrl })
+            .Build();
+
+    private sealed class CapturingHandler : HttpMessageHandler
+    {
+        public HttpRequestMessage? Request { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { ok = true })
+            });
+        }
+    }
+
+    private sealed class TelegramClientFactory(HttpClient client) : ITelegramHttpClientFactory
+    {
+        public HttpClient CreateClient() => Configure(client, "https://api.example/telegram/sendMessage");
+    }
+
+    private sealed class DiscordClientFactory(HttpClient client) : IDiscordHttpClientFactory
+    {
+        public HttpClient CreateClient() => Configure(client, "https://api.example/discord/");
+    }
+
+    private sealed class TelegramConfiguration(string channelName) : ITelegramConfigurationService
+    {
+        public TelegramSettings GetTelegramSettings() => new() { Token = "token", ChannelName = channelName };
+    }
+
+    private sealed class DiscordConfiguration(string channelName) : IDiscordConfigurationService
+    {
+        public TelegramSettings GetDiscordSettings() => new() { Token = "token", ChannelName = channelName };
+    }
+
+    private static HttpClient Configure(HttpClient client, string baseAddress)
+    {
+        client.BaseAddress = new Uri(baseAddress);
+        return client;
+    }
+}

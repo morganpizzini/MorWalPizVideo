@@ -39,6 +39,9 @@ namespace MorWalPiz.Contracts.Contracts
         public string QueryString { get; set; } = string.Empty;
 
         [DataMember]
+        public string[] QueryLinkIds { get; set; } = [];
+
+        [DataMember]
         public string ShortLinkId { get; set; } = string.Empty;
 
         [DataMember]

@@ -66,16 +66,20 @@ Field names must be confirmed against deployed BSON before creation. Prefer expl
 
 ## Canonical Short-Link Migration
 
-1. Inventory standalone links and links embedded in `youtubeContent` and `ytChannels`.
+1. Inventory standalone links and legacy YouTube links embedded in `youtubeContent` and `ytChannels`.
 2. Normalize codes and report cross-collection conflicts.
 3. Choose conflict winners manually or generate replacement codes with redirects where needed.
 4. Create canonical standalone records containing internal references and full validated destinations.
 5. Seed aggregate click totals without double counting.
-6. Deploy dual-read resolution with canonical-first behavior.
+6. Deploy canonical-only resolution and management. Embedded YouTube links are not a runtime fallback.
 7. Create the unique normalized-code index.
 8. Switch all management writes to the canonical collection.
-9. Observe legacy-read telemetry.
-10. Remove embedded links only after backup and compatibility-window completion.
+9. Observe failed legacy-code requests and reconcile any canonical records that were not created.
+10. Remove or archive embedded YouTube fields only after backup, backfill verification, and rollback approval.
+
+## Cross-Collection Write Constraint
+
+Azure Cosmos DB for MongoDB RU does not support transactions spanning the `youtubeContent` and `ytChannels` collections. AssignChannel therefore performs additive, idempotent writes sequentially: validate the exact `VideoRef`, update the content aggregate, then add the video to the target channel if absent. A failure response identifies whether the content or channel write completed so operators can reconcile the second collection safely. Do not replace this flow with an assumed cross-collection transaction.
 
 ## QuickLinks Global Slug Rollout
 

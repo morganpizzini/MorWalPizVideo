@@ -31,7 +31,9 @@ namespace MorWalPiz.Contracts
                 Endpoint = $"{endpointBasePath}/{entity.Code}",
                 Target = entity.Target,
                 QueryString = entity.QueryString,
+                QueryLinkIds = entity.QueryLinks.Select(link => link.Id).ToArray(),
                 ShortLinkId = entity.Id,
+                VideoId = entity.Target,
                 ClicksCount = entity.ClicksCount,
                 LinkType = entity.LinkType,
                 ContentId = entity.ContentId,
@@ -314,16 +316,62 @@ namespace MorWalPiz.Contracts
                 Description = entity.Description,
                 Url = entity.Url,
                 ThumbnailVideoId = entity.ThumbnailVideoId,
-                VideoRefs = entity.VideoRefs,
-                Categories = entity.Categories,
+                VideoRefs = entity.VideoRefs.Select(Convert).ToArray(),
+                Categories = entity.Categories.Select(Convert).ToArray(),
                 ContentType = entity.ContentType,
-                YouTubeVideoLinks = entity.YouTubeVideoLinks,
-                ShortLinks = entity.ShortLinks,
+                YouTubeVideoLinks = entity.YouTubeVideoLinks?.Select(Convert).ToArray() ?? [],
+                ShortLinks = entity.ShortLinks.Select(link => Convert(link, string.Empty)).ToArray(),
                 IsPrivate = entity.IsPrivate,
                 CreatorUserId = entity.CreatorUserId,
                 OwnerChannelId = entity.OwnerChannelId
             };
         }
+        public static PublicYouTubeContentContract ConvertPublic(YouTubeContent entity)
+        {
+            return new PublicYouTubeContentContract
+            {
+                Id = entity.Id,
+                ContentId = entity.ContentId,
+                Title = entity.Title,
+                Description = entity.Description,
+                Url = entity.Url,
+                ThumbnailVideoId = entity.ThumbnailVideoId,
+                VideoRefs = entity.VideoRefs.Select(Convert).ToArray(),
+                Categories = entity.Categories.Select(Convert).ToArray(),
+                ContentType = entity.ContentType,
+                YouTubeVideoLinks = entity.YouTubeVideoLinks?.Select(Convert).ToArray() ?? [],
+                ShortLinks = entity.ShortLinks.Select(link => Convert(link, string.Empty)).ToArray(),
+                IsLink = entity.IsLink,
+                CreationDateTime = entity.CreationDateTime
+            };
+        }
+
+        public static CategoryRefContract Convert(CategoryRef entity) => new()
+        {
+            Id = entity.Id,
+            Title = entity.Title
+        };
+
+        public static VideoRefContract Convert(VideoRef entity) => new()
+        {
+            YoutubeId = entity.YoutubeId,
+            Categories = entity.Categories.Select(Convert).ToArray(),
+            Title = entity.Title,
+            Description = entity.Description,
+            PublishedAt = entity.PublishedAt,
+            ChannelIds = entity.ChannelIds,
+            CreationDateTime = entity.CreationDateTime
+        };
+
+        public static YouTubeVideoLinkContract Convert(YouTubeVideoLink entity) => new()
+        {
+            ContentCreatorName = entity.ContentCreatorName,
+            YouTubeVideoId = entity.YouTubeVideoId,
+            ImageName = entity.ImageName,
+            ShortLink = entity.ShortLink is null ? null : Convert(entity.ShortLink, string.Empty),
+            ShortLinkUrl = entity.ShortLinkUrl,
+            DirectVideoUrl = entity.DirectVideoUrl
+        };
         public static ProductContract Convert(Product entity)
         {
             return new ProductContract

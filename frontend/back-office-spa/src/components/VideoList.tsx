@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import { useRevalidator, Link } from 'react-router';
-import { Match } from '../models/video/types';
+import type { Match } from '@morwalpizvideo/models';
 import type { Channel } from '@morwalpizvideo/models';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
 import { ComposeUrl, Delete, endpoints } from '@morwalpizvideo/services';

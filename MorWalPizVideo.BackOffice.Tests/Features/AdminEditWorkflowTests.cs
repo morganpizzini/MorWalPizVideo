@@ -386,13 +386,13 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
       categories = Array.Empty<string>(),
       videoRefs = new[]
         {
-                new { youtubeId = videoId, categories = Array.Empty<object>(), channelIds = new[] { "owned-channel" } }
+                new { youtubeId = videoId, categories = Array.Empty<object>(), channelIds = new[] { PrimaryScenario.ChannelId } }
             }
     });
     var updated = await _factory.MatchRepository.GetItemAsync(match.Id);
 
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    Assert.Equal("owned-channel", Assert.Single(updated!.VideoRefs).ChannelIds.Single());
+    Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(updated!.VideoRefs).ChannelIds.Single());
   }
 
   private HttpClient CreateClient(string permission, string channelId)

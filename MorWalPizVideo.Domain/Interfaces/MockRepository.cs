@@ -51,6 +51,22 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return includePrivate ? all.Count : all.Count(x => !x.IsPrivate);
         }
 
+        public async Task<IList<YouTubeContent>> GetPublicOrderedForChannelAsync(string channelId, int skip, int take)
+        {
+            var safeSkip = Math.Max(0, skip);
+            var safeTake = Math.Clamp(take, 1, 200);
+            return (await GetItemsAsync(x => !x.IsPrivate &&
+                    x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId))))
+                .OrderByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Take(safeTake)
+                .ToList();
+        }
+
+        public async Task<long> CountPublicForChannelAsync(string channelId)
+            => (await GetItemsAsync(x => !x.IsPrivate &&
+                x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))).Count;
+
         public async Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate)
         {
             var all = await GetItemsAsync();
@@ -171,6 +187,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
     {
+        private readonly object incrementLock = new();
+
         public ShortLinkMockRepository(IMockScenario scenario) : base(scenario, "shortLinks")
         {
         }
@@ -183,13 +201,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<int> IncrementClicksAsync(string id)
         {
-            var item = await GetItemAsync(id);
-            if (item == null)
-                return 0;
+            lock (incrementLock)
+            {
+                var item = scenario.Read<ShortLink>(_fileName).FirstOrDefault(link => link.Id == id);
+                if (item == null)
+                    return 0;
 
-            item.ClicksCount += 1;
-            await UpdateItemAsync(item);
-            return item.ClicksCount;
+                var updated = item with { ClicksCount = item.ClicksCount + 1 };
+                scenario.Replace(_fileName, updated);
+                return updated.ClicksCount;
+            }
         }
     }
 

@@ -242,6 +242,42 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
   }
 
   [Fact]
+  public async Task Collaborator_cannot_bulk_import_into_another_channel_video()
+  {
+    var collaboratorChannel = await AddChannelAsync($"bulk-collaborator-{Guid.NewGuid():N}");
+    await AddOwnerAsync("test-user-id", collaboratorChannel.ChannelId);
+    var videoId = $"bulk-collaborator-video-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+        YouTubeContent.CreateSingleVideo(videoId, []) with
+        {
+          Id = $"bulk-match-{Guid.NewGuid():N}",
+          OwnerChannelId = PrimaryScenario.ChannelId,
+          CreatorUserId = "another-user",
+          VideoRefs = [new VideoRef(videoId, [], channelIds: [collaboratorChannel.ChannelId])]
+        });
+
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosImport, collaboratorChannel.ChannelId);
+    var response = await client.PostAsJsonAsync("/api/Videos/bulk-import", new
+    {
+      items = new[]
+      {
+        new
+        {
+          videoId = $"new-bulk-video-{Guid.NewGuid():N}",
+          categories = new[] { "300000000000000000000001" },
+          target = match.ContentId
+        }
+      }
+    });
+    var body = await response.Content.ReadAsStringAsync();
+    var updatedMatch = await _factory.MatchRepository.GetItemAsync(match.Id);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Contains("Target content was not found or is not accessible", body, StringComparison.Ordinal);
+    Assert.Single(updatedMatch!.VideoRefs);
+  }
+
+  [Fact]
   public async Task Compilation_owner_can_include_a_video_readable_through_another_owned_channel()
   {
     var sourceChannel = await AddChannelAsync($"source-{Guid.NewGuid():N}");

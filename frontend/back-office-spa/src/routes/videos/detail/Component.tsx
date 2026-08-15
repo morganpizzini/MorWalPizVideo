@@ -50,7 +50,7 @@ const Component: React.FC = () => {
             <Card.Body>
               <Row>
                 <Col sm={3}><strong>Match ID:</strong></Col>
-                <Col sm={9}><code>{match.matchId || match.id}</code></Col>
+                <Col sm={9}><code>{match.id}</code></Col>
               </Row>
               <hr />
               <Row>
@@ -163,31 +163,6 @@ const Component: React.FC = () => {
             </Card.Body>
           </Card>
 
-          {match.videos && match.videos.length > 0 && (
-            <Card className="mt-3">
-              <Card.Header>
-                <h5>Video Details</h5>
-              </Card.Header>
-              <Card.Body>
-                {match.videos.map((video, index) => (
-                  <div key={index} className="mb-3 p-2 border rounded">
-                    <h6>{video.title}</h6>
-                    {video.description && <p className="small text-muted">{video.description}</p>}
-                    <div className="small">
-                      {video.views && <span>Views: {video.views.toLocaleString()} </span>}
-                      {video.likes && <span>Likes: {video.likes.toLocaleString()} </span>}
-                      {video.duration && <span>Duration: {video.duration}</span>}
-                    </div>
-                    {video.publishedAt && (
-                      <div className="small text-muted">
-                        Published: {new Date(video.publishedAt).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </Card.Body>
-            </Card>
-          )}
         </Col>
       </Row>
 

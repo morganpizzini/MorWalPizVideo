@@ -85,6 +85,7 @@ public class VideoChannelAssignmentStepDefinitions
             YouTubeContent.CreateSingleVideo(ytId, []) with
             {
                 CreatorUserId = "test-user-id",
+                OwnerChannelId = source.ChannelId,
                 VideoRefs = [new VideoRef(ytId, channelIds: [source.ChannelId])]
             });
 
