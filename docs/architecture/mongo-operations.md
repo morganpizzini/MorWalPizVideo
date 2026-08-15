@@ -35,6 +35,8 @@ For every index or structural migration:
 
 Never create a unique index before duplicate analysis.
 
+For `BaseEntity` string IDs, use the repository `GetItemAsync`/`DeleteItemAsync`/`UpdateItemAsync` paths, which select an ObjectId or string `_id` filter. Do not translate an entity `Id` equality expression for externally supplied values because non-ObjectId values can fail BSON serialization before other predicates are evaluated.
+
 For the approved apply operation, follow the canonical operator guide in
 `docs/architecture/operations/mongo-index-audits/README.md`. The exact route is
 `POST /api/mongoindexes/apply`; it requires a configured API key in `X-API-Key`,

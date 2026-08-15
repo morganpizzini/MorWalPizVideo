@@ -115,10 +115,22 @@ public sealed class ContentService(
         => (await AddCanonicalShortLinksAsync(await youTubeContentRepository.GetItemsAsync(x => x.Id == id))).FirstOrDefault();
 
     public async Task<YouTubeContent?> FindMatchAsync(string matchId)
-        => (await youTubeContentRepository.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault()
-            ?? (await youTubeContentRepository.GetItemsAsync(x => x.Id == matchId)).FirstOrDefault()
-            ?? (await youTubeContentRepository.GetItemsAsync(x => x.VideoRefs != null
-                && x.VideoRefs.Where(v => !string.IsNullOrEmpty(v.YoutubeId)).Any(v => v.YoutubeId == matchId))).FirstOrDefault();
+    {
+        var thumbnailMatch = (await youTubeContentRepository.GetItemsAsync(x => x.ThumbnailVideoId == matchId)).FirstOrDefault();
+        if (thumbnailMatch is not null)
+        {
+            return thumbnailMatch;
+        }
+
+        var idMatch = await youTubeContentRepository.GetItemAsync(matchId);
+        if (idMatch is not null)
+        {
+            return idMatch;
+        }
+
+        return (await youTubeContentRepository.GetItemsAsync(x => x.VideoRefs != null
+            && x.VideoRefs.Where(v => !string.IsNullOrEmpty(v.YoutubeId)).Any(v => v.YoutubeId == matchId))).FirstOrDefault();
+    }
 
     private async Task<IList<YouTubeContent>> AddCanonicalShortLinksAsync(IList<YouTubeContent> matches)
     {
