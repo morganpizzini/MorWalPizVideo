@@ -129,6 +129,19 @@ public sealed class CookieAntiforgeryTests : IClassFixture<BackOfficeWebApplicat
     Assert.False(string.IsNullOrWhiteSpace(payload?.UserId));
   }
 
+  [Fact]
+  public async Task Api_key_endpoint_with_auth_cookie_skips_cookie_csrf_but_remains_authorized()
+  {
+    using var client = CreateClient();
+    client.DefaultRequestHeaders.Add("Cookie", "auth_token=stale-token");
+
+    using var response = await client.PostAsJsonAsync(
+        "/api/mongoindexes/apply",
+        new { approvalToken = "apply-approved-indexes", approvedKeys = new[] { "pages_url" } });
+
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+  }
+
   [Theory]
   [InlineData("Authorization", "Bearer machine-token")]
   [InlineData("X-API-Key", "machine-key")]

@@ -55,12 +55,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
             var safeSkip = Math.Max(0, skip);
             var safeTake = Math.Clamp(take, 1, 200);
-            return (await GetItemsAsync(x => !x.IsPrivate &&
+            var matches = (await GetItemsAsync(x => !x.IsPrivate &&
                     x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId))))
-                .OrderByDescending(x => x.CreationDateTime)
-                .Skip(safeSkip)
-                .Take(safeTake)
+                .OrderByDescending(match => match.CalculateLatestPublishedAt())
+                .ThenByDescending(match => match.CreationDateTime)
                 .ToList();
+
+            return matches.Skip(safeSkip).Take(safeTake).ToList();
         }
 
         public async Task<long> CountPublicForChannelAsync(string channelId)

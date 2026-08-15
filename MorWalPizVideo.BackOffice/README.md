@@ -107,7 +107,7 @@ Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (de
 ### 3.1 Authentication & Identity
 
 #### `AuthController` — `api/auth` *(anonymous)*
-Login/logout/validate. Sets an `auth_token` HttpOnly Secure SameSite=None cookie on success for the separate HTTPS admin SPA origin; the JWT is not returned in the response body. Unsafe requests carrying this cookie require the `X-CSRF-TOKEN` value issued by `/csrf`.
+Login/logout/validate. Sets an `auth_token` HttpOnly Secure SameSite=None cookie on success for the separate HTTPS admin SPA origin; the JWT is not returned in the response body. Unsafe requests carrying this cookie require the `X-CSRF-TOKEN` value issued by `/csrf`, except for endpoints explicitly configured with the `ApiKey` authentication scheme. Those endpoints still require a valid API key and do not use cookie CSRF validation.
 | Verb | Route | Method | Purpose |
 | ---- | ----- | ------ | ------- |
 | POST | `/login` | `Login(LoginRequest)` | Username + password. Rate-limited via `IRateLimitingService`; logs attempt to `LoginAttempt`. |

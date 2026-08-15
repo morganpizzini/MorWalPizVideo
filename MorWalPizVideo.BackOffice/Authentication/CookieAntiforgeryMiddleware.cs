@@ -8,6 +8,8 @@ public sealed class RequireCookieAntiforgeryAttribute : Attribute;
 
 public sealed class CookieAntiforgeryMiddleware
 {
+  private const string ApiKeyScheme = "ApiKey";
+
   private static readonly HashSet<string> SafeMethods = new(StringComparer.OrdinalIgnoreCase)
     {
         HttpMethods.Get,
@@ -56,7 +58,20 @@ public sealed class CookieAntiforgeryMiddleware
       return false;
     }
 
+    if (endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
+        .Any(metadata => HasAuthenticationScheme(metadata, ApiKeyScheme)))
+    {
+      return false;
+    }
+
     return endpoint.Metadata.GetMetadata<RequireCookieAntiforgeryAttribute>() is not null ||
         endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
+  }
+
+  private static bool HasAuthenticationScheme(IAuthorizeData metadata, string scheme)
+  {
+    return metadata.AuthenticationSchemes?
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Any(authenticationScheme => string.Equals(authenticationScheme, scheme, StringComparison.OrdinalIgnoreCase)) == true;
   }
 }
