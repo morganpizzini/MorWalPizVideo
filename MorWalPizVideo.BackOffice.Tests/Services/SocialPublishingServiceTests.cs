@@ -40,6 +40,34 @@ public sealed class SocialPublishingServiceTests
     }
 
     [Fact]
+    public void Discord_configuration_service_reads_named_hierarchical_options()
+    {
+        var service = DiscordConfigurationService(new Dictionary<string, string?>
+        {
+            ["DiscordSettings:Token"] = "discord-token",
+            ["DiscordSettings:ChannelName"] = "discord-channel"
+        });
+
+        var settings = service.GetDiscordSettings();
+
+        Assert.Equal("discord-token", settings.Token);
+        Assert.Equal("discord-channel", settings.ChannelName);
+    }
+
+    [Fact]
+    public void Discord_configuration_service_rejects_missing_token()
+    {
+        var service = DiscordConfigurationService(new Dictionary<string, string?>
+        {
+            ["DiscordSettings:ChannelName"] = "discord-channel"
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(service.GetDiscordSettings);
+
+        Assert.Contains("Discord configuration is not properly set", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Telegram_service_uses_configured_factory_client()
     {
         var handler = new CapturingHandler();
@@ -90,6 +118,21 @@ public sealed class SocialPublishingServiceTests
         var provider = services.BuildServiceProvider();
 
         return new TelegramConfigurationService(
+            provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<global::TelegramSettings>>());
+    }
+
+    private static IDiscordConfigurationService DiscordConfigurationService(
+        Dictionary<string, string?> values)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddOptions<global::TelegramSettings>("DiscordSettings")
+            .Bind(configuration.GetSection("DiscordSettings"));
+        var provider = services.BuildServiceProvider();
+
+        return new DiscordConfigurationService(
             provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<global::TelegramSettings>>());
     }
 

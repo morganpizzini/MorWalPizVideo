@@ -150,6 +150,9 @@ builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureC
 builder.Services.Configure<global::TelegramSettings>(
     "TelegramSettings",
     builder.Configuration.GetSection("TelegramSettings"));
+builder.Services.Configure<global::TelegramSettings>(
+    "DiscordSettings",
+    builder.Configuration.GetSection("DiscordSettings"));
 
 builder.Services.AddSingleton<IChatCompletionService>(sp =>
 {
