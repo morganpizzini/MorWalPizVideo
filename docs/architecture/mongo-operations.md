@@ -8,6 +8,7 @@ Source-owned index operations now exist:
 
 - BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit` and `POST /api/mongoindexes/apply`.
 - Index definitions are maintained in source via `MongoIndexOperationsService` (runtime manifest) and the operational file `docs/architecture/operations/mongo-index-manifest.phase4.json`.
+- The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 
 Operational evidence is now recorded for the Phase 4 verification baseline under `docs/architecture/operations/mongo-index-audits/`:
 
@@ -33,6 +34,13 @@ For every index or structural migration:
 9. Retain compatibility reads until deployed consumers are verified.
 
 Never create a unique index before duplicate analysis.
+
+For the approved apply operation, follow the canonical operator guide in
+`docs/architecture/operations/mongo-index-audits/README.md`. The exact route is
+`POST /api/mongoindexes/apply`; it requires a configured API key in `X-API-Key`,
+not bearer or cookie authentication alone. The request must use the exact
+procedural approval token `apply-approved-indexes` and a non-empty set of current
+manifest keys. Do not copy a partial or historical key list into this document.
 
 ## Recommended Index Inventory
 
@@ -189,19 +197,20 @@ db.youtubeContent.updateMany(
 For each batch, record the `_id` range, matched count, modified count, and any
 documents with missing `creationDateTime`. After the backfill, verify that
 every document has a non-null `latestPublishedAt`, then run the authenticated
-index audit and apply operations with the exact approved key:
+index audit. Apply using the complete request in the canonical operator guide;
+the targeted audit may be run as follows:
 
 ```text
 GET  /api/mongoindexes/audit?keys=youtubecontent_isprivate_latestpublished_creation_desc
-POST /api/mongoindexes/apply
-		 { "approvalToken": "apply-approved-indexes",
-			 "approvedKeys": ["youtubecontent_isprivate_latestpublished_creation_desc"] }
 ```
 
-Capture the audit and apply responses, confirm the exact index keys in Cosmos,
+Capture the audit and apply responses, confirm the exact index keys and options in Cosmos,
 and verify representative public channel queries and pagination after the
 application deployment. The source manifest and operation service do not prove
-that the production Cosmos index or backfill has been completed.
+that the production Cosmos index or backfill has been completed. The apply is
+sequential: a later failure can leave earlier indexes applied, so re-audit before
+retrying. Same-name existing indexes are skipped without full key/options
+reconciliation; compare their actual specifications separately.
 
 ## Operational Monitoring
 

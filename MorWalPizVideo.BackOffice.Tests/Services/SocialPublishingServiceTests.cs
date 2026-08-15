@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Configuration;
 using MorWalPizVideo.BackOffice.Services.Factories;
@@ -10,6 +11,34 @@ namespace MorWalPizVideo.BackOffice.Tests.Services;
 
 public sealed class SocialPublishingServiceTests
 {
+    [Fact]
+    public void Telegram_configuration_service_reads_named_hierarchical_options()
+    {
+        var service = TelegramConfigurationService(new Dictionary<string, string?>
+        {
+            ["TelegramSettings:Token"] = "telegram-token",
+            ["TelegramSettings:ChannelName"] = "telegram-channel"
+        });
+
+        var settings = service.GetTelegramSettings();
+
+        Assert.Equal("telegram-token", settings.Token);
+        Assert.Equal("telegram-channel", settings.ChannelName);
+    }
+
+    [Fact]
+    public void Telegram_configuration_service_rejects_missing_token()
+    {
+        var service = TelegramConfigurationService(new Dictionary<string, string?>
+        {
+            ["TelegramSettings:ChannelName"] = "telegram-channel"
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(service.GetTelegramSettings);
+
+        Assert.Contains("Telegram configuration is not properly set", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Telegram_service_uses_configured_factory_client()
     {
@@ -48,6 +77,21 @@ public sealed class SocialPublishingServiceTests
         => new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["SiteUrl"] = siteUrl })
             .Build();
+
+    private static ITelegramConfigurationService TelegramConfigurationService(
+        Dictionary<string, string?> values)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        var services = new ServiceCollection();
+        services.AddOptions<global::TelegramSettings>("TelegramSettings")
+            .Bind(configuration.GetSection("TelegramSettings"));
+        var provider = services.BuildServiceProvider();
+
+        return new TelegramConfigurationService(
+            provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<global::TelegramSettings>>());
+    }
 
     private sealed class CapturingHandler : HttpMessageHandler
     {

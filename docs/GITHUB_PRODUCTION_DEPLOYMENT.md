@@ -295,6 +295,8 @@ AzureConfig--OpenAi--DeploymentName
 AzureConfig--OpenAi--OpenAiEndpoint
 AzureConfig--OpenAi--OpenAiKey
 JwtSettings--Secret
+TelegramSettings--Token
+TelegramSettings--ChannelName
 ```
 
 The API fails during startup when Key Vault is enabled but cannot be loaded, or when the required production settings are still missing. This prevents silent fallback to empty or development configuration.

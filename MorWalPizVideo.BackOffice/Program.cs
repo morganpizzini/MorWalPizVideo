@@ -147,6 +147,9 @@ builder.AddServiceDefaults();
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
+builder.Services.Configure<global::TelegramSettings>(
+    "TelegramSettings",
+    builder.Configuration.GetSection("TelegramSettings"));
 
 builder.Services.AddSingleton<IChatCompletionService>(sp =>
 {
