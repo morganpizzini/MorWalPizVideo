@@ -19,7 +19,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             if (item == null)
                 return Task.FromResult(item!);
 
-            return Task.FromResult(scenario.Add(_fileName, item));
+            return Task.FromResult(scenario.Add(_fileName, PrepareForPersistence(item)));
         }
 
         public Task DeleteItemAsync(string id)
@@ -47,8 +47,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateItemAsync(T item)
         {
             if (item != null)
-                scenario.Replace(_fileName, item);
+                scenario.Replace(_fileName, PrepareForPersistence(item));
             return Task.CompletedTask;
         }
+
+        protected virtual T PrepareForPersistence(T item) => item;
     }
 }

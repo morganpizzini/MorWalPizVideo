@@ -17,8 +17,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<T> AddItemAsync(T item)
         {
-            await _collection.InsertOneAsync(item);
-            return item;
+            var persistedItem = PrepareForPersistence(item);
+            await _collection.InsertOneAsync(persistedItem);
+            return persistedItem;
         }
 
         public async Task DeleteItemAsync(string id)
@@ -59,15 +60,19 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task UpdateItemAsync(T item)
         {
+            var persistedItem = PrepareForPersistence(item);
+
             // If item.Id is a string representation of an ObjectId, convert it
-            if (ObjectId.TryParse(item.Id, out var objectId))
+            if (ObjectId.TryParse(persistedItem.Id, out var objectId))
             {
-                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", objectId), item);
+                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", objectId), persistedItem);
             }
             else
             {
-                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", item.Id), item);
+                await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", persistedItem.Id), persistedItem);
             }
         }
+
+        protected virtual T PrepareForPersistence(T item) => item;
     }
 }

@@ -1,5 +1,5 @@
 {
-  "manifestVersion": "2026-08-03.phase4",
+  "manifestVersion": "2026-08-15.phase4",
   "adr": "ADR-008",
   "indexes": [
     {
@@ -44,6 +44,18 @@
       },
       "unique": false,
       "notes": "Supports public matches paging without full scans."
+    },
+    {
+      "key": "youtubecontent_isprivate_latestpublished_creation_desc",
+      "collection": "youtubeContent",
+      "name": "ix_youtubecontent_isprivate_latestpublished_creation_desc",
+      "keys": {
+        "isPrivate": 1,
+        "latestPublishedAt": -1,
+        "creationDateTime": -1
+      },
+      "unique": false,
+      "notes": "Supports channel-scoped public match paging ordered by latest video publication. Backfill latestPublishedAt before applying."
     },
     {
       "key": "pages_url",

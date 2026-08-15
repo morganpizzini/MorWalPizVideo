@@ -125,6 +125,84 @@ Indexes provide no benefit when repositories materialize entire collections. Rep
 - Use atomic increment/update operators for counters and state transitions.
 - Use optimistic concurrency or conditional updates where lost updates matter.
 
+## Public Match Publication Ordering
+
+Channel-scoped public matches are filtered by `isPrivate = false` and a matching
+`videoRefs.channelIds` value, then ordered in MongoDB by:
+
+1. `latestPublishedAt` descending: the maximum non-`DateTime.MinValue` value in `videoRefs[].publishedAt`.
+2. `creationDateTime` descending when two matches have the same publication date.
+
+When a match has no usable video publication date, `latestPublishedAt` is its
+`creationDateTime`. This is a persisted, BSON-only compatibility field and is
+recomputed by the YouTube content Mongo and mock repository write boundaries;
+it is not part of the public response contract. The approved index is:
+
+```text
+key:        youtubecontent_isprivate_latestpublished_creation_desc
+collection: youtubeContent
+name:       ix_youtubecontent_isprivate_latestpublished_creation_desc
+keys:       { isPrivate: 1, latestPublishedAt: -1, creationDateTime: -1 }
+```
+
+### Rollout, Backfill, And Audit
+
+Run this migration in a maintenance window with match writes paused. Take and
+verify a restorable Cosmos backup first, then backfill every existing
+`youtubeContent` document before enabling the new reader. The following
+`mongosh` pipeline uses the same missing-date rule as the application; execute
+it in resumable `_id` batches for production RU control:
+
+```javascript
+const missingPublicationDate = ISODate("0001-01-01T00:00:00.000Z");
+db.youtubeContent.updateMany(
+	{ _id: { $gte: batchStart, $lt: batchEnd } },
+	[{
+		$set: {
+			latestPublishedAt: {
+				$let: {
+					vars: {
+						latestVideoDate: {
+							$max: {
+								$map: {
+									input: { $ifNull: ["$videoRefs", []] },
+									as: "video",
+									in: "$$video.publishedAt"
+								}
+							}
+						}
+					},
+					in: {
+						$cond: [
+							{ $gt: ["$$latestVideoDate", missingPublicationDate] },
+							"$$latestVideoDate",
+							"$creationDateTime"
+						]
+					}
+				}
+			}
+		}
+	}]
+);
+```
+
+For each batch, record the `_id` range, matched count, modified count, and any
+documents with missing `creationDateTime`. After the backfill, verify that
+every document has a non-null `latestPublishedAt`, then run the authenticated
+index audit and apply operations with the exact approved key:
+
+```text
+GET  /api/mongoindexes/audit?keys=youtubecontent_isprivate_latestpublished_creation_desc
+POST /api/mongoindexes/apply
+		 { "approvalToken": "apply-approved-indexes",
+			 "approvedKeys": ["youtubecontent_isprivate_latestpublished_creation_desc"] }
+```
+
+Capture the audit and apply responses, confirm the exact index keys in Cosmos,
+and verify representative public channel queries and pagination after the
+application deployment. The source manifest and operation service do not prove
+that the production Cosmos index or backfill has been completed.
+
 ## Operational Monitoring
 
 Track slow queries, collection/document growth, index size, replication/backup health, connection saturation, duplicate-key errors, and failed backfill batches. Do not log connection strings or sensitive document contents.

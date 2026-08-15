@@ -9,7 +9,6 @@
         public const string Facebook = "Facebook";
         public const string YouTube = "YouTube";
         public const string Recaptcha = "Recaptcha";
-        public const string Pinterest = "pinterest";
     }
     public static class DbCollections
     {

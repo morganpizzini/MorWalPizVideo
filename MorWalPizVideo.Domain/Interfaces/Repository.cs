@@ -17,6 +17,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        protected override YouTubeContent PrepareForPersistence(YouTubeContent item)
+            => item with { LatestPublishedAt = item.CalculateLatestPublishedAt() };
+
         public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
         {
             var filter = Builders<YouTubeContent>.Filter.And(
@@ -64,7 +67,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             return await _collection
                 .Find(filter)
-                .SortByDescending(x => x.CreationDateTime)
+                .SortByDescending(x => x.LatestPublishedAt)
+                .ThenByDescending(x => x.CreationDateTime)
                 .Skip(safeSkip)
                 .Limit(safeTake)
                 .ToListAsync();
@@ -89,7 +93,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             return await _collection
                 .Find(filter)
-                .SortByDescending(x => x.CreationDateTime)
+                .SortByDescending(x => x.LatestPublishedAt)
+                .ThenByDescending(x => x.CreationDateTime)
                 .Skip(safeSkip)
                 .Limit(safeTake)
                 .ToListAsync();

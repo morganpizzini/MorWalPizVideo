@@ -33,7 +33,7 @@ public interface IMongoIndexOperationsService
 
 public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMongoIndexOperationsService
 {
-    private static readonly IReadOnlyList<MongoIndexManifestEntry> Manifest =
+    internal static readonly IReadOnlyList<MongoIndexManifestEntry> Manifest =
     [
         new(
             Key: "shortlinks.code.unique",
@@ -57,6 +57,16 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.YouTubeContent,
             Name: "ix_youtubecontent_isprivate_creation_desc",
             Keys: new BsonDocument { { "isPrivate", 1 }, { "creationDateTime", -1 } }),
+        new(
+            Key: "youtubecontent_isprivate_latestpublished_creation_desc",
+            Collection: DbCollections.YouTubeContent,
+            Name: "ix_youtubecontent_isprivate_latestpublished_creation_desc",
+            Keys: new BsonDocument
+            {
+                { "isPrivate", 1 },
+                { "latestPublishedAt", -1 },
+                { "creationDateTime", -1 }
+            }),
         new(
             Key: "pages_url",
             Collection: DbCollections.Pages,

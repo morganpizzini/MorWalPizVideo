@@ -83,6 +83,21 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("ownerChannelId")]
         public string OwnerChannelId { get; init; } = string.Empty;
 
+        [BsonElement("latestPublishedAt")]
+        [JsonIgnore]
+        public DateTime LatestPublishedAt { get; init; }
+
+        public DateTime CalculateLatestPublishedAt()
+        {
+            var publishedDates = (VideoRefs ?? [])
+                .Where(video => video.PublishedAt != DateTime.MinValue)
+                .Select(video => video.PublishedAt);
+
+            return publishedDates.Any()
+                ? publishedDates.Max()
+                : CreationDateTime;
+        }
+
         // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]
         public bool IsLink => ContentType == YoutubeContentType.SingleVideo;

@@ -1,9 +1,4 @@
-﻿internal class PinterestSettings
-{
-    public string AppId { get; set; } = null!;
-    public string AppSecret { get; set; } = null!;
-}
-internal class AzureConfig
+﻿internal class AzureConfig
 {
     public OpenAi OpenAi { get; set; } = null!;
 }

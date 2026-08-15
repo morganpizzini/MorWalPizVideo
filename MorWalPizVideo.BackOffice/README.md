@@ -2,7 +2,7 @@
 Dynamic form designer (text / select / checkbox / etc. — see `CustomFormEnums`). Public form submission is open via `POST /{id}/responses` (`[AllowAnonymous]`); authenticated response listing uses the standalone `customFormResponses` collection via `GET /{id}/responses`, ordered newest-first with duplicate response IDs suppressed. Form read contracts contain metadata and questions only; response records are not embedded.
 # MorWalPizVideo.BackOffice — Project Documentation
 
-The admin Web API powering the MorWalPizVideo platform. It exposes the management surface used by the `back-office-spa` (React 19) SPA and by the WPF `MorWalPiz.VideoImporter` desktop tool. It owns YouTube content lifecycle, translations, the digital shop, social distribution (Discord / Telegram / Pinterest), insights (AI content planning), custom forms, sponsor management and the Shooting ITA vertical (competitions / user requests / push notifications).
+The admin Web API powering the MorWalPizVideo platform. It exposes the management surface used by the `back-office-spa` (React 19) SPA and by the WPF `MorWalPiz.VideoImporter` desktop tool. It owns YouTube content lifecycle, translations, the digital shop, social distribution (Discord / Telegram ), insights (AI content planning), custom forms, sponsor management and the Shooting ITA vertical (competitions / user requests / push notifications).
 
 > Companion docs already in the repo: [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md) · [HEALTH_CHECKS.md](HEALTH_CHECKS.md) · [docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md](../docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md) · [docs/GITHUB_PRODUCTION_DEPLOYMENT.md](../docs/GITHUB_PRODUCTION_DEPLOYMENT.md) · [memory-bank/](../memory-bank/)
 
@@ -26,7 +26,7 @@ The admin Web API powering the MorWalPizVideo platform. It exposes the managemen
        ┌──────────────────┬──────────────────┬────────────────┼────────────────┐
        ▼                  ▼                  ▼                ▼                ▼
    MongoDB         Azure OpenAI       YouTube Data API   Azure Translator  Discord/Telegram/
-   (or Mocks)      (Semantic Kernel)  v3                                   Pinterest/Facebook
+   (or Mocks)      (Semantic Kernel)  v3                                   Facebook
 ```
 
 ### Project layout
@@ -34,7 +34,7 @@ The admin Web API powering the MorWalPizVideo platform. It exposes the managemen
 | ------ | ------- |
 | [Program.cs](Program.cs) | Composition root: DI, auth, feature flags, Hangfire, health checks, Swagger, CORS. |
 | [Authentication/](Authentication/) | `ApiKeyAuthenticationHandler`, `[ApiKeyAuth]` attribute, Swagger security filter. |
-| [Configuration/](Configuration/) | Strongly-typed `IOptions<T>` POCOs (`AzureConfig`, `PinterestSettings`, …). |
+| [Configuration/](Configuration/) | Strongly-typed `IOptions<T>` POCOs (`AzureConfig`, …). |
 | [Controllers/](Controllers/) | 33 controllers — see §3. |
 | [Data/](Data/) | Seed JSON files used by the **Mock** repositories (`EnableMock=true`). |
 | [Jobs/](Jobs/) | Hangfire recurring background jobs — see §5. |
@@ -227,7 +227,7 @@ Manage CMS-style pages that bundle Reel/Short ids (`Page.VideoReelIds`, `Page.Sh
 Linktree-style entries. Add / update / **toggle** enabled state / delete by title.
 
 #### `ShortLinksController` — `api/shortlinks`
-Branded URL shortener entries (`ShortLink`, `LinkType` discriminator) — used by Discord/Telegram/Pinterest publishing flows.
+Branded URL shortener entries (`ShortLink`, `LinkType` discriminator) — used by Discord/Telegram publishing flows.
 
 #### `QueryLinksController` — `api/querylinks`
 Templated query-string snippets attached to a `PublishSchedule` (used for UTM / tracking).
@@ -309,13 +309,6 @@ Uploads to blob storage (Azure Blob in prod, `BlobServiceMock` in mock). Support
 
 #### `TelegramController` — `api/telegram`
 Twin of Discord but for Telegram (uses `ITelegramHttpClientFactory`).
-
-#### `PinterestController` — `api/pinterest`
-| Verb | Route | Purpose |
-| ---- | ----- | ------- |
-| GET | `/` | `Login()` — start OAuth flow, redirects to Pinterest. |
-| GET | `/callback?code=` | OAuth callback; exchanges code for tokens. |
-| POST | `/` | `CreatePin(CreatePinterestPinRequest)` — publish a pin. |
 
 ### 3.8 Shooting ITA Vertical
 
