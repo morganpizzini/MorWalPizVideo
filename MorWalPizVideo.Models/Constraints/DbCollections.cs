@@ -12,7 +12,6 @@
     }
     public static class DbCollections
     {
-        public const string BioLinks = "bioLinks";
         public const string CalendarEvents = "calendarEvents";
         public const string Channels = "ytChannels";
         public const string Compilations = "compilations";

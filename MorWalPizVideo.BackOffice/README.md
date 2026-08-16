@@ -84,6 +84,7 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | `EnableSwagger` | Mounts Swagger UI at `/swagger` with both `Bearer` and `ApiKey` security schemes. |
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using the App Service managed identity through `DefaultAzureCredential`. Production startup fails if the provider cannot load or required settings are missing. |
 | `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
+| `EnableVideoBulkImport` | Enables bulk video import discovery and mutation through `import-candidates`, `import-targets`, and `bulk-import`. Single `ImportVideo` remains available when this flag is disabled. |
 
 YouTube comment analysis is submitted from the existing Insights comments page. Each request is stored in the channel-scoped `insightCommentAnalysisRuns` collection with only the topic/source/request context required for a later manual reschedule. When `EnableHangFire` is enabled and Hangfire is available, the request is queued and the SPA polls its status. When Hangfire is disabled or unavailable, the API explicitly uses the synchronous analysis fallback. Runs transition through `Pending`, `Running`, `Completed`, or terminal `Rejected`; failed runs are not retried automatically. An authorized user can use the run's reschedule action to create a new request from the saved context. Comment bodies and transient author identity are never persisted in the run record.
 
@@ -166,6 +167,9 @@ Core surface for managing the YouTube content catalog.
 | POST | `/{id}/refresh-youtube` | Re-pull stats from the YouTube Data API for one item. |
 | POST | `/{id}/publish-social` | Push the video to the configured social channels (`PublishSocialRequest`). |
 
+#### `FeaturesController` — `api/features`
+`GET /api/features` requires `backoffice.access`, does not require `X-Channel-Id`, and returns typed SPA bootstrap state including `videoBulkImportEnabled`.
+
 #### `ChannelsController` — `api/channels`
 Manage tracked YouTube channels ([`YTChannel`](#510-channels-and-creator-tracking)).
 
@@ -222,9 +226,6 @@ Read-only listing of sponsor application submissions (`SponsorApply`). Submissio
 
 #### `PagesController` — `api/pages`
 Manage CMS-style pages that bundle Reel/Short ids (`Page.VideoReelIds`, `Page.ShortReelIds`).
-
-#### `BioLinksController` — `api/biolinks`
-Linktree-style entries. Add / update / **toggle** enabled state / delete by title.
 
 #### `ShortLinksController` — `api/shortlinks`
 Branded URL shortener entries (`ShortLink`, `LinkType` discriminator) — used by Discord/Telegram publishing flows.
@@ -350,7 +351,6 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 | [`QueryLink`](../MorWalPizVideo.Models/Models/QueryLink.cs) | Reusable query-string template (UTM/tracking) attached to a `PublishSchedule`. |
 | [`Page`](../MorWalPizVideo.Models/Models/Page.cs) | CMS page bundling `VideoReelIds` and `ShortReelIds`. |
 | [`Compilation`](../MorWalPizVideo.Models/Models/Compilation.cs) | Editor-curated grouping of `VideoRef[]` with title/description/url. |
-| [`BioLink`](../MorWalPizVideo.Models/Models/BioLink.cs) | Linktree entry — extends base with `Enable` toggle (other fields in base/derived class). |
 | [`PublishSchedule`](../MorWalPizVideo.Models/Models/PublishSchedule.cs) | Scheduled publication: `VideoId`, `QueryStringIds[]`, `Message`, `Date`. |
 | [`MorWalPizConfiguration`](../MorWalPizVideo.Models/Models/MorWalPizConfiguration.cs) | Generic key/value runtime configuration. |
 

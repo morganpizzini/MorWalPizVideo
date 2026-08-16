@@ -9,6 +9,7 @@ vi.mock('@morwalpizvideo/services', () => ({
 }));
 
 import { authService } from './authService';
+import { useAppStore } from '../state/appStore';
 
 describe('authService', () => {
   beforeEach(async () => {
@@ -35,5 +36,14 @@ describe('authService', () => {
       userId: 'user-1',
       effectivePermissions: ['backoffice.access'],
     });
+  });
+
+  it('updates the app store when setting the current user', () => {
+    const user = { id: 'user-1', username: 'Ada', email: 'ada@example.test' };
+
+    authService.setUser(user);
+
+    expect(useAppStore.getState().user).toEqual(user);
+    expect(authService.getUser()).toEqual(user);
   });
 });

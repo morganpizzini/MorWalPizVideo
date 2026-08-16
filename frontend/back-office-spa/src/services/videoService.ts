@@ -13,8 +13,8 @@ export const VideoService = {
   },
 
   // Import a video
-  importVideo: async (request: VideoImportRequest): Promise<void> => {
-    await post(endpoints.VIDEOS_IMPORT, request);
+  importVideo: async (request: VideoImportRequest): Promise<VideoImportResult> => {
+    return post(endpoints.VIDEOS_IMPORT, request) as Promise<VideoImportResult>;
   },
 
   getImportCandidates: async (startDate: string, endDate: string): Promise<ImportCandidate[]> =>
@@ -59,8 +59,23 @@ export interface BulkImportItem {
 export interface BulkImportResult {
   videoId: string;
   status: 'imported' | 'skipped' | 'error';
+  shortLinkStatus?: 'created' | 'failed' | 'notAttempted';
   error?: string;
 }
+
+export interface VideoImportResponse {
+  videoId: string;
+  status: 'imported' | 'alreadyExists' | 'error';
+  shortLinkStatus?: 'created' | 'failed';
+  error?: string;
+}
+
+export interface ImportApiError {
+  errors?: unknown[];
+  status?: number;
+}
+
+export type VideoImportResult = VideoImportResponse | ImportApiError;
 
 // Export individual function for convenience
 export const publishVideoToSocial = VideoService.publishToSocial;

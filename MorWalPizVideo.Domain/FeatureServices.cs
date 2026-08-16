@@ -852,9 +852,13 @@ public sealed class LinksService(
     {
         var match = (await contentRepository.GetItemsAsync(x =>
                 x.ThumbnailVideoId == videoId ||
-                x.Id == videoId ||
                 x.VideoRefs.Any(video => video.YoutubeId == videoId)))
             .FirstOrDefault();
+        if (match is null && MongoDB.Bson.ObjectId.TryParse(videoId, out _))
+        {
+            match = await contentRepository.GetItemAsync(videoId);
+        }
+
         if (match is null || !match.VideoRefs.Any(video => video.YoutubeId == videoId))
         {
             return null;

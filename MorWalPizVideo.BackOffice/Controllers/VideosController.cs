@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.FeatureManagement.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts.Videos;
-using MorWalPiz.Contracts.Contracts;
-using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
@@ -12,9 +11,7 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
-using MorWalPizVideo.Domain.Interfaces;
-using System.Security.Cryptography;
-using System.Security.Claims;
+using MorWalPizVideo.Server.Utils;
 using System.Text;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -51,6 +48,13 @@ public class VideosController : ApplicationControllerBase
         configuration = _configuration;
         authorization = _authorization;
         logger = _logger;
+    }
+
+    [HttpGet("import-status")]
+    [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> ImportStatus([FromServices] Microsoft.FeatureManagement.IFeatureManager featureManager)
+    {
+        return Ok(new { enabled = await featureManager.IsEnabledAsync(MyFeatureFlags.EnableVideoBulkImport) });
     }
 
     [HttpGet()]
@@ -179,7 +183,7 @@ public class VideosController : ApplicationControllerBase
                 return NotFound("Video not found");
             }
 
-            return Conflict("Video is already imported");
+            return Conflict(new VideoImportResponse(videoId, "alreadyExists", Error: "Video is already imported"));
         }
 
         // Fetch categories and convert to CategoryRef objects
@@ -199,22 +203,27 @@ public class VideosController : ApplicationControllerBase
         };
         if (!await _contentService.SaveMatchAsync(importedMatch))
         {
-            return Conflict("Video is already imported");
+            return Conflict(new VideoImportResponse(videoId, "error", Error: "Video could not be persisted"));
         }
 
         await externalDataService.RefreshMatch(videoId);
 
         // Auto-create shortlink for the imported video
-        await CreateVideoShortLinkAsync(videoId);
+        var shortLink = await CreateVideoShortLinkAsync(videoId);
 
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
         await client.ReloadCache();
 
-        return NoContent();
+        return Ok(new VideoImportResponse(
+            videoId,
+            "imported",
+            shortLink is null ? "failed" : "created",
+            shortLink is null ? "Video imported, but automatic short-link creation failed" : null));
     }
 
     [HttpGet("import-candidates")]
+    [FeatureGate(MyFeatureFlags.EnableVideoBulkImport)]
     [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> ImportCandidates([FromQuery] VideoImportCandidatesRequest request)
     {
@@ -256,6 +265,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpGet("import-targets")]
+    [FeatureGate(MyFeatureFlags.EnableVideoBulkImport)]
     [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> ImportTargets()
     {
@@ -278,6 +288,7 @@ public class VideosController : ApplicationControllerBase
     }
 
     [HttpPost("bulk-import")]
+    [FeatureGate(MyFeatureFlags.EnableVideoBulkImport)]
     [AllowUser(AuthorizationPermissionKeys.VideosImport, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> BulkImport(VideoBulkImportRequest request)
     {
@@ -322,7 +333,7 @@ public class VideosController : ApplicationControllerBase
                     .ToArray();
                 if (categories.Length != item.Categories.Distinct(StringComparer.Ordinal).Count())
                 {
-                    results.Add(new(videoId, "error", "One or more categories were not found"));
+                    results.Add(new(videoId, "error", Error: "One or more categories were not found"));
                     continue;
                 }
 
@@ -333,7 +344,7 @@ public class VideosController : ApplicationControllerBase
                     target = createdTargets.GetValueOrDefault(targetKey) ?? targetsById.GetValueOrDefault(targetKey);
                     if (target is null || !await authorization.CanMutateInChannelAsync(User, target, channelId))
                     {
-                        results.Add(new(videoId, "error", "Target content was not found or is not accessible"));
+                        results.Add(new(videoId, "error", Error: "Target content was not found or is not accessible"));
                         continue;
                     }
                 }
@@ -342,7 +353,7 @@ public class VideosController : ApplicationControllerBase
                 var video = videos.FirstOrDefault();
                 if (video is null)
                 {
-                    results.Add(new(videoId, "error", "YouTube video metadata was not found"));
+                    results.Add(new(videoId, "error", Error: "YouTube video metadata was not found"));
                     continue;
                 }
 
@@ -377,21 +388,28 @@ public class VideosController : ApplicationControllerBase
                     };
                     if (!await _contentService.SaveMatchAsync(importedMatch))
                     {
-                        results.Add(new(videoId, "skipped"));
+                        results.Add(new(videoId, "error", Error: "Video could not be persisted"));
                         continue;
                     }
-                    await CreateVideoShortLinkAsync(videoId);
+                    var shortLink = await CreateVideoShortLinkAsync(videoId);
                     createdTargets[videoId] = importedMatch;
+                    importedIds.Add(videoId);
+                    results.Add(new(
+                        videoId,
+                        "imported",
+                        shortLink is null ? "failed" : "created",
+                        shortLink is null ? "Video imported, but automatic short-link creation failed" : null));
+                    continue;
                 }
 
                 importedIds.Add(videoId);
-                results.Add(new(videoId, "imported"));
+                results.Add(new(videoId, "imported", "notAttempted"));
             }
             catch (Exception exception)
             {
                 logger.LogError(exception, "Bulk video import failed for video {VideoId}, target {Target}, channel {ChannelId}",
                     videoId, item.Target, channelId);
-                results.Add(new(videoId, "error", "Video import failed"));
+                results.Add(new(videoId, "error", Error: "Video import failed"));
             }
         }
 
@@ -697,9 +715,17 @@ public class VideosController : ApplicationControllerBase
 
     private async Task<string?> CreateVideoShortLinkAsync(string videoId)
     {
-        var shortLink = await _linksService.EnsureVideoShortLinkAsync(
-            videoId, HttpContext.GetChannelContext().ChannelId);
-        return shortLink is null ? null : BuildShortLinkUrl(shortLink.Code);
+        try
+        {
+            var shortLink = await _linksService.EnsureVideoShortLinkAsync(
+                videoId, HttpContext.GetChannelContext().ChannelId);
+            return shortLink is null ? null : BuildShortLinkUrl(shortLink.Code);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Automatic short-link creation failed for imported video {VideoId}", videoId);
+            return null;
+        }
     }
 
     private string BuildShortLinkUrl(string code)

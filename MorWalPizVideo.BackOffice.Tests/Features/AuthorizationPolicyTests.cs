@@ -7,7 +7,6 @@ using AdminDigitalProductsController = MorWalPizVideo.BackOffice.Controllers.Adm
 using AdminDigitalProductCategoriesController = MorWalPizVideo.BackOffice.Controllers.AdminDigitalProductCategoriesController;
 using DigitalProductsController = MorWalPizVideo.BackOffice.Controllers.DigitalProductsController;
 using DigitalProductCategoriesController = MorWalPizVideo.BackOffice.Controllers.DigitalProductCategoriesController;
-using BioLinksController = MorWalPizVideo.ServerAPI.Controllers.BioLinksController;
 using CalendarEventsController = MorWalPizVideo.ServerAPI.Controllers.CalendarEventsController;
 using CacheController = MorWalPizVideo.ServerAPI.Controllers.CacheController;
 using CompetitionsController = MorWalPizVideo.ServerAPI.Controllers.CompetitionsController;
@@ -46,7 +45,6 @@ public class AuthorizationPolicyTests
     }
 
     [Theory]
-    [InlineData(typeof(BioLinksController))]
     [InlineData(typeof(CalendarEventsController))]
     [InlineData(typeof(CompetitionsController))]
     [InlineData(typeof(CompilationsController))]

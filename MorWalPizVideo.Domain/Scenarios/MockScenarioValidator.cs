@@ -29,7 +29,6 @@ internal static class MockScenarioValidator
         ValidateIds(scenario.Read<PublishSchedule>("publishSchedules"), "publishSchedules", errors);
         ValidateIds(scenario.Read<CalendarEvent>("calendarEvents"), "calendarEvents", errors);
         ValidateIds(scenario.Read<Compilation>("compilations"), "compilations", errors);
-        ValidateIds(scenario.Read<BioLink>("bioLinks"), "bioLinks", errors);
         ValidateIds(scenario.Read<ShortLink>("shortLinks"), "shortLinks", errors);
         ValidateIds(scenario.Read<QuickLinks>("quickLinks"), "quickLinks", errors);
         ValidateIds(scenario.Read<YTChannel>("ytchannels"), "ytchannels", errors);

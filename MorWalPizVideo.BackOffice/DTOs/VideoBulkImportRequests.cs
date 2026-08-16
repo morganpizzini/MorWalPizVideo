@@ -37,7 +37,14 @@ public sealed record VideoImportCandidateResponse(
     DateTime PublishedAt,
     bool AlreadyImported);
 
+public sealed record VideoImportResponse(
+    string VideoId,
+    string Status,
+    string? ShortLinkStatus = null,
+    string? Error = null);
+
 public sealed record VideoBulkImportItemResponse(
     string VideoId,
     string Status,
+    string? ShortLinkStatus = null,
     string? Error = null);

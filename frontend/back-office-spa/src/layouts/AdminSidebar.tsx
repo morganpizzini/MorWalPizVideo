@@ -1,8 +1,8 @@
 import { Nav, Offcanvas } from 'react-bootstrap';
 import { NavLink } from 'react-router';
-import { authService } from '../services/authService';
 import { adminMenuGroups, canAccessMenuItem } from './adminMenu';
 import { useChannelContext } from '../contexts/ChannelContext';
+import { useAppStore } from '../state/appStore';
 
 interface AdminSidebarProps {
   show: boolean;
@@ -10,7 +10,7 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
-  const permissions = authService.getPermissions();
+  const permissions = useAppStore(state => state.effectivePermissions);
   const { channels, selectedChannelId, selectChannel } = useChannelContext();
   const content = (
     <Nav as="nav" aria-label="Admin navigation" className="flex-column gap-1 px-3 pb-3">

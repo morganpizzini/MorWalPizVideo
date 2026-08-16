@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
 import { ShieldCheck, Users } from 'lucide-react';
 import { hasPermission, permissions } from '../../authorization/permissions';
-import { authService } from '../../services/authService';
+import { useAppStore } from '../../state/appStore';
 
 export default function RbacManagementPage() {
-  const effectivePermissions = authService.getPermissions();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canViewUsers = hasPermission(effectivePermissions, [
     permissions.users.view,
     permissions.users.manage,

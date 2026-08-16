@@ -48,7 +48,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         Task<Compilation?> GetByUrlAsync(string url);
     }
-    public interface IBioLinkRepository : IRepository<BioLink> { }
     public interface IShortLinkRepository : IRepository<ShortLink>
     {
         // Indexed canonical lookup by normalized code; comparison is case-insensitive for legacy compatibility.

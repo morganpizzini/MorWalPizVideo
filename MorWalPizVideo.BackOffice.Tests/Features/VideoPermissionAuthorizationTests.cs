@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
@@ -26,6 +27,20 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
     Assert.Equal(HttpStatusCode.Unauthorized, (await anonymousClient.GetAsync("/api/Videos")).StatusCode);
     Assert.Equal(HttpStatusCode.Forbidden, (await deniedClient.GetAsync("/api/Videos")).StatusCode);
     Assert.Equal(HttpStatusCode.OK, (await viewClient.GetAsync("/api/Videos")).StatusCode);
+  }
+
+  [Fact]
+  public async Task Feature_state_is_available_without_a_channel_scope()
+  {
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.BackofficeAccess);
+    client.DefaultRequestHeaders.Remove("X-Channel-Id");
+
+    var response = await client.GetAsync("/api/features");
+    var featureState = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True(featureState.TryGetProperty("videoBulkImportEnabled", out var bulkImport));
+    Assert.True(bulkImport.GetBoolean());
   }
 
   [Theory]
@@ -102,7 +117,10 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
         "/api/Videos/ImportVideo",
       new { videoId, categories = new[] { "300000000000000000000001" } });
 
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var responseBody = await response.Content.ReadAsStringAsync();
+    Assert.Contains("\"status\":\"imported\"", responseBody, StringComparison.Ordinal);
+    Assert.Contains("\"shortLinkStatus\":\"created\"", responseBody, StringComparison.Ordinal);
     var importedMatch = (await _factory.MatchRepository!.GetItemsAsync())
         .Single(match => match.ContentId == videoId);
 
@@ -131,6 +149,8 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
     var matches = await _factory.MatchRepository.GetItemsAsync(match => match.ContentId == videoId);
 
     Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    var responseBody = await response.Content.ReadAsStringAsync();
+    Assert.Contains("\"status\":\"alreadyExists\"", responseBody, StringComparison.Ordinal);
     Assert.Single(matches);
     Assert.Equal(existingMatch.Id, matches.Single().Id);
   }

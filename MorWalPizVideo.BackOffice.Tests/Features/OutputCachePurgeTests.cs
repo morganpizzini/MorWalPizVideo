@@ -29,10 +29,10 @@ public class OutputCachePurgeTests
         var store = new CapturingOutputCacheStore();
         var controller = new CacheController(_dataService: null!, _memoryCache: null!, _cache: store);
 
-        var result = await controller.Index("Tag-BioLinks");
+        var result = await controller.Index("Tag-CalendarEvents");
 
         Assert.Single(store.EvictedTags);
-        Assert.Equal("tag-biolinks", store.EvictedTags[0]);
+        Assert.Equal("tag-calendarevents", store.EvictedTags[0]);
     }
 
     [Fact]

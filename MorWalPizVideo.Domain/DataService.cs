@@ -13,7 +13,6 @@ namespace MorWalPizVideo.Server.Services
         Task<IList<Compilation>> GetCompilations();
         Task<CustomForm?> GetCustomFormById(string id);
         Task AddFormResponse(string formId, CustomFormResponse response);
-        Task<IList<BioLink>> GetBioLinks();
         Task<IList<CalendarEvent>> GetCalendarEvents();
         Task<IList<MorWalPizConfiguration>> FetchConfigurationByKeys(IList<string> keys);
         Task<IList<CustomForm>> GetActiveForms();
@@ -34,7 +33,6 @@ namespace MorWalPizVideo.Server.Services
         protected readonly ICompilationRepository _compilationRepository;
         protected readonly ICustomFormRepository _customFormRepository;
         protected readonly ICalendarEventRepository _calendarEventRepository;
-        protected readonly IBioLinkRepository _bioLinkRepository;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IPageRepository _pageRepository;
         protected readonly IProductRepository _productRepository;
@@ -42,23 +40,20 @@ namespace MorWalPizVideo.Server.Services
         protected readonly ISponsorApplyRepository _sponsorApplyRepository;
         protected readonly ICompetitionRepository _competitionRepository;
 
-        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IBioLinkRepository bioLinkRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository)
+        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository)
         {
             _youTubeContent = youTubeContent;
             _compilationRepository = compilationRepository;
             _customFormRepository = customFormRepository;
             _calendarEventRepository = calendarEventRepository;
-            _bioLinkRepository = bioLinkRepository;
             _configurationRepository = configurationRepository;
             _pageRepository = pageRepository;
             _productRepository = productRepository;
-            _bioLinkRepository = bioLinkRepository;
             _configurationRepository = configurationRepository;
             _sponsorRepository = sponsorRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
             _competitionRepository = competitionRepository;
         }
-        public async Task<IList<BioLink>> GetBioLinks() => [.. (await _bioLinkRepository.GetItemsAsync(x => x.Enable)).OrderBy(x => x.Order)];
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
         public Task<IList<CalendarEvent>> GetCalendarEvents(string channelId) =>
             _calendarEventRepository.GetItemsAsync(x => x.ChannelId == channelId);
@@ -152,7 +147,6 @@ namespace MorWalPizVideo.Server.Services
             IPageRepository pageRepository,
             ICalendarEventRepository calendarEventRepository,
             ICompilationRepository compilationRepository,
-            IBioLinkRepository bioLinkRepository,
             IShortLinkRepository shortLinkRepository,
             IYTChannelRepository ytChannelRepository,
             ICategoryRepository categoryRepository,
@@ -169,7 +163,7 @@ namespace MorWalPizVideo.Server.Services
             IInsightNewsItemRepository insightNewsItemRepository,
             IInsightContentPlanRepository insightContentPlanRepository,
             IInsightSourceCursorRepository insightSourceCursorRepository,
-            ICompetitionRepository competitionRepository) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, bioLinkRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository)
+            ICompetitionRepository competitionRepository) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;

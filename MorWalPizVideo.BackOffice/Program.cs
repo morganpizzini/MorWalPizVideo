@@ -341,7 +341,6 @@ if (enableMock)
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
     builder.Services.AddScoped<ICompilationRepository, CompilationMockRepository>();
-    builder.Services.AddScoped<IBioLinkRepository, BioLinkMockRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksMockRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsMockRepository>();
@@ -420,7 +419,6 @@ else
     builder.Services.AddScoped<IPageRepository, PageRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
     builder.Services.AddScoped<ICompilationRepository, CompilationRepository>();
-    builder.Services.AddScoped<IBioLinkRepository, BioLinkRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsRepository>();

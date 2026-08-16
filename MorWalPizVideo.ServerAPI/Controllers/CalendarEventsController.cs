@@ -28,7 +28,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.CalendarEvents])]
         public async Task<IActionResult> Index()
         {
-            return Ok(await cache.GetOrCreateAsync(CacheKeys.BioLinks, async () =>
+            return Ok(await cache.GetOrCreateAsync(CacheKeys.CalendarEvents, async () =>
             {
                 var elements = await _catalogService.GetRecentCalendarEventsAsync(DateTime.Now.AddDays(-10), 250);
                 var matchIds = elements

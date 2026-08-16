@@ -17,6 +17,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-011](adr/ADR-011-email-boundary.md) | Provider-neutral future transactional email boundary | Accepted |
 | [ADR-012](adr/ADR-012-desktop-composition.md) | Incremental Generic Host and MVVM direction for WPF | Accepted |
 | [ADR-014](adr/ADR-014-directional-permission-implications.md) | Domain-owned directional permission implications | Accepted |
+| [ADR-015](adr/ADR-015-backoffice-app-store.md) | BackOffice SPA app-store ownership and bootstrap hydration | Accepted |
 
 ## ADR Process
 

@@ -29,7 +29,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public IActionResult Reset([FromQuery(Name = "k")] string keys = "")
         {
             if (string.IsNullOrEmpty(keys))
-                keys = $"{CacheKeys.Matches},{CacheKeys.Products},{CacheKeys.Sponsors},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.BioLinks},{CacheKeys.ShortLinks},{CacheKeys.ChannelNews}";
+                keys = $"{CacheKeys.Matches},{CacheKeys.Products},{CacheKeys.Sponsors},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.ShortLinks},{CacheKeys.ChannelNews}";
 
             foreach (var key in keys.ToLower().Split(","))
                 base.cache.Remove(key);

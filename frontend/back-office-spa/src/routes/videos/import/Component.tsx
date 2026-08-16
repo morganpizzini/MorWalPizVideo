@@ -6,15 +6,23 @@ import GenericErrorList from '@components/GenericErrorList';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
 import { useChannelContext } from '../../../contexts/ChannelContext';
-import { VideoService, type BulkImportItem, type BulkImportResult, type ImportCandidate } from '../../../services/videoService';
+import { VideoService, type BulkImportItem, type BulkImportResult, type ImportCandidate, type VideoImportResponse } from '../../../services/videoService';
 import type { LoaderData } from './loader';
+import { useAppStore } from '../../../state/appStore';
 
 interface ImportSelection extends BulkImportItem { selected: boolean; }
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+const isImportResponse = (result: unknown): result is VideoImportResponse =>
+  typeof result === 'object' && result !== null && 'videoId' in result && 'status' in result && typeof result.status === 'string';
+const errorValues = (result: unknown): string[] => {
+  if (!result || typeof result !== 'object' || !('errors' in result) || !Array.isArray(result.errors)) return [];
+  return result.errors.filter((value): value is string => typeof value === 'string');
+};
 
 const ImportVideo: React.FC = () => {
   const { categories: initialCategories, targets } = useLoaderData<LoaderData>();
   const { selectedChannelId } = useChannelContext();
+  const bulkImportEnabled = useAppStore(state => state.featureFlags.videoBulkImportEnabled);
   const [availableCategories] = useState<Category[]>(initialCategories);
   const [startDate, setStartDate] = useState(() => { const date = new Date(); date.setMonth(date.getMonth() - 1); return formatDate(date); });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
@@ -30,7 +38,7 @@ const ImportVideo: React.FC = () => {
   const toast = useToast();
 
   useEffect(() => {
-    if (!selectedChannelId || !startDate || !endDate) return;
+    if (!bulkImportEnabled || !selectedChannelId || !startDate || !endDate) return;
     let cancelled = false;
     setLoadingCandidates(true); setError('');
     VideoService.getImportCandidates(startDate, endDate).then(value => {
@@ -41,7 +49,7 @@ const ImportVideo: React.FC = () => {
     }).catch(() => { if (!cancelled) setError('Unable to load YouTube candidates.'); })
       .finally(() => { if (!cancelled) setLoadingCandidates(false); });
     return () => { cancelled = true; };
-  }, [selectedChannelId, startDate, endDate]);
+  }, [bulkImportEnabled, selectedChannelId, startDate, endDate]);
 
   const updateSelection = (videoId: string, update: Partial<ImportSelection>) => setSelections(current => ({ ...current, [videoId]: { ...current[videoId], ...update } }));
   const toggleCategory = (videoId: string, categoryId: string) => {
@@ -55,7 +63,14 @@ const ImportVideo: React.FC = () => {
     const items = candidates.map(candidate => selections[candidate.videoId]).filter(selection => selection?.selected).map(({ selected, ...item }) => item);
     if (!items.length || items.some(item => item.categories.length === 0)) { setError('Select at least one candidate and one category for every selected video.'); return; }
     setSaving(true);
-    try { setResults(await VideoService.bulkImport({ items })); toast.show('Import complete', 'The per-video result is shown below.', { variant: 'success' }); }
+    try {
+      const importResults = await VideoService.bulkImport({ items });
+      setResults(importResults);
+      const hasErrors = importResults.some(result => result.status === 'error');
+      const hasWarnings = importResults.some(result => result.status === 'skipped' || result.shortLinkStatus === 'failed');
+      const variant = hasErrors ? (importResults.some(result => result.status === 'imported') ? 'warning' : 'danger') : hasWarnings ? 'warning' : 'success';
+      toast.show(hasErrors ? 'Bulk import completed with errors' : hasWarnings ? 'Bulk import completed with warnings' : 'Import complete', 'The per-video result is shown below.', { variant });
+    }
     catch { setError('Bulk import failed before results could be returned.'); }
     finally { setSaving(false); }
   };
@@ -64,8 +79,27 @@ const ImportVideo: React.FC = () => {
     event.preventDefault(); setError('');
     if (!singleVideoId.trim() || !singleCategories.length) { setError('Enter a video ID and select at least one category.'); return; }
     setSingleSaving(true);
-    try { await VideoService.importVideo({ videoId: singleVideoId.trim(), categories: singleCategories }); setSingleVideoId(''); toast.show('Import complete', 'The video was imported successfully.', { variant: 'success' }); }
-    catch { setError('Single video import failed.'); }
+    try {
+      const result = await VideoService.importVideo({ videoId: singleVideoId.trim(), categories: singleCategories });
+      if (isImportResponse(result)) {
+        if (result.status === 'alreadyExists') {
+          toast.show('Video already exists', result.error ?? 'The video was already imported.', { variant: 'warning' });
+        } else if (result.status === 'error') {
+          toast.show('Import failed', result.error ?? 'The video could not be imported.', { variant: 'danger' });
+        } else if (result.shortLinkStatus === 'failed') {
+          setSingleVideoId('');
+          toast.show('Import completed with warning', result.error ?? 'The video was imported, but its short link could not be created.', { variant: 'warning' });
+        } else {
+          setSingleVideoId('');
+          toast.show('Import complete', 'The video was imported successfully.', { variant: 'success' });
+        }
+      } else {
+        const errors = errorValues(result);
+        const alreadyExists = errors.includes('alreadyExists');
+        toast.show(alreadyExists ? 'Video already exists' : 'Import failed', errors.find(value => value !== 'alreadyExists') ?? 'Single video import failed.', { variant: alreadyExists ? 'warning' : 'danger' });
+      }
+    }
+    catch { toast.show('Import failed', 'Single video import failed.', { variant: 'danger' }); }
     finally { setSingleSaving(false); }
   };
 
@@ -73,8 +107,8 @@ const ImportVideo: React.FC = () => {
   return <>
     <PageHeader title="Import YouTube videos" />
     <GenericErrorList errors={error ? [error] : []} />
-    <Tabs defaultActiveKey="bulk" className="mb-4">
-      <Tab eventKey="bulk" title="Bulk import">
+    <Tabs defaultActiveKey={bulkImportEnabled ? 'bulk' : 'single'} className="mb-4">
+      {bulkImportEnabled ? <Tab eventKey="bulk" title="Bulk import">
         <Form onSubmit={handleBulkSubmit}>
           <div className="row g-3 mb-3">
             <Form.Group className="col-md-6" controlId="importStartDate"><Form.Label>Published from (UTC) *</Form.Label><Form.Control type="date" value={startDate} onChange={event => setStartDate(event.target.value)} required /></Form.Group>
@@ -104,7 +138,7 @@ const ImportVideo: React.FC = () => {
           </div>
           <div className="d-flex justify-content-end mt-3"><Button variant="success" type="submit" disabled={saving || loadingCandidates || !selectedChannelId || selectedCandidateIds.length === 0}>{saving ? 'Importing...' : 'Import selected videos'}</Button></div>
         </Form>
-      </Tab>
+      </Tab> : null}
       <Tab eventKey="single" title="Single import">
         <Form onSubmit={handleSingleSubmit}>
           <Form.Group className="mb-3" controlId="singleVideoId"><Form.Label>Video ID *</Form.Label><Form.Control value={singleVideoId} onChange={event => setSingleVideoId(event.target.value)} required /></Form.Group>

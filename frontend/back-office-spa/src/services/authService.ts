@@ -1,4 +1,5 @@
 import { post, resetCsrfToken, setUnauthorizedHandler } from '@morwalpizvideo/services';
+import { useAppStore } from '../state/appStore';
 
 interface UserInfo {
   id: string;
@@ -25,6 +26,7 @@ class AuthService {
     setUnauthorizedHandler(() => {
       localStorage.removeItem(this.USER_KEY);
       resetCsrfToken();
+      useAppStore.getState().reset();
       window.location.href = '/login';
     });
   }
@@ -32,6 +34,7 @@ class AuthService {
   // Store user info in localStorage (display only; the session itself lives in the HttpOnly auth cookie)
   setUser(user: UserInfo): void {
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    useAppStore.setState({ user });
   }
 
   // Get user info from localStorage
@@ -93,6 +96,7 @@ class AuthService {
       localStorage.removeItem(this.USER_KEY);
       this.validationPromise = null;
       this.effectivePermissions = [];
+      useAppStore.getState().reset();
       resetCsrfToken();
     }
   }

@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
 import { Lightbulb, MessageCircle } from 'lucide-react';
 import { hasPermission, permissions } from '../../../authorization/permissions';
-import { authService } from '../../../services/authService';
+import { useAppStore } from '../../../state/appStore';
 
 export default function InsightsLandingPage() {
-  const effectivePermissions = authService.getPermissions();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canManageTopics = hasPermission(effectivePermissions, [permissions.insights.view, permissions.insights.manage]);
   const canScanComments = hasPermission(effectivePermissions, [permissions.insights.scan, permissions.insights.manage]);
 

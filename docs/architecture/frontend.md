@@ -75,7 +75,11 @@ Shooting ITA is in scope and reuses shared layout and service behavior. Current 
 
 ## State Management
 
-Use router loader/action/fetcher state, local component state, and existing contexts. Do not introduce a repository-wide state library without an approved architectural decision.
+The BackOffice SPA uses its local Zustand app store for information needed across the protected shell lifetime: logged-user display identity, server-effective permissions, session status, feature flags, accessible channels, and the selected channel id. The protected root loader hydrates this store once after session validation; feature state comes from the unscoped `GET /api/features` endpoint. The store is a UI snapshot, not an authentication authority: the HttpOnly cookie, CSRF handling, `authService` validation, and server authorization remain authoritative.
+
+`ChannelContext` is a compatibility facade over the app store. It validates channel ids against accessible channels, persists valid selection through `@morwalpizvideo/services` (which owns `X-Channel-Id`), and revalidates channel-scoped routes. Logout and 401 handling reset the store. Do not duplicate these values in route components or local storage.
+
+Use router loader/action/fetcher state for route-owned request data, local component state for ephemeral form and presentation state, and contexts only for compatibility or genuinely scoped providers. Do not import React Router into the store or add a second repository-wide state owner.
 
 ## Configuration
 

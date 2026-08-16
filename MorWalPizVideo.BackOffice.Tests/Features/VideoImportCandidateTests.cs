@@ -42,6 +42,38 @@ public sealed class VideoImportCandidateTests : IClassFixture<PaginatedCandidate
         Assert.Equal(new DateTime(2026, 1, 2), _factory.YTService.RequestedEndDateUtc);
         Assert.True(_factory.YTService.RequestedShowVideo);
     }
+
+    [Fact]
+    public async Task Candidate_discovery_returns_empty_for_reversed_date_range()
+    {
+        using var client = _factory.CreateClientWithPermissions("videos.import");
+
+        var response = await client.GetAsync(
+            "/api/Videos/import-candidates?startDate=2026-01-02&endDate=2026-01-01");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Candidate_discovery_can_select_shorts()
+    {
+        using var client = _factory.CreateClientWithPermissions("videos.import");
+
+        var response = await client.GetAsync(
+            "/api/Videos/import-candidates?startDate=2026-01-01&endDate=2026-01-02&showVideo=false");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(
+            new[] { "short-video" },
+            document.RootElement.EnumerateArray()
+                .Select(candidate => candidate.GetProperty("videoId").GetString())
+                .ToArray());
+    }
 }
 
 public sealed class PaginatedCandidateWebApplicationFactory : BackOfficeWebApplicationFactory
@@ -84,11 +116,14 @@ public sealed class PaginatedCandidateYTServiceMock : YTServiceMock
                 CreateVideo("boundary-video", channelId, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
                 CreateVideo("short-video", channelId, new DateTime(2026, 1, 1, 6, 0, 0, DateTimeKind.Utc)),
                 CreateVideo("after-end-video", channelId, new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc)),
-                CreateVideo("other-channel-video", "another-channel", new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
+                CreateVideo("other-channel-video", "another-channel", new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)),
+                CreateVideoWithInvalidId(channelId, new DateTime(2026, 1, 2, 1, 0, 0, DateTimeKind.Utc)),
+                CreateVideoWithMissingId(channelId, new DateTime(2026, 1, 2, 2, 0, 0, DateTimeKind.Utc))
             },
             new[]
             {
                 CreateVideo("older-page-video", channelId, new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)),
+                CreateVideo("boundary-video", channelId, new DateTime(2026, 1, 2, 23, 59, 59, DateTimeKind.Utc)),
                 CreateVideo("before-start-video", channelId, new DateTime(2025, 12, 31, 23, 59, 59, DateTimeKind.Utc))
             }
         };
@@ -96,9 +131,17 @@ public sealed class PaginatedCandidateYTServiceMock : YTServiceMock
         var candidates = pages
             .SelectMany(page => page)
             .Where(video => string.Equals(video.Snippet?.ChannelId, channelId, StringComparison.Ordinal))
+            .Where(video => video.Id is { Kind: "youtube#video", VideoId: not null and not "" })
             .Where(video => video.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date >= startDateUtc.Date)
             .Where(video => video.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date <= endDateUtc.Date)
-            .Where(video => !showVideo || video.Id.VideoId != "short-video")
+            .Where(video => showVideo
+                ? video.Id.VideoId != "short-video"
+                : video.Id.VideoId == "short-video")
+            .GroupBy(video => video.Id.VideoId, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderByDescending(video => video.Snippet?.PublishedAtDateTimeOffset)
+                .First())
+            .OrderByDescending(video => video.Snippet?.PublishedAtDateTimeOffset)
             .ToList();
 
         return Task.FromResult<IList<SearchResult>>(candidates);
@@ -112,6 +155,27 @@ public sealed class PaginatedCandidateYTServiceMock : YTServiceMock
             {
                 ChannelId = channelId,
                 Title = videoId,
+                PublishedAtDateTimeOffset = publishedAt
+            }
+        };
+
+    private static SearchResult CreateVideoWithInvalidId(string channelId, DateTime publishedAt)
+        => new()
+        {
+            Id = new ResourceId { Kind = "youtube#channel", VideoId = "not-a-video" },
+            Snippet = new SearchResultSnippet
+            {
+                ChannelId = channelId,
+                PublishedAtDateTimeOffset = publishedAt
+            }
+        };
+
+    private static SearchResult CreateVideoWithMissingId(string channelId, DateTime publishedAt)
+        => new()
+        {
+            Snippet = new SearchResultSnippet
+            {
+                ChannelId = channelId,
                 PublishedAtDateTimeOffset = publishedAt
             }
         };

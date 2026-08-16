@@ -9,6 +9,11 @@ import { requirePermissions } from './router/guards';
 import { permissions } from './authorization/permissions';
 import { authService } from './services/authService';
 import ForbiddenPage from './routes/forbidden/Component';
+import { useAppStore } from './state/appStore';
+
+interface FeatureStateResponse {
+  videoBulkImportEnabled: boolean;
+}
 
 export async function authLoader() {
   const session = await authService.validateSession();
@@ -22,7 +27,11 @@ export async function authLoader() {
     return permissionResult;
   }
 
-  const response = await get(endpoints.CHANNELS_ACCESSIBLE);
+  const [channelResponse, featureResponse] = await Promise.all([
+    get(endpoints.CHANNELS_ACCESSIBLE),
+    get('/api/features') as Promise<FeatureStateResponse>,
+  ]);
+  const response = channelResponse;
   const channels = requireChannelPayload<unknown>(response, 'Unable to load accessible channels');
   if (!Array.isArray(channels)) {
     throw new Response('Unable to load accessible channels', { status: 502 });
@@ -30,6 +39,14 @@ export async function authLoader() {
 
   const accessibleChannels = channels as Channel[];
   const selectedChannelId = selectFirstAccessibleChannel(accessibleChannels);
+  useAppStore.getState().hydrate({
+    user: authService.getUser(),
+    effectivePermissions: session.effectivePermissions,
+    featureFlags: { videoBulkImportEnabled: featureResponse.videoBulkImportEnabled },
+    accessibleChannels,
+    selectedChannelId,
+    sessionStatus: 'authenticated',
+  });
   return { session, channels: accessibleChannels, selectedChannelId };
 }
 

@@ -3,6 +3,7 @@ import { Navbar, Container, Button, Dropdown } from 'react-bootstrap';
 import { Menu, Bell, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { authService } from '../services/authService';
+import { useAppStore } from '../state/appStore';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) => {
   const navigate = useNavigate();
+  const user = useAppStore(state => state.user);
 
   const handleLogout = async () => {
     await authService.logout();
@@ -42,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) =>
             <Dropdown.Menu>
               <Dropdown.Header>
                 <small className="text-muted">Logged in as:</small><br />
-                <strong>{authService.getUser()?.username ?? 'Authenticated user'}</strong>
+                <strong>{user?.username ?? 'Authenticated user'}</strong>
               </Dropdown.Header>
               <Dropdown.Divider />
               <Dropdown.Item as={Link} to="/profile" role="menuitem">

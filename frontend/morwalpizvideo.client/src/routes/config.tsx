@@ -1,7 +1,6 @@
 import Root from "./layout/root";
 import ErrorPage from "../error-page";
 import ErrorPageRoot from "../error-page-root";
-import Bio from "./bio/Component";
 import Matches from "./matches/Component";
 import Pages from "./pages/Component";
 import Links from "./links/Component";
@@ -12,7 +11,6 @@ import SponsorVideo from "./system/sponsors-video";
 import Index from "./home/Component";
 import Compilations from "./compilations/Component";
 import CustomForm from "./customForms/Component";
-import bioLoader from "./bio/loader";
 import matchLoader from "./matches/loader";
 import pageLoader from "./pages/loader";
 import accessoryLoader from "./accessories/loader";
@@ -42,12 +40,6 @@ export const routes: RouteObject[] = [
         path: "/channel-news/:idOrSlug",
         loader: channelNewsLoader,
         element: <ChannelNews />,
-        errorElement: <ErrorPageRoot />,
-    },
-    {
-        path: "bio",
-        loader: bioLoader,
-        element: <Bio />,
         errorElement: <ErrorPageRoot />,
     },
     {

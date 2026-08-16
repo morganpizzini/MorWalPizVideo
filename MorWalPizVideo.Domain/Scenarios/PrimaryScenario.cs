@@ -154,7 +154,6 @@ public class PrimaryScenario : BaseScenario
         Set("publishSchedules", Array.Empty<PublishSchedule>());
         Set("calendarEvents", Array.Empty<CalendarEvent>());
         Set("compilations", Array.Empty<Compilation>());
-        Set("bioLinks", Array.Empty<BioLink>());
         Set("configurations", Array.Empty<MorWalPizConfiguration>());
         Set("customForms", Array.Empty<CustomForm>());
         Set("customFormResponses", Array.Empty<CustomFormResponseDocument>());

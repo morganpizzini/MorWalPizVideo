@@ -5,9 +5,6 @@
 
 const baseEndpoint = 'api';
 
-// Bio Links
-const BIOLINKS = `${baseEndpoint}/biolinks`;
-
 // Calendar Events
 const CALENDAREVENTS = `${baseEndpoint}/calendarEvents`;
 
@@ -49,7 +46,6 @@ const APIKEYS_TOGGLE = `${APIKEYS}/{id}/toggle`;
 const APIKEYS_REGENERATE = `${APIKEYS}/{id}/regenerate`;
 
 export default {
-    BIOLINKS,
     CALENDAREVENTS,
     MATCHES,
     MATCHES_DETAIL,

@@ -5,8 +5,8 @@ import type { Match } from '@morwalpizvideo/models';
 import type { Channel } from '@morwalpizvideo/models';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
 import { ComposeUrl, Delete, endpoints } from '@morwalpizvideo/services';
-import { authService } from '../services/authService';
 import { hasPermission, permissions } from '../authorization/permissions';
+import { useAppStore } from '../state/appStore';
 
 interface VideoListProps {
   matches: Match[];
@@ -42,7 +42,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<RefreshingState>({});
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const effectivePermissions = authService.getPermissions();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canEdit = hasPermission(effectivePermissions, [permissions.videos.update, permissions.videos.manage]);
   const canPublish = hasPermission(effectivePermissions, [permissions.videos.publish, permissions.videos.manage]);
   const canDelete = hasPermission(effectivePermissions, [permissions.videos.delete, permissions.videos.manage]);

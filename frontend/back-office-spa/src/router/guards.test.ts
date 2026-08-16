@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { redirect } from 'react-router';
 import { authLoader } from '../router';
 import { authService } from '../services/authService';
+import * as apiServices from '@morwalpizvideo/services';
+import { useAppStore } from '../state/appStore';
 import { getRoutePermissions, permissions } from '../authorization/permissions';
 import { requireBackOfficeAccess, requirePermissions, withPermission } from './guards';
 
@@ -9,6 +11,28 @@ describe('BackOffice route guards', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    useAppStore.getState().reset();
+  });
+
+  it('hydrates the app store once with session, feature, and channel state', async () => {
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'user-1', username: 'Ada', email: 'ada@example.test' }));
+    vi.spyOn(authService, 'validateSession').mockResolvedValue({
+      userId: 'user-1',
+      effectivePermissions: [permissions.backoffice.access],
+    });
+    vi.spyOn(apiServices, 'get')
+      .mockResolvedValueOnce([{ channelId: 'channel-1', channelName: 'Main', yTChannelId: 'yt-1' }] as never)
+      .mockResolvedValueOnce({ videoBulkImportEnabled: false } as never);
+
+    await expect(authLoader()).resolves.toMatchObject({ selectedChannelId: 'channel-1' });
+
+    expect(useAppStore.getState()).toMatchObject({
+      user: { username: 'Ada' },
+      effectivePermissions: [permissions.backoffice.access],
+      sessionStatus: 'authenticated',
+      featureFlags: { videoBulkImportEnabled: false },
+      selectedChannelId: 'channel-1',
+    });
   });
 
   it('allows an authenticated session with the canonical permission', async () => {

@@ -67,6 +67,23 @@ describe('ChannelContext', () => {
     expect(getSelectedChannelId()).toBe('channel-two');
     expect(revalidate).toHaveBeenCalledTimes(1);
   });
+
+  it('preserves the current selection when the accessible channel list rerenders', () => {
+    const view = render(
+      <ChannelProvider channels={channels}>
+        <SelectionProbe />
+      </ChannelProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+    view.rerender(
+      <ChannelProvider channels={[...channels]}>
+        <SelectionProbe />
+      </ChannelProvider>
+    );
+
+    expect(screen.getByTestId('selected-channel')).toHaveTextContent('channel-two');
+  });
 });
 
 describe('shared channel API client', () => {

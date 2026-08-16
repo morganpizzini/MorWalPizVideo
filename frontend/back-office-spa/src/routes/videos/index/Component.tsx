@@ -4,12 +4,13 @@ import PageHeader from '@components/PageHeader';
 import VideoList from '@components/VideoList';
 import { Match } from '@morwalpizvideo/models';
 import { Download, Languages } from 'lucide-react';
-import { authService } from '../../../services/authService';
 import { hasPermission, permissions } from '../../../authorization/permissions';
+import { useAppStore } from '../../../state/appStore';
 
 const Component: React.FC = () => {
   const { matches, channels } = useLoaderData() as { matches: Match[]; channels: import('@morwalpizvideo/models').Channel[] };
-  const effectivePermissions = authService.getPermissions();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
+  const bulkImportEnabled = useAppStore(state => state.featureFlags.videoBulkImportEnabled);
   const canImport = hasPermission(effectivePermissions, [permissions.videos.import, permissions.videos.manage]);
   const canTranslate = hasPermission(effectivePermissions, [permissions.videos.translate, permissions.videos.manage]);
 
@@ -23,7 +24,7 @@ const Component: React.FC = () => {
               <Languages size={17} aria-hidden="true" /> Translate
             </Link>
           ) : null}
-          {canImport ? (
+          {canImport && bulkImportEnabled ? (
             <Link to="/videos/import" className="btn btn-primary">
               <Download size={17} aria-hidden="true" /> Import
             </Link>

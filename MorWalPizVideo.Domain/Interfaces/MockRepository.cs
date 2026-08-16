@@ -176,11 +176,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => (await GetItemsAsync(x => x.Url == url)).FirstOrDefault();
     }
 
-    public class BioLinkMockRepository : BaseMockRepository<BioLink>, IBioLinkRepository
-    {
-        public BioLinkMockRepository(IMockScenario scenario) : base(scenario, "bioLinks") { }
-    }
-
     public class SponsorApplyMockRepository : BaseMockRepository<SponsorApply>, ISponsorApplyRepository
     {
         public SponsorApplyMockRepository(IMockScenario scenario) : base(scenario, "sponsorApplies") { }

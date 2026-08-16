@@ -86,11 +86,20 @@ namespace MorWalPizVideo.Server.Services
         }
         private async Task<IList<Google.Apis.YouTube.v3.Data.Video>> GetYouTubeVideo(IList<string> videoIds, string parameters = "snippet,contentDetails")
         {
-            var request = _youtubeAuthService.Videos.List(parameters);
-            request.Id = string.Join(",", videoIds);
+            var videos = new List<Google.Apis.YouTube.v3.Data.Video>();
+            foreach (var videoIdBatch in videoIds
+                         .Where(videoId => !string.IsNullOrWhiteSpace(videoId))
+                         .Distinct(StringComparer.Ordinal)
+                         .Chunk(50))
+            {
+                var request = _youtubeAuthService.Videos.List(parameters);
+                request.Id = string.Join(",", videoIdBatch);
 
-            var response = await request.ExecuteAsync();
-            return response.Items;
+                var response = await request.ExecuteAsync();
+                videos.AddRange(response.Items ?? []);
+            }
+
+            return videos;
         }
         public async Task TranslateYoutubeVideo(IList<string> videoIds)
         {
@@ -216,6 +225,11 @@ namespace MorWalPizVideo.Server.Services
         {
             var startDate = DateTime.SpecifyKind(startDateUtc.Date, DateTimeKind.Utc);
             var endDate = DateTime.SpecifyKind(endDateUtc.Date, DateTimeKind.Utc);
+            if (endDate < startDate)
+            {
+                return [];
+            }
+
             var candidates = new List<SearchResult>();
             string? pageToken = null;
 
@@ -232,16 +246,22 @@ namespace MorWalPizVideo.Server.Services
                 var pageItems = searchResponse.Items ?? [];
                 candidates.AddRange(pageItems.Where(item =>
                     string.Equals(item.Snippet?.ChannelId, channelId, StringComparison.Ordinal) &&
+                    item.Id?.Kind == "youtube#video" &&
+                    !string.IsNullOrWhiteSpace(item.Id.VideoId) &&
                     item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date >= startDate &&
                     item.Snippet.PublishedAtDateTimeOffset?.UtcDateTime.Date <= endDate));
 
                 pageToken = searchResponse.NextPageToken;
-                if (pageItems.Any(item => item.Snippet?.PublishedAtDateTimeOffset?.UtcDateTime.Date < startDate))
-                {
-                    break;
-                }
             }
             while (!string.IsNullOrEmpty(pageToken));
+
+            candidates = candidates
+                .GroupBy(item => item.Id.VideoId, StringComparer.Ordinal)
+                .Select(group => group
+                    .OrderByDescending(item => item.Snippet?.PublishedAtDateTimeOffset)
+                    .First())
+                .OrderByDescending(item => item.Snippet?.PublishedAtDateTimeOffset)
+                .ToList();
 
             var videoIds = candidates.Select(item => item.Id.VideoId).ToList();
             if (videoIds.Count == 0)
@@ -251,9 +271,10 @@ namespace MorWalPizVideo.Server.Services
 
             var items = await GetYouTubeVideo(videoIds, "contentDetails");
             var resultVideoIds = items.Where(video =>
-                    showVideo
+                    video.ContentDetails?.Duration != null &&
+                    (showVideo
                         ? XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds >= 120
-                        : XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120)
+                        : XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120))
                 .Select(video => video.Id)
                 .ToHashSet(StringComparer.Ordinal);
 

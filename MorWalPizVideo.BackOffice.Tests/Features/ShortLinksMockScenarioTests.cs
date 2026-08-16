@@ -5,11 +5,25 @@ using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
 public class ShortLinksMockScenarioTests
 {
+    [Fact]
+    public async Task Ensure_video_short_link_matches_a_non_ObjectId_YouTube_id()
+    {
+        await using var factory = new BackOfficeWebApplicationFactory();
+        var linksService = factory.Services.GetRequiredService<ILinksService>();
+
+        var shortLink = await linksService.EnsureVideoShortLinkAsync(PrimaryScenario.VideoId, PrimaryScenario.ChannelId);
+
+        Assert.NotNull(shortLink);
+        Assert.Equal(PrimaryScenario.VideoId, shortLink.Target);
+        Assert.Equal(PrimaryScenario.MatchId, shortLink.ContentId);
+    }
+
     [Fact]
     public async Task Standalone_link_resolves_from_the_code_initialized_scenario()
     {

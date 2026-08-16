@@ -21,11 +21,11 @@ public class CrossApiServiceContractTests
     {
         var (sut, handler) = BuildSut();
 
-        await sut.PurgeCache("tag-biolinks");
+        await sut.PurgeCache("tag-calendarevents");
 
         Assert.NotNull(handler.LastRequest);
         Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
-        Assert.Equal("https://example.test/api/cache/purge?k=tag-biolinks", handler.LastRequest.RequestUri!.ToString());
+        Assert.Equal("https://example.test/api/cache/purge?k=tag-calendarevents", handler.LastRequest.RequestUri!.ToString());
     }
 
     [Fact]

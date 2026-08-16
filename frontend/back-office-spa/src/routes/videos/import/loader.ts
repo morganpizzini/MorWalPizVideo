@@ -1,5 +1,6 @@
 import { get, endpoints } from '@morwalpizvideo/services';
 import type { Category } from '@morwalpizvideo/models';
+import { useAppStore } from '../../../state/appStore';
 
 export interface ImportTarget {
   contentId: string;
@@ -8,9 +9,13 @@ export interface ImportTarget {
 }
 
 export default async function loader(): Promise<{ categories: Category[]; targets: ImportTarget[] }> {
+  const bulkImportEnabled = useAppStore.getState().featureFlags.videoBulkImportEnabled;
+
   const [categories, targets] = await Promise.all([
     get(endpoints.CATEGORIES) as Promise<Category[]>,
-    get('/api/Videos/import-targets') as Promise<ImportTarget[]>,
+    bulkImportEnabled
+      ? get('/api/Videos/import-targets') as Promise<ImportTarget[]>
+      : Promise.resolve([]),
   ]);
   return { categories, targets };
 }

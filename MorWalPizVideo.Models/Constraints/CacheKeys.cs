@@ -3,7 +3,6 @@ namespace MorWalPizVideo.Models.Constraints
 {
     public static class CacheKeys
     {
-        public const string BioLinks = "biolinks";
         public const string ShortLinks = "shortlinks";
         public const string QuickLinks = "quicklinks";
         public const string Matches = "matches";

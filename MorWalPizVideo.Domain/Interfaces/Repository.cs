@@ -273,12 +273,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
-    public class BioLinkRepository : BaseRepository<BioLink>, IBioLinkRepository
-    {
-        public BioLinkRepository(IMongoDatabase database) : base(database, DbCollections.BioLinks)
-        {
-        }
-    }
     public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
     {
         public CategoryRepository(IMongoDatabase database) : base(database, DbCollections.Categories)

@@ -44,7 +44,7 @@ Implemented (2026-08-02):
 
 - Shared `ApplicationControllerBase` (MvcHelpers) no longer applies `[Authorize]`; each host owns its default.
 - BackOffice: `AddAuthorization` fallback policy requires an authenticated JWT/cookie principal by default; `AuthController` is explicitly `[AllowAnonymous]`.
-- ServerAPI: public content controllers (`BioLinksController`, `CalendarEventsController`, `CompetitionsController`, `CompilationsController`, `ConfigurationController`, `CustomFormsController`, `MatchesController`, `PagesController`, `ProductsController`, `SponsorsController`) are explicitly `[AllowAnonymous]`.
+- ServerAPI: public content controllers (`CalendarEventsController`, `CompetitionsController`, `CompilationsController`, `ConfigurationController`, `CustomFormsController`, `MatchesController`, `PagesController`, `ProductsController`, `SponsorsController`) are explicitly `[AllowAnonymous]`.
 - Internal cache operations: new `InternalService` shared-secret scheme (`MorWalPizVideo.MvcHelpers.Authentication`) protects `CacheController`; `CrossApiService` attaches the credential on outbound calls.
 - ShortLinks: `FakeAuthenticationHandler` registration is now gated by `Development` + `EnableDev` (previously unconditional); redirect endpoint remains anonymous.
 - Authorization regression tests added in `MorWalPizVideo.BackOffice.Tests/Features/AuthorizationPolicyTests.cs`.

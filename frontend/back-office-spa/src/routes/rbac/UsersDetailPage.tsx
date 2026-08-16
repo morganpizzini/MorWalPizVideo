@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ComposeUrl, Delete, endpoints, get, put } from '@morwalpizvideo/services';
 import type { Channel } from '@morwalpizvideo/models';
 import { hasPermission, permissions } from '../../authorization/permissions';
-import { authService } from '../../services/authService';
+import { useAppStore } from '../../state/appStore';
 import { parsePermissions, type RbacGroup, type RbacUserSummary } from './types';
 
 export default function RbacUserDetailPage() {
@@ -18,7 +18,7 @@ export default function RbacUserDetailPage() {
   const [channelIds, setChannelIds] = useState<string[]>([]);
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
-  const effectivePermissions = authService.getPermissions();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canUpdateUsers = hasPermission(effectivePermissions, [permissions.users.update]);
   const canDeleteUsers = hasPermission(effectivePermissions, [permissions.users.delete]);
   const canManagePermissions = hasPermission(effectivePermissions, [permissions.users.permissionsManage]);
