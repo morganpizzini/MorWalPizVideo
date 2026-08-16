@@ -11,7 +11,7 @@ public class TestScenarioContext
     public string? CreatedCompilationId { get; set; }
     public string? ExistingCompilationId { get; set; }
     public string? CreatedShortLinkId { get; set; }
-    public string? EmbeddedShortLinkId { get; set; }
+    public string? SelectedShortLinkId { get; set; }
     public string? TestMatchId { get; set; }
     public string? TestChannelId { get; set; }
     public string? CreatedProductId { get; set; }

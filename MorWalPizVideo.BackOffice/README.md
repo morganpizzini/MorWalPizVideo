@@ -359,7 +359,7 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 ### 4.1 Core video graph
 | Model | Role |
 | ----- | ---- |
-| [`YouTubeContent`](../MorWalPizVideo.Models/Models/YouTubeContent.cs) | **Aggregate root.** A collection (root video + sub-videos). Fields: `ContentId`, `Title`, `Description`, `Url`, `ThumbnailVideoId` (id of the video used as poster), `VideoRefs[]`, `Categories[]`, `ContentType` (enum `YoutubeContentType`), `YouTubeVideoLinks[]?`, `ShortLinks[]`, `IsPrivate` (gates access for Shooting ITA). |
+| [`YouTubeContent`](../MorWalPizVideo.Models/Models/YouTubeContent.cs) | **Aggregate root.** A collection (root video + sub-videos). Fields: `ContentId`, `Title`, `Description`, `Url`, `ThumbnailVideoId` (id of the video used as poster), `VideoRefs[]`, `Categories[]`, `ContentType` (enum `YoutubeContentType`), `YouTubeVideoLinks[]?`, legacy `ShortLinks[]` (archival only), `IsPrivate` (gates access for Shooting ITA). Canonical shortlinks are standalone records. |
 | [`Video`](../MorWalPizVideo.Models/Models/Video.cs) | Full video metadata: `YoutubeId`, `Title`, `Description`, view/like/comment counters, `PublishedAt`, `Thumbnail`, `Duration`, `Categories[]`, `IsPrivate`. |
 | [`VideoRef`](../MorWalPizVideo.Models/Models/VideoRef.cs) | Lightweight reference embedded inside a `YouTubeContent.VideoRefs[]` — avoids duplicating a full `Video`. |
 | [`VideoContent`](../MorWalPizVideo.Models/Models/VideoContent.cs) | Projection/DTO used for cross-API responses. |
@@ -432,7 +432,7 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 ### 4.9 Channels & creator tracking
 | Model | Role |
 | ----- | ---- |
-| [`YTChannel`](../MorWalPizVideo.Models/Models/YTChannel.cs) | Tracked YouTube channel with `Videos[]` + `ShortLinks[]`. |
+| [`YTChannel`](../MorWalPizVideo.Models/Models/YTChannel.cs) | Tracked YouTube channel with `Videos[]` and legacy `ShortLinks[]` (archival only). Canonical shortlinks are standalone records. |
 | `YouTubeVideo` (same file) | Snapshot used by scraper: `VideoId`, `Title`, `LastCommentDate`, `VideoIdeas[]`. |
 | `VideoIdea` (same file) | AI-extracted idea from comments: `Idea`, `CommentExcerpt`, `CreationDate`, `Sentiment`. |
 | [`Competition` enums](../MorWalPizVideo.Models/Models/Competition.cs) | `CompetitionType`, `CompetitionStatus`. |

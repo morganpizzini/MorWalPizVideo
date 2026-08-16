@@ -12,7 +12,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public class ShortLinksMockScenarioTests
 {
     [Fact]
-    public async Task Ensure_video_short_link_matches_a_non_ObjectId_YouTube_id()
+    public async Task Ensure_video_short_link_creates_a_canonical_standalone_record()
     {
         await using var factory = new BackOfficeWebApplicationFactory();
         var linksService = factory.Services.GetRequiredService<ILinksService>();
@@ -22,6 +22,13 @@ public class ShortLinksMockScenarioTests
         Assert.NotNull(shortLink);
         Assert.Equal(PrimaryScenario.VideoId, shortLink.Target);
         Assert.Equal(PrimaryScenario.MatchId, shortLink.ContentId);
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        var persistedLink = (await shortLinkRepository.GetItemsAsync())
+            .Single(link => link.Id == shortLink!.Id);
+        Assert.Equal(LinkType.YouTubeVideo, persistedLink.LinkType);
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var match = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        Assert.Empty(match.ShortLinks);
     }
 
     [Fact]
@@ -44,34 +51,26 @@ public class ShortLinksMockScenarioTests
     }
 
     [Fact]
-    public async Task Embedded_video_link_is_not_resolvable()
-    {
-        await using var factory = new ShortLinksWebApplicationFactory();
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        var response = await client.GetAsync($"/{PrimaryScenario.MatchShortLinkCode}");
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var match = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        Assert.Equal(0, match.ShortLinks.Single().ClicksCount);
-    }
-
-    [Fact]
-    public async Task Embedded_video_link_outside_configured_channel_is_not_resolvable()
+    public async Task Canonical_video_link_outside_configured_channel_is_not_resolvable()
     {
         await using var factory = new ShortLinksWebApplicationFactory();
         var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
         var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        const string otherMatchId = "200000000000000000000099";
         await matchRepository.AddItemAsync(source with
         {
-            Id = "200000000000000000000099",
+            Id = otherMatchId,
             OwnerChannelId = "other-channel",
             VideoRefs = source.VideoRefs.Select(video => video with { ChannelIds = ["other-channel"] }).ToArray(),
-            ShortLinks = [new ShortLink("other1", PrimaryScenario.VideoId, [])]
+            ShortLinks = []
+        });
+        await shortLinkRepository.AddItemAsync(new ShortLink("other1", PrimaryScenario.VideoId, [])
+        {
+            Id = "400000000000000000000099",
+            LinkType = LinkType.YouTubeVideo,
+            ContentId = otherMatchId,
+            ManagementChannelId = "other-channel"
         });
 
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions

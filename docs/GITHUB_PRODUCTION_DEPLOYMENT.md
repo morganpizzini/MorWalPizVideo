@@ -56,6 +56,8 @@ Add the following variables to the `production` environment:
 | `BACKOFFICE_API_APP_NAME` | Azure Web App name for BackOffice API | `morwalpiz-backoffice-api` |
 | `SERVERAPI_APP_NAME` | Azure Web App name for ServerAPI | `morwalpiz-serverapi` |
 
+The shop deployment workflow uses the same `production` environment contract as the other container workflows. It authenticates with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`, logs in to ACR with `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`, and uses `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER` for image tags and deployment. It does not use the legacy `AZURE_CREDENTIALS` or `ACR_NAME` values.
+
 ## Azure Resource Setup
 
 ### 1. Create Resource Group

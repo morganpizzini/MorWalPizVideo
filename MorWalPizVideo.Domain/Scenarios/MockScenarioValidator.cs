@@ -77,9 +77,7 @@ internal static class MockScenarioValidator
                 errors.Add($"Channel '{channel.ChannelId}' references missing video '{video.VideoId}'.");
         }
 
-        var shortLinks = scenario.Read<ShortLink>("shortLinks")
-            .Concat(matches.SelectMany(match => match.ShortLinks ?? []))
-            .Concat(channels.SelectMany(channel => channel.ShortLinks ?? []));
+        var shortLinks = scenario.Read<ShortLink>("shortLinks");
         foreach (var duplicate in shortLinks.Where(link => !string.IsNullOrWhiteSpace(link.Code))
                      .GroupBy(link => link.Code, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
         {

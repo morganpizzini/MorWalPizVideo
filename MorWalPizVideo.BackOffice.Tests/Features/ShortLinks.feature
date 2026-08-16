@@ -32,55 +32,26 @@ Scenario: Delete a short link
     When I delete the short link
     Then the response should be No Content
 
-Scenario: Fetch includes short links from matches
-    When I request all short links
-    Then the response should be successful
-    And the response should contain short links from matches
-
 Scenario: Fetch includes short links from channels
     When I request all short links
     Then the response should be successful
     And the response should contain short links from channels
 
-Scenario: Get embedded short link from match by code
-    Given a match with embedded short link exists
-    When I request the short link by its code
-    Then the response should be successful
-    And the response should contain the short link details
-
-Scenario: Get embedded short link from match by code is case-insensitive
-    Given a match with embedded short link exists
-    When I request the short link by its code with different casing
-    Then the response should be successful
-    And the response should contain the short link details
-
 Scenario: Reject unsafe destination targets for generic short links
     When I create a short link with target "javascript:alert(1)" and link type "Other"
     Then the response should be a bad request
 
-Scenario: Get embedded short link from channel by code
-    Given a channel with embedded short link exists
+Scenario: Get standalone short link from channel by code
+    Given a standalone channel short link exists
     When I request the short link by its code
     Then the response should be successful
     And the response should contain the short link details
 
-Scenario: Update embedded short link in match
-    Given a match with embedded short link exists
-    When I update the embedded short link
-    Then the response should be successful
-    And the embedded short link should be updated in the match
-
-Scenario: Delete embedded short link from match
-    Given a match with embedded short link exists
-    When I delete the embedded short link by code
+Scenario: Delete standalone short link from channel
+    Given a standalone channel short link exists
+    When I delete the standalone short link by code
     Then the response should be No Content
-    And the short link should be removed from the match
-
-Scenario: Delete embedded short link from channel
-    Given a channel with embedded short link exists
-    When I delete the embedded short link by code
-    Then the response should be No Content
-    And the short link should be removed from the channel
+    And the standalone short link should be removed from the channel
 
 Scenario: Create short link for match sets correct LinkType
     Given a match exists for short link creation

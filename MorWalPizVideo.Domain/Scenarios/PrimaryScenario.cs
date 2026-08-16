@@ -17,7 +17,6 @@ public class PrimaryScenario : BaseScenario
     public const string VideoId = "scenario-video-1";
     public const string ChannelId = "UCQRMDE-gxoD43w2q-QCVmIA";
     public const string StandaloneShortLinkCode = "test1";
-    public const string MatchShortLinkCode = "match1";
     public const string ChannelShortLinkCode = "channel1";
     public const string AdminGroupId = "700000000000000000000001";
     public const string ContributorGroupId = "700000000000000000000002";
@@ -37,11 +36,6 @@ public class PrimaryScenario : BaseScenario
         {
             CreationDateTime = CreatedAt
         };
-        var matchShortLink = CreateShortLink(
-            "400000000000000000000002",
-            MatchShortLinkCode,
-            VideoId,
-            LinkType.YouTubeVideo);
         var channelShortLink = CreateShortLink(
             "400000000000000000000003",
             ChannelShortLinkCode,
@@ -67,8 +61,7 @@ public class PrimaryScenario : BaseScenario
                 Id = MatchId,
                 CreationDateTime = CreatedAt,
                 CreatorUserId = "test-user-id",
-                OwnerChannelId = ChannelId,
-                ShortLinks = [matchShortLink]
+                OwnerChannelId = ChannelId
             }
         ]);
         Set("ytchannels",

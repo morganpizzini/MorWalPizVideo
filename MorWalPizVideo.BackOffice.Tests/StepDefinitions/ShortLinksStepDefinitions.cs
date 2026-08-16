@@ -181,21 +181,8 @@ public class ShortLinksStepDefinitions
         hasYouTubeChannelLinks.Should().BeTrue("Response should contain short links from channels with LinkType.YouTubeChannel");
     }
 
-    [Given(@"a match with embedded short link exists")]
-    public async Task GivenAMatchWithEmbeddedShortLinkExists()
-    {
-        var match = (await _matchRepository.GetItemsAsync(x => x.ShortLinks.Length > 0)).FirstOrDefault();
-        if (match == null)
-        {
-            throw new Exception("No match with embedded short links found in the repository. Ensure mock data is seeded correctly.");
-        }
-        _context.EmbeddedShortLinkId = match.ShortLinks[0].Code;
-        _context.TestMatchId = match.Id;
-        _context.AssignSourceChannelId = match.VideoRefs.First(video => video.YoutubeId == match.ShortLinks[0].Target).YoutubeId;
-    }
-
-    [Given(@"a channel with embedded short link exists")]
-    public async Task GivenAChannelWithEmbeddedShortLinkExists()
+    [Given(@"a standalone channel short link exists")]
+    public async Task GivenAStandaloneChannelShortLinkExists()
     {
         var result = (await _shortLinkRepository.GetItemsAsync(x => x.LinkType == LinkType.YouTubeChannel)).FirstOrDefault();
 
@@ -204,7 +191,7 @@ public class ShortLinksStepDefinitions
             throw new Exception("No standalone channel short links found in the repository. Ensure mock data is seeded correctly.");
         }
 
-        _context.EmbeddedShortLinkId = result.Code;
+        _context.SelectedShortLinkId = result.Code;
     }
 
     [Given(@"a match exists for short link creation")]
@@ -237,41 +224,23 @@ public class ShortLinksStepDefinitions
     [When(@"I request the short link by its code")]
     public async Task WhenIRequestTheShortLinkByItsCode()
     {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        _context.Response = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
+        _context.SelectedShortLinkId.Should().NotBeNullOrEmpty();
+        _context.Response = await _client.GetAsync($"/api/ShortLinks/{_context.SelectedShortLinkId}");
     }
 
     [When(@"I request the short link by its code with different casing")]
     public async Task WhenIRequestTheShortLinkByItsCodeWithDifferentCasing()
     {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        var upperCasedCode = _context.EmbeddedShortLinkId!.ToUpperInvariant();
+        _context.SelectedShortLinkId.Should().NotBeNullOrEmpty();
+        var upperCasedCode = _context.SelectedShortLinkId!.ToUpperInvariant();
         _context.Response = await _client.GetAsync($"/api/ShortLinks/{upperCasedCode}");
     }
 
-    [When(@"I update the embedded short link")]
-    public async Task WhenIUpdateTheEmbeddedShortLink()
+    [When(@"I delete the standalone short link by code")]
+    public async Task WhenIDeleteTheStandaloneShortLinkByCode()
     {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        _context.TestMatchId.Should().NotBeNullOrEmpty();
-
-        var updateRequest = new
-        {
-            Target = _context.AssignSourceChannelId,
-            LinkType = 0, // Keep as YouTubeVideo
-            QueryLinkIds = Array.Empty<string>()
-        };
-
-        _context.Response = await _client.PutAsJsonAsync(
-            $"/api/ShortLinks/{_context.EmbeddedShortLinkId}",
-            updateRequest);
-    }
-
-    [When(@"I delete the embedded short link by code")]
-    public async Task WhenIDeleteTheEmbeddedShortLinkByCode()
-    {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-        _context.Response = await _client.DeleteAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
+        _context.SelectedShortLinkId.Should().NotBeNullOrEmpty();
+        _context.Response = await _client.DeleteAsync($"/api/ShortLinks/{_context.SelectedShortLinkId}");
     }
 
     [When(@"I create a short link for the match")]
@@ -318,34 +287,12 @@ public class ShortLinksStepDefinitions
         }
     }
 
-    [Then(@"the embedded short link should be updated in the match")]
-    public async Task ThenTheEmbeddedShortLinkShouldBeUpdatedInTheMatch()
+    [Then(@"the standalone short link should be removed from the channel")]
+    public async Task ThenTheStandaloneShortLinkShouldBeRemovedFromTheChannel()
     {
-        _context.Response.Should().NotBeNull();
-        _context.Response!.StatusCode.Should().Be(HttpStatusCode.OK);
+        _context.SelectedShortLinkId.Should().NotBeNullOrEmpty();
 
-        // Verify the update by fetching the short link again
-        var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
-        verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Then(@"the short link should be removed from the match")]
-    public async Task ThenTheShortLinkShouldBeRemovedFromTheMatch()
-    {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-
-        // Verify deletion by trying to fetch the short link again
-        var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
-        verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Then(@"the short link should be removed from the channel")]
-    public async Task ThenTheShortLinkShouldBeRemovedFromTheChannel()
-    {
-        _context.EmbeddedShortLinkId.Should().NotBeNullOrEmpty();
-
-        // Verify deletion by trying to fetch the short link again
-        var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.EmbeddedShortLinkId}");
+        var verifyResponse = await _client.GetAsync($"/api/ShortLinks/{_context.SelectedShortLinkId}");
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 

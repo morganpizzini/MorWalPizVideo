@@ -38,33 +38,6 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("channelLogoUrl")]
         public string ChannelLogoUrl { get; init; } = string.Empty;
         
-        // Add a shortlink to the collection
-        public YTChannel AddShortLink(ShortLink shortLink)
-        {
-            var newShortLinks = ShortLinks.Append(shortLink).ToArray();
-            return this with { ShortLinks = newShortLinks };
-        }
-        
-        // Remove a shortlink from the collection
-        public YTChannel RemoveShortLink(string code)
-        {
-            var newShortLinks = ShortLinks.Where(sl => !sl.MatchesCode(code)).ToArray();
-            return this with { ShortLinks = newShortLinks };
-        }
-        
-        // Update a shortlink in the collection
-        public YTChannel UpdateShortLink(string code, ShortLink updatedShortLink)
-        {
-            var newShortLinks = ShortLinks.Select(sl => 
-                sl.MatchesCode(code) ? updatedShortLink : sl).ToArray();
-            return this with { ShortLinks = newShortLinks };
-        }
-        
-        // Get a shortlink by code
-        public ShortLink? GetShortLink(string code)
-        {
-            return ShortLinks.FirstOrDefault(sl => sl.MatchesCode(code));
-        }
     }
 
     [BsonIgnoreExtraElements]

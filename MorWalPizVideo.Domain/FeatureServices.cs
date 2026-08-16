@@ -149,8 +149,7 @@ public sealed class ContentService(
         {
             var linksForMatch = canonicalLinks.Where(link => link.ContentId == match.Id &&
                 match.VideoRefs.Any(video => video.YoutubeId == link.Target)).ToList();
-            var legacyLinks = match.ShortLinks.Where(link => link.LinkType != LinkType.YouTubeVideo);
-            return match with { ShortLinks = [.. legacyLinks, .. linksForMatch] };
+            return match with { ShortLinks = [.. linksForMatch] };
         }).ToList();
     }
 
@@ -795,8 +794,7 @@ public interface ILinksService
 public sealed class LinksService(
     IShortLinkRepository shortLinkRepository,
     IQueryLinkRepository queryLinkRepository,
-    IYouTubeContentRepository contentRepository,
-    IYTChannelRepository channelRepository) : ILinksService
+    IYouTubeContentRepository contentRepository) : ILinksService
 {
     public Task<IList<ShortLink>> GetShortLinksAsync() => shortLinkRepository.GetItemsAsync();
 
@@ -825,10 +823,7 @@ public sealed class LinksService(
                 .Where(link => link is not null)
                 .Cast<ShortLink>()
                 .ToArray();
-            var nonYouTubeLinks = match.ShortLinks
-                .Where(link => link.LinkType != LinkType.YouTubeVideo)
-                .ToArray();
-            return match with { ShortLinks = canonical.Concat(nonYouTubeLinks).ToArray() };
+            return match with { ShortLinks = canonical };
         }).ToList();
     }
 
@@ -867,14 +862,11 @@ public sealed class LinksService(
         var canonical = await GetCanonicalVideoShortLinkAsync(match.Id, videoId);
         if (canonical is not null)
         {
-            await RemoveEmbeddedYouTubeLinksAsync(match);
             return canonical;
         }
 
         var occupiedCodes = (await shortLinkRepository.GetItemsAsync())
             .Select(link => link.NormalizedCode)
-            .Concat((await contentRepository.GetItemsAsync()).SelectMany(content => content.ShortLinks).Select(link => link.NormalizedCode))
-            .Concat((await channelRepository.GetItemsAsync()).SelectMany(channel => channel.ShortLinks).Select(link => link.NormalizedCode))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var attempt = 0; attempt < 5; attempt++)
@@ -892,21 +884,10 @@ public sealed class LinksService(
                 ManagementChannelId = managementChannelId
             };
             var persistedLink = await shortLinkRepository.AddItemAsync(shortLink);
-            await RemoveEmbeddedYouTubeLinksAsync(match);
             return persistedLink;
         }
 
         throw new InvalidOperationException("Unable to allocate a unique video shortlink code.");
-    }
-
-    private Task RemoveEmbeddedYouTubeLinksAsync(YouTubeContent match)
-    {
-        var remainingLinks = match.ShortLinks
-            .Where(link => link.LinkType != LinkType.YouTubeVideo)
-            .ToArray();
-        return remainingLinks.Length == match.ShortLinks.Length
-            ? Task.CompletedTask
-            : contentRepository.UpdateItemAsync(match with { ShortLinks = remainingLinks });
     }
 
     private static string CreateVideoCode(string videoId, int attempt, ISet<string> occupiedCodes)
@@ -931,14 +912,7 @@ public sealed class LinksService(
             return false;
         }
 
-        if ((await contentRepository.GetItemsAsync(match =>
-            match.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Count > 0)
-        {
-            return false;
-        }
-
-        return !(await channelRepository.GetItemsAsync(channel =>
-            channel.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Any();
+        return true;
     }
 
     public async Task UpdateShortLinkAsync(ShortLink entity)
