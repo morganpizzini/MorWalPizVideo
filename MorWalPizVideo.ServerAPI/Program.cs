@@ -88,7 +88,7 @@ if (enableKeyVault)
 
 builder.AddServiceDefaults();
 
-if (enableCache)
+if (enableOutputCache)
 {
     builder.Services.AddOutputCache(options =>
     {
@@ -218,13 +218,21 @@ else
 
 if (enableCache)
 {
-    builder.Services.AddDistributedMemoryCache();
-    builder.Services.AddScoped<IMorWalPizCache, MorWalPizMemoryCache>();
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+    if (string.IsNullOrWhiteSpace(redisConnectionString))
+        builder.Services.AddDistributedMemoryCache();
+    else
+        builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnectionString);
+
+    builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCache>();
 }
 else
 {
     builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
 }
+builder.Services.AddSingleton<IIndexedCacheStore>(provider =>
+    new MorWalPizIndexedCacheStore(provider.GetRequiredService<IMorWalPizCache>(), enableCache));
+builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexedCache>();
 
 // Authentication: JWT in production, fake scheme in dev
 if (enableDev)

@@ -39,8 +39,9 @@ namespace MorWalPizVideo.Server.Services
         protected readonly ISponsorRepository _sponsorRepository;
         protected readonly ISponsorApplyRepository _sponsorApplyRepository;
         protected readonly ICompetitionRepository _competitionRepository;
+        protected readonly IYouTubeContentIndexedCache? _indexedCache;
 
-        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository)
+        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository, IYouTubeContentIndexedCache? indexedCache = null)
         {
             _youTubeContent = youTubeContent;
             _compilationRepository = compilationRepository;
@@ -53,6 +54,7 @@ namespace MorWalPizVideo.Server.Services
             _sponsorRepository = sponsorRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
             _competitionRepository = competitionRepository;
+            _indexedCache = indexedCache;
         }
         public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
         public Task<IList<CalendarEvent>> GetCalendarEvents(string channelId) =>
@@ -83,6 +85,8 @@ namespace MorWalPizVideo.Server.Services
                 return;
 
             await _youTubeContent.UpdateItemAsync(entity);
+            if (_indexedCache is not null)
+                await _indexedCache.NotifyChangedAsync(entity.Id);
         }
 
         public Task<IList<Compilation>> GetCompilations() => _compilationRepository.GetItemsAsync();
@@ -163,7 +167,8 @@ namespace MorWalPizVideo.Server.Services
             IInsightNewsItemRepository insightNewsItemRepository,
             IInsightContentPlanRepository insightContentPlanRepository,
             IInsightSourceCursorRepository insightSourceCursorRepository,
-            ICompetitionRepository competitionRepository) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository)
+            ICompetitionRepository competitionRepository,
+            IYouTubeContentIndexedCache? indexedCache = null) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository, indexedCache)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;
@@ -387,6 +392,8 @@ namespace MorWalPizVideo.Server.Services
                 return;
 
             await _youTubeContent.AddItemAsync(entity);
+            if (_indexedCache is not null)
+                await _indexedCache.NotifyChangedAsync(entity.Id);
         }
 
 

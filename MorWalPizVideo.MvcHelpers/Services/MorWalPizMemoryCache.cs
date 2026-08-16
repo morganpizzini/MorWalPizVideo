@@ -16,6 +16,32 @@ namespace MorWalPizVideo.Server.Services
         void Remove(string key);
         Task RemoveAsync(string key);
     }
+
+    public sealed class MorWalPizIndexedCacheStore(IMorWalPizCache cache, bool enabled) : IIndexedCacheStore
+    {
+        public bool IsEnabled => enabled;
+
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+            => cache.GetAsync<T>(key);
+
+        public async Task<IReadOnlyDictionary<string, T?>> GetManyAsync<T>(
+            IReadOnlyCollection<string> keys,
+            CancellationToken cancellationToken = default)
+        {
+            var values = new Dictionary<string, T?>(StringComparer.Ordinal);
+            foreach (var key in keys)
+                values[key] = await GetAsync<T>(key, cancellationToken);
+            return values;
+        }
+
+        public Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+            => cache.SetAsync(key, value, new DistributedCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(30))
+                .SetAbsoluteExpiration(TimeSpan.FromHours(6)));
+
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+            => cache.RemoveAsync(key);
+    }
     public class MorWalPizMemoryCache : IMorWalPizCache
     {
         private readonly IDistributedCache _cache;

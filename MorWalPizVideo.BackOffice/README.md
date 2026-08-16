@@ -167,9 +167,6 @@ Core surface for managing the YouTube content catalog.
 | POST | `/{id}/refresh-youtube` | Re-pull stats from the YouTube Data API for one item. |
 | POST | `/{id}/publish-social` | Push the video to the configured social channels (`PublishSocialRequest`). |
 
-#### `FeaturesController` — `api/features`
-`GET /api/features` requires `backoffice.access`, does not require `X-Channel-Id`, and returns typed SPA bootstrap state including `videoBulkImportEnabled`.
-
 #### `ChannelsController` — `api/channels`
 Manage tracked YouTube channels ([`YTChannel`](#510-channels-and-creator-tracking)).
 
@@ -216,7 +213,7 @@ Separate read-only historical link source; it is not used by the public QuickLin
 #### `PublishScheduleController` — `api/publishschedule`
 Scheduled publication entries (a `VideoId` × date × message × query-link list).
 
-### 3.3 Sponsorships, Pages & Navigation
+### 3.3 Sponsorships, Pages & Bio Links
 
 #### `SponsorsController` — `api/sponsors`
 CRUD for `Sponsor`. Accepts `multipart/form-data` (`[FromForm]`) so a logo file can be uploaded inline.
@@ -225,31 +222,10 @@ CRUD for `Sponsor`. Accepts `multipart/form-data` (`[FromForm]`) so a logo file 
 Read-only listing of sponsor application submissions (`SponsorApply`). Submissions are created from the public ServerAPI; this endpoint only surfaces them to admins.
 
 #### `PagesController` — `api/pages`
-Channel-scoped page administration with globally unique public URL slugs. `GET /api/pages`
-and `GET /api/pages/{id}` return `PageContract`; create/update requests use the page
-request fields and `PageStatus` (`Draft` or `Published`). Page HTML is sanitized, inline
-images are uploaded and deleted through the page image routes, and deleting a page also
-removes its navigation references and page-container blobs. The anonymous public read is
-owned by ServerAPI at `GET /api/pages/{url}` and returns `PagePublicContract` without
-channel identity or status. See [Pages and Navigation](../docs/architecture/pages-and-navigation.md)
-for the complete contract, frontend, cache, media, and index behavior.
+Manage CMS-style pages that bundle Reel/Short ids (`Page.VideoReelIds`, `Page.ShortReelIds`).
 
-| Verb | Route | Purpose |
-| ---- | ----- | ------- |
-| GET | `/` or `/{id}` | List or read pages in the selected channel. |
-| POST | `/` | Create a page after slug, status, and content validation. |
-| PUT | `/{id}` | Update page metadata and sanitized HTML. |
-| DELETE | `/{id}` | Delete the page, navigation references, and inline image blobs. |
-| POST | `/{id}/images` | Upload page images to `PageContainerName`. |
-| DELETE | `/{id}/images/{imageIndex}` | Delete an ordered page image and its blob. |
-
-#### `NavigationController` — `api/navigation`
-Channel-scoped BackOffice navigation management using `ChannelNavigationContract`.
-Each channel has at most one configuration. Header and footer items are ordered and may
-target a page in the selected channel, a safe internal path, or an HTTP(S) external URL;
-external items open in a new tab. The anonymous ServerAPI `GET /api/navigation` returns
-the `PublicNavigationContract` projection for the single-site public frontend, including
-published page links only. See [Pages and Navigation](../docs/architecture/pages-and-navigation.md).
+#### `BioLinksController` — `api/biolinks`
+Linktree-style entries. Add / update / **toggle** enabled state / delete by title.
 
 #### `ShortLinksController` — `api/shortlinks`
 Branded URL shortener entries (`ShortLink`, `LinkType` discriminator) — used by Discord/Telegram publishing flows.

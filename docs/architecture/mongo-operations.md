@@ -147,7 +147,8 @@ Indexes provide no benefit when repositories materialize entire collections. Rep
 ## Public Match Publication Ordering
 
 Channel-scoped public matches are filtered by `isPrivate = false` and a matching
-`videoRefs.channelIds` value, then ordered in MongoDB by:
+`videoRefs.channelIds` value. The filtered candidates are materialized and
+ordered in application memory by:
 
 1. `latestPublishedAt` descending: the maximum non-`DateTime.MinValue` value in `videoRefs[].publishedAt`.
 2. `creationDateTime` descending when two matches have the same publication date.
@@ -155,7 +156,9 @@ Channel-scoped public matches are filtered by `isPrivate = false` and a matching
 When a match has no usable video publication date, `latestPublishedAt` is its
 `creationDateTime`. This is a persisted, BSON-only compatibility field and is
 recomputed by the YouTube content Mongo and mock repository write boundaries;
-it is not part of the public response contract. The approved index is:
+it is not part of the public response contract. The existing compound index is
+kept in the manifest for operational compatibility, but is not a correctness
+prerequisite for this reader:
 
 ```text
 key:        youtubecontent_isprivate_latestpublished_creation_desc
@@ -166,11 +169,11 @@ keys:       { isPrivate: 1, latestPublishedAt: -1, creationDateTime: -1 }
 
 ### Rollout, Backfill, And Audit
 
-Run this migration in a maintenance window with match writes paused. Take and
-verify a restorable Cosmos backup first, then backfill every existing
-`youtubeContent` document before enabling the new reader. The following
-`mongosh` pipeline uses the same missing-date rule as the application; execute
-it in resumable `_id` batches for production RU control:
+No index rollout or backfill is required to enable this reader. If legacy
+documents need their persisted compatibility field repaired, run the following
+optional `mongosh` pipeline in a maintenance window with match writes paused.
+Take and verify a restorable Cosmos backup first, and execute it in resumable
+`_id` batches for production RU control:
 
 ```javascript
 const missingPublicationDate = ISODate("0001-01-01T00:00:00.000Z");

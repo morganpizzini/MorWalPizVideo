@@ -36,19 +36,40 @@ public sealed class ContentService(
     ICategoryRepository categoryRepository,
     IYTChannelRepository ytChannelRepository,
     IUserChannelOwnerRepository userChannelOwnerRepository,
-    IShortLinkRepository shortLinkRepository) : IContentService
+    IShortLinkRepository shortLinkRepository,
+    IYouTubeContentIndexedCache? indexedCache = null) : IContentService
 {
     public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, int skip, int take)
-        => await AddCanonicalShortLinksAsync(
-            await youTubeContentRepository.GetPublicOrderedForChannelAsync(channelId, skip, take));
+    {
+        var matches = indexedCache is null
+            ? await youTubeContentRepository.GetPublicOrderedForChannelAsync(channelId, skip, take)
+            : [.. (await indexedCache.GetPublicForChannelAsync(channelId))
+                .Skip(Math.Max(0, skip))
+                .Take(Math.Clamp(take, 1, 200))];
+        return indexedCache is null ? await AddCanonicalShortLinksAsync(matches) : matches;
+    }
 
     public async Task<int> CountPublicMatchesForChannelAsync(string channelId)
-        => (int)await youTubeContentRepository.CountPublicForChannelAsync(channelId);
+        => indexedCache is null
+            ? (int)await youTubeContentRepository.CountPublicForChannelAsync(channelId)
+            : (await indexedCache.GetPublicForChannelAsync(channelId)).Count;
 
     public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate, int skip, int take)
     {
         if (channelIds.Count == 0)
             return [];
+
+        if (indexedCache is not null)
+        {
+            var cachedMatches = await indexedCache.GetGlobalAsync();
+            return [.. cachedMatches
+                .Where(match =>
+                    (includePrivate || !match.IsPrivate) &&
+                    match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)))
+                .OrderByDescending(match => match.CreationDateTime)
+                .Skip(Math.Max(0, skip))
+                .Take(Math.Clamp(take, 1, 200))];
+        }
 
         var matches = await youTubeContentRepository.GetItemsAsync(match =>
             (includePrivate || !match.IsPrivate) &&
@@ -63,17 +84,45 @@ public sealed class ContentService(
         if (channelIds.Count == 0)
             return 0;
 
+        if (indexedCache is not null)
+        {
+            var cachedMatches = await indexedCache.GetGlobalAsync();
+            return cachedMatches.Count(match =>
+                (includePrivate || !match.IsPrivate) &&
+                match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)));
+        }
+
         return (await youTubeContentRepository.GetItemsAsync(match =>
             (includePrivate || !match.IsPrivate) &&
             match.VideoRefs.Any(video => video.ChannelIds.Any(channelIds.Contains)))).Count;
     }
 
     public async Task<IList<YouTubeContent>> GetMatchesPageAsync(bool includePrivate, int skip, int take)
-        => await AddCanonicalShortLinksAsync(
-            await youTubeContentRepository.GetPublicOrderedAsync(includePrivate, skip, take));
+    {
+        if (indexedCache is null)
+            return await AddCanonicalShortLinksAsync(
+                await youTubeContentRepository.GetPublicOrderedAsync(includePrivate, skip, take));
+
+        var matches = await indexedCache.GetGlobalAsync();
+        if (!includePrivate)
+            matches = matches.Where(match => !match.IsPrivate).ToList();
+        return [.. matches
+            .OrderByDescending(match => match.LatestPublishedAt == DateTime.MinValue
+                ? match.CalculateLatestPublishedAt()
+                : match.LatestPublishedAt)
+            .ThenByDescending(match => match.CreationDateTime)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Clamp(take, 1, 200))];
+    }
 
     public async Task<int> CountMatchesAsync(bool includePrivate)
-        => (int)await youTubeContentRepository.CountPublicAsync(includePrivate);
+    {
+        if (indexedCache is null)
+            return (int)await youTubeContentRepository.CountPublicAsync(includePrivate);
+
+        var matches = await indexedCache.GetGlobalAsync();
+        return includePrivate ? matches.Count : matches.Count(match => !match.IsPrivate);
+    }
 
     public async Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate)
     {
@@ -85,7 +134,13 @@ public sealed class ContentService(
         => await AddCanonicalShortLinksAsync(await youTubeContentRepository.GetByIdsAsync(ids, includePrivate));
 
     public async Task<IList<YouTubeContent>> GetAllMatchesAsync()
-        => await AddCanonicalShortLinksAsync([.. (await youTubeContentRepository.GetItemsAsync()).OrderByDescending(x => x.CreationDateTime)]);
+    {
+        if (indexedCache is not null)
+            return [.. await indexedCache.GetGlobalAsync()];
+
+        return await AddCanonicalShortLinksAsync([.. (await youTubeContentRepository.GetItemsAsync())
+            .OrderByDescending(x => x.CreationDateTime)]);
+    }
 
     public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin)
     {
@@ -105,6 +160,14 @@ public sealed class ContentService(
 
     public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string channelId)
     {
+        if (isAdmin && indexedCache is not null)
+        {
+            var cachedMatches = await indexedCache.GetGlobalAsync();
+            return [.. cachedMatches.Where(match =>
+                    match.OwnerChannelId == channelId ||
+                    match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))];
+        }
+
         var matches = await youTubeContentRepository.GetItemsAsync(match =>
             match.OwnerChannelId == channelId ||
             match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
@@ -149,7 +212,8 @@ public sealed class ContentService(
         {
             var linksForMatch = canonicalLinks.Where(link => link.ContentId == match.Id &&
                 match.VideoRefs.Any(video => video.YoutubeId == link.Target)).ToList();
-            return match with { ShortLinks = [.. linksForMatch] };
+            var legacyLinks = match.ShortLinks.Where(link => link.LinkType != LinkType.YouTubeVideo);
+            return match with { ShortLinks = [.. legacyLinks, .. linksForMatch] };
         }).ToList();
     }
 
@@ -176,6 +240,8 @@ public sealed class ContentService(
         }
 
         await youTubeContentRepository.AddItemAsync(entity);
+        if (indexedCache is not null)
+            await indexedCache.NotifyChangedAsync(entity.Id);
         return true;
     }
 
@@ -193,9 +259,16 @@ public sealed class ContentService(
         }
 
         await youTubeContentRepository.UpdateItemAsync(entity);
+        if (indexedCache is not null)
+            await indexedCache.NotifyChangedAsync(entity.Id);
     }
 
-    public Task DeleteMatchAsync(string id) => youTubeContentRepository.DeleteItemAsync(id);
+    public async Task DeleteMatchAsync(string id)
+    {
+        await youTubeContentRepository.DeleteItemAsync(id);
+        if (indexedCache is not null)
+            await indexedCache.NotifyChangedAsync(id);
+    }
 
     public Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null)
         => categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
@@ -794,7 +867,8 @@ public interface ILinksService
 public sealed class LinksService(
     IShortLinkRepository shortLinkRepository,
     IQueryLinkRepository queryLinkRepository,
-    IYouTubeContentRepository contentRepository) : ILinksService
+    IYouTubeContentRepository contentRepository,
+    IYTChannelRepository channelRepository) : ILinksService
 {
     public Task<IList<ShortLink>> GetShortLinksAsync() => shortLinkRepository.GetItemsAsync();
 
@@ -823,7 +897,10 @@ public sealed class LinksService(
                 .Where(link => link is not null)
                 .Cast<ShortLink>()
                 .ToArray();
-            return match with { ShortLinks = canonical };
+            var nonYouTubeLinks = match.ShortLinks
+                .Where(link => link.LinkType != LinkType.YouTubeVideo)
+                .ToArray();
+            return match with { ShortLinks = canonical.Concat(nonYouTubeLinks).ToArray() };
         }).ToList();
     }
 
@@ -862,11 +939,14 @@ public sealed class LinksService(
         var canonical = await GetCanonicalVideoShortLinkAsync(match.Id, videoId);
         if (canonical is not null)
         {
+            await RemoveEmbeddedYouTubeLinksAsync(match);
             return canonical;
         }
 
         var occupiedCodes = (await shortLinkRepository.GetItemsAsync())
             .Select(link => link.NormalizedCode)
+            .Concat((await contentRepository.GetItemsAsync()).SelectMany(content => content.ShortLinks).Select(link => link.NormalizedCode))
+            .Concat((await channelRepository.GetItemsAsync()).SelectMany(channel => channel.ShortLinks).Select(link => link.NormalizedCode))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var attempt = 0; attempt < 5; attempt++)
@@ -884,10 +964,21 @@ public sealed class LinksService(
                 ManagementChannelId = managementChannelId
             };
             var persistedLink = await shortLinkRepository.AddItemAsync(shortLink);
+            await RemoveEmbeddedYouTubeLinksAsync(match);
             return persistedLink;
         }
 
         throw new InvalidOperationException("Unable to allocate a unique video shortlink code.");
+    }
+
+    private Task RemoveEmbeddedYouTubeLinksAsync(YouTubeContent match)
+    {
+        var remainingLinks = match.ShortLinks
+            .Where(link => link.LinkType != LinkType.YouTubeVideo)
+            .ToArray();
+        return remainingLinks.Length == match.ShortLinks.Length
+            ? Task.CompletedTask
+            : contentRepository.UpdateItemAsync(match with { ShortLinks = remainingLinks });
     }
 
     private static string CreateVideoCode(string videoId, int attempt, ISet<string> occupiedCodes)
@@ -912,7 +1003,14 @@ public sealed class LinksService(
             return false;
         }
 
-        return true;
+        if ((await contentRepository.GetItemsAsync(match =>
+            match.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Count > 0)
+        {
+            return false;
+        }
+
+        return !(await channelRepository.GetItemsAsync(channel =>
+            channel.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Any();
     }
 
     public async Task UpdateShortLinkAsync(ShortLink entity)

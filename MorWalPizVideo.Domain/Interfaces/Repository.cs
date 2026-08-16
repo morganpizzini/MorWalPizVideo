@@ -91,13 +91,14 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<YouTubeContent>.Filter.ElemMatch(x => x.VideoRefs,
                     video => video.ChannelIds.Contains(channelId)));
 
-            return await _collection
-                .Find(filter)
-                .SortByDescending(x => x.LatestPublishedAt)
+            var matches = await _collection.Find(filter).ToListAsync();
+
+            return matches
+                .OrderByDescending(x => x.LatestPublishedAt)
                 .ThenByDescending(x => x.CreationDateTime)
                 .Skip(safeSkip)
-                .Limit(safeTake)
-                .ToListAsync();
+                .Take(safeTake)
+                .ToList();
         }
 
         public Task<long> CountPublicForChannelAsync(string channelId)

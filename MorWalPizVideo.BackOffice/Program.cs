@@ -45,6 +45,7 @@ var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.Enable
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
@@ -142,6 +143,24 @@ static void ValidateRequiredConfiguration(IConfiguration configuration)
 }
 
 builder.AddServiceDefaults();
+
+if (enableCache)
+{
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+    if (string.IsNullOrWhiteSpace(redisConnectionString))
+        builder.Services.AddDistributedMemoryCache();
+    else
+        builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnectionString);
+
+    builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCache>();
+}
+else
+{
+    builder.Services.AddSingleton<IMorWalPizCache, MorWalPizMemoryCacheMock>();
+}
+builder.Services.AddSingleton<IIndexedCacheStore>(provider =>
+    new MorWalPizIndexedCacheStore(provider.GetRequiredService<IMorWalPizCache>(), enableCache));
+builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexedCache>();
 
 // Configure comprehensive health checks
 builder.Services.ConfigureHealthChecks(builder.Configuration);
