@@ -1,6 +1,7 @@
 {
   "capturedAtUtc": "2026-08-03T14:10:00Z",
   "environment": "local-verification",
+  "historicalContext": "This sanitized sample predates the global unique page URL rollout. The page entry is shown with current manifest terminology for documentation consistency; this file remains historical evidence and is not proof of the current deployment state.",
   "operation": "GET /api/mongoindexes/audit",
   "result": [
     {
@@ -32,9 +33,9 @@
       "specJson": "{ \"isPrivate\" : 1, \"creationDateTime\" : -1 }"
     },
     {
-      "key": "pages_url",
+      "key": "pages_url.unique",
       "collection": "pages",
-      "name": "ix_pages_url",
+      "name": "ux_pages_url_ci",
       "exists": true,
       "specJson": "{ \"url\" : 1 }"
     },

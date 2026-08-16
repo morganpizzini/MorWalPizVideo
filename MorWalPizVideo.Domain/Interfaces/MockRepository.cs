@@ -103,8 +103,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public async Task<Page?> GetByUrlAsync(string url)
-            => (await GetItemsAsync(x => x.Url == url)).FirstOrDefault();
+        public async Task<Page?> GetByUrlAsync(string url, string? channelId = null)
+            => (await GetItemsAsync(x => x.Url == url &&
+                (string.IsNullOrWhiteSpace(channelId) || x.ChannelId == channelId))).FirstOrDefault();
+    }
+    public sealed class ChannelNavigationMockRepository(IMockScenario scenario)
+        : BaseMockRepository<ChannelNavigation>(scenario, "channelNavigations"), IChannelNavigationRepository
+    {
+        public async Task<ChannelNavigation?> GetByChannelIdAsync(string channelId)
+            => (await GetItemsAsync(x => x.ChannelId == channelId)).FirstOrDefault();
     }
     public class ProductMockRepository : BaseMockRepository<Product>, IProductRepository
     {

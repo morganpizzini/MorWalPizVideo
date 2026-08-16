@@ -136,8 +136,8 @@ public sealed class CookieAntiforgeryTests : IClassFixture<BackOfficeWebApplicat
     client.DefaultRequestHeaders.Add("Cookie", "auth_token=stale-token");
 
     using var response = await client.PostAsJsonAsync(
-        "/api/mongoindexes/apply",
-        new { approvalToken = "apply-approved-indexes", approvedKeys = new[] { "pages_url" } });
+      "/api/mongoindexes/remove",
+      new { approvalToken = "apply-approved-indexes", approvedRemovalKeys = new[] { "pages_url" } });
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }

@@ -72,7 +72,7 @@ export const routes: RouteObject[] = [
                         element: <Matches />,
                     },
                     {
-                        path: "pages/:pageId",
+                        path: "pages/:url",
                         loader: pageLoader,
                         element: <Pages />,
                     },

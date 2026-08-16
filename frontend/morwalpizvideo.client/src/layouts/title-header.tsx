@@ -1,5 +1,7 @@
 import { Link } from "react-router";
 import "./title-header.scss"
+import PublicNavigationLink from "../components/PublicNavigationLink";
+import { usePublicNavigation } from "../routes/layout/navigation";
 
 interface TitleComponentProps {
     dimensions?: string;
@@ -7,6 +9,7 @@ interface TitleComponentProps {
 }
 
 export default function TitleComponent(props: TitleComponentProps) {
+    const { navigation, loading, error } = usePublicNavigation();
 
     return (
         <div className={`container text-center ${props.dimensions}`}>
@@ -31,6 +34,11 @@ export default function TitleComponent(props: TitleComponentProps) {
                         </a>
                     </div>
                 </>}
+            {!props.hideLink && <>
+                {loading && <div className="public-navigation-loading" role="status" aria-label="Loading navigation" />}
+                {error && <div className="alert alert-light py-1 mt-3" role="status">Navigation unavailable</div>}
+                {!loading && !error && navigation?.headerItems.length ? <nav aria-label="Main navigation" className="d-flex flex-wrap justify-content-center gap-3 mt-3">{navigation.headerItems.map(item => <PublicNavigationLink key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`} item={item} className="nav-link" />)}</nav> : null}
+            </>}
 
         </div>
     );

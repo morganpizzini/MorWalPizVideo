@@ -35,6 +35,11 @@ const CHANNEL_NEWS_DETAIL = `${CHANNEL_NEWS}/{id}`;
 const CHANNEL_NEWS_STATUS = `${CHANNEL_NEWS_DETAIL}/status`;
 const CHANNEL_NEWS_IMAGES = `${CHANNEL_NEWS_DETAIL}/images`;
 const CHANNEL_NEWS_IMAGE_DETAIL = `${CHANNEL_NEWS_IMAGES}/{imageIndex}`;
+const PAGES = `${baseEndpoint}/pages`;
+const PAGES_DETAIL = `${PAGES}/{id}`;
+const PAGES_IMAGES = `${PAGES_DETAIL}/images`;
+const PAGES_IMAGE_DETAIL = `${PAGES_IMAGES}/{imageIndex}`;
+const NAVIGATION = `${baseEndpoint}/navigation`;
 const CONFIGURATIONS = `${baseEndpoint}/configurations`;
 const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
 const VIDEOS_IMPORT = `${VIDEOS}/ImportVideo`;
@@ -121,6 +126,11 @@ export default {
     CHANNEL_NEWS_STATUS,
     CHANNEL_NEWS_IMAGES,
     CHANNEL_NEWS_IMAGE_DETAIL,
+    PAGES,
+    PAGES_DETAIL,
+    PAGES_IMAGES,
+    PAGES_IMAGE_DETAIL,
+    NAVIGATION,
     CONFIGURATIONS,
     CONFIGURATIONS_DETAIL,
     VIDEOS_IMPORT,

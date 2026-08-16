@@ -12,7 +12,8 @@ create a separate index inventory.
 3. Authenticated index pre-audit output.
 4. The approved request body and apply response.
 5. Post-apply audit output and representative explain-plan evidence.
-6. A record of conflicts, affected IDs, backfills, and any failed or retried steps.
+6. If removing a legacy index, the approved removal request and removal response.
+7. A record of conflicts, affected IDs, backfills, and any failed or retried steps.
 
 ## Recommended operator sequence
 
@@ -21,8 +22,10 @@ create a separate index inventory.
 3. Resolve all unique-index conflicts before applying any unique index.
 4. Run the authenticated `GET /api/mongoindexes/audit` endpoint and retain its output.
 5. Apply the approved request below during the maintenance window.
-6. Re-run the audit, compare actual index specifications, and capture explain evidence.
-7. Explain the evidence in the environment-specific rollout record; source review and historical samples are not deployment proof.
+6. Verify the replacement index specification, re-run the audit, and capture explain evidence.
+7. Submit the separate removal request only after the replacement verification succeeds.
+8. Re-run the audit after removal and retain both audit responses.
+9. Explain the evidence in the environment-specific rollout record; source review and historical samples are not deployment proof.
 
 ## Apply contract
 
@@ -50,7 +53,8 @@ curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/apply" \
       "customformresponses.formid_responseid.unique",
       "youtubecontent_isprivate_creation_desc",
       "youtubecontent_isprivate_latestpublished_creation_desc",
-      "pages_url",
+      "pages_url.unique",
+      "navigation_channel.unique",
       "compilations_url.unique",
       "quicklinks_url.unique",
       "customforms_active_url",
@@ -69,6 +73,9 @@ Unique indexes require conflict resolution first:
 
 - `shortLinks.code` must have no duplicate or malformed normalized codes.
 - `customFormResponses` must have no duplicate `(formId, responseId)` pairs.
+- `pages.url` must have no duplicate normalized URLs across channel owners; the
+  current authority is the global unique `pages_url.unique` index named
+  `ux_pages_url_ci`.
 - `compilations.url` must have no duplicate normalized public URLs.
 - `quickLinks.url` must have no duplicate normalized URLs across channel owners; normalize by trimming whitespace, trimming surrounding slashes, then lowercasing invariant.
 
@@ -86,6 +93,34 @@ fully reconciling its key pattern or options. Compare the actual deployed index
 specification separately; same-name existence is not proof that the specification
 matches the manifest.
 
+## Legacy removal contract
+
+The current desired page URL state is `pages_url.unique` on collection `pages`,
+with the unique `{ "url": 1 }` index `ux_pages_url_ci`. The key `pages_url` is a
+legacy removal key only; it maps to the exact legacy index `ix_pages_url` and is
+not valid for the apply request.
+
+Removal uses `POST /api/mongoindexes/remove` with the same configured API key and
+the same procedural approval token as apply. `approvedRemovalKeys` must be
+non-empty and may contain only source-controlled removal keys:
+
+```bash
+curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/remove" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <YOUR_API_KEY>" \
+  --data-raw '{
+    "approvalToken": "apply-approved-indexes",
+    "approvedRemovalKeys": ["pages_url"]
+  }'
+```
+
+Before dropping `ix_pages_url`, the service verifies that `ux_pages_url_ci`
+exists and is unique with exactly `{ "url": 1 }`. If the replacement is absent
+or incorrect, removal is rejected and the legacy index is retained. A successful
+result reports `removed`; a missing legacy index reports `skipped_absent` and is
+idempotent. Unknown removal keys fail with HTTP 400. Mongo index conflicts and
+invalid operation errors are returned as clear bad-request responses.
+
 Indexes are never created at startup. Keep backups, rollback notes, audit/apply
 responses, and explain evidence with each environment-specific rollout record.
 
@@ -95,7 +130,13 @@ artifacts.
 
 ## Committed Phase 4 baseline sample
 
+The current page URL authority is global and unique: `pages_url.unique` on
+`pages.url`, named `ux_pages_url_ci`. The older `pages_url` / `ix_pages_url`
+pair is represented only by the source-controlled legacy removal entry and must
+not be used in an apply request or treated as production deployment evidence.
+
 - `phase4-2026-08-03-sample-audit-output.json`
 - `phase4-2026-08-03-sample-apply-output.json`
 - `phase4-2026-08-03-explain-evidence.md`
 - `phase4-2026-08-03-verification-bundle.md`
+- `phase4-2026-08-16-sample-remove-output.json`

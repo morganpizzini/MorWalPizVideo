@@ -5,6 +5,15 @@ import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvide
 import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
 import type { QuickLinks, CreateQuickLinksDTO, UpdateQuickLinksDTO } from '@morwalpizvideo/models';
 import type { ChannelNewsAdmin } from '@morwalpizvideo/models';
+import type {
+    ChannelNavigation,
+    CreatePageDTO,
+    PageAdmin,
+    PageImage,
+    PublicNavigation,
+    SaveNavigationDTO,
+    UpdatePageDTO,
+} from '@morwalpizvideo/models';
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -70,6 +79,8 @@ const scopedBackOfficePrefixes = [
     '/api/shortlinks',
     '/api/querylinks',
     '/api/quicklinks',
+    '/api/pages',
+    '/api/navigation',
     '/api/insights',
     '/api/dashboard',
     '/api/apikeys'
@@ -542,6 +553,40 @@ export const uploadChannelNewsImages = (id: string, files: readonly File[]) => {
 
 export const deleteChannelNewsImage = (id: string, imageIndex: number) =>
     Delete(ComposeUrl(endpoints.CHANNEL_NEWS_IMAGE_DETAIL, { id, imageIndex: String(imageIndex) })) as Promise<ChannelNewsAdmin>;
+
+// ==================== Pages and Navigation API Services ====================
+
+type PageImageResponse = PageImage[];
+
+export const fetchPages = (): Promise<PageAdmin[]> => get(endpoints.PAGES);
+
+export const getPage = (id: string): Promise<PageAdmin> =>
+    get(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
+
+export const createPage = (payload: CreatePageDTO) => post(endpoints.PAGES, payload);
+
+export const updatePage = (id: string, payload: UpdatePageDTO) =>
+    put(ComposeUrl(endpoints.PAGES_DETAIL, { id }), payload);
+
+export const deletePage = (id: string) =>
+    Delete(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
+
+export const uploadPageImages = (id: string, files: readonly File[]) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    return postFormData(ComposeUrl(endpoints.PAGES_IMAGES, { id }), formData) as Promise<PageImageResponse>;
+};
+
+export const deletePageImage = (id: string, imageIndex: number) =>
+    Delete(ComposeUrl(endpoints.PAGES_IMAGE_DETAIL, { id, imageIndex: String(imageIndex) })) as Promise<PageImageResponse>;
+
+export const getNavigation = (): Promise<ChannelNavigation | null> => get(endpoints.NAVIGATION);
+
+export const saveNavigation = (payload: SaveNavigationDTO) =>
+    put(endpoints.NAVIGATION, payload) as Promise<ChannelNavigation>;
+
+export const getPublicNavigation = (): Promise<PublicNavigation | null> =>
+    get(endpoints.NAVIGATION);
 
 // ==================== Sponsor API Services ====================
 

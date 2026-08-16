@@ -14,6 +14,18 @@ export type { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categorie
 export type { Channel, ChannelSocial, ChannelVideo, CreateChannelDTO, UpdateChannelDTO } from './channel';
 export type { ChannelNews, ChannelNewsAdmin, ChannelNewsImage, ChannelNewsStatus } from './channelNews';
 
+// Pages and public navigation exports
+export { PageStatus } from './page';
+export type { PageImage, PageAdmin, PagePublic, CreatePageDTO, UpdatePageDTO } from './page';
+export { NavigationItemType } from './navigation';
+export type {
+  NavigationMenuItem,
+  ChannelNavigation,
+  PublicNavigation,
+  NavigationMenuItemDTO,
+  SaveNavigationDTO,
+} from './navigation';
+
 // Configuration exports
 export type {
   MorWalPizConfiguration,

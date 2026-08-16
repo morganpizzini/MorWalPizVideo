@@ -12,6 +12,8 @@ import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
 import { getPublicChannelNews } from "@morwalpizvideo/services";
 import type { ChannelNews } from "@morwalpizvideo/models";
+import { usePublicNavigation } from "../layout/navigation";
+import PublicNavigationLink from "../../components/PublicNavigationLink";
 interface IndexCategory { title: string }
 interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
@@ -101,6 +103,7 @@ function HomeError({ onRetry }: { onRetry: () => void }) {
 }
 
 function HomeContent({ data, selectedCategories, onToggleCategory }: { data: IndexData; selectedCategories: string[]; onToggleCategory: (category: string) => void }) {
+    const { navigation } = usePublicNavigation();
     const { matches, configuration, activeForms, channelNews } = data;
     let firstMatchId: string = '';
     const first = matches[0];
@@ -190,6 +193,7 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
                         </div>
                     </div>
                     {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
+                    {navigation?.headerItems.length ? <nav aria-label="Homepage menu" className="my-3 p-2 bg-white rounded d-flex flex-wrap gap-3">{navigation.headerItems.map(item => <PublicNavigationLink key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`} item={item} className="nav-link" />)}</nav> : null}
                     <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
                         {allCategories.map((category) => {
                             const includeCategory = availableCategories.includes(category);

@@ -10,6 +10,8 @@ export const permissions = {
   shortlinks: resourcePermissions('shortlinks'),
   querylinks: resourcePermissions('querylinks'),
   quicklinks: resourcePermissions('quicklinks'),
+  pages: resourcePermissions('pages'),
+  navigation: { ...resourcePermissions('navigation'), update: 'navigation.update' },
   forms: resourcePermissions('forms'),
   insights: { ...resourcePermissions('insights'), scan: 'insights.scan' },
   apikeys: resourcePermissions('apikeys'),
@@ -46,6 +48,8 @@ const routeResources: Record<string, StandardResource> = {
   calendarevents: permissions.calendar,
   querylinks: permissions.querylinks,
   quicklinks: permissions.quicklinks,
+  pages: permissions.pages,
+  navigation: permissions.navigation,
   shortlinks: permissions.shortlinks,
   channels: permissions.channels,
   channelnews: permissions.channelnews,
@@ -85,6 +89,7 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
 
   const resource = routeResources[module];
   if (!resource) throw new Error(`Protected route module "${module}" has no permission mapping.`);
+  if (module === 'navigation') return action ? [permissions.navigation.update, permissions.navigation.manage] : [permissions.navigation.view, permissions.navigation.manage];
   if (module === 'insights' && segments.includes('scan-news')) {
     return [permissions.insights.scan, permissions.insights.manage];
   }

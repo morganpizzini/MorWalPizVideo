@@ -26,6 +26,15 @@ Attach output from:
 
 - `POST /api/mongoindexes/apply`
 
+## Legacy removal output
+
+Complete only after the replacement index has been verified and the post-apply audit retained.
+
+- Approved removal keys:
+- Attach output from `POST /api/mongoindexes/remove`:
+- Removal result: `removed` / `skipped_absent`
+- Post-removal audit attached: yes/no
+
 ## Query evidence
 
 Attach representative explain-plan evidence for:

@@ -55,19 +55,22 @@ Observed explain summary:
 
 Query shape: exact url equality lookup for pages and compilations.
 
-Expected indexes: ix_pages_url, ix_compilations_url
+Current expected indexes: `ux_pages_url_ci` and `ux_compilations_url_ci`.
+The page index is the global unique `pages_url.unique` authority. Explain output
+confirms query selection, not index uniqueness; compare the deployed specification
+with the current manifest during the authenticated audit.
 
 Observed explain summary:
 
 - pages:
   - winningPlan stage: FETCH
   - inputStage stage: IXSCAN
-  - indexName: ix_pages_url
+  - indexName: ux_pages_url_ci
   - totalKeysExamined: 1
   - totalDocsExamined: 1
 - compilations:
   - winningPlan stage: FETCH
   - inputStage stage: IXSCAN
-  - indexName: ix_compilations_url
+  - indexName: ux_compilations_url_ci
   - totalKeysExamined: 1
   - totalDocsExamined: 1

@@ -2,9 +2,11 @@
 import TitleComponent from "@layouts/title-header";
 import Footer from "@layouts/footer";
 import ScrollToTop from "@utils/scroll-to-top"; 
+import { PublicNavigationProvider } from './navigation';
 export default function Root() {
     const navigation = useNavigation();
     return (
+        <PublicNavigationProvider>
         <>
             <ScrollToTop/>
             <TitleComponent />
@@ -15,5 +17,6 @@ export default function Root() {
             </div>
             <Footer/>
         </>
+        </PublicNavigationProvider>
     );
 }

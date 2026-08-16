@@ -7,6 +7,7 @@ Scope: persistence and service decomposition closure
 
 - Audit output: phase4-2026-08-03-sample-audit-output.json
 - Apply output: phase4-2026-08-03-sample-apply-output.json
+- Legacy removal output: phase4-2026-08-16-sample-remove-output.json
 - Explain evidence: phase4-2026-08-03-explain-evidence.md
 
 ## Included test evidence
@@ -26,4 +27,6 @@ Scope: persistence and service decomposition closure
 
 ## Convergence note
 
-Phase 4 blockers are considered closed for repository scope as of this bundle. Deferred capability items remain intentionally out of scope.
+Phase 4 blockers are considered closed for repository scope as of this bundle. The
+sanitized artifacts do not prove live MongoDB state; deferred capability items
+remain intentionally out of scope.

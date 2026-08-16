@@ -58,14 +58,24 @@
       "notes": "Supports channel-scoped public match paging ordered by latest video publication. Backfill latestPublishedAt before applying."
     },
     {
-      "key": "pages_url",
+      "key": "pages_url.unique",
       "collection": "pages",
-      "name": "ix_pages_url",
+      "name": "ux_pages_url_ci",
       "keys": {
         "url": 1
       },
-      "unique": false,
-      "notes": "Supports direct page URL lookup."
+      "unique": true,
+      "notes": "Global unique normalized public page URL across channel owners. Resolve duplicates before approved apply; public lookup remains URL-only."
+    },
+    {
+      "key": "navigation_channel.unique",
+      "collection": "channelNavigations",
+      "name": "ux_navigation_channel",
+      "keys": {
+        "channelId": 1
+      },
+      "unique": true,
+      "notes": "Allows at most one navigation configuration per channel. Public single-site projection separately requires at most one active navigation globally."
     },
     {
       "key": "compilations_url.unique",
@@ -107,6 +117,16 @@
       },
       "unique": false,
       "notes": "Supports recent event feed with server-side limit."
+    }
+  ],
+  "removals": [
+    {
+      "key": "pages_url",
+      "collection": "pages",
+      "name": "ix_pages_url",
+      "replacementKey": "pages_url.unique",
+      "replacementName": "ux_pages_url_ci",
+      "notes": "Legacy removal entry only. Remove only after the replacement exists as unique { url: 1 } and a post-apply audit confirms it."
     }
   ]
 }

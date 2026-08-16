@@ -216,7 +216,7 @@ Separate read-only historical link source; it is not used by the public QuickLin
 #### `PublishScheduleController` — `api/publishschedule`
 Scheduled publication entries (a `VideoId` × date × message × query-link list).
 
-### 3.3 Sponsorships, Pages & Bio Links
+### 3.3 Sponsorships, Pages & Navigation
 
 #### `SponsorsController` — `api/sponsors`
 CRUD for `Sponsor`. Accepts `multipart/form-data` (`[FromForm]`) so a logo file can be uploaded inline.
@@ -225,7 +225,31 @@ CRUD for `Sponsor`. Accepts `multipart/form-data` (`[FromForm]`) so a logo file 
 Read-only listing of sponsor application submissions (`SponsorApply`). Submissions are created from the public ServerAPI; this endpoint only surfaces them to admins.
 
 #### `PagesController` — `api/pages`
-Manage CMS-style pages that bundle Reel/Short ids (`Page.VideoReelIds`, `Page.ShortReelIds`).
+Channel-scoped page administration with globally unique public URL slugs. `GET /api/pages`
+and `GET /api/pages/{id}` return `PageContract`; create/update requests use the page
+request fields and `PageStatus` (`Draft` or `Published`). Page HTML is sanitized, inline
+images are uploaded and deleted through the page image routes, and deleting a page also
+removes its navigation references and page-container blobs. The anonymous public read is
+owned by ServerAPI at `GET /api/pages/{url}` and returns `PagePublicContract` without
+channel identity or status. See [Pages and Navigation](../docs/architecture/pages-and-navigation.md)
+for the complete contract, frontend, cache, media, and index behavior.
+
+| Verb | Route | Purpose |
+| ---- | ----- | ------- |
+| GET | `/` or `/{id}` | List or read pages in the selected channel. |
+| POST | `/` | Create a page after slug, status, and content validation. |
+| PUT | `/{id}` | Update page metadata and sanitized HTML. |
+| DELETE | `/{id}` | Delete the page, navigation references, and inline image blobs. |
+| POST | `/{id}/images` | Upload page images to `PageContainerName`. |
+| DELETE | `/{id}/images/{imageIndex}` | Delete an ordered page image and its blob. |
+
+#### `NavigationController` — `api/navigation`
+Channel-scoped BackOffice navigation management using `ChannelNavigationContract`.
+Each channel has at most one configuration. Header and footer items are ordered and may
+target a page in the selected channel, a safe internal path, or an HTTP(S) external URL;
+external items open in a new tab. The anonymous ServerAPI `GET /api/navigation` returns
+the `PublicNavigationContract` projection for the single-site public frontend, including
+published page links only. See [Pages and Navigation](../docs/architecture/pages-and-navigation.md).
 
 #### `ShortLinksController` — `api/shortlinks`
 Branded URL shortener entries (`ShortLink`, `LinkType` discriminator) — used by Discord/Telegram publishing flows.
@@ -349,7 +373,8 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 | [`CategoryRef`](../MorWalPizVideo.Models/Models/CategoryRef.cs) | Lightweight embedded reference. |
 | [`ShortLink`](../MorWalPizVideo.Models/Models/ShortLink.cs) | Branded shortener entry with `ClicksCount` + `LinkType` enum (target type). |
 | [`QueryLink`](../MorWalPizVideo.Models/Models/QueryLink.cs) | Reusable query-string template (UTM/tracking) attached to a `PublishSchedule`. |
-| [`Page`](../MorWalPizVideo.Models/Models/Page.cs) | CMS page bundling `VideoReelIds` and `ShortReelIds`. |
+| [`Page`](../MorWalPizVideo.Models/Models/Page.cs) | Channel-owned CMS page with a globally unique public URL, Draft/Published state, sanitized HTML, and Blob-backed inline image metadata. |
+| [`ChannelNavigation`](../MorWalPizVideo.Models/Models/ChannelNavigation.cs) | Channel-owned header/footer navigation configuration projected to the single-site public navigation. |
 | [`Compilation`](../MorWalPizVideo.Models/Models/Compilation.cs) | Editor-curated grouping of `VideoRef[]` with title/description/url. |
 | [`PublishSchedule`](../MorWalPizVideo.Models/Models/PublishSchedule.cs) | Scheduled publication: `VideoId`, `QueryStringIds[]`, `Message`, `Date`. |
 | [`MorWalPizConfiguration`](../MorWalPizVideo.Models/Models/MorWalPizConfiguration.cs) | Generic key/value runtime configuration. |
@@ -420,7 +445,7 @@ Registered in `Program.cs` only when `EnableHangFire = true`. Checked-in configu
 
 | Job | File | Schedule | What it does | What it could do later |
 | --- | ---- | -------- | ------------ | ---------------------- |
-| `news-job` | [Jobs/NewsJobs.cs](Jobs/NewsJobs.cs) | `0 18 * * 0` (Sunday 18:00) | **Stub.** Intended to roll up the week's shorts + videos, compose a CMS page, populate `VideoReelIds`/`ShortReelIds`, and broadcast a Telegram + Discord post. | Implement the actual pipeline; persist a `Page`; emit via `ITelegramService`/`IDiscordService`. |
+| `news-job` | [Jobs/NewsJobs.cs](Jobs/NewsJobs.cs) | `0 18 * * 0` (Sunday 18:00) | **Stub.** Intended to roll up the week's shorts + videos, compose a CMS page using the current Pages surface, and broadcast a Telegram + Discord post. | Implement the actual pipeline; persist a `Page`; emit via `ITelegramService`/`IDiscordService`. |
 | `youtube-sync-job` | [Jobs/YouTubeSyncJob.cs](Jobs/YouTubeSyncJob.cs) | `0 3 * * *` (daily 03:00 UTC, overridable via `YouTubeSyncCron`) | Iterates every `YouTubeContent`, refreshes title/description/thumbnail/stats from the YouTube Data API via `IExternalDataService.FetchMatches()`. | Add per-content quota tracking; partial sync filters; failure notifications. |
 
 Jobs emit provider-neutral structured started, completed, and failed log events through the existing logging/OpenTelemetry path. A production telemetry backend, thresholds, alert evidence, safe retry/idempotency review, and restart-durability proof remain mandatory activation gates.

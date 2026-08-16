@@ -35,7 +35,9 @@ namespace MorWalPizVideo.Domain
         public Task UploadImagesAsync(string filePath, MemoryStream stream, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default);
         public Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
+        public Task DeleteImageAsync(string filePath, string containerName, CancellationToken cancellationToken = default);
         public string GetImageUrl(string filePath, bool loadInMatchFolder = false);
+        public string GetImageUrl(string filePath, string containerName);
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
     }
@@ -54,6 +56,7 @@ namespace MorWalPizVideo.Domain
 
         private readonly Dictionary<string, StoredBlob> blobs = new(StringComparer.OrdinalIgnoreCase);
         private readonly object sync = new();
+        public string? LastContainerName { get; private set; }
 
         public BlobMockOutcome Outcome { get; set; } = BlobMockOutcome.Success;
 
@@ -78,7 +81,10 @@ namespace MorWalPizVideo.Domain
             => UploadAsync(filePath, stream, cancellationToken);
 
         public Task UploadImageAsync(string filePath, MemoryStream stream, string containerName, CancellationToken cancellationToken = default)
-            => UploadAsync(filePath, stream, cancellationToken);
+        {
+            LastContainerName = containerName;
+            return UploadAsync(filePath, stream, cancellationToken);
+        }
 
         public Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
         {
@@ -89,6 +95,14 @@ namespace MorWalPizVideo.Domain
         }
 
         public string GetImageUrl(string filePath, bool loadInMatchFolder = false) => $"mock://blob/{filePath}";
+
+        public Task DeleteImageAsync(string filePath, string containerName, CancellationToken cancellationToken = default)
+        {
+            LastContainerName = containerName;
+            return DeleteImageAsync(filePath, false, cancellationToken);
+        }
+
+        public string GetImageUrl(string filePath, string containerName) => GetImageUrl(filePath);
 
         public async Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
         {
@@ -192,6 +206,16 @@ namespace MorWalPizVideo.Domain
             return UploadAsync(filePath, stream, containerName, cancellationToken);
         }
 
+        public async Task DeleteImageAsync(string filePath, string containerName, CancellationToken cancellationToken = default)
+        {
+            var blobClient = _serviceClient.GetBlobContainerClient(containerName).GetBlobClient(filePath);
+            await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+            _logger.LogInformation(
+                "Deleted blob from container {ContainerName} at path {BlobPath}",
+                containerName,
+                filePath);
+        }
+
         public async Task DeleteImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
         {
             var containerName = loadInMatchFolder ? _options.ContainerName : _options.UploadContainerName;
@@ -208,6 +232,9 @@ namespace MorWalPizVideo.Domain
             var containerName = loadInMatchFolder ? _options.ContainerName : _options.UploadContainerName;
             return _serviceClient.GetBlobContainerClient(containerName).GetBlobClient(filePath).Uri.ToString();
         }
+
+        public string GetImageUrl(string filePath, string containerName) =>
+            _serviceClient.GetBlobContainerClient(containerName).GetBlobClient(filePath).Uri.ToString();
 
         public async Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default)
         {

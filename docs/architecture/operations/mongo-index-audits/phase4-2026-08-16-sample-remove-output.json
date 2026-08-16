@@ -1,0 +1,29 @@
+{
+  "capturedAtUtc": "2026-08-16T00:00:00Z",
+  "environment": "sanitized-example",
+  "historicalContext": "This is a sanitized contract example only. It does not prove the live MongoDB deployment state.",
+  "operation": "POST /api/mongoindexes/remove",
+  "request": {
+    "approvalToken": "apply-approved-indexes",
+    "approvedRemovalKeys": [
+      "pages_url"
+    ]
+  },
+  "result": [
+    {
+      "key": "pages_url",
+      "collection": "pages",
+      "name": "ix_pages_url",
+      "action": "removed"
+    }
+  ],
+  "prerequisite": {
+    "key": "pages_url.unique",
+    "name": "ux_pages_url_ci",
+    "unique": true,
+    "keys": {
+      "url": 1
+    }
+  },
+  "notes": "Run a backup, duplicate audit, apply/verify the replacement, and a post-removal audit in the target environment."
+}

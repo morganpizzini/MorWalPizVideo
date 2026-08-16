@@ -10,7 +10,13 @@ public class MongoIndexesController(IMongoIndexOperationsService operationsServi
     public sealed class ApplyMongoIndexesRequest
     {
         public string ApprovalToken { get; set; } = string.Empty;
-        public string[] ApprovedKeys { get; set; } = [];
+        public string[]? ApprovedKeys { get; set; } = [];
+    }
+
+    public sealed class RemoveMongoIndexesRequest
+    {
+        public string ApprovalToken { get; set; } = string.Empty;
+        public string[]? ApprovedRemovalKeys { get; set; } = [];
     }
 
     [HttpGet("audit")]
@@ -28,12 +34,51 @@ public class MongoIndexesController(IMongoIndexOperationsService operationsServi
             return BadRequest("ApprovalToken must be 'apply-approved-indexes'.");
         }
 
-        if (request.ApprovedKeys.Length == 0)
+        if (request.ApprovedKeys is null || request.ApprovedKeys.Length == 0)
         {
             return BadRequest("At least one approved index key is required.");
         }
 
-        var applied = await operationsService.ApplyAsync(request.ApprovedKeys, cancellationToken);
-        return Ok(applied);
+        try
+        {
+            var applied = await operationsService.ApplyAsync(request.ApprovedKeys, cancellationToken);
+            return Ok(applied);
+        }
+        catch (MongoIndexOperationValidationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (MongoIndexOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("remove")]
+    public async Task<IActionResult> Remove([FromBody] RemoveMongoIndexesRequest request, CancellationToken cancellationToken)
+    {
+        if (!string.Equals(request.ApprovalToken, "apply-approved-indexes", StringComparison.Ordinal))
+        {
+            return BadRequest("ApprovalToken must be 'apply-approved-indexes'.");
+        }
+
+        if (request.ApprovedRemovalKeys is null || request.ApprovedRemovalKeys.Length == 0)
+        {
+            return BadRequest("At least one approved removal key is required.");
+        }
+
+        try
+        {
+            var removed = await operationsService.RemoveAsync(request.ApprovedRemovalKeys, cancellationToken);
+            return Ok(removed);
+        }
+        catch (MongoIndexOperationValidationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (MongoIndexOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 }

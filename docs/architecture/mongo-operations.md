@@ -6,7 +6,7 @@ MongoDB is owned and operated by the project owner.
 
 Source-owned index operations now exist:
 
-- BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit` and `POST /api/mongoindexes/apply`.
+- BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit`, `POST /api/mongoindexes/apply`, and the explicit legacy-removal route `POST /api/mongoindexes/remove`.
 - Index definitions are maintained in source via `MongoIndexOperationsService` (runtime manifest) and the operational file `docs/architecture/operations/mongo-index-manifest.phase4.json`.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 
@@ -16,6 +16,7 @@ Operational evidence is now recorded for the Phase 4 verification baseline under
 - `phase4-2026-08-03-sample-apply-output.json`
 - `phase4-2026-08-03-explain-evidence.md`
 - `phase4-2026-08-03-verification-bundle.md`
+- `phase4-2026-08-16-sample-remove-output.json`
 
 Per-environment production records should continue to be added for each rollout window.
 
@@ -28,10 +29,12 @@ For every index or structural migration:
 3. Run duplicate and malformed-data reports.
 4. Resolve conflicts deterministically and record affected IDs.
 5. Backfill normalized/additive fields in resumable batches.
-6. Create indexes during an appropriate maintenance window.
-7. Validate representative query plans and latency.
-8. Monitor duplicate-key failures, lock/load impact, and storage growth.
-9. Retain compatibility reads until deployed consumers are verified.
+6. Create replacement indexes during an appropriate maintenance window.
+7. Verify replacement index definitions and audit the applied state.
+8. Remove legacy indexes only through an approved, allowlisted removal operation.
+9. Audit again and validate representative query plans and latency.
+10. Monitor duplicate-key failures, lock/load impact, and storage growth.
+11. Retain compatibility reads until deployed consumers are verified.
 
 Never create a unique index before duplicate analysis.
 
@@ -43,6 +46,12 @@ For the approved apply operation, follow the canonical operator guide in
 not bearer or cookie authentication alone. The request must use the exact
 procedural approval token `apply-approved-indexes` and a non-empty set of current
 manifest keys. Do not copy a partial or historical key list into this document.
+
+For the page URL migration, the safe order is: verify backup and duplicate audit,
+apply `pages_url.unique`, verify `ux_pages_url_ci` is unique on `{ "url": 1 }`,
+audit, remove the legacy `pages_url` / `ix_pages_url` entry through
+`POST /api/mongoindexes/remove`, and audit again. The source manifest and sanitized
+samples do not prove live production state.
 
 ## Recommended Index Inventory
 

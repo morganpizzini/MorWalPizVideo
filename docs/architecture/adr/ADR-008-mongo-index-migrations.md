@@ -9,7 +9,7 @@ MongoDB is project-owned but no source-managed indexes or migrations exist. Quer
 
 ## Decision
 
-Maintain reviewed index definitions and idempotent data migration/backfill operations in source or an explicit operational manifest. Audit and normalize data before unique indexes. Use additive fields, resumable batches, compatibility reads, query-plan validation, and backups.
+Maintain reviewed index definitions and idempotent data migration/backfill operations in source or an explicit operational manifest. Audit and normalize data before unique indexes. Use additive fields, resumable batches, compatibility reads, query-plan validation, and backups. Destructive index removal requires a separate API operation backed by a source-controlled allowlist and a verified replacement definition.
 
 Repositories push filters, projections, ordering, limits, and atomic updates into MongoDB.
 
@@ -25,7 +25,7 @@ Database operations become reviewed release artifacts. Some migrations require m
 
 ## Migration And Rollback
 
-Follow `mongo-operations.md`; retain backups and old fields until compatibility expires. Indexes can be removed if plans regress, but data cleanup requires explicit restore/reconciliation.
+Follow `mongo-operations.md`; retain backups and old fields until compatibility expires. For index replacement, take a verified backup, complete duplicate checks, apply and verify the replacement, audit, remove only the allowlisted legacy index, and audit again. Indexes can be removed if plans regress, but data cleanup requires explicit restore/reconciliation. Repository artifacts never prove live deployment state.
 
 ## Validation
 

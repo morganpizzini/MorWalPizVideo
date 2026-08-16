@@ -150,6 +150,7 @@ public class PrimaryScenario : BaseScenario
         Set("sponsors", Array.Empty<Sponsor>());
         Set("sponsorApplies", Array.Empty<SponsorApply>());
         Set("pages", Array.Empty<Page>());
+        Set("channelNavigations", Array.Empty<ChannelNavigation>());
         Set("queryLinks", Array.Empty<QueryLink>());
         Set("publishSchedules", Array.Empty<PublishSchedule>());
         Set("calendarEvents", Array.Empty<CalendarEvent>());

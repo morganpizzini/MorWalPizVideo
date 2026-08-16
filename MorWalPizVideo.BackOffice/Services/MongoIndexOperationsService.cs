@@ -25,10 +25,28 @@ public sealed record MongoIndexApplyResult(
     string Name,
     string Action);
 
+public sealed record MongoIndexRemovalEntry(
+    string Key,
+    string Collection,
+    string Name,
+    string ReplacementKey);
+
+public sealed record MongoIndexRemovalResult(
+    string Key,
+    string Collection,
+    string Name,
+    string Action);
+
+public sealed class MongoIndexOperationValidationException(string message) : Exception(message);
+
+public sealed class MongoIndexOperationException(string message, Exception innerException)
+    : Exception(message, innerException);
+
 public interface IMongoIndexOperationsService
 {
     Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default);
     Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default);
+    Task<IList<MongoIndexRemovalResult>> RemoveAsync(IList<string> approvedRemovalKeys, CancellationToken cancellationToken = default);
 }
 
 public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMongoIndexOperationsService
@@ -68,10 +86,17 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                 { "creationDateTime", -1 }
             }),
         new(
-            Key: "pages_url",
+            Key: "pages_url.unique",
             Collection: DbCollections.Pages,
-            Name: "ix_pages_url",
-            Keys: new BsonDocument("url", 1)),
+            Name: "ux_pages_url_ci",
+            Keys: new BsonDocument("url", 1),
+            Unique: true),
+        new(
+            Key: "navigation_channel.unique",
+            Collection: DbCollections.ChannelNavigations,
+            Name: "ux_navigation_channel",
+            Keys: new BsonDocument("channelId", 1),
+            Unique: true),
         new(
             Key: "compilations_url.unique",
             Collection: DbCollections.Compilations,
@@ -96,9 +121,18 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("creationDateTime", -1))
     ];
 
+    internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =
+    [
+        new(
+            Key: "pages_url",
+            Collection: DbCollections.Pages,
+            Name: "ix_pages_url",
+            ReplacementKey: "pages_url.unique")
+    ];
+
     public async Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default)
     {
-        var selected = FilterManifest(keys);
+        var selected = FilterManifest(keys, rejectUnknownKeys: false);
         var results = new List<MongoIndexAuditItem>(selected.Count);
 
         foreach (var entry in selected)
@@ -116,7 +150,7 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
 
     public async Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default)
     {
-        var selected = FilterManifest(approvedKeys);
+        var selected = FilterManifest(approvedKeys, rejectUnknownKeys: true);
         var audit = await AuditAsync(approvedKeys, cancellationToken);
         var auditMap = audit.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
         var results = new List<MongoIndexApplyResult>(selected.Count);
@@ -139,14 +173,100 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                     : new BsonDocumentFilterDefinition<BsonDocument>(entry.PartialFilter)
             };
             var model = new CreateIndexModel<BsonDocument>(entry.Keys, options);
-            await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
+            try
+            {
+                await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
+            }
+            catch (MongoException exception)
+            {
+                throw CreateOperationException($"Could not apply Mongo index '{entry.Key}'.", exception);
+            }
+
             results.Add(new MongoIndexApplyResult(entry.Key, entry.Collection, entry.Name, "created"));
         }
 
         return results;
     }
 
-    private static List<MongoIndexManifestEntry> FilterManifest(IList<string>? keys)
+    public async Task<IList<MongoIndexRemovalResult>> RemoveAsync(
+        IList<string> approvedRemovalKeys,
+        CancellationToken cancellationToken = default)
+    {
+        var selected = FilterRemovalManifest(approvedRemovalKeys);
+        var results = new List<MongoIndexRemovalResult>(selected.Count);
+
+        foreach (var removal in selected)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var replacement = Manifest.Single(entry =>
+                string.Equals(entry.Key, removal.ReplacementKey, StringComparison.OrdinalIgnoreCase));
+            var collection = database.GetCollection<BsonDocument>(removal.Collection);
+            var cursor = await collection.Indexes.ListAsync(cancellationToken);
+            var indexDocs = await cursor.ToListAsync(cancellationToken);
+
+            if (!TryGetIndex(indexDocs, replacement.Name, out var replacementIndex) ||
+                !HasExpectedDefinition(replacementIndex, replacement))
+            {
+                throw new MongoIndexOperationValidationException(
+                    $"Cannot remove '{removal.Key}': replacement index '{replacement.Key}' must exist as unique {{ url: 1 }}.");
+            }
+
+            var removalAction = GetRemovalAction(indexDocs, removal);
+            if (removalAction == "skipped_absent")
+            {
+                results.Add(new MongoIndexRemovalResult(
+                    removal.Key,
+                    removal.Collection,
+                    removal.Name,
+                    "skipped_absent"));
+                continue;
+            }
+
+            try
+            {
+                await collection.Indexes.DropOneAsync(removal.Name, cancellationToken);
+                results.Add(new MongoIndexRemovalResult(
+                    removal.Key,
+                    removal.Collection,
+                    removal.Name,
+                    "removed"));
+            }
+            catch (MongoCommandException exception) when (IsIndexNotFound(exception))
+            {
+                results.Add(new MongoIndexRemovalResult(
+                    removal.Key,
+                    removal.Collection,
+                    removal.Name,
+                    "skipped_absent"));
+            }
+            catch (MongoException exception)
+            {
+                throw CreateOperationException($"Could not remove Mongo index '{removal.Key}'.", exception);
+            }
+        }
+
+        return results;
+    }
+
+    internal static bool HasExpectedDefinition(BsonDocument indexDocument, MongoIndexManifestEntry expected)
+    {
+        return indexDocument.GetValue("unique", false).ToBoolean() &&
+            indexDocument.TryGetValue("key", out var actualKeys) &&
+            actualKeys.IsBsonDocument &&
+            actualKeys.AsBsonDocument.Equals(expected.Keys);
+    }
+
+    internal static string GetRemovalAction(
+        IEnumerable<BsonDocument> indexDocuments,
+        MongoIndexRemovalEntry removal)
+    {
+        return TryGetIndex(indexDocuments, removal.Name, out _)
+            ? "removed"
+            : "skipped_absent";
+    }
+
+    private static List<MongoIndexManifestEntry> FilterManifest(IList<string>? keys, bool rejectUnknownKeys)
     {
         if (keys == null || keys.Count == 0)
         {
@@ -154,6 +274,56 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
         }
 
         var keySet = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (rejectUnknownKeys)
+        {
+            var unknownKeys = keySet
+                .Where(key => Manifest.All(entry => !string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (unknownKeys.Length > 0)
+            {
+                throw new MongoIndexOperationValidationException(
+                    $"Unknown Mongo index key(s): {string.Join(", ", unknownKeys)}.");
+            }
+        }
+
         return Manifest.Where(x => keySet.Contains(x.Key)).ToList();
     }
+
+    private static List<MongoIndexRemovalEntry> FilterRemovalManifest(IList<string>? keys)
+    {
+        if (keys == null || keys.Count == 0)
+        {
+            throw new MongoIndexOperationValidationException("At least one approved removal key is required.");
+        }
+
+        var keySet = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unknownKeys = keySet
+            .Where(key => RemovalManifest.All(entry => !string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (unknownKeys.Length > 0)
+        {
+            throw new MongoIndexOperationValidationException(
+                $"Unknown Mongo index removal key(s): {string.Join(", ", unknownKeys)}.");
+        }
+
+        return RemovalManifest.Where(x => keySet.Contains(x.Key)).ToList();
+    }
+
+    private static bool TryGetIndex(
+        IEnumerable<BsonDocument> indexDocuments,
+        string name,
+        out BsonDocument indexDocument)
+    {
+        indexDocument = indexDocuments.FirstOrDefault(document =>
+            document.GetValue("name", string.Empty).AsString == name)!;
+        return indexDocument is not null;
+    }
+
+    private static bool IsIndexNotFound(MongoCommandException exception) =>
+        exception.Code == 27 || string.Equals(exception.CodeName, "IndexNotFound", StringComparison.OrdinalIgnoreCase);
+
+    private static MongoIndexOperationException CreateOperationException(string message, MongoException exception) =>
+        new($"{message} MongoDB rejected the operation: {exception.Message}", exception);
 }

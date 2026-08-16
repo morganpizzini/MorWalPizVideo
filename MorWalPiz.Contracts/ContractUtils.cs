@@ -102,6 +102,77 @@ namespace MorWalPiz.Contracts
                 UpdatedDateTime = entity.UpdatedDateTime
             };
         }
+
+        public static PageContract Convert(Page entity) => new()
+        {
+            Id = entity.Id,
+            ChannelId = entity.ChannelId,
+            ThumbnailUrl = entity.ThumbnailUrl,
+            Title = entity.Title,
+            Content = entity.Content,
+            Url = entity.Url,
+            VideoId = entity.VideoId,
+            Status = entity.Status,
+            InlineImages = entity.InlineImages.Select(Convert).ToArray(),
+            CreationDateTime = entity.CreationDateTime,
+            UpdatedDateTime = entity.UpdatedDateTime
+        };
+
+        public static PagePublicContract ConvertPublic(Page entity) => new()
+        {
+            ThumbnailUrl = entity.ThumbnailUrl,
+            Title = entity.Title,
+            Content = entity.Content,
+            Url = entity.Url,
+            VideoId = entity.VideoId,
+            InlineImages = entity.InlineImages.Select(Convert).ToArray()
+        };
+
+        public static PageImageContract Convert(PageImage image) => new()
+        {
+            PublicUrl = image.PublicUrl,
+            ContentType = image.ContentType,
+            Width = image.Width,
+            Height = image.Height,
+            AltText = image.AltText
+        };
+
+        public static ChannelNavigationContract Convert(ChannelNavigation entity) => new()
+        {
+            Id = entity.Id,
+            ChannelId = entity.ChannelId,
+            IsActive = entity.IsActive,
+            HeaderItems = entity.HeaderItems.Select(Convert).ToArray(),
+            FooterColumnCount = entity.FooterColumnCount,
+            FooterItems = entity.FooterItems.Select(Convert).ToArray()
+        };
+
+        public static NavigationMenuItemContract Convert(NavigationMenuItem item) => new()
+        {
+            Type = item.Type,
+            PageId = item.PageId,
+            TargetUrl = item.TargetUrl,
+            DisplayText = item.DisplayText,
+            Column = item.Column,
+            DisplayOrder = item.DisplayOrder,
+            OpenInNewTab = item.Type == NavigationItemType.External
+        };
+
+        public static PublicNavigationContract Convert(PublicNavigation navigation) => new()
+        {
+            HeaderItems = navigation.HeaderItems.Select(Convert).ToArray(),
+            FooterColumnCount = navigation.FooterColumnCount,
+            FooterItems = navigation.FooterItems.Select(Convert).ToArray()
+        };
+
+        public static NavigationMenuItemContract Convert(PublicNavigationItem item) => new()
+        {
+            DisplayText = item.DisplayText,
+            TargetUrl = item.TargetUrl,
+            OpenInNewTab = item.OpenInNewTab,
+            Column = item.Column,
+            DisplayOrder = item.DisplayOrder
+        };
         public static ChannelNewsImageContract Convert(ChannelNewsImage entity) => new()
         {
             StorageKey = entity.StorageKey,

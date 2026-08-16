@@ -59,6 +59,12 @@ const routeDefinitions: RouteConfig[] = [
     feature('create', () => import('../../routes/quickLinks/form')),
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/quickLinks/detail')), feature('edit', () => import('../../routes/quickLinks/form'))] },
   ]),
+  group('pages', () => import('../../routes/pages/index'), [
+    indexFeature('', () => import('../../routes/pages/index')),
+    feature('create', () => import('../../routes/pages/form')),
+    { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/pages/detail')), feature('edit', () => import('../../routes/pages/form'))] },
+  ]),
+  feature('navigation', () => import('../../routes/navigation'), { errorElement: createErrorElement() }),
   group('shortlinks', () => import('../../routes/shortLinks/index'), [
     indexFeature('', () => import('../../routes/shortLinks/index')),
     feature('create', () => import('../../routes/shortLinks/form')),

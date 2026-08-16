@@ -151,8 +151,22 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public async Task<Page?> GetByUrlAsync(string url)
-            => await _collection.Find(x => x.Url == url).FirstOrDefaultAsync();
+        public async Task<Page?> GetByUrlAsync(string url, string? channelId = null)
+        {
+            var filter = Builders<Page>.Filter.Eq(x => x.Url, url);
+            if (!string.IsNullOrWhiteSpace(channelId))
+                filter &= Builders<Page>.Filter.Eq(x => x.ChannelId, channelId);
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+    }
+    public class ChannelNavigationRepository : BaseRepository<ChannelNavigation>, IChannelNavigationRepository
+    {
+        public ChannelNavigationRepository(IMongoDatabase database) : base(database, DbCollections.ChannelNavigations)
+        {
+        }
+
+        public async Task<ChannelNavigation?> GetByChannelIdAsync(string channelId)
+            => await _collection.Find(x => x.ChannelId == channelId).FirstOrDefaultAsync();
     }
     public class SponsorRepository : BaseRepository<Sponsor>, ISponsorRepository
     {

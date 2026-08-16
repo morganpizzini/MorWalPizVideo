@@ -1,6 +1,9 @@
 import { Link } from "react-router";
 import "./footer.scss"
+import PublicNavigationLink from "../components/PublicNavigationLink";
+import { usePublicNavigation } from "../routes/layout/navigation";
 export default function TitleComponent() {
+    const { navigation, loading, error } = usePublicNavigation();
 
     return (
         <footer className="mt-auto">
@@ -13,22 +16,10 @@ export default function TitleComponent() {
                         <p className="mb-0">MorWalPiz</p>
                         <p>&copy; {(new Date().getFullYear())}</p>
                     </div>
-                    <div className="col-4 offset-md-3 col-md-3">
-                        <h5>Pagine</h5>
-                        <ul className="nav flex-column">
-                            <li className="nav-item mb-2"><Link to="/pages/chi-sono" className="nav-link p-0 link-light">Chi sono</Link></li>
-                            <li className="nav-item mb-2"><Link to="/calendar" className="nav-link p-0 link-light">Calendario</Link></li>
-                        </ul>
-                    </div>
-                    <div className="col-4 col-md-3">
-                        <h5>Sezioni</h5>
-                        <ul className="nav flex-column">
-                            <li className="nav-item mb-2"><Link to="/" className="nav-link p-0 link-light">Home</Link></li>
-                            <li className="nav-item mb-2"><Link to="/attrezzatura" className="nav-link p-0 link-light">Attrezzatura</Link></li>
-                            <li className="nav-item mb-2"><Link to="/sponsors" className="nav-link p-0 link-light">Sponsors</Link></li>
-                            <li className="nav-item mb-2"><Link to="/cookie-policy" className="nav-link p-0 link-light">Cookie policy</Link></li>
-                        </ul>
-                    </div>
+                    {loading && <div className="col-8 col-md-6" role="status" aria-label="Loading footer navigation" />}
+                    {error && <div className="col-8 col-md-6" role="status">Navigation unavailable</div>}
+                    {!loading && !error && Array.from({ length: navigation?.footerColumnCount ?? 0 }, (_, column) => <div className="col-4 col-md-3" key={column}><h5>Menu</h5><ul className="nav flex-column">{navigation?.footerItems.filter(item => item.column === column).map(item => <li className="nav-item mb-2" key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`}><PublicNavigationLink item={item} className="nav-link p-0 link-light" /></li>)}</ul></div>)}
+                    {!loading && !error && !navigation && <div className="col-8 col-md-6"><ul className="nav flex-column"><li className="nav-item mb-2"><Link to="/cookie-policy" className="nav-link p-0 link-light">Cookie policy</Link></li></ul></div>}
                 </div>
             </div>
         </footer>

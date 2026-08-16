@@ -36,7 +36,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ISponsorApplyRepository : IRepository<SponsorApply> { }
     public interface IPageRepository : IRepository<Page>
     {
-        Task<Page?> GetByUrlAsync(string url);
+        Task<Page?> GetByUrlAsync(string url, string? channelId = null);
+    }
+    public interface IChannelNavigationRepository : IRepository<ChannelNavigation>
+    {
+        Task<ChannelNavigation?> GetByChannelIdAsync(string channelId);
     }
     public interface IQueryLinkRepository : IRepository<QueryLink> { }
     public interface IPublishScheduleRepository : IRepository<PublishSchedule> { }

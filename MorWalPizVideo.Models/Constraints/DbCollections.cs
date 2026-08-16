@@ -22,6 +22,7 @@
 
         public const string YouTubeContent = "youtubeContent";
         public const string Pages = "pages";
+        public const string ChannelNavigations = "channelNavigations";
         public const string Sponsors = "sponsors";
         public const string Products = "products";
         public const string ProductCategories = "productCategories";

@@ -2,6 +2,7 @@
   "capturedAtUtc": "2026-08-03T14:12:00Z",
   "environment": "local-verification",
   "operation": "POST /api/mongoindexes/apply",
+  "historicalContext": "This sanitized sample predates the global unique page URL rollout. The page entry is shown with current manifest terminology for documentation consistency; this file remains historical evidence and is not proof of the current deployment state.",
   "request": {
     "approvalToken": "apply-approved-indexes",
     "approvedKeys": [
@@ -9,7 +10,7 @@
       "customformresponses.formid_submittedat_desc",
       "customformresponses.formid_responseid.unique",
       "youtubecontent_isprivate_creation_desc",
-      "pages_url",
+      "pages_url.unique",
       "compilations_url",
       "customforms_active_url",
       "calendarevents_creation_desc"
@@ -41,9 +42,9 @@
       "action": "created"
     },
     {
-      "key": "pages_url",
+      "key": "pages_url.unique",
       "collection": "pages",
-      "name": "ix_pages_url",
+      "name": "ux_pages_url_ci",
       "action": "skipped_existing"
     },
     {

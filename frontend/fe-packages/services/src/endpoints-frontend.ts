@@ -25,6 +25,7 @@ const SHIT_CHANNEL_NEWS_DETAIL = `${SHIT_CHANNEL_NEWS}/{idOrSlug}`;
 // Pages
 const PAGES = `${baseEndpoint}/pages`;
 const PAGES_DETAIL = `${PAGES}/{pageId}`;
+const NAVIGATION = `${baseEndpoint}/navigation`;
 
 // Products
 const PRODUCTS = `${baseEndpoint}/products`;
@@ -59,6 +60,7 @@ export default {
     SHIT_CHANNEL_NEWS_DETAIL,
     PAGES,
     PAGES_DETAIL,
+    NAVIGATION,
     PRODUCTS,
     SPONSORS,
     CONFIGURATION_STREAM,

@@ -10,5 +10,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string CalendarEvents = "tag-calendarevents";
         public const string QuickLinks = "tag-quicklinks";
         public const string ChannelNews = "tag-channelnews";
+        public const string Navigation = "tag-navigation";
     }
 }

@@ -92,10 +92,16 @@ public static partial class ChannelNewsHtmlSanitizer
 {
     private static readonly HashSet<string> AllowedTags = new(StringComparer.OrdinalIgnoreCase)
     {
-        "p", "br", "strong", "em", "u", "s", "ol", "ul", "li", "a", "h2", "h3", "h4", "blockquote"
+        "p", "br", "strong", "em", "u", "s", "ol", "ul", "li", "a", "h2", "h3", "h4", "blockquote",
+        "div", "figure", "figcaption", "img"
     };
 
-    public static string Sanitize(string? html)
+    private static readonly HashSet<string> AllowedLayoutClasses = new(StringComparer.Ordinal)
+    {
+        "page-columns", "page-column"
+    };
+
+    public static string Sanitize(string? html, IReadOnlySet<string>? allowedImageUrls = null)
     {
         var value = html ?? string.Empty;
         value = Regex.Replace(value, "<!--[\\s\\S]*?-->", string.Empty, RegexOptions.IgnoreCase);
@@ -106,13 +112,13 @@ public static partial class ChannelNewsHtmlSanitizer
             var tag = match.Groups[2].Value.ToLowerInvariant();
             if (!AllowedTags.Contains(tag))
                 return string.Empty;
-            return closing ? $"</{tag}>" : $"<{tag}{SanitizeAttributes(tag, match.Groups[3].Value)}>";
+            return closing ? $"</{tag}>" : $"<{tag}{SanitizeAttributes(tag, match.Groups[3].Value, allowedImageUrls)}>";
         }, RegexOptions.IgnoreCase);
     }
 
-    private static string SanitizeAttributes(string tag, string attributes)
+    private static string SanitizeAttributes(string tag, string attributes, IReadOnlySet<string>? allowedImageUrls)
     {
-        if (tag is not ("a" or "br"))
+        if (tag == "br")
             return string.Empty;
 
         var safe = new List<string>();
@@ -121,15 +127,29 @@ public static partial class ChannelNewsHtmlSanitizer
             var name = attribute.Groups[1].Value.ToLowerInvariant();
             var value = attribute.Groups[2].Success ? attribute.Groups[2].Value :
                 attribute.Groups[3].Success ? attribute.Groups[3].Value : attribute.Groups[4].Value;
-            if (name == "href" && tag == "a" && IsSafeUrl(value))
+            if (name == "href" && tag == "a" && IsSafeLink(value))
                 safe.Add($" href=\"{WebUtility.HtmlEncode(value)}\"");
-            if (name == "target" && tag == "a" && value is "_blank" or "_self")
+            if (name == "target" && tag == "a" && value is ("_blank" or "_self"))
                 safe.Add($" target=\"{value}\"");
+            if (name == "rel" && tag == "a" && value == "noopener noreferrer")
+                safe.Add(" rel=\"noopener noreferrer\"");
+            if (name == "src" && tag == "img" && IsSafeImageUrl(value, allowedImageUrls))
+                safe.Add($" src=\"{WebUtility.HtmlEncode(value)}\"");
+            if (name == "alt" && tag == "img")
+                safe.Add($" alt=\"{WebUtility.HtmlEncode(value.Trim())}\"");
+            if (name == "class" && tag == "div" && AllowedLayoutClasses.Contains(value))
+                safe.Add($" class=\"{value}\"");
         }
         return string.Concat(safe);
     }
 
-    private static bool IsSafeUrl(string value) =>
+    private static bool IsSafeLink(string value) =>
         Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out var uri) &&
-        (!uri.IsAbsoluteUri || uri.Scheme is "http" or "https" or "mailto");
+        (!uri.IsAbsoluteUri || uri.Scheme is "http" or "https");
+
+    private static bool IsSafeImageUrl(string value, IReadOnlySet<string>? allowedImageUrls) =>
+        allowedImageUrls?.Contains(value) == true &&
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        uri.Scheme is "http" or "https" &&
+        string.IsNullOrWhiteSpace(uri.UserInfo);
 }

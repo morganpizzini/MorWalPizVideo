@@ -1,8 +1,10 @@
 import { useLoaderData } from "react-router"
 import SEO from "@utils/seo";
 import ReactGA from "react-ga4"
+import type { PagePublic } from "@morwalpizvideo/models";
 export default function Matches() {
-    const { page } = useLoaderData();
+    const { page } = useLoaderData() as { page: PagePublic };
+    const description = page.content.replace(/<[^>]+>/g, '').slice(0, 120);
     if (typeof window !== 'undefined') {
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: page.title })
     }
@@ -10,7 +12,7 @@ export default function Matches() {
         <>
             <SEO
                 title={page.title}
-                description={page.shortContent}
+                description={description}
                 imageUrl={page.thumbnailUrl}
                 type='article' />
             <div id="page-container" className="p-4 bg-white">
