@@ -10,7 +10,7 @@ interface TitleComponentProps {
 
 export default function TitleComponent(props: TitleComponentProps) {
     const { navigation, loading, error } = usePublicNavigation();
-
+    
     return (
         <div className={`container text-center ${props.dimensions}`}>
             <div className="title-container">

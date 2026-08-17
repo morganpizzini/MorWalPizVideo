@@ -7,6 +7,7 @@ import { Channel } from '@morwalpizvideo/models';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import GenericErrorList from '@components/GenericErrorList';
+import { useChannelContext } from '../../../contexts/ChannelContext';
 
 const ChannelDetail: React.FC = () => {
   const entity = useLoaderData<Channel>();
@@ -17,6 +18,7 @@ const ChannelDetail: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const location = useLocation();
+  const { selectChannel } = useChannelContext();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -40,6 +42,11 @@ const ChannelDetail: React.FC = () => {
 
   const handleDelete = () => {
     setShowModal(true);
+  };
+
+  const navigateToChannelManagement = (path: string) => {
+    selectChannel(entity.channelId);
+    navigate(path);
   };
 
   const confirmDelete = () => {
@@ -145,6 +152,16 @@ const ChannelDetail: React.FC = () => {
             </Button>
             {logoUrl && <Button type="button" variant="outline-danger" onClick={removeLogo} disabled={logoBusy}>Remove logo</Button>}
           </div>
+        </div>
+      </DetailPanel>
+      <DetailPanel title="Channel content management">
+        <div className="d-flex flex-wrap gap-2">
+          <Button type="button" variant="outline-primary" onClick={() => navigateToChannelManagement('/pages')}>
+            Pages
+          </Button>
+          <Button type="button" variant="outline-primary" onClick={() => navigateToChannelManagement('/navigation')}>
+            Navigation
+          </Button>
         </div>
       </DetailPanel>
       <Modal show={showModal} onHide={() => setShowModal(false)}>

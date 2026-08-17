@@ -5,6 +5,11 @@ import { createMemoryRouter, RouterProvider, useLoaderData, useFetcher, useNavig
 import { Channel } from '@morwalpizvideo/models';
 import { ToastProvider } from '@components/ToastNotification';
 
+const { mockNavigate, mockSelectChannel } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockSelectChannel: vi.fn(),
+}));
+
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
   return {
@@ -14,6 +19,10 @@ vi.mock('react-router', async () => {
     useNavigate: vi.fn(),
   };
 });
+
+vi.mock('../../../contexts/ChannelContext', () => ({
+  useChannelContext: () => ({ selectChannel: mockSelectChannel }),
+}));
 
 const mockChannel: Channel = {
   channelId: '1',
@@ -36,7 +45,7 @@ const mockFetcher = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockFetcher.data = undefined;
-  vi.mocked(useNavigate).mockReturnValue(vi.fn());
+  vi.mocked(useNavigate).mockReturnValue(mockNavigate);
   vi.mocked(useLoaderData).mockReturnValue(mockChannel);
   vi.mocked(useFetcher).mockReturnValue(mockFetcher as any);
 });
@@ -60,6 +69,23 @@ async function renderComponent() {
 }
 
 describe('Channel Detail', () => {
+  it('selects the channel before opening Pages or Navigation management', async () => {
+    await renderComponent();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pages' }));
+    expect(mockSelectChannel).toHaveBeenCalledWith('1');
+    expect(mockNavigate).toHaveBeenCalledWith('/pages');
+    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
+
+    mockSelectChannel.mockClear();
+    mockNavigate.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigation' }));
+    expect(mockSelectChannel).toHaveBeenCalledWith('1');
+    expect(mockNavigate).toHaveBeenCalledWith('/navigation');
+    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
+  });
+
   it('renders the short-link base and every social entry', async () => {
     await renderComponent();
 

@@ -128,7 +128,7 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
     const availableCategories = useMemo(() => {
         if (selectedCategories.length === 0) {
             // Tutte le categorie sono disponibili se non ci sono filtri attivi
-            const allCategories = matches.flatMap((item: IndexMatch) => 
+            const allCategories = matches.flatMap((item: IndexMatch) =>
                 item.categories.map((cat: IndexCategory) => cat.title)
             );
             return [...new Set(allCategories)];

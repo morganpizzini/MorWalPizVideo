@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Memory;
 using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Controllers;
@@ -23,7 +24,7 @@ public sealed class NavigationController(
         try
         {
             var navigation = await navigationService.GetPublicAsync();
-            return navigation is null ? Ok(null) : Ok(ContractUtils.Convert(navigation));
+            return navigation is null ? Ok(new PublicNavigationContract()) : Ok(ContractUtils.Convert(navigation));
         }
         catch (InvalidOperationException exception)
         {
