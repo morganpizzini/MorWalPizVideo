@@ -68,9 +68,11 @@ BackOffice user-management security model:
 
 ### 2.2 Channel tenancy and selected-channel model
 
-`GET /api/channels/accessible` returns the channels accessible to the effective identity for the BackOffice selector. `GET /api/channels` remains the global channel catalog for channel-management flows. The BackOffice SPA keeps one selected channel in its selector and sends it as `X-Channel-Id` to scoped resources. The selection is cleared or replaced with the first accessible channel when it becomes stale; no accessible channels is a valid empty state.
+`GET /api/channels/accessible` returns the channels accessible to the effective identity for the BackOffice selector. The global `GET /api/channels` catalog and channel creation require the dedicated `channels.admin` permission; `backoffice.manageall` continues to bypass that check. The BackOffice SPA keeps one selected channel in its selector and sends it as `X-Channel-Id` to scoped resources. The selection is cleared or replaced with the first accessible channel when it becomes stale; no accessible channels is a valid empty state.
 
 Scoped resources include videos, categories, images, calendar events, compilations, short links, query links, insights, dashboard data, and API-key management. A missing header is `400`; an unknown or inaccessible channel is `404`. API keys are channel-bound and cannot use impersonation. Administrators may select any channel, while ordinary users receive their owned channels.
+
+The SPA header exposes a self-service channel link for the currently selected channel. It never accepts a channel ID in that route. Channel detail, update, delete, and logo operations continue to enforce the existing route-ID ownership checks; Pages and Navigation remain selected-channel scoped and retain their existing permissions and `X-Channel-Id` enforcement.
 
 Video owners and collaborators can read a video through an accessible channel, but collaborator access is read-only. Compilation management remains scoped to the selected channel, while a compilation may include videos readable through other accessible channels. Public compilation URLs are anonymous and globally resolved, independent of the administrative channel context. Short-link management remains scoped even though public short-link resolution is global.
 

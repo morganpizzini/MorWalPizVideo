@@ -40,7 +40,7 @@ export const adminMenuGroups: AdminMenuGroup[] = [
     label: 'Content',
     items: [
       { label: 'Videos', path: '/videos', permissions: [permissions.videos.view, permissions.videos.manage], icon: ListVideo },
-      { label: 'Channels', path: '/channels', permissions: [permissions.channels.view, permissions.channels.manage], icon: Tv },
+      { label: 'Channels', path: '/channels', permissions: [permissions.channels.admin], icon: Tv },
       { label: 'Categories', path: '/categories', permissions: [permissions.categories.view, permissions.categories.manage], icon: Folder },
       { label: 'Images', path: '/images', permissions: [permissions.images.view, permissions.images.manage], icon: FileImage },
       { label: 'Calendar', path: '/calendarevents', permissions: [permissions.calendar.view, permissions.calendar.manage], icon: CalendarDays },

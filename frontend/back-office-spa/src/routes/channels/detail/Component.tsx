@@ -19,6 +19,7 @@ const ChannelDetail: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
   const { selectChannel } = useChannelContext();
+  const isSelfRoute = location.pathname.startsWith('/my-channel');
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -112,7 +113,7 @@ const ChannelDetail: React.FC = () => {
     <>
       <PageHeader
         title="Channel Detail"
-        editLink={`/channels/${entity.channelId}/edit`}
+        editLink={isSelfRoute ? '/my-channel/edit' : `/channels/${entity.channelId}/edit`}
         deleteCallback={handleDelete}
       />
       <GenericErrorList errors={errors?.generics} />

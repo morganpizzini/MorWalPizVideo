@@ -1,19 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { render } from '../test/test-utils';
-import { authService } from '../services/authService';
+import { useAppStore } from '../state/appStore';
 import AdminSidebar from './AdminSidebar';
-
-vi.mock('../services/authService', () => ({
-  authService: {
-    getPermissions: vi.fn(),
-  },
-}));
 
 describe('AdminSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authService.getPermissions).mockReturnValue(['backoffice.access', 'videos.view']);
+    useAppStore.getState().reset();
+    useAppStore.setState({ effectivePermissions: ['backoffice.access', 'videos.view'] });
   });
 
   it('renders one permission-filtered navigation tree with active and close behavior', () => {
@@ -34,13 +29,13 @@ describe('AdminSidebar', () => {
   });
 
   it('shows resource navigation for manage permission and routed catalog modules', () => {
-    vi.mocked(authService.getPermissions).mockReturnValue([
+    useAppStore.setState({ effectivePermissions: [
       'videos.manage',
       'productcategories.manage',
       'sponsors.manage',
       'products.manage',
       'compilations.manage',
-    ]);
+    ] });
 
     render(<AdminSidebar show onHide={vi.fn()} />);
 
@@ -49,5 +44,14 @@ describe('AdminSidebar', () => {
     expect(screen.getByRole('link', { name: 'Sponsors' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Products' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Compilations' })).toBeInTheDocument();
+  });
+
+  it('shows Channels only with the dedicated administration permission', () => {
+    useAppStore.setState({ effectivePermissions: ['channels.manage'] });
+    render(<AdminSidebar show onHide={vi.fn()} />);
+    expect(screen.queryByRole('link', { name: 'Channels' })).not.toBeInTheDocument();
+
+    act(() => useAppStore.setState({ effectivePermissions: ['channels.admin'] }));
+    expect(screen.getByRole('link', { name: 'Channels' })).toBeInTheDocument();
   });
 });

@@ -73,7 +73,7 @@ public class ChannelsController : ApplicationControllerBase
     }
 
     [HttpGet]
-    [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsAdmin)]
     public async Task<IActionResult> GetChannels()
     {
         var entities = await _dataService.GetChannels();
@@ -106,7 +106,7 @@ public class ChannelsController : ApplicationControllerBase
     }
 
     [HttpPost]
-    [AllowUser(AuthorizationPermissionKeys.ChannelsCreate, AuthorizationPermissionKeys.ChannelsManage)]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsAdmin)]
     public async Task<IActionResult> AddChannel(AddChannelRequest request)
     {
         var channelId = request.YTChannelId is null

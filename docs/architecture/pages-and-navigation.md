@@ -97,7 +97,9 @@ internal, and external target URLs; public external items are marked `OpenInNewT
 ## Frontend Surfaces
 
 - The BackOffice SPA exposes `/pages`, `/pages/create`, `/pages/:id`, and
-  `/pages/:id/edit`, plus `/navigation`. The page editor handles title, public slug,
+  `/pages/:id/edit`, plus `/navigation`. These routes continue to use the selected
+  channel in `X-Channel-Id`; the selected-channel self channel route links to them
+  without accepting an arbitrary channel ID. The page editor handles title, public slug,
   Draft/Published status, thumbnail/video fields, sanitized rich HTML, image upload and
   insertion, image previews, and image deletion. The navigation editor manages active
   state, header/footer order, footer columns, and all three item types.

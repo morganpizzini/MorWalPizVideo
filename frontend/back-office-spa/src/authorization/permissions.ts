@@ -2,7 +2,7 @@ export const permissions = {
   backoffice: { access: 'backoffice.access', manageAll: 'backoffice.manageall' },
   users: { view: 'users.view', manage: 'users.manage', create: 'users.create', update: 'users.update', delete: 'users.delete', permissionsManage: 'users.permissions.manage' },
   videos: { view: 'videos.view', manage: 'videos.manage', create: 'videos.create', update: 'videos.update', delete: 'videos.delete', import: 'videos.import', translate: 'videos.translate', publish: 'videos.publish' },
-  channels: resourcePermissions('channels'),
+  channels: { ...resourcePermissions('channels'), admin: 'channels.admin' },
   channelnews: resourcePermissions('channelnews'),
   categories: resourcePermissions('categories'),
   images: resourcePermissions('images'),
@@ -71,6 +71,7 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
 
   if (!module) return [permissions.backoffice.access];
   if (module === 'profile') return [permissions.backoffice.access];
+  if (module === 'my-channel') return [permissions.backoffice.access];
   if (module === 'diagnostics') return [permissions.diagnostics.view];
   if (module === 'rbac') {
     if (segments[1] === 'groups') return [permissions.users.permissionsManage];
@@ -89,6 +90,9 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
 
   const resource = routeResources[module];
   if (!resource) throw new Error(`Protected route module "${module}" has no permission mapping.`);
+  if (module === 'channels' && (segments.length === 1 || segments.includes('create'))) {
+    return [permissions.channels.admin];
+  }
   if (module === 'navigation') return action ? [permissions.navigation.update, permissions.navigation.manage] : [permissions.navigation.view, permissions.navigation.manage];
   if (module === 'insights' && segments.includes('scan-news')) {
     return [permissions.insights.scan, permissions.insights.manage];

@@ -32,6 +32,15 @@ const routeDefinitions: RouteConfig[] = [
   feature('diagnostics', () => import('../../routes/diagnostics'), { errorElement: createErrorElement() }),
   feature('profile', () => import('../../routes/profile'), { errorElement: createErrorElement() }),
   {
+    path: 'my-channel',
+    Component: Outlet,
+    errorElement: createErrorElement(),
+    children: [
+      indexFeature('', () => import('../../routes/channels/self/detail')),
+      feature('edit', () => import('../../routes/channels/self/edit')),
+    ],
+  },
+  {
     path: 'rbac', Component: Outlet, errorElement: createErrorElement(), children: [
       indexFeature('', () => import('../../routes/rbac')),
       feature('users', () => import('../../routes/rbac/UsersPage')),

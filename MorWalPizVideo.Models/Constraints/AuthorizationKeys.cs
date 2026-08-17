@@ -23,6 +23,7 @@ public static class AuthorizationPermissionKeys
   public const string VideosPublish = "videos.publish";
 
   public const string ChannelsView = "channels.view";
+  public const string ChannelsAdmin = "channels.admin";
   public const string ChannelsManage = "channels.manage";
   public const string ChannelsCreate = "channels.create";
   public const string ChannelsUpdate = "channels.update";

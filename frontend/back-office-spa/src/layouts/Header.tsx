@@ -4,6 +4,7 @@ import { Menu, Bell, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { authService } from '../services/authService';
 import { useAppStore } from '../state/appStore';
+import { useChannelContext } from '../contexts/ChannelContext';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -12,6 +13,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) => {
   const navigate = useNavigate();
   const user = useAppStore(state => state.user);
+  const { selectedChannelId } = useChannelContext();
 
   const handleLogout = async () => {
     await authService.logout();
@@ -50,6 +52,11 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar = () => undefined }) =>
               <Dropdown.Item as={Link} to="/profile" role="menuitem">
                 Profile
               </Dropdown.Item>
+              {selectedChannelId ? (
+                <Dropdown.Item as={Link} to="/my-channel" role="menuitem">
+                  My channel
+                </Dropdown.Item>
+              ) : null}
               <Dropdown.Divider />
               <Dropdown.Item onClick={handleLogout} role="menuitem">
                 Logout

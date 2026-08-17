@@ -22,6 +22,11 @@ vi.mock('../services/authService', () => ({
 
 describe('Header', () => {
   const navigateMock = vi.fn();
+  const channelState = vi.hoisted(() => ({ selectedChannelId: null as string | null }));
+
+  vi.mock('../contexts/ChannelContext', () => ({
+    useChannelContext: () => channelState,
+  }));
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,6 +52,17 @@ describe('Header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'User menu' }));
 
     expect(await screen.findByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'My channel' })).not.toBeInTheDocument();
+  });
+
+  it('links to the selected channel self-service route', async () => {
+    channelState.selectedChannelId = 'channel-two';
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'User menu' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'My channel' })).toHaveAttribute('href', '/my-channel');
+    channelState.selectedChannelId = null;
   });
 
   it('keeps logout behavior intact', async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { protectedRoutes } from './index';
+import { getRoutePermissions, permissions } from '../../authorization/permissions';
 
 describe('protectedRoutes', () => {
   it('includes profile route', () => {
@@ -16,5 +17,11 @@ describe('protectedRoutes', () => {
 
     const resolvedVideoIndex = await (videosRoute!.children![0].lazy as () => Promise<unknown>)();
     expect((resolvedVideoIndex as { loader?: unknown }).loader).toBeTypeOf('function');
+  });
+
+  it('separates global channel administration from selected-channel self service', () => {
+    expect(getRoutePermissions('channels', false)).toEqual([permissions.channels.admin]);
+    expect(getRoutePermissions('channels/create', false)).toEqual([permissions.channels.admin]);
+    expect(getRoutePermissions('my-channel', false)).toEqual([permissions.backoffice.access]);
   });
 });

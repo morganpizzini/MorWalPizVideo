@@ -48,11 +48,11 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
   }
 
   [Fact]
-  public async Task Channels_endpoint_returns_the_global_catalog_for_channels_view_permission()
+  public async Task Channels_endpoint_returns_the_global_catalog_for_channels_admin_permission()
   {
     var firstChannel = await AddChannelAsync($"global-first-{Guid.NewGuid():N}");
     var secondChannel = await AddChannelAsync($"global-second-{Guid.NewGuid():N}");
-    using var client = CreateClient(AuthorizationPermissionKeys.ChannelsView);
+    using var client = CreateClient(AuthorizationPermissionKeys.ChannelsAdmin);
 
     var response = await client.GetAsync("/api/Channels");
     var payload = await response.Content.ReadFromJsonAsync<List<ChannelContract>>();
@@ -61,6 +61,16 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     Assert.NotNull(payload);
     Assert.Contains(payload!, channel => channel.ChannelId == firstChannel.ChannelId);
     Assert.Contains(payload!, channel => channel.ChannelId == secondChannel.ChannelId);
+  }
+
+  [Fact]
+  public async Task Global_channels_endpoint_denies_channel_view_without_channel_admin_permission()
+  {
+    using var client = CreateClient(AuthorizationPermissionKeys.ChannelsView);
+
+    var response = await client.GetAsync("/api/Channels");
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
   }
 
   [Fact]
