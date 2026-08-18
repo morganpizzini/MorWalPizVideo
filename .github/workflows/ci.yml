@@ -16,7 +16,7 @@ jobs:
     
     strategy:
       matrix:
-        app: [back-office-spa, morwalpizvideo.client, shooting-ita-frontend]
+        app: [back-office-spa, morwalpizvideo.client, shooting-ita-frontend, shoot-recorder]
     
     steps:
       - name: Checkout code
