@@ -9,7 +9,8 @@
     "back-office-spa",
     "morwalpizvideo.client",
     "morwalpiz-shop.client",
-    "shooting-ita-frontend"
+    "shooting-ita-frontend",
+    "shoot-recorder"
   ],
   "scripts": {
     "build:models": "yarn workspace @morwalpizvideo/models build",
@@ -20,7 +21,8 @@
     "install:all": "yarn install",
     "dev:back-office-spa": "yarn build:shared && yarn workspace back-office-spa dev",
     "dev:morwalpizvideo-client": "yarn build:shared && yarn workspace morwalpizvideo.client dev",
-    "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev"
+    "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev",
+    "dev:shoot-recorder": "yarn workspace shoot-recorder dev"
   },
   "engines": {
     "node": ">=18.0.0"
