@@ -253,9 +253,3 @@
     text-transform: uppercase;
     opacity: 0.82;
 }
-
-@media (min-width: 768px) {
-    .home-masonry > div > div > div:has(> .d-md-none) {
-        display: none;
-    }
-}

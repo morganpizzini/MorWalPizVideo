@@ -6,7 +6,6 @@ import './style.scss'
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from "react-share";
 import ReactGA from "react-ga4"
 import configKeys from "@utils/configKeys"
-import Masonry, { ResponsiveMasonry } from "react-responsive-masonry"
 import { getMatches } from "@services/matches";
 import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
@@ -297,10 +296,6 @@ function ChannelNewsBanner({ item }: { item: ChannelNews }) {
 }
 
 function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[], selectedTags: string[]) {
-    // Common configuration for all Masonry layouts
-    const columnsCountBreakPoints = { 350: 1, 750: 2, 900: 3 };
-    const gutterBreakpoints = { 350: "12px", 750: "16px", 900: "24px" };
-
     // Create initial section (before Banner)
     const firstSection = items.slice(0, 8);
     const middleSection = items.slice(8, 17);
@@ -311,43 +306,32 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
     return (
         <>
             {/* First section */}
-            <ResponsiveMasonry
-                columnsCountBreakPoints={columnsCountBreakPoints}
-                gutterBreakpoints={gutterBreakpoints}
-                className="home-masonry"
-            >
-                <Masonry>
-                    {firstSection.map((match: IndexMatch, i: number) => {
-                        // Create an array of elements to render
-                        const elementsToRender = match.videoRefs == null ? [] : [
-                            <React.Fragment key={`match-${i}`}>
-                                {RenderMatchCard(match, shouldShowBanners ? i : -1)}
-                            </React.Fragment>
-                        ];
-                        if (i === 3) elementsToRender.push(<BuyMeACoffeeCard key={`coffee-${i}`} />);
-                        if (i === 5) elementsToRender.push(<GoToShortsCard key={`shorts-${i}`} />);
-                        // Return the flattened elements
-                        return elementsToRender;
-                    }).flat()}
-                </Masonry>
-            </ResponsiveMasonry>
+            <div>
+                {firstSection.map((match: IndexMatch, i: number) => {
+                    // Create an array of elements to render
+                    const elementsToRender = match.videoRefs == null ? [] : [
+                        <React.Fragment key={`match-${i}`}>
+                            {RenderMatchCard(match, shouldShowBanners ? i : -1)}
+                        </React.Fragment>
+                    ];
+                    if (i === 3) elementsToRender.push(<BuyMeACoffeeCard key={`coffee-${i}`} />);
+                    if (i === 5) elementsToRender.push(<GoToShortsCard key={`shorts-${i}`} />);
+                    // Return the flattened elements
+                    return elementsToRender;
+                }).flat()}
+            </div>
 
             {shouldShowBanners && <Banner />}
 
             {/* Middle section */}
             {middleSection.length > 0 && (
-                <ResponsiveMasonry
-                    columnsCountBreakPoints={columnsCountBreakPoints}
-                    gutterBreakpoints={gutterBreakpoints}
-                >
-                    <Masonry>
-                        {middleSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
-                            <React.Fragment key={`match-${i + 7}`}>
-                                {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
-                            </React.Fragment>
-                        ])}
-                    </Masonry>
-                </ResponsiveMasonry>
+                <div>
+                    {middleSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
+                        <React.Fragment key={`match-${i + 7}`}>
+                            {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
+                        </React.Fragment>
+                    ])}
+                </div>
             )}
 
             {/* Sponsors full width */}
@@ -355,18 +339,13 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
 
             {/* Last section */}
             {lastSection.length > 0 && (
-                <ResponsiveMasonry
-                    columnsCountBreakPoints={columnsCountBreakPoints}
-                    gutterBreakpoints={gutterBreakpoints}
-                >
-                    <Masonry>
-                        {lastSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
-                            <React.Fragment key={`match-${i + 15}`}>
-                                {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
-                            </React.Fragment>
-                        ])}
-                    </Masonry>
-                </ResponsiveMasonry>
+                <div>
+                    {lastSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
+                        <React.Fragment key={`match-${i + 15}`}>
+                            {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
+                        </React.Fragment>
+                    ])}
+                </div>
             )}
         </>
     );
@@ -374,7 +353,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
 
 function Banner() {
     return (
-        <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
+        <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block">
             <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
                 La mia attrezzatura <i className="fa fa-arrow-right"></i>
             </div>
@@ -384,7 +363,7 @@ function Banner() {
 
 function Sponsors() {
     return (
-        <Link to={`/sponsors`} className="text-decoration-none text-black d-block" style={{ "columnSpan": "all" }}>
+        <Link to={`/sponsors`} className="text-decoration-none text-black d-block">
             <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
                 I miei sponsors <i className="fa fa-arrow-right"></i>
             </div>
