@@ -306,7 +306,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
     return (
         <>
             {/* First section */}
-            <div>
+            <div className="home-card-section">
                 {firstSection.map((match: IndexMatch, i: number) => {
                     // Create an array of elements to render
                     const elementsToRender = match.videoRefs == null ? [] : [
@@ -325,7 +325,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
 
             {/* Middle section */}
             {middleSection.length > 0 && (
-                <div>
+                <div className="home-card-section">
                     {middleSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
                         <React.Fragment key={`match-${i + 7}`}>
                             {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
@@ -339,7 +339,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
 
             {/* Last section */}
             {lastSection.length > 0 && (
-                <div>
+                <div className="home-card-section">
                     {lastSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
                         <React.Fragment key={`match-${i + 15}`}>
                             {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}

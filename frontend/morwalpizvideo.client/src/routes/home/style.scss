@@ -8,17 +8,19 @@
     }
 }
 
-.card-columns {
-    column-count: 4;
-
-    @media (max-width: 768px) {
-        column-count: 2;
-    }
-}
-
 .card {
     break-inside: avoid-column;
     margin-bottom: 1rem;
+}
+
+.home-card-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .home-card {
