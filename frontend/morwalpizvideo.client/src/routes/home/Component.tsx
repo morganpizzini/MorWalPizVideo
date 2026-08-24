@@ -213,7 +213,7 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
             }
             {matches.length > 0 &&
                 <>
-                    <div className="row align-items-center">
+                    <div className="row align-items-start">
                         <div className="d-none d-md-block col-md-3">
                             {RenderMatchCard(matches[0], -1)}
                         </div>

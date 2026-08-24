@@ -9,13 +9,19 @@ public sealed class RecordingCrossApiService : ICrossApiService
 
     public Task<string> ResetCache(string key)
     {
-        ResetKeys.Add(key);
+        lock (ResetKeys)
+        {
+            ResetKeys.Add(key);
+        }
         return Task.FromResult(string.Empty);
     }
 
     public Task<string> PurgeCache(string key)
     {
-        PurgedTags.Add(key);
+        lock (PurgedTags)
+        {
+            PurgedTags.Add(key);
+        }
         return Task.FromResult(string.Empty);
     }
 

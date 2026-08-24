@@ -8,8 +8,35 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 {
     public class MatchMockRepository : BaseMockRepository<YouTubeContent>, IYouTubeContentRepository
     {
+        private static readonly object VideoReferenceSync = new();
+
         public MatchMockRepository(IMockScenario scenario) : base(scenario, "matches")
         {
+        }
+
+        public Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+        {
+            lock (VideoReferenceSync)
+            {
+                var match = scenario.Read<YouTubeContent>(_fileName)
+                    .FirstOrDefault(item => item.Id == matchId);
+                if (match is null)
+                {
+                    return Task.FromResult(VideoReferenceAppendResult.NotFound);
+                }
+
+                if (match.VideoRefs.Any(video =>
+                        string.Equals(video.YoutubeId, videoReference.YoutubeId, StringComparison.Ordinal)))
+                {
+                    return Task.FromResult(VideoReferenceAppendResult.Duplicate);
+                }
+
+                scenario.Replace(_fileName, match with
+                {
+                    VideoRefs = match.VideoRefs.Append(videoReference).ToArray()
+                });
+                return Task.FromResult(VideoReferenceAppendResult.Added);
+            }
         }
 
         public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
@@ -620,4 +647,3 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public UserRequestMockRepository(IMockScenario scenario) : base(scenario, "userRequests") { }
     }
 }
-

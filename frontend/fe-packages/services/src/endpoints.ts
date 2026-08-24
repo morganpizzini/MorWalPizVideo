@@ -2,6 +2,7 @@ const baseEndpoint = 'api';
 
 const VIDEOS = `${baseEndpoint}/videos`;
 const VIDEOS_DETAIL = `${VIDEOS}/{videoId}`;
+const VIDEOS_VIDEO_REFS = `${VIDEOS_DETAIL}/video-refs`;
 const CATEGORIES = `${baseEndpoint}/categories`;
 const CATEGORIES_DETAIL = `${CATEGORIES}/{categoryId}`;
 const QUERYLINKS = `${baseEndpoint}/querylinks`;
@@ -94,6 +95,7 @@ export default {
 
     VIDEOS,
     VIDEOS_DETAIL,
+    VIDEOS_VIDEO_REFS,
     CATEGORIES,
     CATEGORIES_DETAIL,
     QUERYLINKS,

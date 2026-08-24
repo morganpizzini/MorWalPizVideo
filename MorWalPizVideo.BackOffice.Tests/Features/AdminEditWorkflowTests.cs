@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
@@ -393,6 +394,130 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
 
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(updated!.VideoRefs).ChannelIds.Single());
+  }
+
+  [Fact]
+  public async Task Video_reference_add_persists_server_built_reference_and_invalidates_match_cache()
+  {
+    var videoId = $"video-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateCollection($"content-{videoId}", "Collection", string.Empty, string.Empty, videoId, []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId
+      });
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+    _factory.CrossApiService.Clear();
+
+    var response = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = $"  {videoId}  ",
+      categories = new[] { "300000000000000000000001" }
+    });
+    var returned = await response.Content.ReadFromJsonAsync<VideoRefContract>();
+    var updated = await _factory.MatchRepository.GetItemAsync(match.Id);
+    var added = Assert.Single(updated!.VideoRefs);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(videoId, returned!.YoutubeId);
+    Assert.Equal(videoId, added.YoutubeId);
+    Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(added.ChannelIds));
+    Assert.Equal("Scenario category", Assert.Single(added.Categories).Title);
+    Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.PurgedTags);
+  }
+
+  [Fact]
+  public async Task Video_reference_add_rejects_unknown_categories_and_duplicates_without_persistence()
+  {
+    var videoId = $"video-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateSingleVideo(videoId, []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId,
+        VideoRefs = [new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId])]
+      });
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+
+    _factory.CrossApiService.Clear();
+    var unknownCategoryResponse = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = $"unknown-{videoId}",
+      categories = new[] { "missing-category" }
+    });
+    Assert.Equal(HttpStatusCode.BadRequest, unknownCategoryResponse.StatusCode);
+    Assert.Empty(_factory.CrossApiService.ResetKeys);
+
+    var duplicateResponse = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = videoId,
+      categories = new[] { "300000000000000000000001" }
+    });
+    var unchanged = await _factory.MatchRepository.GetItemAsync(match.Id);
+
+    Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+    Assert.Single(unchanged!.VideoRefs);
+    Assert.Empty(_factory.CrossApiService.PurgedTags);
+  }
+
+  [Fact]
+  public async Task Video_reference_add_rejects_categories_from_another_channel()
+  {
+    var videoId = $"video-{Guid.NewGuid():N}";
+    var crossChannelCategoryId = $"category-{Guid.NewGuid():N}";
+    await _factory.CategoryRepository!.AddItemAsync(new Category("Other channel", "Not available here")
+    {
+      Id = crossChannelCategoryId,
+      ChannelId = "other-channel"
+    });
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateSingleVideo(videoId, []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId
+      });
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+    _factory.CrossApiService.Clear();
+
+    var response = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = $"new-{videoId}",
+      categories = new[] { crossChannelCategoryId }
+    });
+    var updated = await _factory.MatchRepository.GetItemAsync(match.Id);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.Empty(updated!.VideoRefs);
+    Assert.Empty(_factory.CrossApiService.ResetKeys);
+  }
+
+  [Fact]
+  public async Task Concurrent_video_reference_adds_preserve_both_references()
+  {
+    var videoId = $"video-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateSingleVideo(videoId, []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId
+      });
+    using var firstClient = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+    using var secondClient = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+
+    var responses = await Task.WhenAll(
+      firstClient.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+      {
+        youtubeId = $"first-{videoId}",
+        categories = new[] { "300000000000000000000001" }
+      }),
+      secondClient.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+      {
+        youtubeId = $"second-{videoId}",
+        categories = new[] { "300000000000000000000001" }
+      }));
+    var updated = await _factory.MatchRepository.GetItemAsync(match.Id);
+
+    Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+    Assert.Equal(
+      new[] { $"first-{videoId}", $"second-{videoId}" }.OrderBy(id => id),
+      updated!.VideoRefs.Select(video => video.YoutubeId).OrderBy(id => id));
   }
 
   private HttpClient CreateClient(string permission, string channelId)

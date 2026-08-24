@@ -2,7 +2,7 @@
 
 ## Scope
 
-This route manages root match metadata and in-memory video reference editing before final save.
+This route manages root match metadata and immediate video reference additions.
 
 Path area:
 - `src/routes/videos/edit/Component.tsx`
@@ -21,7 +21,7 @@ Path area:
 
 - Fields: title, description, url, root categories, match type, thumbnail video id.
 - Root categories are serialized as JSON array of category ids in hidden field `categories`.
-- Video references are serialized as JSON array in hidden field `videoRefs`.
+- Video reference additions are submitted independently from the metadata form.
 
 ### Video References Management
 
@@ -35,14 +35,13 @@ Path area:
   - YouTube id is empty.
   - No categories selected.
   - Ref id already exists.
-- Added refs are not sent immediately; they are included when submitting the main form.
+- Add Video Reference sends a minimal request immediately and adds the server response to the table only after success.
 
 ### Action
 
-- Reads multipart form data.
+- Reads multipart form data for the metadata form, or the add-reference intent.
 - Parses `categories` JSON string into array.
-- Parses `videoRefs` JSON string into array.
-- Sends full payload with `PUT` to `VIDEOS_DETAIL` endpoint.
+- Sends metadata with `PUT` to `VIDEOS_DETAIL`, or `POST` to `VIDEOS_VIDEO_REFS` with `youtubeId` and category IDs.
 
 ## Data Shape Notes
 
@@ -54,15 +53,14 @@ The component normalizes to `id` internally to keep selection and modal behavior
 
 ## Integration Notes For Future Work
 
-1. If backend introduces dedicated add/remove endpoints for video refs, replace hidden field strategy with explicit mutation calls.
-2. If server-side validation for `videoRefs` is added, map response errors to UI near add/edit sections.
-3. Consider extracting reusable `VideoRefEditor` component if create/edit/detail flows converge further.
+1. If a dedicated update endpoint for existing video refs is introduced, wire the modal to it without coupling it to the metadata form.
+2. Consider extracting reusable `VideoRefEditor` component if create/edit/detail flows converge further.
 
 ## Minimal Manual Test Checklist
 
 1. Open edit route with existing refs and categories.
 2. Add a new ref with selected categories.
-3. Save main form.
+3. Verify the add request completes before the new row appears.
 4. Reopen detail/edit and verify new ref persisted.
-5. Edit existing ref categories in modal and save main form.
+5. Edit existing ref categories in modal and verify the existing local behavior.
 6. Verify duplicate id cannot be added from add section.

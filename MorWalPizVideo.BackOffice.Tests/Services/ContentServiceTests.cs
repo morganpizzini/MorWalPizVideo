@@ -80,6 +80,9 @@ public sealed class ContentServiceTests
 
         public Task UpdateItemAsync(YouTubeContent item) => throw new NotSupportedException();
 
+        public Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+            => throw new NotSupportedException();
+
         public Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
             => throw new NotSupportedException();
 

@@ -643,28 +643,49 @@ namespace MorWalPizVideo.Server.Services
         public async Task<Category?> GetCategoryById(string id, string channelId) =>
             (await _categoryRepository.GetItemsAsync(x => x.Id == id && x.ChannelId == channelId)).FirstOrDefault();
 
-        public async Task SaveCategory(Category entity)
+        public async Task<bool> SaveCategory(Category entity)
         {
-            var existingCategory = await _categoryRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            var existingCategory = await _categoryRepository.GetItemsAsync(x =>
+                x.ChannelId == entity.ChannelId &&
+                x.Title.ToLower() == entity.Title.ToLower());
             if (existingCategory.Count > 0)
-                return;
+                return false;
 
             await _categoryRepository.AddItemAsync(entity);
+            return true;
         }
 
-        public async Task UpdateCategory(Category entity)
+        public async Task<bool> UpdateCategory(Category entity)
         {
             var existingCategory = await _categoryRepository.GetItemsAsync(x => x.Id == entity.Id);
             if (existingCategory.Count == 0)
-                return;
+                return false;
+
+            var duplicate = await _categoryRepository.GetItemsAsync(x =>
+                x.Id != entity.Id &&
+                x.ChannelId == entity.ChannelId &&
+                x.Title.ToLower() == entity.Title.ToLower());
+            if (duplicate.Count > 0)
+                return false;
 
             await _categoryRepository.UpdateItemAsync(entity);
+            return true;
         }
 
-        public async Task UpdateCategory(Category entity, string channelId)
+        public async Task<bool> UpdateCategory(Category entity, string channelId)
         {
-            if ((await _categoryRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).Count > 0)
-                await _categoryRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+            if ((await _categoryRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).Count == 0)
+                return false;
+
+            var duplicate = await _categoryRepository.GetItemsAsync(x =>
+                x.Id != entity.Id &&
+                x.ChannelId == channelId &&
+                x.Title.ToLower() == entity.Title.ToLower());
+            if (duplicate.Count > 0)
+                return false;
+
+            await _categoryRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+            return true;
         }
 
         public async Task DeleteCategory(string categoryId)

@@ -23,8 +23,10 @@ public interface IContentService
     Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string channelId);
     Task<bool> SaveMatchAsync(YouTubeContent entity);
     Task UpdateMatchAsync(YouTubeContent entity);
+    Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference);
     Task DeleteMatchAsync(string id);
     Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null);
+    Task<IList<Category>> GetCategoriesAsync(IList<string> ids, string channelId);
     Task<IList<YTChannel>> GetChannelsAsync();
     Task<YTChannel?> FindChannelAsync(string channelNameOrId);
     Task<YTChannel?> GetChannelByIdAsync(string channelId);
@@ -263,6 +265,17 @@ public sealed class ContentService(
             await indexedCache.NotifyChangedAsync(entity.Id);
     }
 
+    public async Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+    {
+        var result = await youTubeContentRepository.AddVideoReferenceAsync(matchId, videoReference);
+        if (result == VideoReferenceAppendResult.Added && indexedCache is not null)
+        {
+            await indexedCache.NotifyChangedAsync(matchId);
+        }
+
+        return result;
+    }
+
     public async Task DeleteMatchAsync(string id)
     {
         await youTubeContentRepository.DeleteItemAsync(id);
@@ -272,6 +285,9 @@ public sealed class ContentService(
 
     public Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null)
         => categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
+
+    public Task<IList<Category>> GetCategoriesAsync(IList<string> ids, string channelId)
+        => categoryRepository.GetItemsAsync(x => x.ChannelId == channelId && ids.Contains(x.Id));
 
     public Task<IList<YTChannel>> GetChannelsAsync() => ytChannelRepository.GetItemsAsync();
 
