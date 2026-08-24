@@ -22,7 +22,14 @@ export default async function action({ request }: { request: Request }) {
 
   // If no errors, execute API request
   try {
-    await post(endpoints.CATEGORIES, values);
+    const response = await post(endpoints.CATEGORIES, values);
+    if (response?.errors) {
+      return data(
+        { success: false, errors: { generics: response.errors } },
+        { status: response.status ?? 500 }
+      );
+    }
+
     return data({ success: true }, { status: 201 });
   } catch (error) {
     errors['generics'] = ['API error found'];

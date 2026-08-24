@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { useLoaderData, Form } from 'react-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLoaderData, useFetcher, useNavigate } from 'react-router';
 import { Card, Row, Col, Form as BootstrapForm, Button, Badge, Table } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
+import { useToast } from '@components/ToastNotification/ToastContext';
+import GenericErrorList from '@components/GenericErrorList';
 import { Match, VideoRef, CategoryRef } from '@morwalpizvideo/models';
 import VideoRefEditModal from '@components/VideoRefEditModal';
 
@@ -12,6 +14,10 @@ const getCategoryId = (category: CategoryWithFallbackId): string =>
 
 const Component: React.FC = () => {
   const { match, categories } = useLoaderData() as { match: Match; categories: CategoryRef[] };
+  const saveFetcher = useFetcher();
+  const addFetcher = useFetcher();
+  const navigate = useNavigate();
+  const toast = useToast();
   const normalizedCategories = (categories as CategoryWithFallbackId[])
     .map((category): CategoryRef => ({
       id: getCategoryId(category),
@@ -28,6 +34,34 @@ const Component: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     (match.categories as CategoryWithFallbackId[] | undefined)?.map(c => getCategoryId(c)).filter(Boolean) || []
   );
+  const saveBusy = saveFetcher.state !== 'idle';
+  const saveErrors = saveFetcher.data?.errors;
+  const lastSaveData = useRef<unknown>(undefined);
+  const lastAddData = useRef<unknown>(undefined);
+
+  useEffect(() => {
+    if (saveBusy || !saveFetcher.data || lastSaveData.current === saveFetcher.data) {
+      return;
+    }
+    lastSaveData.current = saveFetcher.data;
+
+    if (saveFetcher.data.success) {
+      toast.show('Success', 'Video updated successfully', { variant: 'success' });
+      navigate('..');
+      return;
+    }
+
+    const message = saveErrors?.generics?.[0] ?? 'Unable to update video.';
+    toast.show('Video update failed', message, { variant: 'danger' });
+  }, [navigate, saveBusy, saveErrors, saveFetcher.data, toast]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    saveFetcher.submit(new FormData(event.currentTarget), {
+      method: 'post',
+      action: location.pathname,
+    });
+  };
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategories(prev =>
@@ -77,27 +111,21 @@ const Component: React.FC = () => {
       return;
     }
 
-    const categoriesForVideoRef = normalizedCategories.filter(category =>
-      newVideoRefCategories.includes(category.id)
+    addFetcher.submit(
+      {
+        _intent: 'addVideoReference',
+        youtubeId,
+        categories: JSON.stringify(newVideoRefCategories),
+      },
+      {
+        method: 'post',
+        action: location.pathname,
+      }
     );
-
-    const newVideoRef: VideoRef = {
-      youtubeId,
-      categories: categoriesForVideoRef,
-      channelIds: [],
-      title: '',
-      description: '',
-      publishedAt: '',
-      creationDateTime: new Date().toISOString(),
-    };
-
-    setVideoRefs(prev => [...prev, newVideoRef]);
-    setNewVideoRefId('');
-    setNewVideoRefCategories([]);
-    setAddVideoRefAttempted(false);
   };
 
   const isAddVideoRefDisabled =
+    addFetcher.state !== 'idle' ||
     newVideoRefId.trim().length === 0 ||
     newVideoRefCategories.length === 0 ||
     videoRefs.some(ref => ref.youtubeId === newVideoRefId.trim());
@@ -109,14 +137,34 @@ const Component: React.FC = () => {
   const shouldShowVideoRefIdRequired = addVideoRefAttempted && newVideoRefId.trim().length === 0;
   const shouldShowVideoRefCategoriesRequired = addVideoRefAttempted && newVideoRefCategories.length === 0;
 
+  useEffect(() => {
+    if (addFetcher.state !== 'idle' || !addFetcher.data || lastAddData.current === addFetcher.data) {
+      return;
+    }
+    lastAddData.current = addFetcher.data;
+
+    if (addFetcher.data.success && addFetcher.data.videoRef) {
+      setVideoRefs(prev => [...prev, addFetcher.data.videoRef as VideoRef]);
+      setNewVideoRefId('');
+      setNewVideoRefCategories([]);
+      setAddVideoRefAttempted(false);
+      toast.show('Success', 'Video reference added successfully', { variant: 'success' });
+      return;
+    }
+
+    const message = addFetcher.data.errors?.generics?.[0] ?? 'Unable to add video reference.';
+    toast.show('Video reference add failed', message, { variant: 'danger' });
+  }, [addFetcher.data, addFetcher.state, toast]);
+
   return (
     <>
       <PageHeader title={`Edit Video: ${match.title}`} />
+      <GenericErrorList errors={saveErrors?.generics} />
 
       <div className="mb-3">
         <Button
           variant="outline-secondary"
-          onClick={() => window.location.href = `/videos/${match.id}`}
+          onClick={() => navigate(`/videos/${match.id}`)}
         >
           ← Back to Details
         </Button>
@@ -129,8 +177,7 @@ const Component: React.FC = () => {
               <h5>Edit Video Information</h5>
             </Card.Header>
             <Card.Body>
-              <Form method="post">
-                <input type="hidden" name="videoRefs" value={JSON.stringify(videoRefs)} />
+              <BootstrapForm method="post" onSubmit={handleSubmit}>
                 <Row className="mb-3">
                   <Col sm={3}>
                     <BootstrapForm.Label htmlFor="title">Title</BootstrapForm.Label>
@@ -226,6 +273,7 @@ const Component: React.FC = () => {
                       id="thumbnailVideoId"
                       name="thumbnailVideoId"
                       defaultValue={match.thumbnailVideoId}
+                      required
                     />
                   </Col>
                 </Row>
@@ -234,75 +282,75 @@ const Component: React.FC = () => {
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => window.location.href = `/videos/${match.id}`}
+                    onClick={() => navigate(`/videos/${match.id}`)}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary">
-                    Save Changes
+                  <Button type="submit" variant="primary" disabled={saveBusy}>
+                    {saveBusy ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
-              </Form>
+              </BootstrapForm>
             </Card.Body>
           </Card>
 
-          {videoRefs && videoRefs.length > 0 && (
-            <Card className="mt-3">
-              <Card.Header>
-                <h5>Manage Video References ({videoRefs.length})</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="border rounded p-3 mb-3">
-                  <h6 className="mb-3">Add New Video Reference</h6>
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <BootstrapForm.Label htmlFor="newVideoRefId">YouTube ID</BootstrapForm.Label>
-                      <BootstrapForm.Control
-                        id="newVideoRefId"
-                        type="text"
-                        placeholder="Enter YouTube video ID"
-                        value={newVideoRefId}
-                        onChange={e => setNewVideoRefId(e.target.value)}
-                      />
-                      {shouldShowVideoRefIdRequired && (
-                        <div className="text-danger small mt-1">Video ID is required.</div>
-                      )}
-                      {isDuplicateNewVideoRefId && (
-                        <div className="text-danger small mt-1">This video reference already exists.</div>
-                      )}
-                    </Col>
-                    <Col md={6}>
-                      <BootstrapForm.Label>Categories</BootstrapForm.Label>
-                      <div className="border rounded p-2" style={{ maxHeight: '160px', overflowY: 'auto' }}>
-                        {normalizedCategories.map(category => (
-                          <BootstrapForm.Check
-                            key={`new-videoref-category-${category.id}`}
-                            type="checkbox"
-                            id={`new-videoref-category-${category.id}`}
-                            label={category.title}
-                            checked={newVideoRefCategories.includes(category.id)}
-                            onChange={() => handleNewVideoRefCategoryChange(category.id)}
-                            className="mb-1"
-                          />
-                        ))}
-                      </div>
-                      {shouldShowVideoRefCategoriesRequired && (
-                        <div className="text-danger small mt-1">Select at least one category.</div>
-                      )}
-                    </Col>
-                  </Row>
-                  <div className="d-flex justify-content-end">
-                    <Button
-                      type="button"
-                      variant="outline-success"
-                      onClick={handleAddVideoRef}
-                      disabled={isAddVideoRefDisabled}
-                    >
-                      Add Video Reference
-                    </Button>
-                  </div>
+          <Card className="mt-3">
+            <Card.Header>
+              <h5>Manage Video References ({videoRefs.length})</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="border rounded p-3 mb-3">
+                <h6 className="mb-3">Add New Video Reference</h6>
+                <Row className="mb-3">
+                  <Col md={6}>
+                    <BootstrapForm.Label htmlFor="newVideoRefId">YouTube ID</BootstrapForm.Label>
+                    <BootstrapForm.Control
+                      id="newVideoRefId"
+                      type="text"
+                      placeholder="Enter YouTube video ID"
+                      value={newVideoRefId}
+                      onChange={e => setNewVideoRefId(e.target.value)}
+                    />
+                    {shouldShowVideoRefIdRequired && (
+                      <div className="text-danger small mt-1">Video ID is required.</div>
+                    )}
+                    {isDuplicateNewVideoRefId && (
+                      <div className="text-danger small mt-1">This video reference already exists.</div>
+                    )}
+                  </Col>
+                  <Col md={6}>
+                    <BootstrapForm.Label>Categories</BootstrapForm.Label>
+                    <div className="border rounded p-2" style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                      {normalizedCategories.map(category => (
+                        <BootstrapForm.Check
+                          key={`new-videoref-category-${category.id}`}
+                          type="checkbox"
+                          id={`new-videoref-category-${category.id}`}
+                          label={category.title}
+                          checked={newVideoRefCategories.includes(category.id)}
+                          onChange={() => handleNewVideoRefCategoryChange(category.id)}
+                          className="mb-1"
+                        />
+                      ))}
+                    </div>
+                    {shouldShowVideoRefCategoriesRequired && (
+                      <div className="text-danger small mt-1">Select at least one category.</div>
+                    )}
+                  </Col>
+                </Row>
+                <div className="d-flex justify-content-end">
+                  <Button
+                    type="button"
+                    variant="outline-success"
+                    onClick={handleAddVideoRef}
+                    disabled={isAddVideoRefDisabled}
+                  >
+                    {addFetcher.state === 'submitting' ? 'Adding...' : 'Add Video Reference'}
+                  </Button>
                 </div>
+              </div>
 
+              {videoRefs.length > 0 ? (
                 <Table striped bordered hover size="sm">
                   <thead>
                     <tr>
@@ -312,8 +360,8 @@ const Component: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {videoRefs.map((videoRef, index) => (
-                      <tr key={index}>
+                    {videoRefs.map(videoRef => (
+                      <tr key={videoRef.youtubeId}>
                         <td>
                           <code className="text-primary">{videoRef.youtubeId}</code>
                           {videoRef.youtubeId === match.thumbnailVideoId && (
@@ -354,75 +402,14 @@ const Component: React.FC = () => {
                     ))}
                   </tbody>
                 </Table>
-                <p className="small text-muted mb-0">
-                  Changes to VideoRefs are included when you submit the main "Save Changes" form.
-                </p>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(!videoRefs || videoRefs.length === 0) && (
-            <Card className="mt-3">
-              <Card.Header>
-                <h5>Manage Video References</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="border rounded p-3">
-                  <h6 className="mb-3">Add First Video Reference</h6>
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <BootstrapForm.Label htmlFor="newVideoRefId-empty">YouTube ID</BootstrapForm.Label>
-                      <BootstrapForm.Control
-                        id="newVideoRefId-empty"
-                        type="text"
-                        placeholder="Enter YouTube video ID"
-                        value={newVideoRefId}
-                        onChange={e => setNewVideoRefId(e.target.value)}
-                      />
-                      {shouldShowVideoRefIdRequired && (
-                        <div className="text-danger small mt-1">Video ID is required.</div>
-                      )}
-                      {isDuplicateNewVideoRefId && (
-                        <div className="text-danger small mt-1">This video reference already exists.</div>
-                      )}
-                    </Col>
-                    <Col md={6}>
-                      <BootstrapForm.Label>Categories</BootstrapForm.Label>
-                      <div className="border rounded p-2" style={{ maxHeight: '160px', overflowY: 'auto' }}>
-                        {normalizedCategories.map(category => (
-                          <BootstrapForm.Check
-                            key={`new-videoref-empty-category-${category.id}`}
-                            type="checkbox"
-                            id={`new-videoref-empty-category-${category.id}`}
-                            label={category.title}
-                            checked={newVideoRefCategories.includes(category.id)}
-                            onChange={() => handleNewVideoRefCategoryChange(category.id)}
-                            className="mb-1"
-                          />
-                        ))}
-                      </div>
-                      {shouldShowVideoRefCategoriesRequired && (
-                        <div className="text-danger small mt-1">Select at least one category.</div>
-                      )}
-                    </Col>
-                  </Row>
-                  <div className="d-flex justify-content-end">
-                    <Button
-                      type="button"
-                      variant="outline-success"
-                      onClick={handleAddVideoRef}
-                      disabled={isAddVideoRefDisabled}
-                    >
-                      Add Video Reference
-                    </Button>
-                  </div>
-                </div>
-                <p className="small text-muted mt-3 mb-0">
-                  Added references are included when you submit the main "Save Changes" form.
-                </p>
-              </Card.Body>
-            </Card>
-          )}
+              ) : (
+                <p className="small text-muted mb-0">No video references have been added yet.</p>
+              )}
+              <p className="small text-muted mt-3 mb-0">
+                New references are validated and saved immediately. Existing reference edits retain the modal's local behavior.
+              </p>
+            </Card.Body>
+          </Card>
         </Col>
 
         <Col md={4}>

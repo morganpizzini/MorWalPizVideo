@@ -20,6 +20,29 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         protected override YouTubeContent PrepareForPersistence(YouTubeContent item)
             => item with { LatestPublishedAt = item.CalculateLatestPublishedAt() };
 
+        public async Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+        {
+            var idFilter = ObjectId.TryParse(matchId, out var objectId)
+                ? Builders<YouTubeContent>.Filter.Eq("_id", objectId)
+                : Builders<YouTubeContent>.Filter.Eq("_id", matchId);
+            var noDuplicateFilter = Builders<YouTubeContent>.Filter.Not(
+                Builders<YouTubeContent>.Filter.ElemMatch(
+                    x => x.VideoRefs,
+                    video => video.YoutubeId == videoReference.YoutubeId));
+            var update = Builders<YouTubeContent>.Update.Push(x => x.VideoRefs, videoReference);
+
+            var result = await _collection.UpdateOneAsync(idFilter & noDuplicateFilter, update);
+            if (result.ModifiedCount == 1)
+            {
+                return VideoReferenceAppendResult.Added;
+            }
+
+            var existingMatch = await GetItemAsync(matchId);
+            return existingMatch is null
+                ? VideoReferenceAppendResult.NotFound
+                : VideoReferenceAppendResult.Duplicate;
+        }
+
         public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)
         {
             var filter = Builders<YouTubeContent>.Filter.And(

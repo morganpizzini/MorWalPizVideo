@@ -65,6 +65,21 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
   }
 
   [Fact]
+  public async Task Video_reference_add_requires_update_or_manage_permission()
+  {
+    var matchId = (await _factory.MatchRepository!.GetItemsAsync()).First().Id;
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosView);
+
+    var response = await client.PostAsJsonAsync($"/api/Videos/{matchId}/video-refs", new
+    {
+      youtubeId = $"new-{Guid.NewGuid():N}",
+      categories = new[] { "300000000000000000000001" }
+    });
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+  }
+
+  [Fact]
   public async Task Video_record_ownership_remains_required_after_permission_check()
   {
     var matchId = (await _factory.MatchRepository!.GetItemsAsync()).First().Id;

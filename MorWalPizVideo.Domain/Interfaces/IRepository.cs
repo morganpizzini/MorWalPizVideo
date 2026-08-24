@@ -15,6 +15,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
+        Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference);
         Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null);
         Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
@@ -23,6 +24,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<long> CountPublicForChannelAsync(string channelId);
         Task<YouTubeContent?> GetByUrlAsync(string url, bool includePrivate);
         Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate);
+    }
+
+    public enum VideoReferenceAppendResult
+    {
+        Added,
+        Duplicate,
+        NotFound
     }
 
     public sealed record VideoPublication(string VideoId, string Title, DateTime PublishedAt);

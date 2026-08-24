@@ -104,6 +104,7 @@ export type {
   Match,
   Compilation,
   VideoImportRequest,
+  VideoReferenceAddRequest,
   VideoTranslateRequest,
   ReviewDetails,
   VideoCategory,

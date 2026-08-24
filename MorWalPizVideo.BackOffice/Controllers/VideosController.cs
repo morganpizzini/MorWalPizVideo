@@ -11,6 +11,7 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Text;
 
@@ -119,6 +120,62 @@ public class VideosController : ApplicationControllerBase
         await client.ReloadCache();
 
         return NoContent();
+    }
+
+    [HttpPost("{id}/video-refs")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> AddVideoReference(
+        string id,
+        [FromBody] VideoReferenceAddRequest request)
+    {
+        var existingMatch = await FindManageableMatchAsync(id);
+        if (existingMatch is null)
+        {
+            return NotFound("Video not found");
+        }
+
+        var youtubeId = request.YoutubeId.Trim();
+        if (youtubeId.Length == 0)
+        {
+            return BadRequest("youtubeId is required");
+        }
+
+        var categoryIds = request.Categories
+            .Select(categoryId => categoryId?.Trim() ?? string.Empty)
+            .Where(categoryId => categoryId.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (categoryIds.Length == 0)
+        {
+            return BadRequest("At least one category is required");
+        }
+
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var categories = (await _contentService.GetCategoriesAsync(categoryIds, channelId))
+            .Select(category => new CategoryRef(category.Id, category.Title))
+            .ToArray();
+        if (categories.Length != categoryIds.Length)
+        {
+            return BadRequest("One or more categories were not found");
+        }
+
+        var videoReference = new VideoRef(youtubeId, categories, channelIds: [channelId]);
+        var appendResult = await _contentService.AddVideoReferenceAsync(existingMatch.Id, videoReference);
+        if (appendResult == VideoReferenceAppendResult.NotFound)
+        {
+            return NotFound("Video not found");
+        }
+
+        if (appendResult == VideoReferenceAppendResult.Duplicate)
+        {
+            return Conflict($"Video reference '{youtubeId}' already exists");
+        }
+
+        await client.ResetCache(CacheKeys.Matches);
+        await client.PurgeCache(CacheKeys.Matches);
+        await client.ReloadCache();
+
+        return Ok(ContractUtils.Convert(videoReference));
     }
 
     [HttpDelete("{id}")]

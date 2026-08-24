@@ -74,6 +74,11 @@ export interface VideoImportRequest {
   categories: string[];
 }
 
+export interface VideoReferenceAddRequest {
+  youtubeId: string;
+  categories: string[];
+}
+
 export interface Compilation {
   id?: string;
   title: string;

@@ -58,7 +58,9 @@ public class CategoriesController : ApplicationControllerBase
         {
             ChannelId = HttpContext.GetChannelContext().ChannelId
         };
-        await _dataService.SaveCategory(category);
+        if (!await _dataService.SaveCategory(category))
+            return Conflict("A category with this title already exists for the selected channel.");
+
         return Ok(ContractUtils.Convert(category));
     }
 
@@ -71,7 +73,8 @@ public class CategoriesController : ApplicationControllerBase
             return BadRequest("Category not found");
 
         entity = entity with { Title = request.Title, Description = request.Description };
-        await _dataService.UpdateCategory(entity, HttpContext.GetChannelContext().ChannelId);
+        if (!await _dataService.UpdateCategory(entity, HttpContext.GetChannelContext().ChannelId))
+            return Conflict("A category with this title already exists for the selected channel.");
 
         return NoContent();
     }

@@ -22,7 +22,14 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   // If no errors, execute API request
   try {
-    await put(ComposeUrl(endpoints.CATEGORIES_DETAIL, { categoryId: params.id! }), values);
+    const response = await put(ComposeUrl(endpoints.CATEGORIES_DETAIL, { categoryId: params.id! }), values);
+    if (response?.errors) {
+      return data(
+        { success: false, errors: { generics: response.errors } },
+        { status: response.status ?? 500 }
+      );
+    }
+
     return data({ success: true }, { status: 200 });
   } catch (error) {
     errors['generics'] = ['API error found'];

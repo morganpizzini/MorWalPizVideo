@@ -28,6 +28,7 @@ public class PrimaryScenario : BaseScenario
         var category = new Category("Scenario category", "Canonical mock category")
         {
             Id = "300000000000000000000001",
+            ChannelId = ChannelId,
             CreationDateTime = CreatedAt
         };
         var categoryReference = new CategoryRef(category.Id, category.Title);
