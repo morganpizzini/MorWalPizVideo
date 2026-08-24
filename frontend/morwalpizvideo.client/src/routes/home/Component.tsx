@@ -318,8 +318,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                 <Masonry>
                     {firstSection.map((match: IndexMatch, i: number) => {
                         // Create an array of elements to render
-                        const elementsToRender = [
-                            // Always render the match card
+                        const elementsToRender = match.videoRefs == null ? [] : [
                             <React.Fragment key={`match-${i}`}>
                                 {RenderMatchCard(match, shouldShowBanners ? i : -1)}
                             </React.Fragment>
@@ -341,11 +340,11 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                     gutterBreakpoints={gutterBreakpoints}
                 >
                     <Masonry>
-                        {middleSection.map((match: IndexMatch, i: number) => (
+                        {middleSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
                             <React.Fragment key={`match-${i + 7}`}>
                                 {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
                             </React.Fragment>
-                        ))}
+                        ])}
                     </Masonry>
                 </ResponsiveMasonry>
             )}
@@ -360,11 +359,11 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                     gutterBreakpoints={gutterBreakpoints}
                 >
                     <Masonry>
-                        {lastSection.map((match: IndexMatch, i: number) => (
+                        {lastSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
                             <React.Fragment key={`match-${i + 15}`}>
                                 {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
                             </React.Fragment>
-                        ))}
+                        ])}
                     </Masonry>
                 </ResponsiveMasonry>
             )}
