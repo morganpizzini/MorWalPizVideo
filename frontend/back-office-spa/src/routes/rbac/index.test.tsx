@@ -11,6 +11,7 @@ import RbacGroupCreatePage from './GroupCreatePage';
 import RbacGroupEditPage from './GroupEditPage';
 import RbacGroupDetailPage from './GroupDetailPage';
 import { Delete, endpoints, get, post, put } from '@morwalpizvideo/services';
+import { useAppStore } from '../../state/appStore';
 
 vi.mock('../../services/authService', () => ({
   authService: { getPermissions: () => ['backoffice.manageall'] },
@@ -34,7 +35,7 @@ function renderRoute(path: string, element: React.ReactNode) {
 }
 
 describe('RBAC workflows', () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_USERS ? [user] : url === endpoints.RBAC_GROUPS ? [group] : url === endpoints.CHANNELS ? [channel] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
+  beforeEach(() => { vi.clearAllMocks(); useAppStore.setState({ effectivePermissions: ['backoffice.manageall'] }); vi.mocked(get).mockImplementation(async url => url.includes('/users/') ? user : url === endpoints.RBAC_USERS ? [user] : url === endpoints.RBAC_GROUPS ? [group] : url === endpoints.CHANNELS ? [channel] : group); vi.mocked(post).mockResolvedValue({}); vi.mocked(put).mockResolvedValue({}); vi.mocked(Delete).mockResolvedValue({}); });
 
   it('keeps /rbac as a workflow hub', () => {
     render(<RbacManagementPage />);

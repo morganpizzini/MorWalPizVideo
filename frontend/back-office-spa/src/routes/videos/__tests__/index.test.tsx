@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
 import { useLoaderData, useNavigate } from 'react-router';
 import { Match } from '@morwalpizvideo/models';
+import { useAppStore } from '../../../state/appStore';
 
 vi.mock('../../../services/authService', () => ({
   authService: {
@@ -35,6 +36,10 @@ const mockMatches: Match[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useAppStore.setState({
+    effectivePermissions: ['videos.view', 'videos.import', 'videos.translate'],
+    featureFlags: { videoBulkImportEnabled: true },
+  });
   vi.mocked(useNavigate).mockReturnValue(vi.fn());
   vi.mocked(useLoaderData).mockReturnValue({ matches: mockMatches });
 });

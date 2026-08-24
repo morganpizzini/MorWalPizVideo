@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { endpoints, get } from '@morwalpizvideo/services';
 import { render } from '../../test/test-utils';
 import { authService } from '../../services/authService';
+import { useAppStore } from '../../state/appStore';
 import RbacUserDetailPage from './UsersDetailPage';
 import RbacUsersPage from './UsersPage';
 
@@ -49,6 +50,7 @@ describe('RBAC lifecycle capabilities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(authService, 'getPermissions').mockReturnValue(['users.permissions.manage']);
+    useAppStore.setState({ effectivePermissions: ['users.permissions.manage'] });
     vi.mocked(get).mockImplementation(async url => url === endpoints.RBAC_GROUPS ? [] : [user]);
   });
 
@@ -73,6 +75,7 @@ describe('RBAC lifecycle capabilities', () => {
 
   it('renders lifecycle detail read-only for users.view without calling group administration', async () => {
     vi.spyOn(authService, 'getPermissions').mockReturnValue(['users.view']);
+    useAppStore.setState({ effectivePermissions: ['users.view'] });
     vi.mocked(get).mockResolvedValue(user);
 
     render(<RbacUserDetailPage />);
@@ -90,6 +93,12 @@ describe('RBAC lifecycle capabilities', () => {
       'users.update',
       'users.delete',
     ]);
+    useAppStore.setState({ effectivePermissions: [
+      'users.permissions.manage',
+      'users.create',
+      'users.update',
+      'users.delete',
+    ] });
     vi.mocked(get).mockImplementation(async url => url === endpoints.RBAC_GROUPS ? [] : user);
 
     render(<RbacUserDetailPage />);
@@ -112,6 +121,7 @@ describe('RBAC lifecycle capabilities', () => {
 
   it('shows channel assignment controls only for a backoffice.manageall holder', async () => {
     vi.spyOn(authService, 'getPermissions').mockReturnValue(['backoffice.manageall']);
+    useAppStore.setState({ effectivePermissions: ['backoffice.manageall'] });
     vi.mocked(get).mockImplementation(async url => {
       if (url === endpoints.CHANNELS) return [channel];
       if (url === endpoints.RBAC_GROUPS) return [];
