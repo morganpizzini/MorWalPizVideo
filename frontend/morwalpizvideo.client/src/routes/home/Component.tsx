@@ -314,6 +314,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
             <ResponsiveMasonry
                 columnsCountBreakPoints={columnsCountBreakPoints}
                 gutterBreakpoints={gutterBreakpoints}
+                className="home-masonry"
             >
                 <Masonry>
                     {firstSection.map((match: IndexMatch, i: number) => {
