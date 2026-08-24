@@ -70,6 +70,14 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("shortLinks")]
         public ShortLink[] ShortLinks { get; init; } = Array.Empty<ShortLink>();
 
+        /// <summary>
+        /// Free-form aggregate-level tags. Legacy documents without the field deserialize to an empty array.
+        /// Normalization rules live in <see cref="MorWalPizVideo.Models.Constraints.ContentTagRules"/>.
+        /// </summary>
+        [DataMember]
+        [BsonElement("tags")]
+        public string[] Tags { get; init; } = Array.Empty<string>();
+
         /// <summary>When true, an authenticated user is required; unauthenticated requests return 403.</summary>
         [DataMember]
         [BsonElement("isPrivate")]

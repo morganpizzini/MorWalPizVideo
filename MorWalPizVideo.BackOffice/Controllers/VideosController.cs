@@ -77,6 +77,35 @@ public class VideosController : ApplicationControllerBase
         return Ok(ContractUtils.Convert(match));
     }
 
+    /// <summary>
+    /// Bounded free-form tag suggestions derived from the caller's channel-scoped, authorized content.
+    /// Ordered by usage count descending, then alphabetically; duplicates collapse case-insensitively
+    /// preserving the first display casing found.
+    /// </summary>
+    [HttpGet("tag-suggestions")]
+    [AllowUser(AuthorizationPermissionKeys.VideosView, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<IActionResult> TagSuggestions([FromQuery] string? q = null, [FromQuery] int? take = null)
+    {
+        var limit = Math.Clamp(take ?? ContentTagRules.DefaultSuggestions, 1, ContentTagRules.MaxSuggestions);
+        var filter = q?.Trim() ?? string.Empty;
+
+        var matches = await GetAuthorizedMatchesAsync();
+
+        var suggestions = matches
+            .SelectMany(match => match.Tags ?? [])
+            .Select(tag => tag?.Trim() ?? string.Empty)
+            .Where(tag => tag.Length > 0)
+            .Where(tag => filter.Length == 0 || tag.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(limit)
+            .Select(group => group.First())
+            .ToArray();
+
+        return Ok(suggestions);
+    }
+
     [HttpPut("{id}")]
     [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
     public async Task<IActionResult> Update(string id, [FromBody] VideoUpdateRequest request)
@@ -101,6 +130,11 @@ public class VideosController : ApplicationControllerBase
             return BadRequest("One or more video channel assignments are invalid or unauthorized");
         }
 
+        if (!ContentTagRules.TryNormalize(request.Tags, out var normalizedTags, out var tagError))
+        {
+            return BadRequest(tagError);
+        }
+
         // Update the match using immutable record pattern
         var updatedMatch = existingMatch with
         {
@@ -109,6 +143,7 @@ public class VideosController : ApplicationControllerBase
             Url = request.Url,
             ThumbnailVideoId = request.ThumbnailVideoId,
             Categories = categories,
+            Tags = request.Tags is null ? existingMatch.Tags : normalizedTags,
             VideoRefs = request.VideoRefs ?? existingMatch.VideoRefs
         };
 

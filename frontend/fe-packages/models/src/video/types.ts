@@ -65,6 +65,8 @@ export interface Match {
   isLink: boolean;
   creationDateTime: string;
   shortLinks: ShortLink[];
+  /** Free-form aggregate tags. Always serialized by the API; optional for legacy client-side literals. */
+  tags?: string[];
   ownerChannelId?: string;
   creatorUserId?: string;
 }

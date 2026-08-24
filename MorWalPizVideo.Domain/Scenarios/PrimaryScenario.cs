@@ -61,7 +61,8 @@ public class PrimaryScenario : BaseScenario
                 Id = MatchId,
                 CreationDateTime = CreatedAt,
                 CreatorUserId = "test-user-id",
-                OwnerChannelId = ChannelId
+                OwnerChannelId = ChannelId,
+                Tags = ["Scenario", "Mock"]
             }
         ]);
         Set("ytchannels",

@@ -92,6 +92,21 @@ const Component: React.FC = () => {
               </Row>
               <hr />
               <Row>
+                <Col sm={3}><strong>Tags:</strong></Col>
+                <Col sm={9}>
+                  <div className="d-flex gap-1 flex-wrap">
+                    {match.tags && match.tags.length > 0 ? (
+                      match.tags.map((tag, idx) => (
+                        <Badge key={idx} bg="info">{tag}</Badge>
+                      ))
+                    ) : (
+                      <em className="text-muted">No tags</em>
+                    )}
+                  </div>
+                </Col>
+              </Row>
+              <hr />
+              <Row>
                 <Col sm={3}><strong>Match Type:</strong></Col>
                 <Col sm={9}>
                   <Badge bg={match.contentType === ContentType.SingleVideo ? "info" : "warning"}>

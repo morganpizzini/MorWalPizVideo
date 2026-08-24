@@ -139,6 +139,28 @@
     text-transform: capitalize;
 }
 
+.content-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+
+    .tags-container {
+        border-left: 1px solid #dee2e6;
+        padding-left: 10px;
+    }
+
+    @media (max-width: 575.98px) {
+        .tags-container {
+            border-left: none;
+            border-top: 1px solid #dee2e6;
+            padding-left: 0;
+            padding-top: 10px;
+            width: 100%;
+        }
+    }
+}
+
 .Demo__some-network__share-button {
     cursor: pointer;
     background: none;

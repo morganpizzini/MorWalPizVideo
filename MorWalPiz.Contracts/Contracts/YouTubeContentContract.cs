@@ -40,6 +40,9 @@ public class YouTubeContentContract
     public ShortLinkContract[] ShortLinks { get; set; } = [];
 
     [DataMember]
+    public string[] Tags { get; set; } = [];
+
+    [DataMember]
     public bool IsPrivate { get; set; }
 
     [DataMember]

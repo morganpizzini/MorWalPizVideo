@@ -17,6 +17,7 @@ public sealed class PublicYouTubeContentContract
     [DataMember] public YoutubeContentType ContentType { get; set; }
     [DataMember] public YouTubeVideoLinkContract[] YouTubeVideoLinks { get; set; } = [];
     [DataMember] public ShortLinkContract[] ShortLinks { get; set; } = [];
+    [DataMember] public string[] Tags { get; set; } = [];
     [DataMember] public bool IsLink { get; set; }
     [DataMember] public DateTime CreationDateTime { get; set; }
 }

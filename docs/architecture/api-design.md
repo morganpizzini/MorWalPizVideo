@@ -49,6 +49,14 @@ Version only externally observable contracts. Internal implementation and persis
 - Server validation remains authoritative.
 - Validation failures return Problem Details with field errors and stable codes.
 
+### Content tags
+
+`PUT /api/videos/{id}` accepts an optional `tags` array. Omitting the property (`null`) preserves the persisted tags, mirroring the existing `videoRefs` partial-update behavior; sending `[]` clears them. Values are normalized server-side by `ContentTagRules.TryNormalize` (trim, reject empty/whitespace, case-insensitive de-duplication keeping the first display casing) and rejected with `400` when a value is empty, exceeds 32 characters, or the aggregate would exceed 20 tags. Tag mutations reuse the existing `matches` cache invalidation (`ResetCache`/`PurgeCache`/`ReloadCache`).
+
+`GET /api/videos/tag-suggestions` returns a bounded, ordered `string[]` of tags drawn from the caller's channel-scoped authorized content. It requires `videos.view` or `videos.manage` and honors `X-Channel-Id` like the rest of `VideosController`. Optional `q` filters case-insensitively (substring); optional `take` is clamped to 1..50 and defaults to 20. Results are ordered by usage count descending, then alphabetically.
+
+Public match contracts (`GET /api/matches`, `GET /api/matches/{url}`) include `tags` so the public homepage can derive tag filters client-side.
+
 ## Error Contract
 
 Use RFC Problem Details consistently:

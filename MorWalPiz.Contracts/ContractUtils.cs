@@ -392,6 +392,7 @@ namespace MorWalPiz.Contracts
                 ContentType = entity.ContentType,
                 YouTubeVideoLinks = entity.YouTubeVideoLinks?.Select(Convert).ToArray() ?? [],
                 ShortLinks = entity.ShortLinks.Select(link => Convert(link, string.Empty)).ToArray(),
+                Tags = entity.Tags ?? [],
                 IsPrivate = entity.IsPrivate,
                 CreatorUserId = entity.CreatorUserId,
                 OwnerChannelId = entity.OwnerChannelId
@@ -412,6 +413,7 @@ namespace MorWalPiz.Contracts
                 ContentType = entity.ContentType,
                 YouTubeVideoLinks = entity.YouTubeVideoLinks?.Select(Convert).ToArray() ?? [],
                 ShortLinks = entity.ShortLinks.Select(link => Convert(link, string.Empty)).ToArray(),
+                Tags = entity.Tags ?? [],
                 IsLink = entity.IsLink,
                 CreationDateTime = entity.CreationDateTime
             };
