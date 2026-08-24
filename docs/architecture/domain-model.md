@@ -8,7 +8,9 @@ The model is persistence-oriented and uses immutable C# records with MongoDB att
 
 ### YouTubeContent
 
-Owns content identity, title/description, URL, thumbnail, categories, video references, linked YouTube videos, and privacy/visibility. It supports single-video and collection forms. YouTube short links are standalone records that reference this aggregate for target validation.
+Owns content identity, title/description, URL, thumbnail, categories, free-form tags, video references, linked YouTube videos, and privacy/visibility. It supports single-video and collection forms. YouTube short links are standalone records that reference this aggregate for target validation.
+
+Tags are aggregate-level free-form strings persisted in the `tags` Mongo element. Legacy documents without the element deserialize to an empty array (`[BsonIgnoreExtraElements]` plus a default value), and both the admin and public contracts always serialize `tags` as `[]` when absent. Normalization is centralized in `MorWalPizVideo.Models.Constraints.ContentTagRules`: values are trimmed, empty/whitespace values are rejected, and duplicates collapse case-insensitively while keeping the first display casing. Bounds are 20 tags per aggregate and 32 characters per tag.
 
 Target boundary:
 

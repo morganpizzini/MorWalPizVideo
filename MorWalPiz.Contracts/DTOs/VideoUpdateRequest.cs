@@ -20,6 +20,12 @@ namespace MorWalPizVideo.BackOffice.DTOs
     [Required]
     public IList<string> Categories { get; set; } = [];
 
+    /// <summary>
+    /// Free-form aggregate tags. When omitted (null) the persisted tags are preserved,
+    /// mirroring the existing <see cref="VideoRefs"/> partial-update behavior.
+    /// </summary>
+    public IList<string>? Tags { get; set; }
+
     public VideoRef[]? VideoRefs { get; set; }
   }
 }

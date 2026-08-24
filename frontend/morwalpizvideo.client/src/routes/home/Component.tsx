@@ -17,7 +17,7 @@ import PublicNavigationLink from "../../components/PublicNavigationLink";
 interface IndexCategory { title: string }
 interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
-interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
+interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; tags?: string[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
 interface IndexForm { id: string; url: string; title: string }
 interface MatchesResponse { data: IndexMatch[]; count: number; next?: string }
 interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[]; channelNews: ChannelNews[] }
@@ -28,6 +28,7 @@ export default function Index() {
     const [retryCount, setRetryCount] = useState(0);
     const hasSentPageView = useRef(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
     useEffect(() => {
         if (!hasSentPageView.current) {
@@ -69,13 +70,24 @@ export default function Index() {
                 type='website' />
             {!data && !error && <HomeSkeleton />}
             {error && <HomeError onRetry={() => { setData(null); setRetryCount((count) => count + 1); }} />}
-            {data && <HomeContent data={data} selectedCategories={selectedCategories} onToggleCategory={(category) => {
-                setSelectedCategories((prev: string[]) =>
-                    prev.includes(category)
-                        ? prev.filter((cat: string) => cat !== category)
-                        : [...prev, category]
-                );
-            }} />}
+            {data && <HomeContent
+                data={data}
+                selectedCategories={selectedCategories}
+                selectedTags={selectedTags}
+                onToggleCategory={(category) => {
+                    setSelectedCategories((prev: string[]) =>
+                        prev.includes(category)
+                            ? prev.filter((cat: string) => cat !== category)
+                            : [...prev, category]
+                    );
+                }}
+                onToggleTag={(tag) => {
+                    setSelectedTags((prev: string[]) =>
+                        prev.includes(tag)
+                            ? prev.filter((item: string) => item !== tag)
+                            : [...prev, tag]
+                    );
+                }} />}
         </>
     );
 }
@@ -102,7 +114,7 @@ function HomeError({ onRetry }: { onRetry: () => void }) {
     );
 }
 
-function HomeContent({ data, selectedCategories, onToggleCategory }: { data: IndexData; selectedCategories: string[]; onToggleCategory: (category: string) => void }) {
+function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory, onToggleTag }: { data: IndexData; selectedCategories: string[]; selectedTags: string[]; onToggleCategory: (category: string) => void; onToggleTag: (tag: string) => void }) {
     const { navigation } = usePublicNavigation();
     const { matches, configuration, activeForms, channelNews } = data;
     let firstMatchId: string = '';
@@ -116,17 +128,22 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
     }
 
     const filteredItems = useMemo(() => {
-        if (selectedCategories.length === 0) return matches;
+        if (selectedCategories.length === 0 && selectedTags.length === 0) return matches;
         return matches.filter((item: IndexMatch) => {
+            // AND semantics across category filters, tag filters, and between the two groups.
             const itemCategories = item.categories.map((cat: IndexCategory) => cat.title)
-            return selectedCategories.every((selectedCategory: string) =>
+            const matchesCategories = selectedCategories.every((selectedCategory: string) =>
                 itemCategories.includes(selectedCategory)
             );
+            if (!matchesCategories) return false;
+
+            const itemTags = item.tags ?? [];
+            return selectedTags.every((selectedTag: string) => itemTags.includes(selectedTag));
         });
-    }, [matches, selectedCategories]);
+    }, [matches, selectedCategories, selectedTags]);
 
     const availableCategories = useMemo(() => {
-        if (selectedCategories.length === 0) {
+        if (selectedCategories.length === 0 && selectedTags.length === 0) {
             // Tutte le categorie sono disponibili se non ci sono filtri attivi
             const allCategories = matches.flatMap((item: IndexMatch) =>
                 item.categories.map((cat: IndexCategory) => cat.title)
@@ -139,7 +156,7 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
             item.categories.map((cat: IndexCategory) => cat.title)
         );
         return [...new Set(remainingCategories)];
-    }, [filteredItems, matches, selectedCategories]);
+    }, [filteredItems, matches, selectedCategories, selectedTags]);
 
     const allCategories = useMemo(() => {
         const all = matches.flatMap((item: IndexMatch) =>
@@ -147,6 +164,18 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
         );
         return [...new Set(all)];
     }, [matches]);
+
+    const allTags = useMemo(() => {
+        const all = matches.flatMap((item: IndexMatch) => item.tags ?? []);
+        return [...new Set(all)].sort((left, right) => left.localeCompare(right));
+    }, [matches]);
+
+    const availableTags = useMemo(() => {
+        if (selectedCategories.length === 0 && selectedTags.length === 0) {
+            return [...new Set(matches.flatMap((item: IndexMatch) => item.tags ?? []))];
+        }
+        return [...new Set(filteredItems.flatMap((item: IndexMatch) => item.tags ?? []))];
+    }, [filteredItems, matches, selectedCategories, selectedTags]);
 
     return (
         <>
@@ -194,32 +223,58 @@ function HomeContent({ data, selectedCategories, onToggleCategory }: { data: Ind
                     </div>
                     {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
                     {navigation?.headerItems.length ? <nav aria-label="Homepage menu" className="my-3 p-2 bg-white rounded d-flex flex-wrap gap-3">{navigation.headerItems.map(item => <PublicNavigationLink key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`} item={item} className="nav-link" />)}</nav> : null}
-                    <div className="my-3 p-2 bg-white rounded categories-container" style={{ display: "flex", gap: "10px" }}>
-                        {allCategories.map((category) => {
-                            const includeCategory = availableCategories.includes(category);
-                            return (
-                                <button
-                                    key={category}
-                                    className={`btn ${selectedCategories.includes(category)
-                                        ? "btn-success"
-                                        : "btn-outline-secondary"}`}
-                                    onClick={() => onToggleCategory(category)}
-                                    style={{
-                                        opacity: includeCategory ? 1 : 0.5,
-                                        marginRight: "10px",
-                                        cursor: includeCategory
-                                            ? "pointer"
-                                            : "not-allowed",
-                                    }}
-                                    disabled={!includeCategory}
-                                >
-                                    {category}
-                                </button>
-                            )
-                        })}
+                    <div className="my-3 p-2 bg-white rounded content-filters">
+                        <div className="categories-container" role="group" aria-label="Filtra per categoria" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            {allCategories.map((category) => {
+                                const includeCategory = availableCategories.includes(category);
+                                return (
+                                    <button
+                                        key={category}
+                                        className={`btn ${selectedCategories.includes(category)
+                                            ? "btn-success"
+                                            : "btn-outline-secondary"}`}
+                                        onClick={() => onToggleCategory(category)}
+                                        aria-pressed={selectedCategories.includes(category)}
+                                        style={{
+                                            opacity: includeCategory ? 1 : 0.5,
+                                            marginRight: "10px",
+                                            cursor: includeCategory
+                                                ? "pointer"
+                                                : "not-allowed",
+                                        }}
+                                        disabled={!includeCategory}
+                                    >
+                                        {category}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {allTags.length > 0 && (
+                            <div className="tags-container" role="group" aria-label="Filtra per tag" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                {allTags.map((tag) => {
+                                    const includeTag = availableTags.includes(tag);
+                                    const isSelected = selectedTags.includes(tag);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            className={`btn btn-sm ${isSelected ? "btn-info" : "btn-outline-info"}`}
+                                            onClick={() => onToggleTag(tag)}
+                                            aria-pressed={isSelected}
+                                            style={{
+                                                opacity: includeTag ? 1 : 0.5,
+                                                cursor: includeTag ? "pointer" : "not-allowed",
+                                            }}
+                                            disabled={!includeTag}
+                                        >
+                                            #{tag}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
 
-                    {renderContentWithBanners(filteredItems, selectedCategories)}
+                    {renderContentWithBanners(filteredItems, selectedCategories, selectedTags)}
                 </>
             }
 
@@ -241,7 +296,7 @@ function ChannelNewsBanner({ item }: { item: ChannelNews }) {
     );
 }
 
-function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[]) {
+function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[], selectedTags: string[]) {
     // Common configuration for all Masonry layouts
     const columnsCountBreakPoints = { 350: 1, 750: 2, 900: 3 };
     const gutterBreakpoints = { 350: "12px", 750: "16px", 900: "24px" };
@@ -251,7 +306,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
     const middleSection = items.slice(8, 17);
     const lastSection = items.slice(17);
 
-    const shouldShowBanners = selectedCategories.length === 0;
+    const shouldShowBanners = selectedCategories.length === 0 && selectedTags.length === 0;
 
     return (
         <>
@@ -266,7 +321,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                         const elementsToRender = [
                             // Always render the match card
                             <React.Fragment key={`match-${i}`}>
-                                {RenderMatchCard(match, selectedCategories.length === 0 ? i : -1)}
+                                {RenderMatchCard(match, shouldShowBanners ? i : -1)}
                             </React.Fragment>
                         ];
                         if (i === 3) elementsToRender.push(<BuyMeACoffeeCard key={`coffee-${i}`} />);

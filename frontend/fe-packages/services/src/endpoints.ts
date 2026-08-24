@@ -45,6 +45,7 @@ const CONFIGURATIONS = `${baseEndpoint}/configurations`;
 const CONFIGURATIONS_DETAIL = `${CONFIGURATIONS}/{configurationId}`;
 const VIDEOS_IMPORT = `${VIDEOS}/ImportVideo`;
 const VIDEOS_TRANSLATE = `${VIDEOS}/translate`;
+const VIDEOS_TAG_SUGGESTIONS = `${VIDEOS}/tag-suggestions`;
 const IMAGE_UPLOAD = `${baseEndpoint}/ImageUpload/upload`;
 const IMAGE_UPLOAD_MULTIPLE = `${baseEndpoint}/ImageUpload/upload-multiple`;
 
@@ -137,6 +138,7 @@ export default {
     CONFIGURATIONS_DETAIL,
     VIDEOS_IMPORT,
     VIDEOS_TRANSLATE,
+    VIDEOS_TAG_SUGGESTIONS,
     IMAGE_UPLOAD,
     IMAGE_UPLOAD_MULTIPLE,
     SHOP_PRODUCTS,

@@ -6,6 +6,8 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import { Match, VideoRef, CategoryRef } from '@morwalpizvideo/models';
 import VideoRefEditModal from '@components/VideoRefEditModal';
+import TagInput from '@components/TagInput';
+import { normalizeTags } from '@components/TagInput/tagRules';
 
 type CategoryWithFallbackId = CategoryRef & { categoryId?: string };
 
@@ -13,7 +15,11 @@ const getCategoryId = (category: CategoryWithFallbackId): string =>
   category.id ?? category.categoryId ?? '';
 
 const Component: React.FC = () => {
-  const { match, categories } = useLoaderData() as { match: Match; categories: CategoryRef[] };
+  const { match, categories, tagSuggestions } = useLoaderData() as {
+    match: Match;
+    categories: CategoryRef[];
+    tagSuggestions?: string[];
+  };
   const saveFetcher = useFetcher();
   const addFetcher = useFetcher();
   const navigate = useNavigate();
@@ -34,6 +40,7 @@ const Component: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     (match.categories as CategoryWithFallbackId[] | undefined)?.map(c => getCategoryId(c)).filter(Boolean) || []
   );
+  const [tags, setTags] = useState<string[]>(() => normalizeTags(match.tags ?? []));
   const saveBusy = saveFetcher.state !== 'idle';
   const saveErrors = saveFetcher.data?.errors;
   const lastSaveData = useRef<unknown>(undefined);
@@ -249,6 +256,21 @@ const Component: React.FC = () => {
 
                 <Row className="mb-3">
                   <Col sm={3}>
+                    <BootstrapForm.Label htmlFor="video-tags">Tags</BootstrapForm.Label>
+                  </Col>
+                  <Col sm={9}>
+                    <input type="hidden" name="tags" value={JSON.stringify(tags)} />
+                    <TagInput
+                      id="video-tags"
+                      value={tags}
+                      onChange={setTags}
+                      suggestions={tagSuggestions ?? []}
+                    />
+                  </Col>
+                </Row>
+
+                <Row className="mb-3">
+                  <Col sm={3}>
                     <BootstrapForm.Label htmlFor="matchType">Match Type</BootstrapForm.Label>
                   </Col>
                   <Col sm={9}>
@@ -439,6 +461,18 @@ const Component: React.FC = () => {
                     ))
                   ) : (
                     <em className="text-muted">No categories</em>
+                  )}
+                </div>
+              </div>
+              <div className="mb-2">
+                <strong>Current Tags:</strong><br />
+                <div className="d-flex gap-1 flex-wrap">
+                  {match.tags && match.tags.length > 0 ? (
+                    match.tags.map((tag, idx) => (
+                      <Badge key={idx} bg="info">{tag}</Badge>
+                    ))
+                  ) : (
+                    <em className="text-muted">No tags</em>
                   )}
                 </div>
               </div>
