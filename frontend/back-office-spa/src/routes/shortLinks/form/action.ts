@@ -15,6 +15,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   const payload = {
+    ...(id ? { code: String(values.code ?? '').trim() } : {}),
     target: values.target as string,
     linkType: parseInt(values.linkType as string),
     queryLinkIds: JSON.parse((values.queryLinkIds as string) || '[]'),

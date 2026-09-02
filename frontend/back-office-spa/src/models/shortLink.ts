@@ -41,6 +41,9 @@ export interface ShortLink {
   
   /** Legacy property for backward compatibility */
   videoId: string;
+
+  videoTitle?: string;
+  creationDateTime: string;
 }
 
 /**

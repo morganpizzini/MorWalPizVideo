@@ -23,7 +23,7 @@ namespace MorWalPiz.Contracts
                 ChannelId = entity.ChannelId,
             };
         }
-        public static ShortLinkContract Convert(ShortLink entity, string endpointBasePath)
+        public static ShortLinkContract Convert(ShortLink entity, string endpointBasePath, string? videoTitle = null)
         {
             return new ShortLinkContract
             {
@@ -38,7 +38,9 @@ namespace MorWalPiz.Contracts
                 LinkType = entity.LinkType,
                 ContentId = entity.ContentId,
                 ChannelId = entity.ChannelId,
-                ManagementChannelId = entity.ManagementChannelId
+                ManagementChannelId = entity.ManagementChannelId,
+                VideoTitle = videoTitle,
+                CreationDateTime = entity.CreationDateTime
             };
         }
         public static QueryLinkContract Convert(QueryLink entity)

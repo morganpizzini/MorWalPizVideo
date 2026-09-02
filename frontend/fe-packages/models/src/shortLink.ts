@@ -42,6 +42,12 @@ export interface ShortLink {
 
   /** Legacy property for backward compatibility */
   videoId: string;
+
+  /** Title of the referenced video, when this is a YouTube video link */
+  videoTitle?: string;
+
+  /** Date the short link was created */
+  creationDateTime: string;
 }
 
 /**

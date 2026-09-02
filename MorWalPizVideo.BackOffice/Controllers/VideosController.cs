@@ -239,7 +239,7 @@ public class VideosController : ApplicationControllerBase
 
         var video = videos.FirstOrDefault(candidate =>
             string.Equals(candidate.YoutubeId, youtubeId, StringComparison.Ordinal));
-        if (video is null)
+        if (video is null || !IsImportableVideoTitle(video.Title))
         {
             return BadRequest("YouTube video metadata was not found");
         }
@@ -445,7 +445,7 @@ public class VideosController : ApplicationControllerBase
 
         var video = videos.FirstOrDefault(candidate =>
             string.Equals(candidate.YoutubeId, videoId, StringComparison.Ordinal));
-        if (video is null)
+        if (video is null || !IsImportableVideoTitle(video.Title))
         {
             return BadRequest(new VideoImportResponse(videoId, "error", Error: "YouTube video metadata was not found"));
         }
@@ -699,7 +699,7 @@ public class VideosController : ApplicationControllerBase
 
         var video = videos.FirstOrDefault(candidate =>
             string.Equals(candidate.YoutubeId, videoId, StringComparison.Ordinal));
-        if (video is null)
+        if (video is null || !IsImportableVideoTitle(video.Title))
         {
             results.Add(new(videoId, "error", Error: "YouTube video metadata was not found"));
             continue;
@@ -1238,6 +1238,10 @@ public class VideosController : ApplicationControllerBase
 
     private static bool IsDegradedCacheResponse(string response)
         => string.Equals(GetCacheStatus(response), "degraded", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsImportableVideoTitle(string? title) =>
+        !string.IsNullOrWhiteSpace(title) &&
+        !string.Equals(title.Trim(), "undefined", StringComparison.OrdinalIgnoreCase);
 
     private static string? GetCacheStatus(string response)
     {

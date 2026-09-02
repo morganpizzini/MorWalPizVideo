@@ -17,6 +17,7 @@ const ShortLinkForm: React.FC = () => {
   const [searchParams] = useSearchParams();
 
   const [target, setTarget] = useState(entity?.target || '');
+  const [code, setCode] = useState(entity?.code || '');
   const [linkType, setLinkType] = useState<LinkType>(entity?.linkType ?? LinkType.YouTubeVideo);
   const [message, setMessage] = useState((entity as any)?.message || '');
   const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
@@ -42,6 +43,7 @@ const ShortLinkForm: React.FC = () => {
   useEffect(() => {
     if (entity) {
       setTarget(entity.target || '');
+      setCode(entity.code || '');
       setLinkType(entity.linkType ?? LinkType.YouTubeVideo);
       setMessage((entity as any).message || '');
     }
@@ -96,11 +98,11 @@ const ShortLinkForm: React.FC = () => {
         isEditMode ? 'Short link updated successfully' : 'Short link created successfully',
         { variant: 'success' }
       );
-      navigate('..');
+      navigate(isEditMode ? '/shortlinks' : '..');
     }
   }, [result, navigate, isEditMode]);
 
-  const isDisabled = () => target.length === 0 || busy;
+  const isDisabled = () => target.length === 0 || (isEditMode && code.trim().length === 0) || busy;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -110,7 +112,7 @@ const ShortLinkForm: React.FC = () => {
   const confirmSubmit = () => {
     const queryLinkIds = selectedQueryLinks.map(ql => ql.queryLinkId);
     fetcher.submit(
-      { target, linkType, queryLinkIds: JSON.stringify(queryLinkIds), message },
+      { ...(isEditMode ? { code } : {}), target, linkType, queryLinkIds: JSON.stringify(queryLinkIds), message },
       { method: 'post', action: location.pathname }
     );
   };
@@ -165,6 +167,10 @@ const ShortLinkForm: React.FC = () => {
                 disabled={loading}
               >
                 <option value="">Select a video</option>
+                {entity && entity.videoTitle && !matches.some(match =>
+                  match.videoRefs?.some(video => video.youtubeId === entity.target)) && (
+                  <option value={entity.target}>{entity.videoTitle}</option>
+                )}
                 {matches.map(match => (
                   <React.Fragment key={match.id}>
                     {match.videoRefs?.map(video => (
@@ -190,6 +196,21 @@ const ShortLinkForm: React.FC = () => {
             {linkType === LinkType.YouTubeVideo && !matches.length && 'Loading available videos...'}
           </Form.Text>
         </Form.Group>
+
+        {isEditMode && (
+          <Form.Group controlId="formCode" className="mb-3">
+            <Form.Label>
+              Short Link Code <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              required
+            />
+            <FieldError error={errors?.code} />
+          </Form.Group>
+        )}
 
         <MultiSelectWithBadges
           items={availableQueryLinks}

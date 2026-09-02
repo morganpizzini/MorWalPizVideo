@@ -61,5 +61,11 @@ namespace MorWalPiz.Contracts.Contracts
 
         [DataMember]
         public string? ManagementChannelId { get; set; }
+
+        [DataMember]
+        public string? VideoTitle { get; set; }
+
+        [DataMember]
+        public DateTime CreationDateTime { get; set; }
     }
 }

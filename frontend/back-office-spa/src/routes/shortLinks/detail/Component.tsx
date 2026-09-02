@@ -56,9 +56,17 @@ const ShortLinkDetail: React.FC = () => {
     <>
       <PageHeader
         title="Short Link Detail"
-        editLink={`/shortlinks/${entity.shortLinkId}/edit`}
+        editLink={`/shortlinks/${entity.code}/edit`}
         deleteCallback={handleDelete}
       />      <DetailPanel title="Dettagli dell'entità">
+        <p>
+          <strong>Code:</strong> {entity.code}
+        </p>
+        {entity.videoTitle && (
+          <p>
+            <strong>Video Title:</strong> {entity.videoTitle}
+          </p>
+        )}
         <p>
           <strong>Link Type:</strong> {LinkType[entity.linkType]}
         </p>
@@ -67,6 +75,9 @@ const ShortLinkDetail: React.FC = () => {
         </p>
         <p>
           <strong>Query String:</strong> {entity.queryString}
+        </p>
+        <p>
+          <strong>Created:</strong> {new Date(entity.creationDateTime).toLocaleString()}
         </p>
         <p>
           <strong>Clicks Count:</strong> {entity.clicksCount}

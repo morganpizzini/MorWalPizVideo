@@ -63,7 +63,18 @@ const ShortLinks: React.FC = () => {
         accessorKey: 'target',
         header: 'Target',
         cell: info => info.getValue(),
-      },      {
+      },
+      {
+        accessorKey: 'videoTitle',
+        header: 'Video Title',
+        cell: info => info.getValue() || '-',
+      },
+      {
+        accessorKey: 'creationDateTime',
+        header: 'Created',
+        cell: info => new Date(info.getValue() as string).toLocaleString(),
+      },
+      {
         accessorKey: 'linkType',
         header: 'Type',
         cell: info => {
