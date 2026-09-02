@@ -5,12 +5,12 @@
     {
       "key": "shortlinks.code.unique",
       "collection": "shortLinks",
-      "name": "ux_shortlinks_code_ci",
+      "name": "ux_shortlinks_code",
       "keys": {
         "code": 1
       },
       "unique": true,
-      "notes": "Requires duplicate/code-normalization audit before apply."
+      "notes": "Collation-free unique index; requires duplicate/code-normalization audit before apply. Remove legacy ux_shortlinks_code_ci only after this replacement is verified."
     },
     {
       "key": "customformresponses.formid_submittedat_desc",

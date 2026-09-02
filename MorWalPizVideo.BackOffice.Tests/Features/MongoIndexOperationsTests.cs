@@ -27,7 +27,7 @@ public sealed class MongoIndexOperationsTests
     [Fact]
     public void Removal_manifest_maps_only_the_legacy_page_index()
     {
-        var entry = Assert.Single(MongoIndexOperationsService.RemovalManifest);
+        var entry = MongoIndexOperationsService.RemovalManifest.Single(item => item.Key == "pages_url");
 
         Assert.Equal("pages_url", entry.Key);
         Assert.Equal("pages", entry.Collection);
@@ -52,13 +52,40 @@ public sealed class MongoIndexOperationsTests
     }
 
     [Fact]
-    public void Shortlink_manifest_requires_case_insensitive_unique_index()
+    public void Shortlink_manifest_requires_unique_normalized_code_index_without_collation()
     {
         var entry = MongoIndexOperationsService.Manifest.Single(item => item.Key == "shortlinks.code.unique");
 
         Assert.True(entry.Unique);
         Assert.Equal("code", entry.Keys.GetElement(0).Name);
-        Assert.Equal(CollationStrength.Secondary, entry.Collation?.Strength);
+        Assert.Null(entry.Collation);
+        Assert.Equal("ux_shortlinks_code", entry.Name);
+    }
+
+    [Fact]
+    public void Shortlink_collation_index_is_registered_for_removal_after_replacement()
+    {
+        var removal = MongoIndexOperationsService.RemovalManifest
+            .Single(item => item.Key == "shortlinks_code_collation");
+
+        Assert.Equal("ux_shortlinks_code_ci", removal.Name);
+        Assert.Equal("shortlinks.code.unique", removal.ReplacementKey);
+    }
+
+    [Fact]
+    public void Collated_shortlink_index_does_not_match_the_binary_definition()
+    {
+        var expected = MongoIndexOperationsService.Manifest
+            .Single(item => item.Key == "shortlinks.code.unique");
+        var collated = new BsonDocument
+        {
+            { "name", "ux_shortlinks_code" },
+            { "key", new BsonDocument("code", 1) },
+            { "unique", true },
+            { "collation", new BsonDocument { { "locale", "en" }, { "strength", 2 } } }
+        };
+
+        Assert.False(MongoIndexOperationsService.HasExpectedDefinition(collated, expected));
     }
 
     [Fact]
@@ -84,7 +111,7 @@ public sealed class MongoIndexOperationsTests
     [Fact]
     public void Removal_decision_targets_only_the_legacy_index_name()
     {
-        var removal = Assert.Single(MongoIndexOperationsService.RemovalManifest);
+        var removal = MongoIndexOperationsService.RemovalManifest.Single(item => item.Key == "pages_url");
         var replacementOnly = new[]
         {
             new BsonDocument

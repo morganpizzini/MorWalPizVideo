@@ -96,8 +96,10 @@ matches the manifest.
 ## Legacy removal contract
 
 The current desired page URL state is `pages_url.unique` on collection `pages`,
-with the unique `{ "url": 1 }` index `ux_pages_url_ci`. The key `pages_url` is a
-legacy removal key only; it maps to the exact legacy index `ix_pages_url` and is
+with the unique `{ "url": 1 }` index `ux_pages_url_ci`. The short-link state is
+the collation-free unique `{ "code": 1 }` index `ux_shortlinks_code`; the key
+`shortlinks_code_collation` removes the old `ux_shortlinks_code_ci` index only
+after the replacement has been applied and verified. Legacy removal keys are
 not valid for the apply request.
 
 Removal uses `POST /api/mongoindexes/remove` with the same configured API key and
@@ -110,12 +112,12 @@ curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/remove" \
   -H "X-API-Key: <YOUR_API_KEY>" \
   --data-raw '{
     "approvalToken": "apply-approved-indexes",
-    "approvedRemovalKeys": ["pages_url"]
+    "approvedRemovalKeys": ["shortlinks_code_collation"]
   }'
 ```
 
-Before dropping `ix_pages_url`, the service verifies that `ux_pages_url_ci`
-exists and is unique with exactly `{ "url": 1 }`. If the replacement is absent
+Before dropping a legacy index, the service verifies that its replacement exists
+and is unique with the expected key pattern. If the replacement is absent
 or incorrect, removal is rejected and the legacy index is retained. A successful
 result reports `removed`; a missing legacy index reports `skipped_absent` and is
 idempotent. Unknown removal keys fail with HTTP 400. Mongo index conflicts and

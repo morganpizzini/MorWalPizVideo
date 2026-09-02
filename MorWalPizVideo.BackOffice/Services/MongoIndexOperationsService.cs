@@ -57,10 +57,9 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
         new(
             Key: "shortlinks.code.unique",
             Collection: DbCollections.ShortLinks,
-            Name: "ux_shortlinks_code_ci",
+            Name: "ux_shortlinks_code",
             Keys: new BsonDocument("code", 1),
-            Unique: true,
-            Collation: new Collation("en", strength: CollationStrength.Secondary)),
+            Unique: true),
         new(
             Key: "customformresponses.formid_submittedat_desc",
             Collection: DbCollections.CustomFormResponses,
@@ -126,6 +125,11 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =
     [
         new(
+            Key: "shortlinks_code_collation",
+            Collection: DbCollections.ShortLinks,
+            Name: "ux_shortlinks_code_ci",
+            ReplacementKey: "shortlinks.code.unique"),
+        new(
             Key: "pages_url",
             Collection: DbCollections.Pages,
             Name: "ix_pages_url",
@@ -190,7 +194,8 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                 var current = await collection.Indexes.ListAsync(cancellationToken);
                 var currentIndexes = await current.ToListAsync(cancellationToken);
                 if (currentIndexes.Any(index =>
-                    index.GetValue("name", string.Empty).AsString == entry.Name))
+                    index.GetValue("name", string.Empty).AsString == entry.Name &&
+                    HasExpectedDefinition(index, entry)))
                 {
                     results.Add(new MongoIndexApplyResult(entry.Key, entry.Collection, entry.Name, "skipped_existing"));
                     continue;
@@ -272,12 +277,13 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
 
     internal static bool HasExpectedDefinition(BsonDocument indexDocument, MongoIndexManifestEntry expected)
     {
-        var collationMatches = expected.Collation is null ||
-            (expected.Collation.Strength is { } expectedStrength &&
-             indexDocument.TryGetValue("collation", out var collationValue) &&
-             collationValue.IsBsonDocument &&
-             collationValue.AsBsonDocument.GetValue("locale", string.Empty).AsString == expected.Collation.Locale &&
-             collationValue.AsBsonDocument.GetValue("strength", 0).ToInt32() == (int)expectedStrength);
+                var collationMatches = expected.Collation is null
+                        ? !indexDocument.Contains("collation")
+                        : expected.Collation.Strength is { } expectedStrength &&
+                            indexDocument.TryGetValue("collation", out var collationValue) &&
+                            collationValue.IsBsonDocument &&
+                            collationValue.AsBsonDocument.GetValue("locale", string.Empty).AsString == expected.Collation.Locale &&
+                            collationValue.AsBsonDocument.GetValue("strength", 0).ToInt32() == (int)expectedStrength;
 
         return indexDocument.GetValue("unique", false).ToBoolean() &&
             indexDocument.TryGetValue("key", out var actualKeys) &&
