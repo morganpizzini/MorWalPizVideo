@@ -33,7 +33,7 @@ namespace MorWalPizVideo.Server.Services
         {
         }
         public Task TranslateYoutubeVideo(IList<string> videoIds) => Task.CompletedTask;
-        public Task<IList<Video>> FetchFromYoutube(IList<string> videoIds) => Task.FromResult<IList<Video>>(new List<Video>());
+        public virtual Task<IList<Video>> FetchFromYoutube(IList<string> videoIds) => Task.FromResult<IList<Video>>(new List<Video>());
         public Task<ChannelCommentsResult> GetChannelComments(string channelId, int videoCount = 10, int commentCount = 20, bool showVideo = true)
             => Task.FromResult(new ChannelCommentsResult());
         public Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null)
@@ -166,11 +166,16 @@ namespace MorWalPizVideo.Server.Services
                 Query = queryString
             }.Uri;
 
-            var httpResponseMessage = await _operationExecutor.ExecuteAsync(
+            using var httpResponseMessage = await _operationExecutor.ExecuteAsync(
                 $"videos:{string.Join(',', videoIds.OrderBy(id => id))}",
                 cancellationToken => _client.GetAsync(requestUri, cancellationToken));
             if (!httpResponseMessage.IsSuccessStatusCode)
-                return videos;
+            {
+                throw new HttpRequestException(
+                    $"YouTube metadata request failed with status {(int)httpResponseMessage.StatusCode}.",
+                    null,
+                    httpResponseMessage.StatusCode);
+            }
 
             using var contentStream =
                 await httpResponseMessage.Content.ReadAsStreamAsync();
@@ -185,7 +190,9 @@ namespace MorWalPizVideo.Server.Services
             if (youtubeResponse == null)
                 return videos;
 
-            return youtubeResponse.Items.Select(ContractUtils.Convert).ToList();
+            return (youtubeResponse.Items ?? [])
+                .Select(ContractUtils.Convert)
+                .ToList();
         }
         private async Task<IList<SearchResult>> FetchVideos(string channelId, int count)
         {
@@ -208,9 +215,10 @@ namespace MorWalPizVideo.Server.Services
 
             // Filtra i video normali e gli shorts
             var resultVideoIds = items.Where(video =>
-                showVideo ?
-                    XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds >= 120 :
-                    XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120)
+                TryGetDuration(video.ContentDetails?.Duration, out var duration) &&
+                (showVideo
+                    ? duration >= 120
+                    : duration < 120))
                 .Take(count)
                 .Select(x => x.Id)
                 .ToList();
@@ -271,16 +279,35 @@ namespace MorWalPizVideo.Server.Services
 
             var items = await GetYouTubeVideo(videoIds, "contentDetails");
             var resultVideoIds = items.Where(video =>
-                    video.ContentDetails?.Duration != null &&
+                    TryGetDuration(video.ContentDetails?.Duration, out var duration) &&
                     (showVideo
-                        ? XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds >= 120
-                        : XmlConvert.ToTimeSpan(video.ContentDetails.Duration).TotalSeconds < 120))
+                        ? duration >= 120
+                        : duration < 120))
                 .Select(video => video.Id)
                 .ToHashSet(StringComparer.Ordinal);
 
             return candidates
                 .Where(item => item.Id.Kind == "youtube#video" && resultVideoIds.Contains(item.Id.VideoId))
                 .ToList();
+        }
+
+        private static bool TryGetDuration(string? value, out double seconds)
+        {
+            seconds = 0;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            try
+            {
+                seconds = XmlConvert.ToTimeSpan(value).TotalSeconds;
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
 
         public async Task<CommentThreadListResponse> GetVideoComments(string videoId, int commentCount = 20, string? pageToken = null)

@@ -32,6 +32,11 @@ public sealed class VideoRefContract
     [DataMember] public DateTime PublishedAt { get; set; }
     [DataMember] public string[] ChannelIds { get; set; } = [];
     [DataMember] public DateTime CreationDateTime { get; set; }
+    // Populated by mutation responses when the canonical standalone link was ensured.
+    [DataMember] public string? ShortLinkCode { get; set; }
+    [DataMember] public string? ShortLinkStatus { get; set; }
+    [DataMember] public string? ShortLinkError { get; set; }
+    [DataMember] public string? CacheStatus { get; set; }
 }
 
 [DataContract]

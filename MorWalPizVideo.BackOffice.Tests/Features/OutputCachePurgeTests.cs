@@ -1,5 +1,8 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.ServerAPI.Controllers;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -33,6 +36,23 @@ public class OutputCachePurgeTests
 
         Assert.Single(store.EvictedTags);
         Assert.Equal("tag-calendarevents", store.EvictedTags[0]);
+    }
+
+    [Fact]
+    public async Task Refresh_reports_cache_degradation_without_returning_a_false_success()
+    {
+        var controller = new CacheController(
+            _dataService: null!,
+            _memoryCache: null!,
+            _cache: new CapturingOutputCacheStore(),
+            _indexedCache: new ReportingIndexedCache(
+                new IndexedCacheRefreshResult("degraded", 1, 1)));
+
+        var result = await controller.RefreshVideo("match-1");
+
+        var response = Assert.IsType<OkObjectResult>(result);
+        var cacheStatus = response.Value?.GetType().GetProperty("cacheStatus")?.GetValue(response.Value);
+        Assert.Equal("degraded", cacheStatus);
     }
 
     [Fact]
@@ -70,5 +90,21 @@ public class OutputCachePurgeTests
 
         Assert.True(offenders.Count == 0,
             "Non-lowercase [OutputCache] tags detected: " + string.Join("; ", offenders));
+    }
+
+    private sealed class ReportingIndexedCache(IndexedCacheRefreshResult result) : IYouTubeContentIndexedCache
+    {
+        public Task<IReadOnlyList<YouTubeContent>> GetPublicForChannelAsync(
+            string channelId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
+
+        public Task<IReadOnlyList<YouTubeContent>> GetGlobalAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
+
+        public Task NotifyChangedAsync(string entityId) => Task.CompletedTask;
+
+        public Task<IndexedCacheRefreshResult> DrainAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(result);
     }
 }

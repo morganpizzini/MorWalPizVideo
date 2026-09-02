@@ -6,6 +6,7 @@ public sealed class RecordingCrossApiService : ICrossApiService
 {
     public List<string> ResetKeys { get; } = [];
     public List<string> PurgedTags { get; } = [];
+    public List<string> RefreshedVideoIds { get; } = [];
 
     public Task<string> ResetCache(string key)
     {
@@ -25,11 +26,21 @@ public sealed class RecordingCrossApiService : ICrossApiService
         return Task.FromResult(string.Empty);
     }
 
+    public Task<string> RefreshVideoCache(string matchId)
+    {
+        lock (RefreshedVideoIds)
+        {
+            RefreshedVideoIds.Add(matchId);
+        }
+        return Task.FromResult(string.Empty);
+    }
+
     public Task<string> ReloadCache() => Task.FromResult(string.Empty);
 
     public void Clear()
     {
         ResetKeys.Clear();
         PurgedTags.Clear();
+        RefreshedVideoIds.Clear();
     }
 }

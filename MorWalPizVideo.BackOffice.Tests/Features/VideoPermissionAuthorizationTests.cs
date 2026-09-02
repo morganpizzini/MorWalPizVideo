@@ -80,6 +80,32 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
   }
 
   [Fact]
+  public async Task Video_reference_add_rejects_missing_youtube_metadata_without_persisting()
+  {
+    var videoId = $"metadata-missing-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateCollection($"content-{videoId}", "Collection", string.Empty, string.Empty, "thumbnail", []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId
+      });
+    using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosUpdate);
+      _factory.CrossApiService.Clear();
+
+      var response = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = videoId,
+      categories = new[] { "300000000000000000000001" }
+    });
+    var persistedMatch = await _factory.MatchRepository.GetItemAsync(match.Id);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.Contains("YouTube video metadata was not found",
+      await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    Assert.Empty(persistedMatch!.VideoRefs);
+    Assert.Empty(_factory.CrossApiService.ResetKeys);
+  }
+
+  [Fact]
   public async Task Video_record_ownership_remains_required_after_permission_check()
   {
     var matchId = (await _factory.MatchRepository!.GetItemsAsync()).First().Id;
@@ -123,7 +149,7 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
   }
 
   [Fact]
-  public async Task Single_video_import_assigns_the_selected_channel_to_the_video_reference()
+  public async Task Single_video_import_rejects_missing_provider_metadata_without_persisting()
   {
     using var client = CreateClient(permissions: AuthorizationPermissionKeys.VideosImport);
     var videoId = $"import-{Guid.NewGuid():N}";
@@ -132,15 +158,9 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
         "/api/Videos/ImportVideo",
       new { videoId, categories = new[] { "300000000000000000000001" } });
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var responseBody = await response.Content.ReadAsStringAsync();
-    Assert.Contains("\"status\":\"imported\"", responseBody, StringComparison.Ordinal);
-    Assert.Contains("\"shortLinkStatus\":\"created\"", responseBody, StringComparison.Ordinal);
-    var importedMatch = (await _factory.MatchRepository!.GetItemsAsync())
-        .Single(match => match.ContentId == videoId);
-
-    Assert.Equal(PrimaryScenario.ChannelId, importedMatch.OwnerChannelId);
-    Assert.Contains(PrimaryScenario.ChannelId, importedMatch.VideoRefs.Single().ChannelIds);
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.DoesNotContain((await _factory.MatchRepository!.GetItemsAsync()),
+        match => match.ContentId == videoId);
   }
 
   [Fact]

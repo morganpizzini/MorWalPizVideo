@@ -436,6 +436,21 @@ namespace MorWalPiz.Contracts
             CreationDateTime = entity.CreationDateTime
         };
 
+        public static VideoRefContract ConvertWithShortLink(
+            VideoRef entity,
+            string? shortLinkCode,
+            string shortLinkStatus,
+            string? shortLinkError,
+            string? cacheStatus = null)
+        {
+            var contract = Convert(entity);
+            contract.ShortLinkCode = shortLinkCode;
+            contract.ShortLinkStatus = shortLinkStatus;
+            contract.ShortLinkError = shortLinkError;
+            contract.CacheStatus = cacheStatus;
+            return contract;
+        }
+
         public static YouTubeVideoLinkContract Convert(YouTubeVideoLink entity) => new()
         {
             ContentCreatorName = entity.ContentCreatorName,

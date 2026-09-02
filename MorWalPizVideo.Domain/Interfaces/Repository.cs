@@ -1,4 +1,5 @@
 ﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
@@ -20,6 +21,23 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         protected override YouTubeContent PrepareForPersistence(YouTubeContent item)
             => item with { LatestPublishedAt = item.CalculateLatestPublishedAt() };
 
+        public async Task<bool> UpdateMutableFieldsAsync(YouTubeContent entity)
+        {
+            var idFilter = ObjectId.TryParse(entity.Id, out var objectId)
+                ? Builders<YouTubeContent>.Filter.Eq("_id", objectId)
+                : Builders<YouTubeContent>.Filter.Eq("_id", entity.Id);
+            var update = Builders<YouTubeContent>.Update.Combine(
+                Builders<YouTubeContent>.Update.Set(x => x.Title, entity.Title),
+                Builders<YouTubeContent>.Update.Set(x => x.Description, entity.Description),
+                Builders<YouTubeContent>.Update.Set(x => x.Url, entity.Url),
+                Builders<YouTubeContent>.Update.Set(x => x.ThumbnailVideoId, entity.ThumbnailVideoId),
+                Builders<YouTubeContent>.Update.Set(x => x.Categories, entity.Categories),
+                Builders<YouTubeContent>.Update.Set(x => x.Tags, entity.Tags));
+
+            var result = await _collection.UpdateOneAsync(idFilter, update);
+            return result.MatchedCount == 1;
+        }
+
         public async Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
         {
             var idFilter = ObjectId.TryParse(matchId, out var objectId)
@@ -29,9 +47,22 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<YouTubeContent>.Filter.ElemMatch(
                     x => x.VideoRefs,
                     video => video.YoutubeId == videoReference.YoutubeId));
-            var update = Builders<YouTubeContent>.Update.Push(x => x.VideoRefs, videoReference);
+            // Append and recompute the denormalized ordering field in one atomic update.
+            // Recomputing from all references also repairs legacy documents whose aggregate
+            // field is missing or still DateTime.MinValue.
+            var updatePipeline = PipelineDefinition<YouTubeContent, YouTubeContent>.Create(
+            [
+                new BsonDocument("$set", new BsonDocument("videoRefs",
+                    new BsonDocument("$concatArrays", new BsonArray
+                    {
+                        new BsonDocument("$ifNull", new BsonArray { "$videoRefs", new BsonArray() }),
+                        new BsonArray { videoReference.ToBsonDocument() }
+                    }))),
+                new BsonDocument("$set", new BsonDocument("latestPublishedAt",
+                    CalculateLatestPublishedAtExpression()))
+            ]);
 
-            var result = await _collection.UpdateOneAsync(idFilter & noDuplicateFilter, update);
+            var result = await _collection.UpdateOneAsync(idFilter & noDuplicateFilter, updatePipeline);
             if (result.ModifiedCount == 1)
             {
                 return VideoReferenceAppendResult.Added;
@@ -41,6 +72,109 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return existingMatch is null
                 ? VideoReferenceAppendResult.NotFound
                 : VideoReferenceAppendResult.Duplicate;
+        }
+
+        public async Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId)
+        {
+            var idFilter = ObjectId.TryParse(matchId, out var objectId)
+                ? Builders<YouTubeContent>.Filter.Eq("_id", objectId)
+                : Builders<YouTubeContent>.Filter.Eq("_id", matchId);
+            var hasReferenceFilter = Builders<YouTubeContent>.Filter.ElemMatch(
+                x => x.VideoRefs,
+                video => video.YoutubeId == youtubeId);
+            var updatePipeline = PipelineDefinition<YouTubeContent, YouTubeContent>.Create(
+            [
+                new BsonDocument("$set", new BsonDocument("videoRefs",
+                    new BsonDocument("$filter", new BsonDocument
+                    {
+                        { "input", new BsonDocument("$ifNull", new BsonArray { "$videoRefs", new BsonArray() }) },
+                        { "as", "video" },
+                        { "cond", new BsonDocument("$ne", new BsonArray { "$$video.youtubeId", youtubeId }) }
+                    }))),
+                new BsonDocument("$set", new BsonDocument("latestPublishedAt",
+                    CalculateLatestPublishedAtExpression()))
+            ]);
+
+            var result = await _collection.UpdateOneAsync(idFilter & hasReferenceFilter, updatePipeline);
+            return result.ModifiedCount == 1;
+        }
+
+        public async Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference)
+        {
+            var idFilter = ObjectId.TryParse(matchId, out var objectId)
+                ? Builders<YouTubeContent>.Filter.Eq("_id", objectId)
+                : Builders<YouTubeContent>.Filter.Eq("_id", matchId);
+            var expectedFilter = new BsonDocumentFilterDefinition<VideoRef>(expectedReference.ToBsonDocument());
+            var hasExpectedReferenceFilter = Builders<YouTubeContent>.Filter.ElemMatch(
+                x => x.VideoRefs, expectedFilter);
+            var updatePipeline = PipelineDefinition<YouTubeContent, YouTubeContent>.Create(
+            [
+                new BsonDocument("$set", new BsonDocument("videoRefs",
+                    new BsonDocument("$filter", new BsonDocument
+                    {
+                        { "input", new BsonDocument("$ifNull", new BsonArray { "$videoRefs", new BsonArray() }) },
+                        { "as", "video" },
+                        { "cond", new BsonDocument("$ne", new BsonArray { "$$video.youtubeId", expectedReference.YoutubeId }) }
+                    }))),
+                new BsonDocument("$set", new BsonDocument("latestPublishedAt",
+                    CalculateLatestPublishedAtExpression()))
+            ]);
+
+            var result = await _collection.UpdateOneAsync(idFilter & hasExpectedReferenceFilter, updatePipeline);
+            return result.ModifiedCount == 1;
+        }
+
+        public async Task<bool> RemoveEmbeddedYouTubeLinksAsync(string matchId)
+        {
+            var idFilter = ObjectId.TryParse(matchId, out var objectId)
+                ? Builders<YouTubeContent>.Filter.Eq("_id", objectId)
+                : Builders<YouTubeContent>.Filter.Eq("_id", matchId);
+            var update = Builders<YouTubeContent>.Update.PullFilter(
+                x => x.ShortLinks,
+                link => link.LinkType == LinkType.YouTubeVideo);
+            var result = await _collection.UpdateOneAsync(idFilter, update);
+            return result.MatchedCount == 1;
+        }
+
+        private static BsonDocument CalculateLatestPublishedAtExpression()
+        {
+            var minDate = BsonDateTime.Create(DateTime.MinValue);
+            var publishedDates = new BsonDocument("$map", new BsonDocument
+            {
+                {
+                    "input", new BsonDocument("$filter", new BsonDocument
+                    {
+                        { "input", new BsonDocument("$ifNull", new BsonArray { "$videoRefs", new BsonArray() }) },
+                        { "as", "video" },
+                        {
+                            "cond", new BsonDocument("$ne", new BsonArray
+                            {
+                                new BsonDocument("$ifNull", new BsonArray { "$$video.publishedAt", minDate }),
+                                minDate
+                            })
+                        }
+                    })
+                },
+                { "as", "video" },
+                { "in", "$$video.publishedAt" }
+            });
+
+            return new BsonDocument("$let", new BsonDocument
+            {
+                { "vars", new BsonDocument("publishedDates", publishedDates) },
+                {
+                    "in", new BsonDocument("$cond", new BsonArray
+                    {
+                        new BsonDocument("$gt", new BsonArray
+                        {
+                            new BsonDocument("$size", "$$publishedDates"),
+                            0
+                        }),
+                        new BsonDocument("$max", "$$publishedDates"),
+                        "$creationDateTime"
+                    })
+                }
+            });
         }
 
         public async Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)

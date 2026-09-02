@@ -80,7 +80,18 @@ public sealed class ContentServiceTests
 
         public Task UpdateItemAsync(YouTubeContent item) => throw new NotSupportedException();
 
+        public Task<bool> UpdateMutableFieldsAsync(YouTubeContent item) => throw new NotSupportedException();
+
         public Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+            => throw new NotSupportedException();
+
+        public Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId)
+            => throw new NotSupportedException();
+
+        public Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference)
+            => throw new NotSupportedException();
+
+        public Task<bool> RemoveEmbeddedYouTubeLinksAsync(string matchId)
             => throw new NotSupportedException();
 
         public Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null)

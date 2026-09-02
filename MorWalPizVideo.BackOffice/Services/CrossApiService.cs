@@ -9,6 +9,7 @@ public interface ICrossApiService
 {
     Task<string> ResetCache(string key);
     Task<string> PurgeCache(string key);
+    Task<string> RefreshVideoCache(string matchId);
     Task<string> ReloadCache();
 }
 public class MockCrossApiService : ICrossApiService
@@ -18,6 +19,10 @@ public class MockCrossApiService : ICrossApiService
         return Task.FromResult(string.Empty);
     }
     public Task<string> PurgeCache(string key)
+    {
+        return Task.FromResult(string.Empty);
+    }
+    public Task<string> RefreshVideoCache(string matchId)
     {
         return Task.FromResult(string.Empty);
     }
@@ -59,10 +64,14 @@ public class CrossApiService : ICrossApiService
         var httpClient = CreateAuthenticatedClient();
         return httpClient.GetStringAsync($"cache/purge?k={Uri.EscapeDataString(key)}");
     }
+    public Task<string> RefreshVideoCache(string matchId)
+    {
+        var httpClient = CreateAuthenticatedClient();
+        return httpClient.GetStringAsync($"cache/refresh-video?id={Uri.EscapeDataString(matchId)}");
+    }
     public Task<string> ReloadCache()
     {
         var httpClient = client.CreateClient(HttpClientNames.MorWalPiz);
         return httpClient.GetStringAsync($"matches");
     }
 }
-

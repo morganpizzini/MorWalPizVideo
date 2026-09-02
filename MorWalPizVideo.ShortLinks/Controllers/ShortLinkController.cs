@@ -39,7 +39,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             var channelId = configuration["YouTubeChannelId"]?.Trim();
             var match = string.IsNullOrWhiteSpace(channelId)
                 ? null
-                : (await FetchMatches()).FirstOrDefault(content =>
+                : (await FetchMatchesWithoutCache()).FirstOrDefault(content =>
                     content.Id == canonical.ContentId &&
                     (content.OwnerChannelId == channelId || content.VideoRefs.Any(video =>
                         video.ChannelIds.Contains(channelId, StringComparer.Ordinal))) &&
@@ -75,7 +75,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 if (string.IsNullOrWhiteSpace(channelId))
                     return NotFound();
 
-                var lastMatch = (await FetchMatches()).FirstOrDefault(content =>
+                var lastMatch = (await FetchMatchesWithoutCache()).FirstOrDefault(content =>
                     content.OwnerChannelId == channelId ||
                     content.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal)));
                 if (lastMatch == null)
@@ -219,7 +219,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                     var channelId = configuration["YouTubeChannelId"]?.Trim();
                     var existingMatch = string.IsNullOrWhiteSpace(channelId)
                         ? null
-                        : (await FetchMatches()).FirstOrDefault(x => x.Id == shortLink.ContentId &&
+                        : (await FetchMatchesWithoutCache()).FirstOrDefault(x => x.Id == shortLink.ContentId &&
                             (x.OwnerChannelId == channelId || x.VideoRefs.Any(video => video.ChannelIds.Contains(channelId, StringComparer.Ordinal))) &&
                             x.VideoRefs.Any(v => v.YoutubeId == shortLink.Target));
                     
@@ -260,11 +260,6 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                             .ToList();
 
 
-        private async Task<IList<YouTubeContent>> FetchMatches(int skip = 0, int take = int.MaxValue)
-        {
-            return (await cache.GetOrCreateAsync(CacheKeys.Matches, FetchMatchesWithoutCache)).Skip(skip).Take(take).ToList();
-        }
-        
         private async Task<IList<YTChannel>> FetchChannelsWithoutCache() => 
             (await _shortlinkDataService.FetchChannels()).OrderByDescending(x => x.CreationDateTime).ToList();
         private async Task<IList<YTChannel>> FetchChannels()

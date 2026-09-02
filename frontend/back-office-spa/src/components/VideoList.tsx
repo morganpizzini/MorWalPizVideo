@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Table, Form, InputGroup, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import { useRevalidator, Link } from 'react-router';
+import { LinkType } from '@morwalpizvideo/models';
 import type { Match } from '@morwalpizvideo/models';
 import type { Channel } from '@morwalpizvideo/models';
 import { publishVideoToSocial, refreshVideoYouTubeData } from '../services/videoService';
@@ -247,7 +248,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                   match.videoRefs.map((videoRef) => {
                     // Find shortlink for this specific video
                     const videoShortLink = match.shortLinks?.find(
-                      sl => sl.target === videoRef.youtubeId
+                      sl => sl.linkType === LinkType.YouTubeVideo && sl.target === videoRef.youtubeId
                     );
                     const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
                     const shortLinkUrl = composeShortLinkUrl(channel?.shortLinkUrl, videoShortLink?.code);

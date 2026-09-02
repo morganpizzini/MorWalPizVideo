@@ -1,17 +1,40 @@
 ﻿using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Utils;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 namespace MorWalPizVideo.Server.Contracts
 {
     public static class ContractUtils
     {
-        public static Video Convert(ItemResponse contract) { 
-            return new Video(contract.Id,contract.Snippet.Title, contract.Snippet.Description.TrimDescription(), int.Parse(contract.Statistics.ViewCount),
-                int.Parse(contract.Statistics.LikeCount),
-                int.Parse(contract.Statistics.CommentCount),
-                    contract.Snippet.PublishedAt, contract.Snippet.Thumbnails["standard"].Url, contract.ContentDetails.Duration,
-                    Array.Empty<CategoryRef>(), contract.Snippet.ChannelId);
+        public static Video Convert(ItemResponse contract)
+        {
+            var snippet = contract.Snippet;
+            var statistics = contract.Statistics;
+            var contentDetails = contract.ContentDetails;
+            var thumbnail = snippet?.Thumbnails?.Values
+                .OrderByDescending(item => item.Width)
+                .Select(item => item.Url)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url))
+                ?? string.Empty;
+
+            return new Video(
+                contract.Id ?? string.Empty,
+                snippet?.Title ?? string.Empty,
+                (snippet?.Description ?? string.Empty).TrimDescription(),
+                ParseCount(statistics?.ViewCount),
+                ParseCount(statistics?.LikeCount),
+                ParseCount(statistics?.CommentCount),
+                snippet?.PublishedAt ?? DateTime.MinValue,
+                thumbnail,
+                contentDetails?.Duration ?? string.Empty,
+                Array.Empty<CategoryRef>(),
+                snippet?.ChannelId ?? string.Empty);
         }
+
+        private static int ParseCount(string? value)
+            => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : 0;
     }
     public record SponsorRequest([Required]string Name, [Required][EmailAddress] string Email, [Required][MinLength(10)] string Description, [Required] string Token) { }
     public record RecaptchaResponse(bool success, string action) { }

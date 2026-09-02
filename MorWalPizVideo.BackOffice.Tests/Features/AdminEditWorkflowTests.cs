@@ -1,21 +1,26 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.TestHost;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
-public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicationFactory>
+public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebApplicationFactory>
 {
-  private readonly BackOfficeWebApplicationFactory _factory;
+  private readonly VideoReferenceWebApplicationFactory _factory;
 
-  public AdminEditWorkflowTests(BackOfficeWebApplicationFactory factory)
+  public AdminEditWorkflowTests(VideoReferenceWebApplicationFactory factory)
   {
     _factory = factory;
   }
@@ -419,11 +424,27 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.Equal(videoId, returned!.YoutubeId);
+    Assert.Equal($"Title for {videoId}", returned.Title);
+    Assert.Equal($"Description for {videoId}", returned.Description);
+    Assert.Equal(new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc), returned.PublishedAt);
+    Assert.NotEqual(default, returned.CreationDateTime);
+    Assert.Equal("created", returned.ShortLinkStatus);
+    Assert.False(string.IsNullOrWhiteSpace(returned.ShortLinkCode));
     Assert.Equal(videoId, added.YoutubeId);
+    Assert.Equal($"Title for {videoId}", added.Title);
+    Assert.Equal($"Description for {videoId}", added.Description);
+    Assert.Equal(new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc), added.PublishedAt);
+    Assert.NotEqual(default, added.CreationDateTime);
     Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(added.ChannelIds));
     Assert.Equal("Scenario category", Assert.Single(added.Categories).Title);
-    Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.ResetKeys);
+    var canonicalLink = Assert.Single(
+      await _factory.ShortLinkRepository!.GetItemsAsync(link =>
+        link.ContentId == match.Id && link.Target == videoId));
+    Assert.Equal(returned.ShortLinkCode, canonicalLink.Code);
+    Assert.Equal(LinkType.YouTubeVideo, canonicalLink.LinkType);
+    Assert.Equal(new[] { CacheKeys.Matches, CacheKeys.ShortLinks }, _factory.CrossApiService.ResetKeys);
     Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.PurgedTags);
+    Assert.Equal([match.Id], _factory.CrossApiService.RefreshedVideoIds);
   }
 
   [Fact]
@@ -431,7 +452,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
   {
     var videoId = $"video-{Guid.NewGuid():N}";
     var match = await _factory.MatchRepository!.AddItemAsync(
-      YouTubeContent.CreateSingleVideo(videoId, []) with
+      YouTubeContent.CreateCollection($"content-{videoId}", "Collection", string.Empty, string.Empty, "thumbnail", []) with
       {
         OwnerChannelId = PrimaryScenario.ChannelId,
         VideoRefs = [new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId])]
@@ -460,6 +481,32 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
   }
 
   [Fact]
+  public async Task Single_import_persists_provider_metadata_before_creating_the_canonical_link()
+  {
+    var videoId = $"import-{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosImport, PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync("/api/Videos/ImportVideo", new
+    {
+      videoId,
+      categories = new[] { "300000000000000000000001" }
+    });
+
+    var importedMatch = (await _factory.MatchRepository!.GetItemsAsync())
+      .Single(match => match.ContentId == videoId);
+    var importedVideo = Assert.Single(importedMatch.VideoRefs);
+    var canonicalLink = Assert.Single(
+      await _factory.ShortLinkRepository!.GetItemsAsync(link =>
+        link.ContentId == importedMatch.Id && link.Target == videoId));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal($"Title for {videoId}", importedVideo.Title);
+    Assert.Equal($"Description for {videoId}", importedVideo.Description);
+    Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(importedVideo.ChannelIds));
+    Assert.Equal(LinkType.YouTubeVideo, canonicalLink.LinkType);
+  }
+
+  [Fact]
   public async Task Video_reference_add_rejects_categories_from_another_channel()
   {
     var videoId = $"video-{Guid.NewGuid():N}";
@@ -470,7 +517,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
       ChannelId = "other-channel"
     });
     var match = await _factory.MatchRepository!.AddItemAsync(
-      YouTubeContent.CreateSingleVideo(videoId, []) with
+      YouTubeContent.CreateCollection($"content-{videoId}", "Collection", string.Empty, string.Empty, "thumbnail", []) with
       {
         OwnerChannelId = PrimaryScenario.ChannelId
       });
@@ -494,7 +541,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
   {
     var videoId = $"video-{Guid.NewGuid():N}";
     var match = await _factory.MatchRepository!.AddItemAsync(
-      YouTubeContent.CreateSingleVideo(videoId, []) with
+      YouTubeContent.CreateCollection($"content-{videoId}", "Collection", string.Empty, string.Empty, "thumbnail", []) with
       {
         OwnerChannelId = PrimaryScenario.ChannelId
       });
@@ -526,5 +573,39 @@ public sealed class AdminEditWorkflowTests : IClassFixture<BackOfficeWebApplicat
     client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
     client.DefaultRequestHeaders.Add("X-Channel-Id", channelId);
     return client;
+  }
+}
+
+public sealed class VideoReferenceWebApplicationFactory : BackOfficeWebApplicationFactory
+{
+  protected override void ConfigureWebHost(IWebHostBuilder builder)
+  {
+    base.ConfigureWebHost(builder);
+    builder.ConfigureTestServices(services =>
+    {
+      services.RemoveAll<IYTService>();
+      services.AddSingleton<IYTService, VideoReferenceYTServiceMock>();
+    });
+  }
+}
+
+public sealed class VideoReferenceYTServiceMock : YTServiceMock
+{
+  public override Task<IList<Video>> FetchFromYoutube(IList<string> videoIds)
+  {
+    IList<Video> videos = videoIds
+      .Select(videoId => new Video(
+        videoId,
+        $"Title for {videoId}",
+        $"Description for {videoId}",
+        1,
+        2,
+        3,
+        new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc),
+        $"https://img.example/{videoId}.jpg",
+        "PT1M",
+        channelId: PrimaryScenario.ChannelId))
+      .ToList();
+    return Task.FromResult(videos);
   }
 }

@@ -149,7 +149,10 @@ namespace MorWalPizVideo.Server.Services
                         singleVideo.Description,
                         singleVideo.PublishedAt,
                         match.VideoRefs?.FirstOrDefault()?.ChannelIds
-                    );
+                    )
+                    {
+                        CreationDateTime = match.VideoRefs?.FirstOrDefault()?.CreationDateTime ?? DateTime.UtcNow
+                    };
                     
                     // Generate URL from title if current URL is empty
                     var url = string.IsNullOrWhiteSpace(match.Url) 
@@ -188,7 +191,10 @@ namespace MorWalPizVideo.Server.Services
                                 video.Description,
                                 video.PublishedAt,
                                 videoRef.ChannelIds
-                            );
+                            )
+                            {
+                                CreationDateTime = videoRef.CreationDateTime
+                            };
                             updatedVideoRefs.Add(updatedVideoRef);
                         }
                         else

@@ -633,9 +633,14 @@ namespace MorWalPizVideo.Server.Services
 
 
         // Category methods
-        public Task<IList<Category>> FetchCategories(IList<string>? ids = null) => _categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
-        public Task<IList<Category>> FetchCategories(IList<string>? ids, string channelId) =>
-            _categoryRepository.GetItemsAsync(x => x.ChannelId == channelId && (ids == null || ids.Contains(x.Id)));
+        public async Task<IList<Category>> FetchCategories(IList<string>? ids = null) =>
+            (await _categoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true))
+            .OrderBy(x => x.Title)
+            .ToList();
+        public async Task<IList<Category>> FetchCategories(IList<string>? ids, string channelId) =>
+            (await _categoryRepository.GetItemsAsync(x => x.ChannelId == channelId && (ids == null || ids.Contains(x.Id))))
+            .OrderBy(x => x.Title)
+            .ToList();
 
 
         public async Task<Category?> GetCategoryById(string id) =>

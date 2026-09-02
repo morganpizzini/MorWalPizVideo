@@ -14,6 +14,7 @@ using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Text;
+using System.Text.Json;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -28,14 +29,13 @@ public class VideosController : ApplicationControllerBase
     private readonly ITelegramService telegramService;
     private readonly IDiscordService discordService;
     private readonly IFacebookService facebookService;
-    private readonly IConfiguration configuration;
     private readonly IVideoAuthorizationService authorization;
     private readonly ILogger<VideosController> logger;
 
     public VideosController(IContentService contentService, ILinksService linksService, ICrossApiService _clientFactory,
         IYTService _yTService, IExternalDataService _externalDataService,
         ITelegramService _telegramService, IDiscordService _discordService,
-        IFacebookService _facebookService, IConfiguration _configuration,
+        IFacebookService _facebookService,
         IVideoAuthorizationService _authorization, ILogger<VideosController> _logger)
     {
         _contentService = contentService;
@@ -46,7 +46,6 @@ public class VideosController : ApplicationControllerBase
         telegramService = _telegramService;
         discordService = _discordService;
         facebookService = _facebookService;
-        configuration = _configuration;
         authorization = _authorization;
         logger = _logger;
     }
@@ -118,7 +117,8 @@ public class VideosController : ApplicationControllerBase
         }
 
         // Fetch categories and convert to CategoryRef objects
-        var categories = (await _contentService.GetCategoriesAsync(request.Categories))
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var categories = (await _contentService.GetCategoriesAsync(request.Categories, channelId))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
         if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
@@ -148,7 +148,22 @@ public class VideosController : ApplicationControllerBase
             VideoRefs = request.VideoRefs ?? existingMatch.VideoRefs
         };
 
-        await _contentService.UpdateMatchAsync(updatedMatch);
+        var updated = request.VideoRefs is null;
+        if (updated)
+        {
+            updated = await _contentService.UpdateMatchFieldsAsync(updatedMatch);
+        }
+        else
+        {
+            // Explicit VideoRefs payloads are a legacy full-replacement contract.
+            // The normal SPA payload omits them and uses the atomic field update above.
+            await _contentService.UpdateMatchAsync(updatedMatch);
+            updated = true;
+        }
+        if (!updated)
+        {
+            return NotFound("Video not found");
+        }
 
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
@@ -194,8 +209,50 @@ public class VideosController : ApplicationControllerBase
             return BadRequest("One or more categories were not found");
         }
 
-        var videoReference = new VideoRef(youtubeId, categories, channelIds: [channelId]);
-        var appendResult = await _contentService.AddVideoReferenceAsync(existingMatch.Id, videoReference);
+        if (existingMatch.VideoRefs.Any(video =>
+                string.Equals(video.YoutubeId, youtubeId, StringComparison.Ordinal)))
+        {
+            return Conflict($"Video reference '{youtubeId}' already exists");
+        }
+
+        IList<Video> videos;
+        try
+        {
+            videos = await yTService.FetchFromYoutube([youtubeId]);
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata provider was unavailable for video {VideoId}", youtubeId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                error = "youtube_metadata_unavailable"
+            });
+        }
+        catch (TaskCanceledException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata request timed out for video {VideoId}", youtubeId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                error = "youtube_metadata_unavailable"
+            });
+        }
+
+        var video = videos.FirstOrDefault(candidate =>
+            string.Equals(candidate.YoutubeId, youtubeId, StringComparison.Ordinal));
+        if (video is null)
+        {
+            return BadRequest("YouTube video metadata was not found");
+        }
+
+        var videoReference = new VideoRef(
+            youtubeId,
+            categories,
+            video.Title,
+            video.Description,
+            video.PublishedAt,
+            [channelId]);
+        var appendOutcome = await _contentService.AddVideoReferenceWithCacheAsync(existingMatch.Id, videoReference);
+        var appendResult = appendOutcome.AppendResult;
         if (appendResult == VideoReferenceAppendResult.NotFound)
         {
             return NotFound("Video not found");
@@ -206,11 +263,92 @@ public class VideosController : ApplicationControllerBase
             return Conflict($"Video reference '{youtubeId}' already exists");
         }
 
-        await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(CacheKeys.Matches);
-        await client.ReloadCache();
+        ShortLinkCreationResult shortLinkResult;
+        try
+        {
+            shortLinkResult = await CreateVideoShortLinkAsync(existingMatch.Id, youtubeId);
+            if (shortLinkResult.Link is null)
+            {
+                if (!await TryCompensateVideoReferenceAppendAsync(existingMatch.Id, videoReference))
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new
+                    {
+                        error = "video_reference_compensation_failed"
+                    });
+                }
 
-        return Ok(ContractUtils.Convert(videoReference));
+                var failedCacheStatus = await InvalidateVideoCachesAsync(existingMatch.Id, appendOutcome.CacheStatus);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    error = "short_link_unavailable",
+                    shortLinkStatus = shortLinkResult.Status,
+                    shortLinkError = shortLinkResult.Error,
+                    cacheStatus = failedCacheStatus
+                });
+            }
+        }
+        catch (ShortLinkCleanupPendingException exception)
+        {
+            logger.LogWarning(exception,
+                "Short-link {ShortLinkId} was persisted but legacy cleanup is pending for video {VideoId}",
+                exception.Link.Id, youtubeId);
+            var pendingCacheStatus = await InvalidateVideoCachesAsync(existingMatch.Id, appendOutcome.CacheStatus);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                error = "short_link_cleanup_pending",
+                shortLinkCode = exception.Link.Code,
+                shortLinkStatus = "pending",
+                shortLinkError = exception.Message,
+                cacheStatus = pendingCacheStatus
+            });
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogError(exception,
+                "Automatic short-link creation failed after appending video {VideoId} to match {MatchId}",
+                youtubeId, existingMatch.Id);
+            if (!await TryCompensateVideoReferenceAppendAsync(existingMatch.Id, videoReference))
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    error = "video_reference_compensation_failed"
+                });
+            }
+
+            var failedCacheStatus = await InvalidateVideoCachesAsync(existingMatch.Id, appendOutcome.CacheStatus);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                error = "short_link_unavailable",
+                shortLinkStatus = "failed",
+                shortLinkError = "Automatic short-link creation failed",
+                cacheStatus = failedCacheStatus
+            });
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception,
+                "Unexpected short-link failure after appending video {VideoId} to match {MatchId}; compensating append",
+                youtubeId, existingMatch.Id);
+            if (!await TryCompensateVideoReferenceAppendAsync(existingMatch.Id, videoReference))
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    error = "video_reference_compensation_failed"
+                });
+            }
+
+            await InvalidateVideoCachesAsync(existingMatch.Id, appendOutcome.CacheStatus);
+            throw;
+        }
+
+        var cacheStatus = await InvalidateVideoCachesAsync(existingMatch.Id, appendOutcome.CacheStatus);
+
+        return Ok(ContractUtils.ConvertWithShortLink(
+            videoReference,
+            shortLinkResult.Link?.Code,
+            shortLinkResult.Status,
+            shortLinkResult.Error,
+            cacheStatus));
     }
 
     [HttpDelete("{id}")]
@@ -279,7 +417,7 @@ public class VideosController : ApplicationControllerBase
         }
 
         // Fetch categories and convert to CategoryRef objects
-        var categories = (await _contentService.GetCategoriesAsync(request.Categories))
+        var categories = (await _contentService.GetCategoriesAsync(request.Categories, channelId))
             .Select(x => new CategoryRef(x.Id, x.Title))
             .ToArray();
         if (categories.Length != request.Categories.Distinct(StringComparer.Ordinal).Count())
@@ -287,31 +425,132 @@ public class VideosController : ApplicationControllerBase
             return BadRequest("One or more categories were not found");
         }
 
+        IList<Video> videos;
+        try
+        {
+            videos = await yTService.FetchFromYoutube([videoId]);
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata provider was unavailable for imported video {VideoId}", videoId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new VideoImportResponse(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+        }
+        catch (TaskCanceledException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata request timed out for imported video {VideoId}", videoId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new VideoImportResponse(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+        }
+
+        var video = videos.FirstOrDefault(candidate =>
+            string.Equals(candidate.YoutubeId, videoId, StringComparison.Ordinal));
+        if (video is null)
+        {
+            return BadRequest(new VideoImportResponse(videoId, "error", Error: "YouTube video metadata was not found"));
+        }
+
+        var videoReference = new VideoRef(
+            video.YoutubeId,
+            categories,
+            video.Title,
+            video.Description,
+            video.PublishedAt,
+            [channelId]);
         var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
         {
             CreatorUserId = creatorUserId,
             OwnerChannelId = channelId,
-            VideoRefs = [new VideoRef(videoId, categories, channelIds: [channelId])]
+            Title = video.Title,
+            Description = video.Description,
+            CreationDateTime = video.PublishedAt,
+            VideoRefs = [videoReference]
         };
         if (!await _contentService.SaveMatchAsync(importedMatch))
         {
             return Conflict(new VideoImportResponse(videoId, "error", Error: "Video could not be persisted"));
         }
 
-        await externalDataService.RefreshMatch(videoId);
+        var persistedMatch = await _contentService.FindMatchAsync(videoId);
+        if (persistedMatch is null)
+        {
+            // The repository contract only returns a success flag, so a read-back
+            // failure must not leave an imported root without its short link.
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new VideoImportResponse(videoId, "error", Error: "Video could not be located after persistence"));
+        }
+
+        // Preserve the existing import URL enrichment, but only after metadata has
+        // been validated and with compensation if the provider is unavailable.
+        try
+        {
+            persistedMatch = await externalDataService.RefreshMatch(videoId) ?? persistedMatch;
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "YouTube refresh was unavailable for imported video {VideoId}", videoId);
+            await _contentService.DeleteMatchAsync(persistedMatch.Id);
+            await InvalidateVideoCachesAsync();
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new VideoImportResponse(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+        }
+        catch (TaskCanceledException exception)
+        {
+            logger.LogWarning(exception, "YouTube refresh timed out for imported video {VideoId}", videoId);
+            await _contentService.DeleteMatchAsync(persistedMatch.Id);
+            await InvalidateVideoCachesAsync();
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new VideoImportResponse(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Unexpected YouTube refresh failure for imported video {VideoId}; compensating import",
+                videoId);
+            await _contentService.DeleteMatchAsync(persistedMatch.Id);
+            await InvalidateVideoCachesAsync();
+            throw;
+        }
 
         // Auto-create shortlink for the imported video
-        var shortLink = await CreateVideoShortLinkAsync(videoId);
+        ShortLinkCreationResult shortLink;
+        try
+        {
+            shortLink = await CreateVideoShortLinkAsync(persistedMatch.Id, videoId);
+            if (shortLink.Link is null)
+            {
+                await _contentService.DeleteMatchAsync(persistedMatch.Id);
+                await InvalidateVideoCachesAsync();
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    new VideoImportResponse(videoId, "error", shortLink.Status, shortLink.Error));
+            }
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogError(exception,
+                "Automatic short-link creation failed after importing video {VideoId} into match {MatchId}",
+                videoId, persistedMatch.Id);
+            await _contentService.DeleteMatchAsync(persistedMatch.Id);
+            await InvalidateVideoCachesAsync();
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new VideoImportResponse(videoId, "error", "Automatic short-link creation failed"));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception,
+                "Unexpected short-link failure after importing video {VideoId} into match {MatchId}; compensating import",
+                videoId, persistedMatch.Id);
+            await _contentService.DeleteMatchAsync(persistedMatch.Id);
+            await InvalidateVideoCachesAsync();
+            throw;
+        }
 
-        await client.ResetCache(CacheKeys.Matches);
-        await client.PurgeCache(CacheKeys.Matches);
-        await client.ReloadCache();
+        await InvalidateVideoCachesAsync();
 
         return Ok(new VideoImportResponse(
             videoId,
             "imported",
-            shortLink is null ? "failed" : "created",
-            shortLink is null ? "Video imported, but automatic short-link creation failed" : null));
+            shortLink.Status,
+            shortLink.Error));
     }
 
     [HttpGet("import-candidates")]
@@ -344,7 +583,8 @@ public class VideosController : ApplicationControllerBase
         var candidates = await yTService.FetchVideosBetween(
             channelContext.ChannelId,
             DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
-            DateTime.SpecifyKind(endDate, DateTimeKind.Utc));
+            DateTime.SpecifyKind(endDate, DateTimeKind.Utc),
+            request.ShowVideo);
 
         return Ok(candidates
             .Where(candidate => !importedIds.Contains(candidate.Id.VideoId))
@@ -418,98 +658,140 @@ public class VideosController : ApplicationControllerBase
                 continue;
             }
 
+        YouTubeContent? target = null;
+        var targetKey = item.Target?.Trim();
+        if (!string.IsNullOrWhiteSpace(targetKey))
+        {
+            target = createdTargets.GetValueOrDefault(targetKey) ?? targetsById.GetValueOrDefault(targetKey);
+            if (target is null || !await authorization.CanMutateInChannelAsync(User, target, channelId))
+            {
+                results.Add(new(videoId, "error", Error: "Target content was not found or is not accessible"));
+                continue;
+            }
+        }
+
+        var categories = (await _contentService.GetCategoriesAsync(item.Categories, channelId))
+            .Select(category => new CategoryRef(category.Id, category.Title))
+            .ToArray();
+        if (categories.Length != item.Categories.Distinct(StringComparer.Ordinal).Count())
+        {
+            results.Add(new(videoId, "error", Error: "One or more categories were not found"));
+            continue;
+        }
+
+        IList<Video> videos;
+        try
+        {
+            videos = await yTService.FetchFromYoutube([videoId]);
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata provider was unavailable for bulk video {VideoId}", videoId);
+            results.Add(new(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+            continue;
+        }
+        catch (TaskCanceledException exception)
+        {
+            logger.LogWarning(exception, "YouTube metadata request timed out for bulk video {VideoId}", videoId);
+            results.Add(new(videoId, "error", Error: "YouTube metadata provider is unavailable"));
+            continue;
+        }
+
+        var video = videos.FirstOrDefault(candidate =>
+            string.Equals(candidate.YoutubeId, videoId, StringComparison.Ordinal));
+        if (video is null)
+        {
+            results.Add(new(videoId, "error", Error: "YouTube video metadata was not found"));
+            continue;
+        }
+
+        var videoRef = new VideoRef(
+            video.YoutubeId,
+            categories,
+            video.Title,
+            video.Description,
+            video.PublishedAt,
+            [channelId]);
+
+        if (target is not null && !string.IsNullOrWhiteSpace(targetKey))
+        {
+            var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
+            await _contentService.UpdateMatchAsync(updatedTarget);
+            if (createdTargets.ContainsKey(targetKey))
+            {
+                createdTargets[targetKey] = updatedTarget;
+            }
+            targetsById[targetKey] = updatedTarget;
+        }
+        else
+        {
+            var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
+            {
+                CreatorUserId = creatorUserId,
+                OwnerChannelId = channelId,
+                VideoRefs = [videoRef],
+                Title = video.Title,
+                Description = video.Description,
+                CreationDateTime = video.PublishedAt
+            };
+            if (!await _contentService.SaveMatchAsync(importedMatch))
+            {
+                results.Add(new(videoId, "error", Error: "Video could not be persisted"));
+                continue;
+            }
+            var persistedMatch = await _contentService.FindMatchAsync(videoId);
+            if (persistedMatch is null)
+            {
+                results.Add(new(videoId, "error", Error: "Video could not be located after persistence"));
+                continue;
+            }
+
+            ShortLinkCreationResult shortLink;
             try
             {
-                var categories = (await _contentService.GetCategoriesAsync(item.Categories))
-                    .Select(category => new CategoryRef(category.Id, category.Title))
-                    .ToArray();
-                if (categories.Length != item.Categories.Distinct(StringComparer.Ordinal).Count())
+                shortLink = await CreateVideoShortLinkAsync(persistedMatch.Id, videoId);
+                if (shortLink.Link is null)
                 {
-                    results.Add(new(videoId, "error", Error: "One or more categories were not found"));
+                    await _contentService.DeleteMatchAsync(persistedMatch.Id);
+                    results.Add(new(videoId, "error", Error: shortLink.Error));
                     continue;
                 }
-
-                YouTubeContent? target = null;
-                var targetKey = item.Target?.Trim();
-                if (!string.IsNullOrWhiteSpace(targetKey))
-                {
-                    target = createdTargets.GetValueOrDefault(targetKey) ?? targetsById.GetValueOrDefault(targetKey);
-                    if (target is null || !await authorization.CanMutateInChannelAsync(User, target, channelId))
-                    {
-                        results.Add(new(videoId, "error", Error: "Target content was not found or is not accessible"));
-                        continue;
-                    }
-                }
-
-                var videos = await yTService.FetchFromYoutube([videoId]);
-                var video = videos.FirstOrDefault();
-                if (video is null)
-                {
-                    results.Add(new(videoId, "error", Error: "YouTube video metadata was not found"));
-                    continue;
-                }
-
-                var videoRef = new VideoRef(
-                    video.YoutubeId,
-                    categories,
-                    video.Title,
-                    video.Description,
-                    video.PublishedAt,
-                    [channelId]);
-
-                if (target is not null && !string.IsNullOrWhiteSpace(targetKey))
-                {
-                    var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
-                    await _contentService.UpdateMatchAsync(updatedTarget);
-                    if (createdTargets.ContainsKey(targetKey))
-                    {
-                        createdTargets[targetKey] = updatedTarget;
-                    }
-                    targetsById[targetKey] = updatedTarget;
-                }
-                else
-                {
-                    var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
-                    {
-                        CreatorUserId = creatorUserId,
-                        OwnerChannelId = channelId,
-                        VideoRefs = [videoRef],
-                        Title = video.Title,
-                        Description = video.Description,
-                        CreationDateTime = video.PublishedAt
-                    };
-                    if (!await _contentService.SaveMatchAsync(importedMatch))
-                    {
-                        results.Add(new(videoId, "error", Error: "Video could not be persisted"));
-                        continue;
-                    }
-                    var shortLink = await CreateVideoShortLinkAsync(videoId);
-                    createdTargets[videoId] = importedMatch;
-                    importedIds.Add(videoId);
-                    results.Add(new(
-                        videoId,
-                        "imported",
-                        shortLink is null ? "failed" : "created",
-                        shortLink is null ? "Video imported, but automatic short-link creation failed" : null));
-                    continue;
-                }
-
-                importedIds.Add(videoId);
-                results.Add(new(videoId, "imported", "notAttempted"));
+            }
+            catch (InvalidOperationException exception)
+            {
+                logger.LogError(exception,
+                    "Automatic short-link creation failed after bulk importing video {VideoId} into match {MatchId}",
+                    videoId, persistedMatch.Id);
+                await _contentService.DeleteMatchAsync(persistedMatch.Id);
+                results.Add(new(videoId, "error", Error: "Automatic short-link creation failed"));
+                continue;
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Bulk video import failed for video {VideoId}, target {Target}, channel {ChannelId}",
-                    videoId, item.Target, channelId);
-                results.Add(new(videoId, "error", Error: "Video import failed"));
+                logger.LogError(exception,
+                    "Unexpected short-link failure after bulk importing video {VideoId} into match {MatchId}; compensating import",
+                    videoId, persistedMatch.Id);
+                await _contentService.DeleteMatchAsync(persistedMatch.Id);
+                throw;
             }
+
+            createdTargets[videoId] = persistedMatch;
+            importedIds.Add(videoId);
+            results.Add(new(
+                videoId,
+                "imported",
+                shortLink.Status,
+                shortLink.Error));
+            continue;
+        }
+
+        importedIds.Add(videoId);
+        results.Add(new(videoId, "imported", "notAttempted"));
         }
 
         if (results.Any(result => result.Status == "imported"))
         {
-            await client.ResetCache(CacheKeys.Matches);
-            await client.PurgeCache(CacheKeys.Matches);
-            await client.ReloadCache();
+            await InvalidateVideoCachesAsync();
         }
 
         return Ok(results);
@@ -805,26 +1087,177 @@ public class VideosController : ApplicationControllerBase
         return true;
     }
 
-    private async Task<string?> CreateVideoShortLinkAsync(string videoId)
+    private sealed record ShortLinkCreationResult(
+        ShortLink? Link,
+        string Status,
+        string? Error);
+
+    private Task<ShortLinkCreationResult> CreateVideoShortLinkAsync(string contentId, string videoId)
+    {
+        return CreateVideoShortLinkCoreAsync(contentId, videoId);
+    }
+
+    private async Task<ShortLinkCreationResult> CreateVideoShortLinkCoreAsync(string contentId, string videoId)
+    {
+        var shortLink = await _linksService.EnsureVideoShortLinkAsync(
+            contentId, videoId, HttpContext.GetChannelContext().ChannelId);
+        return shortLink is null
+            ? new(null, "failed", "Automatic short-link creation failed")
+            : new(shortLink, "created", null);
+    }
+
+    private async Task CompensateVideoReferenceAppendAsync(string matchId, VideoRef expectedReference)
+    {
+        if (!await _contentService.RemoveVideoReferenceAsync(matchId, expectedReference))
+        {
+            throw new InvalidOperationException(
+                $"Video reference '{expectedReference.YoutubeId}' could not be removed from match '{matchId}' after short-link creation failed.");
+        }
+    }
+
+    private async Task<bool> TryCompensateVideoReferenceAppendAsync(string matchId, VideoRef expectedReference)
     {
         try
         {
-            var shortLink = await _linksService.EnsureVideoShortLinkAsync(
-                videoId, HttpContext.GetChannelContext().ChannelId);
-            return shortLink is null ? null : BuildShortLinkUrl(shortLink.Code);
+            await CompensateVideoReferenceAppendAsync(matchId, expectedReference);
+            return true;
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogError(exception,
+                "Could not compensate video reference {VideoId} in match {MatchId}",
+                expectedReference.YoutubeId, matchId);
+            return false;
+        }
+    }
+
+    private async Task<string> InvalidateVideoCachesAsync(string? matchId = null, string? localStatus = null)
+    {
+        var succeeded = true;
+        var statuses = new List<string>();
+        if (!string.IsNullOrWhiteSpace(localStatus))
+            statuses.Add(localStatus);
+
+        if (!string.IsNullOrWhiteSpace(matchId))
+        {
+            var result = await TryCacheOperationAsync(
+                () => client.RefreshVideoCache(matchId),
+                "refresh video",
+                matchId);
+            succeeded &= result.Succeeded;
+            if (result.Status is not null)
+                statuses.Add(result.Status);
+        }
+
+        var resetMatches = await TryCacheOperationAsync(
+            () => client.ResetCache(CacheKeys.Matches),
+            "reset matches",
+            matchId);
+        succeeded &= resetMatches.Succeeded;
+        if (resetMatches.Status is not null)
+            statuses.Add(resetMatches.Status);
+
+        var purgeMatches = await TryCacheOperationAsync(
+            () => client.PurgeCache(CacheKeys.Matches),
+            "purge matches",
+            matchId);
+        succeeded &= purgeMatches.Succeeded;
+        if (purgeMatches.Status is not null)
+            statuses.Add(purgeMatches.Status);
+
+        var resetShortLinks = await TryCacheOperationAsync(
+            () => client.ResetCache(CacheKeys.ShortLinks),
+            "reset short links",
+            matchId);
+        succeeded &= resetShortLinks.Succeeded;
+        if (resetShortLinks.Status is not null)
+            statuses.Add(resetShortLinks.Status);
+
+        var reload = await TryCacheOperationAsync(
+            () => client.ReloadCache(),
+            "reload matches",
+            matchId);
+        succeeded &= reload.Succeeded;
+        if (reload.Status is not null)
+            statuses.Add(reload.Status);
+
+        if (!succeeded || statuses.Any(status => string.Equals(status, "degraded", StringComparison.OrdinalIgnoreCase)))
+            return "degraded";
+        if (statuses.Any(status => string.Equals(status, "refreshed", StringComparison.OrdinalIgnoreCase)))
+            return "refreshed";
+        if (statuses.Count > 0 && statuses.All(status => string.Equals(status, "disabled", StringComparison.OrdinalIgnoreCase)))
+            return "disabled";
+        return "refreshed";
+    }
+
+    private async Task<CacheOperationResult> TryCacheOperationAsync(
+        Func<Task<string>> operation,
+        string operationName,
+        string? matchId)
+    {
+        try
+        {
+            var response = await operation();
+            if (IsDegradedCacheResponse(response))
+            {
+                logger.LogWarning(
+                    "Cache operation {Operation} reported degraded refresh status after persisting video mutation for match {MatchId}",
+                    operationName, matchId);
+                return new(false, "degraded");
+            }
+
+            return new(true, GetCacheStatus(response));
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception,
+                "Cache operation {Operation} failed after persisting video mutation for match {MatchId}",
+                operationName, matchId);
+        }
+        catch (TaskCanceledException exception)
+        {
+            logger.LogWarning(exception,
+                "Cache operation {Operation} timed out after persisting video mutation for match {MatchId}",
+                operationName, matchId);
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogWarning(exception,
+                "Cache operation {Operation} was unavailable after persisting video mutation for match {MatchId}",
+                operationName, matchId);
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Automatic short-link creation failed for imported video {VideoId}", videoId);
+            logger.LogError(exception,
+                "Unexpected cache operation {Operation} failure after persisting video mutation for match {MatchId}",
+                operationName, matchId);
+        }
+
+        return new(false, "degraded");
+    }
+
+    private static bool IsDegradedCacheResponse(string response)
+        => string.Equals(GetCacheStatus(response), "degraded", StringComparison.OrdinalIgnoreCase);
+
+    private static string? GetCacheStatus(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(response);
+            return document.RootElement.TryGetProperty("cacheStatus", out var status)
+                ? status.GetString()?.ToLowerInvariant()
+                : null;
+        }
+        catch (JsonException)
+        {
             return null;
         }
     }
 
-    private string BuildShortLinkUrl(string code)
-    {
-        var siteUrl = configuration["SiteUrl"] ?? string.Empty;
-        return $"{siteUrl}{code}";
-    }
+    private sealed record CacheOperationResult(bool Succeeded, string? Status);
 
     #endregion
 }

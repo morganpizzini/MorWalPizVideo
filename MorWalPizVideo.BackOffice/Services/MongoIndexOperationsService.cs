@@ -10,7 +10,8 @@ public sealed record MongoIndexManifestEntry(
     string Name,
     BsonDocument Keys,
     bool Unique = false,
-    BsonDocument? PartialFilter = null);
+    BsonDocument? PartialFilter = null,
+    Collation? Collation = null);
 
 public sealed record MongoIndexAuditItem(
     string Key,
@@ -58,7 +59,8 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.ShortLinks,
             Name: "ux_shortlinks_code_ci",
             Keys: new BsonDocument("code", 1),
-            Unique: true),
+            Unique: true,
+            Collation: new Collation("en", strength: CollationStrength.Secondary)),
         new(
             Key: "customformresponses.formid_submittedat_desc",
             Collection: DbCollections.CustomFormResponses,
@@ -141,7 +143,9 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             var cursor = await collection.Indexes.ListAsync(cancellationToken);
             var indexDocs = await cursor.ToListAsync(cancellationToken);
 
-            var exists = indexDocs.Any(x => x.GetValue("name", string.Empty).AsString == entry.Name);
+            var exists = indexDocs.Any(x =>
+                x.GetValue("name", string.Empty).AsString == entry.Name &&
+                HasExpectedDefinition(x, entry));
             results.Add(new MongoIndexAuditItem(entry.Key, entry.Collection, entry.Name, exists, entry.Keys.ToJson()));
         }
 
@@ -168,6 +172,7 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             {
                 Name = entry.Name,
                 Unique = entry.Unique,
+                Collation = entry.Collation,
                 PartialFilterExpression = entry.PartialFilter == null
                     ? null
                     : new BsonDocumentFilterDefinition<BsonDocument>(entry.PartialFilter)
@@ -176,6 +181,22 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             try
             {
                 await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
+            }
+            catch (MongoCommandException exception) when (
+                exception.Code == 85 || exception.Code == 68)
+            {
+                // Multiple application instances may initialize the same index at
+                // startup. Re-audit before treating the concurrent create as a failure.
+                var current = await collection.Indexes.ListAsync(cancellationToken);
+                var currentIndexes = await current.ToListAsync(cancellationToken);
+                if (currentIndexes.Any(index =>
+                    index.GetValue("name", string.Empty).AsString == entry.Name))
+                {
+                    results.Add(new MongoIndexApplyResult(entry.Key, entry.Collection, entry.Name, "skipped_existing"));
+                    continue;
+                }
+
+                throw CreateOperationException($"Could not apply Mongo index '{entry.Key}'.", exception);
             }
             catch (MongoException exception)
             {
@@ -251,10 +272,18 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
 
     internal static bool HasExpectedDefinition(BsonDocument indexDocument, MongoIndexManifestEntry expected)
     {
+        var collationMatches = expected.Collation is null ||
+            (expected.Collation.Strength is { } expectedStrength &&
+             indexDocument.TryGetValue("collation", out var collationValue) &&
+             collationValue.IsBsonDocument &&
+             collationValue.AsBsonDocument.GetValue("locale", string.Empty).AsString == expected.Collation.Locale &&
+             collationValue.AsBsonDocument.GetValue("strength", 0).ToInt32() == (int)expectedStrength);
+
         return indexDocument.GetValue("unique", false).ToBoolean() &&
             indexDocument.TryGetValue("key", out var actualKeys) &&
             actualKeys.IsBsonDocument &&
-            actualKeys.AsBsonDocument.Equals(expected.Keys);
+            actualKeys.AsBsonDocument.Equals(expected.Keys) &&
+            collationMatches;
     }
 
     internal static string GetRemovalAction(

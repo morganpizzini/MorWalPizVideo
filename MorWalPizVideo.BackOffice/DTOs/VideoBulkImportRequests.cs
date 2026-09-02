@@ -9,6 +9,8 @@ public sealed class VideoImportCandidatesRequest
     public DateTime StartDate { get; set; }
 
     public DateTime? EndDate { get; set; }
+
+    public bool ShowVideo { get; set; } = true;
 }
 
 public sealed class VideoBulkImportRequest

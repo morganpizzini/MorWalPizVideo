@@ -41,6 +41,18 @@ public class CrossApiServiceContractTests
     }
 
     [Fact]
+    public async Task RefreshVideoCache_uses_query_string_contract()
+    {
+        var (sut, handler) = BuildSut();
+
+        await sut.RefreshVideoCache("match/1");
+
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal("https://example.test/api/cache/refresh-video?id=match%2F1",
+            handler.LastRequest!.RequestUri!.OriginalString);
+    }
+
+    [Fact]
     public async Task PurgeCache_url_encodes_key()
     {
         var (sut, handler) = BuildSut();

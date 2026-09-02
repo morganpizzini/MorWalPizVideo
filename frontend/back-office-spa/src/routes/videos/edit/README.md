@@ -36,6 +36,8 @@ Path area:
   - No categories selected.
   - Ref id already exists.
 - Add Video Reference sends a minimal request immediately and adds the server response to the table only after success.
+- The returned reference contains YouTube metadata fetched before persistence and, when available, the canonical standalone short-link code.
+- Short-link creation is best-effort; a failed attempt is returned as an explicit warning status while the persisted reference remains visible.
 
 ### Action
 

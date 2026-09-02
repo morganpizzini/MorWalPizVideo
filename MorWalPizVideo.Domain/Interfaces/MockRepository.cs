@@ -14,6 +14,31 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        protected override YouTubeContent PrepareForPersistence(YouTubeContent item)
+            => item with { LatestPublishedAt = item.CalculateLatestPublishedAt() };
+
+        public Task<bool> UpdateMutableFieldsAsync(YouTubeContent entity)
+        {
+            lock (VideoReferenceSync)
+            {
+                var match = scenario.Read<YouTubeContent>(_fileName)
+                    .FirstOrDefault(item => item.Id == entity.Id);
+                if (match is null)
+                    return Task.FromResult(false);
+
+                scenario.Replace(_fileName, match with
+                {
+                    Title = entity.Title,
+                    Description = entity.Description,
+                    Url = entity.Url,
+                    ThumbnailVideoId = entity.ThumbnailVideoId,
+                    Categories = entity.Categories,
+                    Tags = entity.Tags
+                });
+                return Task.FromResult(true);
+            }
+        }
+
         public Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
         {
             lock (VideoReferenceSync)
@@ -31,11 +56,95 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                     return Task.FromResult(VideoReferenceAppendResult.Duplicate);
                 }
 
+                var videoRefs = match.VideoRefs.Append(videoReference).ToArray();
                 scenario.Replace(_fileName, match with
                 {
-                    VideoRefs = match.VideoRefs.Append(videoReference).ToArray()
+                    VideoRefs = videoRefs,
+                    LatestPublishedAt = (match with { VideoRefs = videoRefs }).CalculateLatestPublishedAt()
                 });
                 return Task.FromResult(VideoReferenceAppendResult.Added);
+            }
+        }
+
+        public Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId)
+        {
+            lock (VideoReferenceSync)
+            {
+                var match = scenario.Read<YouTubeContent>(_fileName)
+                    .FirstOrDefault(item => item.Id == matchId);
+                if (match is null)
+                {
+                    return Task.FromResult(false);
+                }
+
+                var updatedReferences = match.VideoRefs
+                    .Where(video => !string.Equals(video.YoutubeId, youtubeId, StringComparison.Ordinal))
+                    .ToArray();
+                if (updatedReferences.Length == match.VideoRefs.Length)
+                {
+                    return Task.FromResult(false);
+                }
+
+                scenario.Replace(_fileName, match with
+                {
+                    VideoRefs = updatedReferences,
+                    LatestPublishedAt = (match with { VideoRefs = updatedReferences }).CalculateLatestPublishedAt()
+                });
+                return Task.FromResult(true);
+            }
+        }
+
+        public Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference)
+        {
+            lock (VideoReferenceSync)
+            {
+                var match = scenario.Read<YouTubeContent>(_fileName)
+                    .FirstOrDefault(item => item.Id == matchId);
+                if (match is null)
+                    return Task.FromResult(false);
+
+                var updatedReferences = match.VideoRefs
+                    .Where(video => !ReferenceEquals(video, expectedReference) &&
+                        !(video.YoutubeId == expectedReference.YoutubeId &&
+                          video.Title == expectedReference.Title &&
+                          video.Description == expectedReference.Description &&
+                          video.PublishedAt == expectedReference.PublishedAt &&
+                          video.CreationDateTime == expectedReference.CreationDateTime &&
+                          video.Categories.SequenceEqual(expectedReference.Categories) &&
+                          video.ChannelIds.SequenceEqual(expectedReference.ChannelIds)))
+                    .ToArray();
+                if (updatedReferences.Length == match.VideoRefs.Length)
+                    return Task.FromResult(false);
+
+                scenario.Replace(_fileName, match with
+                {
+                    VideoRefs = updatedReferences,
+                    LatestPublishedAt = (match with { VideoRefs = updatedReferences }).CalculateLatestPublishedAt()
+                });
+                return Task.FromResult(true);
+            }
+        }
+
+        public virtual Task<bool> RemoveEmbeddedYouTubeLinksAsync(string matchId)
+        {
+            lock (VideoReferenceSync)
+            {
+                var match = scenario.Read<YouTubeContent>(_fileName)
+                    .FirstOrDefault(item => item.Id == matchId);
+                if (match is null)
+                {
+                    return Task.FromResult(false);
+                }
+
+                var remainingLinks = match.ShortLinks
+                    .Where(link => link.LinkType != LinkType.YouTubeVideo)
+                    .ToArray();
+                if (remainingLinks.Length != match.ShortLinks.Length)
+                {
+                    scenario.Replace(_fileName, match with { ShortLinks = remainingLinks });
+                }
+
+                return Task.FromResult(true);
             }
         }
 
@@ -217,7 +326,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
     {
-        private readonly object incrementLock = new();
+        private static readonly object IncrementLock = new();
 
         public ShortLinkMockRepository(IMockScenario scenario) : base(scenario, "shortLinks")
         {
@@ -231,7 +340,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<int> IncrementClicksAsync(string id)
         {
-            lock (incrementLock)
+            lock (IncrementLock)
             {
                 var item = scenario.Read<ShortLink>(_fileName).FirstOrDefault(link => link.Id == id);
                 if (item == null)

@@ -1,6 +1,8 @@
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MongoDB.Driver;
+using Microsoft.Extensions.Logging;
 
 namespace MorWalPizVideo.Server.Services;
 
@@ -15,15 +17,17 @@ public interface IContentService
     Task<YouTubeContent?> GetMatchByUrlAsync(string url, bool includePrivate);
     Task<IList<YouTubeContent>> GetMatchesByIdsAsync(IList<string> ids, bool includePrivate);
     Task<IList<YouTubeContent>> GetAllMatchesAsync();
-    Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin);
-    Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string channelId);
+    Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string? channelId = null);
     Task<YouTubeContent?> GetMatchByIdAsync(string id);
     Task<YouTubeContent?> FindMatchAsync(string matchId);
-    Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin);
-    Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string channelId);
+    Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string? channelId = null);
     Task<bool> SaveMatchAsync(YouTubeContent entity);
     Task UpdateMatchAsync(YouTubeContent entity);
+    Task<bool> UpdateMatchFieldsAsync(YouTubeContent entity);
     Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference);
+    Task<VideoReferenceAppendOutcome> AddVideoReferenceWithCacheAsync(string matchId, VideoRef videoReference);
+    Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId);
+    Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference);
     Task DeleteMatchAsync(string id);
     Task<IList<Category>> GetCategoriesAsync(IList<string>? ids = null);
     Task<IList<Category>> GetCategoriesAsync(IList<string> ids, string channelId);
@@ -39,7 +43,8 @@ public sealed class ContentService(
     IYTChannelRepository ytChannelRepository,
     IUserChannelOwnerRepository userChannelOwnerRepository,
     IShortLinkRepository shortLinkRepository,
-    IYouTubeContentIndexedCache? indexedCache = null) : IContentService
+    IYouTubeContentIndexedCache? indexedCache = null,
+    ILogger<ContentService>? logger = null) : IContentService
 {
     public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, int skip, int take)
     {
@@ -144,11 +149,44 @@ public sealed class ContentService(
             .OrderByDescending(x => x.CreationDateTime)]);
     }
 
-    public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin)
+    public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string? channelId = null)
     {
-        if (isAdmin)
+        if (indexedCache is not null)
+        {
+            var cachedMatches = await indexedCache.GetGlobalAsync();
+            if (!string.IsNullOrWhiteSpace(channelId))
+            {
+                return [.. cachedMatches.Where(match =>
+                    match.OwnerChannelId == channelId ||
+                    match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))];
+            }
+
+            if (isAdmin)
+            {
+                return [.. cachedMatches];
+            }
+
+            var ownedChannelIds = (await userChannelOwnerRepository.GetByUserIdAsync(userId))
+                .Where(owner => owner.IsActive)
+                .Select(owner => owner.ChannelId)
+                .Distinct(StringComparer.Ordinal)
+                .ToHashSet(StringComparer.Ordinal);
+            return [.. cachedMatches.Where(match =>
+                match.CreatorUserId == userId ||
+                match.VideoRefs.Any(video => video.ChannelIds.Any(ownedChannelIds.Contains)))];
+        }
+
+        if (string.IsNullOrWhiteSpace(channelId) && isAdmin)
         {
             return await GetAllMatchesAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(channelId))
+        {
+            var matches = await youTubeContentRepository.GetItemsAsync(match =>
+                match.OwnerChannelId == channelId ||
+                match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+            return await AddCanonicalShortLinksAsync([.. matches.OrderByDescending(x => x.CreationDateTime)]);
         }
 
         var channelIds = (await userChannelOwnerRepository.GetByUserIdAsync(userId))
@@ -158,22 +196,6 @@ public sealed class ContentService(
             .ToArray();
         return await AddCanonicalShortLinksAsync([.. (await youTubeContentRepository.GetOwnedAsync(userId, channelIds))
             .OrderByDescending(x => x.CreationDateTime)]);
-    }
-
-    public async Task<IList<YouTubeContent>> GetAuthorizedMatchesAsync(string userId, bool isAdmin, string channelId)
-    {
-        if (isAdmin && indexedCache is not null)
-        {
-            var cachedMatches = await indexedCache.GetGlobalAsync();
-            return [.. cachedMatches.Where(match =>
-                    match.OwnerChannelId == channelId ||
-                    match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)))];
-        }
-
-        var matches = await youTubeContentRepository.GetItemsAsync(match =>
-            match.OwnerChannelId == channelId ||
-            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
-        return await AddCanonicalShortLinksAsync([.. matches.OrderByDescending(x => x.CreationDateTime)]);
     }
 
     public async Task<YouTubeContent?> GetMatchByIdAsync(string id)
@@ -219,14 +241,11 @@ public sealed class ContentService(
         }).ToList();
     }
 
-    public async Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin)
-    {
-        var matches = await GetAuthorizedMatchesAsync(userId, isAdmin);
-        return matches.FirstOrDefault(match => match.ThumbnailVideoId == matchId ||
-            match.Id == matchId || match.VideoRefs.Any(video => video.YoutubeId == matchId));
-    }
-
-    public async Task<YouTubeContent?> FindAuthorizedMatchAsync(string matchId, string userId, bool isAdmin, string channelId)
+    public async Task<YouTubeContent?> FindAuthorizedMatchAsync(
+        string matchId,
+        string userId,
+        bool isAdmin,
+        string? channelId = null)
     {
         var matches = await GetAuthorizedMatchesAsync(userId, isAdmin, channelId);
         return matches.FirstOrDefault(match => match.ThumbnailVideoId == matchId ||
@@ -265,15 +284,62 @@ public sealed class ContentService(
             await indexedCache.NotifyChangedAsync(entity.Id);
     }
 
+    public async Task<bool> UpdateMatchFieldsAsync(YouTubeContent entity)
+    {
+        var updated = await youTubeContentRepository.UpdateMutableFieldsAsync(entity);
+        if (updated && indexedCache is not null)
+            await indexedCache.NotifyChangedAsync(entity.Id);
+        return updated;
+    }
+
     public async Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference)
+        => (await AddVideoReferenceWithCacheAsync(matchId, videoReference)).AppendResult;
+
+    public async Task<VideoReferenceAppendOutcome> AddVideoReferenceWithCacheAsync(
+        string matchId,
+        VideoRef videoReference)
     {
         var result = await youTubeContentRepository.AddVideoReferenceAsync(matchId, videoReference);
-        if (result == VideoReferenceAppendResult.Added && indexedCache is not null)
+        if (result != VideoReferenceAppendResult.Added || indexedCache is null)
+            return new(result, indexedCache is null ? "disabled" : null);
+
+        try
         {
             await indexedCache.NotifyChangedAsync(matchId);
+            var refresh = await indexedCache.DrainAsync();
+            return new(result, refresh.Status);
+        }
+        catch (Exception exception)
+        {
+            logger?.LogWarning(exception,
+                "Video reference {VideoId} persisted for match {MatchId}, but local cache refresh is degraded",
+                videoReference.YoutubeId, matchId);
+            return new(result, "degraded", exception.Message);
+        }
+    }
+
+    public async Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId)
+    {
+        var removed = await youTubeContentRepository.RemoveVideoReferenceAsync(matchId, youtubeId);
+        if (removed && indexedCache is not null)
+        {
+            await indexedCache.NotifyChangedAsync(matchId);
+            await indexedCache.DrainAsync();
         }
 
-        return result;
+        return removed;
+    }
+
+    public async Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference)
+    {
+        var removed = await youTubeContentRepository.RemoveVideoReferenceAsync(matchId, expectedReference);
+        if (removed && indexedCache is not null)
+        {
+            await indexedCache.NotifyChangedAsync(matchId);
+            await indexedCache.DrainAsync();
+        }
+
+        return removed;
     }
 
     public async Task DeleteMatchAsync(string id)
@@ -874,10 +940,21 @@ public interface ILinksService
     Task<IList<QueryLink>> GetQueryLinksAsync(IList<string>? ids = null);
     Task<ShortLink> SaveShortLinkAsync(ShortLink entity);
     Task<ShortLink?> EnsureVideoShortLinkAsync(string videoId, string? managementChannelId = null);
+    Task<ShortLink?> EnsureVideoShortLinkAsync(string contentId, string videoId, string? managementChannelId = null);
     Task<bool> IsCodeAvailableAsync(string code, string? excludingId = null);
     Task UpdateShortLinkAsync(ShortLink entity);
     Task DeleteShortLinkAsync(string shortLinkId);
     Task<int> IncrementClicksAsync(string id);
+}
+
+public sealed class ShortLinkCleanupPendingException(
+    ShortLink link,
+    Exception innerException)
+    : InvalidOperationException(
+        $"Short-link '{link.Id}' was created but legacy-link cleanup is pending.",
+        innerException)
+{
+    public ShortLink Link { get; } = link;
 }
 
 public sealed class LinksService(
@@ -933,7 +1010,19 @@ public sealed class LinksService(
             return normalizedEntity;
         }
 
-        return await shortLinkRepository.AddItemAsync(normalizedEntity);
+        try
+        {
+            return await shortLinkRepository.AddItemAsync(normalizedEntity);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000)
+        {
+            // A concurrent creator may have won the unique-index race. Returning the
+            // persisted record makes repeated requests idempotent without weakening
+            // the database-enforced uniqueness guarantee.
+            return await shortLinkRepository.GetByCodeAsync(normalizedCode)
+                ?? throw new InvalidOperationException(
+                    $"Short-link code '{normalizedCode}' was rejected by the unique index.", exception);
+        }
     }
 
     public async Task<ShortLink?> EnsureVideoShortLinkAsync(string videoId, string? managementChannelId = null)
@@ -952,10 +1041,30 @@ public sealed class LinksService(
             return null;
         }
 
+        return await EnsureVideoShortLinkAsync(match.Id, videoId, managementChannelId);
+    }
+
+    public async Task<ShortLink?> EnsureVideoShortLinkAsync(
+        string contentId,
+        string videoId,
+        string? managementChannelId = null)
+        => await EnsureVideoShortLinkCoreAsync(contentId, videoId, managementChannelId);
+
+    private async Task<ShortLink?> EnsureVideoShortLinkCoreAsync(
+        string contentId,
+        string videoId,
+        string? managementChannelId)
+    {
+        var match = await contentRepository.GetItemAsync(contentId);
+        if (match is null || !match.VideoRefs.Any(video => video.YoutubeId == videoId))
+        {
+            return null;
+        }
+
         var canonical = await GetCanonicalVideoShortLinkAsync(match.Id, videoId);
         if (canonical is not null)
         {
-            await RemoveEmbeddedYouTubeLinksAsync(match);
+            await RemoveEmbeddedYouTubeLinksWithRetryAsync(match.Id, canonical);
             return canonical;
         }
 
@@ -979,22 +1088,65 @@ public sealed class LinksService(
                 ContentId = match.Id,
                 ManagementChannelId = managementChannelId
             };
-            var persistedLink = await shortLinkRepository.AddItemAsync(shortLink);
-            await RemoveEmbeddedYouTubeLinksAsync(match);
+            ShortLink persistedLink;
+            try
+            {
+                persistedLink = await shortLinkRepository.AddItemAsync(shortLink);
+            }
+            catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000)
+            {
+                // Another process won the unique code race. Re-read the canonical
+                // link so deterministic retries remain idempotent.
+                var concurrent = await GetCanonicalVideoShortLinkAsync(match.Id, videoId);
+                if (concurrent is not null)
+                {
+                    await RemoveEmbeddedYouTubeLinksWithRetryAsync(match.Id, concurrent);
+                    return concurrent;
+                }
+
+                continue;
+            }
+
+            await RemoveEmbeddedYouTubeLinksWithRetryAsync(match.Id, persistedLink);
             return persistedLink;
         }
 
         throw new InvalidOperationException("Unable to allocate a unique video shortlink code.");
     }
 
-    private Task RemoveEmbeddedYouTubeLinksAsync(YouTubeContent match)
+    private async Task RemoveEmbeddedYouTubeLinksWithRetryAsync(string matchId, ShortLink persistedLink)
     {
-        var remainingLinks = match.ShortLinks
-            .Where(link => link.LinkType != LinkType.YouTubeVideo)
-            .ToArray();
-        return remainingLinks.Length == match.ShortLinks.Length
-            ? Task.CompletedTask
-            : contentRepository.UpdateItemAsync(match with { ShortLinks = remainingLinks });
+        Exception? lastException = null;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (!await contentRepository.RemoveEmbeddedYouTubeLinksAsync(matchId))
+                {
+                    throw new InvalidOperationException(
+                        $"Video content '{matchId}' was not found while removing legacy short links.");
+                }
+
+                return;
+            }
+            catch (MongoException exception)
+            {
+                lastException = exception;
+            }
+            catch (InvalidOperationException exception)
+            {
+                lastException = exception;
+            }
+            catch (Exception exception)
+            {
+                lastException = exception;
+            }
+
+            if (attempt < 2)
+                await Task.Delay(TimeSpan.FromMilliseconds(50 * (attempt + 1)));
+        }
+
+        throw new ShortLinkCleanupPendingException(persistedLink, lastException!);
     }
 
     private static string CreateVideoCode(string videoId, int attempt, ISet<string> occupiedCodes)

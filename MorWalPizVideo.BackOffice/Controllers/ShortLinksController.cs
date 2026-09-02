@@ -125,8 +125,24 @@ public class ShortLinksController : ApplicationControllerBase
                 {
                     return BadRequest("Match do not exists");
                 }
-                var ensuredVideoShortLink = await _linksService.EnsureVideoShortLinkAsync(
-                    request.Target, HttpContext.GetChannelContext().ChannelId);
+                ShortLink? ensuredVideoShortLink;
+                try
+                {
+                    ensuredVideoShortLink = await _linksService.EnsureVideoShortLinkAsync(
+                        existingMatch.Id,
+                        request.Target,
+                        HttpContext.GetChannelContext().ChannelId);
+                }
+                catch (ShortLinkCleanupPendingException exception)
+                {
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                    {
+                        error = "short_link_cleanup_pending",
+                        shortLinkCode = exception.Link.Code,
+                        shortLinkStatus = "pending",
+                        shortLinkError = exception.Message
+                    });
+                }
                 if (ensuredVideoShortLink is null)
                 {
                     return BadRequest("Match do not exists");

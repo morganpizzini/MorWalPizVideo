@@ -24,8 +24,13 @@ public interface IYouTubeContentIndexedCache
     Task<IReadOnlyList<YouTubeContent>> GetPublicForChannelAsync(string channelId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<YouTubeContent>> GetGlobalAsync(CancellationToken cancellationToken = default);
     Task NotifyChangedAsync(string entityId);
-    Task DrainAsync(CancellationToken cancellationToken = default);
+    Task<IndexedCacheRefreshResult> DrainAsync(CancellationToken cancellationToken = default);
 }
+
+public sealed record IndexedCacheRefreshResult(
+    string Status,
+    int FailedRefreshes,
+    int RetriedRefreshes);
 
 public static class YouTubeContentCacheKeys
 {
@@ -52,13 +57,15 @@ public sealed class YouTubeContentIndexedCache(
     IServiceScopeFactory scopeFactory,
     ILogger<YouTubeContentIndexedCache> logger) : IYouTubeContentIndexedCache
 {
-    private sealed record RefreshRequest(string EntityId, string? Scope, string QueueKey);
+    private sealed record RefreshRequest(string EntityId, string? Scope, string QueueKey, int Attempt = 0);
 
     private readonly ConcurrentQueue<RefreshRequest> refreshQueue = new();
     private readonly ConcurrentDictionary<string, byte> pendingKeys = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim drainLock = new(1, 1);
     private readonly object workerLock = new();
     private readonly SemaphoreSlim scopeRegistryLock = new(1, 1);
+    private int failedRefreshes;
+    private int retriedRefreshes;
     private Task? workerTask;
 
     public int PendingRefreshCount => pendingKeys.Count;
@@ -84,7 +91,7 @@ public sealed class YouTubeContentIndexedCache(
         return Task.CompletedTask;
     }
 
-    public async Task DrainAsync(CancellationToken cancellationToken = default)
+    public async Task<IndexedCacheRefreshResult> DrainAsync(CancellationToken cancellationToken = default)
     {
         while (true)
         {
@@ -98,7 +105,14 @@ public sealed class YouTubeContentIndexedCache(
                 await worker.WaitAsync(cancellationToken);
 
             if (pendingKeys.IsEmpty && refreshQueue.IsEmpty)
-                return;
+            {
+                var failures = Interlocked.Exchange(ref failedRefreshes, 0);
+                var retries = Interlocked.Exchange(ref retriedRefreshes, 0);
+                return new(
+                    !store.IsEnabled ? "disabled" : failures == 0 ? "refreshed" : "degraded",
+                    failures,
+                    retries);
+            }
 
             StartWorker();
         }
@@ -252,6 +266,7 @@ public sealed class YouTubeContentIndexedCache(
         {
             while (refreshQueue.TryDequeue(out var request))
             {
+                var retryQueued = false;
                 try
                 {
                     if (request.Scope is null)
@@ -270,10 +285,21 @@ public sealed class YouTubeContentIndexedCache(
                 {
                     logger.LogError(exception, "Indexed YouTubeContent cache refresh failed for {EntityId} in {Scope}",
                         request.EntityId, request.Scope ?? "*");
+                    if (request.Attempt == 0)
+                    {
+                        Interlocked.Increment(ref retriedRefreshes);
+                        refreshQueue.Enqueue(request with { Attempt = 1 });
+                        retryQueued = true;
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref failedRefreshes);
+                    }
                 }
                 finally
                 {
-                    pendingKeys.TryRemove(request.QueueKey, out _);
+                    if (!retryQueued)
+                        pendingKeys.TryRemove(request.QueueKey, out _);
                 }
             }
         }

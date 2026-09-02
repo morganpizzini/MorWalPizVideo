@@ -218,7 +218,7 @@ if (!enableMock)
     builder.Services.AddScoped<ITelegramHttpClientFactory, TelegramHttpClientFactory>();
 
 
-    var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
+    var siteUrl = $"{builder.Configuration["ServerAPISiteUrl"]}api/";
 
     builder.Services.AddHttpClient(HttpClientNames.MorWalPiz, httpClient =>
     {
@@ -344,7 +344,7 @@ if (enableMock)
     builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
     builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
 
-    var siteUrl = $"{builder.Configuration["SiteUrl"]}api/";
+    var siteUrl = $"{builder.Configuration["ServerAPISiteUrl"]}api/";
 
     builder.Services.AddHttpClient(HttpClientNames.MorWalPiz, httpClient =>
     {
@@ -499,6 +499,7 @@ else
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
     builder.Services.AddScoped<IMongoIndexOperationsService, MongoIndexOperationsService>();
+    builder.Services.AddHostedService<MongoIndexStartupInitializer>();
 
     // Insight Agent Service (Production)
     builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();

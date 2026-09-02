@@ -10,17 +10,20 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     [InternalServiceAuth] // ADR-002: internal cache operations require an authenticated service identity
     public class CacheController : ApplicationController
     {
-        private readonly IOutputCacheStore cache;
+        private readonly IOutputCacheStore outputCache;
+        private readonly IYouTubeContentIndexedCache? indexedCache;
         public CacheController(IGenericDataService _dataService, IMorWalPizCache _memoryCache,
-                                IOutputCacheStore _cache)
+                                IOutputCacheStore _cache,
+                                IYouTubeContentIndexedCache? _indexedCache = null)
                                     : base(_dataService, _memoryCache)
         {
-            cache = _cache;
+            outputCache = _cache;
+            indexedCache = _indexedCache;
         }
         [HttpGet("purge")]
         public async Task<IActionResult> Index([FromQuery(Name = "k")] string tag){
             
-            await cache.EvictByTagAsync(tag.ToLowerInvariant(), default);
+            await outputCache.EvictByTagAsync(tag.ToLowerInvariant(), default);
 
             return NoContent();
         }
@@ -31,10 +34,31 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             if (string.IsNullOrEmpty(keys))
                 keys = $"{CacheKeys.Matches},{CacheKeys.Products},{CacheKeys.Sponsors},{CacheKeys.Pages},{CacheKeys.CalendarEvents},{CacheKeys.ShortLinks},{CacheKeys.ChannelNews}";
 
-            foreach (var key in keys.ToLower().Split(","))
+            foreach (var key in keys.ToLowerInvariant().Split(","))
                 base.cache.Remove(key);
 
             return NoContent();
+        }
+
+        [HttpGet("refresh-video")]
+        public async Task<IActionResult> RefreshVideo([FromQuery(Name = "id")] string entityId)
+        {
+            if (string.IsNullOrWhiteSpace(entityId))
+                return BadRequest("Video id is required.");
+
+            if (indexedCache is not null)
+            {
+                await indexedCache.NotifyChangedAsync(entityId);
+                var refresh = await indexedCache.DrainAsync();
+                return Ok(new
+                {
+                    cacheStatus = refresh.Status,
+                    failedRefreshes = refresh.FailedRefreshes,
+                    retriedRefreshes = refresh.RetriedRefreshes
+                });
+            }
+
+            return Ok(new { cacheStatus = "disabled" });
         }
 
     }

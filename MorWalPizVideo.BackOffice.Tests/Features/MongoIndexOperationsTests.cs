@@ -1,7 +1,10 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.BackOffice.Services;
@@ -30,6 +33,32 @@ public sealed class MongoIndexOperationsTests
         Assert.Equal("pages", entry.Collection);
         Assert.Equal("ix_pages_url", entry.Name);
         Assert.Equal("pages_url.unique", entry.ReplacementKey);
+    }
+
+    [Fact]
+    public async Task Startup_initializer_applies_the_shortlink_unique_index_idempotently()
+    {
+        var operations = new RecordingMongoIndexOperationsService();
+        using var provider = new ServiceCollection()
+            .AddScoped<IMongoIndexOperationsService>(_ => operations)
+            .BuildServiceProvider();
+        var initializer = new MongoIndexStartupInitializer(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MongoIndexStartupInitializer>.Instance);
+
+        await initializer.StartAsync(CancellationToken.None);
+
+        Assert.Equal(["shortlinks.code.unique"], operations.AppliedKeys);
+    }
+
+    [Fact]
+    public void Shortlink_manifest_requires_case_insensitive_unique_index()
+    {
+        var entry = MongoIndexOperationsService.Manifest.Single(item => item.Key == "shortlinks.code.unique");
+
+        Assert.True(entry.Unique);
+        Assert.Equal("code", entry.Keys.GetElement(0).Name);
+        Assert.Equal(CollationStrength.Secondary, entry.Collation?.Strength);
     }
 
     [Fact]
@@ -138,14 +167,18 @@ public sealed class MongoIndexOperationsTests
 
     private sealed class RecordingMongoIndexOperationsService : IMongoIndexOperationsService
     {
+        public IList<string> AppliedKeys { get; private set; } = [];
         public IList<string> RemovalKeys { get; private set; } = [];
         public IList<MongoIndexRemovalResult> RemovalResults { get; set; } = [];
 
         public Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IList<MongoIndexAuditItem>>([]);
 
-        public Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IList<MongoIndexApplyResult>>([]);
+        public Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default)
+        {
+            AppliedKeys = approvedKeys;
+            return Task.FromResult<IList<MongoIndexApplyResult>>([]);
+        }
 
         public Task<IList<MongoIndexRemovalResult>> RemoveAsync(IList<string> approvedRemovalKeys, CancellationToken cancellationToken = default)
         {

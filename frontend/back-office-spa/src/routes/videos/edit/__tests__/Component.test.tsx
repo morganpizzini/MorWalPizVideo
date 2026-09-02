@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useFetcher, useLoaderData, useNavigate } from 'react-router';
+import { LinkType } from '@morwalpizvideo/models';
 import type { CategoryRef, Match, VideoRef } from '@morwalpizvideo/models';
 import { render } from '../../../../test/test-utils';
 import Component from '../Component';
@@ -107,11 +108,14 @@ describe('Edit Video', () => {
         description: '',
         publishedAt: '',
         creationDateTime: '2026-01-01T00:00:00.000Z',
+        shortLinkCode: 'abc12',
+        shortLinkStatus: 'created',
       },
     };
     view.rerender(<Component />);
 
     await waitFor(() => expect(screen.getByText('new-video')).toBeInTheDocument());
+    expect(screen.getByText('/abc12')).toBeInTheDocument();
     expect(mockToastShow).toHaveBeenCalledWith(
       'Success',
       'Video reference added successfully',
@@ -200,5 +204,38 @@ describe('Edit Video', () => {
     await renderComponent();
 
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled();
+  });
+
+  it('projects the canonical short link after the edit route is reloaded', async () => {
+    const persistedVideoRef: VideoRef = {
+      youtubeId: 'persisted-video',
+      categories,
+      channelIds: ['channel-1'],
+      title: 'Persisted title',
+      description: '',
+      publishedAt: '',
+      creationDateTime: '2026-01-01T00:00:00.000Z',
+    };
+    vi.mocked(useLoaderData).mockReturnValue({
+      match: {
+        ...match,
+        videoRefs: [persistedVideoRef],
+        shortLinks: [{
+          shortLinkId: 'short-link-1',
+          code: 'persisted-code',
+          target: 'persisted-video',
+          linkType: LinkType.YouTubeVideo,
+          queryLinkIds: [],
+          message: '',
+          clicksCount: 0,
+          videoId: 'persisted-video',
+        }],
+      },
+      categories,
+    });
+
+    await renderComponent();
+
+    expect(screen.getByText('/persisted-code')).toBeInTheDocument();
   });
 });

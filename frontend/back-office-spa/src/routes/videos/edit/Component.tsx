@@ -4,7 +4,7 @@ import { Card, Row, Col, Form as BootstrapForm, Button, Badge, Table } from 'rea
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
-import { Match, VideoRef, CategoryRef } from '@morwalpizvideo/models';
+import { Match, VideoRef, CategoryRef, LinkType } from '@morwalpizvideo/models';
 import VideoRefEditModal from '@components/VideoRefEditModal';
 import TagInput from '@components/TagInput';
 import { normalizeTags } from '@components/TagInput/tagRules';
@@ -13,6 +13,11 @@ type CategoryWithFallbackId = CategoryRef & { categoryId?: string };
 
 const getCategoryId = (category: CategoryWithFallbackId): string =>
   category.id ?? category.categoryId ?? '';
+
+const getCanonicalShortLinkCode = (match: Match, youtubeId: string): string | undefined =>
+  match.shortLinks?.find(link =>
+    link.linkType === LinkType.YouTubeVideo &&
+    link.target === youtubeId)?.code;
 
 const Component: React.FC = () => {
   const { match, categories, tagSuggestions } = useLoaderData() as {
@@ -155,7 +160,13 @@ const Component: React.FC = () => {
       setNewVideoRefId('');
       setNewVideoRefCategories([]);
       setAddVideoRefAttempted(false);
-      toast.show('Success', 'Video reference added successfully', { variant: 'success' });
+      if (addFetcher.data.videoRef.cacheStatus === 'degraded') {
+        toast.show('Video reference added', 'Saved, but cache refresh is degraded.', { variant: 'warning' });
+      } else if (addFetcher.data.videoRef.cacheStatus === 'disabled') {
+        toast.show('Video reference added', 'Saved; cache refresh is disabled.', { variant: 'warning' });
+      } else {
+        toast.show('Success', 'Video reference added successfully', { variant: 'success' });
+      }
       return;
     }
 
@@ -388,6 +399,31 @@ const Component: React.FC = () => {
                           <code className="text-primary">{videoRef.youtubeId}</code>
                           {videoRef.youtubeId === match.thumbnailVideoId && (
                             <Badge bg="success" className="ms-2">Thumbnail</Badge>
+                          )}
+                          {(getCanonicalShortLinkCode(match, videoRef.youtubeId) ?? videoRef.shortLinkCode) && (
+                            <Badge bg="info" className="ms-2">
+                              /{getCanonicalShortLinkCode(match, videoRef.youtubeId) ?? videoRef.shortLinkCode}
+                            </Badge>
+                          )}
+                          {videoRef.shortLinkStatus === 'failed' && (
+                            <Badge bg="warning" text="dark" className="ms-2">
+                              Short link unavailable
+                            </Badge>
+                          )}
+                          {videoRef.shortLinkStatus === 'pending' && (
+                            <Badge bg="warning" text="dark" className="ms-2">
+                              Short link cleanup pending
+                            </Badge>
+                          )}
+                          {videoRef.cacheStatus === 'degraded' && (
+                            <Badge bg="warning" text="dark" className="ms-2">
+                              Cache degraded
+                            </Badge>
+                          )}
+                          {videoRef.cacheStatus === 'disabled' && (
+                            <Badge bg="secondary" className="ms-2">
+                              Cache disabled
+                            </Badge>
                           )}
                         </td>
                         <td>

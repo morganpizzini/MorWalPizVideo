@@ -466,6 +466,27 @@ export async function call(url: string, method: string, body: any, overrideHeade
                             }
                             return { errors: errorMessages, status: response.status };
                         }
+                    case 503:
+                        {
+                            const rawResponse = await response.text();
+                            try {
+                                const parsedResponse = JSON.parse(rawResponse);
+                                if (typeof parsedResponse === 'object' && parsedResponse !== null) {
+                                    for (const key in parsedResponse) {
+                                        if (Array.isArray(parsedResponse[key])) {
+                                            errorMessages.push(...parsedResponse[key]);
+                                        } else if (parsedResponse[key] !== undefined) {
+                                            errorMessages.push(parsedResponse[key]);
+                                        }
+                                    }
+                                } else if (parsedResponse) {
+                                    errorMessages.push(parsedResponse);
+                                }
+                            } catch {
+                                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+                            }
+                            return { errors: errorMessages, status: response.status };
+                        }
                     default:
                         errorMessages.push("An unexpected error occurred");
                 }

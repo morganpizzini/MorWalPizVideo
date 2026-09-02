@@ -80,6 +80,26 @@ public sealed class YouTubeContentIndexedCacheTests
     }
 
     [Fact]
+    public async Task Refresh_reports_degraded_after_a_real_failure_and_retry()
+    {
+        var repository = new MatchMockRepository(new EmptyScenario());
+        var match = CreateMatch("failed-refresh", PrimaryScenario.ChannelId, DateTime.UtcNow);
+        await repository.AddItemAsync(match);
+        var store = new InMemoryIndexedCacheStore();
+        var cache = CreateCache(repository, store);
+
+        await cache.GetPublicForChannelAsync(PrimaryScenario.ChannelId);
+        store.FailuresRemaining = 2;
+
+        await cache.NotifyChangedAsync(match.Id);
+        var result = await cache.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("degraded", result.Status);
+        Assert.Equal(1, result.FailedRefreshes);
+        Assert.Equal(1, result.RetriedRefreshes);
+    }
+
+    [Fact]
     public async Task Content_service_notifies_cache_after_successful_mutations()
     {
         var repository = new MatchMockRepository(new EmptyScenario());
@@ -98,6 +118,71 @@ public sealed class YouTubeContentIndexedCacheTests
         await service.DeleteMatchAsync(match.Id);
 
         Assert.Equal([match.Id, match.Id, match.Id], notifier.ChangedIds);
+    }
+
+    [Fact]
+    public async Task Content_service_reports_degraded_cache_without_rejecting_persisted_append()
+    {
+        var repository = new MatchMockRepository(new EmptyScenario());
+        var match = CreateMatch("degraded-append", PrimaryScenario.ChannelId, DateTime.UtcNow);
+        await repository.AddItemAsync(match);
+        var service = new ContentService(
+            repository,
+            null!,
+            null!,
+            null!,
+            new ShortLinkMockRepository(new EmptyScenario()),
+            new RecordingIndexedCache(status: "degraded"));
+
+        var outcome = await service.AddVideoReferenceWithCacheAsync(
+            match.Id,
+            new VideoRef("new-reference", channelIds: [PrimaryScenario.ChannelId]));
+
+        Assert.Equal(VideoReferenceAppendResult.Added, outcome.AppendResult);
+        Assert.Equal("degraded", outcome.CacheStatus);
+        Assert.Contains(
+            (await repository.GetItemAsync(match.Id)).VideoRefs,
+            reference => reference.YoutubeId == "new-reference");
+    }
+
+    [Fact]
+    public async Task Atomic_match_field_update_preserves_concurrent_video_reference_append()
+    {
+        var repository = new MatchMockRepository(new EmptyScenario());
+        var match = CreateMatch("atomic-update", PrimaryScenario.ChannelId, DateTime.UtcNow);
+        await repository.AddItemAsync(match);
+
+        await Task.WhenAll(
+            repository.UpdateMutableFieldsAsync(match with { Title = "updated" }),
+            repository.AddVideoReferenceAsync(
+                match.Id,
+                new VideoRef("concurrent-reference", channelIds: [PrimaryScenario.ChannelId])));
+
+        var persisted = await repository.GetItemAsync(match.Id);
+        Assert.Equal("updated", persisted.Title);
+        Assert.Contains(persisted.VideoRefs, reference => reference.YoutubeId == "concurrent-reference");
+    }
+
+    [Fact]
+    public async Task Content_service_uses_global_cache_for_non_admin_channel_reads()
+    {
+        var channelId = PrimaryScenario.ChannelId;
+        var cachedMatch = CreateMatch("cached", channelId, DateTime.UtcNow);
+        var unrelatedMatch = CreateMatch("unrelated", "other-channel", DateTime.UtcNow);
+        var repository = new MatchMockRepository(new EmptyScenario());
+        var cache = new RecordingIndexedCache([cachedMatch, unrelatedMatch]);
+        var service = new ContentService(
+            repository,
+            null!,
+            null!,
+            null!,
+            new ShortLinkMockRepository(new EmptyScenario()),
+            cache);
+
+        var matches = await service.GetAuthorizedMatchesAsync("another-user", false, channelId);
+
+        Assert.Equal([cachedMatch.Id], matches.Select(match => match.Id));
+        Assert.Equal(1, cache.GlobalReadCount);
     }
 
     private static YouTubeContent CreateMatch(string id, string channelId, DateTime publishedAt)
@@ -130,6 +215,7 @@ public sealed class YouTubeContentIndexedCacheTests
         public bool IsEnabled => true;
         public int GetCount { get; private set; }
         public int SetCount { get; private set; }
+        public int FailuresRemaining { get; set; }
         public TaskCompletionSource<bool> RefreshBlocked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public void BlockNextPublicIndexRead()
@@ -140,6 +226,7 @@ public sealed class YouTubeContentIndexedCacheTests
 
         public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
         {
+            ThrowIfConfiguredToFail();
             GetCount++;
             var readGate = blockedRead;
             if (readGate is not null && key.StartsWith(
@@ -156,11 +243,15 @@ public sealed class YouTubeContentIndexedCacheTests
         }
 
         public Task<IReadOnlyDictionary<string, T?>> GetManyAsync<T>(IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyDictionary<string, T?>>(
+        {
+            ThrowIfConfiguredToFail();
+            return Task.FromResult<IReadOnlyDictionary<string, T?>>(
                 keys.ToDictionary(key => key, key => values.TryGetValue(key, out var value) && value is T typed ? typed : default, StringComparer.Ordinal));
+        }
 
         public Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
         {
+            ThrowIfConfiguredToFail();
             values[key] = value!;
             SetCount++;
             return Task.CompletedTask;
@@ -168,21 +259,48 @@ public sealed class YouTubeContentIndexedCacheTests
 
         public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
         {
+            ThrowIfConfiguredToFail();
             values.Remove(key);
             return Task.CompletedTask;
+        }
+
+        private void ThrowIfConfiguredToFail()
+        {
+            if (FailuresRemaining > 0)
+            {
+                FailuresRemaining--;
+                throw new InvalidOperationException("Simulated indexed-cache failure.");
+            }
         }
     }
 
     private sealed class RecordingIndexedCache : IYouTubeContentIndexedCache
     {
+        private readonly IReadOnlyList<YouTubeContent> globalMatches;
+        private readonly string status;
+
+        public RecordingIndexedCache(
+            IReadOnlyList<YouTubeContent>? globalMatches = null,
+            string status = "refreshed")
+        {
+            this.globalMatches = globalMatches ?? [];
+            this.status = status;
+        }
+
         public List<string> ChangedIds { get; } = [];
+        public int GlobalReadCount { get; private set; }
         public Task<IReadOnlyList<YouTubeContent>> GetPublicForChannelAsync(string channelId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
-        public Task<IReadOnlyList<YouTubeContent>> GetGlobalAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
+        public Task<IReadOnlyList<YouTubeContent>> GetGlobalAsync(CancellationToken cancellationToken = default)
+        {
+            GlobalReadCount++;
+            return Task.FromResult(globalMatches);
+        }
         public Task NotifyChangedAsync(string entityId)
         {
             ChangedIds.Add(entityId);
             return Task.CompletedTask;
         }
-        public Task DrainAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<IndexedCacheRefreshResult> DrainAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new IndexedCacheRefreshResult(status, status == "degraded" ? 1 : 0, 0));
     }
 }

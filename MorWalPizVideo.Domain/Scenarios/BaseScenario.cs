@@ -104,9 +104,19 @@ public abstract class BaseScenario : IMockScenario
         return typedCollection;
     }
 
-    private T Clone<T>(T item) where T : BaseEntity =>
-        JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(item, jsonOptions), jsonOptions)!;
+    private T Clone<T>(T item) where T : BaseEntity
+    {
+        var clone = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(item, jsonOptions), jsonOptions)!;
+        if (item is YouTubeContent source && clone is YouTubeContent target)
+        {
+            // LatestPublishedAt is intentionally hidden from JSON/API contracts, but it is
+            // persisted by Mongo and therefore must survive mock scenario cloning as well.
+            return (T)(object)(target with { LatestPublishedAt = source.LatestPublishedAt });
+        }
+
+        return clone;
+    }
 
     private List<T> Clone<T>(List<T> items) where T : BaseEntity =>
-        JsonSerializer.Deserialize<List<T>>(JsonSerializer.Serialize(items, jsonOptions), jsonOptions) ?? [];
+        items.Select(Clone).ToList();
 }

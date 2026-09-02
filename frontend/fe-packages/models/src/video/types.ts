@@ -29,6 +29,11 @@ export interface VideoRef {
   description: string;
   publishedAt: string;
   creationDateTime: string;
+  /** Present on immediate add responses; canonical links are stored separately. */
+  shortLinkCode?: string;
+  shortLinkStatus?: 'created' | 'failed' | 'pending';
+  shortLinkError?: string;
+  cacheStatus?: 'refreshed' | 'degraded' | 'disabled';
 }
 
 /**

@@ -15,7 +15,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
+        Task<bool> UpdateMutableFieldsAsync(YouTubeContent entity);
         Task<VideoReferenceAppendResult> AddVideoReferenceAsync(string matchId, VideoRef videoReference);
+        Task<bool> RemoveVideoReferenceAsync(string matchId, string youtubeId);
+        Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference);
+        Task<bool> RemoveEmbeddedYouTubeLinksAsync(string matchId);
         Task<IList<VideoPublication>> GetPublicationsAsync(DateTime fromInclusive, DateTime toExclusive, string? channelId = null);
         Task<IList<YouTubeContent>> GetOwnedAsync(string userId, IList<string> channelIds);
         Task<IList<YouTubeContent>> GetPublicOrderedAsync(bool includePrivate, int skip, int take);
@@ -32,6 +36,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Duplicate,
         NotFound
     }
+
+    public sealed record VideoReferenceAppendOutcome(
+        VideoReferenceAppendResult AppendResult,
+        string? CacheStatus,
+        string? CacheError = null);
 
     public sealed record VideoPublication(string VideoId, string Title, DateTime PublishedAt);
     public interface IProductRepository : IRepository<Product>
