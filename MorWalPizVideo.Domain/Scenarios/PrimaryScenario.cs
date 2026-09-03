@@ -176,6 +176,7 @@ public class PrimaryScenario : BaseScenario
         Set("impersonationGrants", Array.Empty<ImpersonationGrant>());
         Set("impersonationSessions", Array.Empty<ImpersonationSession>());
         Set("impersonationAuditEvents", Array.Empty<ImpersonationAuditEvent>());
+        Set("auditEvents", Array.Empty<AuditEvent>());
     }
 
     private static ShortLink CreateShortLink(string id, string code, string target, LinkType linkType) =>

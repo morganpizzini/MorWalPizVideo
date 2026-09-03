@@ -67,6 +67,20 @@ namespace MorWalPiz.Contracts
                 LastLogin = entity.LastLogin
             };
         }
+
+        public static AuditLogContract Convert(AuditEvent entity) => new()
+        {
+            Id = entity.Id,
+            EventType = entity.EventType,
+            EntityType = entity.EntityType,
+            EntityId = entity.EntityId,
+            ActorId = entity.ActorId,
+            ActorType = entity.ActorType,
+            OccurredAt = entity.OccurredAt,
+            BeforeJson = entity.BeforeJson,
+            AfterJson = entity.AfterJson,
+            MetadataJson = entity.MetadataJson
+        };
         public static ChannelContract Convert(YTChannel entity)
         {
             return new ChannelContract

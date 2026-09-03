@@ -326,6 +326,7 @@ builder.Services.AddScoped<IGenericDataService>(provider => provider.GetRequired
 builder.Services.AddScoped<IExternalDataService, ExternalDataService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
 builder.Services.AddScoped<IContentService, ContentService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IVideoAuthorizationService, VideoAuthorizationService>();
 builder.Services.AddScoped<IChannelContextResolver, ChannelContextResolver>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
@@ -374,6 +375,7 @@ if (enableMock)
     builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantMockRepository>();
     builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionMockRepository>();
     builder.Services.AddScoped<IImpersonationAuditRepository, ImpersonationAuditMockRepository>();
+    builder.Services.AddScoped<IAuditEventRepository, AuditEventMockRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptMockRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>(); // Example for
 
@@ -455,6 +457,7 @@ else
     builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantRepository>();
     builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionRepository>();
     builder.Services.AddScoped<IImpersonationAuditRepository, ImpersonationAuditRepository>();
+    builder.Services.AddScoped<IAuditEventRepository, AuditEventRepository>();
     builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();

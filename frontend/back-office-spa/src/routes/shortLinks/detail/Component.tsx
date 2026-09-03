@@ -5,10 +5,18 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import { LinkType } from '@morwalpizvideo/models';
+import { ComposeUrl, endpoints, get } from '@morwalpizvideo/services';
+import type { AuditLog } from '@/models/auditLog';
+import AuditLogList from '@components/AuditLogList';
+import ShareShortLink from './ShareShortLink';
 
 const ShortLinkDetail: React.FC = () => {
   const entity = useLoaderData();
   const [showModal, setShowModal] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
   const location = useLocation();
@@ -31,6 +39,14 @@ const ShortLinkDetail: React.FC = () => {
       navigate('..');
     }
   }, [result, navigate]);
+
+  useEffect(() => {
+    if (!entity?.shortLinkId) return;
+    void get(ComposeUrl(endpoints.SHORTLINKS_LOGS, { querylinkId: entity.shortLinkId }))
+      .then(value => setLogs(value as AuditLog[]))
+      .catch(error => setLogsError(error instanceof Error ? error.message : 'Unable to load logs.'))
+      .finally(() => setLogsLoading(false));
+  }, [entity]);
 
   const handleDelete = () => {
     setShowModal(true);
@@ -83,6 +99,16 @@ const ShortLinkDetail: React.FC = () => {
           <strong>Clicks Count:</strong> {entity.clicksCount}
         </p>
       </DetailPanel>
+
+      <Button variant="primary" onClick={() => setShowShare(value => !value)} className="mt-3">
+        {showShare ? 'Close Share' : 'Share'}
+      </Button>
+      {showShare && <ShareShortLink shortLinkId={entity.shortLinkId} />}
+
+      <section className="mt-4">
+        <h2 className="h5">History</h2>
+        <AuditLogList logs={logs} loading={logsLoading} error={logsError} />
+      </section>
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>

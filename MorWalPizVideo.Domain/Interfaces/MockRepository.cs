@@ -486,6 +486,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class AuditEventMockRepository : BaseMockRepository<AuditEvent>, IAuditEventRepository
+    {
+        public AuditEventMockRepository(IMockScenario scenario) : base(scenario, "auditEvents") { }
+    }
+
     public class LoginAttemptMockRepository : BaseMockRepository<LoginAttempt>, ILoginAttemptRepository
     {
         public LoginAttemptMockRepository(IMockScenario scenario) : base(scenario, "loginAttempts")

@@ -737,6 +737,13 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class AuditEventRepository : BaseRepository<AuditEvent>, IAuditEventRepository
+    {
+        public AuditEventRepository(IMongoDatabase database) : base(database, DbCollections.AuditEvents)
+        {
+        }
+    }
+
     public class LoginAttemptRepository : BaseRepository<LoginAttempt>, ILoginAttemptRepository
     {
         public LoginAttemptRepository(IMongoDatabase database) : base(database, DbCollections.LoginAttempts)

@@ -12,6 +12,12 @@ Anonymous public projections and narrowly approved public interactions. Public a
 
 ### ShortLinks
 
+Shortlink CRUD and social publication audit behavior is documented in
+[ShortLink Audit Logging](shortlink-audit-logging.md). The CRUD contract does
+not contain a persistent message field; publication messages are accepted
+only by the explicit share action.
+
+
 Unversioned `GET /{code}` redirect surface. It is not a general JSON API.
 
 ## Versioning

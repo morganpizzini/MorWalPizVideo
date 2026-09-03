@@ -19,7 +19,6 @@ const ShortLinkForm: React.FC = () => {
   const [target, setTarget] = useState(entity?.target || '');
   const [code, setCode] = useState(entity?.code || '');
   const [linkType, setLinkType] = useState<LinkType>(entity?.linkType ?? LinkType.YouTubeVideo);
-  const [message, setMessage] = useState((entity as any)?.message || '');
   const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
   const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -45,7 +44,6 @@ const ShortLinkForm: React.FC = () => {
       setTarget(entity.target || '');
       setCode(entity.code || '');
       setLinkType(entity.linkType ?? LinkType.YouTubeVideo);
-      setMessage((entity as any).message || '');
     }
   }, [entity]);
 
@@ -112,7 +110,7 @@ const ShortLinkForm: React.FC = () => {
   const confirmSubmit = () => {
     const queryLinkIds = selectedQueryLinks.map(ql => ql.queryLinkId);
     fetcher.submit(
-      { ...(isEditMode ? { code } : {}), target, linkType, queryLinkIds: JSON.stringify(queryLinkIds), message },
+      { ...(isEditMode ? { code } : {}), target, linkType, queryLinkIds: JSON.stringify(queryLinkIds) },
       { method: 'post', action: location.pathname }
     );
   };
@@ -225,19 +223,6 @@ const ShortLinkForm: React.FC = () => {
           error={errors?.queryLinkIds}
         />
 
-        <Form.Group controlId="formMessage" className="mb-3 mt-3">
-          <Form.Label>Message</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-          />
-          <Form.Text className="text-muted">
-            Optional message to be sent with the link when shared
-          </Form.Text>
-        </Form.Group>
-
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           {isEditMode ? 'Save Changes' : 'Create'}
         </Button>
@@ -274,11 +259,6 @@ const ShortLinkForm: React.FC = () => {
             <p>
               <strong>Query Links:</strong>{' '}
               {selectedQueryLinks.map(ql => ql.title).join(', ')}
-            </p>
-          )}
-          {message && (
-            <p>
-              <strong>Message:</strong> {message}
             </p>
           )}
         </Modal.Body>

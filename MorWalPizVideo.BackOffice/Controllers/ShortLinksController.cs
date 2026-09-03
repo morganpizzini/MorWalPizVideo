@@ -19,6 +19,13 @@ public class CreateShortLinkRequest
     public string Target { get; set; } = string.Empty;
     public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
     public string[] QueryLinkIds { get; set; } = [];
+}
+public class ShareShortLinkRequest
+{
+    [Required]
+    public string Platform { get; set; } = string.Empty;
+
+    [Required]
     public string Message { get; set; } = string.Empty;
 }
 public class UpdateShortLinkRequest
@@ -38,9 +45,11 @@ public class ShortLinksController : ApplicationControllerBase
     private readonly IConfiguration configuration;
     private readonly IDiscordService discordService;
     private readonly ITelegramService telegramService;
+    private readonly IFacebookService facebookService;
+    private readonly IAuditService auditService;
     private readonly IVideoAuthorizationService _authorization;
     public ShortLinksController(ILinksService linksService, IContentService contentService, ITelegramService telegramService, ICrossApiService clientFactory, IConfiguration configuration,
-        IDiscordService discordService, IVideoAuthorizationService authorization)
+        IDiscordService discordService, IFacebookService facebookService, IVideoAuthorizationService authorization, IAuditService auditService)
     {
         _linksService = linksService;
         _contentService = contentService;
@@ -48,7 +57,9 @@ public class ShortLinksController : ApplicationControllerBase
         this.configuration = configuration;
         this.discordService = discordService;
         this.telegramService = telegramService;
+        this.facebookService = facebookService;
         _authorization = authorization;
+        this.auditService = auditService;
     }
 
     [HttpGet]
@@ -91,6 +102,20 @@ public class ShortLinksController : ApplicationControllerBase
         var siteUrl = configuration.GetValue<string>("SiteUrl");
         var matches = await _contentService.GetAllMatchesAsync();
         return Ok(ContractUtils.Convert(shortLink, $"{siteUrl}", GetVideoTitle(shortLink, matches)));
+    }
+
+    [HttpGet("{id}/logs")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
+    public async Task<IActionResult> GetShortLinkLogs(string id)
+    {
+        var shortLink = await FindShortLinkAsync(id);
+        if (shortLink == null || !await CanAccessShortLinkAsync(shortLink))
+        {
+            return NotFound("Short link not found");
+        }
+
+        var logs = await auditService.GetEntityLogsAsync("shortlink", shortLink.Id);
+        return Ok(logs.Select(ContractUtils.Convert));
     }
     [HttpPost]
     [AllowUser(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]
@@ -191,17 +216,14 @@ public class ShortLinksController : ApplicationControllerBase
             await client.PurgeCache(CacheKeys.Matches);
         }
 
-        if (!string.IsNullOrEmpty(request.Message))
-        {
-            await discordService.CreatePost(shortLinkCode, request.Message);
-            await telegramService.CreatePost(shortLinkCode, request.Message);
-        }
-
         // Ensure the code is not null or empty before building the URL
         if (string.IsNullOrEmpty(newShortLink.Code))
         {
             return StatusCode(500, "Failed to generate short link code");
         }
+
+        await auditService.RecordAsync(User, "shortlink.created", "shortlink", newShortLink.Id,
+            null, newShortLink);
 
         return Ok($"{siteUrl}{newShortLink.Code}");
 
@@ -237,6 +259,61 @@ public class ShortLinksController : ApplicationControllerBase
                 return uniqueString;
             }
         }
+    }
+
+    [HttpPost("{id}/share")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
+    public async Task<IActionResult> ShareShortLink(string id, ShareShortLinkRequest request)
+    {
+        var shortLink = await FindShortLinkAsync(id);
+        if (shortLink == null || !await CanAccessShortLinkAsync(shortLink))
+        {
+            return NotFound("Short link not found");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Platform) || string.IsNullOrWhiteSpace(request.Message))
+        {
+            return BadRequest("Platform and message are required");
+        }
+
+        var platform = request.Platform.Trim().ToLowerInvariant();
+        if (platform is not ("discord" or "telegram" or "facebook"))
+        {
+            return BadRequest("Unsupported social platform");
+        }
+
+        string? providerError = null;
+        try
+        {
+            providerError = platform switch
+            {
+                "discord" => await discordService.CreatePost(shortLink.Code, request.Message),
+                "telegram" => await telegramService.CreatePost(shortLink.Code, request.Message),
+                "facebook" => await facebookService.CreatePost(shortLink.Code, request.Message),
+                _ => null
+            };
+        }
+        catch (Exception exception)
+        {
+            providerError = exception.Message;
+        }
+
+        var succeeded = string.IsNullOrEmpty(providerError);
+        await auditService.RecordAsync(User, "shortlink.shared", "shortlink", shortLink.Id,
+            null, null, new
+            {
+                platform,
+                message = request.Message,
+                success = succeeded,
+                error = providerError
+            });
+
+        if (!succeeded)
+        {
+            return BadRequest(new { error = "Social publication failed", details = providerError });
+        }
+
+        return NoContent();
     }
 
     [HttpPut("{id}")]
@@ -337,6 +414,9 @@ public class ShortLinksController : ApplicationControllerBase
 
         var siteUrl = configuration.GetValue<string>("SiteUrl");
 
+        await auditService.RecordAsync(User, "shortlink.updated", "shortlink", updatedShortLink.Id,
+            existingShortLink, updatedShortLink);
+
         return Ok($"{siteUrl}{updatedShortLink.Code}");
     }
 
@@ -350,6 +430,9 @@ public class ShortLinksController : ApplicationControllerBase
             return NotFound("Short link not found");
 
         await _linksService.DeleteShortLinkAsync(existingShortLink.Id);
+
+        await auditService.RecordAsync(User, "shortlink.deleted", "shortlink", existingShortLink.Id,
+            existingShortLink, null);
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
         return NoContent();

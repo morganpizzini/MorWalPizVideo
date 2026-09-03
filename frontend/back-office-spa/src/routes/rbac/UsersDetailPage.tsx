@@ -5,6 +5,8 @@ import { ComposeUrl, Delete, endpoints, get, put } from '@morwalpizvideo/service
 import type { Channel } from '@morwalpizvideo/models';
 import { hasPermission, permissions } from '../../authorization/permissions';
 import { useAppStore } from '../../state/appStore';
+import type { AuditLog } from '@/models/auditLog';
+import AuditLogList from '@components/AuditLogList';
 import { parsePermissions, type RbacGroup, type RbacUserSummary } from './types';
 
 export default function RbacUserDetailPage() {
@@ -18,6 +20,10 @@ export default function RbacUserDetailPage() {
   const [channelIds, setChannelIds] = useState<string[]>([]);
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [entityLogs, setEntityLogs] = useState<AuditLog[]>([]);
+  const [activityLogs, setActivityLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState('');
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canUpdateUsers = hasPermission(effectivePermissions, [permissions.users.update]);
   const canDeleteUsers = hasPermission(effectivePermissions, [permissions.users.delete]);
@@ -34,6 +40,13 @@ export default function RbacUserDetailPage() {
       setDirectPermissions(loadedUser.directPermissions.join(', '));
       setChannelIds(loadedUser.channelIds);
 
+      const [loadedEntityLogs, loadedActivityLogs] = await Promise.all([
+        get(ComposeUrl(endpoints.USER_LOGS, { id: encodeURIComponent(id) })),
+        get(ComposeUrl(endpoints.USER_ACTIVITY_LOGS, { id: encodeURIComponent(id) }))
+      ]);
+      setEntityLogs(Array.isArray(loadedEntityLogs) ? loadedEntityLogs as AuditLog[] : []);
+      setActivityLogs(Array.isArray(loadedActivityLogs) ? loadedActivityLogs as AuditLog[] : []);
+
       if (canManagePermissions) {
         const loadedGroups = await get(endpoints.RBAC_GROUPS) as RbacGroup[];
         setGroups(loadedGroups ?? []);
@@ -45,7 +58,8 @@ export default function RbacUserDetailPage() {
       }
     };
 
-    void loadUser();
+    void loadUser().catch(error => setLogsError(error instanceof Error ? error.message : 'Unable to load user logs.'))
+      .finally(() => setLogsLoading(false));
   }, [canManageChannelAssignments, canManagePermissions, id]);
 
   if (!user) return <p>Loading user...</p>;
@@ -96,6 +110,8 @@ export default function RbacUserDetailPage() {
 
       {canUpdateUsers ? <section><hr /><h2 className="h5">Password</h2><Form.Control type="password" value={password} onChange={event => setPassword(event.target.value)} aria-label="New password" /><div className="d-flex gap-2 mt-2"><Button variant="outline-warning" onClick={() => void savePassword('reset')}>Reset password</Button><Button variant="outline-secondary" onClick={() => void savePassword('set')}>Set password</Button></div></section> : null}
       {canDeleteUsers ? <><hr /><Button variant="danger" onClick={() => void Delete(endpoint(endpoints.USER_DETAIL)).then(() => navigate('/rbac/users'))}>Delete user</Button></> : null}
+      <section className="mt-4"><hr /><h2 className="h5">User history</h2><AuditLogList logs={entityLogs} loading={logsLoading} error={logsError} /></section>
+      <section className="mt-4"><h2 className="h5">User activity</h2><AuditLogList logs={activityLogs} loading={logsLoading} error={logsError} /></section>
     </div>
   );
 }

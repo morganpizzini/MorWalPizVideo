@@ -16,7 +16,6 @@ export enum LinkType {
  * @property target - Target of the link (video ID, channel ID, Instagram post ID, etc.)
  * @property linkType - Type of link (YouTube video, channel, Instagram, etc.)
  * @property queryLinkIds - Array of query link IDs for the link
- * @property message - Optional message for the short link
  * @property clicksCount - Number of times the link has been clicked
  * @property videoId - Legacy property for backward compatibility
  */
@@ -33,9 +32,6 @@ export interface ShortLink {
 
   /** Array of query link IDs for the link */
   queryLinkIds: string[];
-
-  /** Optional message for the short link */
-  message: string;
 
   /** Number of times the link has been clicked */
   clicksCount: number;
@@ -62,7 +58,7 @@ export type CreateShortLinkDTO = Omit<ShortLink, 'shortLinkId' | 'clicksCount' |
  * Type for updating an existing short link (all fields optional except id)
  */
 export type UpdateShortLinkDTO = Partial<
-  Omit<ShortLink, 'shortLinkId' | 'clicksCount' | 'message' | 'videoId'>
+  Omit<ShortLink, 'shortLinkId' | 'clicksCount' | 'videoId'>
 > & {
   shortLinkId: string;
 };

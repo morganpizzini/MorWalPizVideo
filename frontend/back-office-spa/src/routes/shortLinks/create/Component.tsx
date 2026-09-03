@@ -15,7 +15,6 @@ const CreateShortLink: React.FC = () => {
   const [target, setTarget] = useState('');
   const [selectedQueryLinks, setSelectedQueryLinks] = useState<QueryLink[]>([]);
   const [availableQueryLinks, setAvailableQueryLinks] = useState<QueryLink[]>([]);
-  const [message, setMessage] = useState('');
   const [linkType, setLinkType] = useState<LinkType>(LinkType.YouTubeVideo);
   const [showModal, setShowModal] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -104,7 +103,6 @@ const CreateShortLink: React.FC = () => {
         target,
         linkType,
         queryLinkIds: JSON.stringify(queryLinkIds),
-        message,
       },
       {
         method: 'post',
@@ -203,19 +201,6 @@ const CreateShortLink: React.FC = () => {
           error={errors?.queryLinkIds}
         />
 
-        <Form.Group controlId="formMessage" className="mb-3">
-          <Form.Label>Message</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-          />
-          <Form.Text className="text-muted">
-            Optional message to be sent with the link when shared
-          </Form.Text>
-        </Form.Group>
-
         <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
           Create
         </Button>
@@ -234,11 +219,6 @@ const CreateShortLink: React.FC = () => {
           {selectedQueryLinks.length > 0 && (
             <p>
               <strong>Query Links:</strong> {selectedQueryLinks.map(ql => ql.title).join(', ')}
-            </p>
-          )}
-          {message && (
-            <p>
-              <strong>Message:</strong> {message}
             </p>
           )}
         </Modal.Body>

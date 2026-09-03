@@ -9,6 +9,7 @@ const QUERYLINKS = `${baseEndpoint}/querylinks`;
 const QUERYLINKS_DETAIL = `${QUERYLINKS}/{querylinkId}`;
 const SHORTLINKS = `${baseEndpoint}/shortlinks`;
 const SHORTLINKS_DETAIL = `${SHORTLINKS}/{querylinkId}`;
+const SHORTLINKS_SHARE = `${SHORTLINKS_DETAIL}/share`;
 const QUICKLINKS = `${baseEndpoint}/quicklinks`;
 const QUICKLINKS_DETAIL = `${QUICKLINKS}/{quickLinksId}`;
 const PRODUCTS = `${baseEndpoint}/products`;
@@ -76,6 +77,8 @@ const USER_PASSWORD_RESET = `${USER_DETAIL}/password/reset`;
 const USER_PASSWORD_SET = `${USER_DETAIL}/password/set`;
 const USER_ME = `${baseEndpoint}/user/me`;
 const USER_ME_PASSWORD = `${USER_ME}/password`;
+const USER_LOGS = `${USER_DETAIL}/logs`;
+const USER_ACTIVITY_LOGS = `${USER_DETAIL}/activity-logs`;
 
 // RBAC endpoints
 const RBAC = `${baseEndpoint}/rbac`;
@@ -88,6 +91,7 @@ const RBAC_USER_CHANNELS = `${RBAC}/users/{id}/channels`;
 const RBAC_GROUPS = `${RBAC}/groups`;
 const RBAC_GROUPS_DETAIL = `${RBAC_GROUPS}/{id}`;
 const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
+const SHORTLINKS_LOGS = `${SHORTLINKS_DETAIL}/logs`;
 const DASHBOARD_SUMMARY = `${baseEndpoint}/dashboard/summary`;
 const DASHBOARD_VIDEO_PUBLICATIONS = `${baseEndpoint}/dashboard/video-publications`;
 
@@ -102,6 +106,7 @@ export default {
     QUERYLINKS_DETAIL,
     SHORTLINKS,
     SHORTLINKS_DETAIL,
+    SHORTLINKS_SHARE,
     QUICKLINKS,
     QUICKLINKS_DETAIL,
     PRODUCTS,
@@ -163,6 +168,8 @@ export default {
     USER_PASSWORD_SET,
     USER_ME,
     USER_ME_PASSWORD,
+    USER_LOGS,
+    USER_ACTIVITY_LOGS,
     RBAC,
     RBAC_USERS,
     RBAC_USER_DETAIL,
@@ -173,6 +180,7 @@ export default {
     RBAC_GROUPS,
     RBAC_GROUPS_DETAIL,
     RBAC_GROUP_PERMISSIONS,
+    SHORTLINKS_LOGS,
     DASHBOARD_SUMMARY,
     DASHBOARD_VIDEO_PUBLICATIONS,
 }

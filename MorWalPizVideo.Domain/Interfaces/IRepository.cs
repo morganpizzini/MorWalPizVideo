@@ -154,4 +154,5 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
 
     public interface IImpersonationAuditRepository : IRepository<ImpersonationAuditEvent>;
+    public interface IAuditEventRepository : IRepository<AuditEvent>;
 }

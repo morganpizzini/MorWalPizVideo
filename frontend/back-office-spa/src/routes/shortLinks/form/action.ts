@@ -19,7 +19,6 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     target: values.target as string,
     linkType: parseInt(values.linkType as string),
     queryLinkIds: JSON.parse((values.queryLinkIds as string) || '[]'),
-    message: (values.message as string) || '',
   };
 
   try {

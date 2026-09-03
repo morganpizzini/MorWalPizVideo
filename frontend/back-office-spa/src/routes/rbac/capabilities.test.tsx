@@ -17,6 +17,8 @@ vi.mock('@morwalpizvideo/services', () => ({
     RBAC_USER_CHANNELS: 'api/rbac/users/{id}/channels',
     CHANNELS: 'api/channels',
     USER_DETAIL: 'api/user/{id}',
+    USER_LOGS: 'api/user/{id}/logs',
+    USER_ACTIVITY_LOGS: 'api/user/{id}/activity-logs',
     USER_STATUS: 'api/user/{id}/status',
     USER_PASSWORD_RESET: 'api/user/{id}/password/reset',
     USER_PASSWORD_SET: 'api/user/{id}/password/set',
@@ -81,7 +83,7 @@ describe('RBAC lifecycle capabilities', () => {
     render(<RbacUserDetailPage />);
 
     expect(await screen.findByText('mario')).toBeInTheDocument();
-    expect(get).toHaveBeenCalledOnce();
+    expect(get).toHaveBeenCalledTimes(3);
     expect(get).not.toHaveBeenCalledWith(endpoints.RBAC_GROUPS);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });

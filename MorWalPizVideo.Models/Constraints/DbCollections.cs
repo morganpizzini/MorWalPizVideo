@@ -39,6 +39,7 @@
         public const string ImpersonationGrants = "impersonationGrants";
         public const string ImpersonationSessions = "impersonationSessions";
         public const string ImpersonationAuditEvents = "impersonationAuditEvents";
+        public const string AuditEvents = "auditEvents";
 
         // Insights Collections
         public const string InsightTopics = "insightTopics";

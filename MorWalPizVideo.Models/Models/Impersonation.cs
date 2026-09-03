@@ -74,3 +74,33 @@ public record ImpersonationAuditEvent : BaseEntity
     [BsonElement("occurredAt")]
     public DateTime OccurredAt { get; init; }
 }
+
+public record AuditEvent : BaseEntity
+{
+    [BsonElement("eventType")]
+    public string EventType { get; init; } = string.Empty;
+
+    [BsonElement("entityType")]
+    public string EntityType { get; init; } = string.Empty;
+
+    [BsonElement("entityId")]
+    public string EntityId { get; init; } = string.Empty;
+
+    [BsonElement("actorId")]
+    public string ActorId { get; init; } = string.Empty;
+
+    [BsonElement("actorType")]
+    public string ActorType { get; init; } = string.Empty;
+
+    [BsonElement("occurredAt")]
+    public DateTime OccurredAt { get; init; }
+
+    [BsonElement("beforeJson")]
+    public string? BeforeJson { get; init; }
+
+    [BsonElement("afterJson")]
+    public string? AfterJson { get; init; }
+
+    [BsonElement("metadataJson")]
+    public string? MetadataJson { get; init; }
+}

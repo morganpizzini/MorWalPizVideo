@@ -4,6 +4,7 @@ using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
@@ -25,17 +26,20 @@ namespace MorWalPizVideo.BackOffice.Controllers
         private readonly IUserGroupRepository _userGroupRepository;
         private readonly IConfiguration _configuration;
         private readonly ILogger<UserController> _logger;
+        private readonly IAuditService _auditService;
 
         public UserController(
             DataService dataService,
             IUserGroupRepository userGroupRepository,
             IConfiguration configuration,
-            ILogger<UserController> logger)
+            ILogger<UserController> logger,
+            IAuditService auditService)
         {
             _dataService = dataService;
             _userGroupRepository = userGroupRepository;
             _configuration = configuration;
             _logger = logger;
+            _auditService = auditService;
         }
 
         [HttpGet]
@@ -58,6 +62,34 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
 
             return Ok(ContractUtils.Convert(user));
+        }
+
+        [HttpGet("{id}/logs")]
+        [AllowUser(AuthorizationPermissionKeys.UsersView)]
+        public async Task<ActionResult<IEnumerable<AuditLogContract>>> GetUserLogs(string id)
+        {
+            var user = await _dataService.GetUser(id);
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            var logs = await _auditService.GetEntityLogsAsync("user", id);
+            return Ok(logs.Select(ContractUtils.Convert));
+        }
+
+        [HttpGet("{id}/activity-logs")]
+        [AllowUser(AuthorizationPermissionKeys.UsersView)]
+        public async Task<ActionResult<IEnumerable<AuditLogContract>>> GetUserActivityLogs(string id)
+        {
+            var user = await _dataService.GetUser(id);
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            var logs = await _auditService.GetActorLogsAsync(id);
+            return Ok(logs.Select(ContractUtils.Convert));
         }
 
         [AllowAnonymous]
@@ -185,6 +217,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "User creation failed.");
             }
 
+            await _auditService.RecordAsync(User, "user.created", "user", createdUser.Id,
+                null, ToAuditUser(createdUser));
             return Created($"/api/User/{createdUser.Id}", ContractUtils.Convert(createdUser));
         }
 
@@ -238,6 +272,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
             await _dataService.UpdateUser(updatedUser);
 
+            await _auditService.RecordAsync(User, "user.updated", "user", id,
+                ToAuditUser(existingUser), ToAuditUser(updatedUser));
+
             return NoContent();
         }
 
@@ -252,6 +289,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
 
             await _dataService.DeleteUser(id);
+            await _auditService.RecordAsync(User, "user.deleted", "user", id,
+                ToAuditUser(user), null);
             return NoContent();
         }
 
@@ -267,6 +306,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
             var updatedUser = user with { IsActive = request.IsActive };
             await _dataService.UpdateUser(updatedUser);
+            await _auditService.RecordAsync(User, "user.status_updated", "user", id,
+                ToAuditUser(user), ToAuditUser(updatedUser));
 
             return NoContent();
         }
@@ -292,6 +333,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 PasswordHash = passwordHash,
                 Salt = salt
             });
+
+            await _auditService.RecordAsync(User, "user.password_reset", "user", id,
+                null, null, new { action = "password_reset" });
 
             return NoContent();
         }
@@ -366,6 +410,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
             };
 
             await _dataService.UpdateUser(updatedUser);
+            await _auditService.RecordAsync(User, "user.profile_updated", "user", user.Id,
+                ToAuditUser(user), ToAuditUser(updatedUser));
             return NoContent();
         }
 
@@ -401,8 +447,27 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 Salt = newSalt
             });
 
+            await _auditService.RecordAsync(User, "user.password_changed", "user", user.Id,
+                null, null, new { action = "password_changed" });
+
             return NoContent();
         }
+
+        private static object ToAuditUser(User user) => new
+        {
+            user.Id,
+            user.Username,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            user.Phone,
+            user.IsActive,
+            user.LastLogin,
+            user.DirectPermissions,
+            user.GroupIds,
+            user.CanAccessBackoffice,
+            user.IsSecurityAccount
+        };
     }
 
     public class CreateUserRequest

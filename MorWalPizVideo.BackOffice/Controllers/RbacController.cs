@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Constraints;
@@ -17,7 +18,8 @@ public class RbacController(
     IUserRepository userRepository,
     IUserGroupRepository userGroupRepository,
     IUserChannelOwnerRepository userChannelOwnerRepository,
-    IYTChannelRepository channelRepository) : ControllerBase
+    IYTChannelRepository channelRepository,
+    IAuditService auditService) : ControllerBase
 {
   [HttpGet("users")]
   [AllowUser(AuthorizationPermissionKeys.UsersView, AuthorizationPermissionKeys.UsersManage, AuthorizationPermissionKeys.UsersPermissionsManage)]
@@ -106,6 +108,9 @@ public class RbacController(
       });
     }
 
+    await auditService.RecordAsync(User, "user.channel_assignments_updated", "user", id,
+      new { channelIds = ownedChannelIds }, new { channelIds = requestedChannelIds });
+
     return NoContent();
   }
 
@@ -129,6 +134,8 @@ public class RbacController(
     };
 
     await userRepository.UpdateItemAsync(updatedUser);
+    await auditService.RecordAsync(User, "user.permissions_updated", "user", id,
+      ToAuditUser(user), ToAuditUser(updatedUser));
     return NoContent();
   }
 
@@ -163,6 +170,8 @@ public class RbacController(
 
     var updatedUser = user with { GroupIds = requestedGroupIds };
     await userRepository.UpdateItemAsync(updatedUser);
+    await auditService.RecordAsync(User, "user.groups_updated", "user", id,
+      ToAuditUser(user), ToAuditUser(updatedUser));
     return NoContent();
   }
 
@@ -187,7 +196,10 @@ public class RbacController(
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    await userRepository.UpdateItemAsync(user with { GroupIds = groupIds });
+    var updatedUser = user with { GroupIds = groupIds };
+    await userRepository.UpdateItemAsync(updatedUser);
+    await auditService.RecordAsync(User, "user.group_added", "user", id,
+      ToAuditUser(user), ToAuditUser(updatedUser), new { groupId });
     return NoContent();
   }
 
@@ -205,7 +217,10 @@ public class RbacController(
         .Where(existing => !string.Equals(existing, groupId, StringComparison.OrdinalIgnoreCase))
         .ToList();
 
-    await userRepository.UpdateItemAsync(user with { GroupIds = groupIds });
+    var updatedUser = user with { GroupIds = groupIds };
+    await userRepository.UpdateItemAsync(updatedUser);
+    await auditService.RecordAsync(User, "user.group_removed", "user", id,
+      ToAuditUser(user), ToAuditUser(updatedUser), new { groupId });
     return NoContent();
   }
 
@@ -425,6 +440,22 @@ public class RbacController(
       ChannelIds = channelIds.Distinct(StringComparer.Ordinal).ToList()
     };
   }
+
+  private static object ToAuditUser(User user) => new
+  {
+    user.Id,
+    user.Username,
+    user.Email,
+    user.FirstName,
+    user.LastName,
+    user.Phone,
+    user.IsActive,
+    user.LastLogin,
+    user.DirectPermissions,
+    user.GroupIds,
+    user.CanAccessBackoffice,
+    user.IsSecurityAccount
+  };
 
   private static List<string> NormalizeMany(IEnumerable<string>? values) =>
       (values ?? [])
