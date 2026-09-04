@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-04T00:00:00.000Z",
+  "title": "Design System: MorWalPizVideo Client",
+  "extensions": {
+    "colorMeta": {
+      "brand-black": {
+        "role": "neutral",
+        "displayName": "Brand Black",
+        "canonical": "#333333",
+        "tonalRamp": [
+          "#262626",
+          "#333333",
+          "#404040",
+          "#555555",
+          "#707070",
+          "#8c8c8c",
+          "#b3b3b3",
+          "#e6e6e6"
+        ]
+      },
+      "brand-paper": {
+        "role": "neutral",
+        "displayName": "Brand Paper",
+        "canonical": "#ececec",
+        "tonalRamp": [
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a3a3a3",
+          "#c2c2c2",
+          "#d9d9d9",
+          "#ececec"
+        ]
+      },
+      "surface-white": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#292929",
+          "#454545",
+          "#616161",
+          "#7d7d7d",
+          "#999999",
+          "#b5b5b5",
+          "#d1d1d1",
+          "#ffffff"
+        ]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Muted Surface",
+        "canonical": "#f1f1f1",
+        "tonalRamp": [
+          "#2c2c2c",
+          "#484848",
+          "#646464",
+          "#808080",
+          "#9c9c9c",
+          "#b8b8b8",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Primary Ink",
+        "canonical": "#1f1f1f",
+        "tonalRamp": [
+          "#1f1f1f",
+          "#393939",
+          "#535353",
+          "#6d6d6d",
+          "#878787",
+          "#a1a1a1",
+          "#c5c5c5",
+          "#ededed"
+        ]
+      },
+      "text-body": {
+        "role": "neutral",
+        "displayName": "Body Gray",
+        "canonical": "#555555",
+        "tonalRamp": [
+          "#303030",
+          "#4a4a4a",
+          "#646464",
+          "#7e7e7e",
+          "#989898",
+          "#b2b2b2",
+          "#cccccc",
+          "#eeeeee"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Gray",
+        "canonical": "#6c757d",
+        "tonalRamp": [
+          "#31363a",
+          "#4a5156",
+          "#636c72",
+          "#7c878e",
+          "#96a1a7",
+          "#afb9be",
+          "#c9d0d4",
+          "#edf0f1"
+        ]
+      },
+      "bootstrap-primary": {
+        "role": "primary",
+        "displayName": "Bootstrap Action Blue",
+        "canonical": "#0d6efd",
+        "tonalRamp": [
+          "#062e69",
+          "#08439a",
+          "#0a58ca",
+          "#0d6efd",
+          "#3d8bfd",
+          "#6ea8fe",
+          "#9ec5fe",
+          "#cfe2ff"
+        ]
+      },
+      "telegram-blue": {
+        "role": "secondary",
+        "displayName": "Telegram Blue",
+        "canonical": "#2481cc",
+        "tonalRamp": [
+          "#092943",
+          "#0e4169",
+          "#155a91",
+          "#2481cc",
+          "#529ada",
+          "#80b4e4",
+          "#afd0ee",
+          "#d7e8f7"
+        ]
+      },
+      "instagram-pink": {
+        "role": "secondary",
+        "displayName": "Instagram Pink",
+        "canonical": "#e4405f",
+        "tonalRamp": [
+          "#601021",
+          "#8c1730",
+          "#b91f3e",
+          "#e4405f",
+          "#ea7087",
+          "#ef9aaa",
+          "#f5c4cd",
+          "#fbe7eb"
+        ]
+      },
+      "youtube-red": {
+        "role": "secondary",
+        "displayName": "YouTube Red",
+        "canonical": "#ff0000",
+        "tonalRamp": [
+          "#660000",
+          "#990000",
+          "#cc0000",
+          "#ff0000",
+          "#ff3333",
+          "#ff6666",
+          "#ff9999",
+          "#ffcccc"
+        ]
+      },
+      "quick-links-ink": {
+        "role": "neutral",
+        "displayName": "Quick-links Ink",
+        "canonical": "#18232d",
+        "tonalRamp": [
+          "#18232d",
+          "#303e4a",
+          "#485966",
+          "#607481",
+          "#788e9b",
+          "#9aadb7",
+          "#bdcbd1",
+          "#e4eaed"
+        ]
+      },
+      "quick-links-sage": {
+        "role": "tertiary",
+        "displayName": "Quick-links Sage",
+        "canonical": "#d5e0dc",
+        "tonalRamp": [
+          "#293b34",
+          "#486258",
+          "#66897b",
+          "#85aa9d",
+          "#a3c1b7",
+          "#b8cec6",
+          "#c7d8d1",
+          "#d5e0dc"
+        ]
+      },
+      "quick-links-terracotta": {
+        "role": "secondary",
+        "displayName": "Quick-links Terracotta",
+        "canonical": "#ab4b2c",
+        "tonalRamp": [
+          "#451e12",
+          "#66301d",
+          "#873d25",
+          "#ab4b2c",
+          "#bd6a50",
+          "#ce8975",
+          "#dfaa9b",
+          "#f0d4cc"
+        ]
+      },
+      "quick-links-blush": {
+        "role": "tertiary",
+        "displayName": "Quick-links Blush",
+        "canonical": "#f1d8ca",
+        "tonalRamp": [
+          "#542e20",
+          "#7b4936",
+          "#a2634c",
+          "#c77d61",
+          "#d99a82",
+          "#e3b19e",
+          "#ebc5b5",
+          "#f1d8ca"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "High Speed",
+        "purpose": "Creator wordmark only; oversized initials establish the brand signature."
+      },
+      "headline": {
+        "displayName": "Georgia Editorial",
+        "purpose": "Quick-links page headline, where the directory takes on a calmer editorial voice."
+      },
+      "body": {
+        "displayName": "Roboto Utility",
+        "purpose": "Application copy, controls, forms, metadata, and dense operational content."
+      },
+      "label": {
+        "displayName": "Roboto Label",
+        "purpose": "Uppercase categories, channel labels, and compact metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "global-hover",
+        "value": "0 4px 6px rgba(0, 0, 0, 0.4)",
+        "purpose": "Shared button and popup hover response."
+      },
+      {
+        "name": "content-card-rest",
+        "value": "0 4px 8px rgba(0, 0, 0, 0.2)",
+        "purpose": "Baseline separation for home and match cards."
+      },
+      {
+        "name": "content-card-hover",
+        "value": "0 8px 16px rgba(0, 0, 0, 0.4)",
+        "purpose": "Lifted emphasis while a content card is hovered."
+      },
+      {
+        "name": "quick-link-rest",
+        "value": "0 0.75rem 2rem rgba(24, 35, 45, 0.08)",
+        "purpose": "Soft ambient separation for quick-link rows."
+      },
+      {
+        "name": "quick-link-hover",
+        "value": "0 1rem 2.25rem rgba(24, 35, 45, 0.14)",
+        "purpose": "Focused or hovered quick-link row."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-hover",
+        "value": "transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out",
+        "purpose": "Subtle scale and depth response for shared controls."
+      },
+      {
+        "name": "card-hover",
+        "value": "transform 0.3s ease, box-shadow 0.3s ease",
+        "purpose": "Content card lift response."
+      },
+      {
+        "name": "quick-link-state",
+        "value": "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
+        "purpose": "Fast directory row hover and focus response."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "576px" },
+      { "name": "md", "value": "768px" },
+      { "name": "quick-links-compact", "value": "34rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact Bootstrap action for operational commands and form submission.",
+      "html": "<button class=\"ds-btn-primary\">SAVE</button>",
+      "css": ".ds-btn-primary { background: #0d6efd; color: #fff; padding: 0.375rem 0.75rem; border: 1px solid #0d6efd; border-radius: 0.375rem; font: 400 1rem/1.5 Roboto, Arial, sans-serif; transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out; } .ds-btn-primary:hover { background: #0b5ed7; border-color: #0a58ca; transform: scale(1.03); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); } .ds-btn-primary:focus-visible { outline: 0.2rem solid rgba(13, 110, 253, 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Social Channel Button",
+      "kind": "button",
+      "refersTo": "button-social-telegram",
+      "description": "Destination-colored social action used in the branded title header.",
+      "html": "<a class=\"ds-social-button\" href=\"#\">TELEGRAM</a>",
+      "css": ".ds-social-button { display: inline-block; padding: 10px 20px; color: #fff; background: #2481cc; border-radius: 5px; text-decoration: none; font: 400 1rem/1.5 Roboto, Arial, sans-serif; transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.2s ease; } .ds-social-button:hover, .ds-social-button:focus-visible { color: #fff; background: #1a8ad5; transform: scale(1.03); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); }"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "refersTo": "content-card",
+      "description": "Image-first content unit for the home feed and related media surfaces.",
+      "html": "<article class=\"ds-content-card\"><div class=\"ds-content-card__media\"></div><div class=\"ds-content-card__body\"><small>VIDEO</small><h3>Content title</h3><p>Supporting description</p></div></article>",
+      "css": ".ds-content-card { overflow: hidden; background: #fff; border: 0; border-radius: 10px; color: #1f1f1f; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease; } .ds-content-card:hover { transform: scale(1.03); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); } .ds-content-card__media { aspect-ratio: 16 / 9; background: #f1f1f1; } .ds-content-card__body { padding: 0.9rem 1rem 0.75rem; } .ds-content-card__body small { color: #6c757d; font: 700 0.75rem/1.2 Roboto, Arial, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; } .ds-content-card__body h3 { margin: 0.35rem 0 0.5rem; font: 600 1.05rem/1.25 Roboto, Arial, sans-serif; } .ds-content-card__body p { margin: 0; color: #555; font: 400 0.9rem/1.5 Roboto, Arial, sans-serif; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Bootstrap-compatible field for tools, forms, and account workflows.",
+      "html": "<label class=\"ds-field\">Email<input type=\"email\" placeholder=\"name@example.com\"></label>",
+      "css": ".ds-field { display: grid; gap: 0.375rem; color: #1f1f1f; font: 400 1rem/1.5 Roboto, Arial, sans-serif; } .ds-field input { width: 100%; min-height: 2.375rem; padding: 0.375rem 0.75rem; color: #212529; background: #fff; border: 1px solid #dee2e6; border-radius: 0.375rem; font: inherit; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; } .ds-field input:focus-visible { border-color: #86b7fe; outline: 0; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }"
+    },
+    {
+      "name": "Quick Link",
+      "kind": "nav",
+      "refersTo": "quick-link",
+      "description": "Editorial directory row with icon or image, concise copy, and directional affordance.",
+      "html": "<a class=\"ds-quick-link\" href=\"#\"><span class=\"ds-quick-link__icon\">+</span><span class=\"ds-quick-link__copy\"><strong>Project link</strong><small>Supporting label</small></span><span class=\"ds-quick-link__arrow\">&rarr;</span></a>",
+      "css": ".ds-quick-link { display: flex; align-items: center; gap: 0.9rem; min-height: 4.5rem; padding: 1rem 1.1rem; color: #18232d; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(24, 35, 45, 0.12); border-radius: 0.5rem; box-shadow: 0 0.75rem 2rem rgba(24, 35, 45, 0.08); text-decoration: none; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; } .ds-quick-link:hover, .ds-quick-link:focus-visible { border-color: #ab4b2c; box-shadow: 0 1rem 2.25rem rgba(24, 35, 45, 0.14); transform: translateY(-2px); } .ds-quick-link__icon { display: grid; flex: 0 0 2.5rem; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 0.35rem; color: #ab4b2c; background: #f1d8ca; font-size: 1.25rem; } .ds-quick-link__copy { display: grid; min-width: 0; gap: 0.15rem; } .ds-quick-link__copy small { overflow: hidden; color: #52616b; font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; } .ds-quick-link__arrow { margin-left: auto; color: #ab4b2c; font-size: 1.2rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Regia in movimento",
+    "overview": "MorWalPizVideo is a creative-operational video hub: the interface carries a visible creator identity while helping visitors scan content, reach social channels, manage tools, and follow live or scheduled activity. The main shell layers readable Bootstrap content over a photographic brand backdrop. Its signature wordmark uses the custom High Speed face, with oversized dark initials and pale supporting letters to create a compact, recognizable masthead.\n\nThe system is practical first, but it is not anonymous. Content cards, status alerts, filters, social actions, and forms use familiar Bootstrap patterns so repeated work stays predictable. The quick-links surface is a deliberate editorial variation: cool paper, sage, and terracotta create a calmer link directory while retaining the same direct, action-oriented rhythm.",
+    "keyCharacteristics": [
+      "Branded photographic atmosphere behind a readable content layer.",
+      "Bootstrap utility language strengthened by custom creator branding.",
+      "Content-led cards with image-first 16:9 media and compact metadata.",
+      "Flat surfaces at rest, with restrained lift and shadow on interaction."
+    ],
+    "rules": [
+      {
+        "name": "The Accent Rarity Rule",
+        "body": "Social colors and terracotta should identify a destination or state; they should not become a general page wash.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Voice Rule",
+        "body": "Use High Speed only for the brand mark; use Roboto for the application and Georgia only for the quick-links editorial headline.",
+        "section": "typography"
+      },
+      {
+        "name": "The State-Lift Rule",
+        "body": "Depth belongs to interaction and hierarchy: use shadow and translation to signal hover or focus, not as decoration on every surface.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the High Speed typeface exclusive to the brand mark.",
+      "Do preserve 16:9 media framing for home content cards.",
+      "Do use saturated social colors only for the matching social destination.",
+      "Do keep operational surfaces readable over the photographic background.",
+      "Do let cards and quick links lift subtly on hover and focus-visible.",
+      "Do retain the quick-links sage, paper, and terracotta atmosphere on that route."
+    ],
+    "donts": [
+      "Don't replace the photographic backdrop with a flat application-wide fill without an explicit identity decision.",
+      "Don't use High Speed for body copy, labels, or forms.",
+      "Don't turn every surface into a heavily rounded floating card.",
+      "Don't mix quick-links terracotta into unrelated Bootstrap status semantics.",
+      "Don't let responsive card grids distort media proportions or create horizontal overflow."
+    ]
+  }
+}

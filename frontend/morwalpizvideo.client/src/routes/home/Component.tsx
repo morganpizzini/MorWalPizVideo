@@ -217,7 +217,7 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
                             {RenderMatchCard(matches[0], -1)}
                         </div>
                         <div className="col-12 col-md-9">
-                            <iframe width="100%" height="450px" className="rounded" src={`https://www.youtube.com/embed/${firstMatchId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                            <FeaturedVideo youtubeId={firstMatchId} />
                         </div>
                     </div>
                     {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
@@ -281,10 +281,29 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
     );
 }
 
+function FeaturedVideo({ youtubeId }: { youtubeId: string }) {
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    if (isLoaded) {
+        return (
+            <div className="featured-video">
+                <iframe className="featured-video__frame" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
+            </div>
+        );
+    }
+
+    return (
+        <button type="button" className="featured-video" onClick={() => setIsLoaded(true)} aria-label="Riproduci il video in evidenza">
+            <img className="featured-video__thumbnail" src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`} alt="Anteprima del video in evidenza" fetchPriority="high" />
+            <span className="featured-video__play" aria-hidden="true"><i className="fa fa-play" /></span>
+        </button>
+    );
+}
+
 function ChannelNewsBanner({ item }: { item: ChannelNews }) {
     return (
         <Link to={`/channel-news/${item.id}`} className="channel-news-banner">
-            <img src={item.channelLogoUrl || "/images/logo-150.png"} alt={item.channelName} className="channel-news-banner__logo" />
+            <img src={item.channelLogoUrl || "/images/logo-150.png"} alt={item.channelName} className="channel-news-banner__logo" loading="lazy" decoding="async" />
             <span className="channel-news-banner__copy">
                 <span className="channel-news-banner__channel">{item.channelName}</span>
                 <strong>{item.title}</strong>
@@ -375,7 +394,7 @@ function BuyMeACoffeeCard() {
     return (
         <div className="card position-relative home-card">
             <div className="home-card__thumb home-card__thumb--promo home-card__thumb--coffee">
-                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" />
+                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" loading="lazy" decoding="async" />
             </div>
             <div className="card-body">
                 <p className="home-card__category">supporto</p>
@@ -391,7 +410,7 @@ function GoToShortsCard() {
     return (
         <div className="card position-relative home-card">
             <div className="home-card__thumb home-card__thumb--promo">
-                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" />
+                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" loading="lazy" decoding="async" />
             </div>
             <div className="card-body">
                 <p className="home-card__category">consigli</p>
@@ -419,7 +438,7 @@ function RenderMatchCard(match: IndexMatch, i: number) {
     return (
         <div className={className}>
             <div className="home-card__thumb">
-                <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} alt="Video Thumbnail" />
+                <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} alt="Video Thumbnail" loading="lazy" decoding="async" />
             </div>
             <div className="card-body">
                 <p className="home-card__category">
