@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import path from 'path';
+import { fileURLToPath, URL } from 'node:url';
 import { env } from 'process';
 
 const target = env.ASPNETCORE_HTTPS_PORT
@@ -14,9 +14,9 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
         alias: {
-            '@morwalpiz/layout': path.resolve(__dirname, '../fe-packages/layout/dist/index.js'),
-            '@morwalpizvideo/models': path.resolve(__dirname, '../fe-packages/models/dist/index.js'),
-            '@morwalpizvideo/services': path.resolve(__dirname, '../fe-packages/services/dist/index.js'),
+            '@morwalpiz/layout': fileURLToPath(new URL('../fe-packages/layout/dist/index.js', import.meta.url)),
+            '@morwalpizvideo/models': fileURLToPath(new URL('../fe-packages/models/dist/index.js', import.meta.url)),
+            '@morwalpizvideo/services': fileURLToPath(new URL('../fe-packages/services/dist/index.js', import.meta.url)),
         },
         dedupe: ['react', 'react-dom', 'react-router'],
     },
@@ -24,12 +24,12 @@ export default defineConfig({
         preprocessorOptions: {
             scss: {
                 api: 'legacy',
-                includePaths: [path.resolve(__dirname, '../fe-packages/layout/dist/styles')],
+                includePaths: [fileURLToPath(new URL('../fe-packages/layout/dist/styles', import.meta.url))],
                 importer: [
                     (url: string) => {
                         if (url === '@morwalpiz/layout/styles') {
                             return {
-                                file: path.resolve(__dirname, '../fe-packages/layout/dist/styles/index.css'),
+                                file: fileURLToPath(new URL('../fe-packages/layout/dist/styles/index.css', import.meta.url)),
                             };
                         }
                         return null;
