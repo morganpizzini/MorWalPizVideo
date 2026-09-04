@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 // Aggiungi using per AppDbContext e Disclaimer
@@ -26,6 +27,10 @@ namespace MorWalPiz.VideoImporter
         public ObservableCollection<VideoFile> VideoFiles { get; set; } = [];
         private List<string> selectedFolders = [];
         private List<string> selectedFiles = [];
+        private static readonly string DialogPathsFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MorWalPiz.VideoImporter",
+            "dialog-paths.json");
 
         private DateTime _selectedPublishDate = DateTime.Today;
 
@@ -198,14 +203,21 @@ namespace MorWalPiz.VideoImporter
 
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
         {
+            var dialogPaths = LoadDialogPaths();
             using (var folderDialog = new FolderBrowserDialog())
             {
                 folderDialog.Description = "Seleziona una cartella contenente file MP4";
+                if (Directory.Exists(dialogPaths.FolderPath))
+                {
+                    folderDialog.SelectedPath = dialogPaths.FolderPath;
+                }
 
                 if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     selectedFolders.Clear();
                     selectedFolders.Add(folderDialog.SelectedPath);
+                    dialogPaths.FolderPath = folderDialog.SelectedPath;
+                    SaveDialogPaths(dialogPaths);
                 }
                 ProcessFiles();
             }
@@ -213,11 +225,15 @@ namespace MorWalPiz.VideoImporter
 
         private void BrowseFilesButton_Click(object sender, RoutedEventArgs e)
         {
+            var dialogPaths = LoadDialogPaths();
             var fileDialog = new Microsoft.Win32.OpenFileDialog
             {
                 Multiselect = true,
                 Filter = "File MP4 (*.mp4)|*.mp4",
-                Title = "Seleziona file MP4"
+                Title = "Seleziona file MP4",
+                InitialDirectory = Directory.Exists(dialogPaths.FilePath)
+                    ? dialogPaths.FilePath
+                    : string.Empty
             };
 
             if (fileDialog.ShowDialog() == true)
@@ -227,8 +243,55 @@ namespace MorWalPiz.VideoImporter
                 {
                     selectedFiles.Add(file);
                 }
+                dialogPaths.FilePath = Path.GetDirectoryName(fileDialog.FileNames[0]);
+                SaveDialogPaths(dialogPaths);
                 ProcessFiles();
             }
+        }
+
+        private static DialogPaths LoadDialogPaths()
+        {
+            try
+            {
+                if (File.Exists(DialogPathsFile))
+                {
+                    return JsonSerializer.Deserialize<DialogPaths>(File.ReadAllText(DialogPathsFile)) ?? new DialogPaths();
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore invalid persisted paths and start with the default dialog location.
+            }
+            catch (IOException)
+            {
+                // Ignore unavailable persisted paths and start with the default dialog location.
+            }
+
+            return new DialogPaths();
+        }
+
+        private static void SaveDialogPaths(DialogPaths dialogPaths)
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName(DialogPathsFile);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.WriteAllText(DialogPathsFile, JsonSerializer.Serialize(dialogPaths));
+            }
+            catch (IOException)
+            {
+                // Persisting a dialog path is optional and must not interrupt file selection.
+            }
+        }
+
+        private sealed class DialogPaths
+        {
+            public string? FolderPath { get; set; }
+            public string? FilePath { get; set; }
         }
 
 
