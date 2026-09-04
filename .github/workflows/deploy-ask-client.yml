@@ -1,0 +1,37 @@
+name: Deploy Ask Client
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/ask.client/**', 'frontend/fe-packages/**', 'frontend/package.json', '.github/workflows/deploy-ask-client.yml']
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+env:
+  IMAGE_NAME: ask-client
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/ask.client/Dockerfile
+          push: true
+          tags: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.ASK_CLIENT_APP_NAME }}
+          images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

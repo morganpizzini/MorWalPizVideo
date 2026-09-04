@@ -20,6 +20,7 @@ export const permissions = {
   sponsors: resourcePermissions('sponsors'),
   products: resourcePermissions('products'),
   compilations: resourcePermissions('compilations'),
+  ask: { view: 'ask.view', manage: 'ask.manage', create: 'ask.create', update: 'ask.update', moderate: 'ask.moderate' },
   diagnostics: { view: 'diagnostics.view' },
 } as const;
 
@@ -63,6 +64,7 @@ const routeResources: Record<string, StandardResource> = {
   customforms: permissions.forms,
   insights: permissions.insights,
   keys: permissions.apikeys,
+  ask: { ...permissions.ask, delete: 'ask.delete' },
 };
 
 export function getRoutePermissions(path: string, action: boolean): readonly string[] {
@@ -99,6 +101,9 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   }
   if (module === 'insights' && (segments.includes('comments') || segments.includes('analyze-comments'))) {
     return [permissions.insights.scan, permissions.insights.manage];
+  }
+  if (module === 'ask' && action && segments.includes(':id') && !segments.includes('edit')) {
+    return [permissions.ask.moderate, permissions.ask.manage];
   }
   if (segments.includes('create')) return [resource.create, resource.manage];
   if (segments.includes('edit') || segments.some(segment => segment.startsWith(':') && action)) {

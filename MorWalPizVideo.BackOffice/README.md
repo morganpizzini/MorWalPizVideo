@@ -172,6 +172,8 @@ Core surface for managing the YouTube content catalog.
 #### `ChannelsController` — `api/channels`
 Manage tracked YouTube channels ([`YTChannel`](#510-channels-and-creator-tracking)).
 
+Channel create, update, delete, logo upload, and logo removal return `200 OK` JSON with `success: true` and a `cacheInvalidation` object. Its `status` is `completed` when all existing reset/purge calls finish, or `failed` with the stable warning code `public_cache_invalidation_failed` and a safe user-facing message when persistence succeeded but public cache invalidation failed. Cache failure does not roll back the mutation or change authentication, validation, cache keys, or invalidation order.
+
 #### `ChannelNewsController` — `api/channelnews`
 Channel-scoped editorial CRUD. `POST /` and `PUT /{id}` accept `ChannelNewsRequest`; `POST /{id}/status` accepts `ChannelNewsStatusRequest`; all responses use `ChannelNewsContract`. `GET /` and `GET /{id}` require the channel-news view/manage permission, while mutations require the corresponding create/update/delete/manage permission. The selected `X-Channel-Id` is validated server-side.
 

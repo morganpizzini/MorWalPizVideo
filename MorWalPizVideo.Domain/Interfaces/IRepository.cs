@@ -100,6 +100,26 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<bool> UpsertByFormAndResponseIdAsync(CustomFormResponseDocument item);
     }
 
+    public interface IAskCampaignRepository : IRepository<AskCampaign>
+    {
+        Task<AskCampaign?> GetByChannelAndSlugAsync(string channelId, string slug);
+        Task<IList<AskCampaign>> GetByChannelIdAsync(string channelId);
+    }
+
+    public interface IAskSubmissionRepository : IRepository<AskSubmission>
+    {
+        Task<IList<AskSubmission>> GetByCampaignIdAsync(string campaignId, int limit = 500);
+        Task<int> CountByCampaignIdAsync(string campaignId);
+        Task<AskSubmission?> GetByIdempotencyKeyAsync(string campaignId, string idempotencyKey);
+        Task<bool> HasRecentDuplicateAsync(string campaignId, string contentHash, DateTime since);
+        Task<int> DeleteExpiredAsync(DateTime now);
+    }
+    public interface IAskReactionRepository : IRepository<AskReaction>
+    {
+        Task<bool> ExistsAsync(string submissionId, string fingerprint);
+        Task<int> CountBySubmissionIdAsync(string submissionId);
+    }
+
     // Insights repositories
     public interface IInsightTopicRepository : IRepository<InsightTopic> { }
     public interface IInsightNewsItemRepository : IRepository<InsightNewsItem> { }

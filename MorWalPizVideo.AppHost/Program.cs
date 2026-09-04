@@ -17,6 +17,14 @@ builder.AddJavaScriptApp("morwalpizvideo", "../frontend", "dev:morwalpizvideo-cl
     .WithHttpEndpoint(port: 5174, env: "PORT")
     .InGroup(frontendGroup);
 
+builder.AddJavaScriptApp("ask", "../frontend", "dev:ask-client")
+    .WithReference(frontoffice)
+    .WaitFor(frontoffice)
+    .WithEnvironment("ASPNETCORE_URLS", frontoffice.GetEndpoint("https"))
+    .WithEnvironment("BROWSER", "none")
+    .WithHttpEndpoint(port: 5176, env: "PORT")
+    .InGroup(frontendGroup);
+
 builder.AddJavaScriptApp("morwalpizshop", "../frontend", "dev:morwalpiz-shop-client")
     .WithReference(frontoffice)
     .WaitFor(frontoffice)

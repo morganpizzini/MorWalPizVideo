@@ -119,7 +119,29 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Key: "calendarevents_creation_desc",
             Collection: DbCollections.CalendarEvents,
             Name: "ix_calendarevents_creation_desc",
-            Keys: new BsonDocument("creationDateTime", -1))
+            Keys: new BsonDocument("creationDateTime", -1)),
+        new(
+            Key: "askcampaigns_channelid_slug.unique",
+            Collection: DbCollections.AskCampaigns,
+            Name: "ux_askcampaigns_channelid_slug",
+            Keys: new BsonDocument { { "channelId", 1 }, { "slug", 1 } },
+            Unique: true),
+        new(
+            Key: "asksubmissions_campaignid_submittedat_desc",
+            Collection: DbCollections.AskSubmissions,
+            Name: "ix_asksubmissions_campaignid_submittedat_desc",
+            Keys: new BsonDocument { { "campaignId", 1 }, { "submittedAt", -1 } }),
+        new(
+            Key: "asksubmissions_retentionuntil",
+            Collection: DbCollections.AskSubmissions,
+            Name: "ix_asksubmissions_retentionuntil",
+            Keys: new BsonDocument("retentionUntil", 1)),
+        new(
+            Key: "askreactions_submissionid_fingerprint.unique",
+            Collection: DbCollections.AskReactions,
+            Name: "ux_askreactions_submissionid_fingerprint",
+            Keys: new BsonDocument { { "submissionId", 1 }, { "fingerprint", 1 } },
+            Unique: true)
     ];
 
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =

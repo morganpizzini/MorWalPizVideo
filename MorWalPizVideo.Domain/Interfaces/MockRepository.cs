@@ -368,6 +368,50 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class AskCampaignMockRepository(IMockScenario scenario)
+        : BaseMockRepository<AskCampaign>(scenario, "askCampaigns"), IAskCampaignRepository
+    {
+        public async Task<AskCampaign?> GetByChannelAndSlugAsync(string channelId, string slug)
+            => (await GetItemsAsync(x => x.ChannelId == channelId && x.Slug == slug)).FirstOrDefault();
+
+        public async Task<IList<AskCampaign>> GetByChannelIdAsync(string channelId)
+            => await GetItemsAsync(x => x.ChannelId == channelId);
+    }
+
+    public sealed class AskSubmissionMockRepository(IMockScenario scenario)
+        : BaseMockRepository<AskSubmission>(scenario, "askSubmissions"), IAskSubmissionRepository
+    {
+        public async Task<IList<AskSubmission>> GetByCampaignIdAsync(string campaignId, int limit = 500)
+            => (await GetItemsAsync(x => x.CampaignId == campaignId)).OrderByDescending(x => x.SubmittedAt)
+                .Take(Math.Clamp(limit, 1, 5000)).ToList();
+
+        public async Task<int> CountByCampaignIdAsync(string campaignId)
+            => (await GetItemsAsync(x => x.CampaignId == campaignId)).Count;
+
+        public async Task<AskSubmission?> GetByIdempotencyKeyAsync(string campaignId, string idempotencyKey)
+            => (await GetItemsAsync(x => x.CampaignId == campaignId && x.IdempotencyKey == idempotencyKey)).FirstOrDefault();
+
+        public async Task<bool> HasRecentDuplicateAsync(string campaignId, string contentHash, DateTime since)
+            => (await GetItemsAsync(x => x.CampaignId == campaignId && x.ContentHash == contentHash && x.SubmittedAt >= since)).Count > 0;
+
+        public async Task<int> DeleteExpiredAsync(DateTime now)
+        {
+            var expired = await GetItemsAsync(x => x.RetentionUntil <= now);
+            foreach (var item in expired) await DeleteItemAsync(item.Id);
+            return expired.Count;
+        }
+    }
+
+    public sealed class AskReactionMockRepository(IMockScenario scenario)
+        : BaseMockRepository<AskReaction>(scenario, "askReactions"), IAskReactionRepository
+    {
+        public async Task<bool> ExistsAsync(string submissionId, string fingerprint)
+            => (await GetItemsAsync(x => x.SubmissionId == submissionId && x.Fingerprint == fingerprint)).Count > 0;
+
+        public async Task<int> CountBySubmissionIdAsync(string submissionId)
+            => (await GetItemsAsync(x => x.SubmissionId == submissionId)).Count;
+    }
+
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
     {
         public CategoryMockRepository(IMockScenario scenario) : base(scenario, "categories")

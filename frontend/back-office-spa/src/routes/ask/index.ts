@@ -1,0 +1,1 @@
+export { Component, Loader, Action, default } from './index.tsx';

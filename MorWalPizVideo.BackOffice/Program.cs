@@ -339,6 +339,8 @@ builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
+builder.Services.AddScoped<IAskService, AskService>();
+builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
 
 if (enableMock)
 {
@@ -383,6 +385,9 @@ if (enableMock)
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
+    builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
+    builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
@@ -462,6 +467,9 @@ else
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
+    builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionRepository>();
+    builder.Services.AddScoped<IAskReactionRepository, AskReactionRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
 
@@ -631,6 +639,9 @@ if (enableHangFire)
         job => job.ExecuteAsync(),
         youtubeSyncCron
     );
+
+    var askRetentionCron = app.Configuration["Ask:RetentionCron"] ?? "0 2 * * *";
+    RecurringJob.AddOrUpdate<AskRetentionJob>(AskRetentionJob.JobId, job => job.ExecuteAsync(), askRetentionCron);
 }
 
 app.MapDefaultEndpoints();

@@ -1,0 +1,31 @@
+{
+  "name": "ask.client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "build:ssr": "vite build --mode ssr --ssr src/entry-server.tsx --outDir dist-ssr",
+    "build:all": "npm run build && npm run build:ssr",
+    "dev": "vite",
+    "serve": "node server.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@morwalpizvideo/services": "1.0.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-google-recaptcha-v3": "^1.10.1",
+    "react-helmet-async": "^3.0.0",
+    "react-router": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vitest": "^2.1.9"
+  }
+}

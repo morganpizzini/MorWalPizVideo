@@ -11,7 +11,7 @@ export default async function action({ request }: { request: Request }) {
       return channelActionError(response, 'Unable to delete channel');
     }
 
-    return data({ success: true }, { status: 200 });
+    return data({ success: true, cacheInvalidation: response?.cacheInvalidation }, { status: 200 });
   } catch (error) {
     return channelActionError(error, 'Unable to delete channel');
   }

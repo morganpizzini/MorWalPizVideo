@@ -426,6 +426,53 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class AskCampaignRepository(IMongoDatabase database)
+        : BaseRepository<AskCampaign>(database, DbCollections.AskCampaigns), IAskCampaignRepository
+    {
+        public Task<AskCampaign?> GetByChannelAndSlugAsync(string channelId, string slug)
+            => _collection.Find(x => x.ChannelId == channelId && x.Slug == slug).FirstOrDefaultAsync();
+
+        public async Task<IList<AskCampaign>> GetByChannelIdAsync(string channelId)
+            => await _collection.Find(x => x.ChannelId == channelId).ToListAsync();
+    }
+
+    public sealed class AskSubmissionRepository(IMongoDatabase database)
+        : BaseRepository<AskSubmission>(database, DbCollections.AskSubmissions), IAskSubmissionRepository
+    {
+        public async Task<IList<AskSubmission>> GetByCampaignIdAsync(string campaignId, int limit = 500)
+            => await _collection.Find(x => x.CampaignId == campaignId)
+                .SortByDescending(x => x.SubmittedAt).Limit(Math.Clamp(limit, 1, 5000)).ToListAsync();
+
+        public Task<int> CountByCampaignIdAsync(string campaignId)
+            => CountAsync(x => x.CampaignId == campaignId);
+
+        public Task<AskSubmission?> GetByIdempotencyKeyAsync(string campaignId, string idempotencyKey)
+            => _collection.Find(x => x.CampaignId == campaignId && x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync();
+
+        public Task<bool> HasRecentDuplicateAsync(string campaignId, string contentHash, DateTime since)
+            => _collection.Find(x => x.CampaignId == campaignId && x.ContentHash == contentHash && x.SubmittedAt >= since)
+                .Limit(1).AnyAsync();
+
+        public async Task<int> DeleteExpiredAsync(DateTime now)
+            => (int)(await _collection.DeleteManyAsync(x => x.RetentionUntil <= now)).DeletedCount;
+
+        private async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<AskSubmission, bool>> predicate)
+            => (int)await _collection.CountDocumentsAsync(predicate);
+    }
+
+    public sealed class AskReactionRepository(IMongoDatabase database)
+        : BaseRepository<AskReaction>(database, DbCollections.AskReactions), IAskReactionRepository
+    {
+        public Task<bool> ExistsAsync(string submissionId, string fingerprint)
+            => _collection.Find(x => x.SubmissionId == submissionId && x.Fingerprint == fingerprint).Limit(1).AnyAsync();
+
+        public Task<int> CountBySubmissionIdAsync(string submissionId)
+            => CountAsync(x => x.SubmissionId == submissionId);
+
+        private async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<AskReaction, bool>> predicate)
+            => (int)await _collection.CountDocumentsAsync(predicate);
+    }
+
     public class ConfigurationRepository : BaseRepository<MorWalPizConfiguration>, IConfigurationRepository
     {
         public ConfigurationRepository(IMongoDatabase database) : base(database, DbCollections.Configurations)

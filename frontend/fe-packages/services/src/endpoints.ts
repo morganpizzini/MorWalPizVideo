@@ -94,6 +94,17 @@ const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
 const SHORTLINKS_LOGS = `${SHORTLINKS_DETAIL}/logs`;
 const DASHBOARD_SUMMARY = `${baseEndpoint}/dashboard/summary`;
 const DASHBOARD_VIDEO_PUBLICATIONS = `${baseEndpoint}/dashboard/video-publications`;
+const ASK_CAMPAIGN = `${baseEndpoint}/ask/{channelName}/{campaignSlug}`;
+const ASK_SUBMISSIONS = `${ASK_CAMPAIGN}/submissions`;
+const ASK_ADMIN = `${baseEndpoint}/ask`;
+const ASK_ADMIN_DETAIL = `${ASK_ADMIN}/{id}`;
+const ASK_ADMIN_SUBMISSIONS = `${ASK_ADMIN_DETAIL}/submissions`;
+const ASK_ADMIN_MODERATE = `${ASK_ADMIN}/submissions/{id}/moderate`;
+const ASK_ADMIN_RESPONSE = `${ASK_ADMIN}/submissions/{id}/response`;
+const ASK_ADMIN_ANALYTICS = `${ASK_ADMIN_DETAIL}/analytics`;
+const ASK_ADMIN_SHARE = `${ASK_ADMIN_DETAIL}/share`;
+const ASK_ADMIN_EXPORT = `${ASK_ADMIN_DETAIL}/export`;
+const ASK_REACTIONS = `${ASK_SUBMISSIONS}/{submissionId}/reactions`;
 
 export default {
 
@@ -183,6 +194,17 @@ export default {
     SHORTLINKS_LOGS,
     DASHBOARD_SUMMARY,
     DASHBOARD_VIDEO_PUBLICATIONS,
+    ASK_CAMPAIGN,
+    ASK_SUBMISSIONS,
+    ASK_ADMIN,
+    ASK_ADMIN_DETAIL,
+    ASK_ADMIN_SUBMISSIONS,
+    ASK_ADMIN_MODERATE,
+    ASK_ADMIN_RESPONSE,
+    ASK_ADMIN_ANALYTICS,
+    ASK_ADMIN_SHARE,
+    ASK_ADMIN_EXPORT,
+    ASK_REACTIONS,
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

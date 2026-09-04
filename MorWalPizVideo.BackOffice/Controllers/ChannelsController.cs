@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
@@ -55,6 +56,7 @@ public class ChannelsController : ApplicationControllerBase
     private readonly IVideoAuthorizationService channelAuthorization;
     private readonly ICrossApiService crossApiService;
     private readonly IBlobService blobService;
+    private readonly ILogger<ChannelsController> logger;
 
     public ChannelsController(
         IYTService _ytService,
@@ -62,7 +64,8 @@ public class ChannelsController : ApplicationControllerBase
         IChannelContextResolver channelContextResolver,
         IVideoAuthorizationService channelAuthorization,
         ICrossApiService crossApiService,
-        IBlobService blobService)
+        IBlobService blobService,
+        ILogger<ChannelsController> logger)
     {
         ytService = _ytService;
         _dataService = dataService;
@@ -70,6 +73,7 @@ public class ChannelsController : ApplicationControllerBase
         this.channelAuthorization = channelAuthorization;
         this.crossApiService = crossApiService;
         this.blobService = blobService;
+        this.logger = logger;
     }
 
     [HttpGet]
@@ -130,9 +134,8 @@ public class ChannelsController : ApplicationControllerBase
             Socials = socials,
             IsSHIT = request.IsSHIT
         });
-        await InvalidatePublicShootingItaCachesAsync();
-
-        return NoContent();
+        var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+        return Ok(new { success = true, cacheInvalidation });
     }
 
     [HttpPut("{id}")]
@@ -164,8 +167,8 @@ public class ChannelsController : ApplicationControllerBase
             Socials = socials,
             IsSHIT = request.IsSHIT
         });
-        await InvalidatePublicShootingItaCachesAsync();
-        return NoContent();
+        var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+        return Ok(new { success = true, cacheInvalidation });
     }
 
     [HttpDelete("{id}")]
@@ -184,8 +187,8 @@ public class ChannelsController : ApplicationControllerBase
         }
 
         await _dataService.RemoveChannelById(id);
-        await InvalidatePublicShootingItaCachesAsync();
-        return NoContent();
+        var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+        return Ok(new { success = true, cacheInvalidation });
     }
 
     [HttpPost("{id}/logo")]
@@ -212,12 +215,17 @@ public class ChannelsController : ApplicationControllerBase
                 ChannelLogoStorageKey = storageKey,
                 ChannelLogoUrl = blobService.GetImageUrl(storageKey)
             });
-            await InvalidatePublicShootingItaCachesAsync();
-            return Ok(ContractUtils.Convert(existing with
+            var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+            return Ok(new
             {
-                ChannelLogoStorageKey = storageKey,
-                ChannelLogoUrl = blobService.GetImageUrl(storageKey)
-            }));
+                success = true,
+                channel = ContractUtils.Convert(existing with
+                {
+                    ChannelLogoStorageKey = storageKey,
+                    ChannelLogoUrl = blobService.GetImageUrl(storageKey)
+                }),
+                cacheInvalidation
+            });
         }
         catch (Exception exception)
         {
@@ -241,21 +249,35 @@ public class ChannelsController : ApplicationControllerBase
         {
             await blobService.DeleteImageAsync(existing.ChannelLogoStorageKey);
         }
-        await InvalidatePublicShootingItaCachesAsync();
-        return NoContent();
+        var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+        return Ok(new { success = true, cacheInvalidation });
     }
 
-    private async Task InvalidatePublicShootingItaCachesAsync()
+    private async Task<CacheInvalidationResult> TryInvalidatePublicShootingItaCachesAsync()
     {
-        await crossApiService.ResetCache(CacheKeys.Channels);
-        await crossApiService.ResetCache(CacheKeys.Matches);
-        await crossApiService.ResetCache(CacheKeys.QuickLinks);
-        await crossApiService.ResetCache(CacheKeys.ChannelNews);
-        await crossApiService.PurgeCache(CacheKeys.Channels);
-        await crossApiService.PurgeCache(CacheKeys.Matches);
-        await crossApiService.PurgeCache(CacheKeys.QuickLinks);
-        await crossApiService.PurgeCache(ApiTagCacheKeys.ChannelNews);
+        try
+        {
+            await crossApiService.ResetCache(CacheKeys.Channels);
+            await crossApiService.ResetCache(CacheKeys.Matches);
+            await crossApiService.ResetCache(CacheKeys.QuickLinks);
+            await crossApiService.ResetCache(CacheKeys.ChannelNews);
+            await crossApiService.PurgeCache(CacheKeys.Channels);
+            await crossApiService.PurgeCache(CacheKeys.Matches);
+            await crossApiService.PurgeCache(CacheKeys.QuickLinks);
+            await crossApiService.PurgeCache(ApiTagCacheKeys.ChannelNews);
+            return new CacheInvalidationResult("completed", null, null);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Public shooting ITA cache invalidation failed after channel mutation. CacheInvalidationStatus={CacheInvalidationStatus} WarningCode={WarningCode}", "failed", "public_cache_invalidation_failed");
+            return new CacheInvalidationResult(
+                "failed",
+                "public_cache_invalidation_failed",
+                "The operation completed, but the public cache was not reset.");
+        }
     }
+
+    private sealed record CacheInvalidationResult(string Status, string? WarningCode, string? Message);
 
     private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)
     {

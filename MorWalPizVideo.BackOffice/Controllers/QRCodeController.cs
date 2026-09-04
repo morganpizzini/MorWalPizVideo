@@ -8,8 +8,15 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 
 public class QRCodeController : ApplicationControllerBase
 {
+    [HttpGet("ask")]
+    public async Task<IActionResult> GenerateAskQRCode(string data)
+        => await GenerateQRCodeInternal(data, null);
+
     [HttpPost]
     public async Task<IActionResult> GenerateQRCode(IFormFile logoFile, string data)
+        => await GenerateQRCodeInternal(data, logoFile);
+
+    private async Task<IActionResult> GenerateQRCodeInternal(string data, IFormFile? logoFile)
     {
         try
         {
@@ -22,7 +29,7 @@ public class QRCodeController : ApplicationControllerBase
 
                     using var qrCodeImage = Image.Load(qrCodeAsPngByteArr);
 
-                    if (logoFile != null && logoFile.Length > 0)
+                    if (logoFile is not null && logoFile.Length > 0)
                     {
                         using var logo = await LoadImageFromFormFile(logoFile);
                         if (logo != null)

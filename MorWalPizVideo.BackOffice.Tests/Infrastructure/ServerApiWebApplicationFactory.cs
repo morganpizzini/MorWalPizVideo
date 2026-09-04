@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.ServerAPI.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
@@ -14,6 +18,7 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
     public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
     public QuickLinksMockRepository? QuickLinksRepository => Services.GetRequiredService<IQuickLinksRepository>() as QuickLinksMockRepository;
     public ChannelNewsMockRepository? ChannelNewsRepository => Services.GetRequiredService<IChannelNewsRepository>() as ChannelNewsMockRepository;
+    public AskCampaignMockRepository? AskCampaignRepository => Services.GetRequiredService<IAskCampaignRepository>() as AskCampaignMockRepository;
 
     static ServerApiWebApplicationFactory()
     {
@@ -44,5 +49,19 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
                 ["YouTubeChannelId"] = PrimaryScenario.ChannelId
             });
         });
+
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IRecaptchaService>();
+            services.AddSingleton<IRecaptchaService, TestRecaptchaService>();
+            services.RemoveAll<IAskModerationProvider>();
+            services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
+        });
     }
+}
+
+public sealed class TestRecaptchaService : IRecaptchaService
+{
+    public Task<bool> VerifyAsync(string token, string remoteIp, string expectedAction, CancellationToken ct = default)
+        => Task.FromResult(token == "valid-token");
 }

@@ -29,6 +29,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   try {
+    let cacheInvalidation: unknown;
     if (id) {
       const payload = {
         channelId: id,
@@ -41,6 +42,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       if (getChannelApiError(response)) {
         return channelActionError(response, 'Unable to update channel');
       }
+      cacheInvalidation = response?.cacheInvalidation;
     } else {
       const payload = {
         channelName,
@@ -53,8 +55,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       if (getChannelApiError(response)) {
         return channelActionError(response, 'Unable to create channel');
       }
+      cacheInvalidation = response?.cacheInvalidation;
     }
-    return data({ success: true }, { status: id ? 200 : 201 });
+    return data({ success: true, cacheInvalidation }, { status: id ? 200 : 201 });
   } catch (error) {
     return channelActionError(error, id ? 'Unable to update channel' : 'Unable to create channel');
   }

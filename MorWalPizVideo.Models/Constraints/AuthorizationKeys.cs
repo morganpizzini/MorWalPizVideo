@@ -64,6 +64,12 @@ public static class AuthorizationPermissionKeys
   public const string ChannelNewsUpdate = "channelnews.update";
   public const string ChannelNewsDelete = "channelnews.delete";
 
+  public const string AskView = "ask.view";
+  public const string AskManage = "ask.manage";
+  public const string AskCreate = "ask.create";
+  public const string AskUpdate = "ask.update";
+  public const string AskModerate = "ask.moderate";
+
   public const string PagesView = "pages.view";
   public const string PagesManage = "pages.manage";
   public const string PagesCreate = "pages.create";

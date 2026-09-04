@@ -21,5 +21,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Competitions = "competitions";
         public const string ChannelNews = "channelnews";
         public const string Navigation = "navigation";
+        public const string Ask = "ask";
     }
 }

@@ -7,6 +7,7 @@ import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import GenericTable from '@components/Table';
 import { ColumnDef } from '@tanstack/react-table';
+import { hasCacheInvalidationWarning } from '../response';
 
 const ChannelLinks: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
@@ -68,6 +69,9 @@ const ChannelLinks: React.FC = () => {
 
     if (result.success) {
       toast.show('Success', 'Channel deleted successfully', { variant: 'success' });
+      if (hasCacheInvalidationWarning(result)) {
+        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+      }
     }
   }, [result]);
 

@@ -119,6 +119,21 @@ namespace MorWalPiz.Contracts
             };
         }
 
+        public static AskCampaignContract Convert(AskCampaign entity, int submissionCount = 0) => new()
+        {
+            Id = entity.Id, ChannelId = entity.ChannelId, Title = entity.Title, Description = entity.Description,
+            Slug = entity.Slug, Status = entity.Status, Policy = entity.Policy, SubmissionCount = submissionCount
+        };
+
+        public static AskSubmissionContract Convert(AskSubmission entity) => new()
+        {
+            Id = entity.Id, CampaignId = entity.CampaignId, Text = entity.Text, Name = entity.Name,
+            ModerationStatus = entity.ModerationStatus, SubmittedAt = entity.SubmittedAt
+            ,ResponseContent = entity.ResponseContent, ResponseAuthor = entity.ResponseAuthor,
+            ResponseCreatedAt = entity.ResponseCreatedAt, ResponseVisibility = entity.ResponseVisibility,
+            ReactionCount = entity.ReactionCount
+        };
+
         public static PageContract Convert(Page entity) => new()
         {
             Id = entity.Id,

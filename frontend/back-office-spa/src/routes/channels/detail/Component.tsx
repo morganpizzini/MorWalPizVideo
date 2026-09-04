@@ -8,6 +8,7 @@ import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import GenericErrorList from '@components/GenericErrorList';
 import { useChannelContext } from '../../../contexts/ChannelContext';
+import { hasCacheInvalidationWarning } from '../response';
 
 const ChannelDetail: React.FC = () => {
   const entity = useLoaderData<Channel>();
@@ -37,6 +38,9 @@ const ChannelDetail: React.FC = () => {
 
     if (result.success) {
       toast.show('Success', 'Channel deleted successfully', { variant: 'success' });
+      if (hasCacheInvalidationWarning(result)) {
+        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+      }
       navigate('..');
     }
   }, [result, navigate]);
@@ -77,9 +81,12 @@ const ChannelDetail: React.FC = () => {
         return;
       }
 
-      setLogoUrl(response?.channelLogoUrl ?? '');
+      setLogoUrl(response?.channel?.channelLogoUrl ?? '');
       setLogoFile(null);
       toast.show('Success', 'Channel logo uploaded successfully', { variant: 'success' });
+      if (hasCacheInvalidationWarning(response)) {
+        toast.show('Warning', response.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+      }
     } catch {
       toast.show('Logo upload failed', 'Unable to upload channel logo', { variant: 'danger' });
     } finally {
@@ -98,6 +105,9 @@ const ChannelDetail: React.FC = () => {
 
       setLogoUrl('');
       toast.show('Success', 'Channel logo removed successfully', { variant: 'success' });
+      if (hasCacheInvalidationWarning(response)) {
+        toast.show('Warning', response.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+      }
     } catch {
       toast.show('Logo removal failed', 'Unable to remove channel logo', { variant: 'danger' });
     } finally {

@@ -1,0 +1,11 @@
+import express from 'express';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const { render } = await import('./dist-ssr/entry-server.js');
+const app = express();
+const dist = resolve('dist');
+writeFileSync(resolve(dist, 'env-config.js'), `window.ENV={API_BASE_URL:'${process.env.API_BASE_URL ?? ''}',VITE_API_BASE_URL:'${process.env.VITE_API_BASE_URL ?? ''}'};`);
+const template = readFileSync(resolve(dist, 'index.html'), 'utf8');
+app.use(express.static(dist, { index: false }));
+app.get('*', async (request, response) => { try { const host = request.headers['x-forwarded-host'] ?? request.headers.host ?? 'ask.morwalpiz.com'; const protocol = request.headers['x-forwarded-proto'] ?? 'https'; const result = await render(new Request(`${protocol}://${host}${request.originalUrl}`)); response.status(200).send(template.replace('<!--ssr-head-->', result.head).replace('<div id="root"></div>', `<div id="root">${result.html}</div>`)); } catch (error) { if (error instanceof Response && error.status === 404) return response.status(404).send(template); console.error(error); response.status(500).send(template); } });
+app.listen(process.env.PORT ?? 5180, () => console.log('Ask SSR listening'));

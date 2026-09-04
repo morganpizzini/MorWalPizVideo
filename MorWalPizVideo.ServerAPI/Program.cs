@@ -111,6 +111,8 @@ builder.Services.AddScoped<IQuickLinksService, QuickLinksService>();
 builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
+builder.Services.AddScoped<IAskService, AskService>();
+builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
 
 if (enableMock)
 {
@@ -140,6 +142,9 @@ if (enableMock)
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
+    builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
+    builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
@@ -175,6 +180,9 @@ else
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
+    builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionRepository>();
+    builder.Services.AddScoped<IAskReactionRepository, AskReactionRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();

@@ -37,7 +37,7 @@ export default async function action({ request }: { request: Request }) {
       return channelActionError(response, 'Unable to create channel');
     }
 
-    return data({ success: true }, { status: 201 });
+    return data({ success: true, cacheInvalidation: response?.cacheInvalidation }, { status: 201 });
   } catch (error) {
     return channelActionError(error, 'Unable to create channel');
   }

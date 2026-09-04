@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,7 +36,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var response = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new { channelName = "Updated name" });
     var updated = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
 
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.Equal("Updated name", updated!.ChannelName);
   }
 
@@ -62,8 +63,8 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var updated = await _factory.YTChannelRepository.GetItemAsync(created.Id);
 
-    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
-    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
     Assert.Equal("https://morwalpiz.com/links", updated!.ShortLinkUrl);
     Assert.Equal("youtube", Assert.Single(updated.Socials).Provider);
   }
@@ -97,7 +98,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.True(created.IsSHIT);
   }
 
@@ -115,7 +116,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Cache test channel",
       yTChannelId = channelId
     });
-    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
 
@@ -125,13 +126,13 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Cache test Shooting channel",
       isSHIT = true
     });
-    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
 
     _factory.CrossApiService.Clear();
     var deleteResponse = await client.DeleteAsync($"/api/Channels/{channelId}");
-    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
   }
@@ -180,11 +181,33 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var removeResponse = await client.DeleteAsync($"/api/Channels/{channelId}/logo");
     var removed = (await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
-    Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, removeResponse.StatusCode);
     Assert.Equal(string.Empty, removed!.ChannelLogoStorageKey);
     Assert.Equal(string.Empty, removed.ChannelLogoUrl);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
+  }
+
+  [Fact]
+  public async Task Channel_create_succeeds_with_warning_when_cache_invalidation_fails()
+  {
+    var channelId = $"UC{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    _factory.CrossApiService.ShouldFail = true;
+
+    var response = await client.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = "Cache warning channel",
+      yTChannelId = channelId
+    });
+    var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+    var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True(payload.GetProperty("success").GetBoolean());
+    Assert.Equal("failed", payload.GetProperty("cacheInvalidation").GetProperty("status").GetString());
+    Assert.Equal("public_cache_invalidation_failed", payload.GetProperty("cacheInvalidation").GetProperty("warningCode").GetString());
+    Assert.Equal("Cache warning channel", created.ChannelName);
   }
 
   private static async Task<MemoryStream> CreatePngAsync(int width, int height)
@@ -365,7 +388,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).SingleOrDefault();
 
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.NotNull(created);
     Assert.Equal("Created channel", created!.ChannelName);
   }

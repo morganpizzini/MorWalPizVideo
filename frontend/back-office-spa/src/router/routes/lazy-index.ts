@@ -153,6 +153,11 @@ const routeDefinitions: RouteConfig[] = [
     feature('create', () => import('../../routes/apiKeys/form')),
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/apiKeys/detail')), feature('edit', () => import('../../routes/apiKeys/form'))] },
   ]),
+  group('ask', () => import('../../routes/ask'), [
+    indexFeature('', () => import('../../routes/ask')),
+    feature('create', () => import('../../routes/ask/create')),
+    { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/ask/detail')), feature('edit', () => import('../../routes/ask/edit'))] },
+  ]),
 ];
 
 function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {

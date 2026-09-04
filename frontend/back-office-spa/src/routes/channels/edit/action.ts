@@ -23,7 +23,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       return channelActionError(response, 'Unable to update channel');
     }
 
-    return data({ success: true }, { status: 200 });
+    return data({ success: true, cacheInvalidation: response?.cacheInvalidation }, { status: 200 });
   } catch (error) {
     return channelActionError(error, 'Unable to update channel');
   }

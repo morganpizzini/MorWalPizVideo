@@ -145,6 +145,7 @@ export type {
 } from './legal';
 
 // Insights exports
+export type { AskCampaign, AskPolicy, AskSubmission, AskCampaignRequest } from './ask';
 export {
   InsightNewsStatus,
   ContentPlanType,

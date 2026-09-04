@@ -81,3 +81,18 @@ export function channelActionError(response: unknown, fallbackMessage: string) {
 
   return data(error, { status: apiError?.status ?? 500 });
 }
+
+export interface ChannelMutationResult {
+  success: true;
+  cacheInvalidation?: {
+    status?: string;
+    warningCode?: string | null;
+    message?: string | null;
+  };
+  channel?: unknown;
+}
+
+export function hasCacheInvalidationWarning(result: unknown): result is ChannelMutationResult {
+  return isRecord(result) && result.success === true &&
+    isRecord(result.cacheInvalidation) && result.cacheInvalidation.status === 'failed';
+}

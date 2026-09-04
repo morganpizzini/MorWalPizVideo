@@ -14,6 +14,7 @@ import type {
     SaveNavigationDTO,
     UpdatePageDTO,
 } from '@morwalpizvideo/models';
+import type { AskCampaign, AskSubmission, AskCampaignRequest } from '@morwalpizvideo/models';
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -39,6 +40,37 @@ export const submitCustomFormResponse = (formId: string, answers: AnyAnswer[]): 
     post(ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, { customFormId: encodeURIComponent(formId) }), {
         answers: serializeFormAnswers(answers)
     });
+
+export interface AskPublicCampaign {
+    channelName: string;
+    title: string;
+    description: string;
+    slug: string;
+    maxSubmissionLength: number;
+    allowNamedSubmissions: boolean;
+    nameRequired: boolean;
+    recaptchaRequired: boolean;
+    questions: Array<{ id: string; text: string; reactionCount: number; response?: { content: string; author: string; createdAt: string } | null }>;
+}
+
+export const getAskCampaign = (channelName: string, campaignSlug: string): Promise<AskPublicCampaign> =>
+    get(ComposeUrl(endpoints.ASK_CAMPAIGN, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug) }));
+
+export const submitAsk = (channelName: string, campaignSlug: string, text: string, recaptchaToken: string, name?: string): Promise<{ status: string }> =>
+    post(ComposeUrl(endpoints.ASK_SUBMISSIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug) }), { text, recaptchaToken, name }, '', { 'Idempotency-Key': crypto.randomUUID() });
+export const reactToAskSubmission = (channelName: string, campaignSlug: string, submissionId: string): Promise<{ accepted: boolean; count: number }> =>
+    post(ComposeUrl(endpoints.ASK_REACTIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug), submissionId }), {});
+
+export const fetchAskCampaigns = (): Promise<AskCampaign[]> => get(endpoints.ASK_ADMIN);
+export const getAskCampaignAdmin = (id: string): Promise<AskCampaign> => get(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }));
+export const createAskCampaign = (request: AskCampaignRequest): Promise<AskCampaign> => post(endpoints.ASK_ADMIN, request);
+export const updateAskCampaign = (id: string, request: AskCampaignRequest): Promise<AskCampaign> => put(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }), request);
+export const fetchAskSubmissions = (id: string): Promise<AskSubmission[]> => get(ComposeUrl(endpoints.ASK_ADMIN_SUBMISSIONS, { id }));
+export const moderateAskSubmission = (id: string, status: AskSubmission['moderationStatus'], note: string): Promise<AskSubmission> => post(ComposeUrl(endpoints.ASK_ADMIN_MODERATE, { id }), { status, note });
+export const respondToAskSubmission = (id: string, content: string, author: string, visibility: number): Promise<AskSubmission> => post(ComposeUrl(endpoints.ASK_ADMIN_RESPONSE, { id }), { content, author, visibility });
+export const getAskAnalytics = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_ANALYTICS, { id }));
+export const getAskShare = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_SHARE, { id }));
+export const exportAskSubmissions = (id: string, includeName = false) => getFile(ComposeUrl(endpoints.ASK_ADMIN_EXPORT, { id }), { includeName });
 
 /**
  * Auth token provider function type
@@ -253,8 +285,8 @@ async function getCsrfToken(): Promise<string> {
     return csrfTokenPromise;
 }
 
-export function post(url: string, obj: any, overrideHeaderEnv: string = '') {
-    return call(url, 'POST', obj, overrideHeaderEnv);
+export function post(url: string, obj: any, overrideHeaderEnv: string = '', extraHeaders?: Record<string, string>) {
+    return call(url, 'POST', obj, overrideHeaderEnv, undefined, false, false, undefined, extraHeaders);
 }
 
 export function postFormData(url: string, formData: FormData, overrideHeaderEnv: string = '') {
@@ -311,8 +343,9 @@ interface ResponseOptions {
  * // Get full response envelope including metadata
  * const fullResponse = await call('/api/products', 'GET', {}, '', undefined, false, false, { returnFullResponse: true });
  */
-export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false, responseOptions?: ResponseOptions) {
+export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false, responseOptions?: ResponseOptions, extraHeaders?: Record<string, string>) {
     const headers = new Headers();
+    Object.entries(extraHeaders ?? {}).forEach(([key, value]) => headers.set(key, value));
 
     // Add authorization header if user is authenticated
     const token = getAuthToken();

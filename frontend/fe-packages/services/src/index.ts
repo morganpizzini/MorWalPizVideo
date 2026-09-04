@@ -60,6 +60,8 @@ export {
     deleteSponsor
 } from './apiService';
 export { getActiveCustomForms, getCustomFormByUrl, submitCustomFormResponse } from './apiService';
+export { getAskCampaign, submitAsk, reactToAskSubmission, fetchAskCampaigns, getAskCampaignAdmin, createAskCampaign, updateAskCampaign, fetchAskSubmissions, moderateAskSubmission, respondToAskSubmission, getAskAnalytics, getAskShare, exportAskSubmissions } from './apiService';
+export type { AskPublicCampaign } from './apiService';
 
 // Endpoints exports
 export { default as endpoints } from './endpoints';

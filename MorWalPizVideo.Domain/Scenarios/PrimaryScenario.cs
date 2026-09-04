@@ -153,6 +153,9 @@ public class PrimaryScenario : BaseScenario
         Set("configurations", Array.Empty<MorWalPizConfiguration>());
         Set("customForms", Array.Empty<CustomForm>());
         Set("customFormResponses", Array.Empty<CustomFormResponseDocument>());
+        Set("askCampaigns", Array.Empty<AskCampaign>());
+        Set("askSubmissions", Array.Empty<AskSubmission>());
+        Set("askReactions", Array.Empty<AskReaction>());
         Set("insightTopics", Array.Empty<InsightTopic>());
         Set("insightNewsItems", Array.Empty<InsightNewsItem>());
         Set("insightContentPlans", Array.Empty<InsightContentPlan>());

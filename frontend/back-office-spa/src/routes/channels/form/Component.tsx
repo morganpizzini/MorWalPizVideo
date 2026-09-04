@@ -6,6 +6,7 @@ import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import { Channel, ChannelSocial } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
+import { hasCacheInvalidationWarning } from '../response';
 
 const ChannelForm: React.FC = () => {
   const entity = useLoaderData() as Channel | null;
@@ -48,6 +49,9 @@ const ChannelForm: React.FC = () => {
         isEditMode ? 'Channel updated successfully' : 'Channel created successfully',
         { variant: 'success' }
       );
+      if (hasCacheInvalidationWarning(result)) {
+        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+      }
       navigate('..');
     }
   }, [result, navigate, isEditMode]);
@@ -127,24 +131,31 @@ const ChannelForm: React.FC = () => {
 
         <Form.Label>Socials</Form.Label>
         {socials.map((social, index) => (
-          <div className="d-flex gap-2 mb-2" key={`${social.provider}-${index}`}>
-            <Form.Select aria-label={`Social provider ${index + 1}`} value={social.provider} onChange={e => updateSocial(index, 'provider', e.target.value)}>
+          <div className="row g-2 align-items-center mb-2" key={`${social.provider}-${index}`}>
+            <div className="col-12 col-md-3">
+              <Form.Select aria-label={`Social provider ${index + 1}`} value={social.provider} onChange={e => updateSocial(index, 'provider', e.target.value)}>
               <option value="">Select provider</option>
               <option value="instagram">Instagram</option>
               <option value="youtube">YouTube</option>
               <option value="reddit">Reddit</option>
               <option value="x">X</option>
               <option value="patreon">Patreon</option>
-            </Form.Select>
-            <Form.Control aria-label={`Social handler ${index + 1}`} value={social.handler} onChange={e => updateSocial(index, 'handler', e.target.value)} placeholder="Handle or public identifier" />
-            <Button type="button" variant="outline-danger" aria-label={`Remove social ${index + 1}`} onClick={() => setSocials(current => current.filter((_, socialIndex) => socialIndex !== index))}>Remove</Button>
+              </Form.Select>
+            </div>
+            <div className="col-12 col-md">
+              <Form.Control aria-label={`Social handler ${index + 1}`} value={social.handler} onChange={e => updateSocial(index, 'handler', e.target.value)} placeholder="Handle or public identifier" />
+            </div>
+            <div className="col-12 col-md-auto">
+              <Button type="button" variant="outline-danger" className="w-100" aria-label={`Remove social ${index + 1}`} onClick={() => setSocials(current => current.filter((_, socialIndex) => socialIndex !== index))}>Remove</Button>
+            </div>
           </div>
         ))}
-        <Button type="button" variant="outline-secondary" className="mb-3" onClick={() => setSocials(current => [...current, { provider: '', handler: '' }])}>Add social</Button>
-
-        <Button variant="success" disabled={isDisabled()} type="submit" className="mt-2">
-          {isEditMode ? 'Save Changes' : 'Create'}
-        </Button>
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <Button type="button" variant="outline-secondary" onClick={() => setSocials(current => [...current, { provider: '', handler: '' }])}>Add social</Button>
+          <Button variant="success" disabled={isDisabled()} type="submit">
+            {isEditMode ? 'Save Changes' : 'Create'}
+          </Button>
+        </div>
       </Form>
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
