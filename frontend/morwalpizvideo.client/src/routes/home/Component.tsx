@@ -180,8 +180,8 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
         <>
             {configuration[configKeys.STREAM_ENABLE] &&
                 <>
-                    <div className="alert alert-warning my-3 d-flex align-items-center justify-content-between" role="alert">
-                        <div>
+                    <div className="home-alert alert alert-warning my-3" role="alert">
+                        <div className="home-alert__copy">
                             <i className="fa fa-circle-exclamation me-2"></i>
                             <strong>ATTENZIONE:</strong> Una diretta è attualmente in corso! Non perdertela!
                         </div>
@@ -192,8 +192,8 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
                 </>
             }
             {activeForms && activeForms.length > 0 && activeForms.map((form: IndexForm) => (
-                <div key={form.id} className="alert alert-info my-3 d-flex align-items-center justify-content-between" role="alert">
-                    <div>
+                <div key={form.id} className="home-alert alert alert-info my-3" role="alert">
+                    <div className="home-alert__copy">
                         <i className="fa fa-clipboard-question me-2"></i>
                         <strong>NUOVO SONDAGGIO:</strong> {form.title}
                     </div>
@@ -223,24 +223,17 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
                     {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
                     {navigation?.headerItems.length ? <nav aria-label="Homepage menu" className="my-3 p-2 bg-white rounded d-flex flex-wrap gap-3">{navigation.headerItems.map(item => <PublicNavigationLink key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`} item={item} className="nav-link" />)}</nav> : null}
                     <div className="my-3 p-2 bg-white rounded content-filters">
-                        <div className="categories-container" role="group" aria-label="Filtra per categoria" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                        <div className="categories-container" role="group" aria-label="Filtra per categoria">
                             {allCategories.map((category) => {
                                 const includeCategory = availableCategories.includes(category);
                                 return (
                                     <button
                                         key={category}
-                                        className={`btn ${selectedCategories.includes(category)
+                                        className={`filter-option btn ${selectedCategories.includes(category)
                                             ? "btn-success"
-                                            : "btn-outline-secondary"}`}
+                                            : "btn-outline-secondary"} ${!includeCategory ? "is-unavailable" : ""}`}
                                         onClick={() => onToggleCategory(category)}
                                         aria-pressed={selectedCategories.includes(category)}
-                                        style={{
-                                            opacity: includeCategory ? 1 : 0.5,
-                                            marginRight: "10px",
-                                            cursor: includeCategory
-                                                ? "pointer"
-                                                : "not-allowed",
-                                        }}
                                         disabled={!includeCategory}
                                     >
                                         {category}
@@ -249,20 +242,16 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
                             })}
                         </div>
                         {allTags.length > 0 && (
-                            <div className="tags-container" role="group" aria-label="Filtra per tag" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <div className="tags-container" role="group" aria-label="Filtra per tag">
                                 {allTags.map((tag) => {
                                     const includeTag = availableTags.includes(tag);
                                     const isSelected = selectedTags.includes(tag);
                                     return (
                                         <button
                                             key={tag}
-                                            className={`btn btn-sm ${isSelected ? "btn-info" : "btn-outline-info"}`}
+                                            className={`filter-option btn btn-sm ${isSelected ? "btn-info" : "btn-outline-info"} ${!includeTag ? "is-unavailable" : ""}`}
                                             onClick={() => onToggleTag(tag)}
                                             aria-pressed={isSelected}
-                                            style={{
-                                                opacity: includeTag ? 1 : 0.5,
-                                                cursor: includeTag ? "pointer" : "not-allowed",
-                                            }}
                                             disabled={!includeTag}
                                         >
                                             #{tag}
