@@ -32,6 +32,9 @@ const PRODUCTS = `${baseEndpoint}/products`;
 
 // Sponsors
 const SPONSORS = `${baseEndpoint}/sponsors`;
+const NEWSLETTER_SUBSCRIBE = `${baseEndpoint}/newsletter/subscribe`;
+const NEWSLETTER_CONFIRM = `${baseEndpoint}/newsletter/confirm`;
+const NEWSLETTER_UNSUBSCRIBE = `${baseEndpoint}/newsletter/unsubscribe`;
 
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
@@ -63,6 +66,9 @@ export default {
     NAVIGATION,
     PRODUCTS,
     SPONSORS,
+    NEWSLETTER_SUBSCRIBE,
+    NEWSLETTER_CONFIRM,
+    NEWSLETTER_UNSUBSCRIBE,
     CONFIGURATION_STREAM,
     QUICK_LINKS,
     QUICK_LINKS_DETAIL,

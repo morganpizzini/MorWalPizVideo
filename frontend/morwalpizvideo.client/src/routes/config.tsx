@@ -28,6 +28,7 @@ import quickLinksLoader from "./quickLinks/loader";
 import ChannelNews from "./channelNews/Component";
 import channelNewsLoader from "./channelNews/loader";
 import type { RouteObject } from "react-router";
+import Newsletter from "./newsletter/Component";
 
 export const routes: RouteObject[] = [
     {
@@ -107,6 +108,10 @@ export const routes: RouteObject[] = [
                     {
                         path: "cookie-policy",
                         element: <CookiePolicy />,
+                    },
+                    {
+                        path: "newsletter",
+                        element: <Newsletter />,
                     },
                     {
                         path: "stream",

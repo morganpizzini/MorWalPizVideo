@@ -12,6 +12,104 @@ using System.Text.RegularExpressions;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
+    public sealed class NewsletterRepository(IMongoDatabase database) : BaseRepository<Newsletter>(database, DbCollections.Newsletters), INewsletterRepository;
+    public sealed class NewsletterTemplateRepository(IMongoDatabase database) : BaseRepository<NewsletterTemplate>(database, DbCollections.NewsletterTemplates), INewsletterTemplateRepository;
+    public sealed class NewsletterUserRepository(IMongoDatabase database) : BaseRepository<NewsletterUser>(database, DbCollections.NewsletterUsers), INewsletterUserRepository
+    {
+        public Task<NewsletterUser?> ConsumeConfirmationAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default)
+            => ConsumeAsync(channelId, tokenHash, now, true, cancellationToken);
+
+        public Task<NewsletterUser?> ConsumeUnsubscribeAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default)
+            => ConsumeAsync(channelId, tokenHash, now, false, cancellationToken);
+
+        private async Task<NewsletterUser?> ConsumeAsync(string channelId, string tokenHash, DateTime now, bool confirmation, CancellationToken cancellationToken)
+        {
+            var tokenFilter = confirmation
+                ? Builders<NewsletterUser>.Filter.And(Builders<NewsletterUser>.Filter.Eq(x => x.ConfirmationTokenHash, tokenHash), Builders<NewsletterUser>.Filter.Gt(x => x.ConfirmationExpiresAt, now))
+                : Builders<NewsletterUser>.Filter.And(Builders<NewsletterUser>.Filter.Eq(x => x.UnsubscribeTokenHash, tokenHash), Builders<NewsletterUser>.Filter.Gt(x => x.UnsubscribeExpiresAt, now));
+            var filter = Builders<NewsletterUser>.Filter.And(Builders<NewsletterUser>.Filter.Eq(x => x.ChannelId, channelId), tokenFilter);
+            var update = confirmation
+                ? Builders<NewsletterUser>.Update.Set(x => x.ConfirmationTokenHash, null).Set(x => x.ConfirmationExpiresAt, null).Set(x => x.Status, NewsletterUserStatus.Subscribed)
+                : Builders<NewsletterUser>.Update.Set(x => x.UnsubscribeTokenHash, null).Set(x => x.UnsubscribeTokenCiphertext, null).Set(x => x.UnsubscribeExpiresAt, null).Set(x => x.Status, NewsletterUserStatus.Unsubscribed);
+            return await _collection.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<NewsletterUser> { ReturnDocument = ReturnDocument.Before }, cancellationToken);
+        }
+    }
+    public sealed class NewsletterRecipientRepository(IMongoDatabase database) : BaseRepository<NewsletterRecipient>(database, DbCollections.NewsletterRecipients), INewsletterRecipientRepository, INewsletterRecipientDispatchRepository
+    {
+        public async Task EnsurePendingAsync(NewsletterRecipient recipient, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<NewsletterRecipient>.Filter.And(
+                Builders<NewsletterRecipient>.Filter.Eq(x => x.ChannelId, recipient.ChannelId),
+                Builders<NewsletterRecipient>.Filter.Eq(x => x.NewsletterId, recipient.NewsletterId),
+                Builders<NewsletterRecipient>.Filter.Eq(x => x.NewsletterUserId, recipient.NewsletterUserId));
+            var options = new UpdateOptions { IsUpsert = true };
+            var update = Builders<NewsletterRecipient>.Update
+                .SetOnInsert(x => x.ChannelId, recipient.ChannelId)
+                .SetOnInsert(x => x.NewsletterId, recipient.NewsletterId)
+                .SetOnInsert(x => x.NewsletterUserId, recipient.NewsletterUserId)
+                .SetOnInsert(x => x.Language, recipient.Language)
+                .SetOnInsert(x => x.Status, NewsletterRecipientStatus.Pending)
+                .SetOnInsert(x => x.IdempotencyKey, recipient.IdempotencyKey);
+            await _collection.UpdateOneAsync(filter, update, options, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<NewsletterRecipient>> ClaimBatchAsync(string channelId, string newsletterId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default)
+        {
+            var claimed = new List<NewsletterRecipient>();
+            var filter = Builders<NewsletterRecipient>.Filter.And(
+                Builders<NewsletterRecipient>.Filter.Eq(x => x.ChannelId, channelId),
+                Builders<NewsletterRecipient>.Filter.Eq(x => x.NewsletterId, newsletterId),
+                Builders<NewsletterRecipient>.Filter.Or(
+                    Builders<NewsletterRecipient>.Filter.Eq(x => x.Status, NewsletterRecipientStatus.Pending),
+                    Builders<NewsletterRecipient>.Filter.And(
+                        Builders<NewsletterRecipient>.Filter.Eq(x => x.Status, NewsletterRecipientStatus.Sending),
+                        Builders<NewsletterRecipient>.Filter.Lt(x => x.LastAttemptAt, now - lease))));
+            var update = Builders<NewsletterRecipient>.Update
+                .Set(x => x.Status, NewsletterRecipientStatus.Sending)
+                .Set(x => x.LastAttemptAt, now)
+                .Inc(x => x.AttemptCount, 1);
+            for (var index = 0; index < batchSize; index++)
+            {
+                var item = await _collection.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<NewsletterRecipient> { ReturnDocument = ReturnDocument.After, Sort = Builders<NewsletterRecipient>.Sort.Ascending(x => x.CreationDateTime) }, cancellationToken);
+                if (item is null) break;
+                claimed.Add(item);
+            }
+            return claimed;
+        }
+
+        public Task MarkSentAsync(string recipientId, string? providerMessageId, DateTime sentAt, CancellationToken cancellationToken = default) =>
+            UpdateStatusAsync(recipientId, NewsletterRecipientStatus.Sent, sentAt, providerMessageId, null, cancellationToken);
+
+        public Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default) =>
+            UpdateStatusAsync(recipientId, NewsletterRecipientStatus.Suppressed, suppressedAt, null, reason, cancellationToken);
+
+        public Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default) =>
+            UpdateStatusAsync(recipientId, retryable ? NewsletterRecipientStatus.Pending : NewsletterRecipientStatus.Failed, failedAt, null, reason, cancellationToken);
+
+        private async Task UpdateStatusAsync(string id, NewsletterRecipientStatus status, DateTime at, string? providerMessageId, string? reason, CancellationToken cancellationToken)
+        {
+            var filter = ObjectId.TryParse(id, out var objectId)
+                ? Builders<NewsletterRecipient>.Filter.Eq("_id", objectId)
+                : Builders<NewsletterRecipient>.Filter.Eq("_id", id);
+            var update = Builders<NewsletterRecipient>.Update.Set(x => x.Status, status).Set(x => x.FailureReason, reason);
+            if (providerMessageId is not null) update = update.Set(x => x.ProviderMessageId, providerMessageId);
+            if (status == NewsletterRecipientStatus.Sent) update = update.Set(x => x.SentAt, at);
+            if (status == NewsletterRecipientStatus.Failed) update = update.Set(x => x.FailedAt, at);
+            await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        }
+    }
+    public sealed class NewsletterEventRepository(IMongoDatabase database) : BaseRepository<NewsletterEvent>(database, DbCollections.NewsletterEvents), INewsletterEventRepository
+    {
+        public async Task RecordClickAsync(string channelId, string newsletterId, string shortLinkCode, DateTime occurredAt, CancellationToken cancellationToken = default)
+        {
+            var context = shortLinkCode.Trim().ToLowerInvariant();
+            var id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"click:{channelId}:{newsletterId}:{context}")))[..24].ToLowerInvariant();
+            var filter = Builders<NewsletterEvent>.Filter.Eq(x => x.Id, id);
+            var update = Builders<NewsletterEvent>.Update.Inc(x => x.Count, 1).SetOnInsert(x => x.ChannelId, channelId).SetOnInsert(x => x.NewsletterId, newsletterId).SetOnInsert(x => x.Type, NewsletterEventType.Click).SetOnInsert(x => x.OccurredAt, occurredAt).SetOnInsert(x => x.ShortLinkContext, context);
+            await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, cancellationToken);
+        }
+    }
+
     public class YouTubeContentRepository : BaseRepository<YouTubeContent>, IYouTubeContentRepository
     {
         public YouTubeContentRepository(IMongoDatabase database) : base(database, DbCollections.YouTubeContent)

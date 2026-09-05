@@ -35,7 +35,8 @@ const distDir = resolve('dist');
 const envConfig = `window.ENV = {
   VITE_API_BASE_URL: '${process.env.VITE_API_BASE_URL ?? ''}',
   API_BASE_URL: '${process.env.API_BASE_URL ?? ''}',
-  REACT_APP_API_URL: '${process.env.REACT_APP_API_URL ?? ''}'
+    REACT_APP_API_URL: '${process.env.REACT_APP_API_URL ?? ''}',
+    VITE_MORWALPIZ_CHANNEL_ID: '${process.env.VITE_MORWALPIZ_CHANNEL_ID ?? ''}'
 };`;
 writeFileSync(resolve(distDir, 'env-config.js'), envConfig);
 

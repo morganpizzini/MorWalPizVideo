@@ -52,6 +52,8 @@ export {
     saveNavigation,
     getPublicNavigation,
     fetchSponsors,
+    subscribeNewsletter, confirmNewsletter, unsubscribeNewsletter,
+    fetchNewsletters, getNewsletter, createNewsletter, updateNewsletter, changeNewsletterState, sendNewsletter, previewNewsletter, fetchNewsletterSubscribers, fetchNewsletterStats, fetchNewsletterTemplates, createNewsletterTemplate,
     getSponsor,
     createSponsor,
     createSponsorWithImage,

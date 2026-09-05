@@ -1,4 +1,5 @@
 import endpoints, { ComposeUrl } from './endpoints';
+import frontendEndpoints from './endpoints-frontend';
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvideo/models';
 import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
 import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
@@ -115,7 +116,8 @@ const scopedBackOfficePrefixes = [
     '/api/navigation',
     '/api/insights',
     '/api/dashboard',
-    '/api/apikeys'
+    '/api/apikeys',
+    '/api/newsletters'
 ];
 
 function isScopedBackOfficeRequest(url: string): boolean {
@@ -646,6 +648,27 @@ export const getPublicNavigation = (): Promise<PublicNavigation | null> =>
 
 export const fetchSponsors = (): Promise<Sponsor[]> =>
     get(endpoints.SPONSORS);
+
+export const subscribeNewsletter = (payload: { channelId: string; email: string; language: string; recaptchaToken: string }) =>
+    post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
+
+export const confirmNewsletter = (payload: { channelId: string; token: string }) =>
+    post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
+
+export const unsubscribeNewsletter = (payload: { channelId: string; token: string }) =>
+    post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
+
+export const fetchNewsletters = () => get(endpoints.NEWSLETTERS);
+export const getNewsletter = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }));
+export const createNewsletter = (request: unknown) => post(endpoints.NEWSLETTERS, request);
+export const updateNewsletter = (id: string, request: unknown) => put(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }), request);
+export const changeNewsletterState = (id: string, state: string) => post(ComposeUrl(endpoints.NEWSLETTERS_STATE, { id }), { state });
+export const sendNewsletter = (id: string) => post(ComposeUrl(endpoints.NEWSLETTERS_SEND, { id }), {});
+export const previewNewsletter = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_PREVIEW, { id }));
+export const fetchNewsletterSubscribers = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_SUBSCRIBERS, { id }));
+export const fetchNewsletterStats = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_STATS, { id }));
+export const fetchNewsletterTemplates = () => get(endpoints.NEWSLETTER_TEMPLATES);
+export const createNewsletterTemplate = (request: unknown) => post(endpoints.NEWSLETTER_TEMPLATES, request);
 
 export const getSponsor = (id: string): Promise<Sponsor> =>
     get(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));

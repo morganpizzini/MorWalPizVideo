@@ -19,9 +19,11 @@ using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
+builder.Services.Configure<NewsletterSmtpOptions>(builder.Configuration.GetSection("Newsletter:Smtp"));
 builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
 
@@ -59,6 +61,20 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("newsletter-public", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"newsletter:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{context.Request.Query["channelId"].ToString()}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("Newsletter:PublicRateLimit:PermitLimit", 10),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("Newsletter:PublicRateLimit:WindowMinutes", 1)),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
 // Configure Azure KeyVault if enabled
@@ -113,6 +129,9 @@ builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
 builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
+builder.Services.AddScoped<INewsletterService, NewsletterService>();
+    builder.Services.AddSingleton<SmtpMockService>();
+    builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
 
 if (enableMock)
 {
@@ -149,6 +168,11 @@ if (enableMock)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
+    builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
+    builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
+    builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientMockRepository>();
+    builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
 
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
@@ -187,6 +211,12 @@ else
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
+    builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
+    builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
+    builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientRepository>();
+    builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
+    builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
 
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
@@ -340,6 +370,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 
 // ADR-002 follow-up (TD-007): fail closed outside Development instead of falling back to an open policy.
 if (app.Environment.IsDevelopment())

@@ -141,7 +141,34 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.AskReactions,
             Name: "ux_askreactions_submissionid_fingerprint",
             Keys: new BsonDocument { { "submissionId", 1 }, { "fingerprint", 1 } },
-            Unique: true)
+            Unique: true),
+        new(
+            Key: "newsletterusers.channelid_emailhash.unique",
+            Collection: DbCollections.NewsletterUsers,
+            Name: "ux_newsletterusers_channelid_emailhash",
+            Keys: new BsonDocument { { "channelId", 1 }, { "emailHash", 1 } },
+            Unique: true),
+        new(
+            Key: "newsletterusers.channelid_confirmationtokenhash",
+            Collection: DbCollections.NewsletterUsers,
+            Name: "ix_newsletterusers_channelid_confirmationtokenhash",
+            Keys: new BsonDocument { { "channelId", 1 }, { "confirmationTokenHash", 1 } }),
+        new(
+            Key: "newsletterusers.channelid_unsubscribetokenhash",
+            Collection: DbCollections.NewsletterUsers,
+            Name: "ix_newsletterusers_channelid_unsubscribetokenhash",
+            Keys: new BsonDocument { { "channelId", 1 }, { "unsubscribeTokenHash", 1 } }),
+        new(
+            Key: "newsletterrecipients.channelid_newsletterid_userid.unique",
+            Collection: DbCollections.NewsletterRecipients,
+            Name: "ux_newsletterrecipients_channelid_newsletterid_userid",
+            Keys: new BsonDocument { { "channelId", 1 }, { "newsletterId", 1 }, { "newsletterUserId", 1 } },
+            Unique: true),
+        new(
+            Key: "newsletterevents.channelid_newsletterid_type_occurredat",
+            Collection: DbCollections.NewsletterEvents,
+            Name: "ix_newsletterevents_channelid_newsletterid_type_occurredat",
+            Keys: new BsonDocument { { "channelId", 1 }, { "newsletterId", 1 }, { "type", 1 }, { "occurredAt", -1 } })
     ];
 
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =

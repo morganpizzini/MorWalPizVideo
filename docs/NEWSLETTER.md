@@ -1,0 +1,27 @@
+# Newsletter
+
+## Delivered slice
+
+Newsletter documents, templates, users, recipients and events are separate Mongo collections and all carry `ChannelId`. Public routes are `POST /api/newsletter/subscribe`, `/confirm` and `/unsubscribe`; the subscribe response is deliberately identical for new and existing addresses. Confirmation and unsubscribe tokens are 32 random bytes, stored only as SHA-256 hashes, expire and are single-use/idempotent. Subscriber email values are AES-encrypted using `Newsletter:EncryptionKey`, never a source-controlled value. The public client is `/newsletter?channelId=<configured-channel-id>`.
+
+BackOffice routes are `GET/POST /api/newsletters`, `GET /api/newsletters/{id}`, `POST /api/newsletters/{id}/state`, `POST /api/newsletters/{id}/send`, `GET /api/newsletters/{id}/preview`, `/subscribers`, `/stats`, and `GET/POST /api/newsletters/templates`. They require the existing authentication and `RequireChannelScope`; no channel id is accepted from the request body.
+
+The newsletter state machine rejects invalid transitions and sent content is represented by the immutable template/section snapshot on the newsletter document. Repositories have Mongo and mock implementations.
+
+## Email and Hangfire
+
+`Newsletter:Smtp:Host`, `Port`, `EnableSsl`, `Username`, `Password`, and `From` are configuration-only values. They may be supplied through environment variables, user secrets or Key Vault. `SmtpMockService` is registered for mock scenarios. When `FeatureManagement:EnableHangFire` is true, `ConnectionStrings:HangfireConnection` is mandatory and SQL Server storage is always used; in-memory storage is not used for newsletter work. The checked-in BackOffice default enables Hangfire with an empty placeholder, so deployment must provide the secret connection string or startup fails fast. The `/hangfire` dashboard uses the existing authenticated admin-group filter.
+
+Sending is durable only when Hangfire is activated: the send endpoint provisions recipients by `(ChannelId, NewsletterId, NewsletterUserId)`, claims leases in bounded batches, records `Pending/Sending/Sent/Failed/Bounced/Suppressed`, and enqueues the next batch. The explicit retry policy is five Hangfire retries (`AutomaticRetry(Attempts = 5)`); transient failures remain pending, while malformed addresses and SMTP 5xx failures suppress the subscriber and prevent future deliveries. SMTP has no atomic transaction spanning provider acceptance and Mongo persistence: a process failure between those boundaries can cause a provider retry or duplicate delivery, so the idempotency key and generated `Message-Id` are retained for reconciliation. `Newsletter:BatchSize` and `Newsletter:SendingLeaseMinutes` control batching. The mock provider exposes `Sent`, `Messages` and `Clear()` for assertions.
+
+The bounce endpoint is `POST /api/newsletter/webhooks/bounce`. It accepts only an HMAC-SHA256 signature in `X-Newsletter-Signature` using `Newsletter:WebhookSigningKey`, does not assume a provider payload beyond channel and provider message id, and is idempotent for an already-bounced recipient/event.
+
+## Privacy and tracking
+
+No open pixel is emitted. Short-link association remains the existing ShortLinks redirect engine; this slice does not add a second redirect. Newsletter section `ShortLinkCode` is rendered as `Newsletter:ShortLinkBaseUrl/<code>?newsletterId=<id>&channelId=<id>`, and the redirect aggregates a bounded `(ChannelId, NewsletterId, ShortLinkCode)` event. No email, IP or User-Agent is persisted for analytics. Retention and suppression policy must be configured before activation. The legal owner, contact and consent text are intentionally not invented: deployment must provide them in the privacy policy and channel configuration.
+
+## Indexes, tests and risks
+
+The BackOffice startup manifest now applies unique/lookup indexes for `(channelId, emailHash)`, token hashes, recipient `(channelId, newsletterId, newsletterUserId)`, and event `(channelId, newsletterId, type, occurredAt)`. Public subscribe/confirm/unsubscribe use the dedicated `newsletter-public` fixed-window limiter keyed by remote address and channel, configurable through `Newsletter:PublicRateLimit`. `NewsletterStateTests` remains green; focused API, SMTP/job, webhook, click-context and authorization tests are still required before production activation. Specs Pepperbox are outside this implementation.
+
+E2E workflow: configure encryption, SMTP/webhook secrets and Hangfire SQL storage; apply startup indexes; create a template and newsletter in the channel; move it through preview to `Approved`; call `send`; inspect recipient state and provider/mock messages; confirm/unsubscribe through the public routes; send a signed bounce and verify recipient/event state. AI and translation remain optional.

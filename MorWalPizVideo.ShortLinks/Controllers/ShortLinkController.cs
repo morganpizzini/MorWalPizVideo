@@ -4,6 +4,8 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
+using MorWalPizVideo.Domain;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Shortlinks.Controllers
 {
@@ -13,12 +15,14 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         private IShortLinkDataService _shortlinkDataService;
         private readonly IMorWalPizCache cache;
         private readonly IConfiguration configuration;
+        private readonly INewsletterEventRepository newsletterEventRepository;
 
-        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration)
+        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository)
         {
             cache = memoryCache;
             _shortlinkDataService = shortLinkDataService;
             this.configuration = configuration;
+            this.newsletterEventRepository = newsletterEventRepository;
         }
 
         private async Task<ShortLink?> FindShortLinkInContent(string code)
@@ -103,6 +107,10 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             // Increment click count
             await UpdateShortLinkClickCount(shortLink);
+            var newsletterId = Request.Query["newsletterId"].ToString();
+            var newsletterChannelId = Request.Query["channelId"].ToString();
+            if (!string.IsNullOrWhiteSpace(newsletterId) && !string.IsNullOrWhiteSpace(newsletterChannelId))
+                await newsletterEventRepository.RecordClickAsync(newsletterChannelId, newsletterId, shortLink.Code, DateTime.UtcNow, HttpContext.RequestAborted);
 
             // Handle different link types
             string linkQuerystring = !string.IsNullOrEmpty(shortLink.QueryString) ? $"&{shortLink.QueryString}" : string.Empty;

@@ -89,6 +89,9 @@ const routeDefinitions: RouteConfig[] = [
     feature('create', () => import('../../routes/channelNews/form')),
     { path: ':id', Component: Outlet, children: [feature('edit', () => import('../../routes/channelNews/form'))] },
   ]),
+  group('newsletters', () => import('../../routes/newsletters'), [
+    indexFeature('', () => import('../../routes/newsletters')),
+  ]),
   group('categories', () => import('../../routes/categories/index'), [
     indexFeature('', () => import('../../routes/categories/index')),
     feature('create', () => import('../../routes/categories/create')),

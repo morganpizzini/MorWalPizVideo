@@ -12,6 +12,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
+using MorWalPizVideo.BackOffice.Configuration;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Configuration;
@@ -39,6 +40,7 @@ builder.Logging.AddProvider(new DiagnosticsLoggerProvider(diagnosticsProblemStor
 var featureFlags = builder.Configuration.GetSection("FeatureManagement");
 builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
+builder.Services.Configure<NewsletterSmtpOptions>(builder.Configuration.GetSection("Newsletter:Smtp"));
 
 var enableHangFire = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableHangFire);
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
@@ -408,6 +410,13 @@ if (enableMock)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
+    builder.Services.AddSingleton<SmtpMockService>();
+    builder.Services.AddSingleton<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
+    builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
+    builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
+    builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientMockRepository>();
+    builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
 
     // services
     builder.Services.AddScoped<ICrossApiService, MockCrossApiService>();
@@ -490,6 +499,12 @@ else
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
+    builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
+    builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
+    builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
+    builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientRepository>();
+    builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
 
     builder.Services.AddScoped<DataService>();
     builder.Services.AddScoped<IYTService, YTService>();
@@ -518,6 +533,7 @@ else
 
 builder.Services.AddScoped<IInsightIngestionService, InsightIngestionService>();
 builder.Services.AddScoped<IInsightCommentAnalysisService, InsightCommentAnalysisService>();
+builder.Services.AddScoped<INewsletterDispatchService, NewsletterDispatchService>();
 builder.Services.AddScoped<IInsightCommentAnalysisScheduler>(provider =>
     new InsightCommentAnalysisScheduler(provider.GetService<IBackgroundJobClient>()));
 
@@ -568,15 +584,7 @@ if (enableHangFire)
               .UseSimpleAssemblyNameTypeSerializer()
               .UseDefaultTypeSerializer();
 
-        if (!builder.Environment.IsDevelopment())
-        {
-            // run dotnet ef database update
-            config.UseSqlServerStorage(builder.Configuration.GetConnectionString("HangfireConnection"));
-        }
-        else
-        {
-            config.UseMemoryStorage();
-        }
+        config.UseSqlServerStorage(HangfireConfiguration.GetRequiredConnectionString(builder.Configuration));
     });
 
     // Add Hangfire Server (Background Worker)
@@ -623,7 +631,10 @@ app.UseExceptionHandler(errorApp =>
 if (enableHangFire)
 {
     // Use Hangfire Dashboard (accessible via /hangfire)
-    app.UseHangfireDashboard();
+    app.UseHangfireDashboard(options: new DashboardOptions
+    {
+        Authorization = [new HangfireAdminAuthorizationFilter()]
+    });
 
     // Schedule a recurring job
     RecurringJob.AddOrUpdate<NewsJobs>(

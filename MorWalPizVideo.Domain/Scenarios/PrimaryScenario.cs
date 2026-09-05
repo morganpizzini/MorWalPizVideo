@@ -86,6 +86,7 @@ public class PrimaryScenario : BaseScenario
         ]);
         Set("quickLinks", Array.Empty<QuickLinks>());
         Set("channelNews", Array.Empty<ChannelNews>());
+        Set("newsletterEvents", Array.Empty<NewsletterEvent>());
 
         var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);
         Set("users",

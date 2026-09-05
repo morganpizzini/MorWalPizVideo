@@ -20,7 +20,14 @@ public sealed class MongoIndexStartupInitializer(
             {
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var operationsService = scope.ServiceProvider.GetRequiredService<IMongoIndexOperationsService>();
-                await operationsService.ApplyAsync(["shortlinks.code.unique"], cancellationToken);
+                await operationsService.ApplyAsync([
+                    "shortlinks.code.unique",
+                    "newsletterusers.channelid_emailhash.unique",
+                    "newsletterusers.channelid_confirmationtokenhash",
+                    "newsletterusers.channelid_unsubscribetokenhash",
+                    "newsletterrecipients.channelid_newsletterid_userid.unique",
+                    "newsletterevents.channelid_newsletterid_type_occurredat"
+                ], cancellationToken);
                 return;
             }
             catch (Exception exception) when (

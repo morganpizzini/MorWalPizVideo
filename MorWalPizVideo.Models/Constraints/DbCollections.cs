@@ -62,5 +62,11 @@
         public const string UserChannels = "userChannels";
         public const string UserChannelOwners = "userChannelOwners";
         public const string UserRequests = "userRequests";
+
+        public const string Newsletters = "newsletters";
+        public const string NewsletterTemplates = "newsletterTemplates";
+        public const string NewsletterUsers = "newsletterUsers";
+        public const string NewsletterRecipients = "newsletterRecipients";
+        public const string NewsletterEvents = "newsletterEvents";
     }
 }

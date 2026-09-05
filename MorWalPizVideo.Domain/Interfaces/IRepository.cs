@@ -154,6 +154,26 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId);
     }
     public interface IUserRequestRepository : IRepository<UserRequest> { }
+    public interface INewsletterRepository : IRepository<Newsletter> { }
+    public interface INewsletterTemplateRepository : IRepository<NewsletterTemplate> { }
+    public interface INewsletterUserRepository : IRepository<NewsletterUser>
+    {
+        Task<NewsletterUser?> ConsumeConfirmationAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default);
+        Task<NewsletterUser?> ConsumeUnsubscribeAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default);
+    }
+    public interface INewsletterRecipientRepository : IRepository<NewsletterRecipient> { }
+    public interface INewsletterRecipientDispatchRepository
+    {
+        Task EnsurePendingAsync(NewsletterRecipient recipient, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<NewsletterRecipient>> ClaimBatchAsync(string channelId, string newsletterId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default);
+        Task MarkSentAsync(string recipientId, string? providerMessageId, DateTime sentAt, CancellationToken cancellationToken = default);
+        Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default);
+        Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default);
+    }
+    public interface INewsletterEventRepository : IRepository<NewsletterEvent>
+    {
+        Task RecordClickAsync(string channelId, string newsletterId, string shortLinkCode, DateTime occurredAt, CancellationToken cancellationToken = default);
+    }
 
     public interface IUserGroupRepository : IRepository<UserGroup>
     {

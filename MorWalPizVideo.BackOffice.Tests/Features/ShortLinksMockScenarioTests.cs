@@ -14,6 +14,30 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public class ShortLinksMockScenarioTests
 {
     [Fact]
+    public async Task Newsletter_redirect_aggregates_click_context_without_identity_data()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        await shortLinkRepository.AddItemAsync(new ShortLink("newsletter-link", "@morwalpiz", [])
+        {
+            LinkType = LinkType.YouTubeChannel,
+            Id = "newsletter-link-id"
+        });
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using var response = await client.GetAsync("/newsletter-link?newsletterId=newsletter-1&channelId=channel-a");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var events = factory.Services.GetRequiredService<INewsletterEventRepository>();
+        var click = (await events.GetItemsAsync(item => item.Type == NewsletterEventType.Click)).Single();
+        Assert.Equal("channel-a", click.ChannelId);
+        Assert.Equal("newsletter-1", click.NewsletterId);
+        Assert.Equal("newsletter-link", click.ShortLinkContext);
+        Assert.Equal(1, click.Count);
+        Assert.Null(click.ProviderMessageId);
+    }
+
+    [Fact]
     public async Task Ensure_video_short_link_creates_a_canonical_standalone_record()
     {
         await using var factory = new BackOfficeWebApplicationFactory();

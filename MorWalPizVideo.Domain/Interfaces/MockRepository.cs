@@ -353,6 +353,86 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class NewsletterMockRepository(IMockScenario scenario) : BaseMockRepository<Newsletter>(scenario, "newsletters"), INewsletterRepository;
+    public sealed class NewsletterTemplateMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterTemplate>(scenario, "newsletterTemplates"), INewsletterTemplateRepository;
+    public sealed class NewsletterUserMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterUser>(scenario, "newsletterUsers"), INewsletterUserRepository
+    {
+        public Task<NewsletterUser?> ConsumeConfirmationAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default)
+            => ConsumeAsync(channelId, tokenHash, now, true);
+
+        public Task<NewsletterUser?> ConsumeUnsubscribeAsync(string channelId, string tokenHash, DateTime now, CancellationToken cancellationToken = default)
+            => ConsumeAsync(channelId, tokenHash, now, false);
+
+        private Task<NewsletterUser?> ConsumeAsync(string channelId, string tokenHash, DateTime now, bool confirmation)
+        {
+            var item = scenario.Read<NewsletterUser>("newsletterUsers").FirstOrDefault(x => x.ChannelId == channelId && (confirmation ? x.ConfirmationTokenHash == tokenHash && x.ConfirmationExpiresAt > now : x.UnsubscribeTokenHash == tokenHash && x.UnsubscribeExpiresAt > now));
+            if (item is null) return Task.FromResult<NewsletterUser?>(null);
+            var updated = confirmation ? item with { Status = NewsletterUserStatus.Subscribed, ConfirmationTokenHash = null, ConfirmationExpiresAt = null } : item with { Status = NewsletterUserStatus.Unsubscribed, UnsubscribeTokenHash = null, UnsubscribeTokenCiphertext = null, UnsubscribeExpiresAt = null };
+            scenario.Replace("newsletterUsers", updated);
+            return Task.FromResult<NewsletterUser?>(item);
+        }
+    }
+    public sealed class NewsletterRecipientMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterRecipient>(scenario, "newsletterRecipients"), INewsletterRecipientRepository, INewsletterRecipientDispatchRepository
+    {
+        private readonly object sync = new();
+
+        public Task EnsurePendingAsync(NewsletterRecipient recipient, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                if (!scenario.Read<NewsletterRecipient>("newsletterRecipients").Any(item => item.ChannelId == recipient.ChannelId && item.NewsletterId == recipient.NewsletterId && item.NewsletterUserId == recipient.NewsletterUserId))
+                    scenario.Add("newsletterRecipients", recipient);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<NewsletterRecipient>> ClaimBatchAsync(string channelId, string newsletterId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var result = scenario.Read<NewsletterRecipient>("newsletterRecipients")
+                    .Where(item => item.ChannelId == channelId && item.NewsletterId == newsletterId &&
+                        (item.Status == NewsletterRecipientStatus.Pending || item.Status == NewsletterRecipientStatus.Sending && item.LastAttemptAt < now - lease))
+                    .OrderBy(item => item.CreationDateTime).Take(batchSize).ToList();
+                foreach (var item in result)
+                    scenario.Replace("newsletterRecipients", item with { Status = NewsletterRecipientStatus.Sending, LastAttemptAt = now, AttemptCount = item.AttemptCount + 1 });
+                return Task.FromResult<IReadOnlyList<NewsletterRecipient>>(result.Select(item => item with { Status = NewsletterRecipientStatus.Sending, LastAttemptAt = now, AttemptCount = item.AttemptCount + 1 }).ToList());
+            }
+        }
+
+        public Task MarkSentAsync(string recipientId, string? providerMessageId, DateTime sentAt, CancellationToken cancellationToken = default)
+        {
+            var item = scenario.Read<NewsletterRecipient>("newsletterRecipients").FirstOrDefault(x => x.Id == recipientId);
+            if (item is not null) scenario.Replace("newsletterRecipients", item with { Status = NewsletterRecipientStatus.Sent, ProviderMessageId = providerMessageId, SentAt = sentAt });
+            return Task.CompletedTask;
+        }
+
+        public Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default)
+        {
+            var item = scenario.Read<NewsletterRecipient>("newsletterRecipients").FirstOrDefault(x => x.Id == recipientId);
+            if (item is not null) scenario.Replace("newsletterRecipients", item with { Status = NewsletterRecipientStatus.Suppressed, FailureReason = reason, FailedAt = suppressedAt });
+            return Task.CompletedTask;
+        }
+
+        public Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default)
+        {
+            var item = scenario.Read<NewsletterRecipient>("newsletterRecipients").FirstOrDefault(x => x.Id == recipientId);
+            if (item is not null) scenario.Replace("newsletterRecipients", item with { Status = retryable ? NewsletterRecipientStatus.Pending : NewsletterRecipientStatus.Failed, FailureReason = reason, FailedAt = retryable ? null : failedAt });
+            return Task.CompletedTask;
+        }
+    }
+    public sealed class NewsletterEventMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterEvent>(scenario, "newsletterEvents"), INewsletterEventRepository
+    {
+        public Task RecordClickAsync(string channelId, string newsletterId, string shortLinkCode, DateTime occurredAt, CancellationToken cancellationToken = default)
+        {
+            var context = shortLinkCode.Trim().ToLowerInvariant();
+            var item = scenario.Read<NewsletterEvent>("newsletterEvents").FirstOrDefault(x => x.ChannelId == channelId && x.NewsletterId == newsletterId && x.Type == NewsletterEventType.Click && x.ShortLinkContext == context);
+            if (item is null) scenario.Add("newsletterEvents", new NewsletterEvent(channelId, newsletterId, NewsletterEventType.Click, occurredAt, ShortLinkContext: context));
+            else scenario.Replace("newsletterEvents", item with { Count = item.Count + 1 });
+            return Task.CompletedTask;
+        }
+    }
+
     public sealed class QuickLinksMockRepository(IMockScenario scenario)
         : BaseMockRepository<QuickLinks>(scenario, "quickLinks"), IQuickLinksRepository
     {

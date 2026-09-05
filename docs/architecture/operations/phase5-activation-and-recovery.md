@@ -1,18 +1,18 @@
 # Phase 5 Activation And Recovery (Deferred)
 
-This document is a future operations prompt only. Hangfire activation and all related recovery automation are deferred; nothing in the current video-platform implementation activates or changes Hangfire.
+This document remains an operations and recovery prompt. The checked-in BackOffice configuration now enables Hangfire, but activation is fail-fast until a durable SQL connection is supplied through secret configuration.
 
 This runbook defines production operations that source changes and local tests cannot prove. Do not mark Phase 5 complete from configuration review alone.
 
 ## Hangfire Activation (Future Only)
 
-Hangfire remains disabled by default through `FeatureManagement:EnableHangFire=false`. Keep `ConnectionStrings:HangfireConnection` as a secret placeholder until an approved durable SQL store exists. Enabling the flag without that connection fails startup before any server, scheduler, dashboard, storage, or Hangfire health probe is registered.
+The checked-in BackOffice default uses `FeatureManagement:EnableHangFire=true` with an empty `ConnectionStrings:HangfireConnection` placeholder. Keep the value secret and supply it only after an approved durable SQL store exists; leaving it empty fails startup before any server, scheduler, dashboard, storage, or Hangfire health probe is registered. The dashboard is restricted by the existing authenticated admin-group filter.
 
 Before activation:
 
 1. Provision and approve durable production storage.
 2. Grant only the application identity the required database permissions.
-3. Set the existing connection key, then enable the existing feature flag.
+3. Set the existing connection key in secret configuration; the feature flag is already enabled in the BackOffice application settings.
 4. Confirm `/hangfire` rejects anonymous and non-admin users and accepts only an authenticated `admin`.
 5. Confirm recurring IDs remain `news-job` and `youtube-sync-job`; retain `YouTubeSyncCron` for the latter.
 6. Restart the application and prove recurring-job continuity from the durable store.
@@ -79,7 +79,7 @@ Never record secrets, tokens, complete connection strings, or private Blob URLs.
 | Blob lifecycle and RBAC | No Azure commands, portal output, or reviewed assignment evidence attached | Pending administrator evidence |
 | Private checksum-verified restore | No Azure recovery drill record attached | Pending administrator evidence |
 | Credential revocation/rotation | No proof that historical credentials no longer authenticate | Pending administrator evidence |
-| Hangfire durable restart and retry/idempotency activation review | No approved store or restart drill attached; feature remains disabled | Pending future activation |
+| Hangfire durable restart and retry/idempotency activation review | No approved store or restart drill attached; connection remains an empty checked-in placeholder | Pending operations evidence |
 | Exported Hangfire/Blob telemetry and alerts | No production backend, threshold, or alert-firing evidence attached | Pending operations evidence |
 
 The accepted Phase 5 source implementation slices are complete. Phase 5 itself is **not complete** because the operational gates above remain open.
