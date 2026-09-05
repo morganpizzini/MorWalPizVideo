@@ -9,6 +9,8 @@ flowchart LR
     Browser -->|CORS HTTPS| API[Azure App Service: morwalpiz-serverapi.azurewebsites.net]
     Admin[Admin browser] -->|HTTPS| AdminSpa[Azure: morwalpiz-admin-spa.azurewebsites.net]
     AdminSpa -->|Credentialed CORS + CSRF| BO[Azure: morwalpiz-admin.azurewebsites.net]
+    Shooter[Range user] -->|HTTPS| ShootingClient[Azure App Service: Shooting Range SSR client]
+    ShootingClient -->|Credentialed CORS + CSRF| ShootingAPI[Shooting Range API]
     Follower[Follower] -->|HTTPS| Shorts[shorts.morwalpiz.com / ShortLinks]
     API --> Mongo[(MongoDB)]
     BO --> Mongo
@@ -16,6 +18,7 @@ flowchart LR
     API --> Blob[(Azure Blob Storage)]
     BO --> Blob
     BO --> Vault[Azure Key Vault]
+    ShootingAPI --> Mongo
 ```
 
 There is no source-backed production reverse proxy from `morwalpiz.com` to ServerAPI. The browser calls Azure ServerAPI directly. Relative `/api` proxy behavior is local-development behavior only.
@@ -27,6 +30,7 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - `https://morwalpiz-admin-spa.azurewebsites.net`: BackOffice SPA.
 - `https://morwalpiz-admin.azurewebsites.net`: BackOffice API; credentialed CORS accepts only the BackOffice SPA origin.
 - `https://shorts.morwalpiz.com`: branded redirects.
+- Shooting Range client and API hosts are environment-managed Azure App Services; the client receives the API origin through runtime `API_BASE_URL`.
 
 The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
 
@@ -39,6 +43,7 @@ Aspire AppHost starts:
 - ServerAPI, public client, and shop client.
 - BackOffice and BackOffice SPA.
 - ShortLinks.
+- Shooting Range API and client.
 
 It does not provision MongoDB, Key Vault, Shooting ITA, or either WPF application. Developers supply those dependencies or use mocks/fakes.
 
@@ -71,11 +76,12 @@ Frontend containers must use `VITE_API_BASE_URL` consistently. The shop client's
 For cross-cutting changes:
 
 1. Deploy backward-compatible Models/Domain/Contracts behavior.
-2. Deploy APIs with old and new routes/contracts active.
-3. Apply idempotent data backfills and indexes.
-4. Deploy frontend and desktop consumers.
-5. Observe legacy route/data usage.
-6. Remove compatibility paths only after a defined zero-use window.
+2. Apply or verify Mongo indexes and production configuration separately; deployment workflows do not perform these operations.
+3. Deploy the Shooting Range API and verify `/health` and `/health/ready`.
+4. Deploy the Shooting Range client with its immutable image SHA and verify `API_BASE_URL`, CSRF, and login against the API.
+5. Deploy other frontend and desktop consumers.
+6. Observe legacy route/data usage.
+7. Remove compatibility paths only after a defined zero-use window.
 
 ## Health And Rollback
 
@@ -83,6 +89,7 @@ For cross-cutting changes:
 - Readiness checks critical stores required by that host.
 - Optional external-provider failures are reported without necessarily failing liveness.
 - Rollback artifacts and configuration are retained for every release.
+- Shooting Range container images and API releases are addressed by immutable commit SHA; a previous SHA can be redeployed manually.
 - Database changes are additive until rollback risk has passed.
 - Blob migrations copy and checksum before switching references; old locations remain read-only during verification.
 

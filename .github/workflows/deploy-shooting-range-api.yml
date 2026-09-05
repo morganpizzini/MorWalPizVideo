@@ -1,0 +1,68 @@
+name: Deploy Shooting Range API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'MorWalPizVideo.ShootingRange/**'
+      - 'MorWalPizVideo.Domain/**'
+      - 'MorWalPizVideo.Models/**'
+      - 'MorWalPizVideo.MvcHelpers/**'
+      - 'MorWalPizVideo.ServiceDefaults/**'
+      - 'MorWalPiz.Contracts/**'
+      - 'MorWalPizVideo.BackOffice.Tests/**'
+      - '.github/workflows/deploy-shooting-range-api.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-test-and-deploy:
+    name: Build, Test and Deploy Shooting Range API
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore API and focused tests
+        run: |
+          dotnet restore MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj
+          dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+
+      - name: Build API
+        run: dotnet build MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-restore
+
+      - name: Run focused Shooting Range tests with mock repositories
+        env:
+          FeatureManagement__EnableMock: 'true'
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange
+
+      - name: Publish API
+        run: dotnet publish MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-build --output ./publish
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.SHOOTING_RANGE_API_APP_NAME }}
+          package: ./publish
+
+      - name: Azure logout
+        if: always()
+        run: az logout

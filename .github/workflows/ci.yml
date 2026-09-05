@@ -16,7 +16,7 @@ jobs:
     
     strategy:
       matrix:
-        app: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shoot-recorder]
+        app: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shoot-recorder]
     
     steps:
       - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
 
       - name: Build ${{ matrix.app }}
         working-directory: frontend
-        run: if [ "${{ matrix.app }}" = "ask.client" ]; then yarn workspace ask.client build:all; else yarn workspace ${{ matrix.app }} build; fi
+        run: if [ "${{ matrix.app }}" = "ask.client" ] || [ "${{ matrix.app }}" = "shooting-range.client" ]; then yarn workspace ${{ matrix.app }} build:all; else yarn workspace ${{ matrix.app }} build; fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -61,6 +61,8 @@ jobs:
             path: MorWalPizVideo.ServerAPI
           - name: ShortLinks
             path: MorWalPizVideo.ShortLinks
+          - name: ShootingRange
+            path: MorWalPizVideo.ShootingRange
     
     steps:
       - name: Checkout code

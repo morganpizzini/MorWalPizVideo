@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.YouTubeUtili
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.YouTubeUtilities.Tests", "MorWalPizVideo.YouTubeUtilities.Tests\MorWalPizVideo.YouTubeUtilities.Tests.csproj", "{42BD0339-F982-4183-B374-16B86962AF1A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.ShootingRange", "MorWalPizVideo.ShootingRange\MorWalPizVideo.ShootingRange.csproj", "{7D95A830-E5D9-462E-B21B-304F78529A04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -283,6 +285,18 @@ Global
 		{42BD0339-F982-4183-B374-16B86962AF1A}.Release|x64.Build.0 = Release|Any CPU
 		{42BD0339-F982-4183-B374-16B86962AF1A}.Release|x86.ActiveCfg = Release|Any CPU
 		{42BD0339-F982-4183-B374-16B86962AF1A}.Release|x86.Build.0 = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|x64.Build.0 = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Debug|x86.Build.0 = Debug|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x64.ActiveCfg = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x64.Build.0 = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x86.ActiveCfg = Release|Any CPU
+		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

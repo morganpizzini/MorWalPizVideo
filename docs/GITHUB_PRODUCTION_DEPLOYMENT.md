@@ -9,10 +9,12 @@ The project uses GitHub Actions for CI/CD with the following deployment strategy
 - **Frontend Applications**: Deployed as Docker containers to Azure Web App for Containers
   - `back-office-spa`
   - `morwalpizvideo.client`
+  - `shooting-range.client`
 
 - **Backend APIs**: Deployed as .NET applications to Azure Web Apps
   - `MorWalPizVideo.BackOffice`
   - `MorWalPizVideo.ServerAPI`
+  - `MorWalPizVideo.ShootingRange`
 
 ## Prerequisites
 
@@ -55,6 +57,8 @@ Add the following variables to the `production` environment:
 | `MORWALPIZVIDEO_CLIENT_APP_NAME` | Azure Web App name for client | `morwalpiz-client` |
 | `BACKOFFICE_API_APP_NAME` | Azure Web App name for BackOffice API | `morwalpiz-backoffice-api` |
 | `SERVERAPI_APP_NAME` | Azure Web App name for ServerAPI | `morwalpiz-serverapi` |
+| `SHOOTING_RANGE_API_APP_NAME` | Azure Web App name for Shooting Range API | `morwalpiz-shooting-range-api` |
+| `SHOOTING_RANGE_CLIENT_APP_NAME` | Azure Web App name for Shooting Range SSR client | `morwalpiz-shooting-range-client` |
 
 The shop deployment workflow uses the same `production` environment contract as the other container workflows. It authenticates with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`, logs in to ACR with `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`, and uses `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER` for image tags and deployment. It does not use the legacy `AZURE_CREDENTIALS` or `ACR_NAME` values.
 
@@ -126,6 +130,28 @@ az ad app federated-credential create \
 ```
 
 ### 5. Create Azure Web Apps for Frontend (Containers)
+
+The Shooting Range client is an SSR Node 22 container built from `frontend/shooting-range.client/Dockerfile`. It listens on port `5177` and receives the API origin at runtime through the `API_BASE_URL` App Service setting. The workflow publishes only the immutable `${GITHUB_SHA}` image; `latest` is intentionally not required for rollback safety.
+
+#### Shooting Range Client
+```bash
+az webapp create \
+  --resource-group rg-morwalpiz-prod \
+  --plan asp-morwalpiz-prod \
+  --name morwalpiz-shooting-range-client \
+  --deployment-container-image-name morwalpizregistry.azurecr.io/shooting-range-client:latest
+
+az webapp config container set \
+  --name morwalpiz-shooting-range-client \
+  --resource-group rg-morwalpiz-prod \
+  --docker-custom-image-name morwalpizregistry.azurecr.io/shooting-range-client:latest \
+  --docker-registry-server-url https://morwalpizregistry.azurecr.io
+
+az webapp config appsettings set \
+  --resource-group rg-morwalpiz-prod \
+  --name morwalpiz-shooting-range-client \
+  --settings WEBSITES_PORT=5177 API_BASE_URL=https://<shooting-range-api-host>
+```
 
 #### Back Office SPA
 ```bash
@@ -229,6 +255,26 @@ az webapp config appsettings set \
     ASPNETCORE_ENVIRONMENT=Production
 ```
 
+#### Shooting Range API
+```bash
+az webapp create \
+  --resource-group rg-morwalpiz-prod \
+  --plan asp-morwalpiz-api-prod \
+  --name morwalpiz-shooting-range-api \
+  --runtime "DOTNET:10.0"
+
+az webapp config appsettings set \
+  --resource-group rg-morwalpiz-prod \
+  --name morwalpiz-shooting-range-api \
+  --settings \
+    ASPNETCORE_ENVIRONMENT=Production \
+    FeatureManagement__EnableMock=false \
+    MorWalPizDatabase__ConnectionString="<managed-secret>" \
+    MorWalPizDatabase__DatabaseName=morwalpizvideo
+```
+
+The API exposes `/health`, `/health/live`, and `/health/ready`. Production must provide MongoDB settings and the existing authentication/CORS prerequisites separately; the workflow never provisions MongoDB, indexes, secrets, or data.
+
 ### 7. Configure App Service Plans
 
 If you need to create a new App Service Plan:
@@ -313,8 +359,9 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - [ ] Create Service Principal with appropriate roles
 - [ ] Configure federated credentials for OIDC (optional but recommended)
 - [ ] Create App Service Plan(s)
-- [ ] Create Azure Web Apps for frontends (2x container apps)
-- [ ] Create Azure Web Apps for backends (2x .NET apps)
+- [ ] Create Azure Web Apps for frontends (3x container apps)
+- [ ] Create Azure Web Apps for Shooting Range client (`WEBSITES_PORT=5177` and `API_BASE_URL`)
+- [ ] Create Azure Web Apps for backends (3x .NET apps)
 - [ ] Configure ACR pull permissions for Web App managed identities
 - [ ] Set WEBSITES_PORT=80 for frontend container apps
 
@@ -329,6 +376,8 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - [ ] Add `MORWALPIZVIDEO_CLIENT_APP_NAME` variable
 - [ ] Add `BACKOFFICE_API_APP_NAME` variable
 - [ ] Add `SERVERAPI_APP_NAME` variable
+- [ ] Add `SHOOTING_RANGE_API_APP_NAME` variable
+- [ ] Add `SHOOTING_RANGE_CLIENT_APP_NAME` variable
 
 ### Application Configuration
 - [ ] Configure frontend environment variables (API URLs)
@@ -379,6 +428,12 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 All deployment workflows can be triggered:
 1. **Automatically**: On push to `main` branch when relevant files change
 2. **Manually**: Via GitHub Actions UI using workflow_dispatch
+
+The Shooting Range workflows validate the API with mock repositories and the client with its real Yarn/Vite SSR build before Azure login or deployment. The API workflow watches the Shooting Range API, shared .NET projects, contracts, and focused tests. The client workflow watches the client, shared frontend packages, root manifests, its Dockerfile, and workflow.
+
+### Rollback
+
+Images are tagged with the immutable commit SHA. To roll back the Shooting Range client, redeploy a previously successful SHA through the workflow's manual path or set that image on the Web App. The API package must likewise be redeployed from the corresponding commit. Do not apply destructive Mongo changes during application rollout; indexes, configuration secrets, and any data preparation are separate operator-owned prerequisites and are not automated by these workflows. The Shooting Range collections and fields are additive in the current design.
 
 ## Security Best Practices
 

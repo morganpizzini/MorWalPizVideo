@@ -36,6 +36,17 @@ builder.AddJavaScriptApp("morwalpizshop", "../frontend", "dev:morwalpiz-shop-cli
 var backoffice = builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoffice")
                     .InGroup(backendGroup);
 
+var shootingRange = builder.AddProject<Projects.MorWalPizVideo_ShootingRange>("shooting-range")
+    .InGroup(backendGroup);
+
+builder.AddJavaScriptApp("shooting-range-client", "../frontend", "dev:shooting-range-client")
+    .WithReference(shootingRange)
+    .WaitFor(shootingRange)
+    .WithEnvironment("ASPNETCORE_URLS", shootingRange.GetEndpoint("https"))
+    .WithEnvironment("BROWSER", "none")
+    .WithHttpEndpoint(port: 5177, env: "PORT")
+    .InGroup(frontendGroup);
+
 builder.AddJavaScriptApp("back-office-spa", "../frontend", "dev:back-office-spa")
     .WithReference(backoffice)
     .WaitFor(backoffice)
