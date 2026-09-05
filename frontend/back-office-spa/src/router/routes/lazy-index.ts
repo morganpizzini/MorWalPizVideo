@@ -161,6 +161,13 @@ const routeDefinitions: RouteConfig[] = [
     feature('create', () => import('../../routes/ask/create')),
     { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/ask/detail')), feature('edit', () => import('../../routes/ask/edit'))] },
   ]),
+  group('faq', () => import('../../routes/faq'), [
+    indexFeature('', () => import('../../routes/faq')),
+    feature('create', () => import('../../routes/faq/form')),
+    feature('categories', () => import('../../routes/faq/categories')),
+    feature('candidates', () => import('../../routes/faq/candidates')),
+    { path: ':id', Component: Outlet, children: [indexFeature('', () => import('../../routes/faq/detail')), feature('edit', () => import('../../routes/faq/form'))] },
+  ]),
 ];
 
 function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {

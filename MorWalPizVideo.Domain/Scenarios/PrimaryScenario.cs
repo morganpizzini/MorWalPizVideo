@@ -156,6 +156,11 @@ public class PrimaryScenario : BaseScenario
         Set("customFormResponses", Array.Empty<CustomFormResponseDocument>());
         Set("askCampaigns", Array.Empty<AskCampaign>());
         Set("askSubmissions", Array.Empty<AskSubmission>());
+        Set("faqs", Array.Empty<Faq>());
+        Set("faqCategories", Array.Empty<FaqCategory>());
+        Set("faqAnswers", Array.Empty<FaqAnswer>());
+        Set("faqCandidates", Array.Empty<FaqCandidate>());
+        Set("faqVotes", Array.Empty<FaqVote>());
         Set("askReactions", Array.Empty<AskReaction>());
         Set("insightTopics", Array.Empty<InsightTopic>());
         Set("insightNewsItems", Array.Empty<InsightNewsItem>());

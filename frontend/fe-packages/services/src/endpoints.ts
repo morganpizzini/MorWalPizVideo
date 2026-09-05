@@ -113,6 +113,18 @@ const ASK_ADMIN_ANALYTICS = `${ASK_ADMIN_DETAIL}/analytics`;
 const ASK_ADMIN_SHARE = `${ASK_ADMIN_DETAIL}/share`;
 const ASK_ADMIN_EXPORT = `${ASK_ADMIN_DETAIL}/export`;
 const ASK_REACTIONS = `${ASK_SUBMISSIONS}/{submissionId}/reactions`;
+const FAQ = `${baseEndpoint}/faq`;
+const FAQ_CATEGORIES = `${FAQ}/categories`;
+const FAQ_VOTE = `${FAQ}/{faqId}/answers/{channelName}/vote`;
+const FAQ_ADMIN = `${baseEndpoint}/faq`;
+const FAQ_ADMIN_DETAIL = `${FAQ_ADMIN}/{id}`;
+const FAQ_ADMIN_CATEGORIES = `${FAQ_ADMIN}/categories`;
+const FAQ_ADMIN_CATEGORY = `${FAQ_ADMIN_CATEGORIES}/{id}`;
+const FAQ_ADMIN_ANSWERS = `${FAQ_ADMIN_DETAIL}/answers`;
+const FAQ_ADMIN_ANSWER = `${FAQ_ADMIN}/answers/{answerId}`;
+const FAQ_ADMIN_CANDIDATES = `${FAQ_ADMIN}/candidates`;
+const FAQ_ADMIN_GENERATE_CANDIDATES = `${FAQ_ADMIN_CANDIDATES}/generate`;
+const FAQ_ADMIN_REVIEW_CANDIDATE = `${FAQ_ADMIN_CANDIDATES}/{id}/review`;
 
 export default {
 
@@ -221,6 +233,18 @@ export default {
     ASK_ADMIN_SHARE,
     ASK_ADMIN_EXPORT,
     ASK_REACTIONS,
+    FAQ,
+    FAQ_CATEGORIES,
+    FAQ_VOTE,
+    FAQ_ADMIN,
+    FAQ_ADMIN_DETAIL,
+    FAQ_ADMIN_CATEGORIES,
+    FAQ_ADMIN_CATEGORY,
+    FAQ_ADMIN_ANSWERS,
+    FAQ_ADMIN_ANSWER,
+    FAQ_ADMIN_CANDIDATES,
+    FAQ_ADMIN_GENERATE_CANDIDATES,
+    FAQ_ADMIN_REVIEW_CANDIDATE,
 }
 
 export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {

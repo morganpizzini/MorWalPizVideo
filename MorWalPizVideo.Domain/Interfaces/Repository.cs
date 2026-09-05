@@ -571,6 +571,66 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => (int)await _collection.CountDocumentsAsync(predicate);
     }
 
+    public sealed class FaqRepository(IMongoDatabase database) : BaseRepository<Faq>(database, DbCollections.Faqs), IFaqRepository
+    {
+        public async Task<IList<Faq>> GetPublicAsync(string? categoryId = null)
+            => await _collection.Find(x => x.Status == FaqLifecycleStatus.Published && (categoryId == null || x.CategoryId == categoryId)).ToListAsync();
+    }
+    public sealed class FaqCategoryRepository(IMongoDatabase database) : BaseRepository<FaqCategory>(database, DbCollections.FaqCategories), IFaqCategoryRepository { }
+    public sealed class FaqAnswerRepository(IMongoDatabase database) : BaseRepository<FaqAnswer>(database, DbCollections.FaqAnswers), IFaqAnswerRepository
+    {
+        public async Task<IList<FaqAnswer>> GetByFaqIdAsync(string faqId) => await _collection.Find(x => x.FaqId == faqId).ToListAsync();
+        public async Task<IList<FaqAnswer>> GetByFaqIdAndChannelIdAsync(string faqId, string channelId) => await _collection.Find(x => x.FaqId == faqId && x.ChannelId == channelId).ToListAsync();
+        public async Task<IList<FaqAnswer>> GetByChannelIdAsync(string channelId) => await _collection.Find(x => x.ChannelId == channelId).ToListAsync();
+        public async Task<int> IncrementVoteAsync(string id, FaqVoteValue value, int delta)
+        {
+            var update = value == FaqVoteValue.Helpful
+                ? Builders<FaqAnswer>.Update.Inc(x => x.HelpfulVotes, delta)
+                : Builders<FaqAnswer>.Update.Inc(x => x.NotHelpfulVotes, delta);
+            var result = await _collection.FindOneAndUpdateAsync(x => x.Id == id, update, new FindOneAndUpdateOptions<FaqAnswer> { ReturnDocument = ReturnDocument.After });
+            return result is null ? 0 : value == FaqVoteValue.Helpful ? result.HelpfulVotes : result.NotHelpfulVotes;
+        }
+
+        public async Task<bool> SetVoteCountsAsync(string id, int helpfulVotes, int notHelpfulVotes)
+        {
+            var update = Builders<FaqAnswer>.Update
+                .Set(x => x.HelpfulVotes, helpfulVotes)
+                .Set(x => x.NotHelpfulVotes, notHelpfulVotes);
+            var result = await _collection.UpdateOneAsync(x => x.Id == id, update);
+            return result.MatchedCount > 0;
+        }
+    }
+    public sealed class FaqCandidateRepository(IMongoDatabase database) : BaseRepository<FaqCandidate>(database, DbCollections.FaqCandidates), IFaqCandidateRepository { }
+    public sealed class FaqVoteRepository(IMongoDatabase database) : BaseRepository<FaqVote>(database, DbCollections.FaqVotes), IFaqVoteRepository
+    {
+        public Task<FaqVote?> GetByAnswerAndUserAsync(string answerId, string userId)
+            => _collection.Find(x => x.AnswerId == answerId && x.UserId == userId).FirstOrDefaultAsync();
+
+        public async Task<IReadOnlyList<FaqVoteCountSnapshot>> GetCountsByAnswerIdsAsync(IReadOnlyCollection<string> answerIds)
+        {
+            if (answerIds.Count == 0) return [];
+            var ids = answerIds.ToArray();
+
+            var counts = await _collection.Aggregate()
+                .Match(x => ids.Contains(x.AnswerId))
+                .Group(x => x.AnswerId, group => new
+                {
+                    AnswerId = group.Key,
+                    HelpfulVotes = group.Count(x => x.Value == FaqVoteValue.Helpful),
+                    NotHelpfulVotes = group.Count(x => x.Value == FaqVoteValue.NotHelpful),
+                    LatestUpdatedAt = group.Max(x => x.UpdatedAt)
+                })
+                .ToListAsync();
+
+            return counts.Select(count => new FaqVoteCountSnapshot(
+                    count.AnswerId,
+                    count.HelpfulVotes,
+                    count.NotHelpfulVotes,
+                    count.LatestUpdatedAt))
+                .ToArray();
+        }
+    }
+
     public class ConfigurationRepository : BaseRepository<MorWalPizConfiguration>, IConfigurationRepository
     {
         public ConfigurationRepository(IMongoDatabase database) : base(database, DbCollections.Configurations)

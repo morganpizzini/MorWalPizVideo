@@ -75,6 +75,15 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("faq-vote", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"faq-vote:{context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous"}:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("Faq:VoteRateLimit:PermitLimit", 30),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("Faq:VoteRateLimit:WindowMinutes", 1)),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
 // Configure Azure KeyVault if enabled
@@ -128,6 +137,7 @@ builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
 builder.Services.AddScoped<IAskService, AskService>();
+builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
     builder.Services.AddSingleton<SmtpMockService>();
@@ -164,6 +174,11 @@ if (enableMock)
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
+    builder.Services.AddScoped<IFaqRepository, FaqMockRepository>();
+    builder.Services.AddScoped<IFaqCategoryRepository, FaqCategoryMockRepository>();
+    builder.Services.AddScoped<IFaqAnswerRepository, FaqAnswerMockRepository>();
+    builder.Services.AddScoped<IFaqCandidateRepository, FaqCandidateMockRepository>();
+    builder.Services.AddScoped<IFaqVoteRepository, FaqVoteMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
@@ -207,6 +222,11 @@ else
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionRepository>();
+    builder.Services.AddScoped<IFaqRepository, FaqRepository>();
+    builder.Services.AddScoped<IFaqCategoryRepository, FaqCategoryRepository>();
+    builder.Services.AddScoped<IFaqAnswerRepository, FaqAnswerRepository>();
+    builder.Services.AddScoped<IFaqCandidateRepository, FaqCandidateRepository>();
+    builder.Services.AddScoped<IFaqVoteRepository, FaqVoteRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();

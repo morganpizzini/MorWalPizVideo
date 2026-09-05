@@ -69,6 +69,9 @@ public static class AuthorizationPermissionKeys
   public const string AskCreate = "ask.create";
   public const string AskUpdate = "ask.update";
   public const string AskModerate = "ask.moderate";
+  public const string FaqView = "faq.view";
+  public const string FaqManage = "faq.manage";
+  public const string FaqCandidates = "faq.candidates";
 
   public const string PagesView = "pages.view";
   public const string PagesManage = "pages.manage";

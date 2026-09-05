@@ -146,6 +146,7 @@ export type {
 
 // Insights exports
 export type { AskCampaign, AskPolicy, AskSubmission, AskCampaignRequest } from './ask';
+export type { FaqAdmin, FaqAnswerAdmin, FaqCandidateAdmin, FaqCategoryAdmin, FaqSourceMetadata, FaqLifecycleStatus, FaqCandidateStatus } from './faq';
 export {
   InsightNewsStatus,
   ContentPlanType,

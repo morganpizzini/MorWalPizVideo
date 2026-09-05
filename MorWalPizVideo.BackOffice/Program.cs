@@ -342,6 +342,10 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
 builder.Services.AddScoped<IAskService, AskService>();
+builder.Services.AddScoped<IFaqService, FaqService>();
+builder.Services.AddScoped<IFaqVoteReconciliationService, FaqVoteReconciliationService>();
+builder.Services.AddScoped<IFaqCandidateGenerationService, FaqCandidateGenerationService>();
+builder.Services.AddScoped<IFaqCandidateAiProvider, SemanticKernelFaqCandidateAiProvider>();
 builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
 
 if (enableMock)
@@ -390,6 +394,11 @@ if (enableMock)
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
+    builder.Services.AddScoped<IFaqRepository, FaqMockRepository>();
+    builder.Services.AddScoped<IFaqCategoryRepository, FaqCategoryMockRepository>();
+    builder.Services.AddScoped<IFaqAnswerRepository, FaqAnswerMockRepository>();
+    builder.Services.AddScoped<IFaqCandidateRepository, FaqCandidateMockRepository>();
+    builder.Services.AddScoped<IFaqVoteRepository, FaqVoteMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
@@ -479,6 +488,11 @@ else
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionRepository>();
+    builder.Services.AddScoped<IFaqRepository, FaqRepository>();
+    builder.Services.AddScoped<IFaqCategoryRepository, FaqCategoryRepository>();
+    builder.Services.AddScoped<IFaqAnswerRepository, FaqAnswerRepository>();
+    builder.Services.AddScoped<IFaqCandidateRepository, FaqCandidateRepository>();
+    builder.Services.AddScoped<IFaqVoteRepository, FaqVoteRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionRepository>();
 
@@ -653,6 +667,9 @@ if (enableHangFire)
 
     var askRetentionCron = app.Configuration["Ask:RetentionCron"] ?? "0 2 * * *";
     RecurringJob.AddOrUpdate<AskRetentionJob>(AskRetentionJob.JobId, job => job.ExecuteAsync(), askRetentionCron);
+
+    var faqVoteReconciliationCron = app.Configuration["Faq:VoteReconciliationCron"] ?? "*/15 * * * *";
+    RecurringJob.AddOrUpdate<FaqVoteReconciliationJob>(FaqVoteReconciliationJob.JobId, job => job.ExecuteAsync(), faqVoteReconciliationCron);
 }
 
 app.MapDefaultEndpoints();

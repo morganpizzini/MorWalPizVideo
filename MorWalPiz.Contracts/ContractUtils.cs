@@ -134,6 +134,22 @@ namespace MorWalPiz.Contracts
             ReactionCount = entity.ReactionCount
         };
 
+        public static FaqContract Convert(Faq entity) => new()
+        {
+            Id = entity.Id, Question = entity.Question, CategoryId = entity.CategoryId, Status = entity.Status,
+            PublishedAt = entity.PublishedAt, UpdatedAt = entity.UpdatedAt, SourceMetadata = entity.SourceMetadata
+        };
+        public static FaqAnswerContract Convert(FaqAnswer entity) => new()
+        {
+            Id = entity.Id, FaqId = entity.FaqId, ChannelId = entity.ChannelId, Content = entity.Content,
+            Status = entity.Status, HelpfulVotes = entity.HelpfulVotes, NotHelpfulVotes = entity.NotHelpfulVotes
+        };
+        public static FaqCategoryContract Convert(FaqCategory entity) => new()
+        {
+            Id = entity.Id, Slug = entity.Slug, Name = entity.Name, Description = entity.Description,
+            SortOrder = entity.SortOrder, IsActive = entity.IsActive
+        };
+
         public static PageContract Convert(Page entity) => new()
         {
             Id = entity.Id,

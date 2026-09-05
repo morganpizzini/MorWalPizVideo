@@ -16,6 +16,7 @@ import type {
     UpdatePageDTO,
 } from '@morwalpizvideo/models';
 import type { AskCampaign, AskSubmission, AskCampaignRequest } from '@morwalpizvideo/models';
+import type { FaqAdmin, FaqAnswerAdmin, FaqCandidateAdmin, FaqCategoryAdmin } from '@morwalpizvideo/models';
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -61,6 +62,38 @@ export const submitAsk = (channelName: string, campaignSlug: string, text: strin
     post(ComposeUrl(endpoints.ASK_SUBMISSIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug) }), { text, recaptchaToken, name }, '', { 'Idempotency-Key': crypto.randomUUID() });
 export const reactToAskSubmission = (channelName: string, campaignSlug: string, submissionId: string): Promise<{ accepted: boolean; count: number }> =>
     post(ComposeUrl(endpoints.ASK_REACTIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug), submissionId }), {});
+
+export interface FaqPublicAnswer {
+    channelName: string;
+    content: string;
+    helpfulVotes: number;
+    notHelpfulVotes: number;
+}
+export interface FaqPublicItem {
+    id: string;
+    question: string;
+    categorySlug: string;
+    categoryName: string;
+    answers: FaqPublicAnswer[];
+}
+export const getPublicFaq = (category?: string): Promise<FaqPublicItem[]> =>
+    get(ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined));
+export const getPublicFaqCategories = (): Promise<Array<{ id: string; slug: string; name: string }>> => get(endpoints.FAQ_CATEGORIES);
+export const voteFaqAnswer = (faqId: string, channelName: string, value: 1 | -1): Promise<{ accepted: boolean; changed: boolean; helpfulVotes: number; notHelpfulVotes: number }> =>
+    post(ComposeUrl(endpoints.FAQ_VOTE, { faqId, channelName: encodeURIComponent(channelName) }), value);
+
+export const fetchFaqs = (query = ''): Promise<FaqAdmin[]> => get(`${endpoints.FAQ_ADMIN}${query}`);
+export const getFaq = (id: string): Promise<FaqAdmin> => get(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }));
+export const createFaq = (payload: Partial<FaqAdmin>): Promise<FaqAdmin> => post(endpoints.FAQ_ADMIN, payload);
+export const updateFaq = (id: string, payload: Partial<FaqAdmin>): Promise<FaqAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }), payload);
+export const fetchFaqCategories = (): Promise<FaqCategoryAdmin[]> => get(endpoints.FAQ_ADMIN_CATEGORIES);
+export const saveFaqCategory = (id: string | undefined, payload: Partial<FaqCategoryAdmin>): Promise<FaqCategoryAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_CATEGORY, { id: id ?? '' }), payload);
+export const fetchFaqAnswers = (faqId: string): Promise<FaqAnswerAdmin[]> => get(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }));
+export const createFaqAnswer = (faqId: string, payload: Partial<FaqAnswerAdmin>): Promise<FaqAnswerAdmin> => post(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }), payload);
+export const updateFaqAnswer = (answerId: string, payload: Partial<FaqAnswerAdmin>): Promise<FaqAnswerAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_ANSWER, { answerId }), payload);
+export const fetchFaqCandidates = (status?: number): Promise<FaqCandidateAdmin[]> => get(`${endpoints.FAQ_ADMIN_CANDIDATES}${status === undefined ? '' : `?status=${status}`}`);
+export const generateFaqCandidates = (campaignIds: string[]): Promise<unknown> => post(endpoints.FAQ_ADMIN_GENERATE_CANDIDATES, { campaignIds });
+export const reviewFaqCandidate = (id: string, status: number): Promise<FaqCandidateAdmin> => post(ComposeUrl(endpoints.FAQ_ADMIN_REVIEW_CANDIDATE, { id }), { status });
 
 export const fetchAskCampaigns = (): Promise<AskCampaign[]> => get(endpoints.ASK_ADMIN);
 export const getAskCampaignAdmin = (id: string): Promise<AskCampaign> => get(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }));

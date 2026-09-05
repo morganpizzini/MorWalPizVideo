@@ -20,6 +20,11 @@
         public const string AskCampaigns = "askCampaigns";
         public const string AskSubmissions = "askSubmissions";
         public const string AskReactions = "askReactions";
+        public const string Faqs = "faqs";
+        public const string FaqCategories = "faqCategories";
+        public const string FaqAnswers = "faqAnswers";
+        public const string FaqCandidates = "faqCandidates";
+        public const string FaqVotes = "faqVotes";
         public const string QueryLinks = "queryLinks";
         public const string PublishSchedules = "publishSchedules";
 

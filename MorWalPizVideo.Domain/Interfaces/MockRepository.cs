@@ -492,6 +492,51 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => (await GetItemsAsync(x => x.SubmissionId == submissionId)).Count;
     }
 
+    public sealed class FaqMockRepository(IMockScenario scenario) : BaseMockRepository<Faq>(scenario, "faqs"), IFaqRepository
+    {
+        public async Task<IList<Faq>> GetPublicAsync(string? categoryId = null)
+            => await GetItemsAsync(x => x.Status == FaqLifecycleStatus.Published && (categoryId == null || x.CategoryId == categoryId));
+    }
+    public sealed class FaqCategoryMockRepository(IMockScenario scenario) : BaseMockRepository<FaqCategory>(scenario, "faqCategories"), IFaqCategoryRepository { }
+    public sealed class FaqAnswerMockRepository(IMockScenario scenario) : BaseMockRepository<FaqAnswer>(scenario, "faqAnswers"), IFaqAnswerRepository
+    {
+        public async Task<IList<FaqAnswer>> GetByFaqIdAsync(string faqId) => await GetItemsAsync(x => x.FaqId == faqId);
+        public async Task<IList<FaqAnswer>> GetByFaqIdAndChannelIdAsync(string faqId, string channelId) => await GetItemsAsync(x => x.FaqId == faqId && x.ChannelId == channelId);
+        public async Task<IList<FaqAnswer>> GetByChannelIdAsync(string channelId) => await GetItemsAsync(x => x.ChannelId == channelId);
+        public async Task<int> IncrementVoteAsync(string id, FaqVoteValue value, int delta)
+        {
+            var item = (await GetItemsAsync(x => x.Id == id)).FirstOrDefault();
+            if (item is null) return 0;
+            var updated = value == FaqVoteValue.Helpful ? item with { HelpfulVotes = item.HelpfulVotes + delta } : item with { NotHelpfulVotes = item.NotHelpfulVotes + delta };
+            await UpdateItemAsync(updated);
+            return value == FaqVoteValue.Helpful ? updated.HelpfulVotes : updated.NotHelpfulVotes;
+        }
+
+        public async Task<bool> SetVoteCountsAsync(string id, int helpfulVotes, int notHelpfulVotes)
+        {
+            var item = (await GetItemsAsync(x => x.Id == id)).FirstOrDefault();
+            if (item is null) return false;
+            await UpdateItemAsync(item with { HelpfulVotes = helpfulVotes, NotHelpfulVotes = notHelpfulVotes });
+            return true;
+        }
+    }
+    public sealed class FaqCandidateMockRepository(IMockScenario scenario) : BaseMockRepository<FaqCandidate>(scenario, "faqCandidates"), IFaqCandidateRepository { }
+    public sealed class FaqVoteMockRepository(IMockScenario scenario) : BaseMockRepository<FaqVote>(scenario, "faqVotes"), IFaqVoteRepository
+    {
+        public async Task<FaqVote?> GetByAnswerAndUserAsync(string answerId, string userId)
+            => (await GetItemsAsync(x => x.AnswerId == answerId && x.UserId == userId)).FirstOrDefault();
+
+        public async Task<IReadOnlyList<FaqVoteCountSnapshot>> GetCountsByAnswerIdsAsync(IReadOnlyCollection<string> answerIds)
+            => (await GetItemsAsync(x => answerIds.Contains(x.AnswerId)))
+                .GroupBy(x => x.AnswerId)
+                .Select(group => new FaqVoteCountSnapshot(
+                    group.Key,
+                    group.Count(x => x.Value == FaqVoteValue.Helpful),
+                    group.Count(x => x.Value == FaqVoteValue.NotHelpful),
+                    group.Max(x => x.UpdatedAt)))
+                .ToArray();
+    }
+
     public class CategoryMockRepository : BaseMockRepository<Category>, ICategoryRepository
     {
         public CategoryMockRepository(IMockScenario scenario) : base(scenario, "categories")

@@ -12,5 +12,6 @@ namespace MorWalPizVideo.Models.Constraints
         public const string ChannelNews = "tag-channelnews";
         public const string Navigation = "tag-navigation";
         public const string Ask = "tag-ask";
+        public const string Faq = "tag-faq";
     }
 }

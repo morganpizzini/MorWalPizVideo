@@ -143,6 +143,24 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument { { "submissionId", 1 }, { "fingerprint", 1 } },
             Unique: true),
         new(
+            Key: "faqvotes_answerid_userid.unique",
+            Collection: DbCollections.FaqVotes,
+            Name: "ux_faqvotes_answerid_userid",
+            Keys: new BsonDocument { { "answerId", 1 }, { "userId", 1 } },
+            Unique: true),
+        new(
+            Key: "faqanswers_faqid_channelid.unique",
+            Collection: DbCollections.FaqAnswers,
+            Name: "ux_faqanswers_faqid_channelid",
+            Keys: new BsonDocument { { "faqId", 1 }, { "channelId", 1 } },
+            Unique: true),
+        new(
+            Key: "faqcategories_slug.unique",
+            Collection: DbCollections.FaqCategories,
+            Name: "ux_faqcategories_slug",
+            Keys: new BsonDocument("slug", 1),
+            Unique: true),
+        new(
             Key: "newsletterusers.channelid_emailhash.unique",
             Collection: DbCollections.NewsletterUsers,
             Name: "ux_newsletterusers_channelid_emailhash",

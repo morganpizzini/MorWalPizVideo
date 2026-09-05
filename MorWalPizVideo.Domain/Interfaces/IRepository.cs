@@ -119,6 +119,30 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<bool> ExistsAsync(string submissionId, string fingerprint);
         Task<int> CountBySubmissionIdAsync(string submissionId);
     }
+    public interface IFaqRepository : IRepository<Faq>
+    {
+        Task<IList<Faq>> GetPublicAsync(string? categoryId = null);
+    }
+    public interface IFaqCategoryRepository : IRepository<FaqCategory> { }
+    public interface IFaqAnswerRepository : IRepository<FaqAnswer>
+    {
+        Task<IList<FaqAnswer>> GetByFaqIdAsync(string faqId);
+        Task<IList<FaqAnswer>> GetByFaqIdAndChannelIdAsync(string faqId, string channelId);
+        Task<IList<FaqAnswer>> GetByChannelIdAsync(string channelId);
+        Task<int> IncrementVoteAsync(string id, FaqVoteValue value, int delta);
+        Task<bool> SetVoteCountsAsync(string id, int helpfulVotes, int notHelpfulVotes);
+    }
+    public interface IFaqCandidateRepository : IRepository<FaqCandidate> { }
+    public interface IFaqVoteRepository : IRepository<FaqVote>
+    {
+        Task<FaqVote?> GetByAnswerAndUserAsync(string answerId, string userId);
+        Task<IReadOnlyList<FaqVoteCountSnapshot>> GetCountsByAnswerIdsAsync(IReadOnlyCollection<string> answerIds);
+    }
+
+    public sealed record FaqVoteCountSnapshot(string AnswerId, int HelpfulVotes, int NotHelpfulVotes, DateTime LatestUpdatedAt)
+    {
+        public int TotalVotes => HelpfulVotes + NotHelpfulVotes;
+    }
 
     // Insights repositories
     public interface IInsightTopicRepository : IRepository<InsightTopic> { }

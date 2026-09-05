@@ -64,6 +64,9 @@ export {
 export { getActiveCustomForms, getCustomFormByUrl, submitCustomFormResponse } from './apiService';
 export { getAskCampaign, submitAsk, reactToAskSubmission, fetchAskCampaigns, getAskCampaignAdmin, createAskCampaign, updateAskCampaign, fetchAskSubmissions, moderateAskSubmission, respondToAskSubmission, getAskAnalytics, getAskShare, exportAskSubmissions } from './apiService';
 export type { AskPublicCampaign } from './apiService';
+export { getPublicFaq, getPublicFaqCategories, voteFaqAnswer } from './apiService';
+export type { FaqPublicItem, FaqPublicAnswer } from './apiService';
+export { fetchFaqs, getFaq, createFaq, updateFaq, fetchFaqCategories, saveFaqCategory, fetchFaqAnswers, createFaqAnswer, updateFaqAnswer, fetchFaqCandidates, generateFaqCandidates, reviewFaqCandidate } from './apiService';
 
 // Endpoints exports
 export { default as endpoints } from './endpoints';
