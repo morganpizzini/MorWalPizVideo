@@ -88,6 +88,12 @@ Verify this map against the current tree before every plan because the repositor
 - Validation currently combines native HTML constraints, route actions, fetcher error objects, and component checks. Preserve server-side validation as authoritative and plan accessible client feedback.
 - Use existing app-specific icon and styling systems. Shared UI belongs in the layout package only when at least two consumers have the same behavior, not merely similar markup.
 
+### Impeccable Planning Lens
+
+When a request affects a frontend surface, include the installed `impeccable` workflow in the plan without executing it. Identify the target surface, its mode (`Persuade`, `Operate`, `Read`, or `Experience`), the incumbent `PRODUCT.md`/`DESIGN.md` context, and the narrowest applicable command such as `shape`, `audit`, `adapt`, `harden`, or `polish`.
+
+The plan must state whether the work is a refinement or an explicit redesign, preserve the owning application's visual and technical conventions, and define the minimum visual evidence and responsive/accessibility checks expected from implementation. Do not require Impeccable artifacts for backend-only work, and do not treat visual preferences as architecture constraints without repository evidence.
+
 ### Testing And Data
 
 - Backend behavior tests belong in `MorWalPizVideo.BackOffice.Tests`, using the existing WebApplicationFactory, Reqnroll feature/step organization, mock repositories, and test auth patterns. Add focused unit tests only where pure logic warrants them.

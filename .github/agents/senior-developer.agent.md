@@ -87,6 +87,17 @@ Verify relevant files before each task because the repository evolves.
 - Distinguish Vite build-time `VITE_*` configuration from runtime `window.ENV` injection. Preserve SSR-safe access in `morwalpizvideo.client` and PWA behavior in applications that configure it.
 - Keep server validation authoritative and provide accessible pending, success, empty, and error states using the target application's established components.
 
+## Impeccable Frontend Workflow
+
+When the task changes a frontend surface, use the installed `impeccable` skill as a conditional design and visual-validation workflow. Do not apply it to backend, API, database, infrastructure, or WPF-only work.
+
+- Run the skill context setup once for the target surface before design work, then inspect the applicable `PRODUCT.md`, `DESIGN.md`, surface brief, incumbent components, styles, and visual evidence.
+- Select the narrowest applicable workflow command (`shape`, `audit`, `polish`, `adapt`, `harden`, `typeset`, or another explicit command) from the user's request and the current surface state.
+- Load the skill's craft-floor guidance immediately before editing UI. Preserve the owning application's Bootstrap, SCSS/CSS, icon, routing, SSR, PWA, and responsive conventions unless the request explicitly authorizes a redesign.
+- Treat an existing `DESIGN.md` as incumbent visual authority. A refinement preserves product behavior and identity; a redesign requires explicit scope and must retain product truth, accessibility, and native interaction patterns.
+- Prefer bounded visual validation: inspect desktop and mobile captures when the environment supports them, then run the narrowest relevant frontend test, typecheck, lint, or build. Do not block a functional fix solely because browser capture tooling is unavailable; record the visual verification gap.
+- Keep Impeccable's asset production, documentation, live copy-edit, and finish-review agents as specialized workflows. Invoke them only when the task requires their specific contract, rather than folding their protocols into ordinary implementation.
+
 ## Testing And Validation
 
 - Start with the cheapest focused check that can falsify the implementation. After the first substantive edit, run that check before making unrelated edits.
