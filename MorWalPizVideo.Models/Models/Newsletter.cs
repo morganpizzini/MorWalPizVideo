@@ -2,7 +2,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace MorWalPizVideo.Server.Models;
 
-public enum NewsletterState { Draft, Editing, ReadyForPreview, Preview, Approved, Sending, Sent, Failed, Cancelled }
+public enum NewsletterState { Draft, Editing, ReadyForPreview, Preview, Approved, Scheduled, Sending, Sent, Failed, Cancelled }
 public enum NewsletterUserStatus { PendingConfirmation, Subscribed, Unsubscribed, Suppressed }
 public enum NewsletterRecipientStatus { Pending, Sending, Sent, Delivered, Bounced, Suppressed, Failed }
 public enum NewsletterEventType { Send, Delivered, Bounce, Click, Unsubscribe }
@@ -30,6 +30,9 @@ public sealed record Newsletter(
 {
     [BsonElement("approvedAt")]
     public DateTime? ApprovedAt { get; init; }
+
+    [BsonElement("scheduledAtUtc")]
+    public DateTime? ScheduledAtUtc { get; init; }
 }
 
 [BsonIgnoreExtraElements]

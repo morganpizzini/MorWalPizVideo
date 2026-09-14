@@ -70,6 +70,83 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
   }
 
   [Fact]
+  public async Task Channel_social_credentials_are_encrypted_redacted_preserved_and_explicitly_cleared()
+  {
+    var channelId = $"UC{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+
+    var createResponse = await client.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = "Publishing channel",
+      yTChannelId = channelId,
+      socialPublishing = new
+      {
+        telegram = new { destinationId = "-100123", credential = "telegram-secret" },
+        discord = new { destinationId = "discord-channel", credential = "discord-secret" }
+      }
+    });
+    var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
+
+    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+    Assert.NotEqual("telegram-secret", created.SocialPublishing.Telegram.CredentialCiphertext);
+    Assert.NotEmpty(created.SocialPublishing.Telegram.CredentialCiphertext);
+
+    using var detailResponse = await client.GetAsync($"/api/Channels/{channelId}");
+    var detailJson = await detailResponse.Content.ReadAsStringAsync();
+    using var detail = JsonDocument.Parse(detailJson);
+    Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+    Assert.DoesNotContain("telegram-secret", detailJson, StringComparison.Ordinal);
+    Assert.DoesNotContain("credentialCiphertext", detailJson, StringComparison.OrdinalIgnoreCase);
+    Assert.True(detail.RootElement.GetProperty("socialPublishing").GetProperty("telegram").GetProperty("credentialConfigured").GetBoolean());
+
+    var updateResponse = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    {
+      channelName = "Publishing channel updated"
+    });
+    var preserved = await _factory.YTChannelRepository.GetItemAsync(created.Id);
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+    Assert.Equal(created.SocialPublishing.Telegram.CredentialCiphertext, preserved!.SocialPublishing.Telegram.CredentialCiphertext);
+    Assert.Equal("-100123", preserved.SocialPublishing.Telegram.DestinationId);
+
+    var clearResponse = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    {
+      channelName = "Publishing channel updated",
+      socialPublishing = new
+      {
+        telegram = new { clearCredential = true }
+      }
+    });
+    var cleared = await _factory.YTChannelRepository.GetItemAsync(created.Id);
+    Assert.Equal(HttpStatusCode.OK, clearResponse.StatusCode);
+    Assert.Empty(cleared!.SocialPublishing.Telegram.CredentialCiphertext);
+    Assert.Equal("-100123", cleared.SocialPublishing.Telegram.DestinationId);
+  }
+
+  [Fact]
+  public async Task Short_link_share_rejects_provider_not_configured_for_selected_channel()
+  {
+    var channelId = $"channel-{Guid.NewGuid():N}";
+    await _factory.YTChannelRepository!.AddItemAsync(new YTChannel(channelId, "Unconfigured channel"));
+    var shortLink = await _factory.ShortLinkRepository!.AddItemAsync(new ShortLink("share1", "https://example.com", [])
+    {
+      LinkType = LinkType.CustomUrl,
+      ManagementChannelId = channelId
+    });
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, channelId);
+
+    var response = await client.PostAsJsonAsync($"/api/ShortLinks/{shortLink.Id}/share", new
+    {
+      platform = "telegram",
+      message = "New video"
+    });
+    var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    Assert.Equal("social_provider_not_configured", payload.GetProperty("code").GetString());
+    Assert.Equal("telegram", payload.GetProperty("provider").GetString());
+  }
+
+  [Fact]
   public async Task Channel_rejects_unsafe_short_link_url()
   {
     using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);

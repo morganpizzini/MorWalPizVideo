@@ -12,8 +12,9 @@
 | `MorWalPizVideo.BackOffice` | ASP.NET API | Contracts, Domain, Models, MvcHelpers, ServiceDefaults | Administrative system and business-management center |
 | `MorWalPizVideo.ServerAPI` | ASP.NET API | Domain, Models, MvcHelpers, ServiceDefaults | Public projections and approved public interactions |
 | `MorWalPizVideo.ShortLinks` | ASP.NET API | Domain, MvcHelpers, ServiceDefaults | Branded redirects and usage tracking |
-| `MorWalPizVideo.AppHost` | Aspire host | Three service projects | Local orchestration for APIs and selected frontends |
-| `MorWalPizVideo.BackOffice.Tests` | xUnit/Reqnroll | BackOffice, ServerAPI | HTTP behavior, authentication, repositories, cache and contract tests |
+| `MorWalPizVideo.ShootingRange` | ASP.NET API POC | ServiceDefaults | Independent authorized range-booking proof of concept |
+| `MorWalPizVideo.AppHost` | Aspire host | BackOffice, ServerAPI, ShortLinks, ShootingRange | Local orchestration for APIs and selected frontends |
+| `MorWalPizVideo.BackOffice.Tests` | xUnit/Reqnroll | BackOffice, ServerAPI, ShortLinks, ShootingRange | HTTP behavior, authentication, repositories, cache and contract tests |
 | `MorWalPiz.VideoImporter` | .NET 10 WPF | Contracts | Local upload, scheduling, tenant, SQLite, and BackOffice integration |
 | `MorWalPiz.InsightScanner` | .NET 10 WPF | Contracts | Local web scanning and insight submission |
 
@@ -30,8 +31,10 @@ The Yarn Classic workspace in `frontend/package.json` contains:
 | `@morwalpiz/layout` | Shared React navigation, content, category, video, and presentation components |
 | `back-office-spa` | Authenticated administration UI using React Router data routes |
 | `morwalpizvideo.client` | Public SSR/PWA application hosted at `morwalpiz.com` |
-| `morwalpiz-shop.client` | Free digital-artifact catalog, cart, acquisition, and download UI |
+| `morwalpiz-shop.client` | Pre-production shop client; implementation and deployment evolution are on hold |
 | `shooting-ita-frontend` | Focused PWA using shared content and layout packages |
+| `shooting-range.client` | Independent minimal UI for the Shooting Range POC |
+| `shoot-recorder` | Focused recording and analysis PWA |
 
 Shared packages build in this order: models, services, layout. Consumers build afterward.
 
@@ -47,6 +50,7 @@ Shared packages build in this order: models, services, layout. Consumers build a
 | Administrative composition and workflows | BackOffice |
 | Public API composition and projections | ServerAPI |
 | Redirect resolution | ShortLinks |
+| Shooting Range accounts, bookings, configuration, and project-local contracts | ShootingRange |
 | Shared TypeScript DTOs | Frontend models package |
 | Shared endpoint/network behavior | Frontend services package |
 | Truly shared presentation | Frontend layout package |
@@ -60,6 +64,7 @@ Models and Domain currently retain `MorWalPizVideo.Server.*` namespaces, while s
 - `MorWalPizVideo.BackOffice/Program.cs`
 - `MorWalPizVideo.ServerAPI/Program.cs`
 - `MorWalPizVideo.ShortLinks/Program.cs`
+- `MorWalPizVideo.ShootingRange/Program.cs`
 - `MorWalPizVideo.AppHost/Program.cs`
 - `MorWalPiz.VideoImporter/App.xaml.cs`
 - `MorWalPiz.InsightScanner/App.xaml.cs`

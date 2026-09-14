@@ -34,13 +34,17 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 
 The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
 
+Shooting Range is not publicly exposed yet but is expected to be soon. Its API and client workflows remain bound to the GitHub `production` environment. Before public exposure, the release must satisfy the authorization, CORS, CSRF, account-state, response-contract, MongoDB readiness, and booking-integrity gates in [Shooting Range Booking](../shooting-range-architecture.md).
+
+The shop remains pre-production and on hold. Existing shop workflows or runtime artifacts do not imply approval to deploy or evolve it; deployment automation must be reviewed when the hold is eventually lifted.
+
 Other Azure application names and custom bindings are environment-managed and must be inventoried before deployment changes.
 
 ## Local Orchestration
 
 Aspire AppHost starts:
 
-- ServerAPI, public client, and shop client.
+- ServerAPI, public client, and the on-hold shop client for local compatibility.
 - BackOffice and BackOffice SPA.
 - ShortLinks.
 - Shooting Range API and client.
@@ -51,25 +55,23 @@ Local development keeps the relative `/api` Vite proxy and Development credentia
 
 ## CI Baseline
 
-Current CI builds only selected web projects and incorrectly checks for a root `tests` directory, so the actual backend tests are skipped.
+Current CI builds six frontend applications, four backend hosts, and both Windows clients, and runs `MorWalPizVideo.BackOffice.Tests`. It does not build the on-hold shop client, AppHost, or `MorWalPizVideo.YouTubeUtilities.Tests`, and several frontend applications have little or no executable test coverage.
 
-Target CI matrix:
+Required improvements for active surfaces:
 
-- .NET restore/build for all solution projects.
-- BackOffice.Tests execution.
-- Shared frontend packages in dependency order.
-- BackOffice SPA, public client, shop, and Shooting ITA tests/builds.
-- ShortLinks build and behavior tests.
-- WPF builds on Windows.
-- Docker builds for every deployed container.
-- Secret scanning and dependency/security review.
-- Documentation link and structure validation.
+- Keep shared frontend packages built in dependency order.
+- Add the omitted active test projects and AppHost build verification.
+- Require focused Shooting Range API authorization/integrity tests and non-empty client tests before its production deployment.
+- Build Docker images for deployed active containers.
+- Add secret scanning, dependency/security review, and documentation link validation.
+
+The shop is intentionally excluded while on hold; omission from active CI is not a release defect until the hold is lifted.
 
 ## Container Baseline
 
 API Dockerfiles currently use .NET 8/9 images while projects target .NET 10, and restore stages do not consistently copy all referenced project manifests. Align SDK/runtime images and restore inputs with project files.
 
-Frontend containers must use `VITE_API_BASE_URL` consistently. The shop client's Docker entrypoint and workflow have been aligned to this convention (`env-config.js`/`window.ENV`, same as `back-office-spa`).
+Frontend containers use each application's established runtime/build-time configuration. The shop client's existing runtime injection is retained but receives no active evolution while the hold applies.
 
 ## Release Order
 
@@ -78,10 +80,11 @@ For cross-cutting changes:
 1. Deploy backward-compatible Models/Domain/Contracts behavior.
 2. Apply or verify Mongo indexes and production configuration separately; deployment workflows do not perform these operations.
 3. Deploy the Shooting Range API and verify `/health` and `/health/ready`.
-4. Deploy the Shooting Range client with its immutable image SHA and verify `API_BASE_URL`, CSRF, and login against the API.
-5. Deploy other frontend and desktop consumers.
-6. Observe legacy route/data usage.
-7. Remove compatibility paths only after a defined zero-use window.
+4. Before public exposure, verify deny-by-default authorization, the configured client origin, CSRF/login/session restoration, manually inserted administrator access, safe DTOs, and booking invariants.
+5. Deploy the Shooting Range client with its immutable image SHA and verify runtime `API_BASE_URL` against the API.
+6. Deploy other active frontend and desktop consumers.
+7. Observe legacy route/data usage.
+8. Remove compatibility paths only after a defined zero-use window.
 
 ## Health And Rollback
 

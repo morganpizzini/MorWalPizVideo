@@ -148,6 +148,20 @@ const ChannelDetail: React.FC = () => {
           ) : <span> None configured</span>}
         </div>
         <div className="mt-3">
+          <strong>Social publishing:</strong>
+          <ul className="mb-0">
+            {(['telegram', 'discord', 'facebook'] as const).map(provider => {
+              const settings = entity.socialPublishing?.[provider];
+              const configured = Boolean(settings?.destinationId && settings.credentialConfigured);
+              return (
+                <li key={provider}>
+                  {provider}: {configured ? `configured for ${settings?.destinationId}` : 'not configured'}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div className="mt-3">
           <strong>Channel logo:</strong>
           {logoUrl && <img src={logoUrl} alt={`${entity.channelName} logo`} className="d-block my-2" style={{ maxWidth: 250, maxHeight: 150 }} />}
           <div className="d-flex gap-2 align-items-center mt-2">

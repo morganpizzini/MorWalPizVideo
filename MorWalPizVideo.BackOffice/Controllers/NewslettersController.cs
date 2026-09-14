@@ -36,9 +36,24 @@ public sealed class NewslettersController(
             return BadRequest("Name and at least one section are required.");
         if (string.IsNullOrWhiteSpace(request.TemplateId) || !(await templateRepository.GetItemsAsync(template => template.Id == request.TemplateId && template.ChannelId == channelId && template.Version == request.TemplateVersion)).Any())
             return BadRequest("Template does not belong to the selected channel or version.");
+        if (request.DeliveryMode.Equals("Scheduled", StringComparison.OrdinalIgnoreCase) && request.ScheduledAtUtc is null)
+            return BadRequest("ScheduledAtUtc is required for scheduled newsletters.");
+        if (!request.DeliveryMode.Equals("Draft", StringComparison.OrdinalIgnoreCase) && !request.DeliveryMode.Equals("Immediate", StringComparison.OrdinalIgnoreCase) && !request.DeliveryMode.Equals("Scheduled", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("DeliveryMode must be Draft, Immediate, or Scheduled.");
+        var immediate = request.DeliveryMode.Equals("Immediate", StringComparison.OrdinalIgnoreCase);
         var item = await newsletterService.CreateAsync(new Newsletter(
             channelId, request.Name.Trim(), request.SubjectIt.Trim(), request.SubjectEng.Trim(), request.TemplateId,
-            request.TemplateVersion, request.Sections.Select(section => new NewsletterSection(section.Type, section.Title, section.Body, section.ImageUrl, section.ShortLinkCode)).ToArray()));
+            request.TemplateVersion, request.Sections.Select(section => new NewsletterSection(section.Type, section.Title, section.Body, section.ImageUrl, section.ShortLinkCode)).ToArray(),
+            immediate ? NewsletterState.Approved : NewsletterState.Draft) with { ApprovedAt = immediate ? DateTime.UtcNow : null });
+        if (request.DeliveryMode.Equals("Scheduled", StringComparison.OrdinalIgnoreCase))
+        {
+            var scheduled = await newsletterService.ScheduleAsync(channelId, item.Id, request.ScheduledAtUtc!.Value);
+            if (scheduled is null) return BadRequest("ScheduledAtUtc must be a future UTC time on minute 00 or 30.");
+            await dispatchService.QueueScheduledAsync(channelId, item.Id, scheduled.ScheduledAtUtc!.Value);
+            return CreatedAtAction(nameof(Get), new { id = item.Id }, ToContract(scheduled));
+        }
+        if (immediate && !await dispatchService.QueueAsync(channelId, item.Id))
+            return Conflict("Immediate sending requires Hangfire to be enabled.");
         return CreatedAtAction(nameof(Get), new { id = item.Id }, ToContract(item));
     }
 
@@ -49,7 +64,7 @@ public sealed class NewslettersController(
         var current = (await newsletterRepository.GetItemsAsync(item => item.Id == id && item.ChannelId == channelId)).FirstOrDefault();
         var templateExists = !string.IsNullOrWhiteSpace(request.TemplateId) && (await templateRepository.GetItemsAsync(template => template.Id == request.TemplateId && template.ChannelId == channelId && template.Version == request.TemplateVersion)).Any();
         if (current is null) return NotFound();
-        if (current.State is NewsletterState.Approved or NewsletterState.Sending or NewsletterState.Sent || string.IsNullOrWhiteSpace(request.Name) || request.Sections.Count == 0 || !templateExists)
+        if (current.State is NewsletterState.Sending or NewsletterState.Sent || string.IsNullOrWhiteSpace(request.Name) || request.Sections.Count == 0 || !templateExists)
             return Conflict("Only draft content with a channel-owned template can be edited.");
         var updated = current with { Name = request.Name.Trim(), SubjectIt = request.SubjectIt.Trim(), SubjectEng = request.SubjectEng.Trim(), TemplateId = request.TemplateId, TemplateVersion = request.TemplateVersion, Sections = request.Sections.Select(section => new NewsletterSection(section.Type, section.Title, section.Body, section.ImageUrl, section.ShortLinkCode)).ToArray() };
         await newsletterRepository.UpdateItemAsync(updated);
@@ -76,6 +91,16 @@ public sealed class NewslettersController(
     {
         var queued = await dispatchService.QueueAsync(HttpContext.GetChannelContext().ChannelId, id, cancellationToken);
         return queued ? Accepted() : Conflict("Newsletter must be approved and Hangfire must be enabled before sending.");
+    }
+
+    [HttpPost("{id}/schedule")]
+    public async Task<ActionResult<NewsletterContract>> Schedule(string id, NewsletterScheduleRequest request, CancellationToken cancellationToken)
+    {
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var item = await newsletterService.ScheduleAsync(channelId, id, request.ScheduledAtUtc, cancellationToken);
+        if (item is null) return BadRequest("ScheduledAtUtc must be a future UTC time on minute 00 or 30.");
+        await dispatchService.QueueScheduledAsync(channelId, id, item.ScheduledAtUtc!.Value, cancellationToken);
+        return Ok(ToContract(item));
     }
 
     [HttpGet("{id}/preview")]
@@ -130,7 +155,7 @@ public sealed class NewslettersController(
     }
 
     private static NewsletterContract ToContract(Newsletter item) =>
-        new(item.Id, item.ChannelId, item.Name, item.SubjectIt, item.SubjectEng, item.TemplateId, item.TemplateVersion, item.State.ToString());
+        new(item.Id, item.ChannelId, item.Name, item.SubjectIt, item.SubjectEng, item.TemplateId, item.TemplateVersion, item.State.ToString(), item.ScheduledAtUtc, item.ApprovedAt);
 }
 
 public sealed record NewsletterTemplateCreateRequest(string Name, int Version, IReadOnlyList<NewsletterSection> Sections);

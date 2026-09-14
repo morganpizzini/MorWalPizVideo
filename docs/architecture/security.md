@@ -8,6 +8,7 @@
 | BackOffice SPA to BackOffice | Authenticated administrator |
 | WPF tools to BackOffice | Authenticated API-key client |
 | Public apps to ServerAPI | Anonymous by default; explicit cart/customer policies |
+| Shooting Range client to Shooting Range API | Authenticated cookie session; deny-by-default domain access |
 | BackOffice to ServerAPI | Authenticated internal service call |
 | Followers to ShortLinks | Anonymous untrusted input |
 | APIs to Mongo/Blob/external providers | Managed service credentials |
@@ -85,7 +86,9 @@ Managed keys have a persisted `channelId`. Scoped BackOffice resources require `
 
 The effective impersonated target identity is used for ordinary content/channel authorization, while the primary actor remains the audit and CSRF identity. Administrators can select any channel; normal users can select only owned channels. Video collaborators can read but not mutate shared videos. Compilation management and other BackOffice resources remain scoped, but public compilation URLs and short-link redirects are anonymous global lookups. Scoped responses and caches must include channel and effective-identity authorization inputs; public URL caches must remain global.
 
-## Public And Cart Security
+## Public And Cart Security (Target, On Hold)
+
+The shop is pre-production and all shop implementation is on hold. The following rules remain the accepted target if the portfolio hold is lifted; they do not authorize active shop work.
 
 Public endpoints are explicitly anonymous. An anonymous-cart cookie is opaque, HttpOnly, Secure, narrowly scoped, integrity protected, and rotated when ownership changes. API routes derive cart identity from the server-controlled cookie, never a route/query customer ID.
 
@@ -113,9 +116,30 @@ Development allow-all CORS is gated by Development plus `EnableDev`. Production 
 
 - ServerAPI: `https://morwalpiz.com`, no credentials for public requests; cookie endpoints require a reviewed credential policy.
 - BackOffice: `https://morwalpiz-admin-spa.azurewebsites.net`, credentials enabled.
+- Shooting Range: only its configured production client origin, credentials enabled.
 - ShortLinks: no CORS required for navigation redirects.
 
 Reject lookalike suffixes. Configure AllowedHosts and forwarded-header trusted networks/proxies independently.
+
+## Shooting Range POC Security
+
+Shooting Range is expected to become publicly reachable while remaining a minimal POC. Authorization is deny-by-default for all domain endpoints, including availability. Anonymous access is limited to login, CSRF token acquisition, and liveness/readiness probes.
+
+The first administrator is inserted manually into MongoDB. There is no bootstrap-admin endpoint and no secret or reusable password hash in source or documentation. Public registration is not part of the approved release posture; administrator-created ordinary users are the working assumption pending final confirmation.
+
+Required release controls are:
+
+- Explicit credentialed CORS for the deployed client origin.
+- Secure HttpOnly authentication cookie and CSRF validation for unsafe requests.
+- Session revalidation against current account status, administrator role, and forced-password state.
+- Explicit response DTOs that exclude password hashes, bay whitelist identifiers, and persistence-only metadata.
+- Rate limiting for anonymous login.
+- MongoDB uniqueness for normalized usernames and active booking conflicts.
+- Authoritative booking validation for dates, opening days, closures, bay status, periods, reservations, and overlap.
+- Production rejection of mock repositories and readiness coverage for MongoDB.
+- Persistent Data Protection keys when more than one instance or application restart must preserve sessions.
+
+Current source does not yet satisfy these controls. Public exposure is gated on implementation and executable authorization, CORS, CSRF, account-state, response-contract, and booking-integrity tests.
 
 ## Data Protection And Privacy
 
@@ -127,4 +151,4 @@ Reject lookalike suffixes. Configure AllowedHosts and forwarded-header trusted n
 
 ## Security Verification
 
-Required tests include authorization matrices, CSRF, CORS, cookie tampering, cookie-backed validation effective-permission responses, SPA RBAC route allow/deny cases, cross-cart denial, expired/revoked credentials, unsafe redirects, hidden storage keys, private Blob access, SAS expiry, rate limits, and secret-scanner CI gates.
+Required tests include authorization matrices, CSRF, CORS, cookie tampering, cookie-backed validation effective-permission responses, SPA RBAC route allow/deny cases, expired/revoked credentials, unsafe redirects, rate limits, and secret-scanner CI gates. Shop-specific cross-cart, hidden-storage-key, private-Blob, and SAS-expiry scenarios remain required only when the shop hold is lifted.

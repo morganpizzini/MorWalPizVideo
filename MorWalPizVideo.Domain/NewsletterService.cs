@@ -15,6 +15,7 @@ public interface INewsletterService
 
     Task<Newsletter> CreateAsync(Newsletter newsletter, CancellationToken cancellationToken = default);
     Task<Newsletter?> TransitionAsync(string channelId, string id, NewsletterState target, CancellationToken cancellationToken = default);
+    Task<Newsletter?> ScheduleAsync(string channelId, string id, DateTime scheduledAtUtc, CancellationToken cancellationToken = default);
 }
 
 public sealed class NewsletterService(
@@ -85,6 +86,18 @@ public sealed class NewsletterService(
 
     public Task<Newsletter> CreateAsync(Newsletter newsletter, CancellationToken cancellationToken = default) => newsletterRepository.AddItemAsync(newsletter);
 
+    public async Task<Newsletter?> ScheduleAsync(string channelId, string id, DateTime scheduledAtUtc, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        if (scheduledAtUtc.Kind != DateTimeKind.Utc || scheduledAtUtc <= now || scheduledAtUtc.Second != 0 || scheduledAtUtc.Millisecond != 0 || scheduledAtUtc.Minute is not (0 or 30)) return null;
+        var normalized = scheduledAtUtc;
+        var newsletter = (await newsletterRepository.GetItemsAsync(item => item.Id == id && item.ChannelId == channelId)).FirstOrDefault();
+        if (newsletter is null || newsletter.State is NewsletterState.Sending or NewsletterState.Sent or NewsletterState.Cancelled) return null;
+        var updated = newsletter with { State = NewsletterState.Scheduled, ScheduledAtUtc = normalized, ApprovedAt = newsletter.ApprovedAt ?? now };
+        await newsletterRepository.UpdateItemAsync(updated);
+        return updated;
+    }
+
     public async Task<Newsletter?> TransitionAsync(string channelId, string id, NewsletterState target, CancellationToken cancellationToken = default)
     {
         var newsletter = (await newsletterRepository.GetItemsAsync(item => item.Id == id && item.ChannelId == channelId)).FirstOrDefault();
@@ -100,7 +113,8 @@ public sealed class NewsletterService(
         NewsletterState.Editing => target is NewsletterState.ReadyForPreview or NewsletterState.Cancelled,
         NewsletterState.ReadyForPreview => target is NewsletterState.Preview or NewsletterState.Approved,
         NewsletterState.Preview => target is NewsletterState.Editing or NewsletterState.Approved,
-        NewsletterState.Approved => target is NewsletterState.Sending or NewsletterState.Cancelled,
+        NewsletterState.Approved => target is NewsletterState.Sending or NewsletterState.Scheduled or NewsletterState.Cancelled,
+        NewsletterState.Scheduled => target is NewsletterState.Editing or NewsletterState.Cancelled,
         NewsletterState.Sending => target is NewsletterState.Sent or NewsletterState.Failed,
         _ => false
     };

@@ -34,7 +34,9 @@
 - No core administrative write is exposed by ServerAPI.
 - No active consumer calls duplicate BackOffice shop routes.
 
-## Phase 2: Contracts And Free Artifacts
+## Phase 2: Contracts And Free Artifacts (On Hold)
+
+The entire shop and digital-artifact phase is pre-production and unscheduled. Do not implement, migrate, test-expand, or deploy this phase until an explicit portfolio decision lifts the hold. The work and exit criteria remain design context for that future reassessment.
 
 ### Work
 
@@ -113,6 +115,8 @@ Exit-criteria evidence:
 - Add durable Hangfire configuration and dashboard protection.
 - Add Blob health, metadata, lifecycle, and recovery controls.
 - Include Shooting ITA and WPF builds in CI.
+- Close the Shooting Range public-release gate without expanding its product scope: deny-by-default authorization, explicit production CORS, safe DTOs, current account-state enforcement, authoritative booking validation, MongoDB uniqueness/readiness, and focused tests.
+- Keep the Shooting Range UI limited to authentication/session lifecycle, availability, booking, own bookings, and only the administrator operations required by the selected onboarding flow.
 
 ### Exit Criteria
 
@@ -120,15 +124,15 @@ Exit-criteria evidence:
 - WPF network clients are factory-managed and testable.
 - Jobs survive restart and expose usable telemetry.
 - Storage recovery and credential rotation are tested.
+- Shooting Range anonymous access is limited to login, CSRF token acquisition, and health probes; production deployment tests prove the authorization matrix and booking invariants.
 
 ## Phase 6: Deferred Capabilities
 
 Only start when product need is confirmed:
 
-- Verified customer accounts and anonymous-acquisition claiming.
-- Customer and download analytics with approved retention.
-- Provider-neutral transactional email.
+- Shop customer accounts, acquisition claiming, download analytics, and transactional delivery remain on hold with the rest of the shop.
 - Detailed short-link analytics.
+- Shooting Range cancellation/rescheduling, schedule administration, messages, notifications, waitlists, custom-duration sessions, reporting, and invite onboarding. Promote only when observed POC use establishes the requirement.
 
 ## Phase 7: Operational Verification And Convergence
 

@@ -37,7 +37,7 @@ beforeEach(() => {
     sessionStatus: 'authenticated',
   });
   vi.mocked(useLoaderData).mockReturnValue({
-    categories: [{ categoryId: 'cat-1', title: 'Sports' }],
+    categories: [{ categoryId: 'cat-1', title: 'Sports' }, { categoryId: 'cat-2', title: 'Training' }],
     channels: [{ channelId: 'channel-1', channelName: 'Main', yTChannelId: 'yt-1', mine: true }],
     targets: [{ contentId: 'content-1', title: 'Existing collection', videoCount: 2 }],
   });
@@ -56,13 +56,21 @@ describe('bulk video import', () => {
   });
 
   it('shows success for a complete single import', async () => {
-    vi.mocked((await import('../../../../services/videoService')).VideoService.importVideo).mockResolvedValue({ videoId: 'new-video', status: 'imported', shortLinkStatus: 'created' });
+    const { VideoService } = await import('../../../../services/videoService');
+    vi.mocked(VideoService.importVideo).mockResolvedValue({ videoId: 'new-video', status: 'imported', shortLinkStatus: 'created' });
     render(<Component />);
     fireEvent.click(screen.getByRole('tab', { name: 'Single import' }));
     fireEvent.change(screen.getByLabelText('Video ID *'), { target: { value: 'new-video' } });
-    fireEvent.click(screen.getAllByLabelText('Sports')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Sports' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Training' }));
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Training' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.submit(screen.getByRole('button', { name: 'Import video' }).closest('form')!);
     expect(await screen.findByText('Import complete')).toBeInTheDocument();
+    expect(VideoService.importVideo).toHaveBeenCalledWith({ videoId: 'new-video', categories: ['cat-1', 'cat-2'] });
+    expect(screen.getByLabelText('Video ID *')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Training' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('shows a warning when short-link creation fails after persistence', async () => {
@@ -70,9 +78,11 @@ describe('bulk video import', () => {
     render(<Component />);
     fireEvent.click(screen.getByRole('tab', { name: 'Single import' }));
     fireEvent.change(screen.getByLabelText('Video ID *'), { target: { value: 'new-video' } });
-    fireEvent.click(screen.getByLabelText('Sports'));
+    fireEvent.click(screen.getByRole('button', { name: 'Sports' }));
     fireEvent.submit(screen.getByRole('button', { name: 'Import video' }).closest('form')!);
     expect(await screen.findByText('Import completed with warning')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video ID *')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('shows a warning for an already existing video response', async () => {
@@ -80,9 +90,11 @@ describe('bulk video import', () => {
     render(<Component />);
     fireEvent.click(screen.getByRole('tab', { name: 'Single import' }));
     fireEvent.change(screen.getByLabelText('Video ID *'), { target: { value: 'old-video' } });
-    fireEvent.click(screen.getByLabelText('Sports'));
+    fireEvent.click(screen.getByRole('button', { name: 'Sports' }));
     fireEvent.submit(screen.getByRole('button', { name: 'Import video' }).closest('form')!);
     expect(await screen.findByText('Video already exists')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video ID *')).toHaveValue('old-video');
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows a danger toast for a primary import failure', async () => {
@@ -90,9 +102,24 @@ describe('bulk video import', () => {
     render(<Component />);
     fireEvent.click(screen.getByRole('tab', { name: 'Single import' }));
     fireEvent.change(screen.getByLabelText('Video ID *'), { target: { value: 'failed-video' } });
-    fireEvent.click(screen.getByLabelText('Sports'));
+    fireEvent.click(screen.getByRole('button', { name: 'Sports' }));
     fireEvent.submit(screen.getByRole('button', { name: 'Import video' }).closest('form')!);
     expect(await screen.findByText('Import failed')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video ID *')).toHaveValue('failed-video');
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('preserves the single import values when the request throws', async () => {
+    const { VideoService } = await import('../../../../services/videoService');
+    vi.mocked(VideoService.importVideo).mockRejectedValue(new Error('Network failure'));
+    render(<Component />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Single import' }));
+    fireEvent.change(screen.getByLabelText('Video ID *'), { target: { value: 'exception-video' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sports' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Import video' }).closest('form')!);
+    expect(await screen.findByText('Import failed')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video ID *')).toHaveValue('exception-video');
+    expect(screen.getByRole('button', { name: 'Sports' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

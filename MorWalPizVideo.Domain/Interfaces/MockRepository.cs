@@ -353,7 +353,25 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
-    public sealed class NewsletterMockRepository(IMockScenario scenario) : BaseMockRepository<Newsletter>(scenario, "newsletters"), INewsletterRepository;
+    public sealed class NewsletterMockRepository(IMockScenario scenario) : BaseMockRepository<Newsletter>(scenario, "newsletters"), INewsletterRepository
+    {
+        private readonly object sync = new();
+
+        public Task<Newsletter?> ClaimForSendingAsync(string channelId, string newsletterId, NewsletterState expectedState, DateTime now, DateTime? expectedScheduledAtUtc = null, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var item = scenario.Read<Newsletter>("newsletters").FirstOrDefault(candidate => candidate.Id == newsletterId && candidate.ChannelId == channelId && candidate.State == expectedState && (expectedState != NewsletterState.Scheduled || candidate.ScheduledAtUtc == expectedScheduledAtUtc));
+                if (item is null) return Task.FromResult<Newsletter?>(null);
+                var updated = item with { State = NewsletterState.Sending };
+                scenario.Replace("newsletters", updated);
+                return Task.FromResult<Newsletter?>(updated);
+            }
+        }
+
+        public async Task<IList<Newsletter>> GetDueScheduledAsync(DateTime now, int limit, CancellationToken cancellationToken = default)
+            => (await GetItemsAsync(item => item.State == NewsletterState.Scheduled && item.ScheduledAtUtc <= now)).OrderBy(item => item.ScheduledAtUtc).Take(Math.Clamp(limit, 1, 1000)).ToList();
+    }
     public sealed class NewsletterTemplateMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterTemplate>(scenario, "newsletterTemplates"), INewsletterTemplateRepository;
     public sealed class NewsletterUserMockRepository(IMockScenario scenario) : BaseMockRepository<NewsletterUser>(scenario, "newsletterUsers"), INewsletterUserRepository
     {

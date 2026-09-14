@@ -120,7 +120,39 @@ describe('channel route error handling', () => {
           { provider: 'instagram', handler: '@morwalpiz' },
           { provider: 'x', handler: 'morwalpiz' },
         ],
+        socialPublishing: {
+          telegram: { clearCredential: false },
+          discord: { clearCredential: false },
+          facebook: { clearCredential: false },
+        },
       }
+    );
+  });
+
+  it('sends replace and clear intent without requiring existing credentials', async () => {
+    vi.mocked(put).mockResolvedValue({} as never);
+
+    await formAction({
+      request: formRequest({
+        channelName: 'Updated',
+        socialPublishing: JSON.stringify({
+          telegram: { destinationId: '-100123', credential: 'new-token', clearCredential: false },
+          discord: { destinationId: '456', credential: '', clearCredential: true },
+          facebook: { destinationId: '789', credential: '', clearCredential: false },
+        }),
+      }),
+      params: { id: 'channel-one' },
+    } as never);
+
+    expect(put).toHaveBeenCalledWith(
+      '/api/channels/channel-one',
+      expect.objectContaining({
+        socialPublishing: {
+          telegram: { destinationId: '-100123', credential: 'new-token', clearCredential: false },
+          discord: { destinationId: '456', credential: undefined, clearCredential: true },
+          facebook: { destinationId: '789', credential: undefined, clearCredential: false },
+        },
+      })
     );
   });
 });

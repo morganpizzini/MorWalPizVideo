@@ -15,7 +15,8 @@ describe('shot timeline', () => {
     const analysis: AnalysisResult = {
       durationSeconds: 5,
       sampledFrames: 50,
-      startBeepSeconds: 1,
+      trimRange: { startSeconds: 0, endSeconds: 5 },
+      timerOriginSeconds: 1,
       candidates: [
         { id: 'first', timeSeconds: 1.3, confidence: 80, selected: true, source: 'analysis' },
         { id: 'ignored', timeSeconds: 1.5, confidence: 80, selected: false, source: 'analysis' },
@@ -32,7 +33,8 @@ describe('shot timeline', () => {
     const analysis: AnalysisResult = {
       durationSeconds: 10,
       sampledFrames: 100,
-      startBeepSeconds: 0,
+      trimRange: { startSeconds: 0, endSeconds: 10 },
+      timerOriginSeconds: 0,
       candidates: Array.from({ length: 5 }, (_, index) => ({
         id: `shot-${index + 1}`,
         timeSeconds: index + 1,

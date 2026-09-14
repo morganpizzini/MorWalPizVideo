@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
-using MorWalPiz.Contracts.ShootingRange;
-using MorWalPizVideo.Domain.Security;
-using MorWalPizVideo.Domain.ShootingRange;
-using MorWalPizVideo.Models.ShootingRange;
+using MorWalPizVideo.ShootingRange.Contracts;
+using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Repositories;
+using MorWalPizVideo.ShootingRange.Security;
 using MongoDB.Bson;
 
 namespace MorWalPizVideo.ShootingRange.Services;

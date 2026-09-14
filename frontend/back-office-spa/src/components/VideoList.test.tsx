@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { composeShortLinkUrl, shouldShowMainUrl } from './VideoList';
+import { composeShortLinkUrl, getSocialPublishingVideoId, shouldShowMainUrl } from './VideoList';
+import type { Match } from '@morwalpizvideo/models';
 
 describe('composeShortLinkUrl', () => {
   it('normalizes slashes around the channel base and code', () => {
@@ -27,5 +28,27 @@ describe('shouldShowMainUrl', () => {
 
   it('keeps the canonical content URL for multiple references', () => {
     expect(shouldShowMainUrl(2)).toBe(true);
+  });
+});
+
+describe('getSocialPublishingVideoId', () => {
+  it('uses the thumbnail YouTube id instead of the aggregate database id', () => {
+    const match = {
+      id: 'mongo-id',
+      thumbnailVideoId: 'youtube-thumbnail',
+      videoRefs: [{ youtubeId: 'youtube-first' }],
+    } as Match;
+
+    expect(getSocialPublishingVideoId(match)).toBe('youtube-thumbnail');
+  });
+
+  it('falls back to the first video reference', () => {
+    const match = {
+      id: 'mongo-id',
+      thumbnailVideoId: '',
+      videoRefs: [{ youtubeId: 'youtube-first' }],
+    } as Match;
+
+    expect(getSocialPublishingVideoId(match)).toBe('youtube-first');
   });
 });

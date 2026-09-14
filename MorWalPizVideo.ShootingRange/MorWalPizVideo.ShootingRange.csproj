@@ -5,9 +5,6 @@
     <PackageReference Include="MongoDB.Driver" Version="3.11.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MorWalPiz.Contracts\MorWalPiz.Contracts.csproj" />
-    <ProjectReference Include="..\MorWalPizVideo.Domain\MorWalPizVideo.Domain.csproj" />
-    <ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.ServiceDefaults\MorWalPizVideo.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

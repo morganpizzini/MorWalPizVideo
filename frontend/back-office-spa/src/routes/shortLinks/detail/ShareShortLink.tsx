@@ -17,10 +17,16 @@ const ShareShortLink: React.FC<ShareShortLinkProps> = ({ shortLinkId }) => {
     setBusy(true);
     setFeedback(null);
     try {
-      await post(ComposeUrl(endpoints.SHORTLINKS_SHARE, { querylinkId: shortLinkId }), {
+      const response: unknown = await post(ComposeUrl(endpoints.SHORTLINKS_SHARE, { querylinkId: shortLinkId }), {
         platform,
         message
       });
+      if (typeof response === 'object' && response !== null && 'errors' in response && Array.isArray(response.errors)) {
+        const errorMessage = response.errors
+          .filter((error): error is string => typeof error === 'string')
+          .at(-1);
+        throw new Error(errorMessage ?? 'Social publication failed.');
+      }
       setFeedback({ kind: 'success', text: 'Published successfully.' });
     } catch (error) {
       setFeedback({

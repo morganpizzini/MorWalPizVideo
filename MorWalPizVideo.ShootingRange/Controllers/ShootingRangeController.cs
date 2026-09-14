@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MorWalPiz.Contracts.ShootingRange;
-using MorWalPizVideo.Domain.ShootingRange;
-using MorWalPizVideo.Models.ShootingRange;
+using MorWalPizVideo.ShootingRange.Contracts;
+using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Repositories;
+using MorWalPizVideo.ShootingRange.Security;
 using MorWalPizVideo.ShootingRange.Services;
-using MorWalPizVideo.Domain.Security;
 
 namespace MorWalPizVideo.ShootingRange.Controllers;
 

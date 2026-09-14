@@ -1,7 +1,7 @@
 using FluentAssertions;
-using MorWalPiz.Contracts.ShootingRange;
-using MorWalPizVideo.Domain.ShootingRange;
-using MorWalPizVideo.Models.ShootingRange;
+using MorWalPizVideo.ShootingRange.Contracts;
+using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Services;

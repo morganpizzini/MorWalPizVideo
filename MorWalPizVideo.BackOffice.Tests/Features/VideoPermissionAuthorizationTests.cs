@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
@@ -41,6 +43,27 @@ public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOffice
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.True(featureState.TryGetProperty("videoBulkImportEnabled", out var bulkImport));
     Assert.True(bulkImport.GetBoolean());
+  }
+
+  [Fact]
+  public async Task Feature_state_honors_a_host_local_false_configuration_override()
+  {
+    using var overriddenFactory = _factory.WithWebHostBuilder(builder =>
+        builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+              ["FeatureManagement:EnableVideoBulkImport"] = "false"
+            })));
+    using var client = overriddenFactory.CreateClient();
+    client.DefaultRequestHeaders.Add(
+        "X-Test-Permissions",
+        AuthorizationPermissionKeys.BackofficeAccess);
+
+    var response = await client.GetAsync("/api/features");
+    var featureState = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.False(featureState.GetProperty("videoBulkImportEnabled").GetBoolean());
   }
 
   [Theory]

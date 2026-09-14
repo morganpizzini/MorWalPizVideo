@@ -10,7 +10,10 @@ public sealed record NewsletterCreateRequest(
     string SubjectEng,
     string TemplateId,
     int TemplateVersion,
-    IReadOnlyList<NewsletterSectionContract> Sections);
+    IReadOnlyList<NewsletterSectionContract> Sections,
+    string DeliveryMode = "Draft",
+    DateTime? ScheduledAtUtc = null);
 public sealed record NewsletterSectionContract(string Type, string? Title, string? Body, string? ImageUrl, string? ShortLinkCode);
 public sealed record NewsletterStateRequest(string State);
-public sealed record NewsletterContract(string Id, string ChannelId, string Name, string SubjectIt, string SubjectEng, string TemplateId, int TemplateVersion, string State);
+public sealed record NewsletterScheduleRequest(DateTime ScheduledAtUtc);
+public sealed record NewsletterContract(string Id, string ChannelId, string Name, string SubjectIt, string SubjectEng, string TemplateId, int TemplateVersion, string State, DateTime? ScheduledAtUtc = null, DateTime? ApprovedAt = null);

@@ -1,4 +1,5 @@
-import type { AnalysisResult, ShotCandidate } from './types'
+import { resolveTimerOrigin } from './trim'
+import type { AnalysisResult, ShotCandidate, TrimRange } from './types'
 
 const SAMPLE_INTERVAL_SECONDS = 0.1
 const MAX_SAMPLES = 600
@@ -37,7 +38,7 @@ const frameDifference = (
   return { difference: difference / (pixels.length / 4 * 3 * 255), pixels }
 }
 
-export const analyzeVideo = async (file: File, peakMultiplier = 1.15, startAtSeconds = 0): Promise<AnalysisResult> => {
+export const analyzeVideo = async (file: File, peakMultiplier = 1.15, trimRange: TrimRange, beepSeconds?: number): Promise<AnalysisResult> => {
   const video = document.createElement('video')
   const canvas = document.createElement('canvas')
   canvas.width = 96
@@ -52,8 +53,9 @@ export const analyzeVideo = async (file: File, peakMultiplier = 1.15, startAtSec
   try {
     await waitFor(video, 'loadedmetadata')
     const durationSeconds = video.duration
-    const analysisStart = Math.min(Math.max(0, startAtSeconds), durationSeconds)
-    const analysisDuration = Math.max(0, durationSeconds - analysisStart)
+    const analysisStart = resolveTimerOrigin(trimRange, beepSeconds)
+    const analysisEnd = Math.min(durationSeconds, trimRange.endSeconds)
+    const analysisDuration = Math.max(0, analysisEnd - analysisStart)
     const sampleCount = Math.min(MAX_SAMPLES, Math.max(1, Math.ceil(analysisDuration / SAMPLE_INTERVAL_SECONDS)))
     const scores: number[] = []
     let previous: Uint8ClampedArray | undefined
@@ -85,7 +87,7 @@ export const analyzeVideo = async (file: File, peakMultiplier = 1.15, startAtSec
         })
       }
     })
-    return { durationSeconds, candidates, sampledFrames: sampleCount, startBeepSeconds: analysisStart }
+    return { durationSeconds, candidates, sampledFrames: sampleCount, trimRange, timerOriginSeconds: analysisStart }
   } finally {
     URL.revokeObjectURL(url)
   }

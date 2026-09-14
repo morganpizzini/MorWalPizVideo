@@ -37,7 +37,33 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("channelLogoUrl")]
         public string ChannelLogoUrl { get; init; } = string.Empty;
+
+        [BsonElement("socialPublishing")]
+        public SocialPublishingConfiguration SocialPublishing { get; init; } = new();
         
+    }
+
+    [BsonIgnoreExtraElements]
+    public record SocialPublishingConfiguration
+    {
+        [BsonElement("telegram")]
+        public SocialPublishingProviderConfiguration Telegram { get; init; } = new();
+
+        [BsonElement("discord")]
+        public SocialPublishingProviderConfiguration Discord { get; init; } = new();
+
+        [BsonElement("facebook")]
+        public SocialPublishingProviderConfiguration Facebook { get; init; } = new();
+    }
+
+    [BsonIgnoreExtraElements]
+    public record SocialPublishingProviderConfiguration
+    {
+        [BsonElement("destinationId")]
+        public string DestinationId { get; init; } = string.Empty;
+
+        [BsonElement("credentialCiphertext")]
+        public string CredentialCiphertext { get; init; } = string.Empty;
     }
 
     [BsonIgnoreExtraElements]

@@ -88,9 +88,11 @@ const ImportVideo: React.FC = () => {
           toast.show('Import failed', result.error ?? 'The video could not be imported.', { variant: 'danger' });
         } else if (result.shortLinkStatus === 'failed') {
           setSingleVideoId('');
+          setSingleCategories([]);
           toast.show('Import completed with warning', result.error ?? 'The video was imported, but its short link could not be created.', { variant: 'warning' });
         } else {
           setSingleVideoId('');
+          setSingleCategories([]);
           toast.show('Import complete', 'The video was imported successfully.', { variant: 'success' });
         }
       } else {
@@ -142,7 +144,10 @@ const ImportVideo: React.FC = () => {
       <Tab eventKey="single" title="Single import">
         <Form onSubmit={handleSingleSubmit}>
           <Form.Group className="mb-3" controlId="singleVideoId"><Form.Label>Video ID *</Form.Label><Form.Control value={singleVideoId} onChange={event => setSingleVideoId(event.target.value)} required /></Form.Group>
-          <Form.Group className="mb-3" controlId="singleCategories"><Form.Label>Categories *</Form.Label><div className="d-flex flex-wrap gap-3">{availableCategories.map(category => <Form.Check key={category.categoryId} type="checkbox" id={`single-category-${category.categoryId}`} label={category.title} checked={singleCategories.includes(category.categoryId)} onChange={() => toggleSingleCategory(category.categoryId)} />)}</div></Form.Group>
+          <Form.Group className="mb-3" controlId="singleCategories"><Form.Label id="single-categories-label">Categories *</Form.Label><div className="d-flex flex-wrap gap-2" role="group" aria-labelledby="single-categories-label">{availableCategories.map(category => {
+            const selected = singleCategories.includes(category.categoryId);
+            return <button key={category.categoryId} type="button" className={`btn btn-sm ${selected ? 'btn-primary' : 'btn-outline-secondary'}`} aria-pressed={selected} onClick={() => toggleSingleCategory(category.categoryId)}>{category.title}</button>;
+          })}</div></Form.Group>
           <Button variant="success" type="submit" disabled={singleSaving}>{singleSaving ? 'Importing...' : 'Import video'}</Button>
         </Form>
       </Tab>

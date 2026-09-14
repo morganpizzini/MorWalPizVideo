@@ -15,8 +15,6 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Configuration;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
-using MorWalPizVideo.BackOffice.Services.Configuration;
-using MorWalPizVideo.BackOffice.Services.Factories;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Interfaces;
@@ -126,7 +124,8 @@ static void ValidateRequiredConfiguration(IConfiguration configuration)
         ["AzureConfig:OpenAi:DeploymentName"] = configuration["AzureConfig:OpenAi:DeploymentName"],
         ["AzureConfig:OpenAi:OpenAiEndpoint"] = configuration["AzureConfig:OpenAi:OpenAiEndpoint"],
         ["AzureConfig:OpenAi:OpenAiKey"] = configuration["AzureConfig:OpenAi:OpenAiKey"],
-        ["JwtSettings:Secret"] = configuration["JwtSettings:Secret"]
+        ["JwtSettings:Secret"] = configuration["JwtSettings:Secret"],
+        ["SocialPublishing:EncryptionKey"] = configuration["SocialPublishing:EncryptionKey"]
     };
 
     if (string.Equals(requiredValues["JwtSettings:Secret"], "your-super-secret-key-with-at-least-32-characters", StringComparison.Ordinal))
@@ -141,6 +140,17 @@ static void ValidateRequiredConfiguration(IConfiguration configuration)
     {
         throw new InvalidOperationException(
             $"Required production configuration is missing: {string.Join(", ", missingValues)}.");
+    }
+
+    try
+    {
+        if (Convert.FromBase64String(requiredValues["SocialPublishing:EncryptionKey"]!).Length != 32)
+            throw new FormatException();
+    }
+    catch (FormatException)
+    {
+        throw new InvalidOperationException(
+            "SocialPublishing:EncryptionKey must be a base64-encoded 32-byte key.");
     }
 }
 
@@ -168,12 +178,9 @@ builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexed
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
-builder.Services.Configure<global::TelegramSettings>(
-    "TelegramSettings",
-    builder.Configuration.GetSection("TelegramSettings"));
-builder.Services.Configure<global::TelegramSettings>(
-    "DiscordSettings",
-    builder.Configuration.GetSection("DiscordSettings"));
+builder.Services.Configure<SocialPublishingOptions>(builder.Configuration.GetSection("SocialPublishing"));
+builder.Services.AddSingleton<ISocialPublishingSecretProtector, SocialPublishingSecretProtector>();
+builder.Services.AddScoped<ISelectedChannelPublishingConfigurationAccessor, SelectedChannelPublishingConfigurationAccessor>();
 
 builder.Services.AddSingleton<IChatCompletionService>(sp =>
 {
@@ -205,21 +212,8 @@ builder.Services.AddAntiforgery(options =>
 });
 builder.Services.AddHttpContextAccessor();
 
-var facebookSettings = builder.Configuration
-        .GetSection("FacebookSettings")
-        .Get<FacebookSettings>();
-
 if (!enableMock)
 {
-    // Register configuration services for lazy loading
-    builder.Services.AddScoped<IDiscordConfigurationService, DiscordConfigurationService>();
-    builder.Services.AddScoped<ITelegramConfigurationService, TelegramConfigurationService>();
-
-    // Register HttpClient factories
-    builder.Services.AddScoped<IDiscordHttpClientFactory, DiscordHttpClientFactory>();
-    builder.Services.AddScoped<ITelegramHttpClientFactory, TelegramHttpClientFactory>();
-
-
     var siteUrl = $"{builder.Configuration["ServerAPISiteUrl"]}api/";
 
     builder.Services.AddHttpClient(HttpClientNames.MorWalPiz, httpClient =>
@@ -236,24 +230,18 @@ if (!enableMock)
     });
 
 
-    if (!string.IsNullOrEmpty(facebookSettings.PageId))
+    builder.Services.AddHttpClient(HttpClientNames.Telegram, httpClient =>
     {
-        builder.Services.AddHttpClient(HttpClientNames.Facebook, httpClient =>
-        {
-            httpClient.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
-            httpClient.DefaultRequestHeaders.Accept.Clear();
-            httpClient.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-
-            if (!string.IsNullOrEmpty(facebookSettings?.AccessToken))
-            {
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", facebookSettings.AccessToken);
-            }
-        });
-    }
-
-    // Note: Discord and Telegram HttpClients will be created via factories when needed
+        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    }).RemoveAllLoggers();
+    builder.Services.AddHttpClient(HttpClientNames.Discord, httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://discord.com/api/");
+    });
+    builder.Services.AddHttpClient(HttpClientNames.Facebook, httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
+    });
 }
 
 
@@ -526,10 +514,7 @@ else
     builder.Services.AddScoped<ICrossApiService, CrossApiService>();
     builder.Services.AddScoped<IDiscordService, DiscordService>();
     builder.Services.AddScoped<ITelegramService, TelegramService>();
-    if (!string.IsNullOrEmpty(facebookSettings.PageId))
-        builder.Services.AddScoped<IFacebookService, FacebookService>();
-    else
-        builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
+    builder.Services.AddScoped<IFacebookService, FacebookService>();
     builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddSingleton<BlobServiceClient>(provider =>
     {
@@ -670,6 +655,11 @@ if (enableHangFire)
 
     var faqVoteReconciliationCron = app.Configuration["Faq:VoteReconciliationCron"] ?? "*/15 * * * *";
     RecurringJob.AddOrUpdate<FaqVoteReconciliationJob>(FaqVoteReconciliationJob.JobId, job => job.ExecuteAsync(), faqVoteReconciliationCron);
+
+    RecurringJob.AddOrUpdate<NewsletterDispatchService>(
+        "newsletter-scheduled-reconciliation",
+        service => service.ReconcileScheduledAsync(CancellationToken.None),
+        builder.Configuration["Newsletter:ReconciliationCron"] ?? "*/5 * * * *");
 }
 
 app.MapDefaultEndpoints();

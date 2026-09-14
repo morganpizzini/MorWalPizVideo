@@ -178,7 +178,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<UserChannelOwner>> GetByChannelIdAsync(string channelId);
     }
     public interface IUserRequestRepository : IRepository<UserRequest> { }
-    public interface INewsletterRepository : IRepository<Newsletter> { }
+    public interface INewsletterRepository : IRepository<Newsletter>
+    {
+        Task<Newsletter?> ClaimForSendingAsync(string channelId, string newsletterId, NewsletterState expectedState, DateTime now, DateTime? expectedScheduledAtUtc = null, CancellationToken cancellationToken = default);
+        Task<IList<Newsletter>> GetDueScheduledAsync(DateTime now, int limit, CancellationToken cancellationToken = default);
+    }
     public interface INewsletterTemplateRepository : IRepository<NewsletterTemplate> { }
     public interface INewsletterUserRepository : IRepository<NewsletterUser>
     {

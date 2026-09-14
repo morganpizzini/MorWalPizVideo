@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using MorWalPizVideo.Models.ShootingRange;
+using MorWalPizVideo.ShootingRange.Models;
 
-namespace MorWalPiz.Contracts.ShootingRange;
+namespace MorWalPizVideo.ShootingRange.Contracts;
 
 public sealed record RegisterShootingRangeUserRequest([Required, StringLength(80, MinimumLength = 3)] string Username, [Required, StringLength(100, MinimumLength = 12)] string Password, [Required, StringLength(80)] string FirstName, [Required, StringLength(80)] string LastName);
 public sealed record ShootingRangeLoginRequest([Required] string Username, [Required] string Password);

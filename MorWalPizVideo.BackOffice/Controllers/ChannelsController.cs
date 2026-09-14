@@ -7,6 +7,7 @@ using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.Domain;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
@@ -27,6 +28,7 @@ public class AddChannelRequest
     public bool IsSHIT { get; set; }
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
+    public SocialPublishingConfigurationRequest SocialPublishing { get; set; } = new();
 }
 
 public class UpdateChannelRequest
@@ -40,12 +42,27 @@ public class UpdateChannelRequest
     public bool IsSHIT { get; set; }
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
+    public SocialPublishingConfigurationRequest SocialPublishing { get; set; } = new();
 }
 
 public class ChannelSocialRequest
 {
     public string Provider { get; set; } = string.Empty;
     public string Handler { get; set; } = string.Empty;
+}
+
+public class SocialPublishingConfigurationRequest
+{
+    public SocialPublishingProviderRequest? Telegram { get; set; } = new();
+    public SocialPublishingProviderRequest? Discord { get; set; } = new();
+    public SocialPublishingProviderRequest? Facebook { get; set; } = new();
+}
+
+public class SocialPublishingProviderRequest
+{
+    public string? DestinationId { get; set; }
+    public string? Credential { get; set; }
+    public bool ClearCredential { get; set; }
 }
 
 public class ChannelsController : ApplicationControllerBase
@@ -57,6 +74,7 @@ public class ChannelsController : ApplicationControllerBase
     private readonly ICrossApiService crossApiService;
     private readonly IBlobService blobService;
     private readonly ILogger<ChannelsController> logger;
+    private readonly ISocialPublishingSecretProtector secretProtector;
 
     public ChannelsController(
         IYTService _ytService,
@@ -65,6 +83,7 @@ public class ChannelsController : ApplicationControllerBase
         IVideoAuthorizationService channelAuthorization,
         ICrossApiService crossApiService,
         IBlobService blobService,
+        ISocialPublishingSecretProtector secretProtector,
         ILogger<ChannelsController> logger)
     {
         ytService = _ytService;
@@ -73,6 +92,7 @@ public class ChannelsController : ApplicationControllerBase
         this.channelAuthorization = channelAuthorization;
         this.crossApiService = crossApiService;
         this.blobService = blobService;
+        this.secretProtector = secretProtector;
         this.logger = logger;
     }
 
@@ -106,7 +126,7 @@ public class ChannelsController : ApplicationControllerBase
         {
             return NotFound();
         }
-        return Ok(ContractUtils.Convert(existing));
+        return Ok(ConvertManagement(existing));
     }
 
     [HttpPost]
@@ -128,10 +148,13 @@ public class ChannelsController : ApplicationControllerBase
         }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, null, channelId, out var publishingError);
+        if (publishingError is not null) return BadRequest(publishingError);
         await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim())
         {
             ShortLinkUrl = shortLinkUrl,
             Socials = socials,
+            SocialPublishing = socialPublishing,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
@@ -160,11 +183,14 @@ public class ChannelsController : ApplicationControllerBase
         }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError);
+        if (publishingError is not null) return BadRequest(publishingError);
         await _dataService.UpdateChannel(existing with
         {
             ChannelName = request.ChannelName.Trim(),
             ShortLinkUrl = shortLinkUrl,
             Socials = socials,
+            SocialPublishing = socialPublishing,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
@@ -278,6 +304,88 @@ public class ChannelsController : ApplicationControllerBase
     }
 
     private sealed record CacheInvalidationResult(string Status, string? WarningCode, string? Message);
+
+    private ChannelManagementContract ConvertManagement(YTChannel entity)
+    {
+        var contract = ContractUtils.Convert(entity);
+        var socialPublishing = entity.SocialPublishing ?? new SocialPublishingConfiguration();
+        return new ChannelManagementContract
+        {
+            Id = contract.Id,
+            ChannelId = contract.ChannelId,
+            YTChannelId = contract.YTChannelId,
+            ChannelName = contract.ChannelName,
+            ShortLinkUrl = contract.ShortLinkUrl,
+            IsSHIT = contract.IsSHIT,
+            ChannelLogoUrl = contract.ChannelLogoUrl,
+            Socials = contract.Socials,
+            Videos = contract.Videos,
+            SocialPublishing = new SocialPublishingManagementContract
+            {
+                Telegram = ConvertManagement(socialPublishing.Telegram ?? new SocialPublishingProviderConfiguration()),
+                Discord = ConvertManagement(socialPublishing.Discord ?? new SocialPublishingProviderConfiguration()),
+                Facebook = ConvertManagement(socialPublishing.Facebook ?? new SocialPublishingProviderConfiguration())
+            }
+        };
+    }
+
+    private static SocialPublishingProviderManagementContract ConvertManagement(
+        SocialPublishingProviderConfiguration configuration) => new()
+        {
+            DestinationId = configuration.DestinationId,
+            CredentialConfigured = !string.IsNullOrWhiteSpace(configuration.CredentialCiphertext)
+        };
+
+    private SocialPublishingConfiguration BuildSocialPublishing(
+        SocialPublishingConfigurationRequest? request,
+        SocialPublishingConfiguration? existing,
+        string channelId,
+        out string? error)
+    {
+        request ??= new SocialPublishingConfigurationRequest();
+        existing ??= new SocialPublishingConfiguration();
+        request.Telegram ??= new SocialPublishingProviderRequest();
+        request.Discord ??= new SocialPublishingProviderRequest();
+        request.Facebook ??= new SocialPublishingProviderRequest();
+        error = ValidateProviderRequest(request.Telegram, "Telegram")
+            ?? ValidateProviderRequest(request.Discord, "Discord")
+            ?? ValidateProviderRequest(request.Facebook, "Facebook");
+        if (error is not null)
+        {
+            return existing;
+        }
+
+        return new SocialPublishingConfiguration
+        {
+            Telegram = BuildProvider(request.Telegram, existing.Telegram ?? new SocialPublishingProviderConfiguration(), channelId, "telegram"),
+            Discord = BuildProvider(request.Discord, existing.Discord ?? new SocialPublishingProviderConfiguration(), channelId, "discord"),
+            Facebook = BuildProvider(request.Facebook, existing.Facebook ?? new SocialPublishingProviderConfiguration(), channelId, "facebook")
+        };
+    }
+
+    private SocialPublishingProviderConfiguration BuildProvider(
+        SocialPublishingProviderRequest request,
+        SocialPublishingProviderConfiguration existing,
+        string channelId,
+        string provider)
+    {
+        var credentialCiphertext = request.ClearCredential
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(request.Credential)
+                ? existing.CredentialCiphertext
+                : secretProtector.Protect(request.Credential.Trim(), channelId, provider);
+
+        return new SocialPublishingProviderConfiguration
+        {
+            DestinationId = request.DestinationId?.Trim() ?? existing.DestinationId,
+            CredentialCiphertext = credentialCiphertext
+        };
+    }
+
+    private static string? ValidateProviderRequest(SocialPublishingProviderRequest request, string provider) =>
+        request.ClearCredential && !string.IsNullOrWhiteSpace(request.Credential)
+            ? $"{provider} credential cannot be replaced and cleared in the same request."
+            : null;
 
     private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)
     {

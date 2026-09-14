@@ -1,38 +1,36 @@
 ﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.BackOffice.Services.Configuration;
-using MorWalPizVideo.BackOffice.Services.Factories;
+using MorWalPizVideo.Models.Constraints;
+using System.Net.Http.Headers;
 
 namespace MorWalPizVideo.BackOffice.Services;
-public class DiscordServiceMock : IDiscordService
+public class DiscordServiceMock(ISelectedChannelPublishingConfigurationAccessor configurationAccessor) : IDiscordService
 {
     public Task<string> CreatePost(string shortLink, string message)
     {
+        configurationAccessor.Get("discord");
         return Task.FromResult("");
     }
 }
 public class DiscordService : IDiscordService
 {
-    private readonly HttpClient client;
-    private readonly string channelName;
+    private readonly IHttpClientFactory clientFactory;
+    private readonly ISelectedChannelPublishingConfigurationAccessor configurationAccessor;
     private readonly string siteUrl;
     public DiscordService(
-        IDiscordHttpClientFactory clientFactory,
-        IDiscordConfigurationService configurationService,
+        IHttpClientFactory clientFactory,
+        ISelectedChannelPublishingConfigurationAccessor configurationAccessor,
         IConfiguration configuration)
     {
-        client = clientFactory.CreateClient();
+        this.clientFactory = clientFactory;
+        this.configurationAccessor = configurationAccessor;
         siteUrl = configuration["SiteUrl"] ?? string.Empty;
         if (string.IsNullOrWhiteSpace(siteUrl))
             throw new InvalidOperationException("SiteUrl is empty");
-
-        channelName = configurationService.GetDiscordSettings().ChannelName;
-        if (string.IsNullOrWhiteSpace(channelName))
-            throw new InvalidOperationException("Discord channel name is not configured");
     }
 
     public async Task<string> CreatePost(string shortLink, string message)
     {
-        
+        var settings = configurationAccessor.Get("discord");
         var youtubeUrl = $"{siteUrl}sl/{shortLink}";
 
         var requestMessage = !string.IsNullOrEmpty(message) ? message : "Guarda il mio ultimo video:";
@@ -42,7 +40,15 @@ public class DiscordService : IDiscordService
             content = $"{requestMessage} {youtubeUrl}"
         };
 
-        var response = await client.PostAsJsonAsync($"channels/{channelName}/messages", request);
+        var client = clientFactory.CreateClient(HttpClientNames.Discord);
+        using var requestMessageBody = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"channels/{settings.DestinationId}/messages")
+        {
+            Content = JsonContent.Create(request)
+        };
+        requestMessageBody.Headers.Authorization = new AuthenticationHeaderValue("Bot", settings.Credential);
+        var response = await client.SendAsync(requestMessageBody);
 
         return response.IsSuccessStatusCode ? string.Empty
                 : await response.Content.ReadAsStringAsync();

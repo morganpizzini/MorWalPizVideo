@@ -62,7 +62,11 @@ public static class Extensions
                     .AddAspNetCoreInstrumentation()
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
-                    .AddHttpClientInstrumentation();
+                    .AddHttpClientInstrumentation(options =>
+                    {
+                        options.FilterHttpRequestMessage = request =>
+                            !string.Equals(request.RequestUri?.Host, "api.telegram.org", StringComparison.OrdinalIgnoreCase);
+                    });
             });
 
         builder.AddOpenTelemetryExporters();

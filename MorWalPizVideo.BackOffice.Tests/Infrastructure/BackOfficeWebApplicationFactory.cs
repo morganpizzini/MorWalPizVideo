@@ -56,6 +56,7 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
         Environment.SetEnvironmentVariable("JwtSettings__Issuer", "MorWalPizVideo.BackOffice.Tests");
         Environment.SetEnvironmentVariable("JwtSettings__Audience", "MorWalPizVideo.BackOffice.Tests");
         Environment.SetEnvironmentVariable("SiteUrl", "http://localhost/");
+        Environment.SetEnvironmentVariable("SocialPublishing__EncryptionKey", "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -78,6 +79,8 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
                 ["JwtSettings:Audience"] = "MorWalPizVideo.BackOffice.Tests"
                 ,
                 ["BootstrapSettings:Secret"] = "test-bootstrap-secret"
+                ,
+                ["SocialPublishing:EncryptionKey"] = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
             });
         });
 

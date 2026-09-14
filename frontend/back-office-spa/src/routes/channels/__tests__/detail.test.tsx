@@ -34,6 +34,11 @@ const mockChannel: Channel = {
     { provider: 'instagram', handler: '@morwalpiz' },
     { provider: 'x', handler: 'morwalpiz' },
   ],
+  socialPublishing: {
+    telegram: { destinationId: '-100123', credentialConfigured: true },
+    discord: { destinationId: '', credentialConfigured: false },
+    facebook: { destinationId: 'page-123', credentialConfigured: true },
+  },
 };
 
 const mockFetcher = {
@@ -47,7 +52,7 @@ beforeEach(() => {
   mockFetcher.data = undefined;
   vi.mocked(useNavigate).mockReturnValue(mockNavigate);
   vi.mocked(useLoaderData).mockReturnValue(mockChannel);
-  vi.mocked(useFetcher).mockReturnValue(mockFetcher as any);
+  vi.mocked(useFetcher).mockReturnValue(mockFetcher as unknown as ReturnType<typeof useFetcher>);
 });
 
 async function renderComponent() {
@@ -92,6 +97,9 @@ describe('Channel Detail', () => {
     expect(screen.getByText('https://morwalpiz.com/sl')).toBeInTheDocument();
     expect(screen.getByText('instagram: @morwalpiz')).toBeInTheDocument();
     expect(screen.getByText('x: morwalpiz')).toBeInTheDocument();
+    expect(screen.getByText('telegram: configured for -100123')).toBeInTheDocument();
+    expect(screen.getByText('discord: not configured')).toBeInTheDocument();
+    expect(screen.getByText('facebook: configured for page-123')).toBeInTheDocument();
   });
 
   it('renders delete API errors and keeps the confirmation modal open', async () => {

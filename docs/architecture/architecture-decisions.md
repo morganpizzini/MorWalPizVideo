@@ -4,7 +4,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-001](adr/ADR-001-management-public-boundary.md) | Separate management and public API boundaries | Accepted |
+| ADR-001 (source record missing) | Separate management and public API boundaries | Accepted baseline; reconstruct or supersede before changing this boundary |
 | [ADR-002](adr/ADR-002-explicit-authentication.md) | Explicit host-specific authentication and authorization | Accepted |
 | [ADR-003](adr/ADR-003-versioned-dto-apis.md) | Versioned DTO-based JSON APIs | Accepted |
 | [ADR-004](adr/ADR-004-canonical-short-links.md) | Canonical short-link aggregate and focused redirect service | Accepted |
@@ -16,8 +16,10 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-010](adr/ADR-010-domain-and-cors.md) | Canonical domains and least-privilege CORS | Accepted |
 | [ADR-011](adr/ADR-011-email-boundary.md) | Provider-neutral future transactional email boundary | Accepted |
 | [ADR-012](adr/ADR-012-desktop-composition.md) | Incremental Generic Host and MVVM direction for WPF | Accepted |
+| [ADR-013](adr/ADR-013-shop-admin-ui-and-checkout-delivery.md) | Shop admin UI and checkout delivery remain out of scope | Proposed; reinforced by portfolio hold |
 | [ADR-014](adr/ADR-014-directional-permission-implications.md) | Domain-owned directional permission implications | Accepted |
 | [ADR-015](adr/ADR-015-backoffice-app-store.md) | BackOffice SPA app-store ownership and bootstrap hydration | Accepted |
+| [ADR-016](adr/ADR-016-shooting-range-public-poc.md) | Authorization-first public posture for the Shooting Range POC | Accepted |
 
 ## ADR Process
 

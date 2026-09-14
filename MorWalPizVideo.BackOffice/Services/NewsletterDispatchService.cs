@@ -11,12 +11,16 @@ public sealed class NewsletterTransientException(string message, Exception? inne
 public interface INewsletterDispatchService
 {
     Task<bool> QueueAsync(string channelId, string newsletterId, CancellationToken cancellationToken = default);
+    Task<bool> QueueScheduledAsync(string channelId, string newsletterId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default);
+    Task ProcessScheduledAsync(string channelId, string newsletterId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default);
+    Task ReconcileScheduledAsync(CancellationToken cancellationToken = default);
     Task ProcessBatchAsync(string channelId, string newsletterId, CancellationToken cancellationToken = default);
 }
 
 public sealed class NewsletterDispatchService(
     INewsletterRepository newsletterRepository,
     INewsletterUserRepository userRepository,
+    INewsletterRecipientRepository recipientRepository,
     INewsletterRecipientDispatchRepository dispatchRepository,
     INewsletterEventRepository eventRepository,
     INewsletterEmailService emailService,
@@ -31,18 +35,50 @@ public sealed class NewsletterDispatchService(
         if (newsletter is null || newsletter.State != NewsletterState.Approved || backgroundJobClient is null)
             return false;
 
-        var users = await userRepository.GetItemsAsync(item => item.ChannelId == channelId && item.Status == NewsletterUserStatus.Subscribed);
+        var claimed = await newsletterRepository.ClaimForSendingAsync(channelId, newsletterId, NewsletterState.Approved, DateTime.UtcNow, cancellationToken: cancellationToken);
+        if (claimed is null) return false;
+        await ProvisionRecipientsAsync(claimed, cancellationToken);
+        backgroundJobClient.Enqueue<NewsletterDispatchService>(service => service.ProcessBatchAsync(channelId, newsletterId, CancellationToken.None));
+        logger.LogInformation("Newsletter {NewsletterId} queued for channel {ChannelId}", newsletterId, channelId);
+        return true;
+    }
+
+    public async Task<bool> QueueScheduledAsync(string channelId, string newsletterId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default)
+    {
+        var backgroundJobClient = serviceProvider.GetService<IBackgroundJobClient>();
+        if (backgroundJobClient is null) return false;
+        var delay = scheduledAtUtc - DateTime.UtcNow;
+        if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+        backgroundJobClient.Schedule<NewsletterDispatchService>(service => service.ProcessScheduledAsync(channelId, newsletterId, scheduledAtUtc, CancellationToken.None), delay);
+        return true;
+    }
+
+    public async Task ProcessScheduledAsync(string channelId, string newsletterId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default)
+    {
+        if (scheduledAtUtc > DateTime.UtcNow) return;
+        var claimed = await newsletterRepository.ClaimForSendingAsync(channelId, newsletterId, NewsletterState.Scheduled, DateTime.UtcNow, scheduledAtUtc, cancellationToken);
+        if (claimed is null) return;
+        await ProvisionRecipientsAsync(claimed, cancellationToken);
+        await ProcessBatchAsync(channelId, newsletterId, cancellationToken);
+    }
+
+    public async Task ReconcileScheduledAsync(CancellationToken cancellationToken = default)
+    {
+        var limit = Math.Clamp(configuration.GetValue("Newsletter:ReconciliationBatchSize", 100), 1, 1000);
+        var due = await newsletterRepository.GetDueScheduledAsync(DateTime.UtcNow, limit, cancellationToken);
+        foreach (var newsletter in due)
+            await ProcessScheduledAsync(newsletter.ChannelId, newsletter.Id, newsletter.ScheduledAtUtc!.Value, cancellationToken);
+    }
+
+    private async Task ProvisionRecipientsAsync(Newsletter newsletter, CancellationToken cancellationToken)
+    {
+        var users = await userRepository.GetItemsAsync(item => item.ChannelId == newsletter.ChannelId && item.Status == NewsletterUserStatus.Subscribed);
         foreach (var user in users)
         {
             await dispatchRepository.EnsurePendingAsync(new NewsletterRecipient(
-                channelId, newsletter.Id, user.Id, user.Language, NewsletterRecipientStatus.Pending)
-            { IdempotencyKey = $"{channelId}:{newsletter.Id}:{user.Id}" }, cancellationToken);
+                newsletter.ChannelId, newsletter.Id, user.Id, user.Language, NewsletterRecipientStatus.Pending)
+            { IdempotencyKey = $"{newsletter.ChannelId}:{newsletter.Id}:{user.Id}" }, cancellationToken);
         }
-
-        await newsletterRepository.UpdateItemAsync(newsletter with { State = NewsletterState.Sending });
-        backgroundJobClient.Enqueue<NewsletterDispatchService>(service => service.ProcessBatchAsync(channelId, newsletterId, CancellationToken.None));
-        logger.LogInformation("Newsletter {NewsletterId} queued for channel {ChannelId} with {RecipientCount} recipients", newsletterId, channelId, users.Count);
-        return true;
     }
 
     [AutomaticRetry(Attempts = 5, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
@@ -92,9 +128,11 @@ public sealed class NewsletterDispatchService(
         if (hasTransientFailure)
             throw new NewsletterTransientException($"Transient delivery failure in newsletter {newsletterId}.");
 
-        if (recipients.Count == batchSize && backgroundJobClient is not null)
+        var outstanding = (await recipientRepository.GetItemsAsync(item => item.ChannelId == channelId && item.NewsletterId == newsletterId))
+            .Any(item => item.Status is NewsletterRecipientStatus.Pending or NewsletterRecipientStatus.Sending);
+        if (outstanding && backgroundJobClient is not null)
             backgroundJobClient.Enqueue<NewsletterDispatchService>(service => service.ProcessBatchAsync(channelId, newsletterId, CancellationToken.None));
-        else
+        else if (!outstanding)
             await newsletterRepository.UpdateItemAsync(newsletter with { State = NewsletterState.Sent });
     }
 

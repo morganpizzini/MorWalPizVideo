@@ -2,7 +2,7 @@
 
 ## Purpose
 
-MorWalPizVideo is a multi-application content-management and publishing system centered on BackOffice. It manages video-oriented content, channels, categories, compilations, short links, sponsors, forms, products, digital artifacts, publishing schedules, social integrations, and insight workflows. Public applications consume selected projections through ServerAPI.
+MorWalPizVideo is a multi-application content-management and publishing system centered on BackOffice. It manages video-oriented content, channels, categories, compilations, short links, sponsors, forms, publishing schedules, social integrations, and insight workflows. Public applications consume selected projections through ServerAPI. Shop capabilities exist as pre-production code but are on hold. Shooting Range is an independent, minimal POC rather than part of the core publishing domain.
 
 ## System Context
 
@@ -10,13 +10,16 @@ MorWalPizVideo is a multi-application content-management and publishing system c
 flowchart LR
     Admin[BackOffice SPA] -->|JWT or secure cookie| BO[BackOffice API]
     Public[Public React app on Aruba] -->|Anonymous public API| API[ServerAPI on Azure]
-    Shop[Shop React app] -->|Public catalog and free acquisition| API
+    Shop[Shop React app - on hold] -.->|Target-only catalog and acquisition| API
     Shooting[Shooting ITA] -->|Public API| API
+    RangeUser[Authorized range user] -->|Credentialed HTTPS + CSRF| RangeClient[Shooting Range client]
+    RangeClient --> RangeAPI[Shooting Range API POC]
     Importer[VideoImporter WPF] -->|API key| BO
     Scanner[InsightScanner WPF] -->|API key| BO
     Followers[Followers] -->|Branded URL| SL[ShortLinks]
     BO --> Mongo[(MongoDB)]
     API --> Mongo
+    RangeAPI --> Mongo
     SL --> Mongo
     BO --> Blob[(Azure Blob Storage)]
     API --> Blob
@@ -34,11 +37,17 @@ flowchart LR
 
 ### Public Plane
 
-`MorWalPizVideo.ServerAPI` exposes public projections and explicitly approved public interactions, such as form responses, sponsorship applications, public catalog browsing, and the free-artifact flow. It must not provide administrative writes for videos, channels, categories, compilations, playlists, or equivalent core content.
+`MorWalPizVideo.ServerAPI` exposes public projections and explicitly approved public interactions, such as form responses and sponsorship applications. Pre-production public catalog and free-artifact code remains present but on hold. ServerAPI must not provide administrative writes for videos, channels, categories, compilations, playlists, or equivalent core content.
 
 ### Redirect Plane
 
 `MorWalPizVideo.ShortLinks` resolves branded short codes and records usage. It remains independent of media delivery and administrative management.
+
+### Shooting Range POC
+
+`MorWalPizVideo.ShootingRange` and `frontend/shooting-range.client` form a self-contained booking POC. The API references ServiceDefaults but does not depend on the publishing Domain, Models, Contracts, MvcHelpers, or BackOffice projects. Every domain operation is targeted to require authorization; login, CSRF token acquisition, and health probes are the only anonymous technical exceptions.
+
+The POC remains deliberately small. The first administrator is inserted manually into MongoDB, ordinary-user onboarding is not yet final, and admin-created users are the working assumption. See [Shooting Range Booking](../shooting-range-architecture.md).
 
 ### Local Operations Plane
 
@@ -86,7 +95,9 @@ API hosts compose shared libraries; they do not reference each other. Cross-serv
 3. Output caching may serve or retain the response.
 4. Persistence entities are mapped to public DTOs before returning.
 
-### Free Digital Artifact
+### Free Digital Artifact (Target, On Hold)
+
+This flow is an accepted future design for the pre-production shop. It is not active roadmap work.
 
 1. ServerAPI returns an anonymous catalog DTO containing a public preview URL but no storage key.
 2. ServerAPI creates or resumes a server-owned anonymous cart using an opaque HttpOnly cookie.
@@ -112,4 +123,4 @@ API hosts compose shared libraries; they do not reference each other. Cross-serv
 
 ## Known Gaps
 
-Current source does not yet fully implement the target free-acquisition, canonical short-link, versioned API, strict CORS, DTO, or Blob-download designs. See [Technical Debt](technical-debt.md) and [Refactoring Roadmap](refactoring-roadmap.md).
+Current source does not yet fully implement versioned APIs or uniform DTO and Problem Details boundaries. Shooting Range still requires its public-release authorization, CORS, response-projection, account-lifecycle, and booking-integrity gates. Shop gaps remain recorded but inactive while the portfolio hold applies. See [Technical Debt](technical-debt.md) and [Refactoring Roadmap](refactoring-roadmap.md).

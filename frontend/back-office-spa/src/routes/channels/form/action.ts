@@ -11,6 +11,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const shortLinkUrl = typeof values.shortLinkUrl === 'string' ? values.shortLinkUrl.trim() : '';
   const isSHIT = values.isSHIT === 'true';
   const socials = parseSocials(values.socials);
+  const socialPublishing = parseSocialPublishing(values.socialPublishing);
 
   if (!channelName) {
     errors['channelName'] = 'Channel name cannot be empty';
@@ -22,6 +23,10 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   if (socials === null) {
     errors['socials'] = 'Social entries must be valid provider and handler pairs';
+  }
+
+  if (socialPublishing === null) {
+    errors['socialPublishing'] = 'Social publishing configuration is invalid';
   }
 
   if (Object.keys(errors).length > 0) {
@@ -36,6 +41,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelName,
         shortLinkUrl,
         socials: socials ?? [],
+        socialPublishing,
         ...(typeof values.isSHIT === 'string' ? { isSHIT } : {}),
       };
       const response = await put(ComposeUrl(endpoints.CHANNELS_DETAIL, { channelId: id }), payload);
@@ -50,6 +56,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         shortLinkUrl,
         isSHIT,
         socials: socials ?? [],
+        socialPublishing,
       };
       const response = await post(endpoints.CHANNELS, payload);
       if (getChannelApiError(response)) {
@@ -60,6 +67,45 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     return data({ success: true, cacheInvalidation }, { status: id ? 200 : 201 });
   } catch (error) {
     return channelActionError(error, id ? 'Unable to update channel' : 'Unable to create channel');
+  }
+}
+
+type PublishingProviderPayload = {
+  destinationId?: string;
+  credential?: string;
+  clearCredential: boolean;
+};
+
+function parseSocialPublishing(value: FormDataEntryValue | undefined): Record<string, PublishingProviderPayload> | null {
+  const emptyProvider = (): PublishingProviderPayload => ({ clearCredential: false });
+  if (typeof value !== 'string' || !value.trim()) {
+    return { telegram: emptyProvider(), discord: emptyProvider(), facebook: emptyProvider() };
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+
+    const result: Record<string, PublishingProviderPayload> = {};
+    for (const provider of ['telegram', 'discord', 'facebook']) {
+      const candidate = (parsed as Record<string, unknown>)[provider];
+      if (typeof candidate !== 'object' || candidate === null) return null;
+      const values = candidate as Record<string, unknown>;
+      if (values.destinationId !== undefined && typeof values.destinationId !== 'string') return null;
+      if (values.credential !== undefined && typeof values.credential !== 'string') return null;
+      if (values.clearCredential !== undefined && typeof values.clearCredential !== 'boolean') return null;
+
+      result[provider] = {
+        destinationId: typeof values.destinationId === 'string' ? values.destinationId.trim() : undefined,
+        credential: typeof values.credential === 'string' && values.credential.trim()
+          ? values.credential.trim()
+          : undefined,
+        clearCredential: values.clearCredential === true,
+      };
+    }
+    return result;
+  } catch {
+    return null;
   }
 }
 

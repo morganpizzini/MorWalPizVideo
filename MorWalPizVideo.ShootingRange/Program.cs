@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using MorWalPizVideo.Domain.ShootingRange;
-using MorWalPizVideo.Models.ShootingRange;
+using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Services;
 
 var builder = WebApplication.CreateBuilder(args);

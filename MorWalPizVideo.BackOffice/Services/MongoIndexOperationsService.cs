@@ -183,6 +183,11 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument { { "channelId", 1 }, { "newsletterId", 1 }, { "newsletterUserId", 1 } },
             Unique: true),
         new(
+            Key: "newsletters_state_scheduledat",
+            Collection: DbCollections.Newsletters,
+            Name: "ix_newsletters_state_scheduledat",
+            Keys: new BsonDocument { { "state", 1 }, { "scheduledAtUtc", 1 } }),
+        new(
             Key: "newsletterevents.channelid_newsletterid_type_occurredat",
             Collection: DbCollections.NewsletterEvents,
             Name: "ix_newsletterevents_channelid_newsletterid_type_occurredat",

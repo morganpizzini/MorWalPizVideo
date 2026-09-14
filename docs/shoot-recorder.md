@@ -3,9 +3,9 @@
 ## Purpose
 
 Shoot Recorder is a standalone React Progressive Web App for reviewing IPSC and
-IDPA action-stage videos. A user imports an MP4 showing a dynamic stage, runs a
-browser-local motion analysis, reviews candidate shot spikes, and exports an
-annotated MP4.
+IDPA action-stage videos. A user imports an MP4 showing a dynamic stage, chooses
+the scoring mode and source trim, runs browser-local motion analysis, reviews
+candidate shot spikes and scores, and exports an annotated MP4.
 
 The first release is entirely frontend-only. It has no backend, authentication,
 API calls, uploads, or server-side persistence.
@@ -23,8 +23,12 @@ applications.
 | `frontend/shoot-recorder/src/types.ts` | App-local preferences, overlay, analysis, and candidate contracts |
 | `frontend/shoot-recorder/src/preferences.ts` | Validated localStorage read/write and migration from earlier overlay shapes |
 | `frontend/shoot-recorder/src/analysis.ts` | Video metadata, frame sampling, motion-spike detection, and time formatting |
+| `frontend/shoot-recorder/src/trim.ts` | Valid trim boundaries, source/composition mapping, and timer-origin fallback |
+| `frontend/shoot-recorder/src/scoring.ts` | App-local IPSC/IDPA rules, hit-factor decay/clamping, and session score preservation |
 | `frontend/shoot-recorder/src/timeline.ts` | Beep-relative shot timing, split calculation, shot numbering, and last-four filtering |
-| `frontend/shoot-recorder/src/exportVideo.ts` | Canvas rendering, audio routing, MP4 MediaRecorder export, progress, and download |
+| `frontend/shoot-recorder/src/composition.ts` | Shared composition-time, overlay, and scoring data consumed by preview and export |
+| `frontend/shoot-recorder/src/remotionComposition.tsx` | Remotion Player composition for visible shot, social, score, and IPSC thermometer overlays |
+| `frontend/shoot-recorder/src/exportVideo.ts` | Remotion WebCodecs export where supported, consistent trimmed canvas fallback, audio routing, progress, and download |
 | `frontend/shoot-recorder/src/styles.css` | Responsive layout and preview overlay styling |
 | `frontend/shoot-recorder/vite.config.ts` | Vite, React, Vitest, and PWA configuration |
 | `frontend/shoot-recorder/src/__tests__/` | Preference persistence, timeline arithmetic, formatting, and shell tests |
@@ -36,25 +40,28 @@ or `@morwalpiz/layout` unless a second application needs the same contract.
 
 ## User workflow
 
-1. Choose an MP4 from the device.
-2. Analysis starts automatically when the video metadata is ready. The browser
-   samples video frames at 0.1-second intervals and compares consecutive frames
+1. Choose IPSC or IDPA, then choose an MP4 from the device.
+2. Set and confirm the two-handle source trim. Analysis and scoring remain
+   blocked until a valid range is confirmed. The browser then samples video
+   frames at 0.1-second intervals and compares consecutive frames
    to find motion spikes. The persisted peak-sensitivity control changes how
    far a motion score must rise above the average; lower values include more
    candidates. This is a candidate detector, not a certified shot-timer or
    scoring system.
 3. Pause the preview on the range officer timer's first beep and set it as the
-   start beep. The video is re-analyzed from that point, so the review list only
-   contains spikes after the beep. Shot times and splits are then measured
-   relative to that beep.
-4. Review the candidate list. Candidates can be deselected when camera motion,
+   start beep when it falls inside the trim. If the beep is blank or outside the
+   trim, the timer origin is the absolute source timestamp `trimStart`.
+4. Review the candidate list and enter points, penalties, and misses for each
+   detected or manual shot. Candidates can be deselected when camera motion,
    a nearby stage, or another false positive was counted. The `Jump` control
    seeks the preview to a candidate. A manual shot can be added at any
    user-provided video time in 0.1-second increments.
 5. Configure independent position, size, text color, stroke color, and stroke
    width for the shot timeline and social-handler overlays. Entering
    `mysocialpage` renders `@mysocialpage` in bold.
-6. Export the selected analysis as an annotated MP4.
+6. Export the selected analysis as an annotated MP4. IPSC shows hit factor and a
+   fixed 0..11 thermometer; IDPA shows its points-down summary and no hit-factor
+   UI.
 
 While the preview plays, the shot overlay timer advances from the beep and shows
 the last four selected shots that have already occurred. The split is rendered
@@ -72,17 +79,17 @@ responsive layout are required.
 ## Runtime lifecycle and control states
 
 The selected `File` is the session identity. Selecting a new file clears the
-analysis, current time, beep input, audio status, and video URL. The file-load
-effect starts analysis immediately from video time `0`. A second analysis effect
-handles peak-sensitivity changes:
+analysis, current time, beep input, audio status, and video URL. Loading a file
+creates the initial full-duration trim range, but does not analyze it. The user
+must confirm a valid trim range before analysis controls become available, and
+must then explicitly start analysis. Changing either trim handle clears the
+analysis and requires confirmation again.
 
-1. The sensitivity slider is persisted immediately.
-2. A two-second timer starts after the last slider event.
-3. A later slider event cancels and replaces that timer.
-4. The analysis starts with the current beep time after the timer expires.
-
-The file-load path is not debounced. This preserves the requirement that a
-selected video starts analysis without an extra user action.
+After analysis has been run, changing peak sensitivity persists the preference
+and schedules a new analysis two seconds after the last slider event. A later
+slider event cancels and replaces that timer. The scheduled analysis uses the
+current confirmed trim and beep time; it does not start while the trim is
+unconfirmed.
 
 `status` is `idle`, `analyzing`, `ready`, or `error`. `analysisDebouncing` is
 separate from `status`, so the user can see that a sensitivity analysis is
@@ -220,15 +227,21 @@ without resetting the shot timeline.
 
 ## MP4 export
 
-Export uses a hidden canvas renderer and `MediaRecorder` with an MP4 MIME type
-where the browser supports it. The source video's audio is routed into the
-export stream through an `AudioContext` media destination where available, with
-the video capture stream as a fallback. The
-output is downloaded as
-`<source-name>-annotated.mp4`. Browsers that cannot encode MP4 show an explicit
-error instead of silently producing a different file format. MP4
-`MediaRecorder` support varies; Safari and compatible Chromium configurations
-should be tested on the target devices.
+Export is available only after trim confirmation and explicit analysis. When
+Remotion WebCodecs is available, it is the primary export path for the complete
+source range. Its current browser path does not export a nonzero or shortened
+trim, so a trimmed range uses the native fallback instead. The output is
+downloaded as `<source-name>-annotated.mp4`.
+
+The MediaRecorder fallback renders the confirmed source range to a hidden canvas
+and records an MP4 MIME type where the browser supports it. It routes source
+audio through an `AudioContext` media destination when available. If that route
+cannot be created, it uses `HTMLVideoElement.captureStream()` while keeping the
+hidden source video at the confirmed trim start; it never resets the source to
+zero. The fallback stops at `analysis.trimRange.endSeconds`, but MP4
+MediaRecorder, canvas capture, capture-stream audio, and AAC decoding support
+vary by browser. If the required capability or audio track is unavailable, it
+fails visibly rather than silently producing the wrong range or a mute file.
 
 The exported shot overlay contains a live `TIME` heading, the last four shots
 already reached by playback (`shoot 1`, `shoot 2`, etc.), their beep-relative
@@ -246,8 +259,9 @@ overlay to an existing MP4 without decoding and encoding the frames. The source
 video element is never added to the document, has no controls, and is routed
 through an `AudioContext` media destination when that API is available. This
 keeps the renderer out of the visible UI and prevents a second user-facing
-preview while preserving audio for the output stream. A capture-stream audio
-fallback is retained for browsers without `AudioContext`.
+preview while preserving audio for the output stream. The capture-stream audio
+fallback is retained only where the browser can capture the source audio track
+correctly for the confirmed trim.
 
 If the preview itself is silent, this is normally a browser decode/codec issue,
 not an input-control issue. The player is explicitly unmuted and preloads media,

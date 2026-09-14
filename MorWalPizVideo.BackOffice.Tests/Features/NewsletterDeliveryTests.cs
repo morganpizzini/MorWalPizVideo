@@ -60,6 +60,8 @@ public sealed class NewsletterDeliveryTests
         public Task<IList<Newsletter>> GetItemsAsync() => Task.FromResult<IList<Newsletter>>([]);
         public Task<IList<Newsletter>> GetItemsAsync(System.Linq.Expressions.Expression<Func<Newsletter, bool>> predicate) => Task.FromResult<IList<Newsletter>>([]);
         public Task UpdateItemAsync(Newsletter item) => Task.CompletedTask;
+        public Task<Newsletter?> ClaimForSendingAsync(string channelId, string newsletterId, NewsletterState expectedState, DateTime now, DateTime? expectedScheduledAtUtc = null, CancellationToken cancellationToken = default) => Task.FromResult<Newsletter?>(null);
+        public Task<IList<Newsletter>> GetDueScheduledAsync(DateTime now, int limit, CancellationToken cancellationToken = default) => Task.FromResult<IList<Newsletter>>([]);
     }
 
     private sealed class EmptyEventRepository : INewsletterEventRepository

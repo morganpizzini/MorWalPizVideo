@@ -1,46 +1,47 @@
 ﻿using MorWalPizVideo.BackOffice.Services.Interfaces;
-using MorWalPizVideo.BackOffice.Services.Configuration;
-using MorWalPizVideo.BackOffice.Services.Factories;
+using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
-public class TelegramServiceMock : ITelegramService
+public class TelegramServiceMock(ISelectedChannelPublishingConfigurationAccessor configurationAccessor) : ITelegramService
 {
     public Task<string> CreatePost(string shortLink, string message)
     {
+        configurationAccessor.Get("telegram");
         return Task.FromResult("");
     }
 }
 public class TelegramService : ITelegramService
 {
-    private readonly HttpClient client;
-    private readonly string channelName;
+    private readonly IHttpClientFactory clientFactory;
+    private readonly ISelectedChannelPublishingConfigurationAccessor configurationAccessor;
     private readonly string siteUrl;
     public TelegramService(
-        ITelegramHttpClientFactory clientFactory,
-        ITelegramConfigurationService configurationService,
+        IHttpClientFactory clientFactory,
+        ISelectedChannelPublishingConfigurationAccessor configurationAccessor,
         IConfiguration configuration)
     {
-        client = clientFactory.CreateClient();
+        this.clientFactory = clientFactory;
+        this.configurationAccessor = configurationAccessor;
         siteUrl = configuration["SiteUrl"] ?? string.Empty;
         if (string.IsNullOrWhiteSpace(siteUrl))
             throw new InvalidOperationException("SiteUrl is empty");
-
-        channelName = configurationService.GetTelegramSettings().ChannelName;
-        if (string.IsNullOrWhiteSpace(channelName))
-            throw new InvalidOperationException("Telegram channel name is not configured");
     }
     public async Task<string> CreatePost(string shortLink, string message)
     {
+        var settings = configurationAccessor.Get("telegram");
         var youtubeUrl = $"{siteUrl}sl/{shortLink}";
 
         var request = new
         {
-            chat_id = channelName,
+            chat_id = settings.DestinationId,
             text = $"{message} {youtubeUrl}"
         };
 
-        var response = await client.PostAsJsonAsync("", request);
+        var client = clientFactory.CreateClient(HttpClientNames.Telegram);
+        var response = await client.PostAsJsonAsync(
+            $"https://api.telegram.org/bot{settings.Credential}/sendMessage",
+            request);
 
         return response.IsSuccessStatusCode ? string.Empty
                     : await response.Content.ReadAsStringAsync();

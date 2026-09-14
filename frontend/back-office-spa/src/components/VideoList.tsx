@@ -31,6 +31,10 @@ export function shouldShowMainUrl(videoRefCount: number): boolean {
   return videoRefCount !== 1;
 }
 
+export function getSocialPublishingVideoId(match: Match): string | undefined {
+  return match.thumbnailVideoId || match.videoRefs?.[0]?.youtubeId;
+}
+
 const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
   const revalidator = useRevalidator();
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -108,13 +112,23 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
     setPublishSuccess(null);
 
     try {
-      await publishVideoToSocial(selectedVideoId, publishMessage);
-      setPublishSuccess('Successfully published to all social media platforms!');
+      const response = await publishVideoToSocial(selectedVideoId, publishMessage);
+      const published = response.results
+        .filter(result => result.status === 'published')
+        .map(result => result.provider);
+      const skipped = response.results
+        .filter(result => result.status === 'skipped')
+        .map(result => result.provider);
+      const summary = [`Published to ${published.join(', ')}.`];
+      if (skipped.length > 0) {
+        summary.push(`Not configured: ${skipped.join(', ')}.`);
+      }
+      setPublishSuccess(summary.join(' '));
       setTimeout(() => {
         handleClosePublishModal();
       }, 2000);
-    } catch (error: any) {
-      setPublishError(error.message || 'Failed to publish to social media');
+    } catch (error: unknown) {
+      setPublishError(error instanceof Error ? error.message : 'Failed to publish to social media');
     } finally {
       setPublishLoading(false);
     }
@@ -128,8 +142,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
       await refreshVideoYouTubeData(matchId);
       // Revalidate the route to refresh the data
       revalidator.revalidate();
-    } catch (error: any) {
-      setRefreshError(error.message || 'Failed to refresh YouTube data');
+    } catch (error: unknown) {
+      setRefreshError(error instanceof Error ? error.message : 'Failed to refresh YouTube data');
       setTimeout(() => setRefreshError(null), 5000);
     } finally {
       setRefreshing(prev => ({ ...prev, [matchId]: false }));
@@ -226,7 +240,11 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                           View
                         </Dropdown.Item>
                         {canEdit ? <Dropdown.Item onClick={() => handleEdit(match.id)}>Edit</Dropdown.Item> : null}
-                        {canPublish ? <Dropdown.Item onClick={() => handleOpenPublishModal(match.id)}>Publish to Social</Dropdown.Item> : null}
+                        {canPublish && getSocialPublishingVideoId(match) ? (
+                          <Dropdown.Item onClick={() => handleOpenPublishModal(getSocialPublishingVideoId(match)!)}>
+                            Publish to Social
+                          </Dropdown.Item>
+                        ) : null}
                         {canEdit ? (
                           <Dropdown.Item onClick={() => handleRefresh(match.id)} disabled={refreshing[match.id]}>
                             {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}

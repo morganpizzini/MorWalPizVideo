@@ -1,7 +1,7 @@
 # MorWalPizVideo Architecture Guide
 
-**Status:** Official architecture reference  
-**Baseline:** Source reviewed through 2026-08-01  
+**Status:** Official architecture reference
+**Baseline:** Source reviewed through 2026-09-11
 **System center:** `MorWalPizVideo.BackOffice`
 
 This directory is the long-term architectural reference for MorWalPizVideo. It records both the architecture that exists in source and the approved target direction. Future work should consult this guide before performing a repository-wide analysis.
@@ -13,7 +13,7 @@ Current source, project manifests, deployment workflows, and executable tests re
 Included:
 
 - ASP.NET services, shared .NET libraries, tests, and Aspire orchestration.
-- BackOffice SPA, public application, shop client, Shooting ITA, and shared frontend packages.
+- BackOffice SPA, public application, pre-production shop client, Shooting ITA, Shooting Range POC, and shared frontend packages.
 - VideoImporter and InsightScanner Windows applications.
 - MongoDB, SQLite, Blob Storage, caching, jobs, authentication, configuration, CI/CD, and external integrations.
 
@@ -43,6 +43,7 @@ Excluded:
 16. [Future Improvements](future-improvements.md)
 17. [Refactoring Roadmap](refactoring-roadmap.md)
 18. [BackOffice Admin Dashboard](admin-dashboard.md)
+19. [Shooting Range POC](../shooting-range-architecture.md)
 
 ## Architectural Baseline
 
@@ -52,8 +53,8 @@ Excluded:
 - Shared behavior belongs in existing Models, Domain, Contracts, MvcHelpers, ServiceDefaults, or frontend packages according to their established responsibilities. API projects must not reference each other.
 - `morwalpiz.com` is the canonical public domain. The public frontend is hosted by Aruba and calls `https://morwalpiz-serverapi.azurewebsites.net` directly.
 - `https://morwalpiz-admin-spa.azurewebsites.net` is the administrative SPA origin. `https://shorts.morwalpiz.com` is the branded redirect host.
-- Digital artifacts are permanently free. Public previews may be anonymous; originals belong in private Blob Storage and are released through a server-controlled free-acquisition flow.
-- Customer accounts and analytics are deferred, but identifiers and contracts must permit later attachment without redesigning products or acquisitions.
+- Shop and digital-artifact functionality is pre-production and on hold. Its accepted ADRs remain target design records, but no shop implementation, migration, UI, contract, or deployment work belongs in the active roadmap until the hold is explicitly lifted.
+- Shooting Range is an independently owned POC preparing for public exposure. Its target is deny-by-default authorization with anonymous access limited to login, CSRF token acquisition, and health probes; scope remains intentionally minimal and extensible.
 - JSON APIs will adopt URL-segment versioning beginning with `/api/v1`; branded redirect URLs remain unversioned.
 - Development enables only `EnableDev` and `EnableSwagger`. Local CORS is permissive; deployed CORS is explicit and least-privilege.
 
@@ -63,6 +64,7 @@ Excluded:
 - **Target:** approved architecture not necessarily implemented.
 - **Historical:** retained context that is not authoritative.
 - **Unknown:** requires deployed-environment or operational verification.
+- **On hold:** valid context or target design excluded from active implementation until an explicit portfolio decision resumes it.
 
 ## Superseded And Supporting Documents
 

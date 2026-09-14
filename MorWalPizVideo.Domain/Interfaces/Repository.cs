@@ -12,7 +12,26 @@ using System.Text.RegularExpressions;
 
 namespace MorWalPizVideo.Server.Services.Interfaces
 {
-    public sealed class NewsletterRepository(IMongoDatabase database) : BaseRepository<Newsletter>(database, DbCollections.Newsletters), INewsletterRepository;
+    public sealed class NewsletterRepository(IMongoDatabase database) : BaseRepository<Newsletter>(database, DbCollections.Newsletters), INewsletterRepository
+    {
+        public Task<Newsletter?> ClaimForSendingAsync(string channelId, string newsletterId, NewsletterState expectedState, DateTime now, DateTime? expectedScheduledAtUtc = null, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Newsletter>.Filter.And(
+                Builders<Newsletter>.Filter.Eq(item => item.Id, newsletterId),
+                Builders<Newsletter>.Filter.Eq(item => item.ChannelId, channelId),
+                Builders<Newsletter>.Filter.Eq(item => item.State, expectedState));
+            if (expectedState == NewsletterState.Scheduled)
+                filter &= Builders<Newsletter>.Filter.Eq(item => item.ScheduledAtUtc, expectedScheduledAtUtc);
+            var update = Builders<Newsletter>.Update.Set(item => item.State, NewsletterState.Sending);
+            return _collection.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<Newsletter> { ReturnDocument = ReturnDocument.After }, cancellationToken);
+        }
+
+        public async Task<IList<Newsletter>> GetDueScheduledAsync(DateTime now, int limit, CancellationToken cancellationToken = default)
+            => await _collection.Find(Builders<Newsletter>.Filter.And(
+                Builders<Newsletter>.Filter.Eq(item => item.State, NewsletterState.Scheduled),
+                Builders<Newsletter>.Filter.Lte(item => item.ScheduledAtUtc, now)))
+                .SortBy(item => item.ScheduledAtUtc).Limit(Math.Clamp(limit, 1, 1000)).ToListAsync(cancellationToken);
+    }
     public sealed class NewsletterTemplateRepository(IMongoDatabase database) : BaseRepository<NewsletterTemplate>(database, DbCollections.NewsletterTemplates), INewsletterTemplateRepository;
     public sealed class NewsletterUserRepository(IMongoDatabase database) : BaseRepository<NewsletterUser>(database, DbCollections.NewsletterUsers), INewsletterUserRepository
     {

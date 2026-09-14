@@ -309,11 +309,9 @@ Uploads to blob storage (Azure Blob in prod, `BlobServiceMock` in mock). Support
 
 ### 3.7 Social Distribution
 
-#### `DiscordController` — `api/discord`
-`GET /{shortLink}?message=...` — publishes a post to the configured Discord channel using the URL backed by the given short link. HttpClient is created on demand via `IDiscordHttpClientFactory` so missing tokens don't crash startup.
+Social publishing is available through channel-scoped video and short-link operations. Every request requires `X-Channel-Id`; Telegram, Discord, and Facebook destinations and encrypted credentials are loaded from that selected channel. The former direct `api/telegram` and `api/discord` endpoints have been removed.
 
-#### `TelegramController` — `api/telegram`
-Twin of Discord but for Telegram (uses `ITelegramHttpClientFactory`).
+`POST /api/Videos/{id}/publish-social` publishes to every configured provider and reports each provider as `published`, `skipped`, or `failed`. `POST /api/ShortLinks/{id}/share` targets one provider and returns `409 social_provider_not_configured` when that provider is not configured for the selected channel.
 
 ### 3.8 Shooting ITA Vertical
 
@@ -412,7 +410,7 @@ All persisted entities derive from [`BaseEntity`](../MorWalPizVideo.Models/Model
 ### 4.9 Channels & creator tracking
 | Model | Role |
 | ----- | ---- |
-| [`YTChannel`](../MorWalPizVideo.Models/Models/YTChannel.cs) | Tracked YouTube channel with `Videos[]` and legacy `ShortLinks[]` (archival only). Canonical shortlinks are standalone records. |
+| [`YTChannel`](../MorWalPizVideo.Models/Models/YTChannel.cs) | Tracked YouTube channel with `Videos[]`, encrypted per-channel social publishing configuration, and legacy `ShortLinks[]` (archival only). Canonical shortlinks are standalone records. |
 | `YouTubeVideo` (same file) | Snapshot used by scraper: `VideoId`, `Title`, `LastCommentDate`, `VideoIdeas[]`. |
 | `VideoIdea` (same file) | AI-extracted idea from comments: `Idea`, `CommentExcerpt`, `CreationDate`, `Sentiment`. |
 | [`Competition` enums](../MorWalPizVideo.Models/Models/Competition.cs) | `CompetitionType`, `CompetitionStatus`. |
@@ -442,14 +440,14 @@ Under [Services/](Services/) — registered in `Program.cs`. Most have a matchin
 | `IRateLimitingService` / `RateLimitingService` | Per-IP login rate limiting (config: `SecuritySettings.MaxLoginAttempts`, `LockoutDurationMinutes`). |
 | `IApiKeyService` / `ApiKeyService` | Hash/verify/generate API keys; manage CRUD via repository. |
 | `IApiKeyRateLimitingService` / `ApiKeyRateLimitingService` | Sliding-window per-key rate limiter (`ConcurrentDictionary`). |
-| `IDiscordService` / `DiscordService` | Discord posting (uses `IDiscordHttpClientFactory` + `IDiscordConfigurationService`). |
-| `ITelegramService` / `TelegramService` | Telegram posting (twin of Discord). |
-| `IFacebookService` / `FacebookService` | Facebook page posting (auto-falls back to `FacebookServiceMock` if `FacebookSettings.PageId` is blank). |
+| `IDiscordService` / `DiscordService` | Discord posting with the selected channel's destination and encrypted bot token. |
+| `ITelegramService` / `TelegramService` | Telegram posting with the selected channel's chat ID and encrypted bot token. |
+| `IFacebookService` / `FacebookService` | Facebook posting with the selected channel's page ID and encrypted access token. |
+| `ISocialPublishingSecretProtector` | Authenticated AES-GCM protection for credentials stored on channel documents; requires `SocialPublishing:EncryptionKey`. |
 | `IImageGenerationService` / `ImageGenerationService` | PNG generation (text-on-image, QR composition). |
 | `IInsightAgentService` / `InsightAgentService` | AI agent for the Insights pipeline (Azure OpenAI via Semantic Kernel). |
 | `ICrossApiService` / `CrossApiService` | Calls the named HttpClient `MorWalPiz` (internal API base = `SiteUrl + "api/"`). |
 | `HealthCheckService` | Programmatic health-check registration (see [HEALTH_CHECKS.md](HEALTH_CHECKS.md)). |
-| Factories (`IDiscordHttpClientFactory`, `ITelegramHttpClientFactory`) | Build HttpClient instances **lazily** so missing tokens don't block startup. |
 
 ### Repositories (provided by `MorWalPizVideo.Domain`)
 Mock vs MongoDB registration is performed in `Program.cs` based on `EnableMock`. Each entity has its own `IxxxRepository` + `xxxRepository` + `xxxMockRepository` triad — e.g. `IProductRepository`, `IYouTubeContentRepository`, `IApiKeyRepository`, `IUserRequestRepository`, etc. Mock implementations share the singleton, code-initialized `PrimaryScenario`.

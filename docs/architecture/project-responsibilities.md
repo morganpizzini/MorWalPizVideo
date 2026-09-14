@@ -17,7 +17,7 @@
 - Public cart or free-acquisition interactions.
 - Public short-link resolution.
 
-The current anonymous BackOffice `api/shop/*` controllers duplicate ServerAPI and are scheduled for removal after consumer verification.
+Shop-related ownership cleanup is frozen with the rest of the pre-production shop. Existing compatibility surfaces must not be expanded while the hold remains active.
 
 ## ServerAPI
 
@@ -26,9 +26,9 @@ The current anonymous BackOffice `api/shop/*` controllers duplicate ServerAPI an
 - Public DTO projections for published content and active catalog data.
 - Anonymous form responses and sponsorship applications where explicitly approved.
 - Public preview-image discovery.
-- Server-owned anonymous cart, permanent-free acquisition, and authorized original download.
-- Future customer identity and analytics extension points.
 - Public push-subscription behavior.
+
+When the shop hold is explicitly lifted, ServerAPI is the intended owner of server-owned anonymous carts, permanent-free acquisitions, authorized original downloads, and future customer identity extension points. These are target responsibilities, not active implementation work.
 
 ### Must Not Own
 
@@ -86,11 +86,19 @@ Owns public content discovery, presentation, SEO, PWA, and SSR behavior. It omit
 
 ### Shop Client
 
-Owns free-artifact discovery, anonymous cart UI, acquisition, and download. It does not own authorization decisions or storage URLs.
+Pre-production and on hold. Its intended ownership of free-artifact discovery, cart UI, acquisition, and download remains documented for future reassessment, but no active roadmap work targets this client.
 
 ### Shooting ITA
 
 Owns its focused content experience while reusing shared services and layout. Placeholder app-local API clients should be replaced with the shared package.
+
+### Shooting Range POC
+
+`MorWalPizVideo.ShootingRange` owns its account, booking, bay, configuration, exception, message, repository, and project-local contract behavior. `frontend/shooting-range.client` owns only the minimal authenticated POC experience.
+
+The POC stays independent from BackOffice and the shared publishing libraries. Its domain endpoints are deny-by-default; only login, CSRF token acquisition, and health probes are anonymous. The first administrator is inserted manually into MongoDB. Ordinary-user onboarding remains unresolved, with admin-created users as the current working assumption.
+
+Future messaging, schedule administration, cancellation, rescheduling, notifications, waitlists, custom sessions, and reporting remain deferred until observed use justifies them.
 
 ## Windows Applications
 

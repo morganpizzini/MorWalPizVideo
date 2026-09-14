@@ -29,8 +29,12 @@ export const VideoService = {
   },
 
   // Publish video to social media
-  publishToSocial: async (videoId: string, message: string): Promise<void> => {
-    await post(`/api/Videos/${videoId}/publish-social`, { message });
+  publishToSocial: async (videoId: string, message: string): Promise<SocialPublishingResponse> => {
+    const response: unknown = await post(`/api/Videos/${videoId}/publish-social`, { message });
+    if (!isSocialPublishingResponse(response)) {
+      throw new Error(getApiErrorMessage(response, 'Failed to publish to social media'));
+    }
+    return response;
   },
 
   // Refresh YouTube metadata for a video
@@ -61,6 +65,27 @@ export interface BulkImportResult {
   status: 'imported' | 'skipped' | 'error';
   shortLinkStatus?: 'created' | 'failed' | 'notAttempted';
   error?: string;
+}
+
+export interface SocialPublishingResponse {
+  message: string;
+  results: Array<{
+    provider: 'telegram' | 'discord' | 'facebook';
+    status: 'published' | 'skipped' | 'failed';
+  }>;
+}
+
+function isSocialPublishingResponse(value: unknown): value is SocialPublishingResponse {
+  return typeof value === 'object' && value !== null &&
+    'results' in value && Array.isArray(value.results);
+}
+
+function getApiErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value !== 'object' || value === null || !('errors' in value) || !Array.isArray(value.errors)) {
+    return fallback;
+  }
+
+  return value.errors.filter((error): error is string => typeof error === 'string').at(-1) ?? fallback;
 }
 
 export interface VideoImportResponse {

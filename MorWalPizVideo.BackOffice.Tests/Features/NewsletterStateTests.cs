@@ -8,6 +8,20 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public sealed class NewsletterStateTests
 {
     [Fact]
+    public async Task Schedule_requires_utc_half_hour_and_can_reschedule_before_sending()
+    {
+        var newsletterRepository = new TestNewsletterRepository(new Newsletter("channel-a", "Test", "IT", "EN", "template", 1, []));
+        var service = new NewsletterService(newsletterRepository, new TestNewsletterUserRepository(), new TestNewsletterEmailService(), new TestNewsletterEventRepository(), new ConfigurationBuilder().Build());
+        var validTime = DateTime.UtcNow.AddHours(2).Date.AddHours(DateTime.UtcNow.Hour + 2).AddMinutes(30);
+
+        (await service.ScheduleAsync("channel-a", newsletterRepository.Item.Id, validTime)).Should().NotBeNull();
+        newsletterRepository.Item.State.Should().Be(NewsletterState.Scheduled);
+        (await service.ScheduleAsync("channel-a", newsletterRepository.Item.Id, validTime.AddHours(1))).Should().NotBeNull();
+        newsletterRepository.Item.ScheduledAtUtc.Should().Be(validTime.AddHours(1));
+        (await service.ScheduleAsync("channel-a", newsletterRepository.Item.Id, validTime.AddMinutes(15))).Should().BeNull();
+    }
+
+    [Fact]
     public async Task Invalid_transition_is_rejected_without_persisting()
     {
         var newsletterRepository = new TestNewsletterRepository(new Newsletter("channel-a", "Test", "IT", "EN", "template", 1, [], NewsletterState.Draft));
@@ -33,6 +47,8 @@ public sealed class NewsletterStateTests
         public Task<IList<Newsletter>> GetItemsAsync() => Task.FromResult<IList<Newsletter>>([Item]);
         public Task<IList<Newsletter>> GetItemsAsync(System.Linq.Expressions.Expression<Func<Newsletter, bool>> predicate) => Task.FromResult<IList<Newsletter>>(new List<Newsletter> { Item }.AsQueryable().Where(predicate).ToList());
         public Task UpdateItemAsync(Newsletter value) { Item = value; return Task.CompletedTask; }
+        public Task<Newsletter?> ClaimForSendingAsync(string channelId, string newsletterId, NewsletterState expectedState, DateTime now, DateTime? expectedScheduledAtUtc = null, CancellationToken cancellationToken = default) => Task.FromResult<Newsletter?>(null);
+        public Task<IList<Newsletter>> GetDueScheduledAsync(DateTime now, int limit, CancellationToken cancellationToken = default) => Task.FromResult<IList<Newsletter>>([]);
     }
 
     private sealed class TestNewsletterUserRepository : MorWalPizVideo.Server.Services.Interfaces.INewsletterUserRepository

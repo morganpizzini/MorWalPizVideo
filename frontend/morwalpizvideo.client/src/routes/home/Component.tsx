@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router";
+﻿import { Link, useLoaderData, useRevalidator } from "react-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import DateDisplay from "@utils/date-display";
 import SEO from "@utils/seo";
@@ -6,10 +6,6 @@ import './style.scss'
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from "react-share";
 import ReactGA from "react-ga4"
 import configKeys from "@utils/configKeys"
-import { getMatches } from "@services/matches";
-import { getConfiguration } from "@services/stream";
-import { getActiveForms } from "@services/customForms";
-import { getPublicChannelNews } from "@morwalpizvideo/services";
 import type { ChannelNews } from "@morwalpizvideo/models";
 import { usePublicNavigation } from "../layout/navigation";
 import PublicNavigationLink from "../../components/PublicNavigationLink";
@@ -18,13 +14,12 @@ interface IndexShortLink { target: string; code: string }
 interface IndexVideoRef { youtubeId: string }
 interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; tags?: string[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
 interface IndexForm { id: string; url: string; title: string }
-interface MatchesResponse { data: IndexMatch[]; count: number; next?: string }
-interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[]; channelNews: ChannelNews[] }
+interface SponsorItem { title: string; imgSrc: string; url: string }
+interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[]; channelNews: ChannelNews[]; sponsors: SponsorItem[]; error: boolean }
 
 export default function Index() {
-    const [data, setData] = useState<IndexData | null>(null);
-    const [error, setError] = useState(false);
-    const [retryCount, setRetryCount] = useState(0);
+    const data = useLoaderData() as IndexData;
+    const { revalidate } = useRevalidator();
     const hasSentPageView = useRef(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -36,40 +31,15 @@ export default function Index() {
         }
     }, []);
 
-    useEffect(() => {
-        let cancelled = false;
-
-        setError(false);
-        Promise.all([getMatches(true), getConfiguration(), getActiveForms(), getPublicChannelNews()])
-            .then(([response, configuration, activeForms, channelNews]) => {
-                if (cancelled) return;
-                const matchesResponse = response as MatchesResponse;
-                setData({
-                    matches: matchesResponse.data ?? [],
-                    configuration: configuration as Record<string, boolean>,
-                    activeForms: activeForms ?? [],
-                    channelNews: channelNews ?? []
-                });
-            })
-            .catch(() => {
-                if (!cancelled) setError(true);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [retryCount]);
-
     return (
         <>
             <SEO
                 title={"MorWalPiz"}
                 description={"MorWalPiz"}
-                imageUrl={data?.matches.length ? `https://img.youtube.com/vi/${data.matches[0].contentId}/hqdefault.jpg` : ''}
+                imageUrl={data.matches.length ? `https://img.youtube.com/vi/${data.matches[0].contentId}/hqdefault.jpg` : ''}
                 type='website' />
-            {!data && !error && <HomeSkeleton />}
-            {error && <HomeError onRetry={() => { setData(null); setRetryCount((count) => count + 1); }} />}
-            {data && <HomeContent
+            {data.error && <HomeError onRetry={revalidate} />}
+            {!data.error && <HomeContent
                 data={data}
                 selectedCategories={selectedCategories}
                 selectedTags={selectedTags}
@@ -91,19 +61,6 @@ export default function Index() {
     );
 }
 
-function HomeSkeleton() {
-    return (
-        <div className="home-loading" aria-busy="true" aria-label="Caricamento contenuti">
-            <div className="home-loading__feature" />
-            <div className="home-loading__grid">
-                <div className="home-loading__card" />
-                <div className="home-loading__card" />
-                <div className="home-loading__card" />
-            </div>
-        </div>
-    );
-}
-
 function HomeError({ onRetry }: { onRetry: () => void }) {
     return (
         <div className="alert alert-warning my-3 text-center" role="alert">
@@ -115,7 +72,7 @@ function HomeError({ onRetry }: { onRetry: () => void }) {
 
 function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory, onToggleTag }: { data: IndexData; selectedCategories: string[]; selectedTags: string[]; onToggleCategory: (category: string) => void; onToggleTag: (tag: string) => void }) {
     const { navigation } = usePublicNavigation();
-    const { matches, configuration, activeForms, channelNews } = data;
+    const { matches, configuration, activeForms, channelNews, sponsors } = data;
     let firstMatchId: string = '';
     const first = matches[0];
     if (first) {
@@ -262,7 +219,7 @@ function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory,
                         )}
                     </div>
 
-                    {renderContentWithBanners(filteredItems, selectedCategories, selectedTags)}
+                    {renderContentWithBanners(filteredItems, selectedCategories, selectedTags, sponsors)}
                 </>
             }
 
@@ -303,7 +260,7 @@ function ChannelNewsBanner({ item }: { item: ChannelNews }) {
     );
 }
 
-function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[], selectedTags: string[]) {
+function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[], selectedTags: string[], sponsors: SponsorItem[]) {
     // Create initial section (before Banner)
     const firstSection = items.slice(0, 8);
     const middleSection = items.slice(8, 17);
@@ -329,7 +286,8 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                 }).flat()}
             </div>
 
-            {shouldShowBanners && <Banner />}
+            {/* Sponsors full width */}
+            {shouldShowBanners && <Sponsors sponsors={sponsors} />}
 
             {/* Middle section */}
             {middleSection.length > 0 && (
@@ -342,8 +300,7 @@ function renderContentWithBanners(items: IndexMatch[], selectedCategories: strin
                 </div>
             )}
 
-            {/* Sponsors full width */}
-            {shouldShowBanners && <Sponsors />}
+            {shouldShowBanners && <Banner />}
 
             {/* Last section */}
             {lastSection.length > 0 && (
@@ -369,13 +326,45 @@ function Banner() {
     )
 }
 
-function Sponsors() {
+function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    useEffect(() => {
+        setActiveIndex((currentIndex) => sponsors.length === 0 ? 0 : Math.min(currentIndex, sponsors.length - 1));
+    }, [sponsors.length]);
+
+    if (sponsors.length === 0) return null;
+
+    const activeSponsor = sponsors[activeIndex];
+    const hasControls = sponsors.length > 1;
+    const goToPrevious = () => setActiveIndex((currentIndex) => (currentIndex - 1 + sponsors.length) % sponsors.length);
+    const goToNext = () => setActiveIndex((currentIndex) => (currentIndex + 1) % sponsors.length);
+
     return (
-        <Link to={`/sponsors`} className="text-decoration-none text-black d-block">
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
-                I miei sponsors <i className="fa fa-arrow-right"></i>
+        <section className="home-sponsors my-3" role="region" aria-roledescription="carousel" aria-label="I miei sponsor">
+            <div className="home-sponsors__heading">
+                <h2>I miei sponsor</h2>
+                <Link to="/sponsors">Vedi tutti</Link>
             </div>
-        </Link>
+            <div className="home-sponsors__viewport" aria-live="polite">
+                {hasControls && (
+                    <button type="button" className="home-sponsors__control home-sponsors__control--previous" onClick={goToPrevious} aria-label="Sponsor precedente">
+                        <i className="fa fa-chevron-left" aria-hidden="true" />
+                    </button>
+                )}
+                <div className="home-sponsors__slide" role="group" aria-roledescription="slide" aria-label={`${activeIndex + 1} di ${sponsors.length}: ${activeSponsor.title}`}>
+                    <Link to={activeSponsor.url} target="_blank" rel="noopener noreferrer" className="home-sponsors__link" aria-label={`Visita il sito di ${activeSponsor.title}`}>
+                        <img className="home-sponsors__image" src={activeSponsor.imgSrc} alt={activeSponsor.title} loading="lazy" decoding="async" />
+                        <span className="home-sponsors__title">{activeSponsor.title}</span>
+                    </Link>
+                </div>
+                {hasControls && (
+                    <button type="button" className="home-sponsors__control home-sponsors__control--next" onClick={goToNext} aria-label="Sponsor successivo">
+                        <i className="fa fa-chevron-right" aria-hidden="true" />
+                    </button>
+                )}
+            </div>
+        </section>
     )
 }
 

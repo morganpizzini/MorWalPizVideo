@@ -293,6 +293,15 @@ public class ShortLinksController : ApplicationControllerBase
                 _ => null
             };
         }
+        catch (SocialProviderNotConfiguredException exception)
+        {
+            return Conflict(new
+            {
+                code = "social_provider_not_configured",
+                provider = exception.Provider,
+                message = exception.Message
+            });
+        }
         catch (Exception exception)
         {
             providerError = exception.Message;

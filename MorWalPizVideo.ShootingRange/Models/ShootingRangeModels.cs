@@ -1,8 +1,6 @@
-using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using MorWalPizVideo.Server.Models;
 
-namespace MorWalPizVideo.Models.ShootingRange;
+namespace MorWalPizVideo.ShootingRange.Models;
 
 public enum ShootingRangeAccountStatus { Pending, Approved, Disabled }
 public enum ShootingRangeBookingStatus { Pending, Approved, Rejected, Cancelled }

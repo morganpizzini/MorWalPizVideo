@@ -1,23 +1,45 @@
 import { getMatches } from "@services/matches";
 import { getConfiguration } from "@services/stream";
 import { getActiveForms } from "@services/customForms";
+import { getSponsors } from "@services/sponsors";
+import { getPublicChannelNews } from "@morwalpizvideo/services";
+
+interface SponsorItem {
+    title: string;
+    imgSrc: string;
+    url: string;
+}
 
 export default async function loader() {
-    const responsePromise = getMatches(true);
-    const configurationPromise = getConfiguration();
-    const activeFormsPromise = getActiveForms();
-    
-    const [response, configuration, activeForms] = await Promise.all([
-        responsePromise,
-        configurationPromise,
-        activeFormsPromise
-    ]);
-    console.log(response);
-    return { 
-        matches: response.data, 
-        total: response.count, 
-        next: response.next, 
-        configuration: configuration,
-        activeForms: activeForms || []
-    };
+    try {
+        const [response, configuration, activeForms, channelNews, sponsors] = await Promise.all([
+            getMatches(true),
+            getConfiguration(),
+            getActiveForms(),
+            getPublicChannelNews(),
+            getSponsors().catch(() => [] as SponsorItem[])
+        ]);
+
+        return {
+            matches: response.data ?? [],
+            total: response.count,
+            next: response.next,
+            configuration: configuration ?? {},
+            activeForms: activeForms ?? [],
+            channelNews: channelNews ?? [],
+            sponsors: sponsors ?? [],
+            error: false
+        };
+    } catch {
+        return {
+            matches: [],
+            total: 0,
+            next: undefined,
+            configuration: {},
+            activeForms: [],
+            channelNews: [],
+            sponsors: [],
+            error: true
+        };
+    }
 }

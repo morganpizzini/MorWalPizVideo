@@ -1,178 +1,181 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MorWalPizVideo.BackOffice.Services;
-using MorWalPizVideo.BackOffice.Services.Configuration;
-using MorWalPizVideo.BackOffice.Services.Factories;
+using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Services;
 
 public sealed class SocialPublishingServiceTests
 {
+    private const string ChannelId = "channel-one";
+    private static readonly string EncryptionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
     [Fact]
-    public void Telegram_configuration_service_reads_named_hierarchical_options()
+    public void Secret_protector_round_trips_and_binds_ciphertext_to_channel_and_provider()
     {
-        var service = TelegramConfigurationService(new Dictionary<string, string?>
-        {
-            ["TelegramSettings:Token"] = "telegram-token",
-            ["TelegramSettings:ChannelName"] = "telegram-channel"
-        });
+        var protector = CreateProtector();
 
-        var settings = service.GetTelegramSettings();
+        var first = protector.Protect("secret-token", ChannelId, "telegram");
+        var second = protector.Protect("secret-token", ChannelId, "telegram");
 
-        Assert.Equal("telegram-token", settings.Token);
-        Assert.Equal("telegram-channel", settings.ChannelName);
+        Assert.NotEqual(first, second);
+        Assert.Equal("secret-token", protector.Unprotect(first, ChannelId, "telegram"));
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(first, "channel-two", "telegram"));
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(first, ChannelId, "discord"));
     }
 
     [Fact]
-    public void Telegram_configuration_service_rejects_missing_token()
+    public void Selected_channel_accessor_reads_only_the_resolved_channel_configuration()
     {
-        var service = TelegramConfigurationService(new Dictionary<string, string?>
+        var protector = CreateProtector();
+        var channel = new YTChannel(ChannelId, "Channel One")
         {
-            ["TelegramSettings:ChannelName"] = "telegram-channel"
-        });
+            SocialPublishing = new SocialPublishingConfiguration
+            {
+                Telegram = new SocialPublishingProviderConfiguration
+                {
+                    DestinationId = "telegram-chat",
+                    CredentialCiphertext = protector.Protect("telegram-token", ChannelId, "telegram")
+                }
+            }
+        };
+        var context = new DefaultHttpContext();
+        context.Items[ChannelContextConstants.ItemKey] = new ChannelContext(ChannelId, channel, true, false, true);
+        var accessor = new SelectedChannelPublishingConfigurationAccessor(
+            new HttpContextAccessor { HttpContext = context },
+            protector);
 
-        var exception = Assert.Throws<InvalidOperationException>(service.GetTelegramSettings);
+        var credentials = accessor.Get("telegram");
 
-        Assert.Contains("Telegram configuration is not properly set", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("telegram-chat", credentials.DestinationId);
+        Assert.Equal("telegram-token", credentials.Credential);
+        Assert.Throws<SocialProviderNotConfiguredException>(() => accessor.Get("discord"));
     }
 
     [Fact]
-    public void Discord_configuration_service_reads_named_hierarchical_options()
-    {
-        var service = DiscordConfigurationService(new Dictionary<string, string?>
-        {
-            ["DiscordSettings:Token"] = "discord-token",
-            ["DiscordSettings:ChannelName"] = "discord-channel"
-        });
-
-        var settings = service.GetDiscordSettings();
-
-        Assert.Equal("discord-token", settings.Token);
-        Assert.Equal("discord-channel", settings.ChannelName);
-    }
-
-    [Fact]
-    public void Discord_configuration_service_rejects_missing_token()
-    {
-        var service = DiscordConfigurationService(new Dictionary<string, string?>
-        {
-            ["DiscordSettings:ChannelName"] = "discord-channel"
-        });
-
-        var exception = Assert.Throws<InvalidOperationException>(service.GetDiscordSettings);
-
-        Assert.Contains("Discord configuration is not properly set", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task Telegram_service_uses_configured_factory_client()
+    public async Task Telegram_service_uses_selected_channel_credentials()
     {
         var handler = new CapturingHandler();
-        var client = new HttpClient(handler);
         var service = new TelegramService(
-            new TelegramClientFactory(client),
-            new TelegramConfiguration("telegram-channel"),
-            Configuration("https://site.example/"));
+            new TestHttpClientFactory(handler),
+            new StaticConfigurationAccessor("telegram-chat", "telegram-token"),
+            Configuration());
 
         var result = await service.CreatePost("abc12", "New video");
 
         Assert.Empty(result);
-        Assert.Equal("https://api.example/telegram/sendMessage", handler.Request!.RequestUri!.ToString());
-        Assert.Contains("New video https://site.example/sl/abc12", await handler.Request.Content!.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal("https://api.telegram.org/bottelegram-token/sendMessage", handler.RequestUri);
+        Assert.Contains("telegram-chat", handler.Content, StringComparison.Ordinal);
+        Assert.Contains("New video https://site.example/sl/abc12", handler.Content, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Discord_service_uses_configured_factory_client()
+    public async Task Discord_service_uses_selected_channel_destination_and_bot_token()
     {
         var handler = new CapturingHandler();
-        var client = new HttpClient(handler);
         var service = new DiscordService(
-            new DiscordClientFactory(client),
-            new DiscordConfiguration("discord-channel"),
-            Configuration("https://site.example/"));
+            new TestHttpClientFactory(handler),
+            new StaticConfigurationAccessor("discord-channel", "discord-token"),
+            Configuration());
 
         var result = await service.CreatePost("abc12", string.Empty);
 
         Assert.Empty(result);
-        Assert.Equal("https://api.example/discord/channels/discord-channel/messages", handler.Request!.RequestUri!.ToString());
-        Assert.Contains("Guarda il mio ultimo video: https://site.example/sl/abc12", await handler.Request.Content!.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal("https://discord.com/api/channels/discord-channel/messages", handler.RequestUri);
+        Assert.Equal("Bot", handler.AuthorizationScheme);
+        Assert.Equal("discord-token", handler.AuthorizationParameter);
+        Assert.Contains("Guarda il mio ultimo video: https://site.example/sl/abc12", handler.Content, StringComparison.Ordinal);
     }
 
-    private static IConfiguration Configuration(string siteUrl)
-        => new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["SiteUrl"] = siteUrl })
-            .Build();
-
-    private static ITelegramConfigurationService TelegramConfigurationService(
-        Dictionary<string, string?> values)
+    [Fact]
+    public async Task Facebook_service_uses_selected_channel_page_and_access_token()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
-        var services = new ServiceCollection();
-        services.AddOptions<global::TelegramSettings>("TelegramSettings")
-            .Bind(configuration.GetSection("TelegramSettings"));
-        var provider = services.BuildServiceProvider();
+        var handler = new CapturingHandler();
+        var service = new FacebookService(
+            new TestHttpClientFactory(handler),
+            new StaticConfigurationAccessor("facebook-page", "facebook-token"),
+            Configuration());
 
-        return new TelegramConfigurationService(
-            provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<global::TelegramSettings>>());
+        var result = await service.CreatePost("abc12", "New video");
+
+        Assert.Empty(result);
+        Assert.Equal("https://graph.facebook.com/v23.0/facebook-page/feed", handler.RequestUri);
+        Assert.Equal("Bearer", handler.AuthorizationScheme);
+        Assert.Equal("facebook-token", handler.AuthorizationParameter);
     }
 
-    private static IDiscordConfigurationService DiscordConfigurationService(
-        Dictionary<string, string?> values)
+    [Fact]
+    public async Task Unconfigured_provider_does_not_create_an_http_client()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
-        var services = new ServiceCollection();
-        services.AddOptions<global::TelegramSettings>("DiscordSettings")
-            .Bind(configuration.GetSection("DiscordSettings"));
-        var provider = services.BuildServiceProvider();
+        var factory = new TestHttpClientFactory(new CapturingHandler());
+        var service = new TelegramService(factory, new MissingConfigurationAccessor(), Configuration());
 
-        return new DiscordConfigurationService(
-            provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<global::TelegramSettings>>());
+        await Assert.ThrowsAsync<SocialProviderNotConfiguredException>(() => service.CreatePost("abc12", "New video"));
+
+        Assert.Equal(0, factory.CreatedClients);
     }
+
+    private static SocialPublishingSecretProtector CreateProtector() =>
+        new(Options.Create(new SocialPublishingOptions { EncryptionKey = EncryptionKey }));
+
+    private static IConfiguration Configuration() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["SiteUrl"] = "https://site.example/" })
+            .Build();
 
     private sealed class CapturingHandler : HttpMessageHandler
     {
-        public HttpRequestMessage? Request { get; private set; }
+        public string RequestUri { get; private set; } = string.Empty;
+        public string AuthorizationScheme { get; private set; } = string.Empty;
+        public string AuthorizationParameter { get; private set; } = string.Empty;
+        public string Content { get; private set; } = string.Empty;
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Request = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            RequestUri = request.RequestUri?.ToString() ?? string.Empty;
+            AuthorizationScheme = request.Headers.Authorization?.Scheme ?? string.Empty;
+            AuthorizationParameter = request.Headers.Authorization?.Parameter ?? string.Empty;
+            Content = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(new { ok = true })
-            });
+            };
         }
     }
 
-    private sealed class TelegramClientFactory(HttpClient client) : ITelegramHttpClientFactory
+    private sealed class TestHttpClientFactory(CapturingHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient() => Configure(client, "https://api.example/telegram/sendMessage");
+        public int CreatedClients { get; private set; }
+
+        public HttpClient CreateClient(string name)
+        {
+            CreatedClients++;
+            var client = new HttpClient(handler);
+            if (name == HttpClientNames.Discord)
+            {
+                client.BaseAddress = new Uri("https://discord.com/api/");
+            }
+            else if (name == HttpClientNames.Facebook)
+            {
+                client.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
+            }
+            return client;
+        }
     }
 
-    private sealed class DiscordClientFactory(HttpClient client) : IDiscordHttpClientFactory
+    private sealed class StaticConfigurationAccessor(string destinationId, string credential)
+        : ISelectedChannelPublishingConfigurationAccessor
     {
-        public HttpClient CreateClient() => Configure(client, "https://api.example/discord/");
+        public SocialPublishingCredentials Get(string provider) => new(destinationId, credential);
     }
 
-    private sealed class TelegramConfiguration(string channelName) : ITelegramConfigurationService
+    private sealed class MissingConfigurationAccessor : ISelectedChannelPublishingConfigurationAccessor
     {
-        public TelegramSettings GetTelegramSettings() => new() { Token = "token", ChannelName = channelName };
-    }
-
-    private sealed class DiscordConfiguration(string channelName) : IDiscordConfigurationService
-    {
-        public TelegramSettings GetDiscordSettings() => new() { Token = "token", ChannelName = channelName };
-    }
-
-    private static HttpClient Configure(HttpClient client, string baseAddress)
-    {
-        client.BaseAddress = new Uri(baseAddress);
-        return client;
+        public SocialPublishingCredentials Get(string provider) => throw new SocialProviderNotConfiguredException(provider);
     }
 }

@@ -1,36 +1,39 @@
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Models.Constraints;
+using System.Net.Http.Headers;
 
 namespace MorWalPizVideo.BackOffice.Services;
 
-public class FacebookServiceMock : IFacebookService
+public class FacebookServiceMock(ISelectedChannelPublishingConfigurationAccessor configurationAccessor) : IFacebookService
 {
     public Task<string> CreatePost(string shortLink, string message)
     {
+        configurationAccessor.Get("facebook");
         return Task.FromResult("");
     }
 }
 
 public class FacebookService : IFacebookService
 {
-    private readonly HttpClient client;
-    private readonly string pageId;
+    private readonly IHttpClientFactory clientFactory;
+    private readonly ISelectedChannelPublishingConfigurationAccessor configurationAccessor;
     private readonly string siteUrl;
     
-    public FacebookService(IHttpClientFactory _clientFactory, IConfiguration _configuration)
+    public FacebookService(
+        IHttpClientFactory clientFactory,
+        ISelectedChannelPublishingConfigurationAccessor configurationAccessor,
+        IConfiguration configuration)
     {
-        client = _clientFactory.CreateClient(HttpClientNames.Facebook);
-        siteUrl = _configuration["SiteUrl"] ?? string.Empty;
+        this.clientFactory = clientFactory;
+        this.configurationAccessor = configurationAccessor;
+        siteUrl = configuration["SiteUrl"] ?? string.Empty;
         if (string.IsNullOrEmpty(siteUrl))
-            throw new NullReferenceException("SiteUrl is empty");
-
-        pageId = _configuration.GetSection("FacebookSettings").Get<FacebookSettings>()?.PageId ?? string.Empty;
-        if (string.IsNullOrEmpty(pageId))
-            throw new NullReferenceException("PageId is not found in the configuration file");
+            throw new InvalidOperationException("SiteUrl is empty");
     }
 
     public async Task<string> CreatePost(string shortLink, string message)
     {
+        var settings = configurationAccessor.Get("facebook");
         var youtubeUrl = $"{siteUrl}sl/{shortLink}";
 
         var requestMessage = !string.IsNullOrEmpty(message) ? message : "Guarda il mio ultimo video:";
@@ -40,15 +43,15 @@ public class FacebookService : IFacebookService
             message = $"{requestMessage} {youtubeUrl}"
         };
 
-        var response = await client.PostAsJsonAsync($"{pageId}/feed", request);
+        var client = clientFactory.CreateClient(HttpClientNames.Facebook);
+        using var requestMessageBody = new HttpRequestMessage(HttpMethod.Post, $"{settings.DestinationId}/feed")
+        {
+            Content = JsonContent.Create(request)
+        };
+        requestMessageBody.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.Credential);
+        var response = await client.SendAsync(requestMessageBody);
 
         return response.IsSuccessStatusCode ? string.Empty
                     : await response.Content.ReadAsStringAsync();
     }
-}
-
-public class FacebookSettings
-{
-    public string PageId { get; set; } = string.Empty;
-    public string AccessToken { get; set; } = string.Empty;
 }

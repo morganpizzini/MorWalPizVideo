@@ -12,6 +12,7 @@ import Index from "./home/Component";
 import Compilations from "./compilations/Component";
 import CustomForm from "./customForms/Component";
 import matchLoader from "./matches/loader";
+import homeLoader from "./home/loader";
 import pageLoader from "./pages/loader";
 import accessoryLoader from "./accessories/loader";
 import sponsorsLoader from "./sponsors/loader";
@@ -65,6 +66,7 @@ export const routes: RouteObject[] = [
                 children: [
                     {
                         index: true,
+                        loader: homeLoader,
                         element: <Index />,
                     },
                     {

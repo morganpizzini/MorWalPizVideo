@@ -697,6 +697,7 @@ export const createNewsletter = (request: unknown) => post(endpoints.NEWSLETTERS
 export const updateNewsletter = (id: string, request: unknown) => put(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }), request);
 export const changeNewsletterState = (id: string, state: string) => post(ComposeUrl(endpoints.NEWSLETTERS_STATE, { id }), { state });
 export const sendNewsletter = (id: string) => post(ComposeUrl(endpoints.NEWSLETTERS_SEND, { id }), {});
+export const scheduleNewsletter = (id: string, scheduledAtUtc: string) => post(ComposeUrl(endpoints.NEWSLETTERS_SCHEDULE, { id }), { scheduledAtUtc });
 export const previewNewsletter = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_PREVIEW, { id }));
 export const fetchNewsletterSubscribers = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_SUBSCRIBERS, { id }));
 export const fetchNewsletterStats = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_STATS, { id }));

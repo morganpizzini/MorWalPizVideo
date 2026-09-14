@@ -18,12 +18,24 @@ export type Channel = Readonly<{
   mine: boolean;
   shortLinkUrl?: string;
   socials?: readonly ChannelSocial[];
+  socialPublishing?: ChannelSocialPublishing;
   videos?: readonly ChannelVideo[];
 }>;
 
 export type ChannelVideo = Readonly<{ videoId: string; title: string; lastCommentDate?: string }>;
 
 export type ChannelSocial = Readonly<{ provider: string; handler: string }>;
+
+export type ChannelSocialPublishing = Readonly<{
+  telegram: ChannelSocialPublishingProvider;
+  discord: ChannelSocialPublishingProvider;
+  facebook: ChannelSocialPublishingProvider;
+}>;
+
+export type ChannelSocialPublishingProvider = Readonly<{
+  destinationId: string;
+  credentialConfigured: boolean;
+}>;
 
 /**
  * Type for creating a new channel (all fields required except id which may be generated)

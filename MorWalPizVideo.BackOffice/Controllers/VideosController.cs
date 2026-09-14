@@ -839,63 +839,64 @@ public class VideosController : ApplicationControllerBase
             return BadRequest("No shortlink found for this video");
         }
 
-        var errors = new List<string>();
-
-        // Publish to Telegram
-        try
+        var results = new[]
         {
-            var telegramError = await telegramService.CreatePost(shortLink.Code, request.Message);
-            if (!string.IsNullOrEmpty(telegramError))
+            await PublishToProviderAsync("telegram", shortLink.Code, () => telegramService.CreatePost(shortLink.Code, request.Message)),
+            await PublishToProviderAsync("discord", shortLink.Code, () => discordService.CreatePost(shortLink.Code, request.Message)),
+            await PublishToProviderAsync("facebook", shortLink.Code, () => facebookService.CreatePost(shortLink.Code, request.Message))
+        };
+
+        if (results.All(result => result.Status == "skipped"))
+        {
+            return Conflict(new
             {
-                logger.LogWarning("Telegram publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
-                errors.Add("Telegram publishing failed");
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Telegram publishing failed for short link {ShortLink}", shortLink.Code);
-            errors.Add("Telegram publishing failed");
+                code = "social_providers_not_configured",
+                message = "No social publishing provider is configured for the selected channel.",
+                results
+            });
         }
 
-        // Publish to Discord
-        try
+        if (results.Any(result => result.Status == "failed"))
         {
-            var discordError = await discordService.CreatePost(shortLink.Code, request.Message);
-            if (!string.IsNullOrEmpty(discordError))
+            return BadRequest(new
             {
-                logger.LogWarning("Discord publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
-                errors.Add("Discord publishing failed");
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Discord publishing failed for short link {ShortLink}", shortLink.Code);
-            errors.Add("Discord publishing failed");
+                errors = results.Where(result => result.Status == "failed")
+                    .Select(result => $"{result.Provider} publishing failed"),
+                results
+            });
         }
 
-        // Publish to Facebook
-        try
-        {
-            var facebookError = await facebookService.CreatePost(shortLink.Code, request.Message);
-            if (!string.IsNullOrEmpty(facebookError))
-            {
-                logger.LogWarning("Facebook publishing returned an unsuccessful response for short link {ShortLink}", shortLink.Code);
-                errors.Add("Facebook publishing failed");
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Facebook publishing failed for short link {ShortLink}", shortLink.Code);
-            errors.Add("Facebook publishing failed");
-        }
-
-        if (errors.Any())
-        {
-            return BadRequest(new { errors });
-        }
-
-        return Ok(new { message = "Successfully published to all platforms" });
+        return Ok(new { message = "Social publishing completed", results });
     }
+
+    private async Task<SocialPublicationResult> PublishToProviderAsync(
+        string provider,
+        string shortLink,
+        Func<Task<string>> publish)
+    {
+        try
+        {
+            var providerError = await publish();
+            if (string.IsNullOrEmpty(providerError))
+            {
+                return new SocialPublicationResult(provider, "published");
+            }
+
+            logger.LogWarning("{Provider} publishing returned an unsuccessful response for short link {ShortLink}", provider, shortLink);
+            return new SocialPublicationResult(provider, "failed");
+        }
+        catch (SocialProviderNotConfiguredException)
+        {
+            return new SocialPublicationResult(provider, "skipped");
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "{Provider} publishing failed for short link {ShortLink}", provider, shortLink);
+            return new SocialPublicationResult(provider, "failed");
+        }
+    }
+
+    private sealed record SocialPublicationResult(string Provider, string Status);
 
     [HttpPost("{youtubeId}/channel")]
     [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]

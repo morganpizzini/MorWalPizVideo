@@ -1,7 +1,6 @@
-using MorWalPizVideo.Models.ShootingRange;
-using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.ShootingRange.Models;
 
-namespace MorWalPizVideo.Domain.ShootingRange;
+namespace MorWalPizVideo.ShootingRange.Repositories;
 
 public interface IShootingRangeRepository<T> where T : BaseEntity
 {
@@ -15,11 +14,13 @@ public interface IShootingRangeUserRepository : IShootingRangeRepository<Shootin
 {
     Task<ShootingRangeUser?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default);
 }
+
 public interface IShootingRangeBookingRepository : IShootingRangeRepository<ShootingRangeBooking>
 {
     Task<bool> HasOverlapAsync(string bayId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
     Task<ShootingRangeBooking> InsertIfAvailableAsync(ShootingRangeBooking booking, CancellationToken cancellationToken = default);
 }
+
 public interface IShootingRangeRepositorySet
 {
     IShootingRangeRepository<ShootingRangeConfig> Configs { get; }

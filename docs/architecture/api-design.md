@@ -20,6 +20,12 @@ only by the explicit share action.
 
 Unversioned `GET /{code}` redirect surface. It is not a general JSON API.
 
+### Shooting Range API
+
+Project-local JSON API for the independently deployed booking POC. A fallback authorization policy protects every domain endpoint. Login, CSRF token acquisition, and health probes are explicit anonymous exceptions; availability is authenticated. Administrator operations require the `admin` role.
+
+The API returns explicit project-local DTOs rather than persistence entities. In particular, account responses exclude password hashes and availability responses exclude bay whitelist identifiers. The first administrator is inserted manually into MongoDB; no bootstrap endpoint is exposed.
+
 ## Versioning
 
 Target JSON routes use URL-segment versioning:
@@ -91,14 +97,19 @@ The effective impersonated target controls channel and content authorization. AP
 | BackOffice SPA management | JWT bearer or secure cookie |
 | VideoImporter/InsightScanner | API key |
 | Public content/catalog | Anonymous |
-| Anonymous cart/acquisition | Opaque HttpOnly cart cookie |
+| Anonymous cart/acquisition | Target contract, on hold |
 | Future customer endpoints | Dedicated customer policy |
 | Internal cache invalidation | Authenticated service identity |
 | Short-link redirect | Anonymous |
+| Shooting Range login/CSRF/health | Anonymous technical exception |
+| Shooting Range availability, booking, own account and messages | Authenticated cookie |
+| Shooting Range administration | Authenticated cookie plus `admin` role |
 
 API-key management is authenticated with the administrator's BackOffice principal. Creation binds the key to the selected channel; only an administrator may reassign it to another existing channel.
 
-## Shop Contract
+## Shop Contract (Target, On Hold)
+
+The shop is pre-production and excluded from active implementation. These rules remain the accepted future contract if the hold is explicitly lifted.
 
 - Catalog returns active free-artifact DTOs.
 - Preview image is public.

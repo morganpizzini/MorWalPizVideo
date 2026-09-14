@@ -20,6 +20,19 @@ export interface ShootPreferences {
   peakMultiplier: number
 }
 
+export type ScoringMode = 'IPSC' | 'IDPA'
+
+export interface TrimRange {
+  startSeconds: number
+  endSeconds: number
+}
+
+export interface ShotScore {
+  points: number
+  penalties: number
+  misses: number
+}
+
 export interface ShotCandidate {
   id: string
   timeSeconds: number
@@ -32,7 +45,28 @@ export interface AnalysisResult {
   durationSeconds: number
   candidates: ShotCandidate[]
   sampledFrames: number
-  startBeepSeconds: number
+  trimRange: TrimRange
+  timerOriginSeconds: number
+}
+
+export interface OverlayCompositionData {
+  currentSourceSeconds: number
+  compositionSeconds: number
+  timerSeconds: number
+  shotTimings: Array<{
+    candidate: ShotCandidate
+    relativeSeconds: number
+    splitSeconds: number
+    shotNumber: number
+    score: ShotScore
+  }>
+  scoringMode: ScoringMode
+  totalScore: number
+  hitFactor: number | null
+  thermometerValue: number | null
+  idpaPointsDown: number | null
+  idpaPenaltyCount: number | null
+  socialHandler: string
 }
 
 export const DEFAULT_SHOT_OVERLAY: OverlayElement = {

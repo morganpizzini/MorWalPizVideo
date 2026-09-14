@@ -236,8 +236,11 @@ az webapp config appsettings set \
   --resource-group rg-morwalpiz-prod \
   --name morwalpiz-backoffice-api \
   --settings \
-    ASPNETCORE_ENVIRONMENT=Production
+    ASPNETCORE_ENVIRONMENT=Production \
+    FeatureManagement__EnableVideoBulkImport=false
 ```
+
+Set this App Service setting on the BackOffice API and restart or redeploy the app to disable bulk video import without changing the checked-in production default.
 
 #### ServerAPI
 ```bash
@@ -343,11 +346,12 @@ AzureConfig--OpenAi--DeploymentName
 AzureConfig--OpenAi--OpenAiEndpoint
 AzureConfig--OpenAi--OpenAiKey
 JwtSettings--Secret
-TelegramSettings--Token
-TelegramSettings--ChannelName
-DiscordSettings--Token
-DiscordSettings--ChannelName
+SocialPublishing--EncryptionKey
 ```
+
+`SocialPublishing--EncryptionKey` must be a Base64-encoded 32-byte key. Generate it once with a cryptographically secure generator, store it in Key Vault, and keep it stable across deployments. Changing or losing this key makes existing channel credentials unreadable. Key rotation requires decrypting and re-encrypting every stored channel credential before the old key is removed.
+
+Telegram, Discord, and Facebook credentials are configured per channel from the BackOffice channel editor. They are encrypted before being stored in the channel document and are never returned by the API. Existing global `TelegramSettings`, `DiscordSettings`, and `FacebookSettings` values are not used as fallbacks. During migration, enter each provider destination and credential on its intended channel, verify publishing with that channel selected, and then delete the legacy global secrets.
 
 The API fails during startup when Key Vault is enabled but cannot be loaded, or when the required production settings are still missing. This prevents silent fallback to empty or development configuration.
 
@@ -364,6 +368,9 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - [ ] Create Azure Web Apps for backends (3x .NET apps)
 - [ ] Configure ACR pull permissions for Web App managed identities
 - [ ] Set WEBSITES_PORT=80 for frontend container apps
+- [ ] Store a stable `SocialPublishing--EncryptionKey` in Key Vault
+- [ ] Configure and verify social publishing credentials separately for every channel that publishes
+- [ ] Remove legacy global Telegram, Discord, and Facebook settings after channel migration
 
 ### GitHub Setup
 - [ ] Create `production` environment in GitHub
