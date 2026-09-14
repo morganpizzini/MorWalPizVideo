@@ -17,7 +17,6 @@ permissions:
   id-token: write
   contents: read
 
-
 env:
   IMAGE_NAME: shooting-range-client
   NODE_VERSION: '22.x'

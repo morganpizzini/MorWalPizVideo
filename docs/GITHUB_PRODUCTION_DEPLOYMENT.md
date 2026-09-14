@@ -271,12 +271,12 @@ az webapp config appsettings set \
   --name morwalpiz-shooting-range-api \
   --settings \
     ASPNETCORE_ENVIRONMENT=Production \
-    FeatureManagement__EnableMock=false \
-    MorWalPizDatabase__ConnectionString="<managed-secret>" \
-    MorWalPizDatabase__DatabaseName=morwalpizvideo
+    FeatureManagement__EnableMock=false
 ```
 
-The API exposes `/health`, `/health/live`, and `/health/ready`. Production must provide MongoDB settings and the existing authentication/CORS prerequisites separately; the workflow never provisions MongoDB, indexes, secrets, or data.
+Configure `KeyVaultUrl` and `FeatureManagement:EnableKeyVault` as externally managed App Service settings. When Key Vault is enabled, the API fails startup if the URL, provider access, or required Mongo settings are invalid; it does not fall back to direct Mongo settings. Grant the App Service managed identity permission to read secrets in the vault, using `MorWalPizDatabase--ConnectionString` and `MorWalPizDatabase--DatabaseName` secret names. The workflow never injects these values or provisions MongoDB, indexes, secrets, or data.
+
+The API exposes `/health`, `/health/live`, and `/health/ready`. Production must also provide the existing authentication/CORS prerequisites separately.
 
 ### 7. Configure App Service Plans
 

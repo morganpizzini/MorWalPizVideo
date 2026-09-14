@@ -73,7 +73,7 @@ Reassess these only after real POC use establishes operational value:
 
 ## Deployment and rollback
 
-Configure `MorWalPizDatabase:ConnectionString` and `MorWalPizDatabase:DatabaseName` for non-mock deployments. Development defaults to the mock repository when `FeatureManagement:EnableMock` is enabled; production must reject mock mode.
+Development defaults to the mock repository when `FeatureManagement:EnableMock` is enabled; production must reject mock mode. For production Mongo configuration, operations manages `KeyVaultUrl` and `FeatureManagement:EnableKeyVault` as external application settings. When Key Vault is enabled, grant the App Service managed identity read access and store the required values as `MorWalPizDatabase--ConnectionString` and `MorWalPizDatabase--DatabaseName`; Azure Key Vault maps the double dashes to the configuration section `MorWalPizDatabase`. The API fails startup when the vault is unavailable or either required value is missing, and does not fall back to direct Mongo settings. Keep these settings outside the deployment workflow.
 
 The API and client continue to deploy independently through workflows bound to the GitHub `production` environment. Before public exposure, validate the authorization matrix, configured CORS origin, CSRF/login flow, persistent Data Protection keys, MongoDB readiness, unique normalized usernames, booking concurrency, and successful login by the manually inserted administrator.
 

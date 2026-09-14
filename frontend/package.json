@@ -21,13 +21,14 @@
     "build:ask-client": "yarn build:shared && yarn workspace ask.client build:all",
     "build:shared": "yarn build:models && yarn build:services && yarn build:layout",
     "clean:models": "yarn workspace @morwalpizvideo/models clean",
+    "format:staged": "node ../scripts/format-staged.mjs",
     "install:all": "yarn install",
     "dev:back-office-spa": "yarn build:shared && yarn workspace back-office-spa dev",
     "dev:morwalpizvideo-client": "yarn build:shared && yarn workspace morwalpizvideo.client dev",
     "dev:ask-client": "yarn build:shared && yarn workspace ask.client dev",
     "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev",
-    "dev:shoot-recorder": "yarn workspace shoot-recorder dev"
-    ,"dev:shooting-range-client": "yarn build:shared && yarn workspace shooting-range.client dev"
+    "dev:shoot-recorder": "yarn workspace shoot-recorder dev",
+    "dev:shooting-range-client": "yarn build:shared && yarn workspace shooting-range.client dev"
   },
   "engines": {
     "node": ">=18.0.0"
