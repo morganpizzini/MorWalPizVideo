@@ -9,11 +9,18 @@ COPY shooting-range.client shooting-range.client
 RUN yarn workspace shooting-range.client build:all
 
 FROM node:22-alpine
+
 WORKDIR /app
-COPY --from=build /app/package.json /app/yarn.lock ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/shooting-range.client ./shooting-range.client
-WORKDIR /app/shooting-range.client
+
+# Install only the runtime dependency required by the SSR server.
+RUN printf '{"type":"module","dependencies":{"express":"^4.19.0"}}' > package.json \
+	&& npm install --no-audit --no-fund
+
+COPY --from=build /app/shooting-range.client/dist ./dist
+COPY --from=build /app/shooting-range.client/dist-ssr ./dist-ssr
+COPY shooting-range.client/server.mjs ./server.mjs
+
 ENV NODE_ENV=production
 EXPOSE 5177
-CMD ["yarn", "serve"]
+ENV PORT=5177
+CMD ["node", "server.mjs"]

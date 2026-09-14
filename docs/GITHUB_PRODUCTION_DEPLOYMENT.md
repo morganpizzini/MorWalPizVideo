@@ -367,7 +367,7 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - [ ] Create Azure Web Apps for Shooting Range client (`WEBSITES_PORT=5177` and `API_BASE_URL`)
 - [ ] Create Azure Web Apps for backends (3x .NET apps)
 - [ ] Configure ACR pull permissions for Web App managed identities
-- [ ] Set WEBSITES_PORT=80 for frontend container apps
+- [ ] Set `WEBSITES_PORT=80` for the Back Office and MorWalPizVideo frontend containers; keep the Shooting Range client at `WEBSITES_PORT=5177`
 - [ ] Store a stable `SocialPublishing--EncryptionKey` in Key Vault
 - [ ] Configure and verify social publishing credentials separately for every channel that publishes
 - [ ] Remove legacy global Telegram, Discord, and Facebook settings after channel migration
@@ -420,7 +420,7 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - Verify managed identity has AcrPull role
 
 ### Application Not Starting
-- Check WEBSITES_PORT is set to 80 for containers
+- Check `WEBSITES_PORT` matches the container contract: `5177` for Shooting Range and `80` for the other frontend containers
 - Review application logs in Azure Portal
 - Verify environment variables are set correctly
 - Check for missing configuration values
