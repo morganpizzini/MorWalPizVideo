@@ -57,6 +57,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify target Web App
+        run: |
+          az webapp show \
+            --name "${{ vars.SHOOTING_RANGE_API_APP_NAME }}" \
+            --resource-group "MVP-Range" \
+            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --output table
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
