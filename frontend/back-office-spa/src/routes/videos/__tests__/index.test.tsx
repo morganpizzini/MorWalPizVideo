@@ -4,6 +4,7 @@ import { render } from '../../../test/test-utils';
 import { useLoaderData, useNavigate } from 'react-router';
 import { Match } from '@morwalpizvideo/models';
 import { useAppStore } from '../../../state/appStore';
+import { permissions } from '../../../authorization/permissions';
 
 vi.mock('../../../services/authService', () => ({
   authService: {
@@ -50,10 +51,27 @@ async function renderComponent() {
 }
 
 describe('Videos Index', () => {
+  it.each([
+    ['manage-all', [permissions.backoffice.manageAll], true, true],
+    ['videos.manage', [permissions.videos.manage], true, true],
+    ['videos.import', [permissions.videos.import], true, false],
+    ['videos.translate', [permissions.videos.translate], false, true],
+    ['unrelated permissions', [permissions.users.view, permissions.users.manage], false, false],
+  ] as const)(
+    'renders the expected actions for %s',
+    async (_label, effectivePermissions, showImport, showTranslate) => {
+      useAppStore.setState({ effectivePermissions });
+
+      await renderComponent();
+      const importLink = screen.queryByRole('link', { name: /import/i });
+      const translateLink = screen.queryByRole('link', { name: /translate/i });
+      expect(importLink !== null).toBe(showImport);
+      expect(translateLink !== null).toBe(showTranslate);
+    }
+  );
+
   it('renders compact toolbar actions instead of feature cards', async () => {
     await renderComponent();
-    expect(screen.getByRole('link', { name: /import/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /translate/i })).toBeInTheDocument();
     expect(screen.queryByText(/utilizza questa dashboard/i)).not.toBeInTheDocument();
   });
 
