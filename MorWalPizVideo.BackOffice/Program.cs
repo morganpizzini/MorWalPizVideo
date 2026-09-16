@@ -412,7 +412,11 @@ if (enableMock)
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
-    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientMockRepository>();
+    builder.Services.AddScoped<NewsletterRecipientMockRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository>(provider =>
+        provider.GetRequiredService<NewsletterRecipientMockRepository>());
+    builder.Services.AddScoped<INewsletterRecipientDispatchRepository>(provider =>
+        provider.GetRequiredService<NewsletterRecipientMockRepository>());
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
 
     // services
@@ -505,7 +509,11 @@ else
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
-    builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientRepository>();
+    builder.Services.AddScoped<NewsletterRecipientRepository>();
+    builder.Services.AddScoped<INewsletterRecipientRepository>(provider =>
+        provider.GetRequiredService<NewsletterRecipientRepository>());
+    builder.Services.AddScoped<INewsletterRecipientDispatchRepository>(provider =>
+        provider.GetRequiredService<NewsletterRecipientRepository>());
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
 
     builder.Services.AddScoped<DataService>();
