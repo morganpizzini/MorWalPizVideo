@@ -1,6 +1,6 @@
 # Ask
 
-Ask is the public, channel-scoped campaign and submission feature. A campaign always belongs to one `YTChannel`; its public URL is `https://ask.morwalpiz.com/<channel-name>/<campaign-slug>` (the host is supplied by deployment/runtime configuration).
+Ask is the public, channel-scoped campaign and submission feature. A campaign always belongs to one `YTChannel`; its canonical long URL is `https://ask.morwalpiz.com/<channel-name>/<campaign-slug>` (the host is supplied by deployment/runtime configuration). Administrative creation also creates exactly one permanent shortlink at `https://shorts.morwalpiz.com/<code>` (the shortlink host is configurable). The shortlink code is derived from the immutable campaign ID and does not change when the slug changes.
 
 ## Data model
 
@@ -14,7 +14,9 @@ Defaults are conservative and overridable from `Ask:*` configuration or campaign
 
 ## API and security
 
-BackOffice owns channel-scoped CRUD, lifecycle and moderation at `/api/Ask`; the existing `RequireChannelScope` and `AllowUser` permission model are authoritative. ServerAPI owns anonymous public `GET /api/ask/{channelName}/{campaignSlug}` and `POST /api/ask/{channelName}/{campaignSlug}/submissions`. Server-side validation, reCAPTCHA, length checks, duplicate/idempotency checks and rate limits apply regardless of client behavior.
+BackOffice owns channel-scoped CRUD, lifecycle, moderation and Telegram publishing at `/api/Ask`; `POST /api/Ask/{id}/publish-telegram` requires `AskModerate` or `AskManage`, resolves the stable short URL server-side, and uses the selected channel's Telegram configuration. Share/QR responses and Telegram payloads use the same `/{code}` URL. The existing `RequireChannelScope` and `AllowUser` permission model are authoritative. ServerAPI owns anonymous public `GET /api/ask/{channelName}/{campaignSlug}` and `POST /api/ask/{channelName}/{campaignSlug}/submissions`. Server-side validation, reCAPTCHA, length checks, duplicate/idempotency checks and rate limits apply regardless of client behavior.
+
+Shortlinks stores an additive `AskCampaign` classification with the immutable `campaignId` and owning `channelId`. The ShortLinks service resolves the campaign on every visit and redirects to its current canonical long URL. It returns HTTP 404 for missing, cross-channel, draft, scheduled, expired, closed, or archived campaigns; it never redirects an inactive ASK link to a stale slug. Creation is saga-like: if campaign persistence succeeds but link creation fails, BackOffice compensates by deleting the newly created campaign. Link creation is deterministic and retry-safe, and the unique code index handles concurrent creators without returning an unrelated link.
 
 Mongo repositories are registered only in the production branch and scenario repositories only when `FeatureManagement:EnableMock` is enabled. Reactions use a unique `(submissionId, fingerprint)` index and a short server-side limiter. Backoffice export is channel-scoped, escaped CSV, and excludes names unless explicitly requested. Cache identities and output tags are lowercase invariant (`ask`, `tag-ask`).
 
@@ -28,7 +30,7 @@ Configure `VITE_SITE_KEY` at build time and the reCAPTCHA secret through the exi
 
 `frontend/ask.client` is a first-class Yarn workspace and Aspire resource (`ask`, port 5176 in development). CI builds its browser and SSR bundles. The deployment workflow builds its SSR Node image and deploys it to `ASK_CLIENT_APP_NAME`; the edge must route `ask.morwalpiz.com` and `/api` as described in the setup guide. `morwalpizvideo.client` no longer mounts Ask and its orphaned route sources were removed.
 
-Backoffice forms expose start/end dates and the detail screen consumes analytics, share/QR, CSV, response visibility, moderation actions, and text/status filters. Expired published campaigns are persisted as `Closed` on the first public read or submission attempt with `ClosedAt` set; the public projection remains published-only.
+Backoffice forms expose start/end dates and the detail screen consumes analytics, share/QR, CSV, response visibility, moderation actions, and text/status filters. Expired published campaigns are persisted as `Closed` on the first public read or submission attempt with `ClosedAt` set; the public projection remains published-only. A slug update retains the existing shortlink code and changes only the resolver's current long-URL target.
 
 Dedicated backend coverage now exists in `MorWalPizVideo.BackOffice.Tests/Services/AskServiceTests.cs`: six executable tests cover lifecycle/expiry, channel isolation and normalized slugs, named/anonymous policy, duplicate/idempotency/rate-limit, AI reject plus provider failure fallback, and response/reaction/analytics/retention behavior. The BackOffice permission test covers Ask route permissions. The standalone Ask browser and SSR bundles also compile successfully.
 

@@ -39,6 +39,7 @@ public static class AuthorizationPermissionKeys
   public const string ImagesManage = "images.manage";
   public const string ImagesCreate = "images.create";
   public const string ImagesDelete = "images.delete";
+  public const string SocialAssetsUpload = "socialassets.upload";
 
   public const string CalendarView = "calendar.view";
   public const string CalendarManage = "calendar.manage";

@@ -14,6 +14,44 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public class ShortLinksMockScenarioTests
 {
     [Fact]
+    public async Task Ask_shortlink_redirects_to_the_current_slug_and_hides_inactive_or_foreign_campaigns()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var campaigns = factory.Services.GetRequiredService<IAskCampaignRepository>();
+        var channels = factory.Services.GetRequiredService<IYTChannelRepository>();
+        var links = factory.Services.GetRequiredService<IShortLinkRepository>();
+        var channel = (await channels.GetItemsAsync()).Single(item => item.ChannelId == PrimaryScenario.ChannelId);
+        var campaign = await campaigns.AddItemAsync(new AskCampaign
+        {
+            Id = "ask-campaign-1",
+            ChannelId = channel.ChannelId,
+            Slug = "first-slug",
+            Status = AskCampaignStatus.Published
+        });
+        var link = await links.AddItemAsync(new ShortLink("ask-test-1", campaign.Id, [])
+        {
+            Id = "ask-link-1",
+            LinkType = LinkType.AskCampaign,
+            CampaignId = campaign.Id,
+            ChannelId = campaign.ChannelId
+        });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var first = await client.GetAsync($"/{link.Code}");
+        Assert.Equal("https://ask.morwalpiz.com/Scenario channel/first-slug", Uri.UnescapeDataString(first.Headers.Location?.ToString() ?? string.Empty));
+
+        await campaigns.UpdateItemAsync(campaign with { Slug = "second-slug" });
+        var renamed = await client.GetAsync($"/{link.Code}");
+        Assert.Equal("https://ask.morwalpiz.com/Scenario channel/second-slug", Uri.UnescapeDataString(renamed.Headers.Location?.ToString() ?? string.Empty));
+
+        await campaigns.UpdateItemAsync(campaign with { Status = AskCampaignStatus.Draft });
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
+
+        await campaigns.UpdateItemAsync(campaign with { Status = AskCampaignStatus.Published, ChannelId = "other-channel" });
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
+    }
+
+    [Fact]
     public async Task Newsletter_redirect_aggregates_click_context_without_identity_data()
     {
         await using var factory = new ShortLinksWebApplicationFactory();

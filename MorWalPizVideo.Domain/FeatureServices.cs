@@ -3,6 +3,7 @@ using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MongoDB.Driver;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace MorWalPizVideo.Server.Services;
 
@@ -939,6 +940,7 @@ public interface ILinksService
     Task<IList<YouTubeContent>> MergeCanonicalVideoShortLinksAsync(IList<YouTubeContent> matches);
     Task<IList<QueryLink>> GetQueryLinksAsync(IList<string>? ids = null);
     Task<ShortLink> SaveShortLinkAsync(ShortLink entity);
+    Task<ShortLink> EnsureAskShortLinkAsync(AskCampaign campaign);
     Task<ShortLink?> EnsureVideoShortLinkAsync(string videoId, string? managementChannelId = null);
     Task<ShortLink?> EnsureVideoShortLinkAsync(string contentId, string videoId, string? managementChannelId = null);
     Task<bool> IsCodeAvailableAsync(string code, string? excludingId = null);
@@ -1022,6 +1024,39 @@ public sealed class LinksService(
             return await shortLinkRepository.GetByCodeAsync(normalizedCode)
                 ?? throw new InvalidOperationException(
                     $"Short-link code '{normalizedCode}' was rejected by the unique index.", exception);
+        }
+    }
+
+    public async Task<ShortLink> EnsureAskShortLinkAsync(AskCampaign campaign)
+    {
+        var existing = await shortLinkRepository.GetByCampaignIdAsync(campaign.Id);
+        if (existing is not null)
+        {
+            if (existing.ChannelId != campaign.ChannelId)
+                throw new InvalidOperationException("The ASK short link does not belong to the campaign channel.");
+            return existing;
+        }
+
+        var digest = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(campaign.Id))).ToLowerInvariant();
+        var link = new ShortLink($"ask-{digest[..16]}", campaign.Id, [])
+        {
+            LinkType = LinkType.AskCampaign,
+            CampaignId = campaign.Id,
+            ChannelId = campaign.ChannelId,
+            ManagementChannelId = campaign.ChannelId
+        };
+
+        try
+        {
+            return await shortLinkRepository.AddItemAsync(link);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000)
+        {
+            existing = await shortLinkRepository.GetByCampaignIdAsync(campaign.Id);
+            if (existing is not null && existing.ChannelId == campaign.ChannelId)
+                return existing;
+
+            throw new InvalidOperationException($"ASK short-link code '{link.Code}' is already in use.", exception);
         }
     }
 

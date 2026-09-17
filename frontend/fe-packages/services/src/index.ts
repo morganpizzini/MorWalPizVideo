@@ -61,8 +61,9 @@ export {
     updateSponsorWithImage,
     deleteSponsor
 } from './apiService';
+export { getChannelTerminology, saveChannelTerminology } from './apiService';
 export { getActiveCustomForms, getCustomFormByUrl, submitCustomFormResponse } from './apiService';
-export { getAskCampaign, submitAsk, reactToAskSubmission, fetchAskCampaigns, getAskCampaignAdmin, createAskCampaign, updateAskCampaign, fetchAskSubmissions, moderateAskSubmission, respondToAskSubmission, getAskAnalytics, getAskShare, exportAskSubmissions } from './apiService';
+export { getAskCampaign, submitAsk, reactToAskSubmission, fetchAskCampaigns, getAskCampaignAdmin, createAskCampaign, updateAskCampaign, fetchAskSubmissions, moderateAskSubmission, respondToAskSubmission, getAskAnalytics, getAskShare, publishAskToTelegram, exportAskSubmissions } from './apiService';
 export type { AskPublicCampaign } from './apiService';
 export { getPublicFaq, getPublicFaqCategories, voteFaqAnswer } from './apiService';
 export type { FaqPublicItem, FaqPublicAnswer } from './apiService';

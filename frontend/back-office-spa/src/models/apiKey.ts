@@ -14,6 +14,7 @@ export interface ApiKeyDto {
   expiresAt: string | null;
   createdAt: string;
   channelId: string | null;
+  scopes: string[];
 }
 
 export interface CreateApiKeyRequest {

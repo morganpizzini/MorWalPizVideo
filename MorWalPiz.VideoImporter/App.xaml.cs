@@ -21,7 +21,17 @@ namespace MorWalPiz.VideoImporter
         public static ITenantContext TenantContext { get; private set; } = null!;
         public static ITenantService TenantService { get; private set; } = null!;
         public static IApiServiceFactory ApiServiceFactory { get; private set; } = null!;
+        public static SocialPublishingService SocialPublishingService { get; private set; } = null!;
+        public static IHashtagHistoryService HashtagHistoryService { get; private set; } = null!;
+        public static IVideoThumbnailService VideoThumbnailService { get; private set; } = null!;
         public static IConfiguration Configuration { get; private set; } = null!;
+
+        public static string GetCurrentChannelId()
+        {
+            using var context = DatabaseService.CreateContext();
+            return context.Tenants.Find(TenantContext.CurrentTenantId)?.ChannelId
+                ?? ApiSettings.ChannelId;
+        }
         private IHost? _host;
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -58,6 +68,18 @@ namespace MorWalPiz.VideoImporter
                             KeepAlivePingTimeout = TimeSpan.FromSeconds(20)
                         });
                     services.AddSingleton<IApiServiceFactory, ApiServiceFactory>();
+                    services.AddHttpClient("SocialGraph", client =>
+                    {
+                        client.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
+                        client.Timeout = TimeSpan.FromMinutes(5);
+                    });
+                    services.AddSingleton<IHashtagHistoryService, HashtagHistoryService>();
+                    services.AddSingleton<IVideoThumbnailService, WpfVideoThumbnailService>();
+                    services.AddSingleton<ISocialProvider>(provider => new OfficialGraphSocialProvider(provider.GetRequiredService<IHttpClientFactory>()) { Provider = SocialProviderKind.FacebookPage });
+                    services.AddSingleton<ISocialProvider>(provider => new OfficialGraphSocialProvider(provider.GetRequiredService<IHttpClientFactory>()) { Provider = SocialProviderKind.InstagramBusiness });
+                    services.AddSingleton<ISocialProvider>(provider => new OfficialGraphSocialProvider(provider.GetRequiredService<IHttpClientFactory>()) { Provider = SocialProviderKind.Threads });
+                    services.AddSingleton<ISocialProvider>(new UnavailableSocialProvider(SocialProviderKind.FacebookPersonalProfile));
+                    services.AddSingleton<SocialPublishingService>();
                 })
                 .Build();
 
@@ -69,6 +91,9 @@ namespace MorWalPiz.VideoImporter
             TenantService = _host.Services.GetRequiredService<ITenantService>();
             ApiSettings = _host.Services.GetRequiredService<ApiSettings>();
             ApiServiceFactory = _host.Services.GetRequiredService<IApiServiceFactory>();
+            SocialPublishingService = _host.Services.GetRequiredService<SocialPublishingService>();
+            HashtagHistoryService = _host.Services.GetRequiredService<IHashtagHistoryService>();
+            VideoThumbnailService = _host.Services.GetRequiredService<IVideoThumbnailService>();
 
             // Inizializza il servizio di upload YouTube con Key Vault
             //var credentials = Configuration[$"credentials-{TenantContext.CurrentTenantName.ToLower()}"];

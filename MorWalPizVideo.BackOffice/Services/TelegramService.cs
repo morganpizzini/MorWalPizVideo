@@ -10,6 +10,12 @@ public class TelegramServiceMock(ISelectedChannelPublishingConfigurationAccessor
         configurationAccessor.Get("telegram");
         return Task.FromResult("");
     }
+
+    public Task<string> CreatePostWithUrl(string url, string message)
+    {
+        configurationAccessor.Get("telegram");
+        return Task.FromResult("");
+    }
 }
 public class TelegramService : ITelegramService
 {
@@ -28,14 +34,16 @@ public class TelegramService : ITelegramService
             throw new InvalidOperationException("SiteUrl is empty");
     }
     public async Task<string> CreatePost(string shortLink, string message)
+        => await CreatePostWithUrl($"{siteUrl}sl/{shortLink}", message);
+
+    public async Task<string> CreatePostWithUrl(string url, string message)
     {
         var settings = configurationAccessor.Get("telegram");
-        var youtubeUrl = $"{siteUrl}sl/{shortLink}";
 
         var request = new
         {
             chat_id = settings.DestinationId,
-            text = $"{message} {youtubeUrl}"
+            text = $"{message} {url}"
         };
 
         var client = clientFactory.CreateClient(HttpClientNames.Telegram);

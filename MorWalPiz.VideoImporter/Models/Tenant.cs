@@ -14,5 +14,7 @@ namespace MorWalPiz.VideoImporter.Models
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public bool IsActive { get; set; } = true;
+
+        public string ChannelId { get; set; } = string.Empty;
     }
 }

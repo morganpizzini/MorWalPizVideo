@@ -37,6 +37,12 @@ export type ChannelSocialPublishingProvider = Readonly<{
   credentialConfigured: boolean;
 }>;
 
+export type TerminologyMapping = { source: string; target: string };
+export type ChannelTerminology = {
+  italianToEnglish: TerminologyMapping[];
+  invariantEnglish: TerminologyMapping[];
+};
+
 /**
  * Type for creating a new channel (all fields required except id which may be generated)
  */

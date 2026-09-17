@@ -111,14 +111,14 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
 
     var updateResponse = await client.PutAsJsonAsync(
-        $"/api/Channels/{ownedChannel.ChannelId}",
-        new { channelName = "Renamed by owner" });
-    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
+      $"/api/Channels/{ownedChannel.ChannelId}",
+      new { channelName = "Renamed by owner" });
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
     var updated = await _factory.YTChannelRepository!.GetItemAsync(ownedChannel.Id);
     Assert.Equal("Renamed by owner", updated!.ChannelName);
 
     var deleteResponse = await client.DeleteAsync($"/api/Channels/{ownedChannel.ChannelId}");
-    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
     var remaining = await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == ownedChannel.ChannelId);
     Assert.Empty(remaining);
   }

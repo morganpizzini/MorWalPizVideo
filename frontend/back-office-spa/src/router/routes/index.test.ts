@@ -24,4 +24,9 @@ describe('protectedRoutes', () => {
     expect(getRoutePermissions('channels/create', false)).toEqual([permissions.channels.admin]);
     expect(getRoutePermissions('my-channel', false)).toEqual([permissions.backoffice.access]);
   });
+
+  it('protects newsletters with general backoffice access', () => {
+    expect(getRoutePermissions('newsletters', false)).toEqual([permissions.backoffice.access]);
+    expect(getRoutePermissions('newsletters', true)).toEqual([permissions.backoffice.access]);
+  });
 });

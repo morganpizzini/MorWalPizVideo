@@ -238,6 +238,30 @@ namespace MorWalPiz.VideoImporter.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MorWalPiz.VideoImporter.Models.HashtagHistory", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
+                    b.Property<string>("ChannelId").IsRequired().HasColumnType("TEXT");
+                    b.Property<DateTime>("LastUsedAtUtc").HasColumnType("TEXT");
+                    b.Property<int>("TenantId").HasColumnType("INTEGER");
+                    b.Property<string>("Value").IsRequired().HasColumnType("TEXT");
+                    b.HasKey("Id");
+                    b.HasIndex("TenantId", "ChannelId", "Value").IsUnique();
+                    b.ToTable("HashtagHistory");
+                });
+
+            modelBuilder.Entity("MorWalPiz.VideoImporter.Models.SocialChannelConfiguration", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
+                    b.Property<string>("AccessToken").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("AccountId").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("ChannelId").IsRequired().HasColumnType("TEXT");
+                    b.Property<int>("Provider").HasColumnType("INTEGER");
+                    b.Property<int>("TenantId").HasColumnType("INTEGER");
+                    b.HasKey("Id");
+                    b.ToTable("SocialChannelConfigurations");
+                });
+
             modelBuilder.Entity("MorWalPiz.VideoImporter.Models.Tenant", b =>
                 {
                     b.Property<int>("Id")

@@ -30,3 +30,10 @@ public class ApiKeyRepository : BaseRepository<ApiKey>, IApiKeyRepository
         return await _collection.Find(filter).ToListAsync();
     }
 }
+
+public sealed class SocialAssetRepository(IMongoDatabase database)
+    : BaseRepository<SocialAsset>(database, DbCollections.SocialAssets), ISocialAssetRepository
+{
+    public Task<SocialAsset?> GetByIdempotencyKeyAsync(string channelId, string idempotencyKey) =>
+        _collection.Find(x => x.ChannelId == channelId && x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync();
+}

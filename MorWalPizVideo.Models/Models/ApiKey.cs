@@ -31,4 +31,7 @@ public record ApiKey : BaseEntity
 
     [BsonElement("channelId")]
     public string? ChannelId { get; init; }
+
+    [BsonElement("scopes")]
+    public List<string> Scopes { get; init; } = new();
 }

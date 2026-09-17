@@ -450,6 +450,11 @@ namespace MorWalPiz.VideoImporter
             settingsPage.ShowDialog();
         }
 
+        private void SocialPublishingMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            new SocialPublishingPage { Owner = this }.ShowDialog();
+        }
+
         private void PublishSchedulesMenuItem_Click(object sender, RoutedEventArgs e)
         {
             var publishSchedulesPage = new Views.PublishSchedulesPage();
@@ -1049,12 +1054,14 @@ namespace MorWalPiz.VideoImporter
                 if (currentTenant != null)
                 {
                     TenantComboBox.SelectedItem = currentTenant;
+                    await EnsureTenantChannelAsync(currentTenant, false);
                 }
                 else if (tenants.Any())
                 {
                     // Select the first tenant if current is not found
                     TenantComboBox.SelectedItem = tenants.First();
                     App.TenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
+                    await EnsureTenantChannelAsync(tenants.First(), false);
                 }
             }
             catch (Exception ex)
@@ -1069,6 +1076,7 @@ namespace MorWalPiz.VideoImporter
             if (TenantComboBox.SelectedItem is Tenant selectedTenant)
             {
                 App.TenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                _ = EnsureTenantChannelAsync(selectedTenant, false);
                 
                 // Clear current data and reload for the new tenant
                 VideoFiles.Clear();
@@ -1078,6 +1086,41 @@ namespace MorWalPiz.VideoImporter
                 // Update title to show current tenant
                 Title = $"Video Importer - {selectedTenant.Name}";
             }
+        }
+
+        private async Task EnsureTenantChannelAsync(Tenant tenant, bool forceRefresh)
+        {
+            try
+            {
+                using var context = App.DatabaseService.CreateContext();
+                var stored = await context.Tenants.FindAsync(tenant.Id);
+                var shouldDiscover = forceRefresh || string.IsNullOrWhiteSpace(stored?.ChannelId);
+                if (!shouldDiscover) return;
+
+                var service = App.ApiServiceFactory.Create(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+                var channels = await service.GetAccessibleChannelsAsync();
+                if (channels.Count == 0)
+                {
+                    MessageBox.Show("Nessun canale accessibile per questo tenant.", "Canale non configurato", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var selection = new ChannelSelectionDialog(channels);
+                selection.Owner = this;
+                if (selection.ShowDialog() != true || selection.SelectedChannel is null) return;
+                stored!.ChannelId = selection.SelectedChannel.ChannelId;
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nel caricamento dei canali: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RefreshChannelsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (TenantComboBox.SelectedItem is Tenant tenant)
+                await EnsureTenantChannelAsync(tenant, true);
         }
 
         private void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)

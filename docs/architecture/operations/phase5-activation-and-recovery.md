@@ -30,8 +30,11 @@ Container exposure must be verified in Azure:
 | `SponsorContainerName` | Public sponsor previews remain public; BackOffice write is authorized |
 | `PageContainerName` | Public page previews remain public; BackOffice write is authorized |
 | `RecoveryContainerName` | Private recovery, restricted operator access |
+| `SocialAssetContainerName` | Private media assets; read access only through short-lived SAS |
 
 Prefer managed identity and container-scoped least-privilege Blob roles. Grant BackOffice contributor only to required write containers and ServerAPI reader only to `ContainerName`; do not grant either runtime identity broad recovery access. Use a separate non-production account for recovery where practical. The existing connection-string option remains a compatibility fallback and must stay in secret configuration. Do not place either credential form in evidence.
+
+Social asset SAS responses use User Delegation SAS when `BlobStorage:PreferManagedIdentity=true`. Configure the BackOffice managed identity, the Blob service `Endpoint`, `StorageAccountName`, `SocialAssetContainerName`, and the SAS TTL. Grant `Storage Blob Data Contributor` for upload access and `Storage Blob Delegator` at storage-account scope for `GetUserDelegationKeyAsync`. `StorageAccountKey` is not required in this path and must not be logged. If `PreferManagedIdentity=false`, both `StorageAccountName` and `StorageAccountKey` are required for the explicit Shared Key fallback; keep the key only in environment configuration or Key Vault. The service must never return a public Blob URL. The unique Mongo index `socialassets.channelid_idempotencykey.unique` must be present before production uploads are enabled.
 
 Configure and verify 30-day blob soft delete, container soft delete, and version retention. Configure approved lifecycle rules that delete temporary and recovery artifacts after 7 days. Public preview behavior must remain unchanged.
 

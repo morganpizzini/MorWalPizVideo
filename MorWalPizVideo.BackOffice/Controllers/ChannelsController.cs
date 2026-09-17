@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
-using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.Domain;
 using System.ComponentModel.DataAnnotations;
@@ -110,6 +110,45 @@ public class ChannelsController : ApplicationControllerBase
     {
         var entities = await channelContextResolver.GetAccessibleChannelsAsync(User);
         return Ok(entities.Select(ContractUtils.Convert));
+    }
+
+    [HttpGet("terminology")]
+    [RequireChannelScope]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
+    public IActionResult GetTerminology() => Ok(ChannelTerminologyRules.ToContract(HttpContext.GetChannelContext().Channel.Terminology));
+
+    [HttpPut("terminology")]
+    [RequireChannelScope]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
+    public async Task<IActionResult> UpdateTerminology([FromBody] ChannelTerminologyRequest request)
+    {
+        if (!ChannelTerminologyRules.TryNormalize(request.ItalianToEnglish, out var italianToEnglish, out var error) ||
+            !ChannelTerminologyRules.TryNormalize(request.InvariantEnglish, out var invariantEnglish, out error))
+        {
+            return BadRequest(error);
+        }
+
+        var context = HttpContext.GetChannelContext();
+        var updated = context.Channel with
+        {
+            Terminology = new ChannelTerminologyConfiguration
+            {
+                ItalianToEnglish = italianToEnglish,
+                InvariantEnglish = invariantEnglish
+            }
+        };
+        await _dataService.UpdateChannel(updated);
+        return Ok(ChannelTerminologyRules.ToContract(updated.Terminology));
+    }
+
+    [HttpDelete("terminology")]
+    [RequireChannelScope]
+    [AllowUser(AuthorizationPermissionKeys.ChannelsUpdate, AuthorizationPermissionKeys.ChannelsManage)]
+    public async Task<IActionResult> DeleteTerminology()
+    {
+        var context = HttpContext.GetChannelContext();
+        await _dataService.UpdateChannel(context.Channel with { Terminology = new ChannelTerminologyConfiguration() });
+        return NoContent();
     }
 
     [HttpGet("{id}")]

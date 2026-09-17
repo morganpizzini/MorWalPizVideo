@@ -6,10 +6,12 @@ using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -27,7 +29,7 @@ public sealed class AskCampaignRequest
 [Route("api/[controller]")]
 [ApiController]
 [RequireChannelScope]
-public sealed class AskController(IAskService askService, ICrossApiService crossApiService, IConfiguration configuration) : ControllerBase
+public sealed class AskController(IAskService askService, ILinksService linksService, ICrossApiService crossApiService, IConfiguration configuration, ITelegramService telegramService) : ControllerBase
 {
     [HttpGet]
     [AllowUser(AuthorizationPermissionKeys.AskView, AuthorizationPermissionKeys.AskManage)]
@@ -54,8 +56,23 @@ public sealed class AskController(IAskService askService, ICrossApiService cross
         var item = new AskCampaign { ChannelId = channelId, Title = request.Title, Description = request.Description, Slug = request.Slug, Status = request.Status, StartAt = request.StartAt, EndAt = request.EndAt, Policy = request.Policy };
         var errors = askService.Validate(item);
         if (errors.Count > 0) return BadRequest(errors);
-        try { item = await askService.CreateAsync(item); }
-        catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000) { return Conflict("A campaign with this slug already exists in the channel."); }
+        try
+        {
+            item = await askService.CreateAsync(item);
+            await linksService.EnsureAskShortLinkAsync(item);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000)
+        {
+            if (!string.IsNullOrWhiteSpace(item.Id))
+                await askService.DeleteAsync(item.Id, channelId);
+            return Conflict("A campaign with this slug already exists in the channel.");
+        }
+        catch
+        {
+            if (!string.IsNullOrWhiteSpace(item.Id))
+                await askService.DeleteAsync(item.Id, channelId);
+            throw;
+        }
         await InvalidateAsync();
         return CreatedAtAction(nameof(Get), new { id = item.Id }, ContractUtils.Convert(item));
     }
@@ -68,7 +85,11 @@ public sealed class AskController(IAskService askService, ICrossApiService cross
         var item = new AskCampaign { Id = id, ChannelId = channelId, Title = request.Title, Description = request.Description, Slug = request.Slug, Status = request.Status, StartAt = request.StartAt, EndAt = request.EndAt, Policy = request.Policy };
         var errors = askService.Validate(item);
         if (errors.Count > 0) return BadRequest(errors);
-        try { item = await askService.UpdateAsync(item, channelId) ?? throw new KeyNotFoundException(); }
+        try
+        {
+            item = await askService.UpdateAsync(item, channelId) ?? throw new KeyNotFoundException();
+            await linksService.EnsureAskShortLinkAsync(item);
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000) { return Conflict("A campaign with this slug already exists in the channel."); }
         await InvalidateAsync();
@@ -102,10 +123,30 @@ public sealed class AskController(IAskService askService, ICrossApiService cross
     {
         var campaign = await askService.GetByIdAsync(id, HttpContext.GetChannelContext().ChannelId);
         if (campaign is null) return NotFound();
-        var baseUrl = (configuration["Ask:PublicBaseUrl"] ?? "https://ask.morwalpiz.com").TrimEnd('/');
-        var channelName = await askService.GetChannelNameAsync(campaign.ChannelId) ?? campaign.ChannelId;
-        var shareUrl = $"{baseUrl}/{Uri.EscapeDataString(channelName)}/{Uri.EscapeDataString(campaign.Slug)}";
+        var shareUrl = await GetShortUrlAsync(campaign);
         return Ok(new { shareUrl, qrUrl = $"/api/QRCode/ask?data={Uri.EscapeDataString(shareUrl)}" });
+    }
+
+    [HttpPost("{id}/publish-telegram")]
+    [AllowUser(AuthorizationPermissionKeys.AskModerate, AuthorizationPermissionKeys.AskManage)]
+    public async Task<ActionResult> PublishTelegram(string id)
+    {
+        var campaign = await askService.GetByIdAsync(id, HttpContext.GetChannelContext().ChannelId);
+        if (campaign is null) return NotFound();
+
+        var url = await GetShortUrlAsync(campaign);
+        var message = campaign.Title;
+        try
+        {
+            var providerError = await telegramService.CreatePostWithUrl(url, message);
+            return string.IsNullOrEmpty(providerError)
+                ? Ok(new { url, message })
+                : StatusCode(StatusCodes.Status502BadGateway, new { error = "telegram_publish_failed" });
+        }
+        catch (SocialProviderNotConfiguredException exception)
+        {
+            return Conflict(new { code = "social_provider_not_configured", provider = exception.Provider, message = exception.Message });
+        }
     }
 
     [HttpGet("{id}/export")]
@@ -138,7 +179,15 @@ public sealed class AskController(IAskService askService, ICrossApiService cross
     private async Task InvalidateAsync()
     {
         await crossApiService.ResetCache(CacheKeys.Ask);
+        await crossApiService.ResetCache(CacheKeys.ShortLinks);
         await crossApiService.PurgeCache(ApiTagCacheKeys.Ask);
+    }
+
+    private async Task<string> GetShortUrlAsync(AskCampaign campaign)
+    {
+        var link = await linksService.EnsureAskShortLinkAsync(campaign);
+        var baseUrl = (configuration["ShortLinks:PublicBaseUrl"] ?? "https://shorts.morwalpiz.com").TrimEnd('/');
+        return $"{baseUrl}/{Uri.EscapeDataString(link.Code)}";
     }
 
     private static string Csv(string value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";

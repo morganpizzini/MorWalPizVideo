@@ -22,7 +22,8 @@ namespace MorWalPizVideo.Server.Models
         Facebook = 4,
 
         [EnumMember]
-        CustomUrl = 5
+        CustomUrl = 5,
+        AskCampaign = 6
     }
 
     [BsonIgnoreExtraElements]
@@ -62,6 +63,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("managementChannelId")]
         public string? ManagementChannelId { get; set; }
+
+        [DataMember]
+        [BsonElement("campaignId")]
+        public string? CampaignId { get; set; }
 
         [BsonIgnore]
         public string QueryString => QueryLinks != null ? string.Join("&", QueryLinks.Select(ql => ql.Value)) : string.Empty;

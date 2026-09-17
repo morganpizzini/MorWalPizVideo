@@ -16,13 +16,17 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         private readonly IMorWalPizCache cache;
         private readonly IConfiguration configuration;
         private readonly INewsletterEventRepository newsletterEventRepository;
+        private readonly IAskCampaignRepository askCampaignRepository;
+        private readonly IYTChannelRepository channelRepository;
 
-        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository)
+        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository)
         {
             cache = memoryCache;
             _shortlinkDataService = shortLinkDataService;
             this.configuration = configuration;
             this.newsletterEventRepository = newsletterEventRepository;
+            this.askCampaignRepository = askCampaignRepository;
+            this.channelRepository = channelRepository;
         }
 
         private async Task<ShortLink?> FindShortLinkInContent(string code)
@@ -104,6 +108,14 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             var shortLink = await FindShortLinkInContent(videoShortLink);
             if (shortLink == null)
                 return BadRequest("shortLink not found");
+
+            string? askRedirectUrl = null;
+            if (shortLink.LinkType == LinkType.AskCampaign)
+            {
+                askRedirectUrl = await ResolveAskUrlAsync(shortLink);
+                if (askRedirectUrl is null)
+                    return NotFound();
+            }
 
             // Increment click count
             await UpdateShortLinkClickCount(shortLink);
@@ -222,6 +234,9 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                     // Direct link to the URL in Target
                     return Redirect(shortLink.Target);
 
+                case LinkType.AskCampaign:
+                    return Redirect(askRedirectUrl!);
+
                 case LinkType.YouTubeVideo:
                 default:                    // For YouTube videos, we need to look up the actual video data
                     var channelId = configuration["YouTubeChannelId"]?.Trim();
@@ -266,6 +281,26 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         private async Task<IList<YouTubeContent>> FetchMatchesWithoutCache() => (await _shortlinkDataService.FetchMatches())
                             .OrderByDescending(x => x.CreationDateTime)
                             .ToList();
+
+        private async Task<string?> ResolveAskUrlAsync(ShortLink shortLink)
+        {
+            if (string.IsNullOrWhiteSpace(shortLink.CampaignId) || string.IsNullOrWhiteSpace(shortLink.ChannelId))
+                return null;
+
+            var campaign = await askCampaignRepository.GetItemAsync(shortLink.CampaignId);
+            var now = DateTime.UtcNow;
+            if (campaign is null || campaign.ChannelId != shortLink.ChannelId || campaign.Status != AskCampaignStatus.Published ||
+                (campaign.StartAt is not null && campaign.StartAt > now) ||
+                (campaign.EndAt is not null && campaign.EndAt <= now))
+                return null;
+
+            var channel = (await channelRepository.GetItemsAsync(item => item.ChannelId == campaign.ChannelId)).FirstOrDefault();
+            if (channel is null || string.IsNullOrWhiteSpace(channel.ChannelName))
+                return null;
+
+            var baseUrl = (configuration["Ask:PublicBaseUrl"] ?? "https://ask.morwalpiz.com").TrimEnd('/');
+            return $"{baseUrl}/{Uri.EscapeDataString(channel.ChannelName)}/{Uri.EscapeDataString(campaign.Slug)}";
+        }
 
 
         private async Task<IList<YTChannel>> FetchChannelsWithoutCache() => 

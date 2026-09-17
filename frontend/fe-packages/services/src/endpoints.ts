@@ -32,6 +32,7 @@ const CHANNELS = `${baseEndpoint}/channels`;
 const CHANNELS_ACCESSIBLE = `${CHANNELS}/accessible`;
 const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
 const CHANNEL_LOGO = `${CHANNELS_DETAIL}/logo`;
+const CHANNEL_TERMINOLOGY = `${CHANNELS}/terminology`;
 const CHANNEL_NEWS = `${baseEndpoint}/channelnews`;
 const CHANNEL_NEWS_DETAIL = `${CHANNEL_NEWS}/{id}`;
 const CHANNEL_NEWS_STATUS = `${CHANNEL_NEWS_DETAIL}/status`;
@@ -112,6 +113,7 @@ const ASK_ADMIN_MODERATE = `${ASK_ADMIN}/submissions/{id}/moderate`;
 const ASK_ADMIN_RESPONSE = `${ASK_ADMIN}/submissions/{id}/response`;
 const ASK_ADMIN_ANALYTICS = `${ASK_ADMIN_DETAIL}/analytics`;
 const ASK_ADMIN_SHARE = `${ASK_ADMIN_DETAIL}/share`;
+const ASK_ADMIN_PUBLISH_TELEGRAM = `${ASK_ADMIN_DETAIL}/publish-telegram`;
 const ASK_ADMIN_EXPORT = `${ASK_ADMIN_DETAIL}/export`;
 const ASK_REACTIONS = `${ASK_SUBMISSIONS}/{submissionId}/reactions`;
 const FAQ = `${baseEndpoint}/faq`;
@@ -161,6 +163,7 @@ export default {
     CHANNELS_ACCESSIBLE,
     CHANNELS_DETAIL,
     CHANNEL_LOGO,
+    CHANNEL_TERMINOLOGY,
     CHANNEL_NEWS,
     CHANNEL_NEWS_DETAIL,
     CHANNEL_NEWS_STATUS,
@@ -233,6 +236,7 @@ export default {
     ASK_ADMIN_RESPONSE,
     ASK_ADMIN_ANALYTICS,
     ASK_ADMIN_SHARE,
+    ASK_ADMIN_PUBLISH_TELEGRAM,
     ASK_ADMIN_EXPORT,
     ASK_REACTIONS,
     FAQ,

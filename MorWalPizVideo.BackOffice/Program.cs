@@ -388,6 +388,8 @@ if (enableMock)
     builder.Services.AddScoped<IFaqCandidateRepository, FaqCandidateMockRepository>();
     builder.Services.AddScoped<IFaqVoteRepository, FaqVoteMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
+    builder.Services.AddScoped<ISocialAssetRepository, SocialAssetMockRepository>();
+    builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobServiceMock>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
     // Shop repositories (Mock)
@@ -426,6 +428,7 @@ if (enableMock)
     builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    builder.Services.AddScoped<SocialAssetService>();
 
     // Insight Agent Service (Mock)
     builder.Services.AddScoped<IInsightAgentService, MockInsightAgentService>();
@@ -530,6 +533,9 @@ else
         return BlobStorageClientFactory.Create(options, new DefaultAzureCredential());
     });
     builder.Services.AddScoped<IBlobService, BlobService>();
+    builder.Services.AddScoped<ISocialAssetRepository, SocialAssetRepository>();
+    builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobService>();
+    builder.Services.AddScoped<SocialAssetService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
     builder.Services.AddScoped<IMongoIndexOperationsService, MongoIndexOperationsService>();
     builder.Services.AddHostedService<MongoIndexStartupInitializer>();

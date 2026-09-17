@@ -40,7 +40,30 @@ namespace MorWalPizVideo.Server.Models
 
         [BsonElement("socialPublishing")]
         public SocialPublishingConfiguration SocialPublishing { get; init; } = new();
+
+        [BsonElement("terminology")]
+        public ChannelTerminologyConfiguration Terminology { get; init; } = new();
         
+    }
+
+    [BsonIgnoreExtraElements]
+    public record ChannelTerminologyConfiguration
+    {
+        [BsonElement("italianToEnglish")]
+        public List<TerminologyMapping> ItalianToEnglish { get; init; } = [];
+
+        [BsonElement("invariantEnglish")]
+        public List<TerminologyMapping> InvariantEnglish { get; init; } = [];
+    }
+
+    [BsonIgnoreExtraElements]
+    public record TerminologyMapping
+    {
+        [BsonElement("source")]
+        public string Source { get; init; } = string.Empty;
+
+        [BsonElement("target")]
+        public string Target { get; init; } = string.Empty;
     }
 
     [BsonIgnoreExtraElements]

@@ -21,8 +21,10 @@
             </MenuItem>
             <MenuItem Header="Edit">
                 <MenuItem Header="Settings" Click="SettingsMenuItem_Click"/>
+                <MenuItem Header="Pubblicazione social" Click="SocialPublishingMenuItem_Click"/>
                 <MenuItem Header="Pianificazioni Pubblicazione" Click="PublishSchedulesMenuItem_Click"/>
                 <MenuItem Header="Gestione Tenant" Click="TenantManagementMenuItem_Click"/>
+                <MenuItem Header="Aggiorna canali" Click="RefreshChannelsMenuItem_Click"/>
                 <MenuItem Header="Pulisci credenziali YouTube" Click="ClearYouTubeCredentials_Click"/>
             </MenuItem>
             <MenuItem Header="Entità">

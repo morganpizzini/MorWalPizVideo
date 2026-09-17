@@ -48,7 +48,15 @@ public sealed class MongoIndexOperationsTests
 
         await initializer.StartAsync(CancellationToken.None);
 
-        Assert.Equal(["shortlinks.code.unique"], operations.AppliedKeys);
+        Assert.Equal([
+            "shortlinks.code.unique",
+            "newsletterusers.channelid_emailhash.unique",
+            "newsletterusers.channelid_confirmationtokenhash",
+            "newsletterusers.channelid_unsubscribetokenhash",
+            "newsletterrecipients.channelid_newsletterid_userid.unique",
+            "newsletterevents.channelid_newsletterid_type_occurredat",
+            "socialassets.channelid_idempotencykey.unique"
+        ], operations.AppliedKeys);
     }
 
     [Fact]

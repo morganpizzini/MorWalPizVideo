@@ -1,0 +1,43 @@
+<Window x:Class="MorWalPiz.VideoImporter.Views.SocialPublishingPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pubblicazione social" Height="720" Width="980" Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Componi pubblicazione" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Le capability vengono mostrate per il canale selezionato. Nessun job locale viene eseguito." Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,16"/>
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Aggiungi foto/video" Click="AddMedia_Click" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Thumbnail da file" Click="SelectThumbnail_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Estrai thumbnail video" Click="ExtractThumbnail_Click" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+        </StackPanel>
+        <Grid Grid.Row="1" Margin="0,16,0,16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                <TextBlock Text="Media selezionati" FontWeight="SemiBold"/>
+                <ListBox x:Name="MediaList" Height="130" Margin="0,6,0,12"/>
+                <TextBlock Text="Caption" FontWeight="SemiBold"/>
+                <TextBox x:Name="CaptionBox" AcceptsReturn="True" Height="130" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" TextChanged="CaptionBox_TextChanged"/>
+                <TextBlock Text="Suggerimenti hashtag" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                <ListBox x:Name="HashtagSuggestions" Height="80" MouseDoubleClick="HashtagSuggestion_DoubleClick"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Canale e formato" FontWeight="SemiBold"/>
+                <TextBlock Text="Provider" Margin="0,8,0,2"/>
+                <ComboBox x:Name="ProviderBox" DisplayMemberPath="Provider" SelectionChanged="ProviderBox_SelectionChanged"/>
+                <TextBlock Text="Aspect ratio" Margin="0,8,0,2"/>
+                <ComboBox x:Name="AspectRatioBox"/>
+                <CheckBox x:Name="ScheduleBox" Content="Pubblica alla data/ora indicata" Margin="0,12,0,4" Checked="ScheduleBox_Changed" Unchecked="ScheduleBox_Changed"/>
+                <DatePicker x:Name="ScheduleDate" IsEnabled="False"/>
+                <TextBox x:Name="ScheduleTime" Text="19:00" IsEnabled="False" Margin="0,4,0,0"/>
+                <TextBlock x:Name="CapabilityStatus" TextWrapping="Wrap" Margin="0,14,0,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Chiudi" Click="Close_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+            <Button Content="Invia" Click="Publish_Click" Style="{StaticResource PrimaryButton}"/>
+        </StackPanel>
+    </Grid>
+</Window>

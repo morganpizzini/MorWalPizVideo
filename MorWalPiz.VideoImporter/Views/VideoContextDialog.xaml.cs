@@ -44,7 +44,7 @@ namespace MorWalPiz.VideoImporter.Views
                 SelectedFiles.Add(fileName);
             }
 
-            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.ApiSettings.ChannelId);
+            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.GetCurrentChannelId());
         }
 
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)

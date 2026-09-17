@@ -76,6 +76,7 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (!module) return [permissions.backoffice.access];
   if (module === 'profile') return [permissions.backoffice.access];
   if (module === 'my-channel') return [permissions.backoffice.access];
+  if (module === 'newsletters') return [permissions.backoffice.access];
   if (module === 'diagnostics') return [permissions.diagnostics.view];
   if (module === 'rbac') {
     if (segments[1] === 'groups') return [permissions.users.permissionsManage];

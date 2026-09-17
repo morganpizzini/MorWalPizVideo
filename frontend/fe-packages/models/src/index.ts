@@ -11,7 +11,7 @@ export type {
 export type { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categories';
 
 // Channel exports
-export type { Channel, ChannelSocial, ChannelVideo, CreateChannelDTO, UpdateChannelDTO } from './channel';
+export type { Channel, ChannelSocial, ChannelVideo, ChannelTerminology, TerminologyMapping, CreateChannelDTO, UpdateChannelDTO } from './channel';
 export type { ChannelNews, ChannelNewsAdmin, ChannelNewsImage, ChannelNewsStatus } from './channelNews';
 
 // Pages and public navigation exports

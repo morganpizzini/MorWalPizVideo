@@ -11,7 +11,7 @@ namespace MorWalPiz.VideoImporter.Views
         public VideoTranscriptAnalysisDialog(string apiEndpoint, string? apiKey = null)
         {
             InitializeComponent();
-            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.ApiSettings.ChannelId);
+            _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.GetCurrentChannelId());
         }
 
         private async void TrimTextBUtton_Click(object sender, RoutedEventArgs e)

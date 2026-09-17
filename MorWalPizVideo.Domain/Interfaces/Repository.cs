@@ -529,6 +529,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             var updated = await _collection.FindOneAndUpdateAsync(filter, update, options);
             return updated?.ClicksCount ?? 0;
         }
+
+        public Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
+            => _collection.Find(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId).FirstOrDefaultAsync();
     }
 
     public sealed class QuickLinksRepository(IMongoDatabase database)

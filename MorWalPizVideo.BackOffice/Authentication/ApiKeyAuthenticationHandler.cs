@@ -95,7 +95,7 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             new Claim(ClaimTypes.Name, apiKey.Name),
             new Claim("ApiKeyId", apiKey.Id!),
             new Claim("ApiKeyName", apiKey.Name)
-        };
+        }.Concat(apiKey.Scopes.Select(scope => new Claim("scope", scope))).ToArray();
 
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);

@@ -912,7 +912,7 @@ namespace MorWalPiz.VideoImporter.Services
                 }
 
                 // Call translation API
-                var apiService = App.ApiServiceFactory.Create(apiSettings.ApiEndpoint, apiSettings.ApiKey, App.ApiSettings.ChannelId);
+                var apiService = App.ApiServiceFactory.Create(apiSettings.ApiEndpoint, apiSettings.ApiKey, App.GetCurrentChannelId());
                 var translations = await apiService.TranslateVideoContentAsync(
                     originalTitle,
                     originalDescription,

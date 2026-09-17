@@ -51,20 +51,22 @@ Separate containers by exposure:
 - Public sponsor and page previews (`SponsorContainerName` and `PageContainerName`): anonymous read remains enabled because current public DTOs compose direct preview URLs.
 - Private digital originals and administrative uploads (`UploadContainerName`): no anonymous access.
 - Private recovery copies (`RecoveryContainerName`): no anonymous access, restricted operator access, and a separate non-production account where practical.
+- Social publishing media (`SocialAssetContainerName`): private access only; BackOffice uploads the asset and returns a short-lived read-only SAS URL to the authorized VideoImporter. With `BlobStorage:PreferManagedIdentity=true`, BackOffice uses `DefaultAzureCredential`, `GetUserDelegationKeyAsync`, and a blob-scoped read-only User Delegation SAS. `StorageAccountName`, `Endpoint`, the social asset container name, and the configured TTL are required; `StorageAccountKey` is not required in this path and is never logged.
 
 ServerAPI issues short-lived, read-only SAS URLs after acquisition verification. Public DTOs never expose storage keys.
 
 Operational controls:
 
 - Prefer managed identity and least-privilege Blob roles over connection strings.
-- Scope BackOffice Blob Data Contributor to only the preview/upload containers it writes. Do not grant its runtime identity recovery-container access.
+- Scope the BackOffice managed identity to `Storage Blob Data Contributor` on the storage account or the containers it writes, including `SocialAssetContainerName`, and grant `Storage Blob Delegator` at storage-account scope so it can call `GetUserDelegationKeyAsync`. Do not grant its runtime identity recovery-container access unless the deployment needs it.
 - Scope ServerAPI Blob Data Reader to `ContainerName`, the only container it lists. Public sponsor/page previews remain anonymous compatibility reads and require no ServerAPI data role.
 - Retain blob and container soft-deleted data and versions for 30 days.
 - Delete temporary and recovery artifacts after 7 days through an approved lifecycle rule.
 - Persist explicit content type plus SHA-256, size, and upload-time metadata; use the service ETag for recovery evidence and configure preview cache policy at the container/CDN boundary.
+- Enforce social upload idempotency with the unique `(channelId, idempotencyKey)` Mongo index; normalize the key before lookup and persistence.
 - Monitor capacity, latency, egress, authorization failures, and unusual downloads.
 - Execute checksum-verified restores only through the private recovery container.
-- Prefer managed identity with least-privilege container-scoped Blob roles; retain the existing connection-string keys only as a compatibility fallback.
+- Prefer managed identity with least-privilege Blob roles. A `StorageAccountName`/`StorageAccountKey` pair is retained only as an explicit Shared Key fallback when `PreferManagedIdentity=false`; it must come from environment configuration or Key Vault and must never be logged. When using Key Vault with managed identity, store no `StorageAccountKey` for the User Delegation SAS path; Key Vault needs connection strings/keys only if the fallback is deliberately selected.
 - Follow `operations/phase5-activation-and-recovery.md` for restore, lifecycle, RBAC, and credential evidence.
 
 ## MongoDB

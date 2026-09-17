@@ -17,6 +17,10 @@ import type {
 } from '@morwalpizvideo/models';
 import type { AskCampaign, AskSubmission, AskCampaignRequest } from '@morwalpizvideo/models';
 import type { FaqAdmin, FaqAnswerAdmin, FaqCandidateAdmin, FaqCategoryAdmin } from '@morwalpizvideo/models';
+import type { ChannelTerminology } from '@morwalpizvideo/models';
+
+export const getChannelTerminology = (): Promise<ChannelTerminology> => get(endpoints.CHANNEL_TERMINOLOGY);
+export const saveChannelTerminology = (payload: ChannelTerminology): Promise<ChannelTerminology> => put(endpoints.CHANNEL_TERMINOLOGY, payload);
 
 function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
     switch (answer.answerType) {
@@ -104,6 +108,7 @@ export const moderateAskSubmission = (id: string, status: AskSubmission['moderat
 export const respondToAskSubmission = (id: string, content: string, author: string, visibility: number): Promise<AskSubmission> => post(ComposeUrl(endpoints.ASK_ADMIN_RESPONSE, { id }), { content, author, visibility });
 export const getAskAnalytics = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_ANALYTICS, { id }));
 export const getAskShare = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_SHARE, { id }));
+export const publishAskToTelegram = (id: string): Promise<{ url: string; message: string }> => post(ComposeUrl(endpoints.ASK_ADMIN_PUBLISH_TELEGRAM, { id }), {});
 export const exportAskSubmissions = (id: string, includeName = false) => getFile(ComposeUrl(endpoints.ASK_ADMIN_EXPORT, { id }), { includeName });
 
 /**

@@ -63,7 +63,8 @@ public class ApiKeysController : ControllerBase
             channelId,
             request.RateLimitPerMinute,
             request.AllowedIpAddresses,
-            request.ExpiresAt
+            request.ExpiresAt,
+            request.Scopes
         );
 
         _logger.LogInformation("API key created: {KeyName} by user {User}", request.Name, User.Identity?.Name);
@@ -79,6 +80,7 @@ public class ApiKeysController : ControllerBase
             ExpiresAt = apiKey.ExpiresAt,
             CreatedAt = apiKey.CreationDateTime,
             ChannelId = apiKey.ChannelId,
+            Scopes = apiKey.Scopes,
             Message = "IMPORTANT: Save this key securely. It will not be shown again."
         });
     }
@@ -104,6 +106,7 @@ public class ApiKeysController : ControllerBase
             ExpiresAt = k.ExpiresAt,
             CreatedAt = k.CreationDateTime,
             ChannelId = k.ChannelId
+            ,Scopes = k.Scopes
         }).ToList();
 
         return Ok(response);
@@ -131,6 +134,7 @@ public class ApiKeysController : ControllerBase
             ExpiresAt = apiKey.ExpiresAt,
             CreatedAt = apiKey.CreationDateTime,
             ChannelId = apiKey.ChannelId
+            ,Scopes = apiKey.Scopes
         });
     }
 
@@ -172,6 +176,7 @@ public class ApiKeysController : ControllerBase
             RateLimitPerMinute = request.RateLimitPerMinute ?? apiKey.RateLimitPerMinute,
             AllowedIpAddresses = request.AllowedIpAddresses ?? apiKey.AllowedIpAddresses,
             ExpiresAt = request.ExpiresAt ?? apiKey.ExpiresAt,
+            Scopes = request.Scopes ?? apiKey.Scopes,
             ChannelId = targetChannelId
         };
 
@@ -269,6 +274,7 @@ public record CreateApiKeyRequest
     public int? RateLimitPerMinute { get; init; }
     public List<string>? AllowedIpAddresses { get; init; }
     public DateTime? ExpiresAt { get; init; }
+    public List<string>? Scopes { get; init; }
 }
 
 public record CreateApiKeyResponse
@@ -283,6 +289,7 @@ public record CreateApiKeyResponse
     public string? ChannelId { get; init; }
     public DateTime CreatedAt { get; init; }
     public string Message { get; init; } = string.Empty;
+    public List<string> Scopes { get; init; } = new();
 }
 
 public record UpdateApiKeyRequest
@@ -292,6 +299,7 @@ public record UpdateApiKeyRequest
     public int? RateLimitPerMinute { get; init; }
     public List<string>? AllowedIpAddresses { get; init; }
     public DateTime? ExpiresAt { get; init; }
+    public List<string>? Scopes { get; init; }
     public string? ChannelId { get; init; }
 }
 
@@ -307,4 +315,5 @@ public record ApiKeyDto
     public DateTime? ExpiresAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public string? ChannelId { get; init; }
+    public List<string> Scopes { get; init; } = new();
 }

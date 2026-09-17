@@ -29,3 +29,10 @@ public class ApiKeyMockRepository : BaseMockRepository<ApiKey>, IApiKeyRepositor
         return items.Where(x => x.IsActive);
     }
 }
+
+public sealed class SocialAssetMockRepository(IMockScenario scenario)
+    : BaseMockRepository<SocialAsset>(scenario, "socialAssets"), ISocialAssetRepository
+{
+    public async Task<SocialAsset?> GetByIdempotencyKeyAsync(string channelId, string idempotencyKey) =>
+        (await GetItemsAsync(x => x.ChannelId == channelId && x.IdempotencyKey == idempotencyKey)).FirstOrDefault();
+}

@@ -1,9 +1,11 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.IO;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPizVideo.BackOffice.DTOs;
 using BackOfficeDTOs = MorWalPizVideo.BackOffice.DTOs;
 using MorWalPiz.Contracts.DTOs;
+using MorWalPiz.Contracts.Contracts;
 
 namespace MorWalPiz.VideoImporter.Services
 {
@@ -108,6 +110,38 @@ namespace MorWalPiz.VideoImporter.Services
             {
                 throw new Exception($"Failed to analyze transcript: {ex.Message}", ex);
             }
+        }
+
+        public async Task<IReadOnlyList<ChannelContract>> GetAccessibleChannelsAsync()
+        {
+            var response = await _httpClient.GetAsync("api/channels/accessible");
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"Unable to load accessible channels ({response.StatusCode})");
+            return await response.Content.ReadFromJsonAsync<List<ChannelContract>>() ?? [];
+        }
+
+        public async Task<SocialAssetContract> UploadSocialAssetAsync(
+            Stream content,
+            string fileName,
+            string contentType,
+            string idempotencyKey,
+            CancellationToken cancellationToken = default)
+        {
+            using var multipart = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(content);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            multipart.Add(fileContent, "file", Path.GetFileName(fileName));
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/social-assets/upload")
+            {
+                Content = multipart
+            };
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
+
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"Social asset upload failed ({response.StatusCode}).");
+            return await response.Content.ReadFromJsonAsync<SocialAssetContract>(cancellationToken: cancellationToken)
+                ?? throw new InvalidOperationException("BackOffice returned an empty social asset response.");
         }
 
     }

@@ -60,6 +60,7 @@ if (enableMock)
     builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
     builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
@@ -67,6 +68,7 @@ if (enableMock)
 else
 {
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+    builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();

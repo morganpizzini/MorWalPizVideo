@@ -30,6 +30,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<IList<YouTubeContent>> GetByIdsAsync(IList<string> ids, bool includePrivate);
     }
 
+    public interface ISocialAssetRepository : IRepository<SocialAsset>
+    {
+        Task<SocialAsset?> GetByIdempotencyKeyAsync(string channelId, string idempotencyKey);
+    }
+
     public enum VideoReferenceAppendResult
     {
         Added,
@@ -75,6 +80,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<ShortLink?> GetByCodeAsync(string code);
         // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
         Task<int> IncrementClicksAsync(string id);
+        Task<ShortLink?> GetByCampaignIdAsync(string campaignId);
     }
     public interface IQuickLinksRepository : IRepository<QuickLinks>
     {

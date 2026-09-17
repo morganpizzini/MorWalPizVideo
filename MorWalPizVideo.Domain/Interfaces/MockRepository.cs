@@ -351,6 +351,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 return updated.ClicksCount;
             }
         }
+
+        public async Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
+            => (await GetItemsAsync(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId)).FirstOrDefault();
     }
 
     public sealed class NewsletterMockRepository(IMockScenario scenario) : BaseMockRepository<Newsletter>(scenario, "newsletters"), INewsletterRepository

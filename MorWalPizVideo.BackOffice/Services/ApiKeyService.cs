@@ -28,7 +28,8 @@ public class ApiKeyService : IApiKeyService
         string channelId,
         int? rateLimitPerMinute = null,
         List<string>? allowedIpAddresses = null,
-        DateTime? expiresAt = null)
+        DateTime? expiresAt = null,
+        List<string>? scopes = null)
     {
         var unhashedKey = GenerateApiKey();
         var hashedKey = HashApiKey(unhashedKey);
@@ -43,6 +44,7 @@ public class ApiKeyService : IApiKeyService
             RateLimitPerMinute = rateLimitPerMinute ?? _settings.DefaultRateLimitPerMinute,
             AllowedIpAddresses = allowedIpAddresses ?? new List<string>(),
             ExpiresAt = expiresAt,
+            Scopes = scopes?.Select(scope => scope.Trim().ToLowerInvariant()).Where(scope => scope.Length > 0).Distinct().ToList() ?? [],
             CreationDateTime = DateTime.UtcNow
         };
 

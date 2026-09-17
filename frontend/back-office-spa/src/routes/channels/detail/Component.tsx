@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLoaderData, useFetcher, useNavigate, useLocation } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
-import { ComposeUrl, Delete, endpoints, postFormData } from '@morwalpizvideo/services';
+import { ComposeUrl, Delete, endpoints, getChannelTerminology, postFormData, saveChannelTerminology } from '@morwalpizvideo/services';
 import { useToast } from '@components/ToastNotification/ToastContext';
-import { Channel } from '@morwalpizvideo/models';
+import { Channel, ChannelTerminology, TerminologyMapping } from '@morwalpizvideo/models';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import GenericErrorList from '@components/GenericErrorList';
@@ -16,6 +16,9 @@ const ChannelDetail: React.FC = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState(entity?.channelLogoUrl ?? '');
   const [logoBusy, setLogoBusy] = useState(false);
+  const [terminology, setTerminology] = useState<ChannelTerminology>({ italianToEnglish: [], invariantEnglish: [] });
+  const [terminologyBusy, setTerminologyBusy] = useState(false);
+  const [terminologyError, setTerminologyError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
   const location = useLocation();
@@ -30,6 +33,25 @@ const ChannelDetail: React.FC = () => {
   useEffect(() => {
     setLogoUrl(entity?.channelLogoUrl ?? '');
   }, [entity]);
+
+  useEffect(() => {
+    let active = true;
+    getChannelTerminology().then(value => active && setTerminology(value)).catch(() => active && setTerminologyError('Unable to load terminology.'));
+    return () => { active = false; };
+  }, [entity.channelId]);
+
+  const updateTerminology = (group: keyof ChannelTerminology, index: number, field: keyof TerminologyMapping, value: string) => {
+    setTerminology(current => ({ ...current, [group]: current[group].map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item) }));
+  };
+
+  const addTerminology = (group: keyof ChannelTerminology) => setTerminology(current => ({ ...current, [group]: [...current[group], { source: '', target: '' }] }));
+  const removeTerminology = (group: keyof ChannelTerminology, index: number) => setTerminology(current => ({ ...current, [group]: current[group].filter((_, itemIndex) => itemIndex !== index) }));
+  const saveTerminology = async () => {
+    setTerminologyBusy(true); setTerminologyError('');
+    try { setTerminology(await saveChannelTerminology(terminology)); }
+    catch { setTerminologyError('Unable to save terminology. Check your channel permission.'); }
+    finally { setTerminologyBusy(false); }
+  };
 
   useEffect(() => {
     if (!result) return;
@@ -188,6 +210,23 @@ const ChannelDetail: React.FC = () => {
             Navigation
           </Button>
         </div>
+      </DetailPanel>
+      <DetailPanel title="Translation terminology">
+        {terminologyError && <div className="alert alert-danger">{terminologyError}</div>}
+        {(['italianToEnglish', 'invariantEnglish'] as const).map(group => (
+          <div key={group} className="mb-3">
+            <h6>{group === 'italianToEnglish' ? 'Italian to English mappings' : 'Invariant English terms'}</h6>
+            {terminology[group].map((mapping, index) => (
+              <div className="row g-2 mb-2" key={`${group}-${index}`}>
+                <div className="col"><input className="form-control" aria-label="Source term" value={mapping.source} onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateTerminology(group, index, 'source', event.target.value)} /></div>
+                <div className="col"><input className="form-control" aria-label="Target term" value={mapping.target} onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateTerminology(group, index, 'target', event.target.value)} placeholder="Keep source as-is" /></div>
+                <div className="col-auto"><Button variant="outline-danger" onClick={() => removeTerminology(group, index)} disabled={terminologyBusy}>Remove</Button></div>
+              </div>
+            ))}
+            <Button variant="outline-secondary" onClick={() => addTerminology(group)} disabled={terminologyBusy}>Add term</Button>
+          </div>
+        ))}
+        <Button variant="primary" onClick={saveTerminology} disabled={terminologyBusy || Boolean(terminologyError && terminology.italianToEnglish.length === 0 && terminology.invariantEnglish.length === 0)}>Save terminology</Button>
       </DetailPanel>
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>

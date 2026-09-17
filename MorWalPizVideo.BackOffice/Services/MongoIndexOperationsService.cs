@@ -191,7 +191,13 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Key: "newsletterevents.channelid_newsletterid_type_occurredat",
             Collection: DbCollections.NewsletterEvents,
             Name: "ix_newsletterevents_channelid_newsletterid_type_occurredat",
-            Keys: new BsonDocument { { "channelId", 1 }, { "newsletterId", 1 }, { "type", 1 }, { "occurredAt", -1 } })
+            Keys: new BsonDocument { { "channelId", 1 }, { "newsletterId", 1 }, { "type", 1 }, { "occurredAt", -1 } }),
+        new(
+            Key: "socialassets.channelid_idempotencykey.unique",
+            Collection: DbCollections.SocialAssets,
+            Name: "ux_socialassets_channelid_idempotencykey",
+            Keys: new BsonDocument { { "channelId", 1 }, { "idempotencyKey", 1 } },
+            Unique: true)
     ];
 
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =

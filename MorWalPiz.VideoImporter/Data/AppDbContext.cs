@@ -14,6 +14,8 @@ namespace MorWalPiz.VideoImporter.Data
     public DbSet<Disclaimer> Disclaimers { get; set; }
     public DbSet<Settings> Settings { get; set; }
     public DbSet<PublishSchedule> PublishSchedules { get; set; }
+    public DbSet<HashtagHistory> HashtagHistory { get; set; }
+    public DbSet<SocialChannelConfiguration> SocialChannelConfigurations { get; set; }
 
     public AppDbContext()
     {
@@ -49,6 +51,12 @@ namespace MorWalPiz.VideoImporter.Data
 
         modelBuilder.Entity<PublishSchedule>()
             .HasQueryFilter(ps => ps.TenantId == _tenantContext.CurrentTenantId);
+
+        modelBuilder.Entity<HashtagHistory>()
+          .HasQueryFilter(item => item.TenantId == _tenantContext.CurrentTenantId);
+
+        modelBuilder.Entity<SocialChannelConfiguration>()
+          .HasQueryFilter(item => item.TenantId == _tenantContext.CurrentTenantId);
       }
 
       // Configurazione della relazione tra Language e Disclaimer
@@ -57,6 +65,10 @@ namespace MorWalPiz.VideoImporter.Data
           .WithOne(d => d.Language)
           .HasForeignKey(d => d.LanguageId)
           .OnDelete(DeleteBehavior.Cascade);
+
+          modelBuilder.Entity<HashtagHistory>()
+            .HasIndex(item => new { item.TenantId, item.ChannelId, item.Value })
+            .IsUnique();
 
       // Configurazione per garantire che ci sia solo una lingua predefinita per tenant
       modelBuilder.Entity<Language>()
@@ -156,6 +168,12 @@ namespace MorWalPiz.VideoImporter.Data
             break;
           case PublishSchedule schedule:
             schedule.TenantId = _tenantContext.CurrentTenantId;
+            break;
+          case HashtagHistory hashtag:
+            hashtag.TenantId = _tenantContext.CurrentTenantId;
+            break;
+          case SocialChannelConfiguration configuration:
+            configuration.TenantId = _tenantContext.CurrentTenantId;
             break;
         }
       }
