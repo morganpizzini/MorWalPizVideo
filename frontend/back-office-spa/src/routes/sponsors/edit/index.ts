@@ -1,3 +1,4 @@
+export { Component, Loader, Action, default } from '../form';
 export { default as Component } from './Component';
 export { loader } from './loader';
 export { default as action } from './action';

@@ -1,458 +1,652 @@
-﻿import { Link, useLoaderData, useRevalidator } from "react-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import DateDisplay from "@utils/date-display";
-import SEO from "@utils/seo";
-import './style.scss'
-import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from "react-share";
-import ReactGA from "react-ga4"
-import configKeys from "@utils/configKeys"
-import type { ChannelNews } from "@morwalpizvideo/models";
-import { usePublicNavigation } from "../layout/navigation";
-import PublicNavigationLink from "../../components/PublicNavigationLink";
-interface IndexCategory { title: string }
-interface IndexShortLink { target: string; code: string }
-interface IndexVideoRef { youtubeId: string }
-interface IndexMatch { contentId: string; title?: string; description?: string; category?: string; categories: IndexCategory[]; tags?: string[]; videoRefs?: IndexVideoRef[]; videos?: { youtubeId: string }[]; shortLinks: IndexShortLink[]; creationDateTime?: string; url?: string }
-interface IndexForm { id: string; url: string; title: string }
-interface SponsorItem { title: string; imgSrc: string; url: string }
-interface IndexData { matches: IndexMatch[]; configuration: Record<string, boolean>; activeForms: IndexForm[]; channelNews: ChannelNews[]; sponsors: SponsorItem[]; error: boolean }
+﻿import { Link, useLoaderData, useRevalidator } from 'react-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import DateDisplay from '@utils/date-display';
+import SEO from '@utils/seo';
+import './style.scss';
+import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from 'react-share';
+import ReactGA from 'react-ga4';
+import configKeys from '@utils/configKeys';
+import type { ChannelNews } from '@morwalpizvideo/models';
+import { usePublicNavigation } from '../layout/navigation';
+import PublicNavigationLink from '../../components/PublicNavigationLink';
+interface IndexCategory {
+  title: string;
+}
+interface IndexShortLink {
+  target: string;
+  code: string;
+}
+interface IndexVideoRef {
+  youtubeId: string;
+}
+interface IndexMatch {
+  contentId: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  categories: IndexCategory[];
+  tags?: string[];
+  videoRefs?: IndexVideoRef[];
+  videos?: { youtubeId: string }[];
+  shortLinks: IndexShortLink[];
+  creationDateTime?: string;
+  url?: string;
+}
+interface IndexForm {
+  id: string;
+  url: string;
+  title: string;
+}
+interface SponsorItem {
+  title: string;
+  imgSrc: string;
+  url: string;
+}
+interface IndexData {
+  matches: IndexMatch[];
+  configuration: Record<string, boolean>;
+  activeForms: IndexForm[];
+  channelNews: ChannelNews[];
+  sponsors: SponsorItem[];
+  error: boolean;
+}
 
 export default function Index() {
-    const data = useLoaderData() as IndexData;
-    const { revalidate } = useRevalidator();
-    const hasSentPageView = useRef(false);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const data = useLoaderData() as IndexData;
+  const { revalidate } = useRevalidator();
+  const hasSentPageView = useRef(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (!hasSentPageView.current) {
-            ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: "Home" });
-            hasSentPageView.current = true;
+  useEffect(() => {
+    if (!hasSentPageView.current) {
+      ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'Home' });
+      hasSentPageView.current = true;
+    }
+  }, []);
+
+  return (
+    <>
+      <SEO
+        title={'MorWalPiz'}
+        description={'MorWalPiz'}
+        imageUrl={
+          data.matches.length
+            ? `https://img.youtube.com/vi/${data.matches[0].contentId}/hqdefault.jpg`
+            : ''
         }
-    }, []);
-
-    return (
-        <>
-            <SEO
-                title={"MorWalPiz"}
-                description={"MorWalPiz"}
-                imageUrl={data.matches.length ? `https://img.youtube.com/vi/${data.matches[0].contentId}/hqdefault.jpg` : ''}
-                type='website' />
-            {data.error && <HomeError onRetry={revalidate} />}
-            {!data.error && <HomeContent
-                data={data}
-                selectedCategories={selectedCategories}
-                selectedTags={selectedTags}
-                onToggleCategory={(category) => {
-                    setSelectedCategories((prev: string[]) =>
-                        prev.includes(category)
-                            ? prev.filter((cat: string) => cat !== category)
-                            : [...prev, category]
-                    );
-                }}
-                onToggleTag={(tag) => {
-                    setSelectedTags((prev: string[]) =>
-                        prev.includes(tag)
-                            ? prev.filter((item: string) => item !== tag)
-                            : [...prev, tag]
-                    );
-                }} />}
-        </>
-    );
+        type="website"
+      />
+      {data.error && <HomeError onRetry={revalidate} />}
+      {!data.error && (
+        <HomeContent
+          data={data}
+          selectedCategories={selectedCategories}
+          selectedTags={selectedTags}
+          onToggleCategory={(category) => {
+            setSelectedCategories((prev: string[]) =>
+              prev.includes(category)
+                ? prev.filter((cat: string) => cat !== category)
+                : [...prev, category]
+            );
+          }}
+          onToggleTag={(tag) => {
+            setSelectedTags((prev: string[]) =>
+              prev.includes(tag) ? prev.filter((item: string) => item !== tag) : [...prev, tag]
+            );
+          }}
+        />
+      )}
+    </>
+  );
 }
 
 function HomeError({ onRetry }: { onRetry: () => void }) {
-    return (
-        <div className="alert alert-warning my-3 text-center" role="alert">
-            <p className="mb-2">I contenuti non sono disponibili al momento.</p>
-            <button type="button" className="btn btn-warning" onClick={onRetry}>Riprova</button>
-        </div>
-    );
+  return (
+    <div className="alert alert-warning my-3 text-center" role="alert">
+      <p className="mb-2">I contenuti non sono disponibili al momento.</p>
+      <button type="button" className="btn btn-warning" onClick={onRetry}>
+        Riprova
+      </button>
+    </div>
+  );
 }
 
-function HomeContent({ data, selectedCategories, selectedTags, onToggleCategory, onToggleTag }: { data: IndexData; selectedCategories: string[]; selectedTags: string[]; onToggleCategory: (category: string) => void; onToggleTag: (tag: string) => void }) {
-    const { navigation } = usePublicNavigation();
-    const { matches, configuration, activeForms, channelNews, sponsors } = data;
-    let firstMatchId: string = '';
-    const first = matches[0];
-    if (first) {
-        if (first.videos && first.videos.length > 0) {
-            firstMatchId = first.videos[first.videos.length - 1].youtubeId;
-        } else {
-            firstMatchId = first.contentId
-        }
+function HomeContent({
+  data,
+  selectedCategories,
+  selectedTags,
+  onToggleCategory,
+  onToggleTag,
+}: {
+  data: IndexData;
+  selectedCategories: string[];
+  selectedTags: string[];
+  onToggleCategory: (category: string) => void;
+  onToggleTag: (tag: string) => void;
+}) {
+  const { navigation } = usePublicNavigation();
+  const { matches, configuration, activeForms, channelNews, sponsors } = data;
+  let firstMatchId: string = '';
+  const first = matches[0];
+  if (first) {
+    if (first.videos && first.videos.length > 0) {
+      firstMatchId = first.videos[first.videos.length - 1].youtubeId;
+    } else {
+      firstMatchId = first.contentId;
+    }
+  }
+
+  const filteredItems = useMemo(() => {
+    if (selectedCategories.length === 0 && selectedTags.length === 0) return matches;
+    return matches.filter((item: IndexMatch) => {
+      // AND semantics across category filters, tag filters, and between the two groups.
+      const itemCategories = item.categories.map((cat: IndexCategory) => cat.title);
+      const matchesCategories = selectedCategories.every((selectedCategory: string) =>
+        itemCategories.includes(selectedCategory)
+      );
+      if (!matchesCategories) return false;
+
+      const itemTags = item.tags ?? [];
+      return selectedTags.every((selectedTag: string) => itemTags.includes(selectedTag));
+    });
+  }, [matches, selectedCategories, selectedTags]);
+
+  const availableCategories = useMemo(() => {
+    if (selectedCategories.length === 0 && selectedTags.length === 0) {
+      // Tutte le categorie sono disponibili se non ci sono filtri attivi
+      const allCategories = matches.flatMap((item: IndexMatch) =>
+        item.categories.map((cat: IndexCategory) => cat.title)
+      );
+      return [...new Set(allCategories)];
     }
 
-    const filteredItems = useMemo(() => {
-        if (selectedCategories.length === 0 && selectedTags.length === 0) return matches;
-        return matches.filter((item: IndexMatch) => {
-            // AND semantics across category filters, tag filters, and between the two groups.
-            const itemCategories = item.categories.map((cat: IndexCategory) => cat.title)
-            const matchesCategories = selectedCategories.every((selectedCategory: string) =>
-                itemCategories.includes(selectedCategory)
-            );
-            if (!matchesCategories) return false;
-
-            const itemTags = item.tags ?? [];
-            return selectedTags.every((selectedTag: string) => itemTags.includes(selectedTag));
-        });
-    }, [matches, selectedCategories, selectedTags]);
-
-    const availableCategories = useMemo(() => {
-        if (selectedCategories.length === 0 && selectedTags.length === 0) {
-            // Tutte le categorie sono disponibili se non ci sono filtri attivi
-            const allCategories = matches.flatMap((item: IndexMatch) =>
-                item.categories.map((cat: IndexCategory) => cat.title)
-            );
-            return [...new Set(allCategories)];
-        }
-
-        // Determina le categorie presenti negli oggetti filtrati
-        const remainingCategories = filteredItems.flatMap((item: IndexMatch) =>
-            item.categories.map((cat: IndexCategory) => cat.title)
-        );
-        return [...new Set(remainingCategories)];
-    }, [filteredItems, matches, selectedCategories, selectedTags]);
-
-    const allCategories = useMemo(() => {
-        const all = matches.flatMap((item: IndexMatch) =>
-            item.categories.map((cat: IndexCategory) => cat.title)
-        );
-        return [...new Set(all)];
-    }, [matches]);
-
-    const allTags = useMemo(() => {
-        const all = matches.flatMap((item: IndexMatch) => item.tags ?? []);
-        return [...new Set(all)].sort((left, right) => left.localeCompare(right));
-    }, [matches]);
-
-    const availableTags = useMemo(() => {
-        if (selectedCategories.length === 0 && selectedTags.length === 0) {
-            return [...new Set(matches.flatMap((item: IndexMatch) => item.tags ?? []))];
-        }
-        return [...new Set(filteredItems.flatMap((item: IndexMatch) => item.tags ?? []))];
-    }, [filteredItems, matches, selectedCategories, selectedTags]);
-
-    return (
-        <>
-            {configuration[configKeys.STREAM_ENABLE] &&
-                <>
-                    <div className="home-alert alert alert-warning my-3" role="alert">
-                        <div className="home-alert__copy">
-                            <i className="fa fa-circle-exclamation me-2"></i>
-                            <strong>ATTENZIONE:</strong> Una diretta è attualmente in corso! Non perdertela!
-                        </div>
-                        <Link to="/stream" className="btn btn-warning ms-2">
-                            Vai alla diretta <i className="fa fa-arrow-right ms-1"></i>
-                        </Link>
-                    </div>
-                </>
-            }
-            {activeForms && activeForms.length > 0 && activeForms.map((form: IndexForm) => (
-                <div key={form.id} className="home-alert alert alert-info my-3" role="alert">
-                    <div className="home-alert__copy">
-                        <i className="fa fa-clipboard-question me-2"></i>
-                        <strong>NUOVO SONDAGGIO:</strong> {form.title}
-                    </div>
-                    <Link to={`/custom-forms/${form.url}`} className="btn btn-info ms-2">
-                        Rispondi ora <i className="fa fa-arrow-right ms-1"></i>
-                    </Link>
-                </div>
-            ))}
-            {matches.length == 0 &&
-                <>
-                    <div className="alert alert-info my-3 text-center" role="alert">
-                        <i className="fa fa-circle-info me-2"></i>
-                        Al momento non ci sono video disponibili. Torna più tardi!
-                    </div>
-                </>
-            }
-            {matches.length > 0 &&
-                <>
-                    <div className="row align-items-start">
-                        <div className="d-none d-md-block col-md-3">
-                            {RenderMatchCard(matches[0], -1)}
-                        </div>
-                        <div className="col-12 col-md-9">
-                            <FeaturedVideo youtubeId={firstMatchId} />
-                        </div>
-                    </div>
-                    {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
-                    {navigation?.headerItems.length ? <nav aria-label="Homepage menu" className="my-3 p-2 bg-white rounded d-flex flex-wrap gap-3">{navigation.headerItems.map(item => <PublicNavigationLink key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`} item={item} className="nav-link" />)}</nav> : null}
-                    <div className="my-3 p-2 bg-white rounded content-filters">
-                        <div className="categories-container" role="group" aria-label="Filtra per categoria">
-                            {allCategories.map((category) => {
-                                const includeCategory = availableCategories.includes(category);
-                                return (
-                                    <button
-                                        key={category}
-                                        className={`filter-option btn ${selectedCategories.includes(category)
-                                            ? "btn-success"
-                                            : "btn-outline-secondary"} ${!includeCategory ? "is-unavailable" : ""}`}
-                                        onClick={() => onToggleCategory(category)}
-                                        aria-pressed={selectedCategories.includes(category)}
-                                        disabled={!includeCategory}
-                                    >
-                                        {category}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                        {allTags.length > 0 && (
-                            <div className="tags-container" role="group" aria-label="Filtra per tag">
-                                {allTags.map((tag) => {
-                                    const includeTag = availableTags.includes(tag);
-                                    const isSelected = selectedTags.includes(tag);
-                                    return (
-                                        <button
-                                            key={tag}
-                                            className={`filter-option btn btn-sm ${isSelected ? "btn-info" : "btn-outline-info"} ${!includeTag ? "is-unavailable" : ""}`}
-                                            onClick={() => onToggleTag(tag)}
-                                            aria-pressed={isSelected}
-                                            disabled={!includeTag}
-                                        >
-                                            #{tag}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {renderContentWithBanners(filteredItems, selectedCategories, selectedTags, sponsors)}
-                </>
-            }
-
-        </>
+    // Determina le categorie presenti negli oggetti filtrati
+    const remainingCategories = filteredItems.flatMap((item: IndexMatch) =>
+      item.categories.map((cat: IndexCategory) => cat.title)
     );
+    return [...new Set(remainingCategories)];
+  }, [filteredItems, matches, selectedCategories, selectedTags]);
+
+  const allCategories = useMemo(() => {
+    const all = matches.flatMap((item: IndexMatch) =>
+      item.categories.map((cat: IndexCategory) => cat.title)
+    );
+    return [...new Set(all)];
+  }, [matches]);
+
+  const allTags = useMemo(() => {
+    const all = matches.flatMap((item: IndexMatch) => item.tags ?? []);
+    return [...new Set(all)].sort((left, right) => left.localeCompare(right));
+  }, [matches]);
+
+  const availableTags = useMemo(() => {
+    if (selectedCategories.length === 0 && selectedTags.length === 0) {
+      return [...new Set(matches.flatMap((item: IndexMatch) => item.tags ?? []))];
+    }
+    return [...new Set(filteredItems.flatMap((item: IndexMatch) => item.tags ?? []))];
+  }, [filteredItems, matches, selectedCategories, selectedTags]);
+
+  return (
+    <>
+      {configuration[configKeys.STREAM_ENABLE] && (
+        <>
+          <div className="home-alert alert alert-warning my-3" role="alert">
+            <div className="home-alert__copy">
+              <i className="fa fa-circle-exclamation me-2"></i>
+              <strong>ATTENZIONE:</strong> Una diretta è attualmente in corso! Non perdertela!
+            </div>
+            <Link to="/stream" className="btn btn-warning ms-2">
+              Vai alla diretta <i className="fa fa-arrow-right ms-1"></i>
+            </Link>
+          </div>
+        </>
+      )}
+      {activeForms &&
+        activeForms.length > 0 &&
+        activeForms.map((form: IndexForm) => (
+          <div key={form.id} className="home-alert alert alert-info my-3" role="alert">
+            <div className="home-alert__copy">
+              <i className="fa fa-clipboard-question me-2"></i>
+              <strong>NUOVO SONDAGGIO:</strong> {form.title}
+            </div>
+            <Link to={`/custom-forms/${form.url}`} className="btn btn-info ms-2">
+              Rispondi ora <i className="fa fa-arrow-right ms-1"></i>
+            </Link>
+          </div>
+        ))}
+      {matches.length == 0 && (
+        <>
+          <div className="alert alert-info my-3 text-center" role="alert">
+            <i className="fa fa-circle-info me-2"></i>
+            Al momento non ci sono video disponibili. Torna più tardi!
+          </div>
+        </>
+      )}
+      {matches.length > 0 && (
+        <>
+          <div className="row align-items-start">
+            <div className="d-none d-md-block col-md-3">{RenderMatchCard(matches[0], -1)}</div>
+            <div className="col-12 col-md-9">
+              <FeaturedVideo youtubeId={firstMatchId} />
+            </div>
+          </div>
+          {channelNews[0] && <ChannelNewsBanner item={channelNews[0]} />}
+          {navigation?.headerItems.length ? (
+            <nav
+              aria-label="Homepage menu"
+              className="my-3 p-2 bg-white rounded d-flex flex-wrap gap-3"
+            >
+              {navigation.headerItems.map((item) => (
+                <PublicNavigationLink
+                  key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`}
+                  item={item}
+                  className="nav-link"
+                />
+              ))}
+            </nav>
+          ) : null}
+          <div className="my-3 p-2 bg-white rounded content-filters">
+            <div className="categories-container" role="group" aria-label="Filtra per categoria">
+              {allCategories.map((category) => {
+                const includeCategory = availableCategories.includes(category);
+                return (
+                  <button
+                    key={category}
+                    className={`filter-option btn ${
+                      selectedCategories.includes(category)
+                        ? 'btn-success'
+                        : 'btn-outline-secondary'
+                    } ${!includeCategory ? 'is-unavailable' : ''}`}
+                    onClick={() => onToggleCategory(category)}
+                    aria-pressed={selectedCategories.includes(category)}
+                    disabled={!includeCategory}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+            {allTags.length > 0 && (
+              <div className="tags-container" role="group" aria-label="Filtra per tag">
+                {allTags.map((tag) => {
+                  const includeTag = availableTags.includes(tag);
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      className={`filter-option btn btn-sm ${isSelected ? 'btn-info' : 'btn-outline-info'} ${!includeTag ? 'is-unavailable' : ''}`}
+                      onClick={() => onToggleTag(tag)}
+                      aria-pressed={isSelected}
+                      disabled={!includeTag}
+                    >
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {renderContentWithBanners(filteredItems, selectedCategories, selectedTags, sponsors)}
+        </>
+      )}
+    </>
+  );
 }
 
 function FeaturedVideo({ youtubeId }: { youtubeId: string }) {
-    const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-    if (isLoaded) {
-        return (
-            <div className="featured-video">
-                <iframe className="featured-video__frame" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
-            </div>
-        );
-    }
-
+  if (isLoaded) {
     return (
-        <button type="button" className="featured-video" onClick={() => setIsLoaded(true)} aria-label="Riproduci il video in evidenza">
-            <img className="featured-video__thumbnail" src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`} alt="Anteprima del video in evidenza" fetchPriority="high" />
-            <span className="featured-video__play" aria-hidden="true"><i className="fa fa-play" /></span>
-        </button>
+      <div className="featured-video">
+        <iframe
+          className="featured-video__frame"
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`}
+          title="YouTube video player"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      </div>
     );
+  }
+
+  return (
+    <button
+      type="button"
+      className="featured-video"
+      onClick={() => setIsLoaded(true)}
+      aria-label="Riproduci il video in evidenza"
+    >
+      <img
+        className="featured-video__thumbnail"
+        src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+        alt="Anteprima del video in evidenza"
+        fetchPriority="high"
+      />
+      <span className="featured-video__play" aria-hidden="true">
+        <i className="fa fa-play" />
+      </span>
+    </button>
+  );
 }
 
 function ChannelNewsBanner({ item }: { item: ChannelNews }) {
-    return (
-        <Link to={`/channel-news/${item.id}`} className="channel-news-banner">
-            <img src={item.channelLogoUrl || "/images/logo-150.png"} alt={item.channelName} className="channel-news-banner__logo" loading="lazy" decoding="async" />
-            <span className="channel-news-banner__copy">
-                <span className="channel-news-banner__channel">{item.channelName}</span>
-                <strong>{item.title}</strong>
-                {item.subtitle && <span>{item.subtitle}</span>}
-            </span>
-            <i className="fa fa-arrow-right" aria-hidden="true" />
-        </Link>
-    );
+  return (
+    <Link to={`/channel-news/${item.id}`} className="channel-news-banner">
+      <img
+        src={item.channelLogoUrl || '/images/logo-150.png'}
+        alt={item.channelName}
+        className="channel-news-banner__logo"
+        loading="lazy"
+        decoding="async"
+      />
+      <span className="channel-news-banner__copy">
+        <span className="channel-news-banner__channel">{item.channelName}</span>
+        <strong>{item.title}</strong>
+        {item.subtitle && <span>{item.subtitle}</span>}
+      </span>
+      <i className="fa fa-arrow-right" aria-hidden="true" />
+    </Link>
+  );
 }
 
-function renderContentWithBanners(items: IndexMatch[], selectedCategories: string[], selectedTags: string[], sponsors: SponsorItem[]) {
-    // Create initial section (before Banner)
-    const firstSection = items.slice(0, 8);
-    const middleSection = items.slice(8, 17);
-    const lastSection = items.slice(17);
+function renderContentWithBanners(
+  items: IndexMatch[],
+  selectedCategories: string[],
+  selectedTags: string[],
+  sponsors: SponsorItem[]
+) {
+  // Create initial section (before Banner)
+  const firstSection = items.slice(0, 8);
+  const middleSection = items.slice(8, 17);
+  const lastSection = items.slice(17);
 
-    const shouldShowBanners = selectedCategories.length === 0 && selectedTags.length === 0;
+  const shouldShowBanners = selectedCategories.length === 0 && selectedTags.length === 0;
 
-    return (
-        <>
-            {/* First section */}
-            <div className="home-card-section">
-                {firstSection.map((match: IndexMatch, i: number) => {
-                    // Create an array of elements to render
-                    const elementsToRender = match.videoRefs == null ? [] : [
-                        <React.Fragment key={`match-${i}`}>
-                            {RenderMatchCard(match, shouldShowBanners ? i : -1)}
-                        </React.Fragment>
-                    ];
-                    if (i === 3) elementsToRender.push(<BuyMeACoffeeCard key={`coffee-${i}`} />);
-                    if (i === 5) elementsToRender.push(<GoToShortsCard key={`shorts-${i}`} />);
-                    // Return the flattened elements
-                    return elementsToRender;
-                }).flat()}
-            </div>
+  return (
+    <>
+      {/* First section */}
+      <div className="home-card-section">
+        {firstSection
+          .map((match: IndexMatch, i: number) => {
+            // Create an array of elements to render
+            const elementsToRender =
+              match.videoRefs == null
+                ? []
+                : [
+                    <React.Fragment key={`match-${i}`}>
+                      {RenderMatchCard(match, shouldShowBanners ? i : -1)}
+                    </React.Fragment>,
+                  ];
+            if (i === 3) elementsToRender.push(<BuyMeACoffeeCard key={`coffee-${i}`} />);
+            if (i === 5) elementsToRender.push(<GoToShortsCard key={`shorts-${i}`} />);
+            // Return the flattened elements
+            return elementsToRender;
+          })
+          .flat()}
+      </div>
 
-            {/* Sponsors full width */}
-            {shouldShowBanners && <Sponsors sponsors={sponsors} />}
+      {/* Sponsors full width */}
+      {shouldShowBanners && <Sponsors sponsors={sponsors} />}
 
-            {/* Middle section */}
-            {middleSection.length > 0 && (
-                <div className="home-card-section">
-                    {middleSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
-                        <React.Fragment key={`match-${i + 7}`}>
-                            {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
-                        </React.Fragment>
-                    ])}
-                </div>
-            )}
+      {/* Middle section */}
+      {middleSection.length > 0 && (
+        <div className="home-card-section">
+          {middleSection.flatMap((match: IndexMatch, i: number) =>
+            match.videoRefs == null
+              ? []
+              : [
+                  <React.Fragment key={`match-${i + 7}`}>
+                    {RenderMatchCard(match, shouldShowBanners ? i + 7 : -1)}
+                  </React.Fragment>,
+                ]
+          )}
+        </div>
+      )}
 
-            {shouldShowBanners && <Banner />}
+      {shouldShowBanners && <Banner />}
 
-            {/* Last section */}
-            {lastSection.length > 0 && (
-                <div className="home-card-section">
-                    {lastSection.flatMap((match: IndexMatch, i: number) => match.videoRefs == null ? [] : [
-                        <React.Fragment key={`match-${i + 15}`}>
-                            {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
-                        </React.Fragment>
-                    ])}
-                </div>
-            )}
-        </>
-    );
+      {/* Last section */}
+      {lastSection.length > 0 && (
+        <div className="home-card-section">
+          {lastSection.flatMap((match: IndexMatch, i: number) =>
+            match.videoRefs == null
+              ? []
+              : [
+                  <React.Fragment key={`match-${i + 15}`}>
+                    {RenderMatchCard(match, shouldShowBanners ? i + 15 : -1)}
+                  </React.Fragment>,
+                ]
+          )}
+        </div>
+      )}
+    </>
+  );
 }
 
 function Banner() {
-    return (
-        <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block">
-            <div className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase" role="alert">
-                La mia attrezzatura <i className="fa fa-arrow-right"></i>
-            </div>
-        </Link>
-    )
+  return (
+    <Link to={`/attrezzatura`} className="text-decoration-none text-black d-block">
+      <div
+        className="alert alert-secondary my-3 text-center fw-bold pop-up text-uppercase"
+        role="alert"
+      >
+        La mia attrezzatura <i className="fa fa-arrow-right"></i>
+      </div>
+    </Link>
+  );
 }
 
 function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
-    const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-    useEffect(() => {
-        setActiveIndex((currentIndex) => sponsors.length === 0 ? 0 : Math.min(currentIndex, sponsors.length - 1));
-    }, [sponsors.length]);
+  useEffect(() => {
+    setActiveIndex((currentIndex) =>
+      sponsors.length === 0 ? 0 : Math.min(currentIndex, sponsors.length - 1)
+    );
+  }, [sponsors.length]);
 
-    if (sponsors.length === 0) return null;
+  if (sponsors.length === 0) return null;
 
-    const activeSponsor = sponsors[activeIndex];
-    const hasControls = sponsors.length > 1;
-    const goToPrevious = () => setActiveIndex((currentIndex) => (currentIndex - 1 + sponsors.length) % sponsors.length);
-    const goToNext = () => setActiveIndex((currentIndex) => (currentIndex + 1) % sponsors.length);
+  const activeSponsor = sponsors[activeIndex];
+  const hasControls = sponsors.length > 1;
+  const goToPrevious = () =>
+    setActiveIndex((currentIndex) => (currentIndex - 1 + sponsors.length) % sponsors.length);
+  const goToNext = () => setActiveIndex((currentIndex) => (currentIndex + 1) % sponsors.length);
 
-    return (
-        <section className="home-sponsors my-3" role="region" aria-roledescription="carousel" aria-label="I miei sponsor">
-            <div className="home-sponsors__heading">
-                <h2>I miei sponsor</h2>
-                <Link to="/sponsors">Vedi tutti</Link>
-            </div>
-            <div className="home-sponsors__viewport" aria-live="polite">
-                {hasControls && (
-                    <button type="button" className="home-sponsors__control home-sponsors__control--previous" onClick={goToPrevious} aria-label="Sponsor precedente">
-                        <i className="fa fa-chevron-left" aria-hidden="true" />
-                    </button>
-                )}
-                <div className="home-sponsors__slide" role="group" aria-roledescription="slide" aria-label={`${activeIndex + 1} di ${sponsors.length}: ${activeSponsor.title}`}>
-                    <Link to={activeSponsor.url} target="_blank" rel="noopener noreferrer" className="home-sponsors__link" aria-label={`Visita il sito di ${activeSponsor.title}`}>
-                        <img className="home-sponsors__image" src={activeSponsor.imgSrc} alt={activeSponsor.title} loading="lazy" decoding="async" />
-                        <span className="home-sponsors__title">{activeSponsor.title}</span>
-                    </Link>
-                </div>
-                {hasControls && (
-                    <button type="button" className="home-sponsors__control home-sponsors__control--next" onClick={goToNext} aria-label="Sponsor successivo">
-                        <i className="fa fa-chevron-right" aria-hidden="true" />
-                    </button>
-                )}
-            </div>
-        </section>
-    )
+  return (
+    <section
+      className="home-sponsors my-3"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="I miei sponsor"
+    >
+      <div className="home-sponsors__heading">
+        <h2>I miei sponsor</h2>
+        <Link to="/sponsors">Vedi tutti</Link>
+      </div>
+      <div className="home-sponsors__viewport" aria-live="polite">
+        {hasControls && (
+          <button
+            type="button"
+            className="home-sponsors__control home-sponsors__control--previous"
+            onClick={goToPrevious}
+            aria-label="Sponsor precedente"
+          >
+            <i className="fa fa-chevron-left" aria-hidden="true" />
+          </button>
+        )}
+        <div
+          className="home-sponsors__slide"
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`${activeIndex + 1} di ${sponsors.length}: ${activeSponsor.title}`}
+        >
+          <Link
+            to={activeSponsor.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="home-sponsors__link"
+            aria-label={`Visita il sito di ${activeSponsor.title}`}
+          >
+            <img
+              className="home-sponsors__image"
+              src={activeSponsor.imgSrc}
+              alt={activeSponsor.title}
+              loading="lazy"
+              decoding="async"
+            />
+          </Link>
+        </div>
+        {hasControls && (
+          <button
+            type="button"
+            className="home-sponsors__control home-sponsors__control--next"
+            onClick={goToNext}
+            aria-label="Sponsor successivo"
+          >
+            <i className="fa fa-chevron-right" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function BuyMeACoffeeCard() {
-    return (
-        <div className="card position-relative home-card">
-            <div className="home-card__thumb home-card__thumb--promo home-card__thumb--coffee">
-                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png" alt="Buy Me A Coffee" loading="lazy" decoding="async" />
-            </div>
-            <div className="card-body">
-                <p className="home-card__category">supporto</p>
-                <h5 className="card-title">Aiutami nel mio percorso!</h5>
-                <p className="card-text">Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i contenuti in anteprima e una chat diretta!</p>
-            </div>
-            <Link to="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer" className="stretched-link" aria-label="Buy me a coffee"></Link>
-        </div>
-    );
+  return (
+    <div className="card position-relative home-card">
+      <div className="home-card__thumb home-card__thumb--promo home-card__thumb--coffee">
+        <img
+          src="https://morwalpizblob.blob.core.windows.net/page-images/home/buyme-button.png"
+          alt="Buy Me A Coffee"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <div className="card-body">
+        <p className="home-card__category">supporto</p>
+        <h5 className="card-title">Aiutami nel mio percorso!</h5>
+        <p className="card-text">
+          Se ti fa piacere, offrimi l&#39;equivalente di un caricatore, o iscriverti per avere i
+          contenuti in anteprima e una chat diretta!
+        </p>
+      </div>
+      <Link
+        to="https://www.buymeacoffee.com/MorWalPiz"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="stretched-link"
+        aria-label="Buy me a coffee"
+      ></Link>
+    </div>
+  );
 }
 
 function GoToShortsCard() {
-    return (
-        <div className="card position-relative home-card">
-            <div className="home-card__thumb home-card__thumb--promo">
-                <img src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg" alt="Stories" loading="lazy" decoding="async" />
-            </div>
-            <div className="card-body">
-                <p className="home-card__category">consigli</p>
-                <h5 className="card-title">Poco tempo? Ci sono gli SHORTS!</h5>
-                <p className="card-text">Guarda tutti i momenti salienti estratti dai miei video!</p>
-            </div>
-            <Link to="https://www.youtube.com/@morwalpiz/shorts" target="_blank" rel="noopener noreferrer" className="stretched-link" aria-label="Vai agli Shorts"></Link>
-        </div>
-    );
+  return (
+    <div className="card position-relative home-card">
+      <div className="home-card__thumb home-card__thumb--promo">
+        <img
+          src="https://morwalpizblob.blob.core.windows.net/page-images/home/stories.jpg"
+          alt="Stories"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <div className="card-body">
+        <p className="home-card__category">consigli</p>
+        <h5 className="card-title">Poco tempo? Ci sono gli SHORTS!</h5>
+        <p className="card-text">Guarda tutti i momenti salienti estratti dai miei video!</p>
+      </div>
+      <Link
+        to="https://www.youtube.com/@morwalpiz/shorts"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="stretched-link"
+        aria-label="Vai agli Shorts"
+      ></Link>
+    </div>
+  );
 }
 
 function RenderMatchCard(match: IndexMatch, i: number) {
-    const className = i == 0
-        ? "card position-relative home-card d-md-none"
-        : "card position-relative home-card";
-    if (match.videoRefs == null)
-        return (<></>);
-    const isLink = match.videoRefs.length == 1;
-    let shortlink = '';
-    if (isLink)
-        shortlink = match.shortLinks.filter((x: IndexShortLink) => x.target == match.contentId)[0]?.code ?? `https://youtu.be/${match.contentId}`;
-    if (!shortlink.startsWith('http')) {
-        shortlink = `https://shorts.morwalpiz.com/${shortlink}`;
-    }
-    return (
-        <div className={className}>
-            <div className="home-card__thumb">
-                <img src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`} alt="Video Thumbnail" loading="lazy" decoding="async" />
+  const className =
+    i == 0 ? 'card position-relative home-card d-md-none' : 'card position-relative home-card';
+  if (match.videoRefs == null) return <></>;
+  const isLink = match.videoRefs.length == 1;
+  let shortlink = '';
+  if (isLink)
+    shortlink =
+      match.shortLinks.filter((x: IndexShortLink) => x.target == match.contentId)[0]?.code ??
+      `https://youtu.be/${match.contentId}`;
+  if (!shortlink.startsWith('http')) {
+    shortlink = `https://shorts.morwalpiz.com/${shortlink}`;
+  }
+  return (
+    <div className={className}>
+      <div className="home-card__thumb">
+        <img
+          src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`}
+          alt="Video Thumbnail"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <div className="card-body">
+        <p className="home-card__category">
+          {isLink ? match.category : `${match.videoRefs?.length} video`}
+        </p>
+        <h5 className="card-title">{match.title}</h5>
+        <p className="card-text">{match.description}</p>
+      </div>
+      {(isLink || match.creationDateTime) && (
+        <div className="home-card__footer">
+          {isLink ? (
+            <div className="home-card__share">
+              <Link
+                to={shortlink}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Guarda su YouTube"
+                className="home-card__share-link"
+              >
+                <i className="text-danger fab fa-youtube"></i>
+              </Link>
+              <FacebookShareButton
+                url={`https://youtu.be/${match.contentId}`}
+                className="home-card__share-link"
+              >
+                <FacebookIcon size={26} round />
+              </FacebookShareButton>
+              <WhatsappShareButton
+                url={`https://youtu.be/${match.contentId}`}
+                title={match.title}
+                separator=":: "
+                className="home-card__share-link"
+              >
+                <WhatsappIcon size={26} round />
+              </WhatsappShareButton>
             </div>
-            <div className="card-body">
-                <p className="home-card__category">
-                    {isLink ? match.category : `${match.videoRefs?.length} video`}
-                </p>
-                <h5 className="card-title">{match.title}</h5>
-                <p className="card-text">{match.description}</p>
-            </div>
-            {(isLink || match.creationDateTime) && (
-                <div className="home-card__footer">
-                    {isLink ? (
-                        <div className="home-card__share">
-                            <Link to={shortlink} target="_blank" rel="noopener noreferrer" aria-label="Guarda su YouTube" className="home-card__share-link">
-                                <i className="text-danger fab fa-youtube"></i>
-                            </Link>
-                            <FacebookShareButton url={`https://youtu.be/${match.contentId}`} className="home-card__share-link">
-                                <FacebookIcon size={26} round />
-                            </FacebookShareButton>
-                            <WhatsappShareButton
-                                url={`https://youtu.be/${match.contentId}`}
-                                title={match.title}
-                                separator=":: "
-                                className="home-card__share-link"
-                            >
-                                <WhatsappIcon size={26} round />
-                            </WhatsappShareButton>
-                        </div>
-                    ) : <span />}
-                    <div className="home-card__date">
-                        <DateDisplay dateString={match.creationDateTime ?? ''} />
-                    </div>
-                </div>
-            )}
-            {!isLink &&
-                <Link to={`/matches/${match.url}`} className="stretched-link" aria-label={match.title}></Link>
-            }
+          ) : (
+            <span />
+          )}
+          <div className="home-card__date">
+            <DateDisplay dateString={match.creationDateTime ?? ''} />
+          </div>
         </div>
-    );
+      )}
+      {!isLink && (
+        <Link
+          to={`/matches/${match.url}`}
+          className="stretched-link"
+          aria-label={match.title}
+        ></Link>
+      )}
+    </div>
+  );
 }
