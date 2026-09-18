@@ -38,9 +38,12 @@ interface IndexForm {
   title: string;
 }
 interface SponsorItem {
+  id: string;
   title: string;
   imgSrc: string;
   url: string;
+  channelId?: string;
+  shortLinkId?: string;
 }
 interface IndexData {
   matches: IndexMatch[];

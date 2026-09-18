@@ -73,6 +73,19 @@ BackOffice channel selection is explicit. `GET /api/channels/accessible` returns
 
 The effective impersonated target identity is used for channel ownership and content authorization, while the actor remains the audit and CSRF identity. Administrators can select any channel; normal users are limited to owned channels. Video collaborators retain read access but not mutation access. Compilation management is channel-scoped, but readable videos from other accessible channels may be included. Public compilation URLs are anonymous and globally resolved, so their route and output cache vary by URL rather than administrative channel.
 
+Affiliate `Product` and `ProductCategory` documents are channel-scoped.
+BackOffice `/api/products` and `/api/productcategories` require
+`X-Channel-Id`; the channel is resolved by `RequireChannelScope` and is never
+accepted from a create or update payload. Product category references are
+validated against the same channel, and title uniqueness is enforced per
+channel. `DigitalProduct` and `DigitalProductCategory` remain shop-owned and
+are intentionally excluded.
+
+Existing affiliate documents may deserialize with a missing `ChannelId` for
+backward compatibility, but they are not visible to scoped or public queries.
+The manual migration in [affiliate catalog backfill](operations/affiliate-catalog-backfill.md)
+is a deployment prerequisite.
+
 ### ServerAPI
 
 - Public endpoints must explicitly allow anonymous access.
@@ -98,6 +111,9 @@ Rules:
 - Cache failures are logged and observable; mutation success must not silently imply invalidation success.
 - Do not cache authorization-sensitive responses without an explicit vary policy.
 - Scoped BackOffice responses must vary by the authenticated/effective identity and selected channel; the `X-Channel-Id` header is part of the authorization input. Public compilation URL responses are global and must not be partitioned by an administrative channel header.
+- Public affiliate products use the single `YouTubeChannelId` configured by the
+    ServerAPI host. Product and product-category mutations invalidate the local
+    `products` cache and the ServerAPI `tag-product` output-cache tag.
 - The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. Index creation is an approved manual operation, not a startup action; local source review does not prove production deployment.
 
 ## Background Work

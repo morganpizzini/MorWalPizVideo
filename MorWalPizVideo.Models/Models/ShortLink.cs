@@ -68,6 +68,10 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("campaignId")]
         public string? CampaignId { get; set; }
 
+        [DataMember]
+        [BsonElement("sponsorId")]
+        public string? SponsorId { get; set; }
+
         [BsonIgnore]
         public string QueryString => QueryLinks != null ? string.Join("&", QueryLinks.Select(ql => ql.Value)) : string.Empty;
     }

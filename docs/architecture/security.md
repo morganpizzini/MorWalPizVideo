@@ -109,6 +109,9 @@ Blob authorization follows container purpose. Match, sponsor, and page previews 
 - Return safe not-found behavior without revealing management metadata.
 - Rate-limit abuse and monitor redirect anomalies.
 - Keep management in BackOffice and resolution in ShortLinks.
+- Sponsor public projections use only the configured `YouTubeChannelId`. They
+	expose the resolved destination URL for navigation, while analytics remain
+	anonymous aggregate-only and carry no sponsor-specific identifiers.
 
 ## CORS And Host Security
 

@@ -9,6 +9,9 @@ public class ProductCategoryContract
     public string Id { get; set; } = string.Empty;
 
     [DataMember]
+    public string? ChannelId { get; set; }
+
+    [DataMember]
     public string Title { get; set; } = string.Empty;
 
     [DataMember]

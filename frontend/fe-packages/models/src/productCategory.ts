@@ -1,5 +1,6 @@
 export interface ProductCategory {
   id: string;
+  channelId?: string;
   title: string;
   description: string;
   creationDateTime: string;

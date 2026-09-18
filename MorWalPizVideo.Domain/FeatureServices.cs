@@ -945,7 +945,7 @@ public interface ILinksService
     Task<ShortLink?> EnsureVideoShortLinkAsync(string contentId, string videoId, string? managementChannelId = null);
     Task<bool> IsCodeAvailableAsync(string code, string? excludingId = null);
     Task UpdateShortLinkAsync(ShortLink entity);
-    Task DeleteShortLinkAsync(string shortLinkId);
+    Task<bool> DeleteShortLinkAsync(string shortLinkId);
     Task<int> IncrementClicksAsync(string id);
 }
 
@@ -1222,15 +1222,19 @@ public sealed class LinksService(
         await shortLinkRepository.UpdateItemAsync(normalizedEntity);
     }
 
-    public async Task DeleteShortLinkAsync(string shortLinkId)
+    public async Task<bool> DeleteShortLinkAsync(string shortLinkId)
     {
         var shortLink = (await shortLinkRepository.GetItemsAsync(x => x.Id == shortLinkId)).FirstOrDefault();
         if (shortLink == null)
         {
-            return;
+            return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(shortLink.SponsorId))
+            return false;
+
         await shortLinkRepository.DeleteItemAsync(shortLink.Id);
+        return true;
     }
 
     public Task<int> IncrementClicksAsync(string id) => shortLinkRepository.IncrementClicksAsync(id);

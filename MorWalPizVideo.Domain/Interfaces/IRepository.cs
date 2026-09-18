@@ -51,6 +51,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface IProductRepository : IRepository<Product>
     {
         Task<IList<Product>> GetPublicOrderedAsync(int skip, int take);
+        Task<IList<Product>> GetPublicOrderedAsync(string channelId, int skip, int take);
     }
     public interface IProductCategoryRepository : IRepository<ProductCategory> { }
     public interface IYTChannelRepository : IRepository<YTChannel> { }

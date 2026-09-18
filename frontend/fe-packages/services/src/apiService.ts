@@ -1,115 +1,279 @@
-import endpoints, { ComposeUrl } from './endpoints';
-import frontendEndpoints from './endpoints-frontend';
-import type { Product, CreateProductDTO, UpdateProductDTO } from '@morwalpizvideo/models';
-import type { VideoProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
-import type { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from '@morwalpizvideo/models';
-import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
-import type { QuickLinks, CreateQuickLinksDTO, UpdateQuickLinksDTO } from '@morwalpizvideo/models';
-import type { ChannelNewsAdmin } from '@morwalpizvideo/models';
+import endpoints, { ComposeUrl } from "./endpoints";
+import frontendEndpoints from "./endpoints-frontend";
 import type {
-    ChannelNavigation,
-    CreatePageDTO,
-    PageAdmin,
-    PageImage,
-    PublicNavigation,
-    SaveNavigationDTO,
-    UpdatePageDTO,
-} from '@morwalpizvideo/models';
-import type { AskCampaign, AskSubmission, AskCampaignRequest } from '@morwalpizvideo/models';
-import type { FaqAdmin, FaqAnswerAdmin, FaqCandidateAdmin, FaqCategoryAdmin } from '@morwalpizvideo/models';
-import type { ChannelTerminology } from '@morwalpizvideo/models';
+  Product,
+  CreateProductDTO,
+  UpdateProductDTO,
+} from "@morwalpizvideo/models";
+import type {
+  VideoProductCategory,
+  CreateProductCategoryDTO,
+  UpdateProductCategoryDTO,
+} from "@morwalpizvideo/models";
+import type {
+  Sponsor,
+  CreateSponsorDTO,
+  UpdateSponsorDTO,
+} from "@morwalpizvideo/models";
+import type {
+  AnyAnswer,
+  CustomForm,
+  CustomFormResponse,
+} from "@morwalpizvideo/models";
+import type {
+  QuickLinks,
+  CreateQuickLinksDTO,
+  UpdateQuickLinksDTO,
+} from "@morwalpizvideo/models";
+import type { ChannelNewsAdmin } from "@morwalpizvideo/models";
+import type {
+  ChannelNavigation,
+  CreatePageDTO,
+  PageAdmin,
+  PageImage,
+  PublicNavigation,
+  SaveNavigationDTO,
+  UpdatePageDTO,
+} from "@morwalpizvideo/models";
+import type {
+  AskCampaign,
+  AskSubmission,
+  AskCampaignRequest,
+} from "@morwalpizvideo/models";
+import type {
+  FaqAdmin,
+  FaqAnswerAdmin,
+  FaqCandidateAdmin,
+  FaqCategoryAdmin,
+} from "@morwalpizvideo/models";
+import type { ChannelTerminology } from "@morwalpizvideo/models";
 
-export const getChannelTerminology = (): Promise<ChannelTerminology> => get(endpoints.CHANNEL_TERMINOLOGY);
-export const saveChannelTerminology = (payload: ChannelTerminology): Promise<ChannelTerminology> => put(endpoints.CHANNEL_TERMINOLOGY, payload);
+export const getChannelTerminology = (): Promise<ChannelTerminology> =>
+  get(endpoints.CHANNEL_TERMINOLOGY);
+export const saveChannelTerminology = (
+  payload: ChannelTerminology,
+): Promise<ChannelTerminology> => put(endpoints.CHANNEL_TERMINOLOGY, payload);
 
-function answerDiscriminator(answer: AnyAnswer): AnyAnswer['_t'] {
-    switch (answer.answerType) {
-        case 0:
-            return 'OpenAnswer';
-        case 1:
-            return 'MultipleChoiceAnswer';
-        case 2:
-            return 'SingleChoiceAnswer';
-    }
+function answerDiscriminator(answer: AnyAnswer): AnyAnswer["_t"] {
+  switch (answer.answerType) {
+    case 0:
+      return "OpenAnswer";
+    case 1:
+      return "MultipleChoiceAnswer";
+    case 2:
+      return "SingleChoiceAnswer";
+  }
 }
 
 function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
-    return answers.map(answer => ({ ...answer, _t: answer._t ?? answerDiscriminator(answer) }));
+  return answers.map((answer) => ({
+    ...answer,
+    _t: answer._t ?? answerDiscriminator(answer),
+  }));
 }
 
-export const getActiveCustomForms = (): Promise<CustomForm[]> => get(endpoints.CUSTOMFORMS_ACTIVE);
+export const getActiveCustomForms = (): Promise<CustomForm[]> =>
+  get(endpoints.CUSTOMFORMS_ACTIVE);
 
 export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
-    get(ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }));
+  get(
+    ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }),
+  );
 
-export const submitCustomFormResponse = (formId: string, answers: AnyAnswer[]): Promise<CustomFormResponse> =>
-    post(ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, { customFormId: encodeURIComponent(formId) }), {
-        answers: serializeFormAnswers(answers)
-    });
+export const submitCustomFormResponse = (
+  formId: string,
+  answers: AnyAnswer[],
+): Promise<CustomFormResponse> =>
+  post(
+    ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
+      customFormId: encodeURIComponent(formId),
+    }),
+    {
+      answers: serializeFormAnswers(answers),
+    },
+  );
 
 export interface AskPublicCampaign {
-    channelName: string;
-    title: string;
-    description: string;
-    slug: string;
-    maxSubmissionLength: number;
-    allowNamedSubmissions: boolean;
-    nameRequired: boolean;
-    recaptchaRequired: boolean;
-    questions: Array<{ id: string; text: string; reactionCount: number; response?: { content: string; author: string; createdAt: string } | null }>;
+  channelName: string;
+  title: string;
+  description: string;
+  slug: string;
+  maxSubmissionLength: number;
+  allowNamedSubmissions: boolean;
+  nameRequired: boolean;
+  recaptchaRequired: boolean;
+  questions: Array<{
+    id: string;
+    text: string;
+    reactionCount: number;
+    response?: { content: string; author: string; createdAt: string } | null;
+  }>;
 }
 
-export const getAskCampaign = (channelName: string, campaignSlug: string): Promise<AskPublicCampaign> =>
-    get(ComposeUrl(endpoints.ASK_CAMPAIGN, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug) }));
+export const getAskCampaign = (
+  channelName: string,
+  campaignSlug: string,
+): Promise<AskPublicCampaign> =>
+  get(
+    ComposeUrl(endpoints.ASK_CAMPAIGN, {
+      channelName: encodeURIComponent(channelName),
+      campaignSlug: encodeURIComponent(campaignSlug),
+    }),
+  );
 
-export const submitAsk = (channelName: string, campaignSlug: string, text: string, recaptchaToken: string, name?: string): Promise<{ status: string }> =>
-    post(ComposeUrl(endpoints.ASK_SUBMISSIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug) }), { text, recaptchaToken, name }, '', { 'Idempotency-Key': crypto.randomUUID() });
-export const reactToAskSubmission = (channelName: string, campaignSlug: string, submissionId: string): Promise<{ accepted: boolean; count: number }> =>
-    post(ComposeUrl(endpoints.ASK_REACTIONS, { channelName: encodeURIComponent(channelName), campaignSlug: encodeURIComponent(campaignSlug), submissionId }), {});
+export const submitAsk = (
+  channelName: string,
+  campaignSlug: string,
+  text: string,
+  recaptchaToken: string,
+  name?: string,
+): Promise<{ status: string }> =>
+  post(
+    ComposeUrl(endpoints.ASK_SUBMISSIONS, {
+      channelName: encodeURIComponent(channelName),
+      campaignSlug: encodeURIComponent(campaignSlug),
+    }),
+    { text, recaptchaToken, name },
+    "",
+    { "Idempotency-Key": crypto.randomUUID() },
+  );
+export const reactToAskSubmission = (
+  channelName: string,
+  campaignSlug: string,
+  submissionId: string,
+): Promise<{ accepted: boolean; count: number }> =>
+  post(
+    ComposeUrl(endpoints.ASK_REACTIONS, {
+      channelName: encodeURIComponent(channelName),
+      campaignSlug: encodeURIComponent(campaignSlug),
+      submissionId,
+    }),
+    {},
+  );
 
 export interface FaqPublicAnswer {
-    channelName: string;
-    content: string;
-    helpfulVotes: number;
-    notHelpfulVotes: number;
+  channelName: string;
+  content: string;
+  helpfulVotes: number;
+  notHelpfulVotes: number;
 }
 export interface FaqPublicItem {
-    id: string;
-    question: string;
-    categorySlug: string;
-    categoryName: string;
-    answers: FaqPublicAnswer[];
+  id: string;
+  question: string;
+  categorySlug: string;
+  categoryName: string;
+  answers: FaqPublicAnswer[];
 }
 export const getPublicFaq = (category?: string): Promise<FaqPublicItem[]> =>
-    get(ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined));
-export const getPublicFaqCategories = (): Promise<Array<{ id: string; slug: string; name: string }>> => get(endpoints.FAQ_CATEGORIES);
-export const voteFaqAnswer = (faqId: string, channelName: string, value: 1 | -1): Promise<{ accepted: boolean; changed: boolean; helpfulVotes: number; notHelpfulVotes: number }> =>
-    post(ComposeUrl(endpoints.FAQ_VOTE, { faqId, channelName: encodeURIComponent(channelName) }), value);
+  get(ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined));
+export const getPublicFaqCategories = (): Promise<
+  Array<{ id: string; slug: string; name: string }>
+> => get(endpoints.FAQ_CATEGORIES);
+export const voteFaqAnswer = (
+  faqId: string,
+  channelName: string,
+  value: 1 | -1,
+): Promise<{
+  accepted: boolean;
+  changed: boolean;
+  helpfulVotes: number;
+  notHelpfulVotes: number;
+}> =>
+  post(
+    ComposeUrl(endpoints.FAQ_VOTE, {
+      faqId,
+      channelName: encodeURIComponent(channelName),
+    }),
+    value,
+  );
 
-export const fetchFaqs = (query = ''): Promise<FaqAdmin[]> => get(`${endpoints.FAQ_ADMIN}${query}`);
-export const getFaq = (id: string): Promise<FaqAdmin> => get(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }));
-export const createFaq = (payload: Partial<FaqAdmin>): Promise<FaqAdmin> => post(endpoints.FAQ_ADMIN, payload);
-export const updateFaq = (id: string, payload: Partial<FaqAdmin>): Promise<FaqAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }), payload);
-export const fetchFaqCategories = (): Promise<FaqCategoryAdmin[]> => get(endpoints.FAQ_ADMIN_CATEGORIES);
-export const saveFaqCategory = (id: string | undefined, payload: Partial<FaqCategoryAdmin>): Promise<FaqCategoryAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_CATEGORY, { id: id ?? '' }), payload);
-export const fetchFaqAnswers = (faqId: string): Promise<FaqAnswerAdmin[]> => get(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }));
-export const createFaqAnswer = (faqId: string, payload: Partial<FaqAnswerAdmin>): Promise<FaqAnswerAdmin> => post(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }), payload);
-export const updateFaqAnswer = (answerId: string, payload: Partial<FaqAnswerAdmin>): Promise<FaqAnswerAdmin> => put(ComposeUrl(endpoints.FAQ_ADMIN_ANSWER, { answerId }), payload);
-export const fetchFaqCandidates = (status?: number): Promise<FaqCandidateAdmin[]> => get(`${endpoints.FAQ_ADMIN_CANDIDATES}${status === undefined ? '' : `?status=${status}`}`);
-export const generateFaqCandidates = (campaignIds: string[]): Promise<unknown> => post(endpoints.FAQ_ADMIN_GENERATE_CANDIDATES, { campaignIds });
-export const reviewFaqCandidate = (id: string, status: number): Promise<FaqCandidateAdmin> => post(ComposeUrl(endpoints.FAQ_ADMIN_REVIEW_CANDIDATE, { id }), { status });
+export const fetchFaqs = (query = ""): Promise<FaqAdmin[]> =>
+  get(`${endpoints.FAQ_ADMIN}${query}`);
+export const getFaq = (id: string): Promise<FaqAdmin> =>
+  get(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }));
+export const createFaq = (payload: Partial<FaqAdmin>): Promise<FaqAdmin> =>
+  post(endpoints.FAQ_ADMIN, payload);
+export const updateFaq = (
+  id: string,
+  payload: Partial<FaqAdmin>,
+): Promise<FaqAdmin> =>
+  put(ComposeUrl(endpoints.FAQ_ADMIN_DETAIL, { id }), payload);
+export const fetchFaqCategories = (): Promise<FaqCategoryAdmin[]> =>
+  get(endpoints.FAQ_ADMIN_CATEGORIES);
+export const saveFaqCategory = (
+  id: string | undefined,
+  payload: Partial<FaqCategoryAdmin>,
+): Promise<FaqCategoryAdmin> =>
+  put(ComposeUrl(endpoints.FAQ_ADMIN_CATEGORY, { id: id ?? "" }), payload);
+export const fetchFaqAnswers = (faqId: string): Promise<FaqAnswerAdmin[]> =>
+  get(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }));
+export const createFaqAnswer = (
+  faqId: string,
+  payload: Partial<FaqAnswerAdmin>,
+): Promise<FaqAnswerAdmin> =>
+  post(ComposeUrl(endpoints.FAQ_ADMIN_ANSWERS, { id: faqId }), payload);
+export const updateFaqAnswer = (
+  answerId: string,
+  payload: Partial<FaqAnswerAdmin>,
+): Promise<FaqAnswerAdmin> =>
+  put(ComposeUrl(endpoints.FAQ_ADMIN_ANSWER, { answerId }), payload);
+export const fetchFaqCandidates = (
+  status?: number,
+): Promise<FaqCandidateAdmin[]> =>
+  get(
+    `${endpoints.FAQ_ADMIN_CANDIDATES}${status === undefined ? "" : `?status=${status}`}`,
+  );
+export const generateFaqCandidates = (
+  campaignIds: string[],
+): Promise<unknown> =>
+  post(endpoints.FAQ_ADMIN_GENERATE_CANDIDATES, { campaignIds });
+export const reviewFaqCandidate = (
+  id: string,
+  status: number,
+): Promise<FaqCandidateAdmin> =>
+  post(ComposeUrl(endpoints.FAQ_ADMIN_REVIEW_CANDIDATE, { id }), { status });
 
-export const fetchAskCampaigns = (): Promise<AskCampaign[]> => get(endpoints.ASK_ADMIN);
-export const getAskCampaignAdmin = (id: string): Promise<AskCampaign> => get(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }));
-export const createAskCampaign = (request: AskCampaignRequest): Promise<AskCampaign> => post(endpoints.ASK_ADMIN, request);
-export const updateAskCampaign = (id: string, request: AskCampaignRequest): Promise<AskCampaign> => put(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }), request);
-export const fetchAskSubmissions = (id: string): Promise<AskSubmission[]> => get(ComposeUrl(endpoints.ASK_ADMIN_SUBMISSIONS, { id }));
-export const moderateAskSubmission = (id: string, status: AskSubmission['moderationStatus'], note: string): Promise<AskSubmission> => post(ComposeUrl(endpoints.ASK_ADMIN_MODERATE, { id }), { status, note });
-export const respondToAskSubmission = (id: string, content: string, author: string, visibility: number): Promise<AskSubmission> => post(ComposeUrl(endpoints.ASK_ADMIN_RESPONSE, { id }), { content, author, visibility });
-export const getAskAnalytics = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_ANALYTICS, { id }));
-export const getAskShare = (id: string) => get(ComposeUrl(endpoints.ASK_ADMIN_SHARE, { id }));
-export const publishAskToTelegram = (id: string): Promise<{ url: string; message: string }> => post(ComposeUrl(endpoints.ASK_ADMIN_PUBLISH_TELEGRAM, { id }), {});
-export const exportAskSubmissions = (id: string, includeName = false) => getFile(ComposeUrl(endpoints.ASK_ADMIN_EXPORT, { id }), { includeName });
+export const fetchAskCampaigns = (): Promise<AskCampaign[]> =>
+  get(endpoints.ASK_ADMIN);
+export const getAskCampaignAdmin = (id: string): Promise<AskCampaign> =>
+  get(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }));
+export const createAskCampaign = (
+  request: AskCampaignRequest,
+): Promise<AskCampaign> => post(endpoints.ASK_ADMIN, request);
+export const updateAskCampaign = (
+  id: string,
+  request: AskCampaignRequest,
+): Promise<AskCampaign> =>
+  put(ComposeUrl(endpoints.ASK_ADMIN_DETAIL, { id }), request);
+export const fetchAskSubmissions = (id: string): Promise<AskSubmission[]> =>
+  get(ComposeUrl(endpoints.ASK_ADMIN_SUBMISSIONS, { id }));
+export const moderateAskSubmission = (
+  id: string,
+  status: AskSubmission["moderationStatus"],
+  note: string,
+): Promise<AskSubmission> =>
+  post(ComposeUrl(endpoints.ASK_ADMIN_MODERATE, { id }), { status, note });
+export const respondToAskSubmission = (
+  id: string,
+  content: string,
+  author: string,
+  visibility: number,
+): Promise<AskSubmission> =>
+  post(ComposeUrl(endpoints.ASK_ADMIN_RESPONSE, { id }), {
+    content,
+    author,
+    visibility,
+  });
+export const getAskAnalytics = (id: string) =>
+  get(ComposeUrl(endpoints.ASK_ADMIN_ANALYTICS, { id }));
+export const getAskShare = (id: string) =>
+  get(ComposeUrl(endpoints.ASK_ADMIN_SHARE, { id }));
+export const publishAskToTelegram = (
+  id: string,
+): Promise<{ url: string; message: string }> =>
+  post(ComposeUrl(endpoints.ASK_ADMIN_PUBLISH_TELEGRAM, { id }), {});
+export const exportAskSubmissions = (id: string, includeName = false) =>
+  getFile(ComposeUrl(endpoints.ASK_ADMIN_EXPORT, { id }), { includeName });
 
 /**
  * Auth token provider function type
@@ -132,67 +296,79 @@ type CredentialsMode = RequestCredentials;
  * Global credentials mode setting
  * Defaults to 'include' for backward compatibility with authenticated apps
  */
-let requestCredentialsMode: CredentialsMode = 'include';
+let requestCredentialsMode: CredentialsMode = "include";
 let csrfTokenPromise: Promise<string> | null = null;
 let cookieOnlyMode = false;
-const selectedChannelStorageKey = 'backoffice.selectedChannelId';
-let selectedChannelId: string | null = typeof window !== 'undefined'
+const selectedChannelStorageKey = "backoffice.selectedChannelId";
+let selectedChannelId: string | null =
+  typeof window !== "undefined"
     ? window.localStorage.getItem(selectedChannelStorageKey)
     : null;
 
 const scopedBackOfficePrefixes = [
-    '/api/videos',
-    '/api/categories',
-    '/api/channels',
-    '/api/imageupload',
-    '/api/calendarevents',
-    '/api/compilations',
-    '/api/shortlinks',
-    '/api/querylinks',
-    '/api/quicklinks',
-    '/api/pages',
-    '/api/navigation',
-    '/api/insights',
-    '/api/dashboard',
-    '/api/apikeys',
-    '/api/newsletters'
+  "/api/videos",
+  "/api/categories",
+  "/api/channels",
+  "/api/imageupload",
+  "/api/calendarevents",
+  "/api/compilations",
+  "/api/shortlinks",
+  "/api/querylinks",
+  "/api/quicklinks",
+  "/api/pages",
+  "/api/navigation",
+  "/api/insights",
+  "/api/dashboard",
+  "/api/apikeys",
+  "/api/newsletters",
+  "/api/products",
+  "/api/productcategories",
 ];
 
 function isScopedBackOfficeRequest(url: string): boolean {
-    const pathWithoutQuery = url.split('?')[0].toLowerCase();
-    const normalizedUrl = pathWithoutQuery.startsWith('/')
-        ? pathWithoutQuery
-        : `/${pathWithoutQuery}`;
+  const pathWithoutQuery = url.split("?")[0].toLowerCase();
+  const normalizedUrl = pathWithoutQuery.startsWith("/")
+    ? pathWithoutQuery
+    : `/${pathWithoutQuery}`;
 
-    if (normalizedUrl === '/api/channels' || normalizedUrl === '/api/channels/accessible') {
-        return false;
-    }
+  if (
+    normalizedUrl === "/api/channels" ||
+    normalizedUrl === "/api/channels/accessible"
+  ) {
+    return false;
+  }
 
-    return scopedBackOfficePrefixes.some(prefix =>
-        normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`));
+  return scopedBackOfficePrefixes.some(
+    (prefix) =>
+      normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
+  );
 }
 
 export function getSelectedChannelId(): string | null {
-    return selectedChannelId;
+  return selectedChannelId;
 }
 
 export function setSelectedChannelId(channelId: string | null): void {
-    selectedChannelId = channelId?.trim() || null;
-    if (typeof window !== 'undefined') {
-        if (selectedChannelId) {
-            window.localStorage.setItem(selectedChannelStorageKey, selectedChannelId);
-        } else {
-            window.localStorage.removeItem(selectedChannelStorageKey);
-        }
+  selectedChannelId = channelId?.trim() || null;
+  if (typeof window !== "undefined") {
+    if (selectedChannelId) {
+      window.localStorage.setItem(selectedChannelStorageKey, selectedChannelId);
+    } else {
+      window.localStorage.removeItem(selectedChannelStorageKey);
     }
+  }
 }
 
-export function selectFirstAccessibleChannel(channels: readonly { channelId: string }[]): string | null {
-    const selected = channels.some(channel => channel.channelId === selectedChannelId)
-        ? selectedChannelId
-        : channels[0]?.channelId ?? null;
-    setSelectedChannelId(selected);
-    return selected;
+export function selectFirstAccessibleChannel(
+  channels: readonly { channelId: string }[],
+): string | null {
+  const selected = channels.some(
+    (channel) => channel.channelId === selectedChannelId,
+  )
+    ? selectedChannelId
+    : (channels[0]?.channelId ?? null);
+  setSelectedChannelId(selected);
+  return selected;
 }
 
 /**
@@ -201,7 +377,7 @@ export function selectFirstAccessibleChannel(channels: readonly { channelId: str
  * @param provider Function that returns the current auth token or null
  */
 export function setAuthTokenProvider(provider: AuthTokenProvider): void {
-    authTokenProvider = provider;
+  authTokenProvider = provider;
 }
 
 /**
@@ -213,22 +389,22 @@ export function setAuthTokenProvider(provider: AuthTokenProvider): void {
  *             - 'same-origin': Only send credentials for same-origin requests
  */
 export function setRequestCredentialsMode(mode: CredentialsMode): void {
-    requestCredentialsMode = mode;
+  requestCredentialsMode = mode;
 }
 
 /** Enable cookie-only browser authentication for applications such as BackOffice. */
 export function setCookieOnlyMode(enabled: boolean): void {
-    cookieOnlyMode = enabled;
+  cookieOnlyMode = enabled;
 }
 
 export function resetCsrfToken(): void {
-    csrfTokenPromise = null;
+  csrfTokenPromise = null;
 }
 
 let unauthorizedHandler: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: () => void): void {
-    unauthorizedHandler = handler;
+  unauthorizedHandler = handler;
 }
 
 /**
@@ -236,21 +412,21 @@ export function setUnauthorizedHandler(handler: () => void): void {
  * @returns Auth token or null
  */
 function getAuthToken(): string | null {
-    if (cookieOnlyMode) {
-        return null;
-    }
-
-    // Try registered provider first
-    if (authTokenProvider) {
-        return authTokenProvider();
-    }
-
-    // Fallback to localStorage for backward compatibility
-    if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem('authToken');
-    }
-
+  if (cookieOnlyMode) {
     return null;
+  }
+
+  // Try registered provider first
+  if (authTokenProvider) {
+    return authTokenProvider();
+  }
+
+  // Fallback to localStorage for backward compatibility
+  if (typeof window !== "undefined" && window.localStorage) {
+    return localStorage.getItem("authToken");
+  }
+
+  return null;
 }
 
 /**
@@ -258,23 +434,21 @@ function getAuthToken(): string | null {
  * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
  */
 function getApiBaseUrl(): string {
-    // Check runtime environment (injected by Docker entrypoint)
-    if (typeof window !==
+  // Check runtime environment (injected by Docker entrypoint)
+  if (typeof window !== "undefined" && (window as any).ENV?.VITE_API_BASE_URL) {
+    return (window as any).ENV.VITE_API_BASE_URL;
+  }
+  if (typeof window !== "undefined" && (window as any).ENV?.API_BASE_URL) {
+    return (window as any).ENV.API_BASE_URL;
+  }
 
-        'undefined' && (window as any).ENV?.VITE_API_BASE_URL) {
-        return (window as any).ENV.VITE_API_BASE_URL;
-    }
-    if (typeof window !== 'undefined' && (window as any).ENV?.API_BASE_URL) {
-        return (window as any).ENV.API_BASE_URL;
-    }
+  // Check build-time environment (Vite)
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
 
-    // Check build-time environment (Vite)
-    if (import.meta.env.VITE_API_BASE_URL) {
-        return import.meta.env.VITE_API_BASE_URL;
-    }
-
-    // Default to relative paths (for Vite dev proxy)
-    return '';
+  // Default to relative paths (for Vite dev proxy)
+  return "";
 }
 
 /**
@@ -282,88 +456,124 @@ function getApiBaseUrl(): string {
  * Handles both '/api/...' and 'api/...' formats safely
  */
 function buildFullUrl(path: string): string {
-    if (path == null || path == undefined || path.length == 0) {
-        throw new Error("Path cannot be null/undefined or empty");
-    }
-    const baseUrl = getApiBaseUrl();
+  if (path == null || path == undefined || path.length == 0) {
+    throw new Error("Path cannot be null/undefined or empty");
+  }
+  const baseUrl = getApiBaseUrl();
 
-    // Normalize path to have single leading slash
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  // Normalize path to have single leading slash
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-    // If no base URL, return relative path (for Vite proxy)
-    if (!baseUrl) {
-        return normalizedPath;
-    }
+  // If no base URL, return relative path (for Vite proxy)
+  if (!baseUrl) {
+    return normalizedPath;
+  }
 
-    // Remove trailing slash from base URL
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  // Remove trailing slash from base URL
+  const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
 
-    // Combine base URL with path
-    return `${cleanBase}${normalizedPath}`;
+  // Combine base URL with path
+  return `${cleanBase}${normalizedPath}`;
 }
 
 async function getCsrfToken(): Promise<string> {
-    csrfTokenPromise ??= fetch(buildFullUrl('/api/auth/csrf'), {
-        method: 'GET',
-        credentials: 'include'
-    }).then(async response => {
-        if (!response.ok) {
-            throw new Error(`Unable to acquire CSRF token (${response.status})`);
-        }
+  csrfTokenPromise ??= fetch(buildFullUrl("/api/auth/csrf"), {
+    method: "GET",
+    credentials: "include",
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Unable to acquire CSRF token (${response.status})`);
+      }
 
-        const payload = await response.json() as { token?: string };
-        if (!payload.token) {
-            throw new Error('CSRF token response was invalid');
-        }
+      const payload = (await response.json()) as { token?: string };
+      if (!payload.token) {
+        throw new Error("CSRF token response was invalid");
+      }
 
-        return payload.token;
-    }).catch(error => {
-        csrfTokenPromise = null;
-        throw error;
+      return payload.token;
+    })
+    .catch((error) => {
+      csrfTokenPromise = null;
+      throw error;
     });
 
-    return csrfTokenPromise;
+  return csrfTokenPromise;
 }
 
-export function post(url: string, obj: any, overrideHeaderEnv: string = '', extraHeaders?: Record<string, string>) {
-    return call(url, 'POST', obj, overrideHeaderEnv, undefined, false, false, undefined, extraHeaders);
+export function post(
+  url: string,
+  obj: any,
+  overrideHeaderEnv: string = "",
+  extraHeaders?: Record<string, string>,
+) {
+  return call(
+    url,
+    "POST",
+    obj,
+    overrideHeaderEnv,
+    undefined,
+    false,
+    false,
+    undefined,
+    extraHeaders,
+  );
 }
 
-export function postFormData(url: string, formData: FormData, overrideHeaderEnv: string = '') {
-    return call(url, 'POST', formData, overrideHeaderEnv, undefined, false, true);
+export function postFormData(
+  url: string,
+  formData: FormData,
+  overrideHeaderEnv: string = "",
+) {
+  return call(url, "POST", formData, overrideHeaderEnv, undefined, false, true);
 }
 
-export function put(url: string, obj: any, overrideHeaderEnv: string = '') {
-    return call(url, 'PUT', obj, overrideHeaderEnv);
+export function put(url: string, obj: any, overrideHeaderEnv: string = "") {
+  return call(url, "PUT", obj, overrideHeaderEnv);
 }
 
-export function patch(url: string, obj: any, overrideHeaderEnv: string = '') {
-    return call(url, 'PATCH', obj, overrideHeaderEnv);
+export function patch(url: string, obj: any, overrideHeaderEnv: string = "") {
+  return call(url, "PATCH", obj, overrideHeaderEnv);
 }
 
-export function get(url: string, query?: any, overrideHeaderEnv: string = '', returnFullRresponse: boolean = false) {
-    return call(url, 'GET', {}, overrideHeaderEnv, query, false, false, { returnFullResponse: returnFullRresponse });
+export function get(
+  url: string,
+  query?: any,
+  overrideHeaderEnv: string = "",
+  returnFullRresponse: boolean = false,
+) {
+  return call(url, "GET", {}, overrideHeaderEnv, query, false, false, {
+    returnFullResponse: returnFullRresponse,
+  });
 }
 
-export function getFile(url: string, query?: any, overrideHeaderEnv: string = '') {
-    return call(url, 'GET', {}, overrideHeaderEnv, query, true);
+export function getFile(
+  url: string,
+  query?: any,
+  overrideHeaderEnv: string = "",
+) {
+  return call(url, "GET", {}, overrideHeaderEnv, query, true);
 }
 
-export function Delete(url: string, query?: any, overrideHeaderEnv: string = '') {
-    return call(url, 'DELETE', {}, overrideHeaderEnv, query);
+export function Delete(
+  url: string,
+  query?: any,
+  overrideHeaderEnv: string = "",
+) {
+  return call(url, "DELETE", {}, overrideHeaderEnv, query);
 }
 
 /**
  * Response options for the call method
  */
 interface ResponseOptions {
-    /** If true, returns the full parsed response instead of extracting the 'data' property */
-    returnFullResponse?: boolean;
+  /** If true, returns the full parsed response instead of extracting the 'data' property */
+  returnFullResponse?: boolean;
 }
 
 /**
  * Makes API calls with automatic authentication header injection
- * 
+ *
  * @param url - The API endpoint URL
  * @param method - HTTP method (GET, POST, PUT, etc.)
  * @param body - Request body
@@ -374,279 +584,335 @@ interface ResponseOptions {
  * @param responseOptions - Options for response handling
  * @returns Parsed response data. By default returns response.data if present, otherwise full response.
  *          Set responseOptions.returnFullResponse = true to always get the full response object.
- * 
+ *
  * @example
  * // Default behavior - returns response.data if present
  * const data = await call('/api/products', 'GET', {});
- * 
+ *
  * @example
  * // Get full response envelope including metadata
  * const fullResponse = await call('/api/products', 'GET', {}, '', undefined, false, false, { returnFullResponse: true });
  */
-export async function call(url: string, method: string, body: any, overrideHeaderEnv: string = '', query?: any, downloadFile = false, isFormData = false, responseOptions?: ResponseOptions, extraHeaders?: Record<string, string>) {
-    const headers = new Headers();
-    Object.entries(extraHeaders ?? {}).forEach(([key, value]) => headers.set(key, value));
+export async function call(
+  url: string,
+  method: string,
+  body: any,
+  overrideHeaderEnv: string = "",
+  query?: any,
+  downloadFile = false,
+  isFormData = false,
+  responseOptions?: ResponseOptions,
+  extraHeaders?: Record<string, string>,
+) {
+  const headers = new Headers();
+  Object.entries(extraHeaders ?? {}).forEach(([key, value]) =>
+    headers.set(key, value),
+  );
 
-    // Add authorization header if user is authenticated
-    const token = getAuthToken();
-    if (token) {
-        headers.append("Authorization", `Bearer ${token}`);
+  // Add authorization header if user is authenticated
+  const token = getAuthToken();
+  if (token) {
+    headers.append("Authorization", `Bearer ${token}`);
+  }
+
+  if (isScopedBackOfficeRequest(url) && selectedChannelId) {
+    headers.set("X-Channel-Id", selectedChannelId);
+  }
+
+  const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(
+    method.toUpperCase(),
+  );
+  const isAnonymousAuthRequest =
+    url.includes("/api/auth/login") || url.includes("/api/auth/csrf");
+  if (
+    requestCredentialsMode === "include" &&
+    isUnsafeMethod &&
+    !token &&
+    !isAnonymousAuthRequest
+  ) {
+    headers.append("X-CSRF-TOKEN", await getCsrfToken());
+  }
+
+  if (query) {
+    url += `?${new URLSearchParams(query).toString()}`;
+  }
+
+  const options: RequestInit = {
+    method: method,
+    headers: headers,
+  };
+
+  // Determine if we have a request body that needs to be sent
+  let hasBody = false;
+
+  if (body) {
+    if (isFormData) {
+      // For FormData, use it directly
+      // Don't set Content-Type - let the browser set it with the boundary
+      options.body = body as FormData;
+      hasBody = true;
+    } else if (Object.keys(body).length > 0) {
+      // For regular objects, stringify them and set Content-Type
+      options.body = JSON.stringify(body);
+      headers.append("Content-Type", "application/json");
+      hasBody = true;
     }
+  }
 
-    if (isScopedBackOfficeRequest(url) && selectedChannelId) {
-        headers.set('X-Channel-Id', selectedChannelId);
-    }
+  // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
+  // This avoids triggering CORS preflight for simple requests
+  // Only set Content-Type when we actually have a JSON body to send
 
-    const isUnsafeMethod = !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method.toUpperCase());
-    const isAnonymousAuthRequest = url.includes('/api/auth/login') || url.includes('/api/auth/csrf');
-    if (requestCredentialsMode === 'include' && isUnsafeMethod && !token && !isAnonymousAuthRequest) {
-        headers.append('X-CSRF-TOKEN', await getCsrfToken());
-    }
+  // Include credentials based on configured mode
+  options.credentials = requestCredentialsMode;
 
-    if (query) {
-        url += `?${new URLSearchParams(query).toString()}`;
-    }
-
-    const options: RequestInit = {
-        method: method,
-        headers: headers
-    };
-
-    // Determine if we have a request body that needs to be sent
-    let hasBody = false;
-
-    if (body) {
-        if (isFormData) {
-            // For FormData, use it directly
-            // Don't set Content-Type - let the browser set it with the boundary
-            options.body = body as FormData;
-            hasBody = true;
-        } else if (Object.keys(body).length > 0) {
-            // For regular objects, stringify them and set Content-Type
-            options.body = JSON.stringify(body);
-            headers.append("Content-Type", 'application/json');
-            hasBody = true;
+  return fetch(buildFullUrl(url), options)
+    .then(async (response) => {
+      if (response.ok) {
+        if (downloadFile) {
+          return response.blob();
         }
-    }
+        if (response.status === 204) {
+          return Promise.resolve({});
+        }
+        const parsedResponse = await response.json();
 
-    // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
-    // This avoids triggering CORS preflight for simple requests
-    // Only set Content-Type when we actually have a JSON body to send
+        // If returnFullResponse is true, return the entire response object
+        if (
+          responseOptions?.returnFullResponse ||
+          !Object.prototype.hasOwnProperty.call(parsedResponse, "data")
+        )
+          return parsedResponse;
 
-    // Include credentials based on configured mode
-    options.credentials = requestCredentialsMode;
-
-    return fetch(buildFullUrl(url), options)
-        .then(async (response) => {
-            if (response.ok) {
-                if (downloadFile) {
-                    return response.blob();
+        // Default behavior: return data property if it exists, otherwise return full response
+        return parsedResponse.data;
+      } else {
+        // error handling
+        const errorMessages = [];
+        switch (response.status) {
+          case 400: {
+            const parsedResponse = await response.json();
+            if (typeof parsedResponse === "object") {
+              for (const key in parsedResponse) {
+                if (Array.isArray(parsedResponse[key])) {
+                  errorMessages.push(...parsedResponse[key]);
+                } else {
+                  errorMessages.push(parsedResponse[key]);
                 }
-                if (response.status === 204) {
-                    return Promise.resolve({});
-                }
-                const parsedResponse = await response.json();
-
-                // If returnFullResponse is true, return the entire response object
-                if (responseOptions?.returnFullResponse || !Object.prototype.hasOwnProperty.call(parsedResponse, 'data'))
-                    return parsedResponse;
-
-                // Default behavior: return data property if it exists, otherwise return full response
-                return parsedResponse.data;
+              }
             } else {
-                // error handling
-                const errorMessages = [];
-                switch (response.status) {
-                    case 400:
-                        {
-                            const parsedResponse = await response.json();
-                            if (typeof parsedResponse === 'object') {
-                                for (const key in parsedResponse) {
-                                    if (Array.isArray(parsedResponse[key])) {
-                                        errorMessages.push(...parsedResponse[key]);
-                                    } else {
-                                        errorMessages.push(parsedResponse[key]);
-                                    }
-                                }
-                            } else {
-                                errorMessages.push(parsedResponse);
-                            }
-                            return {
-                                errors: errorMessages,
-                                status: response.status,
-                                channelContextError: parsedResponse?.code === 'channel_context_required' ||
-                                    parsedResponse?.code === 'channel_context_unavailable'
-                            };
-                        }
-                    case 401:
-                        {
-                            try {
-                                const parsedResponse = await response.json();
-                                if (unauthorizedHandler && !url.includes('/auth/')) {
-                                    unauthorizedHandler();
-                                }
-                                return parsedResponse;
-                            } catch {
-                                errorMessages.push("Authentication failed");
-                            }
-                            break;
-                        }
-                    case 429:
-                        {
-                            // Parse JSON response for rate limit errors
-                            try {
-                                const parsedResponse = await response.json();
-                                return parsedResponse;
-                            } catch {
-                                errorMessages.push("Too many requests");
-                            }
-                            break;
-                        }
-                    case 404:
-                        {
-                            try {
-                                const parsedResponse = await response.json();
-                                if (parsedResponse?.code === 'channel_context_unavailable') {
-                                    return {
-                                        errors: [parsedResponse.message ?? "The selected channel is not accessible"],
-                                        status: response.status,
-                                        channelContextError: true
-                                    };
-                                }
-                            } catch {
-                            }
-                            errorMessages.push({ api: "Not found" });
-                            break;
-                        }
-                    case 409:
-                        {
-                            const rawResponse = await response.text();
-                            try {
-                                const parsedResponse = JSON.parse(rawResponse);
-                                if (typeof parsedResponse === 'object' && parsedResponse !== null) {
-                                    for (const key in parsedResponse) {
-                                        if (Array.isArray(parsedResponse[key])) {
-                                            errorMessages.push(...parsedResponse[key]);
-                                        } else {
-                                            errorMessages.push(parsedResponse[key]);
-                                        }
-                                    }
-                                } else if (parsedResponse) {
-                                    errorMessages.push(parsedResponse);
-                                }
-                            } catch {
-                                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
-                            }
-                            return { errors: errorMessages, status: response.status };
-                        }
-                    case 503:
-                        {
-                            const rawResponse = await response.text();
-                            try {
-                                const parsedResponse = JSON.parse(rawResponse);
-                                if (typeof parsedResponse === 'object' && parsedResponse !== null) {
-                                    for (const key in parsedResponse) {
-                                        if (Array.isArray(parsedResponse[key])) {
-                                            errorMessages.push(...parsedResponse[key]);
-                                        } else if (parsedResponse[key] !== undefined) {
-                                            errorMessages.push(parsedResponse[key]);
-                                        }
-                                    }
-                                } else if (parsedResponse) {
-                                    errorMessages.push(parsedResponse);
-                                }
-                            } catch {
-                                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
-                            }
-                            return { errors: errorMessages, status: response.status };
-                        }
-                    default:
-                        errorMessages.push("An unexpected error occurred");
-                }
-                return { errors: errorMessages, status: response.status };
+              errorMessages.push(parsedResponse);
             }
-        })
-        .catch(error => {
-            console.log("api error", error);
-            throw error;
-        });
+            return {
+              errors: errorMessages,
+              status: response.status,
+              channelContextError:
+                parsedResponse?.code === "channel_context_required" ||
+                parsedResponse?.code === "channel_context_unavailable",
+            };
+          }
+          case 401: {
+            try {
+              const parsedResponse = await response.json();
+              if (unauthorizedHandler && !url.includes("/auth/")) {
+                unauthorizedHandler();
+              }
+              return parsedResponse;
+            } catch {
+              errorMessages.push("Authentication failed");
+            }
+            break;
+          }
+          case 429: {
+            // Parse JSON response for rate limit errors
+            try {
+              const parsedResponse = await response.json();
+              return parsedResponse;
+            } catch {
+              errorMessages.push("Too many requests");
+            }
+            break;
+          }
+          case 404: {
+            try {
+              const parsedResponse = await response.json();
+              if (parsedResponse?.code === "channel_context_unavailable") {
+                return {
+                  errors: [
+                    parsedResponse.message ??
+                      "The selected channel is not accessible",
+                  ],
+                  status: response.status,
+                  channelContextError: true,
+                };
+              }
+            } catch {}
+            errorMessages.push({ api: "Not found" });
+            break;
+          }
+          case 409: {
+            const rawResponse = await response.text();
+            try {
+              const parsedResponse = JSON.parse(rawResponse);
+              if (
+                typeof parsedResponse === "object" &&
+                parsedResponse !== null
+              ) {
+                for (const key in parsedResponse) {
+                  if (Array.isArray(parsedResponse[key])) {
+                    errorMessages.push(...parsedResponse[key]);
+                  } else {
+                    errorMessages.push(parsedResponse[key]);
+                  }
+                }
+              } else if (parsedResponse) {
+                errorMessages.push(parsedResponse);
+              }
+            } catch {
+              if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+            }
+            return { errors: errorMessages, status: response.status };
+          }
+          case 503: {
+            const rawResponse = await response.text();
+            try {
+              const parsedResponse = JSON.parse(rawResponse);
+              if (
+                typeof parsedResponse === "object" &&
+                parsedResponse !== null
+              ) {
+                for (const key in parsedResponse) {
+                  if (Array.isArray(parsedResponse[key])) {
+                    errorMessages.push(...parsedResponse[key]);
+                  } else if (parsedResponse[key] !== undefined) {
+                    errorMessages.push(parsedResponse[key]);
+                  }
+                }
+              } else if (parsedResponse) {
+                errorMessages.push(parsedResponse);
+              }
+            } catch {
+              if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+            }
+            return { errors: errorMessages, status: response.status };
+          }
+          default:
+            errorMessages.push("An unexpected error occurred");
+        }
+        return { errors: errorMessages, status: response.status };
+      }
+    })
+    .catch((error) => {
+      console.log("api error", error);
+      throw error;
+    });
 }
 
 // ==================== Product API Services ====================
 
-export const fetchProducts = (): Promise<Product[]> =>
-    get(endpoints.PRODUCTS);
+export const fetchProducts = (): Promise<Product[]> => get(endpoints.PRODUCTS);
 
 export const getProduct = (id: string): Promise<Product> =>
-    get(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
+  get(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
 
 export const createProduct = (data: CreateProductDTO) =>
-    post(endpoints.PRODUCTS, data);
+  post(endpoints.PRODUCTS, data);
 
 export const updateProduct = (id: string, data: UpdateProductDTO) =>
-    put(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }), data);
+  put(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }), data);
 
 export const deleteProduct = (id: string) =>
-    Delete(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
+  Delete(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
 
 // ==================== ProductCategory API Services ====================
 
 export const fetchProductCategories = (): Promise<VideoProductCategory[]> =>
-    get(endpoints.PRODUCTCATEGORIES);
+  get(endpoints.PRODUCTCATEGORIES);
 
 export const getProductCategory = (id: string): Promise<VideoProductCategory> =>
-    get(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
+  get(
+    ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }),
+  );
 
 export const createProductCategory = (data: CreateProductCategoryDTO) =>
-    post(endpoints.PRODUCTCATEGORIES, data);
+  post(endpoints.PRODUCTCATEGORIES, data);
 
-export const updateProductCategory = (id: string, data: UpdateProductCategoryDTO) =>
-    put(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }), data);
+export const updateProductCategory = (
+  id: string,
+  data: UpdateProductCategoryDTO,
+) =>
+  put(
+    ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }),
+    data,
+  );
 
 export const deleteProductCategory = (id: string) =>
-    Delete(ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }));
+  Delete(
+    ComposeUrl(endpoints.PRODUCTCATEGORIES_DETAIL, { productCategoryId: id }),
+  );
 
 // ==================== QuickLinks API Services ====================
 
-export const fetchQuickLinks = (): Promise<QuickLinks[]> => get(endpoints.QUICKLINKS);
+export const fetchQuickLinks = (): Promise<QuickLinks[]> =>
+  get(endpoints.QUICKLINKS);
 
 export const getQuickLinks = (id: string): Promise<QuickLinks> =>
-    get(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
+  get(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
 
-export const createQuickLinks = (data: CreateQuickLinksDTO) => post(endpoints.QUICKLINKS, data);
+export const createQuickLinks = (data: CreateQuickLinksDTO) =>
+  post(endpoints.QUICKLINKS, data);
 
 export const updateQuickLinks = (id: string, data: UpdateQuickLinksDTO) =>
-    put(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }), data);
+  put(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }), data);
 
 export const deleteQuickLinks = (id: string) =>
-    Delete(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
+  Delete(ComposeUrl(endpoints.QUICKLINKS_DETAIL, { quickLinksId: id }));
 
 export const fetchChannelNews = (): Promise<ChannelNewsAdmin[]> =>
-    get(endpoints.CHANNEL_NEWS) as Promise<ChannelNewsAdmin[]>;
+  get(endpoints.CHANNEL_NEWS) as Promise<ChannelNewsAdmin[]>;
 
 export const getChannelNews = (id: string): Promise<ChannelNewsAdmin> =>
-    get(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id })) as Promise<ChannelNewsAdmin>;
+  get(
+    ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }),
+  ) as Promise<ChannelNewsAdmin>;
 
 export const createChannelNews = (payload: Record<string, unknown>) =>
-    post(endpoints.CHANNEL_NEWS, payload);
+  post(endpoints.CHANNEL_NEWS, payload);
 
-export const updateChannelNews = (id: string, payload: Record<string, unknown>) =>
-    put(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }), payload);
+export const updateChannelNews = (
+  id: string,
+  payload: Record<string, unknown>,
+) => put(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }), payload);
 
 export const deleteChannelNews = (id: string) =>
-    Delete(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }));
+  Delete(ComposeUrl(endpoints.CHANNEL_NEWS_DETAIL, { id }));
 
-export const updateChannelNewsStatus = (id: string, status: ChannelNewsAdmin['status'], publicationTimeUtc?: string) =>
-    post(ComposeUrl(endpoints.CHANNEL_NEWS_STATUS, { id }), { status, publicationTimeUtc });
+export const updateChannelNewsStatus = (
+  id: string,
+  status: ChannelNewsAdmin["status"],
+  publicationTimeUtc?: string,
+) =>
+  post(ComposeUrl(endpoints.CHANNEL_NEWS_STATUS, { id }), {
+    status,
+    publicationTimeUtc,
+  });
 
 export const uploadChannelNewsImages = (id: string, files: readonly File[]) => {
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    return postFormData(ComposeUrl(endpoints.CHANNEL_NEWS_IMAGES, { id }), formData) as Promise<ChannelNewsAdmin>;
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return postFormData(
+    ComposeUrl(endpoints.CHANNEL_NEWS_IMAGES, { id }),
+    formData,
+  ) as Promise<ChannelNewsAdmin>;
 };
 
 export const deleteChannelNewsImage = (id: string, imageIndex: number) =>
-    Delete(ComposeUrl(endpoints.CHANNEL_NEWS_IMAGE_DETAIL, { id, imageIndex: String(imageIndex) })) as Promise<ChannelNewsAdmin>;
+  Delete(
+    ComposeUrl(endpoints.CHANNEL_NEWS_IMAGE_DETAIL, {
+      id,
+      imageIndex: String(imageIndex),
+    }),
+  ) as Promise<ChannelNewsAdmin>;
 
 // ==================== Pages and Navigation API Services ====================
 
@@ -655,119 +921,155 @@ type PageImageResponse = PageImage[];
 export const fetchPages = (): Promise<PageAdmin[]> => get(endpoints.PAGES);
 
 export const getPage = (id: string): Promise<PageAdmin> =>
-    get(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
+  get(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
 
-export const createPage = (payload: CreatePageDTO) => post(endpoints.PAGES, payload);
+export const createPage = (payload: CreatePageDTO) =>
+  post(endpoints.PAGES, payload);
 
 export const updatePage = (id: string, payload: UpdatePageDTO) =>
-    put(ComposeUrl(endpoints.PAGES_DETAIL, { id }), payload);
+  put(ComposeUrl(endpoints.PAGES_DETAIL, { id }), payload);
 
 export const deletePage = (id: string) =>
-    Delete(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
+  Delete(ComposeUrl(endpoints.PAGES_DETAIL, { id }));
 
 export const uploadPageImages = (id: string, files: readonly File[]) => {
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    return postFormData(ComposeUrl(endpoints.PAGES_IMAGES, { id }), formData) as Promise<PageImageResponse>;
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return postFormData(
+    ComposeUrl(endpoints.PAGES_IMAGES, { id }),
+    formData,
+  ) as Promise<PageImageResponse>;
 };
 
 export const deletePageImage = (id: string, imageIndex: number) =>
-    Delete(ComposeUrl(endpoints.PAGES_IMAGE_DETAIL, { id, imageIndex: String(imageIndex) })) as Promise<PageImageResponse>;
+  Delete(
+    ComposeUrl(endpoints.PAGES_IMAGE_DETAIL, {
+      id,
+      imageIndex: String(imageIndex),
+    }),
+  ) as Promise<PageImageResponse>;
 
-export const getNavigation = (): Promise<ChannelNavigation | null> => get(endpoints.NAVIGATION);
+export const getNavigation = (): Promise<ChannelNavigation | null> =>
+  get(endpoints.NAVIGATION);
 
 export const saveNavigation = (payload: SaveNavigationDTO) =>
-    put(endpoints.NAVIGATION, payload) as Promise<ChannelNavigation>;
+  put(endpoints.NAVIGATION, payload) as Promise<ChannelNavigation>;
 
 export const getPublicNavigation = (): Promise<PublicNavigation | null> =>
-    get(endpoints.NAVIGATION);
+  get(endpoints.NAVIGATION);
 
 // ==================== Sponsor API Services ====================
 
-export const fetchSponsors = (): Promise<Sponsor[]> =>
-    get(endpoints.SPONSORS);
+export const fetchSponsors = (): Promise<Sponsor[]> => get(endpoints.SPONSORS);
 
-export const subscribeNewsletter = (payload: { channelId: string; email: string; language: string; recaptchaToken: string }) =>
-    post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
+export const subscribeNewsletter = (payload: {
+  channelId: string;
+  email: string;
+  language: string;
+  recaptchaToken: string;
+}) => post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
 
-export const confirmNewsletter = (payload: { channelId: string; token: string }) =>
-    post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
+export const confirmNewsletter = (payload: {
+  channelId: string;
+  token: string;
+}) => post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
 
-export const unsubscribeNewsletter = (payload: { channelId: string; token: string }) =>
-    post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
+export const unsubscribeNewsletter = (payload: {
+  channelId: string;
+  token: string;
+}) => post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
 
 export const fetchNewsletters = () => get(endpoints.NEWSLETTERS);
-export const getNewsletter = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }));
-export const createNewsletter = (request: unknown) => post(endpoints.NEWSLETTERS, request);
-export const updateNewsletter = (id: string, request: unknown) => put(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }), request);
-export const changeNewsletterState = (id: string, state: string) => post(ComposeUrl(endpoints.NEWSLETTERS_STATE, { id }), { state });
-export const sendNewsletter = (id: string) => post(ComposeUrl(endpoints.NEWSLETTERS_SEND, { id }), {});
-export const scheduleNewsletter = (id: string, scheduledAtUtc: string) => post(ComposeUrl(endpoints.NEWSLETTERS_SCHEDULE, { id }), { scheduledAtUtc });
-export const previewNewsletter = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_PREVIEW, { id }));
-export const fetchNewsletterSubscribers = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_SUBSCRIBERS, { id }));
-export const fetchNewsletterStats = (id: string) => get(ComposeUrl(endpoints.NEWSLETTERS_STATS, { id }));
-export const fetchNewsletterTemplates = () => get(endpoints.NEWSLETTER_TEMPLATES);
-export const createNewsletterTemplate = (request: unknown) => post(endpoints.NEWSLETTER_TEMPLATES, request);
+export const getNewsletter = (id: string) =>
+  get(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }));
+export const createNewsletter = (request: unknown) =>
+  post(endpoints.NEWSLETTERS, request);
+export const updateNewsletter = (id: string, request: unknown) =>
+  put(ComposeUrl(endpoints.NEWSLETTERS_DETAIL, { id }), request);
+export const changeNewsletterState = (id: string, state: string) =>
+  post(ComposeUrl(endpoints.NEWSLETTERS_STATE, { id }), { state });
+export const sendNewsletter = (id: string) =>
+  post(ComposeUrl(endpoints.NEWSLETTERS_SEND, { id }), {});
+export const scheduleNewsletter = (id: string, scheduledAtUtc: string) =>
+  post(ComposeUrl(endpoints.NEWSLETTERS_SCHEDULE, { id }), { scheduledAtUtc });
+export const previewNewsletter = (id: string) =>
+  get(ComposeUrl(endpoints.NEWSLETTERS_PREVIEW, { id }));
+export const fetchNewsletterSubscribers = (id: string) =>
+  get(ComposeUrl(endpoints.NEWSLETTERS_SUBSCRIBERS, { id }));
+export const fetchNewsletterStats = (id: string) =>
+  get(ComposeUrl(endpoints.NEWSLETTERS_STATS, { id }));
+export const fetchNewsletterTemplates = () =>
+  get(endpoints.NEWSLETTER_TEMPLATES);
+export const createNewsletterTemplate = (request: unknown) =>
+  post(endpoints.NEWSLETTER_TEMPLATES, request);
 
 export const getSponsor = (id: string): Promise<Sponsor> =>
-    get(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));
+  get(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));
 
 export const createSponsor = (data: CreateSponsorDTO) =>
-    post(endpoints.SPONSORS, data);
+  post(endpoints.SPONSORS, data);
 
 export const createSponsorWithImage = (formData: FormData) =>
-    postFormData(endpoints.SPONSORS, formData);
+  postFormData(endpoints.SPONSORS, formData);
 
 export const updateSponsor = (id: string, data: UpdateSponsorDTO) =>
-    put(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }), data);
+  put(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }), data);
 
 export const updateSponsorWithImage = (id: string, formData: FormData) =>
-    call(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }), 'PUT', formData, '', undefined, false, true);
+  call(
+    ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }),
+    "PUT",
+    formData,
+    "",
+    undefined,
+    false,
+    true,
+  );
 
 export const deleteSponsor = (id: string) =>
-    Delete(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));
+  Delete(ComposeUrl(endpoints.SPONSORS_DETAIL, { sponsorId: id }));
 
 // Default export for convenience
 const apiService = {
-    // Core HTTP methods
-    get,
-    post,
-    put,
-    patch,
-    Delete,
-    postFormData,
-    getFile,
-    call,
+  // Core HTTP methods
+  get,
+  post,
+  put,
+  patch,
+  Delete,
+  postFormData,
+  getFile,
+  call,
 
-    // Product services
-    fetchProducts,
-    getProduct,
-    createProduct,
-    updateProduct,
-    deleteProduct,
+  // Product services
+  fetchProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
 
-    // ProductCategory services
-    fetchProductCategories,
-    getProductCategory,
-    createProductCategory,
-    updateProductCategory,
-    deleteProductCategory,
+  // ProductCategory services
+  fetchProductCategories,
+  getProductCategory,
+  createProductCategory,
+  updateProductCategory,
+  deleteProductCategory,
 
-    // QuickLinks services
-    fetchQuickLinks,
-    getQuickLinks,
-    createQuickLinks,
-    updateQuickLinks,
-    deleteQuickLinks,
+  // QuickLinks services
+  fetchQuickLinks,
+  getQuickLinks,
+  createQuickLinks,
+  updateQuickLinks,
+  deleteQuickLinks,
 
-    // Sponsor services
-    fetchSponsors,
-    getSponsor,
-    createSponsor,
-    createSponsorWithImage,
-    updateSponsor,
-    updateSponsorWithImage,
-    deleteSponsor,
+  // Sponsor services
+  fetchSponsors,
+  getSponsor,
+  createSponsor,
+  createSponsorWithImage,
+  updateSponsor,
+  updateSponsorWithImage,
+  deleteSponsor,
 };
 
 export default apiService;

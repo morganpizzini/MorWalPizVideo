@@ -56,6 +56,21 @@ Target aggregate fields:
 
 Detailed visit events belong in `shortLinkVisits`, not the aggregate document.
 
+### Sponsor
+
+A sponsor belongs to one `YTChannel` through the nullable `channelId` field. New
+BackOffice sponsor writes preserve that ownership and ensure one owned
+standalone `ShortLink` with `LinkType.CustomUrl`, `SponsorId`, and matching
+management channel metadata. `ShortLinkId` is nullable for legacy documents;
+public projections use its current target when present and fall back to the
+sponsor's persisted `url` when it is missing or unavailable.
+
+Sponsor and owned short-link writes are sequential because MongoDB does not
+provide a cross-collection transaction here. Create, update repair, and delete
+are idempotent at the application boundary; a later update repairs a missing
+owned link. Existing sponsor documents are manually assigned a channel and do
+not require an automatic backfill.
+
 ## Other Independent Roots
 
 Categories, compilations, pages, sponsors, sponsor applications, configurations, publish schedules, query links, users, API keys, competitions, user requests, and insight records are primarily independent Mongo roots.
@@ -74,6 +89,8 @@ Introduce value objects only when they centralize an enforced invariant and rema
 ## Invariants
 
 - Short-link code is globally unique after lowercase invariant normalization.
+- Sponsor reads and BackOffice mutations are channel-scoped.
+- Sponsor-owned short links cannot be deleted through generic short-link CRUD.
 - Customer email is unique after normalized comparison when customer identity is introduced.
 - Only one active cart exists per anonymous cart identity.
 - Free acquisition is unique by owner identity and artifact ID.

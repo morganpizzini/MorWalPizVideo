@@ -2,6 +2,8 @@
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MorWalPizVideo.Server.Services
 {
@@ -19,7 +21,10 @@ namespace MorWalPizVideo.Server.Services
         Task<CustomForm?> GetCustomFormByUrl(string url);
         Task<IList<Page>> GetPages();
         Task<IList<Product>> GetProducts();
+        Task<IList<Product>> GetProducts(string channelId);
         Task<IList<Sponsor>> GetSponsors();
+        Task<IList<Sponsor>> GetSponsors(string channelId);
+        Task<ShortLink?> GetShortLink(string id);
         Task SaveSponsorApplies(SponsorApply entity);
         Task<IList<Competition>> GetCompetitions();
 
@@ -37,11 +42,12 @@ namespace MorWalPizVideo.Server.Services
         protected readonly IPageRepository _pageRepository;
         protected readonly IProductRepository _productRepository;
         protected readonly ISponsorRepository _sponsorRepository;
+        protected readonly IShortLinkRepository _shortLinkRepository;
         protected readonly ISponsorApplyRepository _sponsorApplyRepository;
         protected readonly ICompetitionRepository _competitionRepository;
         protected readonly IYouTubeContentIndexedCache? _indexedCache;
 
-        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository, IYouTubeContentIndexedCache? indexedCache = null)
+        public MinimalDataService(IYouTubeContentRepository youTubeContent, ICompilationRepository compilationRepository, ICustomFormRepository customFormRepository, ICalendarEventRepository calendarEventRepository, IConfigurationRepository configurationRepository, IPageRepository pageRepository, IProductRepository productRepository, ISponsorRepository sponsorRepository, ISponsorApplyRepository sponsorApplyRepository, ICompetitionRepository competitionRepository, IShortLinkRepository shortLinkRepository, IYouTubeContentIndexedCache? indexedCache = null)
         {
             _youTubeContent = youTubeContent;
             _compilationRepository = compilationRepository;
@@ -52,6 +58,7 @@ namespace MorWalPizVideo.Server.Services
             _productRepository = productRepository;
             _configurationRepository = configurationRepository;
             _sponsorRepository = sponsorRepository;
+            _shortLinkRepository = shortLinkRepository;
             _sponsorApplyRepository = sponsorApplyRepository;
             _competitionRepository = competitionRepository;
             _indexedCache = indexedCache;
@@ -108,7 +115,10 @@ namespace MorWalPizVideo.Server.Services
         public Task<IList<Page>> GetPages() => _pageRepository.GetItemsAsync();
 
         public Task<IList<Product>> GetProducts() => _productRepository.GetItemsAsync();
+        public Task<IList<Product>> GetProducts(string channelId) => _productRepository.GetItemsAsync(x => x.ChannelId == channelId);
         public Task<IList<Sponsor>> GetSponsors() => _sponsorRepository.GetItemsAsync();
+        public Task<IList<Sponsor>> GetSponsors(string channelId) => _sponsorRepository.GetItemsAsync(x => x.ChannelId == channelId);
+        public Task<ShortLink?> GetShortLink(string id) => _shortLinkRepository.GetItemAsync(id);
         public async Task SaveSponsorApplies(SponsorApply entity)
         {
             var checkSponsors = await _sponsorApplyRepository.GetItemsAsync(x => x.Email == entity.Email);
@@ -168,7 +178,7 @@ namespace MorWalPizVideo.Server.Services
             IInsightContentPlanRepository insightContentPlanRepository,
             IInsightSourceCursorRepository insightSourceCursorRepository,
             ICompetitionRepository competitionRepository,
-            IYouTubeContentIndexedCache? indexedCache = null) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository, indexedCache)
+            IYouTubeContentIndexedCache? indexedCache = null) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository, shortLinkRepository, indexedCache)
         {
             _productCategoryRepository = productCategoryRepository;
             _shortLinkRepository = shortLinkRepository;
@@ -355,7 +365,6 @@ namespace MorWalPizVideo.Server.Services
 
         public Task<IList<ShortLink>> FetchShortLinks() => _shortLinkRepository.GetItemsAsync();
         public Task<ShortLink?> GetShortLinkByCode(string shortLink) => _shortLinkRepository.GetByCodeAsync(shortLink);
-        public async Task<ShortLink?> GetShortLink(string id) => (await _shortLinkRepository.GetItemsAsync(x => x.Id.ToLower() == id.ToLower())).FirstOrDefault();
         public Task UpdateShortlink(ShortLink entity)
         {
             var normalizedEntity = entity with { Code = ShortLink.NormalizeCode(entity.Code) };
@@ -445,6 +454,9 @@ namespace MorWalPizVideo.Server.Services
         public async Task<Product?> GetProductById(string id) =>
             await _productRepository.GetItemAsync(id);
 
+        public async Task<Product?> GetProductById(string id, string channelId) =>
+            (await _productRepository.GetItemsAsync(x => x.Id == id && x.ChannelId == channelId)).FirstOrDefault();
+
         public async Task SaveProduct(Product entity)
         {
             var existingProduct = await _productRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
@@ -452,6 +464,18 @@ namespace MorWalPizVideo.Server.Services
                 return;
 
             await _productRepository.AddItemAsync(entity);
+        }
+
+        public async Task<bool> SaveProduct(Product entity, string channelId)
+        {
+            var scopedEntity = entity with { ChannelId = channelId };
+            var existingProduct = await _productRepository.GetItemsAsync(x =>
+                x.ChannelId == channelId && x.Title.ToLower() == scopedEntity.Title.ToLower());
+            if (existingProduct.Count > 0)
+                return false;
+
+            await _productRepository.AddItemAsync(scopedEntity);
+            return true;
         }
 
         public async Task UpdateProduct(Product entity)
@@ -463,6 +487,21 @@ namespace MorWalPizVideo.Server.Services
             await _productRepository.UpdateItemAsync(entity);
         }
 
+        public async Task<bool> UpdateProduct(Product entity, string channelId)
+        {
+            var existingProduct = (await _productRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).FirstOrDefault();
+            if (existingProduct == null)
+                return false;
+
+            var duplicate = await _productRepository.GetItemsAsync(x =>
+                x.Id != entity.Id && x.ChannelId == channelId && x.Title.ToLower() == entity.Title.ToLower());
+            if (duplicate.Count > 0)
+                return false;
+
+            await _productRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+            return true;
+        }
+
         public async Task DeleteProduct(string productId)
         {
             var product = (await _productRepository.GetItemsAsync(x => x.Id == productId)).FirstOrDefault();
@@ -472,12 +511,28 @@ namespace MorWalPizVideo.Server.Services
             await _productRepository.DeleteItemAsync(product.Id);
         }
 
+        public async Task<bool> DeleteProduct(string productId, string channelId)
+        {
+            var product = (await _productRepository.GetItemsAsync(x => x.Id == productId && x.ChannelId == channelId)).FirstOrDefault();
+            if (product == null)
+                return false;
+
+            await _productRepository.DeleteItemAsync(product.Id);
+            return true;
+        }
+
         // ProductCategory methods
         public Task<IList<ProductCategory>> FetchProductCategories(IList<string>? ids = null) =>
             _productCategoryRepository.GetItemsAsync(x => ids != null ? ids.Contains(x.Id) : true);
 
+        public Task<IList<ProductCategory>> FetchProductCategories(IList<string>? ids, string channelId) =>
+            _productCategoryRepository.GetItemsAsync(x => x.ChannelId == channelId && (ids != null ? ids.Contains(x.Id) : true));
+
         public async Task<ProductCategory?> GetProductCategoryById(string id) =>
             await _productCategoryRepository.GetItemAsync(id);
+
+        public async Task<ProductCategory?> GetProductCategoryById(string id, string channelId) =>
+            (await _productCategoryRepository.GetItemsAsync(x => x.Id == id && x.ChannelId == channelId)).FirstOrDefault();
 
         public async Task SaveProductCategory(ProductCategory entity)
         {
@@ -486,6 +541,18 @@ namespace MorWalPizVideo.Server.Services
                 return;
 
             await _productCategoryRepository.AddItemAsync(entity);
+        }
+
+        public async Task<bool> SaveProductCategory(ProductCategory entity, string channelId)
+        {
+            var scopedEntity = entity with { ChannelId = channelId };
+            var existingCategory = await _productCategoryRepository.GetItemsAsync(x =>
+                x.ChannelId == channelId && x.Title.ToLower() == scopedEntity.Title.ToLower());
+            if (existingCategory.Count > 0)
+                return false;
+
+            await _productCategoryRepository.AddItemAsync(scopedEntity);
+            return true;
         }
 
         public async Task UpdateProductCategory(ProductCategory entity)
@@ -497,6 +564,21 @@ namespace MorWalPizVideo.Server.Services
             await _productCategoryRepository.UpdateItemAsync(entity);
         }
 
+        public async Task<bool> UpdateProductCategory(ProductCategory entity, string channelId)
+        {
+            var existingCategory = (await _productCategoryRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).FirstOrDefault();
+            if (existingCategory == null)
+                return false;
+
+            var duplicate = await _productCategoryRepository.GetItemsAsync(x =>
+                x.Id != entity.Id && x.ChannelId == channelId && x.Title.ToLower() == entity.Title.ToLower());
+            if (duplicate.Count > 0)
+                return false;
+
+            await _productCategoryRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+            return true;
+        }
+
         public async Task DeleteProductCategory(string categoryId)
         {
             var category = (await _productCategoryRepository.GetItemsAsync(x => x.Id == categoryId)).FirstOrDefault();
@@ -506,37 +588,96 @@ namespace MorWalPizVideo.Server.Services
             await _productCategoryRepository.DeleteItemAsync(category.Id);
         }
 
+        public async Task<bool> DeleteProductCategory(string categoryId, string channelId)
+        {
+            var category = (await _productCategoryRepository.GetItemsAsync(x => x.Id == categoryId && x.ChannelId == channelId)).FirstOrDefault();
+            if (category == null)
+                return false;
+
+            await _productCategoryRepository.DeleteItemAsync(category.Id);
+            return true;
+        }
+
         // Sponsor methods
 
 
         public async Task<Sponsor?> GetSponsorById(string id) =>
             await _sponsorRepository.GetItemAsync(id);
 
-        public async Task SaveSponsor(Sponsor entity)
+        public async Task<Sponsor?> SaveSponsor(Sponsor entity, string channelId)
         {
-            var existingSponsor = await _sponsorRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
+            var existingSponsor = await _sponsorRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower() && x.ChannelId == channelId);
             if (existingSponsor.Count > 0)
-                return;
+                return null;
 
-            await _sponsorRepository.AddItemAsync(entity);
+            var persisted = await _sponsorRepository.AddItemAsync(entity with { ChannelId = channelId });
+            var shortLink = await EnsureSponsorShortLinkAsync(persisted);
+            var updated = persisted with { ShortLinkId = shortLink.Id };
+            await _sponsorRepository.UpdateItemAsync(updated);
+            return updated;
         }
 
-        public async Task UpdateSponsor(Sponsor entity)
+        public async Task<Sponsor?> UpdateSponsor(Sponsor entity, string channelId)
         {
-            var existingSponsor = await _sponsorRepository.GetItemsAsync(x => x.Id == entity.Id);
-            if (existingSponsor.Count == 0)
-                return;
+            var existingSponsor = (await _sponsorRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).FirstOrDefault();
+            if (existingSponsor == null)
+                return null;
 
-            await _sponsorRepository.UpdateItemAsync(entity);
+            var updated = entity with { Id = existingSponsor.Id, ChannelId = existingSponsor.ChannelId, ShortLinkId = existingSponsor.ShortLinkId };
+            var shortLink = await EnsureSponsorShortLinkAsync(updated);
+            updated = updated with { ShortLinkId = shortLink.Id };
+            await _sponsorRepository.UpdateItemAsync(updated);
+            return updated;
         }
 
-        public async Task DeleteSponsor(string sponsorId)
+        public async Task<bool> DeleteSponsor(string sponsorId, string channelId)
         {
-            var sponsor = (await _sponsorRepository.GetItemsAsync(x => x.Id == sponsorId)).FirstOrDefault();
+            var sponsor = (await _sponsorRepository.GetItemsAsync(x => x.Id == sponsorId && x.ChannelId == channelId)).FirstOrDefault();
             if (sponsor == null)
-                return;
+                return false;
 
+            if (!string.IsNullOrWhiteSpace(sponsor.ShortLinkId))
+                await _shortLinkRepository.DeleteItemAsync(sponsor.ShortLinkId);
             await _sponsorRepository.DeleteItemAsync(sponsor.Id);
+            return true;
+        }
+
+        private async Task<ShortLink> EnsureSponsorShortLinkAsync(Sponsor sponsor)
+        {
+            var existing = string.IsNullOrWhiteSpace(sponsor.ShortLinkId)
+                ? null
+                : await _shortLinkRepository.GetItemAsync(sponsor.ShortLinkId);
+            if (existing is not null && existing.SponsorId == sponsor.Id)
+            {
+                var updated = existing with
+                {
+                    Target = sponsor.Url,
+                    LinkType = LinkType.CustomUrl,
+                    ChannelId = sponsor.ChannelId,
+                    ManagementChannelId = sponsor.ChannelId,
+                    SponsorId = sponsor.Id
+                };
+                await _shortLinkRepository.UpdateItemAsync(updated);
+                return updated;
+            }
+
+            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"sponsor:{sponsor.Id}"))).ToLowerInvariant();
+            var code = $"sponsor-{digest[..16]}";
+            var suffix = 0;
+            while (await _shortLinkRepository.GetByCodeAsync(code) is not null)
+            {
+                suffix++;
+                code = $"sponsor-{digest[..12]}-{suffix}";
+            }
+
+            var link = new ShortLink(code, sponsor.Url, [])
+            {
+                LinkType = LinkType.CustomUrl,
+                ChannelId = sponsor.ChannelId,
+                ManagementChannelId = sponsor.ChannelId,
+                SponsorId = sponsor.Id
+            };
+            return await _shortLinkRepository.AddItemAsync(link);
         }
         public Task<IList<SponsorApply>> GetSponsorApplies() => _sponsorApplyRepository.GetItemsAsync();
 

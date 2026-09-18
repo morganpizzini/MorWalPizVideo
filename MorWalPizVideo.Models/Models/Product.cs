@@ -17,6 +17,8 @@ namespace MorWalPizVideo.Server.Models
         [property: BsonElement("categories")]
         CategoryRef[] Categories ) : BaseEntity
 {
+    [BsonElement("channelId")]
+    public string? ChannelId { get; init; }
 }
 
 [BsonIgnoreExtraElements]
@@ -25,4 +27,6 @@ public record ProductCategory(
    [property: DataMember][property: BsonElement("title")] string Title,
    [property: DataMember][property: BsonElement("description")] string Description) : BaseEntity
 {
+    [BsonElement("channelId")]
+    public string? ChannelId { get; init; }
 }}

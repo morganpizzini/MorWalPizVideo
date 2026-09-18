@@ -1,6 +1,7 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { createProductCategory, updateProductCategory } from '@morwalpizvideo/services';
 import type { CreateProductCategoryDTO, UpdateProductCategoryDTO } from '@morwalpizvideo/models';
+import { channelActionError, getChannelApiError } from '../../channels/response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -19,10 +20,14 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   try {
     if (params.categoryId) {
       const updateData: UpdateProductCategoryDTO = { title, description };
-      await updateProductCategory(params.categoryId, updateData);
+      const response = await updateProductCategory(params.categoryId, updateData);
+      if (getChannelApiError(response))
+        return channelActionError(response, 'Unable to update product category');
     } else {
       const createData: CreateProductCategoryDTO = { title, description };
-      await createProductCategory(createData);
+      const response = await createProductCategory(createData);
+      if (getChannelApiError(response))
+        return channelActionError(response, 'Unable to create product category');
     }
     return data({ success: true }, { status: params.categoryId ? 200 : 201 });
   } catch (error) {

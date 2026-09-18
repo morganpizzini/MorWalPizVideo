@@ -210,6 +210,7 @@ public class ShortLinksController : ApplicationControllerBase
                 break;
         }
         var json = await client.ResetCache(CacheKeys.ShortLinks);
+        await client.PurgeCache(ApiTagCacheKeys.ShortLinks);
         if (request.LinkType == LinkType.YouTubeVideo)
         {
             await client.ResetCache(CacheKeys.Matches);
@@ -415,6 +416,7 @@ public class ShortLinksController : ApplicationControllerBase
         }
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
+        await client.PurgeCache(ApiTagCacheKeys.ShortLinks);
         if (request.Body.LinkType == LinkType.YouTubeVideo)
         {
             await client.ResetCache(CacheKeys.Matches);
@@ -438,12 +440,16 @@ public class ShortLinksController : ApplicationControllerBase
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
             return NotFound("Short link not found");
 
-        await _linksService.DeleteShortLinkAsync(existingShortLink.Id);
+        if (!await _linksService.DeleteShortLinkAsync(existingShortLink.Id))
+        {
+            return Conflict("Sponsor-owned short links must be managed through the sponsor.");
+        }
 
         await auditService.RecordAsync(User, "shortlink.deleted", "shortlink", existingShortLink.Id,
             existingShortLink, null);
 
         var json = await client.ResetCache(CacheKeys.ShortLinks);
+        await client.PurgeCache(ApiTagCacheKeys.ShortLinks);
         return NoContent();
     }
 

@@ -1,7 +1,8 @@
-import { CategoryRef } from './video/types';
+import { CategoryRef } from "./video/types";
 
 export interface Product {
   id: string;
+  channelId?: string;
   title: string;
   description: string;
   url: string;

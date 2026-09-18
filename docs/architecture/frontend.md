@@ -83,6 +83,12 @@ The BackOffice SPA uses its local Zustand app store for information needed acros
 
 Use router loader/action/fetcher state for route-owned request data, local component state for ephemeral form and presentation state, and contexts only for compatibility or genuinely scoped providers. Do not import React Router into the store or add a second repository-wide state owner.
 
+Products and product categories use the same central selector as the other
+channel-scoped BackOffice resources. The shared service client adds
+`X-Channel-Id` for both `/api/products` and `/api/productcategories`; their
+loaders revalidate on selector changes and reject `channel_context` envelopes
+instead of treating them as catalog DTOs. Request DTOs contain no channel id.
+
 ## Configuration
 
 - Runtime Docker injection: `window.ENV.VITE_API_BASE_URL`.

@@ -15,5 +15,11 @@ public class SponsorContract
     public string Url { get; set; } = string.Empty;
 
     [DataMember]
+    public string? ChannelId { get; set; }
+
+    [DataMember]
+    public string? ShortLinkId { get; set; }
+
+    [DataMember]
     public string ImgSrc { get; set; } = string.Empty;
 }

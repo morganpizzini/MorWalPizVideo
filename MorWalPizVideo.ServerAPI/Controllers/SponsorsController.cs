@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using SharedContractUtils = MorWalPiz.Contracts.ContractUtils;
 using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MorWalPizVideo.Models.Configuration;
@@ -12,6 +13,7 @@ using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.ServerAPI.Services;
+using MorWalPizVideo.Domain;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
@@ -20,21 +22,52 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly IRecaptchaService recaptchaService;
         private readonly BlobStorageOptions blobOptions;
+        private readonly IConfiguration configuration;
+        private readonly ILogger<SponsorsController> logger;
         public SponsorsController(
             IGenericDataService _dataService, IMorWalPizCache _memoryCache,
-            IRecaptchaService _recaptchaService, IOptions<BlobStorageOptions> _blobOptions) : base(_dataService,_memoryCache)
+            IRecaptchaService _recaptchaService, IOptions<BlobStorageOptions> _blobOptions,
+            IConfiguration _configuration, ILogger<SponsorsController> _logger) : base(_dataService,_memoryCache)
         {
             recaptchaService = _recaptchaService;
             blobOptions = _blobOptions.Value;
+            configuration = _configuration;
+            logger = _logger;
         }
 
         [HttpGet]
-        [OutputCache(Tags = [CacheKeys.Sponsors])]
+        [OutputCache(Tags = [ApiTagCacheKeys.Sponsors])]
         public async Task<IActionResult> Index()
         {
-            var entities = await cache.GetOrCreateAsync(CacheKeys.Sponsors, dataService.GetSponsors);
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+                return Ok(Array.Empty<SponsorContract>());
+
+            var entities = await cache.GetOrCreateAsync(CacheKeys.Sponsors, async () =>
+            {
+                var sponsors = await dataService.GetSponsors(channelId);
+                var resolved = new List<Sponsor>(sponsors.Count);
+                foreach (var sponsor in sponsors)
+                {
+                    var shortLink = string.IsNullOrWhiteSpace(sponsor.ShortLinkId)
+                        ? null
+                        : await dataService.GetShortLink(sponsor.ShortLinkId);
+                    resolved.Add(shortLink is null || shortLink.SponsorId != sponsor.Id
+                        ? sponsor
+                        : sponsor with { Url = shortLink.Target });
+                }
+                return resolved;
+            });
            
             return Ok(entities.Select(x => SharedContractUtils.Convert(x, $"{blobOptions.Endpoint}/{blobOptions.SponsorContainerName}")));
+        }
+
+        private string? GetYouTubeChannelId()
+        {
+            var channelId = configuration["YouTubeChannelId"]?.Trim();
+            if (string.IsNullOrWhiteSpace(channelId))
+                logger.LogError("Public sponsors endpoint is missing the YouTubeChannelId configuration");
+            return channelId;
         }
 
         [HttpPost]

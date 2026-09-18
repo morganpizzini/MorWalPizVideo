@@ -90,6 +90,16 @@ Channel administration itself (`GET`/`PUT`/`DELETE /api/channels/{id}`) is not a
 
 The effective impersonated target controls channel and content authorization. API keys carry a persisted channel binding and cannot impersonate. Administrative compilation and short-link management is scoped, while public compilation URL resolution is anonymous and global; public cache keys therefore use the URL, not the administrative channel.
 
+Affiliate catalog endpoints follow the same scope contract:
+
+- `GET/POST /api/products` and `GET/PUT/DELETE /api/products/{id}` are scoped by `X-Channel-Id`.
+- `GET/POST /api/productcategories` and `GET/PUT/DELETE /api/productcategories/{id}` are scoped by `X-Channel-Id`.
+- Requests do not accept `channelId` as input. The server derives it from the resolved context.
+- The public ServerAPI products endpoint has no channel query parameter; it filters by the host's `YouTubeChannelId` configuration.
+
+The shop's `DigitalProduct` and `DigitalProductCategory` APIs are independent and
+are not part of this channel-scoping change.
+
 ## Authentication Matrix
 
 | Surface | Scheme |
@@ -106,6 +116,22 @@ The effective impersonated target controls channel and content authorization. AP
 | Shooting Range administration | Authenticated cookie plus `admin` role |
 
 API-key management is authenticated with the administrator's BackOffice principal. Creation binds the key to the selected channel; only an administrator may reassign it to another existing channel.
+
+### Sponsors
+
+BackOffice sponsor CRUD is a channel-scoped resource and requires
+`X-Channel-Id`; the selected channel is assigned on create, validated on reads
+and deletes, and preserved on update. Sponsor create/update ensures an owned
+`CustomUrl` ShortLink whose target is the current sponsor URL. Public
+`GET /api/sponsors` has no channel query or route: it filters by the configured
+`YouTubeChannelId`, projects the owned ShortLink target when available, and
+falls back to the persisted sponsor URL for legacy or temporarily missing
+links.
+
+Sponsor analytics are intentionally not part of the API contract. The public
+client may use only anonymous aggregate analytics, never sponsor IDs, titles,
+URLs, short codes, campaign/query data, or other sponsor-specific identifiers;
+navigation must not wait for analytics.
 
 ## Shop Contract (Target, On Hold)
 

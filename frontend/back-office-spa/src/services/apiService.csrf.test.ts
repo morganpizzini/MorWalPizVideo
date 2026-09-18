@@ -25,7 +25,8 @@ describe('shared API client CSRF integration', () => {
   });
 
   it('acquires and sends a CSRF token for unsafe cookie requests', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-token' }))
       .mockResolvedValueOnce(jsonResponse({ saved: true }));
     vi.stubGlobal('fetch', fetchMock);
@@ -43,7 +44,8 @@ describe('shared API client CSRF integration', () => {
   });
 
   it('reuses the token until session state resets it', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'first-token' }))
       .mockResolvedValueOnce(jsonResponse({ saved: true }))
       .mockResolvedValueOnce(jsonResponse({ saved: true }))
@@ -94,28 +96,37 @@ describe('shared API client CSRF integration', () => {
     await Delete('/api/channels/channel-one');
     await get('/api/channels');
     await get('/api/channels/accessible');
+    await get('/api/products');
+    await get('/api/productcategories/one');
 
-    expect(fetchMock.mock.calls.slice(0, 4).map(([url]) => url)).toEqual([
+    expect(fetchMock.mock.calls.slice(0, 8).map(([url]) => url)).toEqual([
       '/api/videos',
       '/api/channels/channel-one',
       '/api/channels/channel-one',
       '/api/channels/channel-one',
+      '/api/channels',
+      '/api/channels/accessible',
+      '/api/products',
+      '/api/productcategories/one',
     ]);
-    expect(fetchMock.mock.calls.slice(0, 4).map(([, request]) => (request as RequestInit).method)).toEqual([
-      'GET',
-      'GET',
-      'PUT',
-      'DELETE',
-    ]);
+    expect(
+      fetchMock.mock.calls.slice(0, 4).map(([, request]) => (request as RequestInit).method)
+    ).toEqual(['GET', 'GET', 'PUT', 'DELETE']);
 
     for (const [, request] of fetchMock.mock.calls.slice(0, 4)) {
+      expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
+    }
+
+    for (const [, request] of fetchMock.mock.calls.slice(6, 8)) {
       expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
     }
 
     const collectionHeaders = new Headers((fetchMock.mock.calls[4][1] as RequestInit).headers);
     expect(collectionHeaders.has('X-Channel-Id')).toBe(false);
 
-    const accessibleCollectionHeaders = new Headers((fetchMock.mock.calls[5][1] as RequestInit).headers);
+    const accessibleCollectionHeaders = new Headers(
+      (fetchMock.mock.calls[5][1] as RequestInit).headers
+    );
     expect(accessibleCollectionHeaders.has('X-Channel-Id')).toBe(false);
   });
 
@@ -123,7 +134,8 @@ describe('shared API client CSRF integration', () => {
     localStorage.setItem('authToken', 'browser-token');
     setCookieOnlyMode(true);
 
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-token' }))
       .mockResolvedValueOnce(jsonResponse({ saved: true }));
     vi.stubGlobal('fetch', fetchMock);

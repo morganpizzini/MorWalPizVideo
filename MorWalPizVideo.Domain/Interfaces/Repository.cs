@@ -466,6 +466,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 .Limit(safeTake)
                 .ToListAsync();
         }
+
+            public async Task<IList<Product>> GetPublicOrderedAsync(string channelId, int skip, int take)
+            {
+                var safeSkip = Math.Max(0, skip);
+                var safeTake = Math.Clamp(take, 1, 500);
+                return await _collection
+                .Find(x => x.ChannelId == channelId)
+                .SortByDescending(x => x.CreationDateTime)
+                .Skip(safeSkip)
+                .Limit(safeTake)
+                .ToListAsync();
+            }
     }
     public class ProductCategoryRepository : BaseRepository<ProductCategory>, IProductCategoryRepository
     {

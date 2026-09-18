@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Authorization;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPiz.Contracts;
 using MorWalPiz.Contracts.Contracts;
@@ -38,24 +39,28 @@ public class UpdateSponsorRequest
     public IFormFile? Image { get; set; }
 }
 
+[RequireChannelScope]
 public class SponsorsController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
     private readonly IBlobService _blobService;
     private readonly BlobStorageOptions _blobOptions;
+    private readonly ICrossApiService _crossApiService;
 
-    public SponsorsController(DataService dataService, IBlobService blobService, IOptions<BlobStorageOptions> blobOptions)
+    public SponsorsController(DataService dataService, IBlobService blobService, IOptions<BlobStorageOptions> blobOptions, ICrossApiService crossApiService)
     {
         _dataService = dataService;
         _blobService = blobService;
         _blobOptions = blobOptions.Value;
+        _crossApiService = crossApiService;
     }
 
     [HttpGet]
     [AllowUser(AuthorizationPermissionKeys.SponsorsView, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> GetSponsors()
     {
-        var entities = await _dataService.GetSponsors();
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var entities = await _dataService.GetSponsors(channelId);
         return Ok(entities.Select(ContractUtils.Convert));
     }
 
@@ -63,7 +68,8 @@ public class SponsorsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.SponsorsView, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> GetSponsor(string id)
     {
-        var entity = await _dataService.GetSponsorById(id);
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var entity = (await _dataService.GetSponsors(channelId)).FirstOrDefault(sponsor => sponsor.Id == id);
         if (entity == null)
             return NotFound();
         return Ok(ContractUtils.Convert(entity));
@@ -98,7 +104,10 @@ public class SponsorsController : ApplicationControllerBase
 
         // Create sponsor with filename
         var sponsor = new Sponsor(request.Title, request.Url, fileName);
-        await _dataService.SaveSponsor(sponsor);
+        var created = await _dataService.SaveSponsor(sponsor, HttpContext.GetChannelContext().ChannelId);
+        if (created is null)
+            return Conflict("A sponsor with this title already exists.");
+        await InvalidateCachesAsync();
         return NoContent();
     }
 
@@ -106,9 +115,10 @@ public class SponsorsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.SponsorsUpdate, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> UpdateSponsor([FromRoute] string id, [FromForm] UpdateSponsorRequest request)
     {
-        var entity = await _dataService.GetSponsorById(id);
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var entity = (await _dataService.GetSponsors(channelId)).FirstOrDefault(sponsor => sponsor.Id == id);
         if (entity == null)
-            return BadRequest("Sponsor not found");
+            return NotFound("Sponsor not found");
 
         var imgSrc = entity.ImgSrc;
 
@@ -144,7 +154,10 @@ public class SponsorsController : ApplicationControllerBase
             ImgSrc = imgSrc
         };
 
-        await _dataService.UpdateSponsor(updatedSponsor);
+        var updated = await _dataService.UpdateSponsor(updatedSponsor, channelId);
+        if (updated is null)
+            return NotFound("Sponsor not found");
+        await InvalidateCachesAsync();
         return NoContent();
     }
 
@@ -152,13 +165,21 @@ public class SponsorsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.SponsorsDelete, AuthorizationPermissionKeys.SponsorsManage)]
     public async Task<IActionResult> DeleteSponsor(BaseRequestId request)
     {
-        var entity = await _dataService.GetSponsorById(request.Id);
-        if (entity == null)
+        var deleted = await _dataService.DeleteSponsor(request.Id, HttpContext.GetChannelContext().ChannelId);
+        if (!deleted)
         {
-            return BadRequest("Sponsor not found");
+            return NotFound("Sponsor not found");
         }
 
-        await _dataService.DeleteSponsor(entity.Id);
+        await InvalidateCachesAsync();
         return NoContent();
+    }
+
+    private async Task InvalidateCachesAsync()
+    {
+        await _crossApiService.ResetCache(CacheKeys.Sponsors);
+        await _crossApiService.PurgeCache(ApiTagCacheKeys.Sponsors);
+        await _crossApiService.ResetCache(CacheKeys.ShortLinks);
+        await _crossApiService.PurgeCache(ApiTagCacheKeys.ShortLinks);
     }
 }

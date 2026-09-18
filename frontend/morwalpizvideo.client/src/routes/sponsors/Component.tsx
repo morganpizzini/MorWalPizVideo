@@ -8,9 +8,12 @@ import { askForSponsor } from '@services/sponsors';
 import './style.scss';
 
 interface SponsorItem {
+  id: string;
   title: string;
   imgSrc: string;
   url: string;
+  channelId?: string;
+  shortLinkId?: string;
 }
 
 export function LegacySponsors() {

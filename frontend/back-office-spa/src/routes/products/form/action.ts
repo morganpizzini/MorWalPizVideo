@@ -1,6 +1,7 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { createProduct, updateProduct } from '@morwalpizvideo/services';
 import type { CreateProductDTO, UpdateProductDTO } from '@morwalpizvideo/models';
+import { channelActionError, getChannelApiError } from '../../channels/response';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -22,10 +23,14 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   try {
     if (params.productId) {
       const productData: UpdateProductDTO = { title, description, url, categoryIds };
-      await updateProduct(params.productId, productData);
+      const response = await updateProduct(params.productId, productData);
+      if (getChannelApiError(response))
+        return channelActionError(response, 'Unable to update product');
     } else {
       const productData: CreateProductDTO = { title, description, url, categoryIds };
-      await createProduct(productData);
+      const response = await createProduct(productData);
+      if (getChannelApiError(response))
+        return channelActionError(response, 'Unable to create product');
     }
     return data({ success: true }, { status: params.productId ? 200 : 201 });
   } catch (error: any) {

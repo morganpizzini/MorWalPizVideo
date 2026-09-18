@@ -6,6 +6,7 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
@@ -28,20 +29,23 @@ public class UpdateProductCategoryRequest
     public string Description { get; set; } = string.Empty;
 }
 
+[RequireChannelScope]
 public class ProductCategoriesController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
+    private readonly ICrossApiService _crossApiService;
 
-    public ProductCategoriesController(DataService dataService)
+    public ProductCategoriesController(DataService dataService, ICrossApiService crossApiService)
     {
         _dataService = dataService;
+        _crossApiService = crossApiService;
     }
 
     [HttpGet]
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> GetProductCategories()
     {
-        var entities = await _dataService.FetchProductCategories();
+        var entities = await _dataService.FetchProductCategories(null, HttpContext.GetChannelContext().ChannelId);
         return Ok(entities.Select(ContractUtils.Convert));
     }
 
@@ -49,7 +53,7 @@ public class ProductCategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> GetProductCategory(string id)
     {
-        var entity = await _dataService.GetProductCategoryById(id);
+        var entity = await _dataService.GetProductCategoryById(id, HttpContext.GetChannelContext().ChannelId);
         if (entity == null)
             return NotFound();
         return Ok(ContractUtils.Convert(entity));
@@ -59,8 +63,11 @@ public class ProductCategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesCreate, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> CreateProductCategory(CreateProductCategoryRequest request)
     {
+        var channelId = HttpContext.GetChannelContext().ChannelId;
         var category = new ProductCategory(request.Title, request.Description);
-        await _dataService.SaveProductCategory(category);
+        if (!await _dataService.SaveProductCategory(category, channelId))
+            return Conflict("A product category with this title already exists for the selected channel.");
+        await InvalidateProductsCacheAsync();
         return NoContent();
     }
 
@@ -68,7 +75,8 @@ public class ProductCategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesUpdate, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> UpdateProductCategory(BaseRequestId<UpdateProductCategoryRequest> request)
     {
-        var entity = await _dataService.GetProductCategoryById(request.Id);
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var entity = await _dataService.GetProductCategoryById(request.Id, channelId);
         if (entity == null)
             return BadRequest("Product category not found");
 
@@ -78,7 +86,9 @@ public class ProductCategoriesController : ApplicationControllerBase
             Description = request.Body.Description
         };
 
-        await _dataService.UpdateProductCategory(updatedCategory);
+        if (!await _dataService.UpdateProductCategory(updatedCategory, channelId))
+            return Conflict("A product category with this title already exists for the selected channel.");
+        await InvalidateProductsCacheAsync();
         return NoContent();
     }
 
@@ -86,13 +96,21 @@ public class ProductCategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesDelete, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> DeleteProductCategory(BaseRequestId request)
     {
-        var entity = await _dataService.GetProductCategoryById(request.Id);
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var entity = await _dataService.GetProductCategoryById(request.Id, channelId);
         if (entity == null)
         {
             return BadRequest("Product category not found");
         }
 
-        await _dataService.DeleteProductCategory(entity.Id);
+        await _dataService.DeleteProductCategory(entity.Id, channelId);
+        await InvalidateProductsCacheAsync();
         return NoContent();
+    }
+
+    private async Task InvalidateProductsCacheAsync()
+    {
+        await _crossApiService.ResetCache(CacheKeys.Products);
+        await _crossApiService.PurgeCache(ApiTagCacheKeys.Products);
     }
 }

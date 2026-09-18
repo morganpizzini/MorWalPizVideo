@@ -4,6 +4,8 @@ export interface Sponsor {
   url: string;
   imgSrc: string;
   creationDateTime: string;
+  channelId?: string;
+  shortLinkId?: string;
 }
 
 export interface CreateSponsorDTO {

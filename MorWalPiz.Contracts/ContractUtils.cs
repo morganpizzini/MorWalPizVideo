@@ -269,9 +269,11 @@ namespace MorWalPiz.Contracts
             return new SponsorContract
             {
                 Id = entity.Id,
+                ChannelId = entity.ChannelId,
                 Title = entity.Title,
                 Url = entity.Url,
-                ImgSrc = entity.ImgSrc
+                ImgSrc = entity.ImgSrc,
+                ShortLinkId = entity.ShortLinkId
             };
         }
         public static SponsorContract Convert(Sponsor entity, string imageBaseUrl)
@@ -279,9 +281,11 @@ namespace MorWalPiz.Contracts
             return new SponsorContract
             {
                 Id = entity.Id,
+                ChannelId = entity.ChannelId,
                 Title = entity.Title,
                 Url = entity.Url,
-                ImgSrc = string.IsNullOrWhiteSpace(entity.ImgSrc) ? entity.ImgSrc : $"{imageBaseUrl}/{entity.ImgSrc}"
+                ImgSrc = string.IsNullOrWhiteSpace(entity.ImgSrc) ? entity.ImgSrc : $"{imageBaseUrl}/{entity.ImgSrc}",
+                ShortLinkId = entity.ShortLinkId
             };
         }
         public static CompilationContract Convert(Compilation entity)
@@ -512,6 +516,7 @@ namespace MorWalPiz.Contracts
             return new ProductContract
             {
                 Id = entity.Id,
+                ChannelId = entity.ChannelId,
                 Title = entity.Title,
                 Description = entity.Description,
                 Url = entity.Url,
@@ -524,6 +529,7 @@ namespace MorWalPiz.Contracts
             return new ProductCategoryContract
             {
                 Id = entity.Id,
+                ChannelId = entity.ChannelId,
                 Title = entity.Title,
                 Description = entity.Description,
                 CreationDateTime = entity.CreationDateTime
