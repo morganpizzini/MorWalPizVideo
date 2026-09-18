@@ -443,20 +443,69 @@ function Banner() {
 
 function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isReducedMotion, setIsReducedMotion] = useState(false);
+  const [isDocumentHidden, setIsDocumentHidden] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const visibleCount = isDesktop ? 3 : 2;
+  const pageCount = Math.ceil(sponsors.length / visibleCount);
+  const hasControls = sponsors.length > visibleCount;
 
   useEffect(() => {
-    setActiveIndex((currentIndex) =>
-      sponsors.length === 0 ? 0 : Math.min(currentIndex, sponsors.length - 1)
-    );
-  }, [sponsors.length]);
+    setActiveIndex(0);
+    setIsPaused(false);
+  }, [sponsors, visibleCount]);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 768px)');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateDesktop = () => setIsDesktop(desktopQuery.matches);
+    const updateReducedMotion = () => setIsReducedMotion(reducedMotionQuery.matches);
+    const updateDocumentVisibility = () => setIsDocumentHidden(document.hidden);
+
+    updateDesktop();
+    updateReducedMotion();
+    updateDocumentVisibility();
+    desktopQuery.addEventListener('change', updateDesktop);
+    reducedMotionQuery.addEventListener('change', updateReducedMotion);
+    document.addEventListener('visibilitychange', updateDocumentVisibility);
+
+    return () => {
+      desktopQuery.removeEventListener('change', updateDesktop);
+      reducedMotionQuery.removeEventListener('change', updateReducedMotion);
+      document.removeEventListener('visibilitychange', updateDocumentVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasControls || isPaused || isReducedMotion || isDocumentHidden) return;
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((currentIndex) => {
+        const nextIndex = currentIndex + visibleCount;
+        return nextIndex < sponsors.length ? nextIndex : 0;
+      });
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [hasControls, isDocumentHidden, isPaused, isReducedMotion, sponsors.length, visibleCount]);
 
   if (sponsors.length === 0) return null;
 
-  const activeSponsor = sponsors[activeIndex];
-  const hasControls = sponsors.length > 1;
+  const visibleSponsors = sponsors.slice(activeIndex, activeIndex + visibleCount);
+  const visibleStart = activeIndex + 1;
+  const visibleEnd = Math.min(activeIndex + visibleSponsors.length, sponsors.length);
   const goToPrevious = () =>
-    setActiveIndex((currentIndex) => (currentIndex - 1 + sponsors.length) % sponsors.length);
-  const goToNext = () => setActiveIndex((currentIndex) => (currentIndex + 1) % sponsors.length);
+    setActiveIndex((currentIndex) =>
+      currentIndex - visibleCount < 0 ? (pageCount - 1) * visibleCount : currentIndex - visibleCount
+    );
+  const goToNext = () =>
+    setActiveIndex((currentIndex) =>
+      currentIndex + visibleCount < sponsors.length ? currentIndex + visibleCount : 0
+    );
+  const handleBlur = (event: React.FocusEvent<HTMLElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsPaused(false);
+  };
 
   return (
     <section
@@ -464,10 +513,16 @@ function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
       role="region"
       aria-roledescription="carousel"
       aria-label="I miei sponsor"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={handleBlur}
     >
       <div className="home-sponsors__heading">
         <h2>I miei sponsor</h2>
-        <Link to="/sponsors">Vedi tutti</Link>
+        <Link className="btn btn-outline-secondary" to="/sponsors">
+          Vedi tutti
+        </Link>
       </div>
       <div className="home-sponsors__viewport" aria-live="polite">
         {hasControls && (
@@ -481,26 +536,30 @@ function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
           </button>
         )}
         <div
-          className="home-sponsors__slide"
+          className="home-sponsors__slides"
           role="group"
           aria-roledescription="slide"
-          aria-label={`${activeIndex + 1} di ${sponsors.length}: ${activeSponsor.title}`}
+          aria-label={`${visibleStart}-${visibleEnd} di ${sponsors.length}: ${visibleSponsors.map((sponsor) => sponsor.title).join(', ')}`}
         >
-          <Link
-            to={activeSponsor.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="home-sponsors__link"
-            aria-label={`Visita il sito di ${activeSponsor.title}`}
-          >
-            <img
-              className="home-sponsors__image"
-              src={activeSponsor.imgSrc}
-              alt={activeSponsor.title}
-              loading="lazy"
-              decoding="async"
-            />
-          </Link>
+          {visibleSponsors.map((sponsor) => (
+            <div className="home-sponsors__slide" key={`${sponsor.url}-${sponsor.title}`}>
+              <Link
+                to={sponsor.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="home-sponsors__link"
+                aria-label={`Visita il sito di ${sponsor.title}`}
+              >
+                <img
+                  className="home-sponsors__image"
+                  src={sponsor.imgSrc}
+                  alt={sponsor.title}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </Link>
+            </div>
+          ))}
         </div>
         {hasControls && (
           <button

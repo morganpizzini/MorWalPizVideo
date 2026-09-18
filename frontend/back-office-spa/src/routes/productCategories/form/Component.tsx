@@ -38,10 +38,12 @@ const ProductCategoryForm: React.FC = () => {
     if (result.success) {
       toast.show(
         'Success',
-        isEditMode ? 'Product category updated successfully' : 'Product category created successfully',
+        isEditMode
+          ? 'Product category updated successfully'
+          : 'Product category created successfully',
         { variant: 'success' }
       );
-      navigate('/product-categories');
+      navigate('/productcategories');
     }
   }, [result, busy, navigate, isEditMode]);
 
@@ -51,10 +53,7 @@ const ProductCategoryForm: React.FC = () => {
   };
 
   const confirmSubmit = () => {
-    fetcher.submit(
-      { title, description },
-      { method: 'post', action: location.pathname }
-    );
+    fetcher.submit({ title, description }, { method: 'post', action: location.pathname });
   };
 
   return (
@@ -97,7 +96,7 @@ const ProductCategoryForm: React.FC = () => {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => navigate('/product-categories')}
+            onClick={() => navigate('/productcategories')}
             disabled={busy}
           >
             Cancel
@@ -111,8 +110,8 @@ const ProductCategoryForm: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <p>
-            Are you sure you want to{' '}
-            {isEditMode ? 'save the changes to' : 'create'} the following category?
+            Are you sure you want to {isEditMode ? 'save the changes to' : 'create'} the following
+            category?
           </p>
           <p>
             <strong>Title:</strong> {title}

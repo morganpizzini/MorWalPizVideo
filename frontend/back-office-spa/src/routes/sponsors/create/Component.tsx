@@ -12,7 +12,7 @@ const CreateSponsor: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
@@ -26,7 +26,7 @@ const CreateSponsor: React.FC = () => {
 
     toast.show('Success', 'Sponsor created successfully', { variant: 'success' });
     navigate('/sponsors');
-  }, [result, busy, navigate]);
+  }, [result, busy]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -43,7 +43,7 @@ const CreateSponsor: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!imageFile) {
       toast.show('Error', 'Please select an image', { variant: 'danger' });
       return;
@@ -66,22 +66,12 @@ const CreateSponsor: React.FC = () => {
       <Form onSubmit={handleSubmit} className="mt-4">
         <Form.Group className="mb-3">
           <Form.Label>Title</Form.Label>
-          <Form.Control
-            type="text"
-            name="title"
-            required
-            placeholder="Enter sponsor name"
-          />
+          <Form.Control type="text" name="title" required placeholder="Enter sponsor name" />
         </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>URL</Form.Label>
-          <Form.Control
-            type="url"
-            name="url"
-            required
-            placeholder="https://example.com"
-          />
+          <Form.Control type="url" name="url" required placeholder="https://example.com" />
         </Form.Group>
 
         <Form.Group className="mb-3">
@@ -114,11 +104,7 @@ const CreateSponsor: React.FC = () => {
         <Button variant="primary" type="submit" disabled={busy}>
           {busy ? 'Creating...' : 'Create Sponsor'}
         </Button>
-        <Button
-          variant="secondary"
-          className="ms-2"
-          onClick={() => navigate('/sponsors')}
-        >
+        <Button variant="secondary" className="ms-2" onClick={() => navigate('/sponsors')}>
           Cancel
         </Button>
       </Form>
