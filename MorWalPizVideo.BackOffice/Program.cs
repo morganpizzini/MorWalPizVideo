@@ -179,6 +179,7 @@ builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
 builder.Services.Configure<SocialPublishingOptions>(builder.Configuration.GetSection("SocialPublishing"));
+builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
 builder.Services.AddSingleton<ISocialPublishingSecretProtector, SocialPublishingSecretProtector>();
 builder.Services.AddScoped<ISelectedChannelPublishingConfigurationAccessor, SelectedChannelPublishingConfigurationAccessor>();
 
@@ -526,7 +527,6 @@ else
     builder.Services.AddScoped<IDiscordService, DiscordService>();
     builder.Services.AddScoped<ITelegramService, TelegramService>();
     builder.Services.AddScoped<IFacebookService, FacebookService>();
-    builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
     builder.Services.AddSingleton<BlobServiceClient>(provider =>
     {
         var options = provider.GetRequiredService<IOptions<BlobStorageOptions>>().Value;

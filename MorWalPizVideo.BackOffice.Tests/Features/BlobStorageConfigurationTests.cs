@@ -6,9 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
+using MorWalPizVideo.Models.Constraints;
 using System.Net;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -168,6 +170,20 @@ public sealed class BlobStorageConfigurationTests
 
     Assert.Contains(registrations, registration =>
         registration.Name == "blob-storage" && registration.Tags.Contains("ready"));
+  }
+
+  [Fact]
+  public async Task Mock_backoffice_host_binds_blob_options_and_activates_sponsors_controller()
+  {
+    await using var factory = new BackOfficeWebApplicationFactory();
+    var options = factory.Services.GetRequiredService<IOptions<BlobStorageOptions>>().Value;
+
+    Assert.NotNull(options);
+
+    using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.SponsorsView);
+    using var response = await client.GetAsync("api/sponsors");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }
 
   private static BlobService CreateBlobService(HttpMessageHandler handler)

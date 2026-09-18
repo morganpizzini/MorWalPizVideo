@@ -9,6 +9,7 @@ using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Domain;
 using System.ComponentModel.DataAnnotations;
 using MorWalPizVideo.Models.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -43,11 +44,11 @@ public class SponsorsController : ApplicationControllerBase
     private readonly IBlobService _blobService;
     private readonly BlobStorageOptions _blobOptions;
 
-    public SponsorsController(DataService dataService, IBlobService blobService,BlobStorageOptions blobOptions)
+    public SponsorsController(DataService dataService, IBlobService blobService, IOptions<BlobStorageOptions> blobOptions)
     {
         _dataService = dataService;
         _blobService = blobService;
-        _blobOptions = blobOptions;
+        _blobOptions = blobOptions.Value;
     }
 
     [HttpGet]
