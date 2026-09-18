@@ -14,20 +14,17 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     [AllowAnonymous] // ADR-002: explicit public read access
     public class ProductsController : ApplicationController
     {
-        private readonly IShopService _shopService;
         public ProductsController(
-            IGenericDataService _dataService,
-            IMorWalPizCache _memoryCache,
-            IShopService shopService) : base(_dataService, _memoryCache)
+            IGenericDataService dataService,
+            IMorWalPizCache memoryCache) : base(dataService, memoryCache)
         {
-            _shopService = shopService;
         }
 
         [HttpGet]
         [OutputCache(Tags = [CacheKeys.Products])]
-        public async Task<IActionResult> Index(int skip = 0, int take = 200)
+        public async Task<IActionResult> Index()
         {
-            var entities = await _shopService.GetProductsAsync(skip, take);
+            var entities = await dataService.GetProducts();
             return Ok(entities.Select(ContractUtils.Convert));
         }
     }

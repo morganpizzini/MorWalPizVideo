@@ -5,6 +5,7 @@ import { useFetcher } from 'react-router';
 import { CustomFormRenderer } from '@morwalpiz/layout';
 import type { AnyAnswer, CustomForm, OpenAnswer } from '@morwalpizvideo/models';
 import { askForSponsor } from '@services/sponsors';
+import './style.scss';
 
 interface SponsorItem {
   title: string;
@@ -132,20 +133,30 @@ export default function Sponsors() {
   return (
     <>
       <h1 className="text-center mb-3">SPONSORS</h1>
-      <div className="row text-center mb-5">
-        {sponsors.map((sponsor) => (
-          <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
-            <img className="mw-100" src={sponsor.imgSrc} alt={sponsor.title} />
-            <Link
-              to={sponsor.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="stretched-link"
-              aria-label={sponsor.title}
-            ></Link>
+      <section className="card sponsors-card mb-5" aria-labelledby="sponsors-list-title">
+        <div className="card-body">
+          <h2 id="sponsors-list-title" className="visually-hidden">
+            Sponsor list
+          </h2>
+          <div className="sponsors-card__grid">
+            {sponsors.map((sponsor) => (
+              <article key={sponsor.title} className="sponsors-card__item position-relative">
+                <div className="sponsors-card__image-frame">
+                  <img className="sponsors-card__image" src={sponsor.imgSrc} alt={sponsor.title} />
+                </div>
+                <p className="sponsors-card__title">{sponsor.title}</p>
+                <Link
+                  to={sponsor.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="stretched-link"
+                  aria-label={sponsor.title}
+                ></Link>
+              </article>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      </section>
       {form && (
         <div className="row">
           <div className="col-12 offset-md-8 col-md-4 bg-light p-3">
