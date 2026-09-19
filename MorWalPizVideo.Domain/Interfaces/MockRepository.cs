@@ -349,6 +349,36 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return (await GetItemsAsync(x => x.Code.ToLowerInvariant() == normalizedCode)).FirstOrDefault();
         }
 
+        public Task<ShortLink> ReplaceByNormalizedCodeAsync(
+            ShortLink link,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var normalizedCode = ShortLink.NormalizeCode(link.Code);
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                throw new ArgumentException("A short-link code is required.", nameof(link));
+
+            lock (IncrementLock)
+            {
+                var existing = scenario.Read<ShortLink>(_fileName)
+                    .Where(item => item.MatchesCode(normalizedCode))
+                    .OrderBy(item => item.Id, StringComparer.Ordinal)
+                    .FirstOrDefault();
+                var replacement = link with
+                {
+                    Id = existing?.Id ?? link.Id,
+                    Code = normalizedCode
+                };
+
+                foreach (var conflict in scenario.Read<ShortLink>(_fileName)
+                             .Where(item => item.MatchesCode(normalizedCode)))
+                    scenario.Delete<ShortLink>(_fileName, conflict.Id);
+
+                scenario.Add(_fileName, replacement);
+                return Task.FromResult(replacement);
+            }
+        }
+
         public async Task<int> IncrementClicksAsync(string id)
         {
             lock (IncrementLock)

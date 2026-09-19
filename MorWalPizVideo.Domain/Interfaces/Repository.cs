@@ -531,6 +531,33 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return await _collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        public async Task<ShortLink> ReplaceByNormalizedCodeAsync(
+            ShortLink link,
+            CancellationToken cancellationToken = default)
+        {
+            var normalizedCode = ShortLink.NormalizeCode(link.Code);
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                throw new ArgumentException("A short-link code is required.", nameof(link));
+
+            var filter = Builders<ShortLink>.Filter.Regex(
+                x => x.Code,
+                new BsonRegularExpression($"^{Regex.Escape(normalizedCode)}$", "i"));
+            var existing = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+            var replacement = link with
+            {
+                Id = existing?.Id ?? link.Id,
+                Code = normalizedCode
+            };
+            var options = new FindOneAndReplaceOptions<ShortLink>
+            {
+                IsUpsert = true,
+                ReturnDocument = ReturnDocument.After
+            };
+
+            return await _collection.FindOneAndReplaceAsync(filter, replacement, options, cancellationToken)
+                ?? replacement;
+        }
+
         public async Task<int> IncrementClicksAsync(string id)
         {
             var filter = ObjectId.TryParse(id, out var objectId)

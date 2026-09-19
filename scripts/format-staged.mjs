@@ -131,13 +131,13 @@ async function formatFrontendFiles(files) {
 function formatDotnetFiles(files) {
   const backups = files.map(filePath => {
     const absolutePath = path.join(repositoryRoot, filePath);
-    return {
-      absolutePath,
-      existed: fs.existsSync(absolutePath),
-      content: fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath) : undefined,
-    };
+    const existed = fs.existsSync(absolutePath);
+    const content = existed ? fs.readFileSync(absolutePath) : undefined;
+    const hasUnstagedEdits = existed && !content.equals(stagedContent(filePath));
+    return { absolutePath, existed, content, hasUnstagedEdits };
   });
 
+  let succeeded = false;
   try {
     for (const filePath of files) {
       fs.writeFileSync(path.join(repositoryRoot, filePath), stagedContent(filePath));
@@ -148,8 +148,14 @@ function formatDotnetFiles(files) {
     for (const filePath of files) {
       updateStagedFile(filePath, fs.readFileSync(path.join(repositoryRoot, filePath)));
     }
+
+    succeeded = true;
   } finally {
     for (const backup of backups) {
+      if (succeeded && !backup.hasUnstagedEdits) {
+        continue;
+      }
+
       if (backup.existed) {
         fs.writeFileSync(backup.absolutePath, backup.content);
       } else if (fs.existsSync(backup.absolutePath)) {

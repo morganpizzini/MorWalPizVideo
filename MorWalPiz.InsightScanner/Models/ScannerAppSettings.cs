@@ -6,5 +6,7 @@ namespace MorWalPiz.InsightScanner.Models
         public string? ApiKey { get; set; }
         public string ChannelId { get; set; } = string.Empty;
         public int DefaultMaxPostsPerSource { get; set; } = 5;
+        public bool UseFake { get; set; }
+        public string FakeScenario { get; set; } = "success";
     }
 }

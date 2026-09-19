@@ -29,6 +29,15 @@ BackOffice video import and short-link creation are mutation operations: a calle
 
 Create and maintain the global unique normalized-code index for standalone records. Before rollout, manually assign channels to existing sponsor documents and optionally reconcile their owned links; no automatic sponsor backfill is required. Because Azure Cosmos DB for MongoDB RU does not support cross-collection transactions, sponsor workflows use explicit sequential writes and tolerate a missing link through URL fallback and update repair. After canonical records are verified, legacy embedded records remain archival data only and are excluded from runtime reads.
 
+The v1 migration endpoint is resumable, dry-run capable, and inventory capable. Codes are
+normalized invariant-lowercase. A matching standalone code is deterministically replaced by
+the embedded YouTube record; the existing standalone id is retained, the greater click total
+is retained, and query, campaign, sponsor, channel, and management ownership values fall back
+to the existing record when the embedded value is absent. The report records every overwrite.
+Canonical persistence is validated before embedded records are removed. Per-item failures leave
+the embedded record in place for resume; optional rollback restores the prior canonical record
+or deletes a newly created one. Startup never runs the migration or creates its unique index.
+
 ## Validation
 
 The current behavior is validated for standalone resolution and atomic click counting, embedded YouTube non-resolution, channel scoping, canonical writes, public DTO projection, scoped management, duplicate-import conflict handling, collaborator mutation denial, and cache-tag alignment. Remaining work is operational: duplicate audit, index application, legacy-link backfill/reconciliation, and production evidence for removing or retaining archival embedded fields.

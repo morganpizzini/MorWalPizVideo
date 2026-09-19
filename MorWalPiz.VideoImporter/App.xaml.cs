@@ -55,6 +55,11 @@ namespace MorWalPiz.VideoImporter
                 })
                 .ConfigureServices((context, services) =>
                 {
+                    var useFake = context.Configuration.GetValue<bool>("UseFake");
+                    var fakeScenario = context.Configuration["FakeScenario"] ?? "success";
+                    var environment = context.Configuration["DOTNET_ENVIRONMENT"] ?? context.Configuration["ASPNETCORE_ENVIRONMENT"];
+                    if (useFake && environment is not ("Development" or "Test"))
+                        throw new InvalidOperationException("VideoImporter fake mode is allowed only in Development or Test.");
                     services.AddSingleton<ITenantContext, TenantContext>();
                     services.AddSingleton<DatabaseService>();
                     services.AddSingleton<ITenantService, TenantService>();
@@ -67,7 +72,10 @@ namespace MorWalPiz.VideoImporter
                             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
                             KeepAlivePingTimeout = TimeSpan.FromSeconds(20)
                         });
-                    services.AddSingleton<IApiServiceFactory, ApiServiceFactory>();
+                    if (useFake)
+                        services.AddSingleton<IApiServiceFactory>(_ => new FakeApiServiceFactory(fakeScenario));
+                    else
+                        services.AddSingleton<IApiServiceFactory, ApiServiceFactory>();
                     services.AddHttpClient("SocialGraph", client =>
                     {
                         client.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");

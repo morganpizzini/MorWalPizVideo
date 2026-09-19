@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.YouTubeUtili
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPizVideo.ShootingRange", "MorWalPizVideo.ShootingRange\MorWalPizVideo.ShootingRange.csproj", "{7D95A830-E5D9-462E-B21B-304F78529A04}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorWalPiz.InsightScanner.Tests", "MorWalPiz.InsightScanner.Tests\MorWalPiz.InsightScanner.Tests.csproj", "{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -297,6 +299,18 @@ Global
 		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x64.Build.0 = Release|Any CPU
 		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x86.ActiveCfg = Release|Any CPU
 		{7D95A830-E5D9-462E-B21B-304F78529A04}.Release|x86.Build.0 = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|x64.Build.0 = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Debug|x86.Build.0 = Debug|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|x64.ActiveCfg = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|x64.Build.0 = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|x86.ActiveCfg = Release|Any CPU
+		{24A0E20B-0689-4AD9-833C-5ADF5F1CE9AF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

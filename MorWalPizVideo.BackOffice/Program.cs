@@ -183,16 +183,19 @@ builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<ISocialPublishingSecretProtector, SocialPublishingSecretProtector>();
 builder.Services.AddScoped<ISelectedChannelPublishingConfigurationAccessor, SelectedChannelPublishingConfigurationAccessor>();
 
-builder.Services.AddSingleton<IChatCompletionService>(sp =>
+if (!enableMock)
 {
-    AzureConfig options = sp.GetRequiredService<IOptions<AzureConfig>>().Value;
+    builder.Services.AddSingleton<IChatCompletionService>(sp =>
+    {
+        AzureConfig options = sp.GetRequiredService<IOptions<AzureConfig>>().Value;
 
-    return new AzureOpenAIChatCompletionService(
-        options.OpenAi.DeploymentName,
-        options.OpenAi.OpenAiEndpoint,
-        options.OpenAi.OpenAiKey);
-});
-builder.Services.AddTransient<Kernel>();
+        return new AzureOpenAIChatCompletionService(
+            options.OpenAi.DeploymentName,
+            options.OpenAi.OpenAiEndpoint,
+            options.OpenAi.OpenAiKey);
+    });
+    builder.Services.AddTransient<Kernel>();
+}
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -325,6 +328,7 @@ builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopManagementService, ShopManagementService>();
 builder.Services.AddScoped<IInsightsService, InsightsService>();
 builder.Services.AddScoped<ILinksService, LinksService>();
+builder.Services.AddScoped<IShortLinkMigrationService, ShortLinkMigrationService>();
 builder.Services.AddScoped<IQuickLinksService, QuickLinksService>();
 builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
@@ -334,7 +338,6 @@ builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IFaqVoteReconciliationService, FaqVoteReconciliationService>();
 builder.Services.AddScoped<IFaqCandidateGenerationService, FaqCandidateGenerationService>();
-builder.Services.AddScoped<IFaqCandidateAiProvider, SemanticKernelFaqCandidateAiProvider>();
 builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
 
 if (enableMock)
@@ -428,7 +431,8 @@ if (enableMock)
     builder.Services.AddScoped<ITelegramService, TelegramServiceMock>();
     builder.Services.AddScoped<IFacebookService, FacebookServiceMock>();
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
-    builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    builder.Services.AddScoped<IImageGenerationService, ImageGenerationServiceMock>();
+    builder.Services.AddScoped<IFaqCandidateAiProvider, FaqCandidateAiProviderMock>();
     builder.Services.AddScoped<SocialAssetService>();
 
     // Insight Agent Service (Mock)
@@ -537,8 +541,8 @@ else
     builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobService>();
     builder.Services.AddScoped<SocialAssetService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();
+    builder.Services.AddScoped<IFaqCandidateAiProvider, SemanticKernelFaqCandidateAiProvider>();
     builder.Services.AddScoped<IMongoIndexOperationsService, MongoIndexOperationsService>();
-    builder.Services.AddHostedService<MongoIndexStartupInitializer>();
 
     // Insight Agent Service (Production)
     builder.Services.AddScoped<IInsightAgentService, InsightAgentService>();

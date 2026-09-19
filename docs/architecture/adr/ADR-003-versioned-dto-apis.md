@@ -29,4 +29,8 @@ Run unversioned and v1 routes in parallel. Migrate shared services and clients, 
 
 ## Validation
 
-Contract serialization tests, OpenAPI checks, and old/new route equivalence tests run during migration.
+Contract serialization tests cover the BackOffice short-link and ServerAPI video v1 DTOs,
+and focused HTTP tests verify authorization, public projection, and legacy-route coexistence.
+BackOffice Swagger and ServerAPI OpenAPI both publish a v1 document. Unversioned controllers
+remain compatibility adapters over the focused content/link services until consumer telemetry
+supports retirement; this iteration does not modify frontend consumers.

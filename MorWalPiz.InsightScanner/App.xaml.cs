@@ -33,22 +33,29 @@ namespace MorWalPiz.InsightScanner
                     var settings = new ScannerAppSettings();
                     context.Configuration.GetSection("BackOffice").Bind(settings);
                     context.Configuration.GetSection("Scanner").Bind(settings);
+                    if (settings.UseFake && !IsTestOrDevelopment(context.Configuration))
+                        throw new InvalidOperationException("InsightScanner fake mode is allowed only in Development or Test.");
                     services.AddSingleton(settings);
-                    services.AddHttpClient<IBackOfficeInsightClient, BackOfficeInsightClient>(client =>
+                    if (settings.UseFake)
                     {
-                        client.BaseAddress = new Uri(settings.ApiEndpoint);
-                        client.Timeout = TimeSpan.FromSeconds(100);
-                        if (!string.IsNullOrEmpty(settings.ApiKey))
+                        services.AddSingleton<IBackOfficeInsightClient, FakeBackOfficeInsightClient>();
+                        services.AddSingleton<HybridInsightScanner>(provider =>
+                            new HybridInsightScanner([new FakeSourceScanStrategy(provider.GetRequiredService<ScannerAppSettings>())]));
+                    }
+                    else
+                    {
+                        services.AddHttpClient<IBackOfficeInsightClient, BackOfficeInsightClient>(client =>
                         {
-                            client.DefaultRequestHeaders.Add("X-API-Key", settings.ApiKey);
-                        }
-                        if (!string.IsNullOrWhiteSpace(settings.ChannelId))
-                        {
-                            client.DefaultRequestHeaders.Add("X-Channel-Id", settings.ChannelId);
-                        }
-                    });
-                    services.AddSingleton<HybridInsightScanner>(_ =>
-                        new HybridInsightScanner([new LightFetchSourceScanStrategy()]));
+                            client.BaseAddress = new Uri(settings.ApiEndpoint);
+                            client.Timeout = TimeSpan.FromSeconds(100);
+                            if (!string.IsNullOrEmpty(settings.ApiKey))
+                                client.DefaultRequestHeaders.Add("X-API-Key", settings.ApiKey);
+                            if (!string.IsNullOrWhiteSpace(settings.ChannelId))
+                                client.DefaultRequestHeaders.Add("X-Channel-Id", settings.ChannelId);
+                        });
+                        services.AddSingleton<HybridInsightScanner>(_ =>
+                            new HybridInsightScanner([new LightFetchSourceScanStrategy()]));
+                    }
                 })
                 .Build();
 
@@ -59,6 +66,10 @@ namespace MorWalPiz.InsightScanner
 
             base.OnStartup(e);
         }
+
+        private static bool IsTestOrDevelopment(IConfiguration configuration)
+            => configuration["DOTNET_ENVIRONMENT"] is "Development" or "Test" ||
+               configuration["ASPNETCORE_ENVIRONMENT"] is "Development" or "Test";
 
         protected override async void OnExit(ExitEventArgs e)
         {

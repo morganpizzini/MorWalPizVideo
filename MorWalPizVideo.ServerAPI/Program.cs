@@ -349,6 +349,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
     });
+builder.Services.AddProblemDetails();
 
 // Add health checks
 builder.Services.AddHealthChecks();
@@ -365,8 +366,11 @@ else
     {
         options.Run(async context =>
         {
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsync("Something went wrong.");
+            await Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "An unexpected error occurred",
+                type: "https://tools.ietf.org/html/rfc9457")
+                .ExecuteAsync(context);
         });
     });
 }

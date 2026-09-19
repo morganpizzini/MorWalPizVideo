@@ -6,23 +6,26 @@ using MorWalPizVideo.Server.Services;
 using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.ShortLinks.Services;
 
 namespace MorWalPizVideo.Shortlinks.Controllers
 {
     [Route("/")]
     public class ShortLinkController : ApplicationControllerBase
     {
-        private IShortLinkDataService _shortlinkDataService;
+        private readonly IShortLinkRedirectService redirectService;
+        private readonly IYouTubeContentRepository contentRepository;
         private readonly IMorWalPizCache cache;
         private readonly IConfiguration configuration;
         private readonly INewsletterEventRepository newsletterEventRepository;
         private readonly IAskCampaignRepository askCampaignRepository;
         private readonly IYTChannelRepository channelRepository;
 
-        public ShortLinkController(IShortLinkDataService shortLinkDataService, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository)
+        public ShortLinkController(IShortLinkRedirectService redirectService, IYouTubeContentRepository contentRepository, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository)
         {
             cache = memoryCache;
-            _shortlinkDataService = shortLinkDataService;
+            this.redirectService = redirectService;
+            this.contentRepository = contentRepository;
             this.configuration = configuration;
             this.newsletterEventRepository = newsletterEventRepository;
             this.askCampaignRepository = askCampaignRepository;
@@ -33,7 +36,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         {
             var normalizedCode = ShortLink.NormalizeCode(code);
 
-            var canonical = await _shortlinkDataService.GetShortLinkByCode(normalizedCode);
+            var canonical = await redirectService.GetByCodeAsync(normalizedCode);
             if (canonical is null)
             {
                 return null;
@@ -56,7 +59,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         }
 
         private Task UpdateShortLinkClickCount(ShortLink shortLink)
-            => _shortlinkDataService.IncrementShortLinkClicksAsync(shortLink.Id);
+            => redirectService.IncrementClicksAsync(shortLink.Id);
 
         [HttpGet("{videoShortLink}")]
         public async Task<IActionResult> Index(string videoShortLink)
@@ -278,7 +281,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             return Redirect(webUrl);
         }
-        private async Task<IList<YouTubeContent>> FetchMatchesWithoutCache() => (await _shortlinkDataService.FetchMatches())
+        private async Task<IList<YouTubeContent>> FetchMatchesWithoutCache() => (await contentRepository.GetItemsAsync())
                             .OrderByDescending(x => x.CreationDateTime)
                             .ToList();
 
@@ -303,8 +306,8 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         }
 
 
-        private async Task<IList<YTChannel>> FetchChannelsWithoutCache() => 
-            (await _shortlinkDataService.FetchChannels()).OrderByDescending(x => x.CreationDateTime).ToList();
+        private async Task<IList<YTChannel>> FetchChannelsWithoutCache() =>
+            (await channelRepository.GetItemsAsync()).OrderByDescending(x => x.CreationDateTime).ToList();
         private async Task<IList<YTChannel>> FetchChannels()
         {
             return (await cache.GetOrCreateAsync(CacheKeys.Channels,FetchChannelsWithoutCache)).ToList();

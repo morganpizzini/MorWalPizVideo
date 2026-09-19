@@ -7,6 +7,7 @@ using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using MorWalPizVideo.ShortLinks.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +56,7 @@ if (enableSwagger)
     builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IShortLinkDataService, ShortlinkDataService>();
+builder.Services.AddScoped<IShortLinkRedirectService, ShortLinkRedirectService>();
 if (enableMock)
 {
     builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();

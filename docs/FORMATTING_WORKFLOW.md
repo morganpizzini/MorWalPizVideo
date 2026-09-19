@@ -9,7 +9,12 @@ the formatter that owns their scope:
   `frontend` Yarn workspace. Existing app-local Prettier configurations remain
   authoritative for their files.
 - C# files below .NET project directories use `dotnet format whitespace` from
-  the repository solution and SDK. XAML is excluded.
+  the repository solution and SDK. XAML is excluded. Because `dotnet format`
+  requires worktree files, the hook writes the staged blob to disk, formats
+  it, and re-stages the result. A file with no separate unstaged edits is left
+  synchronized with the formatted worktree copy; a file with separate
+  unstaged edits has its original worktree content restored untouched after
+  the staged blob is updated.
 
 Generated directories, lockfiles, secrets, deleted files, and unsupported
 paths are skipped. The hook formats staged blobs directly in the Git index, so

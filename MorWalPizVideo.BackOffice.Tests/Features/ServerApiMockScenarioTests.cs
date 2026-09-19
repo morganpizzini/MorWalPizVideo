@@ -1,6 +1,8 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MorWalPiz.Contracts.DTOs;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Models;
@@ -9,6 +11,21 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 
 public class ServerApiMockScenarioTests
 {
+    [Fact]
+    public async Task V1_videos_returns_the_public_explicit_contract_from_the_shared_scenario()
+    {
+        await using var factory = new ServerApiWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/videos");
+        var videos = await response.Content.ReadFromJsonAsync<List<V1VideoResponse>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(videos);
+        Assert.Contains(videos!, video => video.Id == PrimaryScenario.MatchId);
+        Assert.All(videos!, video => Assert.False(string.IsNullOrWhiteSpace(video.Title)));
+    }
+
     [Fact]
     public async Task Matches_endpoint_reads_the_canonical_scenario()
     {

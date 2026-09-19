@@ -29,4 +29,8 @@ Follow `mongo-operations.md`; retain backups and old fields until compatibility 
 
 ## Validation
 
-Verify duplicate reports, batch reconciliation, query plans, latency, index usage, and duplicate-key monitoring.
+Mock validation verifies duplicate/malformed reports, deterministic migration overwrite,
+resumability, and canonical cleanup ordering. Mongo production completion still requires
+environment-specific duplicate reports, batch reconciliation, index audit/apply output,
+query-plan and latency evidence, and duplicate-key monitoring. The short-link unique index
+is an explicit operational action and is not created during host startup.

@@ -79,6 +79,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         // Indexed canonical lookup by normalized code; comparison is case-insensitive for legacy compatibility.
         Task<ShortLink?> GetByCodeAsync(string code);
+        // Atomically replace the canonical record for a normalized code, or insert it when absent.
+        Task<ShortLink> ReplaceByNormalizedCodeAsync(ShortLink link, CancellationToken cancellationToken = default);
         // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
         Task<int> IncrementClicksAsync(string id);
         Task<ShortLink?> GetByCampaignIdAsync(string campaignId);

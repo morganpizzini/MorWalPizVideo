@@ -23,7 +23,7 @@ Fakes require maintenance and contract tests against real adapters. Developers g
 
 ## Migration And Rollback
 
-Add scenarios and fakes one feature at a time while retaining real-provider configuration. Production rejects mock providers. VideoImporter, InsightScanner, frontend applications, browser runners, and frontend E2E are outside this backend-only scope.
+Add scenarios and fakes one feature at a time while retaining real-provider configuration. Production rejects mock providers. BackOffice, ServerAPI, and ShortLinks use the same `PrimaryScenario` baseline and lifecycle pattern. InsightScanner has executable fake BackOffice and source providers with empty, auth, transient, and permanent failure modes. VideoImporter fake work is explicitly deferred and must not be inferred from the existing backend validation.
 
 ## Validation
 
