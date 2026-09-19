@@ -7,7 +7,9 @@ the formatter that owns their scope:
 - Frontend JavaScript, TypeScript, JSX, TSX, CSS, SCSS, JSON, and Markdown
   files under `frontend/` use the Prettier installed by the authoritative
   `frontend` Yarn workspace. Existing app-local Prettier configurations remain
-  authoritative for their files.
+  authoritative for their files. After formatting, a file with no separate
+  unstaged edits is synchronized with the formatted staged content; separate
+  worktree edits are preserved untouched.
 - C# files below .NET project directories use `dotnet format whitespace` from
   the repository solution and SDK. XAML is excluded. Because `dotnet format`
   requires worktree files, the hook writes the staged blob to disk, formats

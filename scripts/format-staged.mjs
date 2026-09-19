@@ -50,6 +50,13 @@ function stagedContent(filePath) {
   return execFileSync('git', ['show', `:${filePath}`], { cwd: repositoryRoot });
 }
 
+function existsInHead(filePath) {
+  return spawnSync('git', ['cat-file', '-e', `HEAD:${filePath}`], {
+    cwd: repositoryRoot,
+    stdio: 'ignore',
+  }).status === 0;
+}
+
 function updateStagedFile(filePath, content) {
   const stageEntry = execFileSync('git', ['ls-files', '--stage', '--', filePath], {
     cwd: repositoryRoot,
@@ -117,6 +124,14 @@ function isDotnetFile(filePath) {
 
 async function formatFrontendFiles(files) {
   const prettier = await import(pathToFileURL(formatterPath).href);
+  const backups = files.map(filePath => {
+    const absolutePath = path.join(repositoryRoot, filePath);
+    const existed = fs.existsSync(absolutePath);
+    const content = existed ? fs.readFileSync(absolutePath) : undefined;
+    const hasUnstagedEdits = existed ? !content.equals(stagedContent(filePath)) : existsInHead(filePath);
+    return { absolutePath, content, hasUnstagedEdits };
+  });
+
   for (const filePath of files) {
     const source = stagedContent(filePath).toString('utf8');
     const config = (await prettier.resolveConfig(path.join(repositoryRoot, filePath))) ?? {};
@@ -125,6 +140,11 @@ async function formatFrontendFiles(files) {
       filepath: path.join(repositoryRoot, filePath),
     });
     updateStagedFile(filePath, formatted);
+
+    const backup = backups.find(item => item.absolutePath === path.join(repositoryRoot, filePath));
+    if (!backup.hasUnstagedEdits) {
+      fs.writeFileSync(backup.absolutePath, formatted);
+    }
   }
 }
 
