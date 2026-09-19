@@ -80,8 +80,6 @@ public sealed class CatalogAuthorizationTests : IClassFixture<BackOfficeWebAppli
 
     private HttpClient CreateClient(string permission)
     {
-        var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
-        return client;
+        return _factory.CreateClientWithPermissions(permission);
     }
 }

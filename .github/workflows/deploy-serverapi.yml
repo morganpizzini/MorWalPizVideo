@@ -10,6 +10,7 @@ on:
       - 'MorWalPizVideo.Models/**'
       - 'MorWalPizVideo.MvcHelpers/**'
       - 'MorWalPizVideo.ServiceDefaults/**'
+      - 'MorWalPizVideo.YouTubeUtilities/**'
       - 'MorWalPiz.Contracts/**'
       - '.github/workflows/deploy-serverapi.yml'
   workflow_dispatch:
@@ -19,10 +20,36 @@ permissions:
   contents: read 
 
 jobs:
+  test-related-backend:
+    name: Run Related Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore BackOffice tests
+        run: dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+
+      - name: Test BackOffice
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity normal
+
+      - name: Restore YouTubeUtilities tests
+        run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj
+
+      - name: Test YouTubeUtilities
+        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity normal
+
   build-and-deploy:
     name: Build and Deploy to Azure
     runs-on: ubuntu-latest
     environment: production
+    needs: test-related-backend
     
     steps:
       - name: Checkout code

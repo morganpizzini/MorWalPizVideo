@@ -79,6 +79,25 @@ jobs:
       - name: Build
         run: dotnet build ${{ matrix.project.path }}/${{ matrix.project.path }}.csproj --configuration Release --no-restore
 
+  build-apphost:
+    name: Build Aspire AppHost
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore AppHost
+        run: dotnet restore MorWalPizVideo.AppHost/MorWalPizVideo.AppHost.csproj
+
+      - name: Build AppHost
+        run: dotnet build MorWalPizVideo.AppHost/MorWalPizVideo.AppHost.csproj --configuration Release --no-restore
+
   build-windows-clients:
     name: Build Windows Client - ${{ matrix.project.name }}
     runs-on: windows-latest
@@ -125,3 +144,23 @@ jobs:
 
       - name: Test
         run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --verbosity normal
+
+  test-youtube-utilities:
+    name: Test YouTube Utilities
+    runs-on: ubuntu-latest
+    needs: build-backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj
+
+      - name: Test
+        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity normal

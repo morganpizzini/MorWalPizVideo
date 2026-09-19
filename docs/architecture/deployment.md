@@ -55,17 +55,20 @@ Local development keeps the relative `/api` Vite proxy and Development credentia
 
 ## CI Baseline
 
-Current CI builds six frontend applications, four backend hosts, and both Windows clients, and runs `MorWalPizVideo.BackOffice.Tests`. It does not build the on-hold shop client, AppHost, or `MorWalPizVideo.YouTubeUtilities.Tests`, and several frontend applications have little or no executable test coverage.
+Current CI builds six frontend applications, four backend hosts, both Windows clients, and the Aspire AppHost, and runs `MorWalPizVideo.BackOffice.Tests` plus `MorWalPizVideo.YouTubeUtilities.Tests`. The shop client is intentionally excluded while it remains on hold. Frontend test coverage is handled outside TD-009 and is not a deployment gate for this debt item.
+
+The BackOffice and ServerAPI deployment workflows run both backend test projects before their build, publish, and Azure deployment jobs. A failed test job prevents publish. The focused `CatalogAuthorizationTests` class now passes all 16 theory cases in `MorWalPizVideo.BackOffice.Tests`; broader baseline status requires separate validation.
 
 Required improvements for active surfaces:
 
 - Keep shared frontend packages built in dependency order.
-- Add the omitted active test projects and AppHost build verification.
+- Keep AppHost build verification and the active backend test projects green.
+- Keep BackOffice and ServerAPI deployments gated by `MorWalPizVideo.BackOffice.Tests` and `MorWalPizVideo.YouTubeUtilities.Tests`; their path filters include `MorWalPizVideo.YouTubeUtilities/**` so shared YouTube changes cannot publish without those tests passing.
 - Require focused Shooting Range API authorization/integrity tests and non-empty client tests before its production deployment.
 - Build Docker images for deployed active containers.
 - Add secret scanning, dependency/security review, and documentation link validation.
 
-The shop is intentionally excluded while on hold; omission from active CI is not a release defect until the hold is lifted.
+Frontend executable test coverage is intentionally outside TD-009 and remains a separate workstream. The shop is intentionally excluded while on hold; its omission from active CI is not a release defect until the hold is lifted.
 
 ## Container Baseline
 
