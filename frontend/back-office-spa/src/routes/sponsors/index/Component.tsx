@@ -29,7 +29,7 @@ const SponsorsIndex: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Sponsor deleted successfully', { variant: 'success' });
     }
-  }, [result, busy]);
+  }, [result, busy, toast]);
 
   const handleDeleteClick = (sponsor: Sponsor) => {
     setSelectedSponsor(sponsor);

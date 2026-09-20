@@ -33,10 +33,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         return channelActionError(response, 'Unable to create product');
     }
     return data({ success: true }, { status: params.productId ? 200 : 201 });
-  } catch (error: any) {
-    return data(
-      { success: false, errors: { generics: [error.message || 'An unexpected error occurred'] } },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return data({ success: false, errors: { generics: [message] } }, { status: 500 });
   }
 }

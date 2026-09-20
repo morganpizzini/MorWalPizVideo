@@ -32,7 +32,6 @@ coverage/
 # Misc
 .git/
 .gitignore
-.husky/
 .prettierignore
 .prettierrc.json
 *.md

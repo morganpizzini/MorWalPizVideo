@@ -18,10 +18,10 @@ interface SponsorItem {
 
 export function LegacySponsors() {
   const { sponsors } = useLoaderData() as { sponsors: SponsorItem[] };
-  let fetcher = useFetcher();
-  let busy = fetcher.state !== 'idle';
-  let errors = fetcher.data?.errors;
-  let result =
+  const fetcher = useFetcher();
+  const busy = fetcher.state !== 'idle';
+  const errors = fetcher.data?.errors;
+  const result =
     fetcher.data != undefined &&
     (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data

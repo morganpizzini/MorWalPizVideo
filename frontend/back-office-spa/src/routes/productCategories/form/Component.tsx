@@ -45,7 +45,7 @@ const ProductCategoryForm: React.FC = () => {
       );
       navigate('/productcategories');
     }
-  }, [result, busy, navigate, isEditMode]);
+  }, [result, busy, navigate, toast, isEditMode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

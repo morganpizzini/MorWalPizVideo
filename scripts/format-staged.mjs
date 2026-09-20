@@ -8,6 +8,11 @@ const repositoryRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { e
 const solutionPath = path.join(repositoryRoot, 'MorWalPizVideo.sln');
 const frontendRoot = path.join(repositoryRoot, 'frontend');
 const formatterPath = path.join(frontendRoot, 'node_modules', 'prettier', 'index.mjs');
+const eslintPath = path.join(frontendRoot, 'node_modules', 'eslint', 'bin', 'eslint.js');
+const eslintProjectRoots = new Map([
+  ['frontend/back-office-spa', path.join(frontendRoot, 'back-office-spa')],
+  ['frontend/morwalpizvideo.client', path.join(frontendRoot, 'morwalpizvideo.client')],
+]);
 const generatedDirectoryNames = new Set([
   '.git',
   'bin',
@@ -50,11 +55,25 @@ function stagedContent(filePath) {
   return execFileSync('git', ['show', `:${filePath}`], { cwd: repositoryRoot });
 }
 
-function existsInHead(filePath) {
-  return spawnSync('git', ['cat-file', '-e', `HEAD:${filePath}`], {
+function hasSeparateUnstagedEdits(filePath) {
+  const result = spawnSync('git', ['diff', '--quiet', '--no-ext-diff', '--', filePath], {
     cwd: repositoryRoot,
     stdio: 'ignore',
-  }).status === 0;
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status === 0) {
+    return false;
+  }
+
+  if (result.status === 1) {
+    return true;
+  }
+
+  throw new Error(`git diff exited with code ${result.status ?? 'unknown'}`);
 }
 
 function updateStagedFile(filePath, content) {
@@ -101,6 +120,23 @@ function isFrontendFile(filePath) {
   );
 }
 
+function eslintProjectRoot(filePath) {
+  for (const [relativeRoot, projectRoot] of eslintProjectRoots) {
+    if (filePath.startsWith(`${relativeRoot}/`)) {
+      return projectRoot;
+    }
+  }
+
+  return undefined;
+}
+
+function isEslintFile(filePath) {
+  return (
+    eslintProjectRoot(filePath) !== undefined &&
+    ['.js', '.jsx', '.ts', '.tsx'].some(extension => filePath.toLowerCase().endsWith(extension))
+  );
+}
+
 function isDotnetFile(filePath) {
   if (!filePath.endsWith('.cs') || hasGeneratedDirectory(filePath) || isSecretFile(filePath)) {
     return false;
@@ -128,22 +164,83 @@ async function formatFrontendFiles(files) {
     const absolutePath = path.join(repositoryRoot, filePath);
     const existed = fs.existsSync(absolutePath);
     const content = existed ? fs.readFileSync(absolutePath) : undefined;
-    const hasUnstagedEdits = existed ? !content.equals(stagedContent(filePath)) : existsInHead(filePath);
-    return { absolutePath, content, hasUnstagedEdits };
+    const hasUnstagedEdits = hasSeparateUnstagedEdits(filePath);
+    return { absolutePath, content, existed, hasUnstagedEdits };
   });
 
+  const formattedContents = new Map();
   for (const filePath of files) {
     const source = stagedContent(filePath).toString('utf8');
     const config = (await prettier.resolveConfig(path.join(repositoryRoot, filePath))) ?? {};
-    const formatted = await prettier.format(source, {
+    formattedContents.set(filePath, await prettier.format(source, {
       ...config,
       filepath: path.join(repositoryRoot, filePath),
-    });
-    updateStagedFile(filePath, formatted);
+    }));
+  }
 
-    const backup = backups.find(item => item.absolutePath === path.join(repositoryRoot, filePath));
-    if (!backup.hasUnstagedEdits) {
-      fs.writeFileSync(backup.absolutePath, formatted);
+  const eslintFilesByProject = new Map();
+  for (const filePath of files) {
+    const projectRoot = eslintProjectRoot(filePath);
+    if (projectRoot === undefined || !isEslintFile(filePath)) {
+      continue;
+    }
+
+    const projectFiles = eslintFilesByProject.get(projectRoot) ?? [];
+    projectFiles.push(filePath);
+    eslintFilesByProject.set(projectRoot, projectFiles);
+  }
+
+  let succeeded = false;
+  try {
+    for (const filePath of files) {
+      if (isEslintFile(filePath)) {
+        fs.writeFileSync(path.join(repositoryRoot, filePath), formattedContents.get(filePath));
+      }
+    }
+
+    if (eslintFilesByProject.size > 0) {
+      if (!fs.existsSync(eslintPath)) {
+        throw new Error('ESLint is not installed. Run `yarn --cwd frontend install`.');
+      }
+
+      for (const [projectRoot, projectFiles] of eslintFilesByProject) {
+        run(
+          process.execPath,
+          [
+            eslintPath,
+            '--fix',
+            ...projectFiles.map(filePath => path.relative(projectRoot, path.join(repositoryRoot, filePath))),
+          ],
+          { cwd: projectRoot }
+        );
+      }
+    }
+
+    for (const filePath of files) {
+      const absolutePath = path.join(repositoryRoot, filePath);
+      const content = isEslintFile(filePath)
+        ? fs.readFileSync(absolutePath)
+        : formattedContents.get(filePath);
+      updateStagedFile(filePath, content);
+
+      const backup = backups.find(item => item.absolutePath === absolutePath);
+      if (!backup.hasUnstagedEdits) {
+        fs.writeFileSync(absolutePath, content);
+      }
+    }
+
+    succeeded = true;
+  } finally {
+    for (const backup of backups) {
+      if (succeeded && !backup.hasUnstagedEdits) {
+        continue;
+      }
+
+      if (backup.existed) {
+        fs.writeFileSync(backup.absolutePath, backup.content);
+      } else if (fs.existsSync(backup.absolutePath)) {
+        fs.unlinkSync(backup.absolutePath);
+      }
     }
   }
 }
@@ -153,7 +250,7 @@ function formatDotnetFiles(files) {
     const absolutePath = path.join(repositoryRoot, filePath);
     const existed = fs.existsSync(absolutePath);
     const content = existed ? fs.readFileSync(absolutePath) : undefined;
-    const hasUnstagedEdits = existed && !content.equals(stagedContent(filePath));
+    const hasUnstagedEdits = hasSeparateUnstagedEdits(filePath);
     return { absolutePath, existed, content, hasUnstagedEdits };
   });
 

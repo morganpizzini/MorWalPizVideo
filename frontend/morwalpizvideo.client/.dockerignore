@@ -33,7 +33,6 @@ coverage/
 # Misc
 .git/
 .gitignore
-.husky/
 *.md
 README.md
 CHANGELOG.md

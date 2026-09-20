@@ -15,18 +15,8 @@
     "lint": "eslint .",
     "lint-format": "npm run lint && npm run format",
     "package:azure": "npm run build-uncheck && bestzip azure-package.zip dist/*",
-    "prepare": "husky",
     "preview": "vite preview",
     "serve": "node server.mjs"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,css,scss,md}": [
-      "prettier --write"
-    ]
   },
   "dependencies": {
     "@morwalpiz/layout": "1.0.0",
@@ -57,8 +47,6 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
     "sass": "1.77.6",
     "typescript": "~5.7.2",

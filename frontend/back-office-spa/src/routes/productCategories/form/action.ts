@@ -30,7 +30,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         return channelActionError(response, 'Unable to create product category');
     }
     return data({ success: true }, { status: params.categoryId ? 200 : 201 });
-  } catch (error) {
+  } catch {
     return data(
       { success: false, errors: { generics: ['Failed to save product category'] } },
       { status: 500 }
