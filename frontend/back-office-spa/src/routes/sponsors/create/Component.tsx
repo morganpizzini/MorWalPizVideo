@@ -26,7 +26,7 @@ const CreateSponsor: React.FC = () => {
 
     toast.show('Success', 'Sponsor created successfully', { variant: 'success' });
     navigate('/sponsors');
-  }, [result, busy, navigate, toast]);
+  }, [result, busy]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
