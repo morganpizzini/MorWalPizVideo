@@ -26,10 +26,25 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [HttpPost]
         public async Task<IActionResult> GetReviewDetails([FromBody] ReviewRequest reviewRequest)
         {
-            var allResults = await ProcessFileNamesRecursively(reviewRequest.Names,
-                reviewRequest.Context,
-                string.Join(", ", reviewRequest.Languages)
-                );
+            var languages = string.Join(", ", reviewRequest.Languages);
+            IList<ReviewApiVideoResponse> allResults;
+
+            if (reviewRequest.Videos.Count > 0)
+            {
+                allResults = [];
+                foreach (var contextGroup in reviewRequest.Videos.GroupBy(video => video.Context ?? string.Empty))
+                {
+                    var groupResults = await ProcessFileNamesRecursively(
+                        contextGroup.Select(video => video.Name).ToList(),
+                        contextGroup.Key,
+                        languages);
+                    allResults = allResults.Concat(groupResults).ToList();
+                }
+            }
+            else
+            {
+                allResults = await ProcessFileNamesRecursively(reviewRequest.Names, reviewRequest.Context, languages);
+            }
 
             return Ok(allResults);
         }

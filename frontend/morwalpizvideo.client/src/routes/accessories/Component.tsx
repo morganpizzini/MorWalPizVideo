@@ -66,7 +66,7 @@ export default function Accessories() {
               className="accessories-category"
               aria-labelledby={`category-${categoryId}`}
             >
-              <h2 id={`category-${categoryId}`} className="accessories-category__title">
+              <h2 id={`category-${categoryId}`} className="-category__taccessoriesitle">
                 {categoryData.title}
               </h2>
               <div className="accessories-subcategories">

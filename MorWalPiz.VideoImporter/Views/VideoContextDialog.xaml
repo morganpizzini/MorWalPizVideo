@@ -15,7 +15,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -29,10 +28,23 @@
                 
                 <ListBox x:Name="SelectedFilesListBox"
                          ItemsSource="{Binding SelectedFiles}"
-                         Height="120"
+                         Height="180"
                          Background="White"
                          BorderBrush="{StaticResource BorderBrush}"
-                         BorderThickness="1"/>
+                         BorderThickness="1">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="4">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBox Text="{Binding Context, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,4,0,0"
+                                         ToolTip="Contesto specifico per questo video"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </StackPanel>
         </Border>
 
@@ -44,25 +56,15 @@
                            FontWeight="SemiBold"
                            Margin="0,0,0,5"/>
                 
-                <TextBlock Text="Inserisci il contesto o le informazioni aggiuntive per i video selezionati"
+                <TextBlock Text="Inserisci il contesto specifico per ogni video. I video con lo stesso contesto verranno elaborati insieme."
                            Foreground="{StaticResource TextSecondaryBrush}"
                            Margin="0,0,0,10"
                            TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
-        <!-- Context TextBox -->
-        <TextBox Grid.Row="2"
-                 x:Name="VideoContextTextBox"
-                 TextWrapping="Wrap"
-                 AcceptsReturn="True"
-                 VerticalScrollBarVisibility="Auto"
-                 Margin="0,0,0,15"
-                 FontFamily="Consolas"
-                 FontSize="12"/>
-
         <!-- Action Area -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>

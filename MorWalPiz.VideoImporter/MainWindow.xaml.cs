@@ -626,12 +626,8 @@ namespace MorWalPiz.VideoImporter
             }
 
             // Estrai i nomi puliti dei file selezionati
-            var selectedFileNames = selectedItems.Select(f => !string.IsNullOrEmpty(f.EditedCleanFileName)
-                                                ? f.EditedCleanFileName
-                                                : f.CleanFileName).ToList();
-
             // Apri la finestra di dialogo per il contesto video
-            var contextDialog = new Views.VideoContextDialog(selectedFileNames, App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+            var contextDialog = new Views.VideoContextDialog(selectedItems, App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
             contextDialog.Owner = this;
 
             // Mostra la finestra di dialogo
@@ -643,10 +639,17 @@ namespace MorWalPiz.VideoImporter
 
                 // Aggiorna i file video con le traduzioni ricevute
                 //foreach (var item in selectedItems)
-                for(int i = 0; i < selectedItems.Count; i++)
+                foreach (var item in selectedItems)
                 {
-                    var item = selectedItems[i];
-                    var current = translations[i];
+                    var videoName = !string.IsNullOrEmpty(item.EditedCleanFileName)
+                        ? item.EditedCleanFileName
+                        : item.CleanFileName;
+                    var current = translations.FirstOrDefault(translation =>
+                        string.Equals(translation.Name, videoName, StringComparison.OrdinalIgnoreCase));
+                    if (current == null)
+                    {
+                        continue;
+                    }
                     
                     // Ottieni la lingua predefinita dal database
                     using var dbContext = App.DatabaseService.CreateContext();
@@ -1242,6 +1245,7 @@ namespace MorWalPiz.VideoImporter
         public string EditedCleanFileName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Context { get; set; } = string.Empty;
         public string DefaultLanguage { get; set; } = string.Empty;
         public string Tags { get; set; } = string.Empty;
 

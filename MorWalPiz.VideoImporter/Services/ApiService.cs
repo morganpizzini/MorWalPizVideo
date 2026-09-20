@@ -49,14 +49,17 @@ namespace MorWalPiz.VideoImporter.Services
             _httpClient = httpClient;
         }
 
-        public async Task<IList<ReviewApiVideoResponse>> SendVideosContextAsync(IEnumerable<string> videoNames, string context, IList<Language> languagues)
+        public async Task<IList<ReviewApiVideoResponse>> SendVideosContextAsync(IEnumerable<Views.VideoContextItem> videos, IList<Language> languagues)
         {
             try
             {
                 var requestData = new ReviewRequest
                 {
-                    Names = [.. videoNames],
-                    Context = context,
+                    Videos = videos.Select(video => new ReviewVideoRequest
+                    {
+                        Name = video.DisplayName,
+                        Context = video.Context
+                    }).ToList(),
                     Languages = languagues.Select(l => l.Name).ToList()
                 };
 

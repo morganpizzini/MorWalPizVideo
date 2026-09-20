@@ -16,7 +16,7 @@ namespace MorWalPiz.VideoImporter.Views
         private bool _isLoading;
         private readonly ApiService _apiService;
 
-        public ObservableCollection<string> SelectedFiles { get; private set; } = new ObservableCollection<string>();
+        public ObservableCollection<VideoContextItem> SelectedFiles { get; private set; } = new ObservableCollection<VideoContextItem>();
         public IList<ReviewApiVideoResponse> ProcessingResult { get; private set; } // Add this property
 
         public bool IsLoading
@@ -35,13 +35,13 @@ namespace MorWalPiz.VideoImporter.Views
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public VideoContextDialog(IEnumerable<string> selectedFileNames, string apiEndpoint, string? apiKey = null)
+        public VideoContextDialog(IEnumerable<VideoFile> selectedFiles, string apiEndpoint, string? apiKey = null)
         {
             InitializeComponent();
             DataContext = this;
-            foreach (var fileName in selectedFileNames)
+            foreach (var file in selectedFiles)
             {
-                SelectedFiles.Add(fileName);
+                SelectedFiles.Add(new VideoContextItem(file));
             }
 
             _apiService = App.ApiServiceFactory.Create(apiEndpoint, apiKey, App.GetCurrentChannelId());
@@ -49,7 +49,6 @@ namespace MorWalPiz.VideoImporter.Views
 
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
-            string context = VideoContextTextBox.Text;
             IList<Language> languagues;
             using (var dbContext = App.DatabaseService.CreateContext())
             {
@@ -62,7 +61,7 @@ namespace MorWalPiz.VideoImporter.Views
 
             try
             {
-                ProcessingResult = await _apiService.SendVideosContextAsync(SelectedFiles, context, languagues);
+                ProcessingResult = await _apiService.SendVideosContextAsync(SelectedFiles, languagues);
 
                 System.Windows.MessageBox.Show("Dati ricevuti! Controllare traduzioni", "Successo", MessageBoxButton.OK, MessageBoxImage.Information);
                 DialogResult = true;
@@ -87,6 +86,26 @@ namespace MorWalPiz.VideoImporter.Views
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public sealed class VideoContextItem
+    {
+        private readonly VideoFile _videoFile;
+
+        public VideoContextItem(VideoFile videoFile)
+        {
+            _videoFile = videoFile;
+        }
+
+        public string DisplayName => !string.IsNullOrEmpty(_videoFile.EditedCleanFileName)
+            ? _videoFile.EditedCleanFileName
+            : _videoFile.CleanFileName;
+
+        public string Context
+        {
+            get => _videoFile.Context;
+            set => _videoFile.Context = value ?? string.Empty;
         }
     }
 }
