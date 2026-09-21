@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../../../test/test-utils';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useLoaderData, useFetcher, useNavigate, useParams } from 'react-router';
 import { Category } from '@morwalpizvideo/models';
 
 vi.mock('react-router', async () => {
@@ -12,6 +12,7 @@ vi.mock('react-router', async () => {
     useLoaderData: vi.fn(),
     useFetcher: vi.fn(),
     useNavigate: vi.fn(),
+    useParams: vi.fn(),
   };
 });
 
@@ -27,6 +28,7 @@ const mockNavigate = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+  vi.mocked(useParams).mockReturnValue({ id: '1' });
   vi.mocked(useLoaderData).mockReturnValue(mockCategory);
   vi.mocked(useFetcher).mockReturnValue({
     state: 'idle',
@@ -36,7 +38,7 @@ beforeEach(() => {
 });
 
 async function renderComponent() {
-  const { default: Component } = await import('../edit/Component');
+  const { default: Component } = await import('../form/Component');
   return render(<Component />);
 }
 

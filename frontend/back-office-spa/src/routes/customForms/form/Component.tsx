@@ -203,7 +203,7 @@ const CustomFormForm: React.FC = () => {
   const getQuestionTypeName = (type: QuestionType): string => {
     switch (type) {
       case QuestionType.Open:
-        return 'Open Text';
+        return 'Text Area';
       case QuestionType.MultipleChoice:
         return 'Multiple Choice';
       case QuestionType.SingleChoice:
@@ -347,13 +347,24 @@ const CustomFormForm: React.FC = () => {
                       <Col md={8}>
                         <Form.Group controlId={`question-${qIndex}-text`}>
                           <Form.Label>Question Text*</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={question.questionText}
-                            onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
-                            placeholder="Enter question text"
-                            required
-                          />
+                          {question.questionType === QuestionType.Open ? (
+                            <textarea
+                              className="form-control"
+                              rows={3}
+                              value={question.questionText}
+                              onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
+                              placeholder="Enter question text"
+                              required
+                            />
+                          ) : (
+                            <Form.Control
+                              type="text"
+                              value={question.questionText}
+                              onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
+                              placeholder="Enter question text"
+                              required
+                            />
+                          )}
                         </Form.Group>
                       </Col>
                       <Col md={4}>
@@ -365,7 +376,7 @@ const CustomFormForm: React.FC = () => {
                               updateQuestion(qIndex, 'questionType', parseInt(e.target.value))
                             }
                           >
-                            <option value={QuestionType.Open}>Open Text</option>
+                            <option value={QuestionType.Open}>Text Area</option>
                             <option value={QuestionType.SingleChoice}>Single Choice</option>
                             <option value={QuestionType.MultipleChoice}>Multiple Choice</option>
                             <option value={QuestionType.Boolean}>True / False</option>

@@ -156,13 +156,13 @@ const routeDefinitions: RouteConfig[] = [
   ]),
   group('categories', () => import('../../routes/categories/index'), [
     indexFeature('', () => import('../../routes/categories/index')),
-    feature('create', () => import('../../routes/categories/create')),
+    feature('create', () => import('../../routes/categories/form')),
     {
       path: ':id',
       Component: Outlet,
       children: [
         indexFeature('', () => import('../../routes/categories/detail')),
-        feature('edit', () => import('../../routes/categories/edit')),
+        feature('edit', () => import('../../routes/categories/form')),
       ],
     },
   ]),

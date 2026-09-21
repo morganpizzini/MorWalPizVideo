@@ -63,13 +63,10 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   try {
     if (id) {
       // Update existing form
-      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), {
-        id,
-        body: payload,
-      });
+      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), payload);
     } else {
       // Create new form
-      await post(endpoints.CUSTOMFORMS, { body: payload });
+      await post(endpoints.CUSTOMFORMS, payload);
     }
 
     // Redirect to the list page on success

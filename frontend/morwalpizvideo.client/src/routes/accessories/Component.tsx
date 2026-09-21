@@ -95,41 +95,28 @@ export default function Accessories() {
                         {subData.title}
                       </h3>
                     )}
-                    <Accordion className="accessories-products">
-                      <ul className="accessories-products__list">
-                        {subData.products.map((product: AccProduct, i: number) => (
-                          <li key={product.id} className="accessories-product">
-                            {product.description && product.description.length > 0 ? (
-                              <Accordion.Item eventKey={`${categoryId}-${subId}-${i}`}>
-                                <Accordion.Header>{product.title}</Accordion.Header>
-                                <Accordion.Body>
-                                  <p className="accessories-product__description">
-                                    {product.description}
-                                  </p>
-                                  <Link
-                                    to={product.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="accessories-product__link"
-                                  >
-                                    Vai al prodotto
-                                  </Link>
-                                </Accordion.Body>
-                              </Accordion.Item>
-                            ) : (
-                              <Link
-                                to={product.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="accessories-product__link"
-                              >
-                                {product.title}
-                              </Link>
+                    <ul className="accessories-products__list">
+                      {subData.products.map((product: AccProduct) => (
+                        <li key={product.id} className="accessories-product">
+                          <div className="accessories-product__details">
+                            <h4 className="accessories-product__title">{product.title}</h4>
+                            {product.description && (
+                              <p className="accessories-product__description">
+                                {product.description}
+                              </p>
                             )}
-                          </li>
-                        ))}
-                      </ul>
-                    </Accordion>
+                          </div>
+                          <Link
+                            to={product.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="accessories-product__link"
+                          >
+                            Vai al prodotto <span aria-hidden="true">&#8594;</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </section>
                 ))}
               </div>
@@ -142,36 +129,5 @@ export default function Accessories() {
         </p>
       )}
     </main>
-  );
-}
-
-import { useContext } from 'react';
-import AccordionContext from 'react-bootstrap/AccordionContext';
-import Accordion from 'react-bootstrap/Accordion';
-import { useAccordionButton } from 'react-bootstrap/AccordionButton';
-
-interface CustomToggleProps {
-  children: React.ReactNode;
-  eventKey: string;
-  callback?: (eventKey: string) => void;
-}
-
-export function CustomToggle({ children, eventKey, callback }: CustomToggleProps) {
-  const { activeEventKey } = useContext(AccordionContext);
-
-  const decoratedOnClick = useAccordionButton(eventKey, () => callback && callback(eventKey));
-
-  const isCurrentEventKey = activeEventKey === eventKey;
-
-  return (
-    <button
-      type="button"
-      className="w-100 border-0"
-      style={{ backgroundColor: 'transparent' }}
-      onClick={decoratedOnClick}
-    >
-      <i className={`fa ${isCurrentEventKey ? 'fa-chevron-down' : 'fa-chevron-right'} me-1`}></i>
-      {children}
-    </button>
   );
 }

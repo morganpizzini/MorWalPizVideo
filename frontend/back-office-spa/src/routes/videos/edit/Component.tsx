@@ -15,9 +15,9 @@ const getCategoryId = (category: CategoryWithFallbackId): string =>
   category.id ?? category.categoryId ?? '';
 
 const getCanonicalShortLinkCode = (match: Match, youtubeId: string): string | undefined =>
-  match.shortLinks?.find(link =>
-    link.linkType === LinkType.YouTubeVideo &&
-    link.target === youtubeId)?.code;
+  match.shortLinks?.find(
+    link => link.linkType === LinkType.YouTubeVideo && link.target === youtubeId
+  )?.code;
 
 const Component: React.FC = () => {
   const { match, categories, tagSuggestions } = useLoaderData() as {
@@ -30,10 +30,12 @@ const Component: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const normalizedCategories = (categories as CategoryWithFallbackId[])
-    .map((category): CategoryRef => ({
-      id: getCategoryId(category),
-      title: category.title,
-    }))
+    .map(
+      (category): CategoryRef => ({
+        id: getCategoryId(category),
+        title: category.title,
+      })
+    )
     .filter(category => category.id.length > 0);
 
   const [showModal, setShowModal] = useState(false);
@@ -43,7 +45,9 @@ const Component: React.FC = () => {
   const [newVideoRefCategories, setNewVideoRefCategories] = useState<string[]>([]);
   const [addVideoRefAttempted, setAddVideoRefAttempted] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    (match.categories as CategoryWithFallbackId[] | undefined)?.map(c => getCategoryId(c)).filter(Boolean) || []
+    (match.categories as CategoryWithFallbackId[] | undefined)
+      ?.map(c => getCategoryId(c))
+      .filter(Boolean) || []
   );
   const [tags, setTags] = useState<string[]>(() => normalizeTags(match.tags ?? []));
   const saveBusy = saveFetcher.state !== 'idle';
@@ -77,9 +81,7 @@ const Component: React.FC = () => {
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+      prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     );
   };
 
@@ -89,9 +91,9 @@ const Component: React.FC = () => {
   };
 
   const handleSaveVideoRef = (updatedVideoRef: VideoRef) => {
-    setVideoRefs(videoRefs.map(ref =>
-      ref.youtubeId === updatedVideoRef.youtubeId ? updatedVideoRef : ref
-    ));
+    setVideoRefs(
+      videoRefs.map(ref => (ref.youtubeId === updatedVideoRef.youtubeId ? updatedVideoRef : ref))
+    );
     setShowModal(false);
     setSelectedVideoRef(null);
   };
@@ -106,9 +108,7 @@ const Component: React.FC = () => {
 
   const handleNewVideoRefCategoryChange = (categoryId: string) => {
     setNewVideoRefCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+      prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     );
   };
 
@@ -147,10 +147,15 @@ const Component: React.FC = () => {
     videoRefs.some(ref => ref.youtubeId === newVideoRefId.trim());
 
   const shouldShowVideoRefIdRequired = addVideoRefAttempted && newVideoRefId.trim().length === 0;
-  const shouldShowVideoRefCategoriesRequired = addVideoRefAttempted && newVideoRefCategories.length === 0;
+  const shouldShowVideoRefCategoriesRequired =
+    addVideoRefAttempted && newVideoRefCategories.length === 0;
 
   useEffect(() => {
-    if (addFetcher.state !== 'idle' || !addFetcher.data || lastAddData.current === addFetcher.data) {
+    if (
+      addFetcher.state !== 'idle' ||
+      !addFetcher.data ||
+      lastAddData.current === addFetcher.data
+    ) {
       return;
     }
     lastAddData.current = addFetcher.data;
@@ -161,9 +166,13 @@ const Component: React.FC = () => {
       setNewVideoRefCategories([]);
       setAddVideoRefAttempted(false);
       if (addFetcher.data.videoRef.cacheStatus === 'degraded') {
-        toast.show('Video reference added', 'Saved, but cache refresh is degraded.', { variant: 'warning' });
+        toast.show('Video reference added', 'Saved, but cache refresh is degraded.', {
+          variant: 'warning',
+        });
       } else if (addFetcher.data.videoRef.cacheStatus === 'disabled') {
-        toast.show('Video reference added', 'Saved; cache refresh is disabled.', { variant: 'warning' });
+        toast.show('Video reference added', 'Saved; cache refresh is disabled.', {
+          variant: 'warning',
+        });
       } else {
         toast.show('Success', 'Video reference added successfully', { variant: 'success' });
       }
@@ -180,10 +189,7 @@ const Component: React.FC = () => {
       <GenericErrorList errors={saveErrors?.generics} />
 
       <div className="mb-3">
-        <Button
-          variant="outline-secondary"
-          onClick={() => navigate(`/videos/${match.id}`)}
-        >
+        <Button variant="outline-secondary" onClick={() => navigate(`/videos/${match.id}`)}>
           ← Back to Details
         </Button>
       </div>
@@ -245,18 +251,27 @@ const Component: React.FC = () => {
                     <BootstrapForm.Label>Categories</BootstrapForm.Label>
                   </Col>
                   <Col sm={9}>
-                    <input type="hidden" name="categories" value={JSON.stringify(selectedCategories)} />
+                    <input
+                      type="hidden"
+                      name="categories"
+                      value={JSON.stringify(selectedCategories)}
+                    />
                     {normalizedCategories.length > 0 ? (
-                      <div className="d-flex flex-column gap-2">
-                        {normalizedCategories.map((category) => (
-                          <BootstrapForm.Check
+                      <div className="d-flex flex-wrap gap-2">
+                        {normalizedCategories.map(category => (
+                          <button
                             key={category.id}
-                            type="checkbox"
-                            id={`category-${category.id}`}
-                            label={category.title}
-                            checked={selectedCategories.includes(category.id)}
-                            onChange={() => handleCategoryChange(category.id)}
-                          />
+                            type="button"
+                            className={`badge border-0 ${
+                              selectedCategories.includes(category.id)
+                                ? 'bg-primary'
+                                : 'bg-light text-dark'
+                            }`}
+                            aria-pressed={selectedCategories.includes(category.id)}
+                            onClick={() => handleCategoryChange(category.id)}
+                          >
+                            {category.title}
+                          </button>
                         ))}
                       </div>
                     ) : (
@@ -298,7 +313,9 @@ const Component: React.FC = () => {
 
                 <Row className="mb-3">
                   <Col sm={3}>
-                    <BootstrapForm.Label htmlFor="thumbnailVideoId">Thumbnail Video ID</BootstrapForm.Label>
+                    <BootstrapForm.Label htmlFor="thumbnailVideoId">
+                      Thumbnail Video ID
+                    </BootstrapForm.Label>
                   </Col>
                   <Col sm={9}>
                     <BootstrapForm.Control
@@ -348,22 +365,28 @@ const Component: React.FC = () => {
                       <div className="text-danger small mt-1">Video ID is required.</div>
                     )}
                     {isDuplicateNewVideoRefId && (
-                      <div className="text-danger small mt-1">This video reference already exists.</div>
+                      <div className="text-danger small mt-1">
+                        This video reference already exists.
+                      </div>
                     )}
                   </Col>
                   <Col md={6}>
                     <BootstrapForm.Label>Categories</BootstrapForm.Label>
-                    <div className="border rounded p-2" style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                    <div className="d-flex flex-wrap gap-2">
                       {normalizedCategories.map(category => (
-                        <BootstrapForm.Check
+                        <button
                           key={`new-videoref-category-${category.id}`}
-                          type="checkbox"
-                          id={`new-videoref-category-${category.id}`}
-                          label={category.title}
-                          checked={newVideoRefCategories.includes(category.id)}
-                          onChange={() => handleNewVideoRefCategoryChange(category.id)}
-                          className="mb-1"
-                        />
+                          type="button"
+                          className={`badge border-0 ${
+                            newVideoRefCategories.includes(category.id)
+                              ? 'bg-primary'
+                              : 'bg-light text-dark'
+                          }`}
+                          aria-pressed={newVideoRefCategories.includes(category.id)}
+                          onClick={() => handleNewVideoRefCategoryChange(category.id)}
+                        >
+                          {category.title}
+                        </button>
                       ))}
                     </div>
                     {shouldShowVideoRefCategoriesRequired && (
@@ -398,11 +421,16 @@ const Component: React.FC = () => {
                         <td>
                           <code className="text-primary">{videoRef.youtubeId}</code>
                           {videoRef.youtubeId === match.thumbnailVideoId && (
-                            <Badge bg="success" className="ms-2">Thumbnail</Badge>
+                            <Badge bg="success" className="ms-2">
+                              Thumbnail
+                            </Badge>
                           )}
-                          {(getCanonicalShortLinkCode(match, videoRef.youtubeId) ?? videoRef.shortLinkCode) && (
+                          {(getCanonicalShortLinkCode(match, videoRef.youtubeId) ??
+                            videoRef.shortLinkCode) && (
                             <Badge bg="info" className="ms-2">
-                              /{getCanonicalShortLinkCode(match, videoRef.youtubeId) ?? videoRef.shortLinkCode}
+                              /
+                              {getCanonicalShortLinkCode(match, videoRef.youtubeId) ??
+                                videoRef.shortLinkCode}
                             </Badge>
                           )}
                           {videoRef.shortLinkStatus === 'failed' && (
@@ -430,7 +458,9 @@ const Component: React.FC = () => {
                           <div className="d-flex gap-1 flex-wrap">
                             {videoRef.categories && videoRef.categories.length > 0 ? (
                               videoRef.categories.map((cat, catIdx) => (
-                                <Badge key={catIdx} bg="secondary">{cat.title}</Badge>
+                                <Badge key={catIdx} bg="secondary">
+                                  {cat.title}
+                                </Badge>
                               ))
                             ) : (
                               <span className="text-muted small">No categories</span>
@@ -464,7 +494,8 @@ const Component: React.FC = () => {
                 <p className="small text-muted mb-0">No video references have been added yet.</p>
               )}
               <p className="small text-muted mt-3 mb-0">
-                New references are validated and saved immediately. Existing reference edits retain the modal's local behavior.
+                New references are validated and saved immediately. Existing reference edits retain
+                the modal's local behavior.
               </p>
             </Card.Body>
           </Card>
@@ -477,23 +508,29 @@ const Component: React.FC = () => {
             </Card.Header>
             <Card.Body>
               <div className="mb-2">
-                <strong>Match ID:</strong><br />
+                <strong>Match ID:</strong>
+                <br />
                 <code>{match.id}</code>
               </div>
               <div className="mb-2">
-                <strong>Current Title:</strong><br />
+                <strong>Current Title:</strong>
+                <br />
                 {match.title}
               </div>
               <div className="mb-2">
-                <strong>Associated Videos:</strong><br />
+                <strong>Associated Videos:</strong>
+                <br />
                 {match.videoRefs?.length || 0} video(s)
               </div>
               <div className="mb-2">
-                <strong>Current Categories:</strong><br />
+                <strong>Current Categories:</strong>
+                <br />
                 <div className="d-flex gap-1 flex-wrap">
                   {match.categories && match.categories.length > 0 ? (
                     match.categories.map((cat, idx) => (
-                      <Badge key={idx} bg="secondary">{cat.title}</Badge>
+                      <Badge key={idx} bg="secondary">
+                        {cat.title}
+                      </Badge>
                     ))
                   ) : (
                     <em className="text-muted">No categories</em>
@@ -501,11 +538,14 @@ const Component: React.FC = () => {
                 </div>
               </div>
               <div className="mb-2">
-                <strong>Current Tags:</strong><br />
+                <strong>Current Tags:</strong>
+                <br />
                 <div className="d-flex gap-1 flex-wrap">
                   {match.tags && match.tags.length > 0 ? (
                     match.tags.map((tag, idx) => (
-                      <Badge key={idx} bg="info">{tag}</Badge>
+                      <Badge key={idx} bg="info">
+                        {tag}
+                      </Badge>
                     ))
                   ) : (
                     <em className="text-muted">No tags</em>
