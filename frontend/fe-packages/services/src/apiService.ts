@@ -54,24 +54,23 @@ export const saveChannelTerminology = (
   payload: ChannelTerminology,
 ): Promise<ChannelTerminology> => put(endpoints.CHANNEL_TERMINOLOGY, payload);
 
-function answerDiscriminator(answer: AnyAnswer): AnyAnswer["_t"] {
-  switch (answer.answerType) {
-    case 0:
-      return "OpenAnswer";
-    case 1:
-      return "MultipleChoiceAnswer";
-    case 2:
-      return "SingleChoiceAnswer";
-    case 3:
-      return "BooleanAnswer";
-  }
-}
-
 function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
-  return answers.map((answer) => ({
-    ...answer,
-    _t: answer._t ?? answerDiscriminator(answer),
-  }));
+  return answers.map((answer): AnyAnswer => {
+    if (answer._t) return answer;
+
+    switch (answer.answerType) {
+      case 0:
+        return { ...answer, _t: "OpenAnswer" };
+      case 1:
+        return { ...answer, _t: "MultipleChoiceAnswer" };
+      case 2:
+        return { ...answer, _t: "SingleChoiceAnswer" };
+      case 3:
+        return { ...answer, _t: "BooleanAnswer" };
+      default:
+        throw new Error(`Unsupported answer type: ${answer.answerType}`);
+    }
+  });
 }
 
 export const getActiveCustomForms = (): Promise<CustomForm[]> =>

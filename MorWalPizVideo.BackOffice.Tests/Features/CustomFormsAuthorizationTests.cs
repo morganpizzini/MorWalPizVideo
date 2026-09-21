@@ -1,5 +1,6 @@
 using System.Net;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
+using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -18,6 +19,7 @@ public sealed class CustomFormsAuthorizationTests : IClassFixture<BackOfficeWebA
     {
         using var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.FormsManage);
+        client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
 
         var response = await client.GetAsync("/api/CustomForms/missing-form/responses");
 

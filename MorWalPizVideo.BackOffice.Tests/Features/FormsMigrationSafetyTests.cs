@@ -33,6 +33,7 @@ public class FormsMigrationSafetyTests
             active: true)
         {
             Id = "form-1",
+            ChannelId = PrimaryScenario.ChannelId,
             Responses = [new CustomFormResponse(
                 "r-embedded",
                 DateTime.UtcNow.AddMinutes(-10),
@@ -43,7 +44,7 @@ public class FormsMigrationSafetyTests
         await responseRepository.UpsertByFormAndResponseIdAsync(CustomFormResponseDocument.FromResponse("form-1", both));
         await responseRepository.UpsertByFormAndResponseIdAsync(CustomFormResponseDocument.FromResponse("form-1", newest));
 
-        var responses = await service.GetResponsesAsync("form-1", limit: 50);
+        var responses = await service.GetResponsesAsync("form-1", PrimaryScenario.ChannelId, limit: 50);
 
         Assert.Equal(2, responses.Count);
         Assert.Equal(["r-newest", "r-both"], responses.Select(x => x.ResponseId));
@@ -65,6 +66,7 @@ public class FormsMigrationSafetyTests
             active: true)
         {
             Id = "form-2",
+            ChannelId = PrimaryScenario.ChannelId,
             Responses =
             [
                 new CustomFormResponse("r1", DateTime.UtcNow.AddMinutes(-20), [new OpenAnswer("q1", "a1")]),
@@ -76,7 +78,7 @@ public class FormsMigrationSafetyTests
 
         var firstRun = await service.BackfillEmbeddedResponsesAsync(continuationToken: null, batchSize: 10);
         var secondRun = await service.BackfillEmbeddedResponsesAsync(continuationToken: null, batchSize: 10);
-        var reconciliation = await service.ReconcileCountsAsync("form-2");
+        var reconciliation = await service.ReconcileCountsAsync("form-2", PrimaryScenario.ChannelId);
 
         Assert.Equal(2, firstRun.UpsertedResponses);
         Assert.Equal(0, secondRun.UpsertedResponses);
