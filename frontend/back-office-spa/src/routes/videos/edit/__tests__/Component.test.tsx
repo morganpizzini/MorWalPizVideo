@@ -10,7 +10,8 @@ import Component from '../Component';
 const mockToastShow = vi.hoisted(() => vi.fn());
 
 vi.mock('@components/ToastNotification/ToastContext', async importOriginal => {
-  const actual = await importOriginal<typeof import('@components/ToastNotification/ToastContext')>();
+  const actual =
+    await importOriginal<typeof import('@components/ToastNotification/ToastContext')>();
   return {
     ...actual,
     useToast: () => ({ show: mockToastShow }),
@@ -47,8 +48,8 @@ const match = {
   shortLinks: [],
 } as Match;
 
-const getManageCategoryCheckbox = (): HTMLElement =>
-  document.querySelector('[id^="new-videoref"][type="checkbox"]') as HTMLElement;
+const getManageCategoryButton = (): HTMLElement =>
+  screen.getByRole('button', { name: 'News', pressed: false });
 
 type FetcherData = {
   success?: boolean;
@@ -56,7 +57,11 @@ type FetcherData = {
   errors?: { generics?: string[] };
 };
 
-let saveFetcher: { state: 'idle' | 'submitting'; data?: FetcherData; submit: typeof mockSaveSubmit };
+let saveFetcher: {
+  state: 'idle' | 'submitting';
+  data?: FetcherData;
+  submit: typeof mockSaveSubmit;
+};
 let addFetcher: { state: 'idle' | 'submitting'; data?: FetcherData; submit: typeof mockAddSubmit };
 
 beforeEach(() => {
@@ -68,8 +73,11 @@ beforeEach(() => {
   vi.mocked(useNavigate).mockReturnValue(mockNavigate);
   vi.mocked(useLoaderData).mockReturnValue({ match, categories });
   let fetcherCall = 0;
-  vi.mocked(useFetcher).mockImplementation(() =>
-    (fetcherCall++ % 2 === 0 ? saveFetcher : addFetcher) as unknown as ReturnType<typeof useFetcher>
+  vi.mocked(useFetcher).mockImplementation(
+    () =>
+      (fetcherCall++ % 2 === 0 ? saveFetcher : addFetcher) as unknown as ReturnType<
+        typeof useFetcher
+      >
   );
 });
 
@@ -83,7 +91,7 @@ describe('Edit Video', () => {
     const view = await renderComponent();
 
     await user.type(screen.getByLabelText('YouTube ID'), 'new-video');
-    await user.click(getManageCategoryCheckbox());
+    await user.click(getManageCategoryButton());
     await user.click(screen.getByRole('button', { name: 'Add Video Reference' }));
 
     expect(screen.queryByText('new-video')).not.toBeInTheDocument();
@@ -116,11 +124,9 @@ describe('Edit Video', () => {
 
     await waitFor(() => expect(screen.getByText('new-video')).toBeInTheDocument());
     expect(screen.getByText('/abc12')).toBeInTheDocument();
-    expect(mockToastShow).toHaveBeenCalledWith(
-      'Success',
-      'Video reference added successfully',
-      { variant: 'success' }
-    );
+    expect(mockToastShow).toHaveBeenCalledWith('Success', 'Video reference added successfully', {
+      variant: 'success',
+    });
   });
 
   it('does not render a row and shows an error toast when adding fails', async () => {
@@ -128,7 +134,7 @@ describe('Edit Video', () => {
     const view = await renderComponent();
 
     await user.type(screen.getByLabelText('YouTube ID'), 'new-video');
-    await user.click(getManageCategoryCheckbox());
+    await user.click(getManageCategoryButton());
     await user.click(screen.getByRole('button', { name: 'Add Video Reference' }));
 
     addFetcher.state = 'idle';
@@ -176,11 +182,9 @@ describe('Edit Video', () => {
     await renderComponent();
 
     await waitFor(() => {
-      expect(mockToastShow).toHaveBeenCalledWith(
-        'Success',
-        'Video updated successfully',
-        { variant: 'success' }
-      );
+      expect(mockToastShow).toHaveBeenCalledWith('Success', 'Video updated successfully', {
+        variant: 'success',
+      });
       expect(mockNavigate).toHaveBeenCalledWith('..');
     });
   });
@@ -220,16 +224,18 @@ describe('Edit Video', () => {
       match: {
         ...match,
         videoRefs: [persistedVideoRef],
-        shortLinks: [{
-          shortLinkId: 'short-link-1',
-          code: 'persisted-code',
-          target: 'persisted-video',
-          linkType: LinkType.YouTubeVideo,
-          queryLinkIds: [],
-          message: '',
-          clicksCount: 0,
-          videoId: 'persisted-video',
-        }],
+        shortLinks: [
+          {
+            shortLinkId: 'short-link-1',
+            code: 'persisted-code',
+            target: 'persisted-video',
+            linkType: LinkType.YouTubeVideo,
+            queryLinkIds: [],
+            message: '',
+            clicksCount: 0,
+            videoId: 'persisted-video',
+          },
+        ],
       },
       categories,
     });
