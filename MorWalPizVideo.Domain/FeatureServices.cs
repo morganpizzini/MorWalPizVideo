@@ -561,17 +561,17 @@ public sealed record FormResponseBackfillBatchResult(
 
 public interface IFormsService
 {
-    Task<IList<CustomForm>> GetAllFormsAsync();
-    Task<CustomForm?> GetFormByIdAsync(string id);
-    Task SaveFormAsync(CustomForm form);
-    Task UpdateFormAsync(CustomForm form);
-    Task DeleteFormAsync(string id);
-    Task<IList<CustomForm>> GetActiveFormsAsync();
-    Task<CustomForm?> GetFormByUrlAsync(string url);
-    Task<bool> AddResponseAsync(string formId, CustomFormResponse response);
-    Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, int limit = 500);
-    Task<int> GetResponseCountAsync(string formId);
-    Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId);
+    Task<IList<CustomForm>> GetAllFormsAsync(string channelId);
+    Task<CustomForm?> GetFormByIdAsync(string id, string channelId);
+    Task<bool> SaveFormAsync(CustomForm form, string channelId);
+    Task<bool> UpdateFormAsync(CustomForm form, string channelId);
+    Task DeleteFormAsync(string id, string channelId);
+    Task<IList<CustomForm>> GetActiveFormsAsync(string channelId);
+    Task<CustomForm?> GetFormByUrlAsync(string url, string channelId);
+    Task<bool> AddResponseAsync(string formId, CustomFormResponse response, string channelId);
+    Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, string channelId, int limit = 500);
+    Task<int> GetResponseCountAsync(string formId, string channelId);
+    Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId, string channelId);
     Task<FormResponseBackfillBatchResult> BackfillEmbeddedResponsesAsync(string? continuationToken, int batchSize);
 }
 
@@ -579,36 +579,42 @@ public sealed class FormsService(
     ICustomFormRepository customFormRepository,
     ICustomFormResponseRepository customFormResponseRepository) : IFormsService
 {
-    public Task<IList<CustomForm>> GetAllFormsAsync() => customFormRepository.GetItemsAsync();
+    public Task<IList<CustomForm>> GetAllFormsAsync(string channelId) => customFormRepository.GetItemsAsync(x => x.ChannelId == channelId);
 
-    public async Task<CustomForm?> GetFormByIdAsync(string id)
-        => await customFormRepository.GetItemAsync(id);
+    public async Task<CustomForm?> GetFormByIdAsync(string id, string channelId)
+        => (await customFormRepository.GetItemsAsync(x => x.Id == id && x.ChannelId == channelId)).FirstOrDefault();
 
-    public async Task SaveFormAsync(CustomForm form)
+    public async Task<bool> SaveFormAsync(CustomForm form, string channelId)
     {
-        var existingForm = await customFormRepository.GetItemsAsync(x => x.Title.ToLower() == form.Title.ToLower());
+        var existingForm = await customFormRepository.GetItemsAsync(x => x.ChannelId == channelId && x.Url.ToLower() == form.Url.ToLower());
         if (existingForm.Count > 0)
         {
-            return;
+            return false;
         }
 
-        await customFormRepository.AddItemAsync(form);
+        await customFormRepository.AddItemAsync(form with { ChannelId = channelId });
+        return true;
     }
 
-    public async Task UpdateFormAsync(CustomForm form)
+    public async Task<bool> UpdateFormAsync(CustomForm form, string channelId)
     {
-        var existingForm = await customFormRepository.GetItemsAsync(x => x.Id == form.Id);
+        var existingForm = await customFormRepository.GetItemsAsync(x => x.Id == form.Id && x.ChannelId == channelId);
         if (existingForm.Count == 0)
         {
-            return;
+            return false;
         }
 
-        await customFormRepository.UpdateItemAsync(form);
+        var duplicateUrl = await customFormRepository.GetItemsAsync(x => x.Id != form.Id && x.ChannelId == channelId && x.Url.ToLower() == form.Url.ToLower());
+        if (duplicateUrl.Count > 0)
+            return false;
+
+        await customFormRepository.UpdateItemAsync(form with { ChannelId = channelId });
+        return true;
     }
 
-    public async Task DeleteFormAsync(string id)
+    public async Task DeleteFormAsync(string id, string channelId)
     {
-        var form = await customFormRepository.GetItemAsync(id);
+        var form = await GetFormByIdAsync(id, channelId);
         if (form == null)
         {
             return;
@@ -617,13 +623,13 @@ public sealed class FormsService(
         await customFormRepository.DeleteItemAsync(form.Id);
     }
 
-    public Task<IList<CustomForm>> GetActiveFormsAsync() => customFormRepository.GetActiveAsync();
+    public Task<IList<CustomForm>> GetActiveFormsAsync(string channelId) => customFormRepository.GetActiveAsync(channelId);
 
-    public Task<CustomForm?> GetFormByUrlAsync(string url) => customFormRepository.GetByUrlAsync(url);
+    public Task<CustomForm?> GetFormByUrlAsync(string url, string channelId) => customFormRepository.GetByUrlAsync(url, channelId);
 
-    public async Task<bool> AddResponseAsync(string formId, CustomFormResponse response)
+    public async Task<bool> AddResponseAsync(string formId, CustomFormResponse response, string channelId)
     {
-        var form = await customFormRepository.GetItemAsync(formId);
+        var form = await GetFormByIdAsync(formId, channelId);
         if (form == null)
         {
             return false;
@@ -642,10 +648,10 @@ public sealed class FormsService(
         return true;
     }
 
-    public async Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, int limit = 500)
+    public async Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, string channelId, int limit = 500)
     {
         var safeLimit = Math.Clamp(limit, 1, 5000);
-        var form = await customFormRepository.GetItemAsync(formId);
+        var form = await GetFormByIdAsync(formId, channelId);
         if (form == null)
         {
             return [];
@@ -664,12 +670,12 @@ public sealed class FormsService(
             .ToList();
     }
 
-    public Task<int> GetResponseCountAsync(string formId)
-        => customFormResponseRepository.CountByFormIdAsync(formId);
+    public async Task<int> GetResponseCountAsync(string formId, string channelId)
+        => await GetFormByIdAsync(formId, channelId) is null ? 0 : await customFormResponseRepository.CountByFormIdAsync(formId);
 
-    public async Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId)
+    public async Task<FormResponseCountReconciliation?> ReconcileCountsAsync(string formId, string channelId)
     {
-        var form = await customFormRepository.GetItemAsync(formId);
+        var form = await GetFormByIdAsync(formId, channelId);
         if (form == null)
         {
             return null;

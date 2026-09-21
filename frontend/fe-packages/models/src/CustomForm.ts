@@ -1,13 +1,17 @@
 export enum QuestionType {
+  TextArea = 0,
   Open = 0,
   MultipleChoice = 1,
-  SingleChoice = 2
+  SingleChoice = 2,
+  Boolean = 3,
 }
 
 export enum AnswerType {
+  TextArea = 0,
   Open = 0,
   MultipleChoice = 1,
-  SingleChoice = 2
+  SingleChoice = 2,
+  Boolean = 3,
 }
 
 export interface QuestionOption {
@@ -18,7 +22,11 @@ export interface QuestionOption {
 
 // Base question interface
 export interface CustomFormQuestion {
-  _t?: 'OpenQuestion' | 'MultipleChoiceQuestion' | 'SingleChoiceQuestion';
+  _t?:
+    | "OpenQuestion"
+    | "MultipleChoiceQuestion"
+    | "SingleChoiceQuestion"
+    | "BooleanQuestion";
   questionId: string;
   questionText: string;
   questionType: QuestionType;
@@ -40,12 +48,25 @@ export interface SingleChoiceQuestion extends CustomFormQuestion {
   options: QuestionOption[];
 }
 
+export interface BooleanQuestion extends CustomFormQuestion {
+  _t?: "BooleanQuestion";
+  questionType: QuestionType.Boolean;
+}
+
 // Union type for all question types
-export type AnyQuestion = OpenQuestion | MultipleChoiceQuestion | SingleChoiceQuestion;
+export type AnyQuestion =
+  | OpenQuestion
+  | MultipleChoiceQuestion
+  | SingleChoiceQuestion
+  | BooleanQuestion;
 
 // Base answer interface
 export interface CustomFormAnswer {
-  _t?: 'OpenAnswer' | 'MultipleChoiceAnswer' | 'SingleChoiceAnswer';
+  _t?:
+    | "OpenAnswer"
+    | "MultipleChoiceAnswer"
+    | "SingleChoiceAnswer"
+    | "BooleanAnswer";
   questionId: string;
   answerType: AnswerType;
 }
@@ -65,8 +86,18 @@ export interface SingleChoiceAnswer extends CustomFormAnswer {
   selectedOptionId: string;
 }
 
+export interface BooleanAnswer extends CustomFormAnswer {
+  _t?: "BooleanAnswer";
+  answerType: AnswerType.Boolean;
+  value: boolean;
+}
+
 // Union type for all answer types
-export type AnyAnswer = OpenAnswer | MultipleChoiceAnswer | SingleChoiceAnswer;
+export type AnyAnswer =
+  | OpenAnswer
+  | MultipleChoiceAnswer
+  | SingleChoiceAnswer
+  | BooleanAnswer;
 
 export interface CustomFormResponse {
   responseId: string;

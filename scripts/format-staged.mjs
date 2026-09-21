@@ -8,11 +8,6 @@ const repositoryRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { e
 const solutionPath = path.join(repositoryRoot, 'MorWalPizVideo.sln');
 const frontendRoot = path.join(repositoryRoot, 'frontend');
 const formatterPath = path.join(frontendRoot, 'node_modules', 'prettier', 'index.mjs');
-const eslintPath = path.join(frontendRoot, 'node_modules', 'eslint', 'bin', 'eslint.js');
-const eslintProjectRoots = new Map([
-  ['frontend/back-office-spa', path.join(frontendRoot, 'back-office-spa')],
-  ['frontend/morwalpizvideo.client', path.join(frontendRoot, 'morwalpizvideo.client')],
-]);
 const generatedDirectoryNames = new Set([
   '.git',
   'bin',
@@ -120,23 +115,6 @@ function isFrontendFile(filePath) {
   );
 }
 
-function eslintProjectRoot(filePath) {
-  for (const [relativeRoot, projectRoot] of eslintProjectRoots) {
-    if (filePath.startsWith(`${relativeRoot}/`)) {
-      return projectRoot;
-    }
-  }
-
-  return undefined;
-}
-
-function isEslintFile(filePath) {
-  return (
-    eslintProjectRoot(filePath) !== undefined &&
-    ['.js', '.jsx', '.ts', '.tsx'].some(extension => filePath.toLowerCase().endsWith(extension))
-  );
-}
-
 function isDotnetFile(filePath) {
   if (!filePath.endsWith('.cs') || hasGeneratedDirectory(filePath) || isSecretFile(filePath)) {
     return false;
@@ -178,49 +156,15 @@ async function formatFrontendFiles(files) {
     }));
   }
 
-  const eslintFilesByProject = new Map();
-  for (const filePath of files) {
-    const projectRoot = eslintProjectRoot(filePath);
-    if (projectRoot === undefined || !isEslintFile(filePath)) {
-      continue;
-    }
-
-    const projectFiles = eslintFilesByProject.get(projectRoot) ?? [];
-    projectFiles.push(filePath);
-    eslintFilesByProject.set(projectRoot, projectFiles);
-  }
-
   let succeeded = false;
   try {
     for (const filePath of files) {
-      if (isEslintFile(filePath)) {
-        fs.writeFileSync(path.join(repositoryRoot, filePath), formattedContents.get(filePath));
-      }
-    }
-
-    if (eslintFilesByProject.size > 0) {
-      if (!fs.existsSync(eslintPath)) {
-        throw new Error('ESLint is not installed. Run `yarn --cwd frontend install`.');
-      }
-
-      for (const [projectRoot, projectFiles] of eslintFilesByProject) {
-        run(
-          process.execPath,
-          [
-            eslintPath,
-            '--fix',
-            ...projectFiles.map(filePath => path.relative(projectRoot, path.join(repositoryRoot, filePath))),
-          ],
-          { cwd: projectRoot }
-        );
-      }
+      fs.writeFileSync(path.join(repositoryRoot, filePath), formattedContents.get(filePath));
     }
 
     for (const filePath of files) {
       const absolutePath = path.join(repositoryRoot, filePath);
-      const content = isEslintFile(filePath)
-        ? fs.readFileSync(absolutePath)
-        : formattedContents.get(filePath);
+      const content = fs.readFileSync(absolutePath);
       updateStagedFile(filePath, content);
 
       const backup = backups.find(item => item.absolutePath === absolutePath);

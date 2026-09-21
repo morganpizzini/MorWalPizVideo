@@ -21,15 +21,18 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly ILogger<CustomFormsController> _logger;
         private readonly IFormsService _formsService;
+        private readonly IConfiguration _configuration;
 
         public CustomFormsController(
             IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
             IFormsService formsService,
-            ILogger<CustomFormsController> logger) : base(_dataService, _memoryCache)
+            ILogger<CustomFormsController> logger,
+            IConfiguration configuration) : base(_dataService, _memoryCache)
         {
             _formsService = formsService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -41,7 +44,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         {
             try
             {
-                var forms = await _formsService.GetActiveFormsAsync();
+                var channelId = GetYouTubeChannelId();
+                if (string.IsNullOrWhiteSpace(channelId))
+                    return Ok(Array.Empty<CustomForm>());
+
+                var forms = await _formsService.GetActiveFormsAsync(channelId);
                 
                 // Return forms without responses for privacy
                 var publicForms = forms.Select(f => f with { Responses = Array.Empty<CustomFormResponse>() }).ToList();
@@ -68,7 +75,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     return BadRequest("URL cannot be empty");
                 }
 
-                var form = await _formsService.GetFormByUrlAsync(url);
+                var channelId = GetYouTubeChannelId();
+                if (string.IsNullOrWhiteSpace(channelId))
+                    return NotFound($"Custom form with URL '{url}' not found");
+
+                var form = await _formsService.GetFormByUrlAsync(url, channelId);
                 if (form == null)
                 {
                     return NotFound($"Custom form with URL '{url}' not found");
@@ -100,7 +111,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             try
             {
                 // Check if form exists
-                var form = await _formsService.GetFormByIdAsync(request.Id);
+                var channelId = GetYouTubeChannelId();
+                if (string.IsNullOrWhiteSpace(channelId))
+                    return NotFound($"Custom form with ID '{request.Id}' not found");
+
+                var form = await _formsService.GetFormByIdAsync(request.Id, channelId);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
@@ -141,6 +156,10 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     else if (question is SingleChoiceQuestion scq && answer is not SingleChoiceAnswer)
                     {
                         return BadRequest($"Question '{question.QuestionText}' expects a single choice answer");
+                    }
+                    else if (question is BooleanQuestion && answer is not BooleanAnswer)
+                    {
+                        return BadRequest($"Question '{question.QuestionText}' expects a true/false answer");
                     }
 
                     // Validate required questions are answered
@@ -186,7 +205,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     request.Body.Answers
                 );
 
-                await _formsService.AddResponseAsync(request.Id, response);
+                await _formsService.AddResponseAsync(request.Id, response, channelId);
 
                 _logger.LogInformation("Form response submitted for form: {FormId}", request.Id);
 
@@ -197,6 +216,15 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 _logger.LogError(ex, "Error submitting form response for form ID: {Id}", request.Id);
                 return StatusCode(500, "An error occurred while submitting the response");
             }
+        }
+
+        private string? GetYouTubeChannelId()
+        {
+            var channelId = _configuration["YouTubeChannelId"]?.Trim();
+            if (string.IsNullOrWhiteSpace(channelId))
+                _logger.LogError("Public custom forms endpoint is missing the YouTubeChannelId configuration");
+
+            return channelId;
         }
     }
 }

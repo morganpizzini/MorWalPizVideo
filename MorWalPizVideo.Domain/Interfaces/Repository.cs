@@ -724,13 +724,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public async Task<IList<CustomForm>> GetActiveAsync()
-            => await _collection.Find(x => x.Active).ToListAsync();
+        public async Task<IList<CustomForm>> GetActiveAsync(string? channelId = null)
+            => await _collection.Find(x => x.Active && (channelId == null || x.ChannelId == channelId)).ToListAsync();
 
-        public async Task<CustomForm?> GetByUrlAsync(string url)
+        public async Task<CustomForm?> GetByUrlAsync(string url, string? channelId = null)
         {
             var escaped = Regex.Escape(url.Trim());
             var filter = Builders<CustomForm>.Filter.Regex(x => x.Url, new BsonRegularExpression($"^{escaped}$", "i"));
+            if (channelId is not null)
+                filter &= Builders<CustomForm>.Filter.Eq(x => x.ChannelId, channelId);
             return await _collection.Find(filter).FirstOrDefaultAsync();
         }
 

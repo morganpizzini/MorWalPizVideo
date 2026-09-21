@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Button, Card, Modal, Badge, Accordion, Table } from 'react-bootstrap';
 import { Link, useLoaderData, useFetcher, useNavigate } from 'react-router';
-import { 
-  CustomForm, 
-  QuestionType, 
-  AnyQuestion, 
-  MultipleChoiceQuestion, 
+import {
+  CustomForm,
+  QuestionType,
+  AnyQuestion,
+  MultipleChoiceQuestion,
   SingleChoiceQuestion,
   CustomFormResponse,
   AnyAnswer,
   AnswerType,
   OpenAnswer,
   MultipleChoiceAnswer,
-  SingleChoiceAnswer
+  SingleChoiceAnswer,
 } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -29,7 +29,7 @@ const CustomFormDetail: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -54,7 +54,7 @@ const CustomFormDetail: React.FC = () => {
       },
       {
         method: 'post',
-        action: `/customforms`
+        action: `/customforms`,
       }
     );
   };
@@ -67,6 +67,8 @@ const CustomFormDetail: React.FC = () => {
         return <Badge bg="info">Multiple Choice</Badge>;
       case QuestionType.SingleChoice:
         return <Badge bg="success">Single Choice</Badge>;
+      case QuestionType.Boolean:
+        return <Badge bg="warning">True / False</Badge>;
       default:
         return <Badge bg="secondary">Unknown</Badge>;
     }
@@ -79,12 +81,16 @@ const CustomFormDetail: React.FC = () => {
           <div className="d-flex justify-content-between align-items-start mb-2">
             <div>
               <strong>{question.questionText}</strong>
-              {question.isRequired && <Badge bg="danger" className="ms-2">Required</Badge>}
+              {question.isRequired && (
+                <Badge bg="danger" className="ms-2">
+                  Required
+                </Badge>
+              )}
             </div>
             {getQuestionTypeBadge(question.questionType)}
           </div>
-          
-          {(question.questionType === QuestionType.MultipleChoice || 
+
+          {(question.questionType === QuestionType.MultipleChoice ||
             question.questionType === QuestionType.SingleChoice) && (
             <div className="mt-2">
               <small className="text-muted">Options:</small>
@@ -106,7 +112,7 @@ const CustomFormDetail: React.FC = () => {
     switch (answer.answerType) {
       case AnswerType.Open:
         return <div>{(answer as OpenAnswer).textResponse || <em>No response</em>}</div>;
-      
+
       case AnswerType.SingleChoice:
         const singleAnswer = answer as SingleChoiceAnswer;
         const singleQuestion = question as SingleChoiceQuestion;
@@ -114,12 +120,12 @@ const CustomFormDetail: React.FC = () => {
           opt => opt.optionId === singleAnswer.selectedOptionId
         );
         return <div>{selectedOption?.optionText || <em>Unknown option</em>}</div>;
-      
+
       case AnswerType.MultipleChoice:
         const multiAnswer = answer as MultipleChoiceAnswer;
         const multiQuestion = question as MultipleChoiceQuestion;
-        const selectedOptions = multiQuestion.options.filter(
-          opt => multiAnswer.selectedOptionIds.includes(opt.optionId)
+        const selectedOptions = multiQuestion.options.filter(opt =>
+          multiAnswer.selectedOptionIds.includes(opt.optionId)
         );
         return (
           <div>
@@ -134,7 +140,7 @@ const CustomFormDetail: React.FC = () => {
             )}
           </div>
         );
-      
+
       default:
         return <em>Unknown answer type</em>;
     }
@@ -154,10 +160,7 @@ const CustomFormDetail: React.FC = () => {
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h2>{form.title}</h2>
             <div>
-              <Link
-                to={`/customforms/${form.id}/edit`}
-                className="btn btn-primary me-2"
-              >
+              <Link to={`/customforms/${form.id}/edit`} className="btn btn-primary me-2">
                 Edit
               </Link>
               <Button variant="danger" onClick={handleDelete}>
@@ -168,9 +171,7 @@ const CustomFormDetail: React.FC = () => {
 
           <dl className="row">
             <dt className="col-sm-3">Description</dt>
-            <dd className="col-sm-9">
-              {form.description || <em>No description provided</em>}
-            </dd>
+            <dd className="col-sm-9">{form.description || <em>No description provided</em>}</dd>
 
             <dt className="col-sm-3">Created</dt>
             <dd className="col-sm-9">{formatDate(form.creationDateTime)}</dd>
@@ -275,7 +276,8 @@ const CustomFormDetail: React.FC = () => {
           Are you sure you want to delete the custom form "{form.title}"?
           {form.responseCount > 0 && (
             <div className="alert alert-warning mt-3">
-              <strong>Warning:</strong> This form has {form.responseCount} response(s) that will also be deleted.
+              <strong>Warning:</strong> This form has {form.responseCount} response(s) that will
+              also be deleted.
             </div>
           )}
         </Modal.Body>

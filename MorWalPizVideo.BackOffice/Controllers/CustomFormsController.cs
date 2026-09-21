@@ -7,6 +7,7 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.BackOffice.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace MorWalPizVideo.BackOffice.Controllers
@@ -49,6 +50,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public CustomFormAnswer[] Answers { get; set; } = [];
     }
 
+    [RequireChannelScope]
     public class CustomFormsController : ApplicationControllerBase
     {
         private readonly IFormsService _formsService;
@@ -71,11 +73,12 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var forms = await _formsService.GetAllFormsAsync();
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var forms = await _formsService.GetAllFormsAsync(channelId);
                 var contracts = new List<CustomFormContract>(forms.Count);
                 foreach (var form in forms)
                 {
-                    contracts.Add(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id)));
+                    contracts.Add(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id, channelId)));
                 }
 
                 return Ok(contracts);
@@ -97,13 +100,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
 
-                var form = await _formsService.GetFormByIdAsync(request.Id);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var form = await _formsService.GetFormByIdAsync(request.Id, channelId);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                return Ok(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id)));
+                return Ok(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id, channelId)));
             }
             catch (Exception ex)
             {
@@ -152,6 +156,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     }
                 }
 
+                var channelId = HttpContext.GetChannelContext().ChannelId;
                 var form = new CustomForm(
                     request.Body.Title,
                     request.Body.Description,
@@ -160,7 +165,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Body.Active
                 );
 
-                await _formsService.SaveFormAsync(form);
+                if (!await _formsService.SaveFormAsync(form, channelId))
+                    return Conflict("A custom form with this URL already exists for the selected channel.");
                 
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
                 
@@ -183,7 +189,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if form exists
-                var existingForm = await _formsService.GetFormByIdAsync(request.Id);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var existingForm = await _formsService.GetFormByIdAsync(request.Id, channelId);
                 if (existingForm == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
@@ -229,7 +236,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Active = request.Body.Active
                 };
 
-                await _formsService.UpdateFormAsync(updatedForm);
+                if (!await _formsService.UpdateFormAsync(updatedForm, channelId))
+                    return Conflict("A custom form with this URL already exists for the selected channel.");
                 
                 _logger.LogInformation("Custom form updated: {Id} - {Title}", request.Id, updatedForm.Title);
                 
@@ -252,13 +260,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
             try
             {
                 // Check if form exists
-                var existingForm = await _formsService.GetFormByIdAsync(request.Id);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var existingForm = await _formsService.GetFormByIdAsync(request.Id, channelId);
                 if (existingForm == null)
                 {
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                await _formsService.DeleteFormAsync(request.Id);
+                await _formsService.DeleteFormAsync(request.Id, channelId);
                 
                 _logger.LogInformation("Custom form deleted: {Id}", request.Id);
                 
@@ -286,7 +295,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 }
 
                 // Check if form exists
-                var form = await _formsService.GetFormByIdAsync(id);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var form = await _formsService.GetFormByIdAsync(id, channelId);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{id}' not found");
@@ -328,6 +338,10 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     {
                         return BadRequest($"Question '{question.QuestionText}' expects a single choice answer");
                     }
+                    else if (question is BooleanQuestion && answer is not BooleanAnswer)
+                    {
+                        return BadRequest($"Question '{question.QuestionText}' expects a true/false answer");
+                    }
 
                     // Validate required questions are answered
                     if (question.IsRequired)
@@ -353,7 +367,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Answers
                 );
 
-                await _formsService.AddResponseAsync(id, response);
+                await _formsService.AddResponseAsync(id, response, channelId);
                 
                 _logger.LogInformation("Form response submitted for form: {FormId}", id);
                 
@@ -380,13 +394,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("Form ID cannot be empty");
                 }
 
-                var form = await _formsService.GetFormByIdAsync(id);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var form = await _formsService.GetFormByIdAsync(id, channelId);
                 if (form == null)
                 {
                     return NotFound($"Custom form with ID '{id}' not found");
                 }
 
-                var responses = await _formsService.GetResponsesAsync(id, 5000);
+                var responses = await _formsService.GetResponsesAsync(id, channelId, 5000);
                 return Ok(responses);
             }
             catch (Exception ex)
@@ -400,7 +415,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         [AllowUser(AuthorizationPermissionKeys.FormsResponsesView, AuthorizationPermissionKeys.FormsManage)]
         public async Task<ActionResult<FormResponseCountReconciliation>> ReconcileResponses(string id)
         {
-            var reconciliation = await _formsService.ReconcileCountsAsync(id);
+            var reconciliation = await _formsService.ReconcileCountsAsync(id, HttpContext.GetChannelContext().ChannelId);
             if (reconciliation == null)
             {
                 return NotFound($"Custom form with ID '{id}' not found");

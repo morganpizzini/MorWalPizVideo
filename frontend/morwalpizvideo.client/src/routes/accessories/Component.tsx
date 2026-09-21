@@ -1,4 +1,5 @@
 ﻿import { Link, useLoaderData } from 'react-router';
+import { PageTitle } from '@morwalpiz/layout';
 import './style.scss';
 
 interface AccCategory {
@@ -56,7 +57,10 @@ export default function Accessories() {
 
   return (
     <main className="accessories-page">
-      <h1 className="accessories-page__title">ACCESSORI</h1>
+      <PageTitle
+        title="ACCESSORI"
+        subtitle="Accessori e strumenti selezionati per migliorare ogni sessione."
+      />
 
       {Object.keys(columnGroups).length > 0 ? (
         <div className="accessories-grid">
@@ -66,8 +70,15 @@ export default function Accessories() {
               className="accessories-category"
               aria-labelledby={`category-${categoryId}`}
             >
-              <h2 id={`category-${categoryId}`} className="-category__taccessoriesitle">
+              <h2 id={`category-${categoryId}`} className="accessories-category__title">
                 {categoryData.title}
+                <span className="accessories-category__count">
+                  {Object.values(categoryData.subcategories).reduce(
+                    (count, subcategory) => count + subcategory.products.length,
+                    0
+                  )}{' '}
+                  prodotti
+                </span>
               </h2>
               <div className="accessories-subcategories">
                 {Object.entries(categoryData.subcategories).map(([subId, subData]) => (

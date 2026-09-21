@@ -4,13 +4,6 @@
   color: #1f1f1f;
   font-family: Roboto, Arial, sans-serif;
 
-  &__title {
-    margin: 0 0 1.5rem;
-    text-align: center;
-    font-size: clamp(1.75rem, 5vw, 2.5rem);
-    line-height: 1.1;
-  }
-
   &__empty {
     margin: 0;
     padding: 1.25rem;
@@ -24,25 +17,41 @@
 
 .accessories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: 1rem;
+  gap: 1.5rem;
   min-width: 0;
 }
 
 .accessories-category {
   min-width: 0;
-  padding: 1.25rem;
+  padding: 1.25rem 1.5rem;
   background: #fff;
   border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  border-radius: 0.6rem;
+  box-shadow: 0 0.4rem 1.4rem rgba(23, 43, 77, 0.08);
 
   &__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
     margin: 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid #333;
+    padding-bottom: 0.85rem;
+    color: #172b4d;
+    border-bottom: 1px solid #dce4ed;
     font-size: 1.35rem;
     line-height: 1.25;
+  }
+
+  &__count {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.55rem;
+    color: #5f7894;
+    background: #eef4f8;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 }
 
@@ -148,5 +157,11 @@
 
   .accessories-category {
     padding: 1rem;
+
+    &__title {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
   }
 }

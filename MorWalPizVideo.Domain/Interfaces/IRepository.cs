@@ -96,8 +96,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface ICustomFormRepository : IRepository<CustomForm>
     {
-        Task<IList<CustomForm>> GetActiveAsync();
-        Task<CustomForm?> GetByUrlAsync(string url);
+        Task<IList<CustomForm>> GetActiveAsync(string? channelId = null);
+        Task<CustomForm?> GetByUrlAsync(string url, string? channelId = null);
         Task<IList<CustomForm>> GetBatchAsync(string? continuationToken, int batchSize);
     }
 

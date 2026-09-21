@@ -2,7 +2,7 @@
 import { Link, useLoaderData } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useFetcher } from 'react-router';
-import { CustomFormRenderer } from '@morwalpiz/layout';
+import { CustomFormRenderer, PageTitle } from '@morwalpiz/layout';
 import type { AnyAnswer, CustomForm, OpenAnswer } from '@morwalpizvideo/models';
 import { askForSponsor } from '@services/sponsors';
 import './style.scss';
@@ -46,7 +46,7 @@ export function LegacySponsors() {
   }, [handleReCaptchaVerify]);
   return (
     <>
-      <h1 className="text-center mb-3">SPONSORS</h1>
+      <PageTitle title="SPONSORS" subtitle="Scopri i partner che sostengono il progetto." />
       <div className="row text-center mb-5">
         {sponsors.map((sponsor: SponsorItem) => (
           <div key={sponsor.title} className="col-12 col-sm-6 col-md-4 position-relative">
@@ -135,7 +135,7 @@ export default function Sponsors() {
 
   return (
     <>
-      <h1 className="text-center mb-3">SPONSORS</h1>
+      <PageTitle title="SPONSORS" subtitle="Scopri i partner che sostengono il progetto." />
       <section className="card sponsors-card mb-5" aria-labelledby="sponsors-list-title">
         <div className="card-body">
           <h2 id="sponsors-list-title" className="visually-hidden">

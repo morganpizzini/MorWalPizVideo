@@ -62,6 +62,8 @@ function answerDiscriminator(answer: AnyAnswer): AnyAnswer["_t"] {
       return "MultipleChoiceAnswer";
     case 2:
       return "SingleChoiceAnswer";
+    case 3:
+      return "BooleanAnswer";
   }
 }
 
@@ -89,7 +91,7 @@ export const submitCustomFormResponse = (
       customFormId: encodeURIComponent(formId),
     }),
     {
-      answers: serializeFormAnswers(answers),
+      body: { answers: serializeFormAnswers(answers) },
     },
   );
 

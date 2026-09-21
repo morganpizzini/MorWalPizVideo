@@ -111,10 +111,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("url", 1),
             Unique: true),
         new(
-            Key: "customforms_active_url",
+            Key: "customforms_channelid_url.unique",
             Collection: DbCollections.CustomForms,
-            Name: "ix_customforms_active_url",
-            Keys: new BsonDocument { { "active", 1 }, { "url", 1 } }),
+            Name: "ux_customforms_channelid_url",
+            Keys: new BsonDocument { { "channelId", 1 }, { "url", 1 } },
+            Unique: true,
+            PartialFilter: new BsonDocument("channelId", new BsonDocument("$exists", true))),
         new(
             Key: "calendarevents_creation_desc",
             Collection: DbCollections.CalendarEvents,

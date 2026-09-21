@@ -803,10 +803,10 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public Task<IList<CustomForm>> GetActiveAsync() => GetItemsAsync(x => x.Active);
+        public Task<IList<CustomForm>> GetActiveAsync(string? channelId = null) => GetItemsAsync(x => x.Active && (channelId == null || x.ChannelId == channelId));
 
-        public async Task<CustomForm?> GetByUrlAsync(string url)
-            => (await GetItemsAsync(x => x.Url.ToLower() == url.ToLower())).FirstOrDefault();
+        public async Task<CustomForm?> GetByUrlAsync(string url, string? channelId = null)
+            => (await GetItemsAsync(x => (channelId == null || x.ChannelId == channelId) && x.Url.ToLower() == url.ToLower())).FirstOrDefault();
 
         public async Task<IList<CustomForm>> GetBatchAsync(string? continuationToken, int batchSize)
         {

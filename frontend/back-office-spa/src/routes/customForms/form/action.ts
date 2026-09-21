@@ -4,7 +4,7 @@ import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
 export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
   const formData = await request.formData();
-  
+
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const url = formData.get('url') as string;
@@ -16,8 +16,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       success: false,
       errors: {
         fields: { title: 'Title is required' },
-        generics: []
-      }
+        generics: [],
+      },
     };
   }
 
@@ -26,8 +26,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
       success: false,
       errors: {
         fields: { url: 'URL is required' },
-        generics: []
-      }
+        generics: [],
+      },
     };
   }
 
@@ -35,8 +35,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     return {
       success: false,
       errors: {
-        generics: ['At least one question is required']
-      }
+        generics: ['At least one question is required'],
+      },
     };
   }
 
@@ -47,8 +47,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     return {
       success: false,
       errors: {
-        generics: ['Invalid questions data']
-      }
+        generics: ['Invalid questions data'],
+      },
     };
   }
 
@@ -57,16 +57,19 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     description: description || '',
     url,
     active,
-    questions
+    questions,
   };
 
   try {
     if (id) {
       // Update existing form
-      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), { ...payload, id });
+      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), {
+        id,
+        body: payload,
+      });
     } else {
       // Create new form
-      await post(endpoints.CUSTOMFORMS, payload);
+      await post(endpoints.CUSTOMFORMS, { body: payload });
     }
 
     // Redirect to the list page on success
@@ -75,8 +78,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     return {
       success: false,
       errors: {
-        generics: [(error as Error).message || 'An unexpected error occurred']
-      }
+        generics: [(error as Error).message || 'An unexpected error occurred'],
+      },
     };
   }
 }

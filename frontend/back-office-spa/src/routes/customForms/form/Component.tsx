@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useFetcher, useNavigate, useLoaderData, useParams } from 'react-router';
-import { 
-  CustomForm, 
-  QuestionType, 
+import {
+  CustomForm,
+  QuestionType,
   AnyQuestion,
   QuestionOption,
   OpenQuestion,
   MultipleChoiceQuestion,
-  SingleChoiceQuestion
+  SingleChoiceQuestion,
 } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -27,13 +27,13 @@ const CustomFormForm: React.FC = () => {
   const existingForm = useLoaderData() as CustomForm | null;
   const params = useParams();
   const isEditMode = !!params.id;
-  
+
   const [title, setTitle] = useState(existingForm?.title || '');
   const [description, setDescription] = useState(existingForm?.description || '');
   const [url, setUrl] = useState(existingForm?.url || '');
   const [active, setActive] = useState(existingForm?.active ?? true);
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
-  
+
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
@@ -49,9 +49,11 @@ const CustomFormForm: React.FC = () => {
         questionType: q.questionType,
         isRequired: q.isRequired,
         order: q.order,
-        options: (q.questionType === QuestionType.MultipleChoice || q.questionType === QuestionType.SingleChoice)
-          ? (q as MultipleChoiceQuestion | SingleChoiceQuestion).options
-          : undefined
+        options:
+          q.questionType === QuestionType.MultipleChoice ||
+          q.questionType === QuestionType.SingleChoice
+            ? (q as MultipleChoiceQuestion | SingleChoiceQuestion).options
+            : undefined,
       }));
       setQuestions(formQuestions);
     }
@@ -64,7 +66,7 @@ const CustomFormForm: React.FC = () => {
       questionType: QuestionType.Open,
       isRequired: false,
       order: questions.length,
-      options: []
+      options: [],
     };
     setQuestions([...questions, newQuestion]);
   };
@@ -72,13 +74,13 @@ const CustomFormForm: React.FC = () => {
   const removeQuestion = (index: number) => {
     const newQuestions = questions.filter((_, i) => i !== index);
     // Update order
-    newQuestions.forEach((q, i) => q.order = i);
+    newQuestions.forEach((q, i) => (q.order = i));
     setQuestions(newQuestions);
   };
 
   const updateQuestion = (index: number, field: keyof QuestionFormData, value: any) => {
     const newQuestions = [...questions];
-    
+
     // If changing question type, handle options accordingly
     if (field === 'questionType') {
       const newType = value as QuestionType;
@@ -88,7 +90,7 @@ const CustomFormForm: React.FC = () => {
         newQuestions[index].options = [];
       }
     }
-    
+
     newQuestions[index] = { ...newQuestions[index], [field]: value };
     setQuestions(newQuestions);
   };
@@ -102,7 +104,7 @@ const CustomFormForm: React.FC = () => {
     const newOption: QuestionOption = {
       optionId: `opt_${Date.now()}`,
       optionText: '',
-      order: options.length
+      order: options.length,
     };
     newQuestions[questionIndex].options = [...options, newOption];
     setQuestions(newQuestions);
@@ -113,7 +115,7 @@ const CustomFormForm: React.FC = () => {
     const options = newQuestions[questionIndex].options!;
     newQuestions[questionIndex].options = options.filter((_, i) => i !== optionIndex);
     // Update order
-    newQuestions[questionIndex].options!.forEach((opt, i) => opt.order = i);
+    newQuestions[questionIndex].options!.forEach((opt, i) => (opt.order = i));
     setQuestions(newQuestions);
   };
 
@@ -135,10 +137,13 @@ const CustomFormForm: React.FC = () => {
 
     const newQuestions = [...questions];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]];
-    
+    [newQuestions[index], newQuestions[targetIndex]] = [
+      newQuestions[targetIndex],
+      newQuestions[index],
+    ];
+
     // Update order
-    newQuestions.forEach((q, i) => q.order = i);
+    newQuestions.forEach((q, i) => (q.order = i));
     setQuestions(newQuestions);
   };
 
@@ -153,24 +158,34 @@ const CustomFormForm: React.FC = () => {
     // Convert to API format
     const apiQuestions: AnyQuestion[] = questions.map(q => {
       const base = {
+        _t:
+          q.questionType === QuestionType.Boolean
+            ? 'BooleanQuestion'
+            : q.questionType === QuestionType.Open
+              ? 'OpenQuestion'
+              : q.questionType === QuestionType.MultipleChoice
+                ? 'MultipleChoiceQuestion'
+                : 'SingleChoiceQuestion',
         questionId: q.questionId,
         questionText: q.questionText,
         questionType: q.questionType,
         isRequired: q.isRequired,
-        order: q.order
+        order: q.order,
       };
 
       if (q.questionType === QuestionType.Open) {
         return base as OpenQuestion;
+      } else if (q.questionType === QuestionType.Boolean) {
+        return base as AnyQuestion;
       } else if (q.questionType === QuestionType.MultipleChoice) {
         return {
           ...base,
-          options: q.options || []
+          options: q.options || [],
         } as MultipleChoiceQuestion;
       } else {
         return {
           ...base,
-          options: q.options || []
+          options: q.options || [],
         } as SingleChoiceQuestion;
       }
     });
@@ -187,10 +202,16 @@ const CustomFormForm: React.FC = () => {
 
   const getQuestionTypeName = (type: QuestionType): string => {
     switch (type) {
-      case QuestionType.Open: return 'Open Text';
-      case QuestionType.MultipleChoice: return 'Multiple Choice';
-      case QuestionType.SingleChoice: return 'Single Choice';
-      default: return 'Unknown';
+      case QuestionType.Open:
+        return 'Open Text';
+      case QuestionType.MultipleChoice:
+        return 'Multiple Choice';
+      case QuestionType.SingleChoice:
+        return 'Single Choice';
+      case QuestionType.Boolean:
+        return 'True / False';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -210,15 +231,13 @@ const CustomFormForm: React.FC = () => {
               <Form.Control
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={e => setTitle(e.target.value)}
                 placeholder="Enter form title"
                 isInvalid={!!errors?.fields?.title}
                 required
               />
               {errors?.fields?.title && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.fields.title}
-                </Form.Control.Feedback>
+                <Form.Control.Feedback type="invalid">{errors.fields.title}</Form.Control.Feedback>
               )}
             </Form.Group>
 
@@ -227,7 +246,7 @@ const CustomFormForm: React.FC = () => {
               <Form.Control
                 as="textarea"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 placeholder="Enter form description"
                 rows={3}
               />
@@ -238,7 +257,7 @@ const CustomFormForm: React.FC = () => {
               <Form.Control
                 type="text"
                 value={url}
-                onChange={(e) => setUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                onChange={e => setUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                 placeholder="e.g., shooting-interest-survey"
                 isInvalid={!!errors?.fields?.url}
                 required
@@ -247,9 +266,7 @@ const CustomFormForm: React.FC = () => {
                 URL-friendly path for accessing the form (lowercase, hyphens only)
               </Form.Text>
               {errors?.fields?.url && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.fields.url}
-                </Form.Control.Feedback>
+                <Form.Control.Feedback type="invalid">{errors.fields.url}</Form.Control.Feedback>
               )}
             </Form.Group>
 
@@ -258,7 +275,7 @@ const CustomFormForm: React.FC = () => {
                 type="switch"
                 label="Active (form accepts responses)"
                 checked={active}
-                onChange={(e) => setActive(e.target.checked)}
+                onChange={e => setActive(e.target.checked)}
               />
               <Form.Text className="text-muted">
                 When active, the form will be visible to users and accept responses
@@ -276,15 +293,23 @@ const CustomFormForm: React.FC = () => {
           </Card.Header>
           <Card.Body>
             {questions.length === 0 ? (
-              <p className="text-muted text-center">No questions added yet. Click "Add Question" to get started.</p>
+              <p className="text-muted text-center">
+                No questions added yet. Click "Add Question" to get started.
+              </p>
             ) : (
               questions.map((question, qIndex) => (
                 <Card key={question.questionId} className="mb-3">
                   <Card.Header className="d-flex justify-content-between align-items-center bg-light">
                     <div>
                       <Badge bg="secondary">Question {qIndex + 1}</Badge>
-                      <Badge bg="info" className="ms-2">{getQuestionTypeName(question.questionType)}</Badge>
-                      {question.isRequired && <Badge bg="danger" className="ms-2">Required</Badge>}
+                      <Badge bg="info" className="ms-2">
+                        {getQuestionTypeName(question.questionType)}
+                      </Badge>
+                      {question.isRequired && (
+                        <Badge bg="danger" className="ms-2">
+                          Required
+                        </Badge>
+                      )}
                     </div>
                     <div>
                       <Button
@@ -325,7 +350,7 @@ const CustomFormForm: React.FC = () => {
                           <Form.Control
                             type="text"
                             value={question.questionText}
-                            onChange={(e) => updateQuestion(qIndex, 'questionText', e.target.value)}
+                            onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
                             placeholder="Enter question text"
                             required
                           />
@@ -336,11 +361,14 @@ const CustomFormForm: React.FC = () => {
                           <Form.Label>Question Type*</Form.Label>
                           <Form.Select
                             value={question.questionType}
-                            onChange={(e) => updateQuestion(qIndex, 'questionType', parseInt(e.target.value))}
+                            onChange={e =>
+                              updateQuestion(qIndex, 'questionType', parseInt(e.target.value))
+                            }
                           >
                             <option value={QuestionType.Open}>Open Text</option>
                             <option value={QuestionType.SingleChoice}>Single Choice</option>
                             <option value={QuestionType.MultipleChoice}>Multiple Choice</option>
+                            <option value={QuestionType.Boolean}>True / False</option>
                           </Form.Select>
                         </Form.Group>
                       </Col>
@@ -351,11 +379,11 @@ const CustomFormForm: React.FC = () => {
                         type="checkbox"
                         label="Required question"
                         checked={question.isRequired}
-                        onChange={(e) => updateQuestion(qIndex, 'isRequired', e.target.checked)}
+                        onChange={e => updateQuestion(qIndex, 'isRequired', e.target.checked)}
                       />
                     </Form.Group>
 
-                    {(question.questionType === QuestionType.SingleChoice || 
+                    {(question.questionType === QuestionType.SingleChoice ||
                       question.questionType === QuestionType.MultipleChoice) && (
                       <div>
                         <div className="d-flex justify-content-between align-items-center mb-2">
@@ -369,7 +397,7 @@ const CustomFormForm: React.FC = () => {
                             ➕ Add Option
                           </Button>
                         </div>
-                        {(!question.options || question.options.length === 0) ? (
+                        {!question.options || question.options.length === 0 ? (
                           <p className="text-muted">No options added yet.</p>
                         ) : (
                           question.options.map((option, optIndex) => (
@@ -377,7 +405,7 @@ const CustomFormForm: React.FC = () => {
                               <Form.Control
                                 type="text"
                                 value={option.optionText}
-                                onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
+                                onChange={e => updateOption(qIndex, optIndex, e.target.value)}
                                 placeholder={`Option ${optIndex + 1}`}
                                 required
                               />
@@ -403,11 +431,16 @@ const CustomFormForm: React.FC = () => {
         </Card>
 
         <div className="d-flex justify-content-end gap-2">
-          <Button variant="secondary" onClick={() => navigate('/customforms')} disabled={busy} type="button">
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/customforms')}
+            disabled={busy}
+            type="button"
+          >
             Cancel
           </Button>
           <Button type="submit" disabled={busy}>
-            {busy ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Create')}
+            {busy ? (isEditMode ? 'Updating...' : 'Creating...') : isEditMode ? 'Update' : 'Create'}
           </Button>
         </div>
       </fetcher.Form>

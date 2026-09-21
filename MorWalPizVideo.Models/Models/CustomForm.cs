@@ -12,7 +12,7 @@ namespace MorWalPizVideo.Server.Models
     public record CustomForm : BaseEntity
     {
         [JsonConstructor]
-        public CustomForm(string title, string description, string url, CustomFormQuestion[] questions, bool active = true)
+        public CustomForm(string title, string description, string url, CustomFormQuestion[] questions, bool active = true, string? channelId = null)
         {
             Title = title;
             Description = description;
@@ -20,6 +20,7 @@ namespace MorWalPizVideo.Server.Models
             Questions = questions ?? Array.Empty<CustomFormQuestion>();
             Responses = Array.Empty<CustomFormResponse>();
             Active = active;
+            ChannelId = channelId;
         }
 
         /// <summary>
@@ -42,6 +43,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("url")]
         public string Url { get; init; }
+
+        [DataMember]
+        [BsonElement("channelId")]
+        public string? ChannelId { get; init; }
 
         /// <summary>
         /// Whether the form is active and accepting responses

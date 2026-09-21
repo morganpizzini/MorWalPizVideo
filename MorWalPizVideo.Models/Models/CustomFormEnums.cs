@@ -24,7 +24,10 @@ namespace MorWalPizVideo.Server.Models
         /// Single choice with radio buttons (one selection only)
         /// </summary>
         [EnumMember]
-        SingleChoice = 2
+        SingleChoice = 2,
+
+        [EnumMember]
+        Boolean = 3
     }
 
     /// <summary>
@@ -49,6 +52,9 @@ namespace MorWalPizVideo.Server.Models
         /// Single option selection
         /// </summary>
         [EnumMember]
-        SingleChoice = 2
+        SingleChoice = 2,
+
+        [EnumMember]
+        Boolean = 3
     }
 }
