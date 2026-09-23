@@ -21,7 +21,7 @@ const CustomForms: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -63,14 +63,6 @@ const CustomForms: React.FC = () => {
               {count} {count === 1 ? 'response' : 'responses'}
             </Badge>
           );
-        },
-      },
-      {
-        accessorKey: 'creationDateTime',
-        header: 'Created',
-        cell: info => {
-          const dateValue = info.getValue() as string;
-          return new Date(dateValue).toLocaleDateString();
         },
       },
       {
@@ -144,7 +136,8 @@ const CustomForms: React.FC = () => {
           Are you sure you want to delete the custom form "{selectedForm?.title}"?
           {selectedForm && selectedForm.responseCount > 0 && (
             <div className="alert alert-warning mt-3">
-              <strong>Warning:</strong> This form has {selectedForm.responseCount} response(s) that will also be deleted.
+              <strong>Warning:</strong> This form has {selectedForm.responseCount} response(s) that
+              will also be deleted.
             </div>
           )}
         </Modal.Body>
