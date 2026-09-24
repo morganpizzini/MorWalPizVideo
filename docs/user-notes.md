@@ -5,15 +5,33 @@ user note while using the application, can be related to bug, new feature, fixes
 ## Frontend
 
 ### Backoffice admin SPA
+
+#### UI enhancement
+
 - the login username/email input box should not have auto-capitalize
-- when a request goes wrong the navigator shouldn't navigate back. This issue appears on customforms/create : i get 400 as response, but i don't see any alert about the request fail and the page navigates back.
-- frontend\back-office-spa\src\routes\customForms\form\loader.ts and frontend\back-office-spa\src\routes\customForms\detail\loader.ts missing breadcrumbidentifier
-- frontend\back-office-spa\src\routes\customForms\form\component.tsx has missing default input as question possibility. check backoffice contract if single input is possible. Options should be 'Text' / 'Text Area' / 'Single choice' / 'Multiple choice' / 'True / False'  
+
+#### submit and callback error feedback
+
+when a request goes wrong the navigator shouldn't navigate back. This issue right now appears on customforms/create but could be in any page : i get 400 as response (this time, could be any response not 2xx), but i don't see any alert about the request fail and the page navigates back.
+the right workflow is to show the toast about the error to inform the user and not navigate back.
+
+#### form pages ui breadcrumbs
+
+frontend\back-office-spa\src\routes\customForms\form\loader.ts and frontend\back-office-spa\src\routes\customForms\detail\loader.ts missing breadcrumbidentifier
+
+#### form creation question type 
+
+frontend\back-office-spa\src\routes\customForms\form\component.tsx has missing default input as question possibility. check backoffice contract if single input is possible. Options should be 'Text' / 'Text Area' / 'Single choice' / 'Multiple choice' / 'True / False'  
 
 ### morwalpizvideo.client
 
-- there is an old implementation which make the UI fail on presenting information: from backoffice i can create forms, that forms can be used in all application, it is a structure of a form which will be presented in UI. But in the past that form were treated as a Survey and now, after create a new form for sponsor page, i see in morwalpizvideo.client a banner which indicate a new survey. if i click on "rispondi ora" it goes to 'custom-forms/sponsor' which is a 404 page. I want to keep the survey function but handled different: new backoffice object which represent a survey, it can contains multiple forms, it has a relation with channelId. If a survey is online then the banner appears and a user can navigate into the page to fill that.
-- when submitting a form i see "form submitted successfully" even if in the network i have error 400 on submitting. the error is this {
+#### form implementation legacy workflow
+
+there is an old implementation which make the UI fail on presenting information: from backoffice i can create forms, that forms can be used in all application, it is a structure of a form which will be presented in UI. But in the past that form were treated as a Survey and now, after create a new form for sponsor page, i see in morwalpizvideo.client a banner which indicate a new survey. if i click on "rispondi ora" it goes to 'custom-forms/sponsor' which is a 404 page. I want to keep the survey function but handled different: new backoffice object which represent a survey, it can contains multiple forms, it has a relation with channelId. If a survey is online then the banner appears and a user can navigate into the page to fill that.
+
+#### client form submitting error
+
+when submitting a form i see "form submitted successfully" even if in the network i have error 400 on submitting. the error is this {
     "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
     "title": "One or more validation errors occurred.",
     "status": 400,
