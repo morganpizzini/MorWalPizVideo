@@ -10,7 +10,7 @@ namespace MorWalPizVideo.Server.Models
     [BsonIgnoreExtraElements]
     [DataContract]
     [BsonDiscriminator(RootClass = true)]
-    [BsonKnownTypes(typeof(OpenQuestion), typeof(MultipleChoiceQuestion), typeof(SingleChoiceQuestion), typeof(BooleanQuestion))]
+    [BsonKnownTypes(typeof(OpenQuestion), typeof(MultipleChoiceQuestion), typeof(SingleChoiceQuestion), typeof(BooleanQuestion), typeof(EmailQuestion))]
     public abstract record CustomFormQuestion
     {
         protected CustomFormQuestion(string questionId, string questionText, QuestionType questionType, bool isRequired, int order)
@@ -127,6 +127,18 @@ namespace MorWalPizVideo.Server.Models
         [JsonConstructor]
         public BooleanQuestion(string questionId, string questionText, bool isRequired, int order)
             : base(questionId, questionText, QuestionType.Boolean, isRequired, order)
+        {
+        }
+    }
+
+    [BsonIgnoreExtraElements]
+    [DataContract]
+    [BsonDiscriminator("EmailQuestion")]
+    public record EmailQuestion : CustomFormQuestion
+    {
+        [JsonConstructor]
+        public EmailQuestion(string questionId, string questionText, bool isRequired, int order)
+            : base(questionId, questionText, QuestionType.Email, isRequired, order)
         {
         }
     }

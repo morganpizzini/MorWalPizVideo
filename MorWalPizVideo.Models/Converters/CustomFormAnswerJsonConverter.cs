@@ -56,6 +56,7 @@ namespace MorWalPizVideo.Models.Converters
                 "MultipleChoiceAnswer" => JsonSerializer.Deserialize<MultipleChoiceAnswer>(ref reader, options),
                 "SingleChoiceAnswer" => JsonSerializer.Deserialize<SingleChoiceAnswer>(ref reader, options),
                 "BooleanAnswer" => JsonSerializer.Deserialize<BooleanAnswer>(ref reader, options),
+                "EmailAnswer" => JsonSerializer.Deserialize<EmailAnswer>(ref reader, options),
                 _ => throw new JsonException($"Unknown discriminator value '{discriminator}' for CustomFormAnswer")
             };
         }
@@ -71,6 +72,7 @@ namespace MorWalPizVideo.Models.Converters
                 MultipleChoiceAnswer => "MultipleChoiceAnswer",
                 SingleChoiceAnswer => "SingleChoiceAnswer",
                 BooleanAnswer => "BooleanAnswer",
+                EmailAnswer => "EmailAnswer",
                 _ => throw new JsonException($"Unknown CustomFormAnswer type: {value.GetType().Name}")
             });
 
@@ -95,6 +97,10 @@ namespace MorWalPizVideo.Models.Converters
             else if (value is BooleanAnswer ba)
             {
                 writer.WriteBoolean("value", ba.Value);
+            }
+            else if (value is EmailAnswer ea)
+            {
+                writer.WriteString("email", ea.Email);
             }
 
             writer.WriteEndObject();

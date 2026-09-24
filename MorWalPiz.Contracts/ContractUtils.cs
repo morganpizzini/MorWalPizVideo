@@ -335,10 +335,24 @@ namespace MorWalPiz.Contracts
                 Description = entity.Description,
                 Url = entity.Url,
                 Active = entity.Active,
+                Lifecycle = entity.Lifecycle,
+                AccessMode = entity.AccessMode,
                 Questions = entity.Questions,
                 ResponseCount = responseCount ?? entity.ResponseCount
             };
         }
+        public static SurveyContract Convert(Survey entity) => new()
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Description = entity.Description,
+            Url = entity.Url,
+            ChannelId = entity.ChannelId,
+            FromUtc = entity.FromUtc,
+            ToUtc = entity.ToUtc,
+            FormIds = entity.FormIds,
+            Lifecycle = entity.Lifecycle
+        };
         public static InsightTopicContract Convert(InsightTopic entity)
         {
             return new InsightTopicContract

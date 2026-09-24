@@ -107,6 +107,17 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<int> CountByFormIdAsync(string formId);
         Task<bool> ExistsForFormAsync(string formId);
         Task<bool> UpsertByFormAndResponseIdAsync(CustomFormResponseDocument item);
+        Task<IList<CustomFormResponseDocument>> ClaimBatchAsync(DateTime now, DateTime leaseUntil, string workerId, int batchSize);
+        Task<bool> MarkProcessedAsync(string formId, string responseId, string workerId);
+        Task<bool> MarkSkippedAsync(string formId, string responseId, string workerId, string reason);
+        Task<bool> MarkFailedAsync(string formId, string responseId, string workerId, string error);
+    }
+
+    public interface ISurveyRepository : IRepository<Survey>
+    {
+        Task<IList<Survey>> GetEligibleAsync(string channelId, DateTime utcNow);
+        Task<Survey?> GetByUrlAsync(string url, string channelId);
+        Task<bool> ExistsReferencingFormAsync(string formId, string channelId);
     }
 
     public interface IAskCampaignRepository : IRepository<AskCampaign>

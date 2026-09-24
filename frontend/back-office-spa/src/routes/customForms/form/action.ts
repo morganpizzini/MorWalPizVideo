@@ -9,6 +9,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const description = formData.get('description') as string;
   const url = formData.get('url') as string;
   const active = formData.get('active') === 'true';
+  const lifecycle = (formData.get('lifecycle') as string) || (active ? 'Online' : 'Disabled');
+  const accessMode = (formData.get('accessMode') as string) || 'Direct';
   const questionsJson = formData.get('questions') as string;
 
   if (!title) {
@@ -57,6 +59,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     description: description || '',
     url,
     active,
+    lifecycle,
+    accessMode,
     questions,
   };
 

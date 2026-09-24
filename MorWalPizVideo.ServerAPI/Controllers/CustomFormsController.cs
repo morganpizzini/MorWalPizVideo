@@ -14,6 +14,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         [Required]
         public CustomFormAnswer[] Answers { get; set; } = [];
+
+        public string? SurveyId { get; set; }
     }
     
     [AllowAnonymous] // ADR-002: explicit public read/submit access
@@ -22,17 +24,56 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         private readonly ILogger<CustomFormsController> _logger;
         private readonly IFormsService _formsService;
         private readonly IConfiguration _configuration;
+        private readonly ISurveyService _surveyService;
 
         public CustomFormsController(
             IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
             IFormsService formsService,
             ILogger<CustomFormsController> logger,
-            IConfiguration configuration) : base(_dataService, _memoryCache)
+            IConfiguration configuration,
+            ISurveyService surveyService) : base(_dataService, _memoryCache)
         {
             _formsService = formsService;
             _logger = logger;
             _configuration = configuration;
+            _surveyService = surveyService;
+        }
+
+        [HttpGet("../surveys/active")]
+        [OutputCache(Tags = [CacheKeys.Surveys])]
+        public async Task<IActionResult> GetEligibleSurveys()
+        {
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+                return Ok(Array.Empty<object>());
+
+            var surveys = await _surveyService.GetEligibleAsync(channelId, DateTime.UtcNow);
+            return Ok(surveys.Select(x => new
+            {
+                x.Survey.Id, x.Survey.Title, x.Survey.Description, x.Survey.Url,
+                fromUtc = x.Survey.FromUtc, toUtc = x.Survey.ToUtc,
+                forms = x.Forms.Select(form => form with { Responses = Array.Empty<CustomFormResponse>() })
+            }));
+        }
+
+        [HttpGet("../surveys/url/{url}")]
+        [OutputCache(Tags = [CacheKeys.Surveys], VaryByRouteValueNames = ["url"])]
+        public async Task<IActionResult> GetSurveyByUrl(string url)
+        {
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+                return NotFound();
+
+            var survey = await _surveyService.GetByUrlAsync(url, channelId, DateTime.UtcNow);
+            return survey is null
+                ? NotFound($"Survey with URL '{url}' not found")
+                : Ok(new
+                {
+                    survey.Survey.Id, survey.Survey.Title, survey.Survey.Description, survey.Survey.Url,
+                    fromUtc = survey.Survey.FromUtc, toUtc = survey.Survey.ToUtc,
+                    forms = survey.Forms.Select(form => form with { Responses = Array.Empty<CustomFormResponse>() })
+                });
         }
 
         /// <summary>
@@ -86,7 +127,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 }
 
                 // Check if form is active
-                if (!form.Active)
+                if (form.EffectiveLifecycle != CustomFormLifecycle.Online || form.EffectiveAccessMode != CustomFormAccessMode.Direct)
                 {
                     return NotFound($"Custom form with URL '{url}' not found");
                 }
@@ -122,9 +163,16 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 }
 
                 // Check if form is active
-                if (!form.Active)
+                if (form.EffectiveLifecycle != CustomFormLifecycle.Online)
                 {
                     return BadRequest("This form is not currently accepting responses");
+                }
+
+                if (form.EffectiveAccessMode == CustomFormAccessMode.SurveyOnly
+                    && (string.IsNullOrWhiteSpace(request.Body.SurveyId)
+                        || !await _surveyService.CanSubmitAsync(request.Body.SurveyId, form.Id, channelId, DateTime.UtcNow)))
+                {
+                    return BadRequest("This form can only be submitted through an active survey");
                 }
 
                 // Validate answers match questions
@@ -161,6 +209,10 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     {
                         return BadRequest($"Question '{question.QuestionText}' expects a true/false answer");
                     }
+                    else if (question is EmailQuestion && answer is not EmailAnswer)
+                    {
+                        return BadRequest($"Question '{question.QuestionText}' expects an email answer");
+                    }
 
                     // Validate required questions are answered
                     if (question.IsRequired)
@@ -174,6 +226,10 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                             return BadRequest($"Question '{question.QuestionText}' is required");
                         }
                         else if (answer is SingleChoiceAnswer sca && string.IsNullOrWhiteSpace(sca.SelectedOptionId))
+                        {
+                            return BadRequest($"Question '{question.QuestionText}' is required");
+                        }
+                        else if (answer is EmailAnswer ea && string.IsNullOrWhiteSpace(ea.Email))
                         {
                             return BadRequest($"Question '{question.QuestionText}' is required");
                         }

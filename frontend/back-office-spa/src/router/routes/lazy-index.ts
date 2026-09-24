@@ -252,6 +252,15 @@ const routeDefinitions: RouteConfig[] = [
       ],
     },
   ]),
+  group('surveys', () => import('../../routes/surveys/index'), [
+    indexFeature('', () => import('../../routes/surveys/index')),
+    feature('create', () => import('../../routes/surveys/form')),
+    {
+      path: ':id',
+      Component: Outlet,
+      children: [feature('edit', () => import('../../routes/surveys/form'))],
+    },
+  ]),
   group('insights', () => import('../../routes/insights/index'), [
     indexFeature('', () => import('../../routes/insights/landing')),
     feature('topics', () => import('../../routes/insights/index')),

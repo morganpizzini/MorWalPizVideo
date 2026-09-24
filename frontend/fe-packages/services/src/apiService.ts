@@ -19,6 +19,7 @@ import type {
   AnyAnswer,
   CustomForm,
   CustomFormResponse,
+  Survey,
 } from "@morwalpizvideo/models";
 import type {
   QuickLinks,
@@ -67,6 +68,8 @@ function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
         return { ...answer, _t: "SingleChoiceAnswer" };
       case 3:
         return { ...answer, _t: "BooleanAnswer" };
+      case 4:
+        return { ...answer, _t: "EmailAnswer" };
       default:
         throw new Error(`Unsupported answer type: ${answer.answerType}`);
     }
@@ -76,6 +79,12 @@ function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
 export const getActiveCustomForms = (): Promise<CustomForm[]> =>
   get(endpoints.CUSTOMFORMS_ACTIVE);
 
+export const getEligibleSurveys = (): Promise<Survey[]> =>
+  get(endpoints.SURVEYS_ACTIVE);
+
+export const getSurveyByUrl = (url: string): Promise<Survey> =>
+  get(ComposeUrl(endpoints.SURVEYS_BY_URL, { url: encodeURIComponent(url) }));
+
 export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
   get(
     ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }),
@@ -84,15 +93,58 @@ export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
 export const submitCustomFormResponse = (
   formId: string,
   answers: AnyAnswer[],
+  surveyId?: string,
 ): Promise<CustomFormResponse> =>
   post(
     ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
       customFormId: encodeURIComponent(formId),
     }),
-    {
-      body: { answers: serializeFormAnswers(answers) },
-    },
-  );
+    { body: { answers: serializeFormAnswers(answers), surveyId } },
+  ).then(requireSuccessfulResponse);
+
+export interface ApiErrorResponse {
+  errors?: unknown[];
+  fieldErrors?: Record<string, unknown>;
+  status?: number;
+}
+
+export class ApiResponseError extends Error {
+  readonly status?: number;
+  readonly errors: unknown[];
+  readonly fieldErrors?: Record<string, unknown>;
+
+  constructor(response: ApiErrorResponse) {
+    const fieldMessages = Object.entries(response.fieldErrors ?? {}).flatMap(
+      ([field, messages]) =>
+        (Array.isArray(messages) ? messages : [messages]).map(
+          (message) => `${field}: ${String(message)}`,
+        ),
+    );
+    const messages =
+      fieldMessages.length > 0
+        ? fieldMessages
+        : (response.errors ?? []).map((error) => String(error));
+
+    super(messages.join("\n") || "The request failed.");
+    this.name = "ApiResponseError";
+    this.status = response.status;
+    this.errors = response.errors ?? [];
+    this.fieldErrors = response.fieldErrors;
+  }
+}
+
+export function requireSuccessfulResponse<T>(response: T): T {
+  const payload = response as T & ApiErrorResponse;
+  if (
+    payload &&
+    ((typeof payload.status === "number" && payload.status >= 400) ||
+      (Array.isArray(payload.errors) && payload.errors.length > 0))
+  ) {
+    throw new ApiResponseError(payload);
+  }
+
+  return response;
+}
 
 export interface AskPublicCampaign {
   channelName: string;
@@ -706,6 +758,11 @@ export async function call(
             }
             return {
               errors: errorMessages,
+              fieldErrors:
+                parsedResponse?.errors &&
+                typeof parsedResponse.errors === "object"
+                  ? parsedResponse.errors
+                  : undefined,
               status: response.status,
               channelContextError:
                 parsedResponse?.code === "channel_context_required" ||

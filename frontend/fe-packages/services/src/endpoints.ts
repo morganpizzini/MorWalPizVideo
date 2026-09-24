@@ -1,4 +1,4 @@
-const baseEndpoint = 'api';
+const baseEndpoint = "api";
 
 const VIDEOS = `${baseEndpoint}/videos`;
 const VIDEOS_DETAIL = `${VIDEOS}/{videoId}`;
@@ -25,6 +25,10 @@ const CUSTOMFORMS_DETAIL = `${CUSTOMFORMS}/{customFormId}`;
 const CUSTOMFORMS_ACTIVE = `${CUSTOMFORMS}/active`;
 const CUSTOMFORMS_BY_URL = `${CUSTOMFORMS}/url/{url}`;
 const CUSTOMFORMS_RESPONSES = `${CUSTOMFORMS}/{customFormId}/responses`;
+const SURVEYS_ACTIVE = `${baseEndpoint}/surveys/active`;
+const SURVEYS_BY_URL = `${baseEndpoint}/surveys/url/{url}`;
+const SURVEYS = `${baseEndpoint}/surveys`;
+const SURVEYS_DETAIL = `${SURVEYS}/{surveyId}`;
 const COMPILATIONS_BY_URL = `${baseEndpoint}/compilations/{url}`;
 const CALENDAREVENTS = `${baseEndpoint}/calendarEvents`;
 const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/{title}`;
@@ -130,145 +134,152 @@ const FAQ_ADMIN_GENERATE_CANDIDATES = `${FAQ_ADMIN_CANDIDATES}/generate`;
 const FAQ_ADMIN_REVIEW_CANDIDATE = `${FAQ_ADMIN_CANDIDATES}/{id}/review`;
 
 export default {
+  VIDEOS,
+  VIDEOS_DETAIL,
+  VIDEOS_VIDEO_REFS,
+  CATEGORIES,
+  CATEGORIES_DETAIL,
+  QUERYLINKS,
+  QUERYLINKS_DETAIL,
+  SHORTLINKS,
+  SHORTLINKS_DETAIL,
+  SHORTLINKS_SHARE,
+  QUICKLINKS,
+  QUICKLINKS_DETAIL,
+  PRODUCTS,
+  PRODUCTS_DETAIL,
+  PRODUCTCATEGORIES,
+  PRODUCTCATEGORIES_DETAIL,
+  SPONSORS,
+  SPONSORS_DETAIL,
+  COMPILATIONS,
+  COMPILATIONS_DETAIL,
+  COMPILATIONS_BY_URL,
+  CUSTOMFORMS,
+  CUSTOMFORMS_DETAIL,
+  CUSTOMFORMS_ACTIVE,
+  CUSTOMFORMS_BY_URL,
+  CUSTOMFORMS_RESPONSES,
+  SURVEYS_ACTIVE,
+  SURVEYS_BY_URL,
+  SURVEYS,
+  SURVEYS_DETAIL,
+  CALENDAREVENTS,
+  CALENDAREVENTS_DETAIL,
+  CHANNELS,
+  CHANNELS_ACCESSIBLE,
+  CHANNELS_DETAIL,
+  CHANNEL_LOGO,
+  CHANNEL_TERMINOLOGY,
+  CHANNEL_NEWS,
+  CHANNEL_NEWS_DETAIL,
+  CHANNEL_NEWS_STATUS,
+  CHANNEL_NEWS_IMAGES,
+  CHANNEL_NEWS_IMAGE_DETAIL,
+  NEWSLETTERS,
+  NEWSLETTERS_DETAIL,
+  NEWSLETTERS_STATE,
+  NEWSLETTERS_SEND,
+  NEWSLETTERS_SCHEDULE,
+  NEWSLETTERS_PREVIEW,
+  NEWSLETTERS_SUBSCRIBERS,
+  NEWSLETTERS_STATS,
+  NEWSLETTER_TEMPLATES,
+  PAGES,
+  PAGES_DETAIL,
+  PAGES_IMAGES,
+  PAGES_IMAGE_DETAIL,
+  NAVIGATION,
+  CONFIGURATIONS,
+  CONFIGURATIONS_DETAIL,
+  VIDEOS_IMPORT,
+  VIDEOS_TRANSLATE,
+  VIDEOS_TAG_SUGGESTIONS,
+  IMAGE_UPLOAD,
+  IMAGE_UPLOAD_MULTIPLE,
+  SHOP_PRODUCTS,
+  SHOP_PRODUCTS_DETAIL,
+  SHOP_PRODUCT_CATEGORIES,
+  SHOP_AUTH_LOGIN,
+  SHOP_AUTH_VERIFY,
+  SHOP_CART,
+  SHOP_CART_DETAIL,
+  SHOP_CART_ITEMS,
+  SHOP_CART_ITEM_DETAIL,
+  SHOP_CART_CHECKOUT,
+  SHOP_LEGAL,
+  APIKEYS,
+  APIKEYS_DETAIL,
+  APIKEYS_TOGGLE,
+  APIKEYS_REGENERATE,
+  USERS,
+  USER_DETAIL,
+  USER_STATUS,
+  USER_PASSWORD_RESET,
+  USER_PASSWORD_SET,
+  USER_ME,
+  USER_ME_PASSWORD,
+  USER_LOGS,
+  USER_ACTIVITY_LOGS,
+  RBAC,
+  RBAC_USERS,
+  RBAC_USER_DETAIL,
+  RBAC_USER_PERMISSIONS,
+  RBAC_USER_GROUPS,
+  RBAC_USER_GROUP,
+  RBAC_USER_CHANNELS,
+  RBAC_GROUPS,
+  RBAC_GROUPS_DETAIL,
+  RBAC_GROUP_PERMISSIONS,
+  SHORTLINKS_LOGS,
+  DASHBOARD_SUMMARY,
+  DASHBOARD_VIDEO_PUBLICATIONS,
+  ASK_CAMPAIGN,
+  ASK_SUBMISSIONS,
+  ASK_ADMIN,
+  ASK_ADMIN_DETAIL,
+  ASK_ADMIN_SUBMISSIONS,
+  ASK_ADMIN_MODERATE,
+  ASK_ADMIN_RESPONSE,
+  ASK_ADMIN_ANALYTICS,
+  ASK_ADMIN_SHARE,
+  ASK_ADMIN_PUBLISH_TELEGRAM,
+  ASK_ADMIN_EXPORT,
+  ASK_REACTIONS,
+  FAQ,
+  FAQ_CATEGORIES,
+  FAQ_VOTE,
+  FAQ_ADMIN,
+  FAQ_ADMIN_DETAIL,
+  FAQ_ADMIN_CATEGORIES,
+  FAQ_ADMIN_CATEGORY,
+  FAQ_ADMIN_ANSWERS,
+  FAQ_ADMIN_ANSWER,
+  FAQ_ADMIN_CANDIDATES,
+  FAQ_ADMIN_GENERATE_CANDIDATES,
+  FAQ_ADMIN_REVIEW_CANDIDATE,
+};
 
-    VIDEOS,
-    VIDEOS_DETAIL,
-    VIDEOS_VIDEO_REFS,
-    CATEGORIES,
-    CATEGORIES_DETAIL,
-    QUERYLINKS,
-    QUERYLINKS_DETAIL,
-    SHORTLINKS,
-    SHORTLINKS_DETAIL,
-    SHORTLINKS_SHARE,
-    QUICKLINKS,
-    QUICKLINKS_DETAIL,
-    PRODUCTS,
-    PRODUCTS_DETAIL,
-    PRODUCTCATEGORIES,
-    PRODUCTCATEGORIES_DETAIL,
-    SPONSORS,
-    SPONSORS_DETAIL,
-    COMPILATIONS,
-    COMPILATIONS_DETAIL,
-    COMPILATIONS_BY_URL,
-    CUSTOMFORMS,
-    CUSTOMFORMS_DETAIL,
-    CUSTOMFORMS_ACTIVE,
-    CUSTOMFORMS_BY_URL,
-    CUSTOMFORMS_RESPONSES,
-    CALENDAREVENTS,
-    CALENDAREVENTS_DETAIL,
-    CHANNELS,
-    CHANNELS_ACCESSIBLE,
-    CHANNELS_DETAIL,
-    CHANNEL_LOGO,
-    CHANNEL_TERMINOLOGY,
-    CHANNEL_NEWS,
-    CHANNEL_NEWS_DETAIL,
-    CHANNEL_NEWS_STATUS,
-    CHANNEL_NEWS_IMAGES,
-    CHANNEL_NEWS_IMAGE_DETAIL,
-    NEWSLETTERS,
-    NEWSLETTERS_DETAIL,
-    NEWSLETTERS_STATE,
-    NEWSLETTERS_SEND,
-    NEWSLETTERS_SCHEDULE,
-    NEWSLETTERS_PREVIEW,
-    NEWSLETTERS_SUBSCRIBERS,
-    NEWSLETTERS_STATS,
-    NEWSLETTER_TEMPLATES,
-    PAGES,
-    PAGES_DETAIL,
-    PAGES_IMAGES,
-    PAGES_IMAGE_DETAIL,
-    NAVIGATION,
-    CONFIGURATIONS,
-    CONFIGURATIONS_DETAIL,
-    VIDEOS_IMPORT,
-    VIDEOS_TRANSLATE,
-    VIDEOS_TAG_SUGGESTIONS,
-    IMAGE_UPLOAD,
-    IMAGE_UPLOAD_MULTIPLE,
-    SHOP_PRODUCTS,
-    SHOP_PRODUCTS_DETAIL,
-    SHOP_PRODUCT_CATEGORIES,
-    SHOP_AUTH_LOGIN,
-    SHOP_AUTH_VERIFY,
-    SHOP_CART,
-    SHOP_CART_DETAIL,
-    SHOP_CART_ITEMS,
-    SHOP_CART_ITEM_DETAIL,
-    SHOP_CART_CHECKOUT,
-    SHOP_LEGAL,
-    APIKEYS,
-    APIKEYS_DETAIL,
-    APIKEYS_TOGGLE,
-    APIKEYS_REGENERATE,
-    USERS,
-    USER_DETAIL,
-    USER_STATUS,
-    USER_PASSWORD_RESET,
-    USER_PASSWORD_SET,
-    USER_ME,
-    USER_ME_PASSWORD,
-    USER_LOGS,
-    USER_ACTIVITY_LOGS,
-    RBAC,
-    RBAC_USERS,
-    RBAC_USER_DETAIL,
-    RBAC_USER_PERMISSIONS,
-    RBAC_USER_GROUPS,
-    RBAC_USER_GROUP,
-    RBAC_USER_CHANNELS,
-    RBAC_GROUPS,
-    RBAC_GROUPS_DETAIL,
-    RBAC_GROUP_PERMISSIONS,
-    SHORTLINKS_LOGS,
-    DASHBOARD_SUMMARY,
-    DASHBOARD_VIDEO_PUBLICATIONS,
-    ASK_CAMPAIGN,
-    ASK_SUBMISSIONS,
-    ASK_ADMIN,
-    ASK_ADMIN_DETAIL,
-    ASK_ADMIN_SUBMISSIONS,
-    ASK_ADMIN_MODERATE,
-    ASK_ADMIN_RESPONSE,
-    ASK_ADMIN_ANALYTICS,
-    ASK_ADMIN_SHARE,
-    ASK_ADMIN_PUBLISH_TELEGRAM,
-    ASK_ADMIN_EXPORT,
-    ASK_REACTIONS,
-    FAQ,
-    FAQ_CATEGORIES,
-    FAQ_VOTE,
-    FAQ_ADMIN,
-    FAQ_ADMIN_DETAIL,
-    FAQ_ADMIN_CATEGORIES,
-    FAQ_ADMIN_CATEGORY,
-    FAQ_ADMIN_ANSWERS,
-    FAQ_ADMIN_ANSWER,
-    FAQ_ADMIN_CANDIDATES,
-    FAQ_ADMIN_GENERATE_CANDIDATES,
-    FAQ_ADMIN_REVIEW_CANDIDATE,
-}
+export function ComposeUrl(
+  inputString: string,
+  replacements: Record<string, string>,
+  queryStringObj: Record<string, string> | undefined = undefined,
+): string {
+  if (!inputString) {
+    console.error("Parameter inputString not provided in ComposeUrl function");
+    return "";
+  }
+  // Regular expression pattern to match placeholders
+  const pattern = /\{(.*?)\}/g;
 
-export function ComposeUrl(inputString: string, replacements: Record<string, string>, queryStringObj: Record<string, string> | undefined = undefined): string {
-    if (!inputString) {
-        console.error("Parameter inputString not provided in ComposeUrl function");
-        return "";
-    }
-    // Regular expression pattern to match placeholders
-    const pattern = /\{(.*?)\}/g;
-
-    // Function to replace placeholders using a callback function
-    function replacePlaceholder(match: string, placeholder: string): string {
-        return replacements[placeholder] || match;
-    }
-    let resultUrl = inputString.replace(pattern, replacePlaceholder);
-    if (queryStringObj) {
-        resultUrl = `${resultUrl}?${new URLSearchParams(queryStringObj).toString()}`;
-    }
-    // Use replace with the pattern and callback function to replace placeholders
-    return resultUrl;
+  // Function to replace placeholders using a callback function
+  function replacePlaceholder(match: string, placeholder: string): string {
+    return replacements[placeholder] || match;
+  }
+  let resultUrl = inputString.replace(pattern, replacePlaceholder);
+  if (queryStringObj) {
+    resultUrl = `${resultUrl}?${new URLSearchParams(queryStringObj).toString()}`;
+  }
+  // Use replace with the pattern and callback function to replace placeholders
+  return resultUrl;
 }

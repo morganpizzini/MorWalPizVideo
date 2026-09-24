@@ -22,6 +22,10 @@ public sealed class MongoIndexStartupInitializer(
                 var operationsService = scope.ServiceProvider.GetRequiredService<IMongoIndexOperationsService>();
                 await operationsService.ApplyAsync([
                     "shortlinks.code.unique",
+                    "customforms_channelid_url.unique",
+                    "surveys_channelid_url.unique",
+                    "surveys_channelid_lifecycle_window",
+                    "customformresponses.processingstatus_leaseuntil",
                     "newsletterusers.channelid_emailhash.unique",
                     "newsletterusers.channelid_confirmationtokenhash",
                     "newsletterusers.channelid_unsubscribetokenhash",

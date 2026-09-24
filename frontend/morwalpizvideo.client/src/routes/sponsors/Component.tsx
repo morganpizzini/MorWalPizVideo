@@ -3,8 +3,8 @@ import { Link, useLoaderData } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useFetcher } from 'react-router';
 import { CustomFormRenderer, PageTitle } from '@morwalpiz/layout';
-import type { AnyAnswer, CustomForm, OpenAnswer } from '@morwalpizvideo/models';
-import { askForSponsor } from '@services/sponsors';
+import type { CustomForm } from '@morwalpizvideo/models';
+import { askForSponsor, getSponsorRequestFromForm } from '@services/sponsors';
 import './style.scss';
 
 interface SponsorItem {
@@ -125,10 +125,6 @@ export function LegacySponsors() {
   );
 }
 
-function getOpenText(answer: AnyAnswer | undefined): string {
-  return answer && 'textResponse' in answer ? (answer as OpenAnswer).textResponse : '';
-}
-
 export default function Sponsors() {
   const { sponsors, form } = useLoaderData() as { sponsors: SponsorItem[]; form?: CustomForm };
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -169,8 +165,13 @@ export default function Sponsors() {
                 executeRecaptcha ? executeRecaptcha('sponsorForm') : null
               }
               onSubmit={async (answers, recaptchaToken) => {
-                const [name, email, description] = answers.map(getOpenText);
-                await askForSponsor(name, email, description, recaptchaToken ?? '');
+                const request = getSponsorRequestFromForm(form, answers, recaptchaToken);
+                await askForSponsor(
+                  request.name,
+                  request.email,
+                  request.description,
+                  request.token
+                );
               }}
             />
           </div>

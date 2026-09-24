@@ -66,6 +66,11 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Name: "ix_customformresponses_formid_submittedat_desc",
             Keys: new BsonDocument { { "formId", 1 }, { "submittedAt", -1 } }),
         new(
+            Key: "customformresponses.processingstatus_leaseuntil",
+            Collection: DbCollections.CustomFormResponses,
+            Name: "ix_customformresponses_processingstatus_leaseuntil",
+            Keys: new BsonDocument { { "processingStatus", 1 }, { "processingLeaseUntil", 1 } }),
+        new(
             Key: "customformresponses.formid_responseid.unique",
             Collection: DbCollections.CustomFormResponses,
             Name: "ux_customformresponses_formid_responseid",
@@ -117,6 +122,17 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument { { "channelId", 1 }, { "url", 1 } },
             Unique: true,
             PartialFilter: new BsonDocument("channelId", new BsonDocument("$exists", true))),
+        new(
+            Key: "surveys_channelid_url.unique",
+            Collection: DbCollections.Surveys,
+            Name: "ux_surveys_channelid_url",
+            Keys: new BsonDocument { { "channelId", 1 }, { "url", 1 } },
+            Unique: true),
+        new(
+            Key: "surveys_channelid_lifecycle_window",
+            Collection: DbCollections.Surveys,
+            Name: "ix_surveys_channelid_lifecycle_window",
+            Keys: new BsonDocument { { "channelId", 1 }, { "lifecycle", 1 }, { "fromUtc", 1 }, { "toUtc", 1 } }),
         new(
             Key: "calendarevents_creation_desc",
             Collection: DbCollections.CalendarEvents,

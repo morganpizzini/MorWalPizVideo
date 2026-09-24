@@ -2,7 +2,11 @@
  * CustomForms API service
  */
 
-import { getActiveCustomForms, getCustomFormByUrl as fetchCustomFormByUrl, submitCustomFormResponse } from '@morwalpizvideo/services';
+import {
+  getActiveCustomForms,
+  getCustomFormByUrl as fetchCustomFormByUrl,
+  submitCustomFormResponse,
+} from '@morwalpizvideo/services';
 import type { AnyAnswer, CustomForm, CustomFormResponse } from '@morwalpizvideo/models';
 
 /**
@@ -28,6 +32,10 @@ export async function getCustomFormByUrl(url: string): Promise<CustomForm> {
  * @param {Array} answers - Array of answers
  * @returns {Promise<CustomFormResponse>} The response data
  */
-export async function submitFormResponse(formId: string, answers: AnyAnswer[]): Promise<CustomFormResponse> {
-  return submitCustomFormResponse(formId, answers);
+export async function submitFormResponse(
+  formId: string,
+  answers: AnyAnswer[],
+  surveyId?: string
+): Promise<CustomFormResponse> {
+  return submitCustomFormResponse(formId, answers, surveyId);
 }

@@ -1,7 +1,23 @@
 export const permissions = {
   backoffice: { access: 'backoffice.access', manageAll: 'backoffice.manageall' },
-  users: { view: 'users.view', manage: 'users.manage', create: 'users.create', update: 'users.update', delete: 'users.delete', permissionsManage: 'users.permissions.manage' },
-  videos: { view: 'videos.view', manage: 'videos.manage', create: 'videos.create', update: 'videos.update', delete: 'videos.delete', import: 'videos.import', translate: 'videos.translate', publish: 'videos.publish' },
+  users: {
+    view: 'users.view',
+    manage: 'users.manage',
+    create: 'users.create',
+    update: 'users.update',
+    delete: 'users.delete',
+    permissionsManage: 'users.permissions.manage',
+  },
+  videos: {
+    view: 'videos.view',
+    manage: 'videos.manage',
+    create: 'videos.create',
+    update: 'videos.update',
+    delete: 'videos.delete',
+    import: 'videos.import',
+    translate: 'videos.translate',
+    publish: 'videos.publish',
+  },
   channels: { ...resourcePermissions('channels'), admin: 'channels.admin' },
   channelnews: resourcePermissions('channelnews'),
   categories: resourcePermissions('categories'),
@@ -20,7 +36,13 @@ export const permissions = {
   sponsors: resourcePermissions('sponsors'),
   products: resourcePermissions('products'),
   compilations: resourcePermissions('compilations'),
-  ask: { view: 'ask.view', manage: 'ask.manage', create: 'ask.create', update: 'ask.update', moderate: 'ask.moderate' },
+  ask: {
+    view: 'ask.view',
+    manage: 'ask.manage',
+    create: 'ask.create',
+    update: 'ask.update',
+    moderate: 'ask.moderate',
+  },
   faq: { view: 'faq.view', manage: 'faq.manage', candidates: 'faq.candidates' },
   diagnostics: { view: 'diagnostics.view' },
 } as const;
@@ -40,8 +62,10 @@ export function hasPermission(
   requiredPermissions: readonly string[]
 ): boolean {
   const normalized = new Set(effectivePermissions.map(permission => permission.toLowerCase()));
-  return normalized.has(permissions.backoffice.manageAll)
-    || requiredPermissions.some(permission => normalized.has(permission));
+  return (
+    normalized.has(permissions.backoffice.manageAll) ||
+    requiredPermissions.some(permission => normalized.has(permission))
+  );
 }
 
 type StandardResource = ReturnType<typeof resourcePermissions>;
@@ -63,6 +87,7 @@ const routeResources: Record<string, StandardResource> = {
   products: permissions.products,
   compilations: permissions.compilations,
   customforms: permissions.forms,
+  surveys: permissions.forms,
   insights: permissions.insights,
   keys: permissions.apikeys,
   ask: { ...permissions.ask, delete: 'ask.delete' },
@@ -80,14 +105,17 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (module === 'diagnostics') return [permissions.diagnostics.view];
   if (module === 'rbac') {
     if (segments[1] === 'groups') return [permissions.users.permissionsManage];
-    if (segments[1] === 'users' && segments.includes('create')) return [permissions.users.create, permissions.users.manage];
-    if (segments[1] === 'users' && segments.includes('edit')) return [permissions.users.update, permissions.users.manage];
+    if (segments[1] === 'users' && segments.includes('create'))
+      return [permissions.users.create, permissions.users.manage];
+    if (segments[1] === 'users' && segments.includes('edit'))
+      return [permissions.users.update, permissions.users.manage];
     return [permissions.users.view, permissions.users.manage, permissions.users.permissionsManage];
   }
 
   if (module === 'videos') {
     if (segments.includes('import')) return [permissions.videos.import, permissions.videos.manage];
-    if (segments.includes('translate')) return [permissions.videos.translate, permissions.videos.manage];
+    if (segments.includes('translate'))
+      return [permissions.videos.translate, permissions.videos.manage];
     if (segments.includes('edit')) return [permissions.videos.update, permissions.videos.manage];
     if (action) return [permissions.videos.delete, permissions.videos.manage];
     return [permissions.videos.view, permissions.videos.manage];
@@ -98,17 +126,24 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (module === 'channels' && (segments.length === 1 || segments.includes('create'))) {
     return [permissions.channels.admin];
   }
-  if (module === 'navigation') return action ? [permissions.navigation.update, permissions.navigation.manage] : [permissions.navigation.view, permissions.navigation.manage];
+  if (module === 'navigation')
+    return action
+      ? [permissions.navigation.update, permissions.navigation.manage]
+      : [permissions.navigation.view, permissions.navigation.manage];
   if (module === 'insights' && segments.includes('scan-news')) {
     return [permissions.insights.scan, permissions.insights.manage];
   }
-  if (module === 'insights' && (segments.includes('comments') || segments.includes('analyze-comments'))) {
+  if (
+    module === 'insights' &&
+    (segments.includes('comments') || segments.includes('analyze-comments'))
+  ) {
     return [permissions.insights.scan, permissions.insights.manage];
   }
   if (module === 'ask' && action && segments.includes(':id') && !segments.includes('edit')) {
     return [permissions.ask.moderate, permissions.ask.manage];
   }
-  if (module === 'faq' && segments.includes('candidates')) return [permissions.faq.candidates, permissions.faq.manage];
+  if (module === 'faq' && segments.includes('candidates'))
+    return [permissions.faq.candidates, permissions.faq.manage];
   if (segments.includes('create')) return [resource.create, resource.manage];
   if (segments.includes('edit') || segments.some(segment => segment.startsWith(':') && action)) {
     return [resource.update, resource.manage];

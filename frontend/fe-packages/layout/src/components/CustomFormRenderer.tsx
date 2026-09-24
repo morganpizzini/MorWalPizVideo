@@ -45,6 +45,13 @@ function emptyAnswer(question: AnyQuestion): AnyAnswer {
         answerType: AnswerType.Boolean,
         value: false,
       };
+    case QuestionType.Email:
+      return {
+        _t: "EmailAnswer",
+        questionId: question.questionId,
+        answerType: AnswerType.Email,
+        email: "",
+      };
   }
 }
 
@@ -80,6 +87,7 @@ export function CustomFormRenderer({
       if (answer.answerType === AnswerType.MultipleChoice)
         return answer.selectedOptionIds.length === 0;
       if (answer.answerType === AnswerType.Boolean) return false;
+      if (answer.answerType === AnswerType.Email) return !answer.email.trim();
       return !answer.selectedOptionId;
     });
     if (unanswered) {
@@ -231,6 +239,23 @@ export function CustomFormRenderer({
                   />{" "}
                   True
                 </label>
+              )}
+              {question.questionType === QuestionType.Email && (
+                <input
+                  className="form-control"
+                  type="email"
+                  value={
+                    answer.answerType === AnswerType.Email ? answer.email : ""
+                  }
+                  onChange={(event) =>
+                    updateAnswer(question, {
+                      _t: "EmailAnswer",
+                      questionId: question.questionId,
+                      answerType: AnswerType.Email,
+                      email: event.target.value,
+                    })
+                  }
+                />
               )}
             </fieldset>
           );

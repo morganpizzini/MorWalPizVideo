@@ -1,6 +1,6 @@
 import { getMatches } from '@services/matches';
 import { getConfiguration } from '@services/stream';
-import { getActiveForms } from '@services/customForms';
+import { getPublicSurveys } from '@services/surveys';
 import { getSponsors } from '@services/sponsors';
 import { getPublicChannelNews } from '@morwalpizvideo/services';
 
@@ -15,10 +15,10 @@ interface SponsorItem {
 
 export default async function loader() {
   try {
-    const [response, configuration, activeForms, channelNews, sponsors] = await Promise.all([
+    const [response, configuration, surveys, channelNews, sponsors] = await Promise.all([
       getMatches(true),
       getConfiguration(),
-      getActiveForms(),
+      getPublicSurveys(),
       getPublicChannelNews(),
       getSponsors().catch(() => [] as SponsorItem[]),
     ]);
@@ -28,7 +28,7 @@ export default async function loader() {
       total: response.count,
       next: response.next,
       configuration: configuration ?? {},
-      activeForms: activeForms ?? [],
+      surveys: surveys ?? [],
       channelNews: channelNews ?? [],
       sponsors: sponsors ?? [],
       error: false,
@@ -39,7 +39,7 @@ export default async function loader() {
       total: 0,
       next: undefined,
       configuration: {},
-      activeForms: [],
+      surveys: [],
       channelNews: [],
       sponsors: [],
       error: true,

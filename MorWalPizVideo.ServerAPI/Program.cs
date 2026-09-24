@@ -171,6 +171,7 @@ if (enableMock)
     builder.Services.AddScoped<IBlobService, BlobServiceMock>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
+    builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();

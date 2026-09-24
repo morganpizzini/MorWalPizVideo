@@ -32,6 +32,7 @@
                 <MenuItem Header="Disclaimer" Click="DisclaimerMenuItem_Click"/>
             </MenuItem>
             <MenuItem Header="Funzioni">
+                <MenuItem Header="Creazione immagini" Click="ImageCreationMenuItem_Click"/>
                 <MenuItem Header="Traduci Video (Manuale)" Click="TranslateVideoMenuItem_Click"/>
                 <MenuItem Header="Traduci Video YouTube (Auto)" Click="AutoTranslateYouTubeVideoMenuItem_Click"/>
                 <MenuItem Header="Analizza Trascrizione Video" Click="AnalyzeTranscriptMenuItem_Click"/>

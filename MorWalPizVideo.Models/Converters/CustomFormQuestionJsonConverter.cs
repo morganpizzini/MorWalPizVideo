@@ -56,6 +56,7 @@ namespace MorWalPizVideo.Models.Converters
                 "MultipleChoiceQuestion" => JsonSerializer.Deserialize<MultipleChoiceQuestion>(ref reader, options),
                 "SingleChoiceQuestion" => JsonSerializer.Deserialize<SingleChoiceQuestion>(ref reader, options),
                 "BooleanQuestion" => JsonSerializer.Deserialize<BooleanQuestion>(ref reader, options),
+                "EmailQuestion" => JsonSerializer.Deserialize<EmailQuestion>(ref reader, options),
                 _ => throw new JsonException($"Unknown discriminator value '{discriminator}' for CustomFormQuestion")
             };
         }
@@ -71,6 +72,7 @@ namespace MorWalPizVideo.Models.Converters
                 MultipleChoiceQuestion => "MultipleChoiceQuestion",
                 SingleChoiceQuestion => "SingleChoiceQuestion",
                 BooleanQuestion => "BooleanQuestion",
+                EmailQuestion => "EmailQuestion",
                 _ => throw new JsonException($"Unknown CustomFormQuestion type: {value.GetType().Name}")
             });
 

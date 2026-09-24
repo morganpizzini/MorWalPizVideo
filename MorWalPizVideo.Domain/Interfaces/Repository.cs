@@ -725,7 +725,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
 
         public async Task<IList<CustomForm>> GetActiveAsync(string? channelId = null)
-            => await _collection.Find(x => x.Active && (channelId == null || x.ChannelId == channelId)).ToListAsync();
+            => (await _collection.Find(x => channelId == null || x.ChannelId == channelId).ToListAsync())
+                .Where(x => x.EffectiveLifecycle == CustomFormLifecycle.Online && x.EffectiveAccessMode == CustomFormAccessMode.Direct)
+                .ToList();
 
         public async Task<CustomForm?> GetByUrlAsync(string url, string? channelId = null)
         {
@@ -749,6 +751,22 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 .Limit(safeBatchSize)
                 .ToListAsync();
         }
+    }
+
+    public class SurveyRepository : BaseRepository<Survey>, ISurveyRepository
+    {
+        public SurveyRepository(IMongoDatabase database) : base(database, DbCollections.Surveys) { }
+
+        public async Task<IList<Survey>> GetEligibleAsync(string channelId, DateTime utcNow)
+            => (await _collection.Find(x => x.ChannelId == channelId && x.Lifecycle == SurveyLifecycle.Online && x.FromUtc <= utcNow && x.ToUtc > utcNow).ToListAsync());
+
+        public async Task<Survey?> GetByUrlAsync(string url, string channelId)
+            => await _collection.Find(x => x.ChannelId == channelId && x.Url.ToLower() == url.Trim().ToLower()).FirstOrDefaultAsync();
+
+        public Task<bool> ExistsReferencingFormAsync(string formId, string channelId)
+            => _collection.Find(x => x.ChannelId == channelId
+                && (x.Lifecycle == SurveyLifecycle.Draft || x.Lifecycle == SurveyLifecycle.Online)
+                && x.FormIds.Contains(formId)).Limit(1).AnyAsync();
     }
 
     public class CustomFormResponseRepository : BaseRepository<CustomFormResponseDocument>, ICustomFormResponseRepository
@@ -777,8 +795,70 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
             var filter = Builders<CustomFormResponseDocument>.Filter.Eq(x => x.FormId, item.FormId)
                 & Builders<CustomFormResponseDocument>.Filter.Eq(x => x.ResponseId, item.ResponseId);
-            var result = await _collection.ReplaceOneAsync(filter, item, new ReplaceOptions { IsUpsert = true });
+            var update = Builders<CustomFormResponseDocument>.Update
+                .Set(x => x.FormId, item.FormId)
+                .Set(x => x.ResponseId, item.ResponseId)
+                .Set(x => x.SubmittedAt, item.SubmittedAt)
+                .Set(x => x.Answers, item.Answers)
+                .SetOnInsert(x => x.Id, item.Id)
+                .SetOnInsert(x => x.CreationDateTime, item.CreationDateTime);
+            var result = await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
             return result.UpsertedId != null;
+        }
+
+        public async Task<IList<CustomFormResponseDocument>> ClaimBatchAsync(DateTime now, DateTime leaseUntil, string workerId, int batchSize)
+        {
+            var safeBatchSize = Math.Clamp(batchSize, 1, 500);
+            var claimed = new List<CustomFormResponseDocument>(safeBatchSize);
+            var status = Builders<CustomFormResponseDocument>.Filter;
+            var eligible = status.Eq(x => x.ProcessingStatus, ResponseProcessingStatus.Pending)
+                | status.Exists("processingStatus", false)
+                | status.Eq(x => x.ProcessingStatus, ResponseProcessingStatus.Failed)
+                | (status.Eq(x => x.ProcessingStatus, ResponseProcessingStatus.Claimed)
+                    & status.Lt(x => x.ProcessingLeaseUntil, now));
+
+            for (var index = 0; index < safeBatchSize; index++)
+            {
+                var item = await _collection.FindOneAndUpdateAsync(
+                    eligible,
+                    Builders<CustomFormResponseDocument>.Update
+                        .Set(x => x.ProcessingStatus, ResponseProcessingStatus.Claimed)
+                        .Set(x => x.ProcessingWorkerId, workerId)
+                        .Set(x => x.ProcessingLeaseUntil, leaseUntil)
+                        .Inc(x => x.ProcessingAttemptCount, 1),
+                    new FindOneAndUpdateOptions<CustomFormResponseDocument> { ReturnDocument = ReturnDocument.After });
+
+                if (item is null)
+                    break;
+
+                claimed.Add(item);
+            }
+
+            return claimed;
+        }
+
+        public Task<bool> MarkProcessedAsync(string formId, string responseId, string workerId)
+            => UpdateProcessingStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Processed, null);
+
+        public Task<bool> MarkSkippedAsync(string formId, string responseId, string workerId, string reason)
+            => UpdateProcessingStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Skipped, reason);
+
+        public Task<bool> MarkFailedAsync(string formId, string responseId, string workerId, string error)
+            => UpdateProcessingStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Failed, error);
+
+        private async Task<bool> UpdateProcessingStateAsync(string formId, string responseId, string workerId, ResponseProcessingStatus state, string? error)
+        {
+            var filter = Builders<CustomFormResponseDocument>.Filter.Eq(x => x.FormId, formId)
+                & Builders<CustomFormResponseDocument>.Filter.Eq(x => x.ResponseId, responseId)
+                & Builders<CustomFormResponseDocument>.Filter.Eq(x => x.ProcessingStatus, ResponseProcessingStatus.Claimed)
+                & Builders<CustomFormResponseDocument>.Filter.Eq(x => x.ProcessingWorkerId, workerId);
+            var update = Builders<CustomFormResponseDocument>.Update
+                .Set(x => x.ProcessingStatus, state)
+                .Set(x => x.ProcessingWorkerId, null)
+                .Set(x => x.ProcessingLeaseUntil, null)
+                .Set(x => x.ProcessingLastError, error);
+            var result = await _collection.UpdateOneAsync(filter, update);
+            return result.ModifiedCount == 1;
         }
     }
 

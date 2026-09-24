@@ -50,6 +50,10 @@ public sealed class MongoIndexOperationsTests
 
         Assert.Equal([
             "shortlinks.code.unique",
+            "customforms_channelid_url.unique",
+            "surveys_channelid_url.unique",
+            "surveys_channelid_lifecycle_window",
+            "customformresponses.processingstatus_leaseuntil",
             "newsletterusers.channelid_emailhash.unique",
             "newsletterusers.channelid_confirmationtokenhash",
             "newsletterusers.channelid_unsubscribetokenhash",

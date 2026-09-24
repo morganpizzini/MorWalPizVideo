@@ -2,6 +2,11 @@ using System.Runtime.Serialization;
 
 namespace MorWalPizVideo.Server.Models
 {
+    public enum CustomFormLifecycle { Draft, Online, Disabled, Archived, Deleted }
+    public enum CustomFormAccessMode { Direct, SurveyOnly }
+
+    public enum ResponseProcessingStatus { Pending, Claimed, Processed, Skipped, Failed }
+
     /// <summary>
     /// Types of questions that can be asked in a custom form
     /// </summary>
@@ -27,7 +32,10 @@ namespace MorWalPizVideo.Server.Models
         SingleChoice = 2,
 
         [EnumMember]
-        Boolean = 3
+        Boolean = 3,
+
+        [EnumMember]
+        Email = 4
     }
 
     /// <summary>
@@ -55,6 +63,9 @@ namespace MorWalPizVideo.Server.Models
         SingleChoice = 2,
 
         [EnumMember]
-        Boolean = 3
+        Boolean = 3,
+
+        [EnumMember]
+        Email = 4
     }
 }

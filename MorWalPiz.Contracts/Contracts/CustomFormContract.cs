@@ -22,6 +22,12 @@ public class CustomFormContract
     public bool Active { get; set; }
 
     [DataMember]
+    public CustomFormLifecycle? Lifecycle { get; set; }
+
+    [DataMember]
+    public CustomFormAccessMode? AccessMode { get; set; }
+
+    [DataMember]
     public CustomFormQuestion[] Questions { get; set; } = [];
 
     [DataMember]

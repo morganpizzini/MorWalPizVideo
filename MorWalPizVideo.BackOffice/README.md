@@ -1,5 +1,5 @@
 #### `CustomFormsController` — `api/customforms`
-Dynamic form designer (text / select / checkbox / etc. — see `CustomFormEnums`). Public form submission is open via `POST /{id}/responses` (`[AllowAnonymous]`); authenticated response listing uses the standalone `customFormResponses` collection via `GET /{id}/responses`, ordered newest-first with duplicate response IDs suppressed. Form read contracts contain metadata and questions only; response records are not embedded.
+Dynamic form designer (text / select / checkbox / email / etc. — see `CustomFormEnums`). Public form submission is open via `POST /{id}/responses` (`[AllowAnonymous]`); authenticated response listing uses the standalone `customFormResponses` collection via `GET /{id}/responses`, ordered newest-first with duplicate response IDs suppressed. Form read contracts contain metadata and questions only; response records are not embedded. When Hangfire is enabled, `custom-form-response-email-job` runs every 10 minutes by default, backfills legacy embedded responses, and sends an HTML acknowledgement through the existing newsletter SMTP service when a valid email answer is present. Missing or invalid email answers are permanently skipped; transient send failures remain retryable.
 # MorWalPizVideo.BackOffice — Project Documentation
 
 The admin Web API powering the MorWalPizVideo platform. It exposes the management surface used by the `back-office-spa` (React 19) SPA and by the WPF `MorWalPiz.VideoImporter` desktop tool. It owns YouTube content lifecycle, translations, the digital shop, social distribution (Discord / Telegram ), insights (AI content planning), custom forms, sponsor management and the Shooting ITA vertical (competitions / user requests / push notifications).
@@ -244,6 +244,11 @@ CRUD for `CalendarEvent` plus `GET /by-title/{title}` lookup. Events can link to
 
 #### `CustomFormsController` — `api/customforms`
 Dynamic form designer (text / select / checkbox / etc. — see `CustomFormEnums`). Public form submission is open via `POST /{id}/responses` (`[AllowAnonymous]`); listing the responses requires auth.
+
+Form lifecycle and access are explicit: `Draft`, `Online`, `Disabled`, `Archived`, or `Deleted`, with `Direct` and `SurveyOnly` access modes. Delete is a soft delete and returns `409 Conflict` while a channel Survey references the form. Legacy forms missing lifecycle/access fields retain the effective `Active`/direct behavior.
+
+#### `SurveysController` — `api/surveys`
+Channel-scoped CRUD for time-windowed Surveys. A Survey references existing eligible forms in the same channel and can be archived through `DELETE`. Public read routes are exposed by ServerAPI at `/api/surveys/active` and `/api/surveys/url/{url}`; public clients submit SurveyOnly forms with the Survey ID.
 
 #### `ConfigurationController` — `api/configuration`
 Key/value store for `MorWalPizConfiguration`. Supports lookup by id or by key (`/key/{key}`).

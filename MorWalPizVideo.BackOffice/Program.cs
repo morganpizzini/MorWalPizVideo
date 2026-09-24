@@ -383,6 +383,7 @@ if (enableMock)
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationMockRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
+    builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
@@ -485,6 +486,7 @@ else
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
     builder.Services.AddScoped<ICustomFormRepository, CustomFormRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseRepository>();
+    builder.Services.AddScoped<ISurveyRepository, SurveyRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionRepository>();
@@ -551,6 +553,7 @@ else
 builder.Services.AddScoped<IInsightIngestionService, InsightIngestionService>();
 builder.Services.AddScoped<IInsightCommentAnalysisService, InsightCommentAnalysisService>();
 builder.Services.AddScoped<INewsletterDispatchService, NewsletterDispatchService>();
+builder.Services.AddScoped<CustomFormResponseEmailJob>();
 builder.Services.AddScoped<IInsightCommentAnalysisScheduler>(provider =>
     new InsightCommentAnalysisScheduler(provider.GetService<IBackgroundJobClient>()));
 
@@ -678,6 +681,11 @@ if (enableHangFire)
         "newsletter-scheduled-reconciliation",
         service => service.ReconcileScheduledAsync(CancellationToken.None),
         builder.Configuration["Newsletter:ReconciliationCron"] ?? "*/5 * * * *");
+
+    RecurringJob.AddOrUpdate<CustomFormResponseEmailJob>(
+        CustomFormResponseEmailJob.JobId,
+        job => job.ExecuteAsync(CancellationToken.None),
+        builder.Configuration[CustomFormResponseEmailJob.CronConfigurationKey] ?? CustomFormResponseEmailJob.DefaultCronSchedule);
 }
 
 app.MapDefaultEndpoints();

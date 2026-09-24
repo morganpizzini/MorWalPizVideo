@@ -69,6 +69,8 @@ const CustomFormDetail: React.FC = () => {
         return <Badge bg="success">Single Choice</Badge>;
       case QuestionType.Boolean:
         return <Badge bg="warning">True / False</Badge>;
+      case QuestionType.Email:
+        return <Badge bg="primary">Email</Badge>;
       default:
         return <Badge bg="secondary">Unknown</Badge>;
     }
@@ -140,6 +142,12 @@ const CustomFormDetail: React.FC = () => {
             )}
           </div>
         );
+
+      case AnswerType.Email:
+        return <div>{answer.email || <em>No response</em>}</div>;
+
+      case AnswerType.Boolean:
+        return <div>{answer.value ? 'True' : 'False'}</div>;
 
       default:
         return <em>Unknown answer type</em>;

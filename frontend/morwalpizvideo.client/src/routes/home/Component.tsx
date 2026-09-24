@@ -6,7 +6,7 @@ import './style.scss';
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from 'react-share';
 import ReactGA from 'react-ga4';
 import configKeys from '@utils/configKeys';
-import type { ChannelNews } from '@morwalpizvideo/models';
+import type { ChannelNews, Survey } from '@morwalpizvideo/models';
 import { usePublicNavigation } from '../layout/navigation';
 import PublicNavigationLink from '../../components/PublicNavigationLink';
 interface IndexCategory {
@@ -32,11 +32,6 @@ interface IndexMatch {
   creationDateTime?: string;
   url?: string;
 }
-interface IndexForm {
-  id: string;
-  url: string;
-  title: string;
-}
 interface SponsorItem {
   id: string;
   title: string;
@@ -48,7 +43,7 @@ interface SponsorItem {
 interface IndexData {
   matches: IndexMatch[];
   configuration: Record<string, boolean>;
-  activeForms: IndexForm[];
+  surveys: Survey[];
   channelNews: ChannelNews[];
   sponsors: SponsorItem[];
   error: boolean;
@@ -129,7 +124,7 @@ function HomeContent({
   onToggleTag: (tag: string) => void;
 }) {
   const { navigation } = usePublicNavigation();
-  const { matches, configuration, activeForms, channelNews, sponsors } = data;
+  const { matches, configuration, surveys, channelNews, sponsors } = data;
   let firstMatchId: string = '';
   const first = matches[0];
   if (first) {
@@ -205,15 +200,15 @@ function HomeContent({
           </div>
         </>
       )}
-      {activeForms &&
-        activeForms.length > 0 &&
-        activeForms.map((form: IndexForm) => (
-          <div key={form.id} className="home-alert alert alert-info my-3" role="alert">
+      {surveys &&
+        surveys.length > 0 &&
+        surveys.map((survey: Survey) => (
+          <div key={survey.id} className="home-alert alert alert-info my-3" role="alert">
             <div className="home-alert__copy">
               <i className="fa fa-clipboard-question me-2"></i>
-              <strong>NUOVO SONDAGGIO:</strong> {form.title}
+              <strong>NUOVO SONDAGGIO:</strong> {survey.title}
             </div>
-            <Link to={`/custom-forms/${form.url}`} className="btn btn-info ms-2">
+            <Link to={`/survey/${survey.url}`} className="btn btn-info ms-2">
               Rispondi ora <i className="fa fa-arrow-right ms-1"></i>
             </Link>
           </div>

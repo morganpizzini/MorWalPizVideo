@@ -32,6 +32,10 @@ const CustomFormForm: React.FC = () => {
   const [description, setDescription] = useState(existingForm?.description || '');
   const [url, setUrl] = useState(existingForm?.url || '');
   const [active, setActive] = useState(existingForm?.active ?? true);
+  const [lifecycle, setLifecycle] = useState(
+    existingForm?.lifecycle ?? (existingForm?.active === false ? 'Disabled' : 'Online')
+  );
+  const [accessMode, setAccessMode] = useState(existingForm?.accessMode ?? 'Direct');
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
 
   const fetcher = useFetcher();
@@ -58,6 +62,16 @@ const CustomFormForm: React.FC = () => {
       setQuestions(formQuestions);
     }
   }, [existingForm]);
+
+  useEffect(() => {
+    if (busy || !fetcher.data || fetcher.data.success) return;
+
+    const genericErrors = fetcher.data.errors?.generics ?? [];
+    const fieldErrors = Object.values(fetcher.data.errors?.fields ?? {});
+    const message =
+      [...genericErrors, ...fieldErrors].join(' ') || 'Unable to save the custom form';
+    toast.show('Save failed', message, { variant: 'danger' });
+  }, [busy, fetcher.data, toast]);
 
   const addQuestion = () => {
     const newQuestion: QuestionFormData = {
@@ -161,11 +175,13 @@ const CustomFormForm: React.FC = () => {
         _t:
           q.questionType === QuestionType.Boolean
             ? 'BooleanQuestion'
-            : q.questionType === QuestionType.Open
-              ? 'OpenQuestion'
-              : q.questionType === QuestionType.MultipleChoice
-                ? 'MultipleChoiceQuestion'
-                : 'SingleChoiceQuestion',
+            : q.questionType === QuestionType.Email
+              ? 'EmailQuestion'
+              : q.questionType === QuestionType.Open
+                ? 'OpenQuestion'
+                : q.questionType === QuestionType.MultipleChoice
+                  ? 'MultipleChoiceQuestion'
+                  : 'SingleChoiceQuestion',
         questionId: q.questionId,
         questionText: q.questionText,
         questionType: q.questionType,
@@ -173,7 +189,7 @@ const CustomFormForm: React.FC = () => {
         order: q.order,
       };
 
-      if (q.questionType === QuestionType.Open) {
+      if (q.questionType === QuestionType.Open || q.questionType === QuestionType.Email) {
         return base as OpenQuestion;
       } else if (q.questionType === QuestionType.Boolean) {
         return base as AnyQuestion;
@@ -195,6 +211,8 @@ const CustomFormForm: React.FC = () => {
     formData.append('description', description);
     formData.append('url', url);
     formData.append('active', active.toString());
+    formData.append('lifecycle', lifecycle);
+    formData.append('accessMode', accessMode);
     formData.append('questions', JSON.stringify(apiQuestions));
 
     fetcher.submit(formData, { method: 'post' });
@@ -210,6 +228,8 @@ const CustomFormForm: React.FC = () => {
         return 'Single Choice';
       case QuestionType.Boolean:
         return 'True / False';
+      case QuestionType.Email:
+        return 'Email';
       default:
         return 'Unknown';
     }
@@ -281,6 +301,34 @@ const CustomFormForm: React.FC = () => {
                 When active, the form will be visible to users and accept responses
               </Form.Text>
             </Form.Group>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="lifecycle">
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select
+                    value={lifecycle}
+                    onChange={e => setLifecycle(e.target.value as typeof lifecycle)}
+                  >
+                    <option value="Draft">Draft</option>
+                    <option value="Online">Online</option>
+                    <option value="Disabled">Disabled</option>
+                    <option value="Archived">Archived</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="accessMode">
+                  <Form.Label>Access</Form.Label>
+                  <Form.Select
+                    value={accessMode}
+                    onChange={e => setAccessMode(e.target.value as typeof accessMode)}
+                  >
+                    <option value="Direct">Direct URL</option>
+                    <option value="SurveyOnly">Survey only</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
           </Card.Body>
         </Card>
 
@@ -380,6 +428,7 @@ const CustomFormForm: React.FC = () => {
                             <option value={QuestionType.SingleChoice}>Single Choice</option>
                             <option value={QuestionType.MultipleChoice}>Multiple Choice</option>
                             <option value={QuestionType.Boolean}>True / False</option>
+                            <option value={QuestionType.Email}>Email</option>
                           </Form.Select>
                         </Form.Group>
                       </Col>

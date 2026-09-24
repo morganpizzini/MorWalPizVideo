@@ -47,7 +47,7 @@ namespace MorWalPizVideo.Server.Models
     [BsonIgnoreExtraElements]
     [DataContract]
     [BsonDiscriminator(RootClass = true)]
-    [BsonKnownTypes(typeof(OpenAnswer), typeof(MultipleChoiceAnswer), typeof(SingleChoiceAnswer), typeof(BooleanAnswer))]
+    [BsonKnownTypes(typeof(OpenAnswer), typeof(MultipleChoiceAnswer), typeof(SingleChoiceAnswer), typeof(BooleanAnswer), typeof(EmailAnswer))]
     public abstract record CustomFormAnswer
     {
         protected CustomFormAnswer(string questionId, AnswerType answerType)
@@ -155,5 +155,23 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("value")]
         public bool Value { get; init; }
+    }
+
+    [BsonIgnoreExtraElements]
+    [DataContract]
+    [BsonDiscriminator("EmailAnswer")]
+    public record EmailAnswer : CustomFormAnswer
+    {
+        [JsonConstructor]
+        public EmailAnswer(string questionId, string email)
+            : base(questionId, AnswerType.Email)
+        {
+            Email = email;
+        }
+
+        [DataMember]
+        [BsonElement("email")]
+        [JsonPropertyName("email")]
+        public string Email { get; init; }
     }
 }

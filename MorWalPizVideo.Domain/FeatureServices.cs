@@ -565,9 +565,9 @@ public interface IFormsService
     Task<CustomForm?> GetFormByIdAsync(string id, string channelId);
     Task<bool> SaveFormAsync(CustomForm form, string channelId);
     Task<bool> UpdateFormAsync(CustomForm form, string channelId);
-    Task DeleteFormAsync(string id, string channelId);
+    Task<bool> DeleteFormAsync(string id, string channelId);
     Task<IList<CustomForm>> GetActiveFormsAsync(string channelId);
-    Task<CustomForm?> GetFormByUrlAsync(string url, string channelId);
+    Task<CustomForm?> GetFormByUrlAsync(string url, string channelId, bool allowSurveyOnly = false);
     Task<bool> AddResponseAsync(string formId, CustomFormResponse response, string channelId);
     Task<IList<CustomFormResponse>> GetResponsesAsync(string formId, string channelId, int limit = 500);
     Task<int> GetResponseCountAsync(string formId, string channelId);
@@ -577,7 +577,8 @@ public interface IFormsService
 
 public sealed class FormsService(
     ICustomFormRepository customFormRepository,
-    ICustomFormResponseRepository customFormResponseRepository) : IFormsService
+    ICustomFormResponseRepository customFormResponseRepository,
+    ISurveyRepository? surveyRepository = null) : IFormsService
 {
     public Task<IList<CustomForm>> GetAllFormsAsync(string channelId) => customFormRepository.GetItemsAsync(x => x.ChannelId == channelId);
 
@@ -612,20 +613,32 @@ public sealed class FormsService(
         return true;
     }
 
-    public async Task DeleteFormAsync(string id, string channelId)
+    public async Task<bool> DeleteFormAsync(string id, string channelId)
     {
         var form = await GetFormByIdAsync(id, channelId);
         if (form == null)
         {
-            return;
+            return false;
         }
 
-        await customFormRepository.DeleteItemAsync(form.Id);
+        if (surveyRepository is not null && await surveyRepository.ExistsReferencingFormAsync(form.Id, channelId))
+            return false;
+
+        await customFormRepository.UpdateItemAsync(form with
+        {
+            Active = false,
+            Lifecycle = CustomFormLifecycle.Deleted
+        });
+        return true;
     }
 
     public Task<IList<CustomForm>> GetActiveFormsAsync(string channelId) => customFormRepository.GetActiveAsync(channelId);
 
-    public Task<CustomForm?> GetFormByUrlAsync(string url, string channelId) => customFormRepository.GetByUrlAsync(url, channelId);
+    public async Task<CustomForm?> GetFormByUrlAsync(string url, string channelId, bool allowSurveyOnly = false)
+    {
+        var form = await customFormRepository.GetByUrlAsync(url, channelId);
+        return form is not null && form.EffectiveLifecycle == CustomFormLifecycle.Online && (allowSurveyOnly || form.EffectiveAccessMode == CustomFormAccessMode.Direct) ? form : null;
+    }
 
     public async Task<bool> AddResponseAsync(string formId, CustomFormResponse response, string channelId)
     {
@@ -708,6 +721,67 @@ public sealed class FormsService(
         var safeBatchSize = Math.Clamp(batchSize, 1, 200);
         var nextToken = batch.Count == safeBatchSize ? batch[^1].Id : null;
         return new FormResponseBackfillBatchResult(batch.Count, processedResponses, upsertedResponses, nextToken);
+    }
+}
+
+public sealed record PublicSurvey(Survey Survey, IReadOnlyList<CustomForm> Forms);
+
+public interface ISurveyService
+{
+    Task<IReadOnlyList<PublicSurvey>> GetEligibleAsync(string channelId, DateTime utcNow);
+    Task<PublicSurvey?> GetByUrlAsync(string url, string channelId, DateTime utcNow);
+    Task<bool> CanSubmitAsync(string surveyId, string formId, string channelId, DateTime utcNow);
+}
+
+public sealed class SurveyService(ISurveyRepository surveyRepository, ICustomFormRepository customFormRepository) : ISurveyService
+{
+    public async Task<IReadOnlyList<PublicSurvey>> GetEligibleAsync(string channelId, DateTime utcNow)
+    {
+        var surveys = await surveyRepository.GetEligibleAsync(channelId, utcNow);
+        var result = new List<PublicSurvey>();
+        foreach (var survey in surveys)
+        {
+            var publicSurvey = await ResolveAsync(survey, channelId, utcNow);
+            if (publicSurvey is not null)
+                result.Add(publicSurvey);
+        }
+
+        return result;
+    }
+
+    public async Task<PublicSurvey?> GetByUrlAsync(string url, string channelId, DateTime utcNow)
+    {
+        var survey = await surveyRepository.GetByUrlAsync(url, channelId);
+        return survey is null ? null : await ResolveAsync(survey, channelId, utcNow);
+    }
+
+    public async Task<bool> CanSubmitAsync(string surveyId, string formId, string channelId, DateTime utcNow)
+    {
+        var survey = (await surveyRepository.GetItemsAsync(x => x.Id == surveyId && x.ChannelId == channelId)).FirstOrDefault();
+        return survey is not null
+            && survey.IsPubliclyEligible(utcNow)
+            && survey.FormIds.Contains(formId, StringComparer.Ordinal)
+            && await ResolveAsync(survey, channelId, utcNow) is not null;
+    }
+
+    private async Task<PublicSurvey?> ResolveAsync(Survey survey, string channelId, DateTime utcNow)
+    {
+        if (survey.ChannelId != channelId || !survey.IsPubliclyEligible(utcNow) || survey.FromUtc >= survey.ToUtc || survey.FormIds.Length == 0)
+            return null;
+
+        if (survey.FormIds.Distinct(StringComparer.Ordinal).Count() != survey.FormIds.Length)
+            return null;
+
+        var forms = new List<CustomForm>(survey.FormIds.Length);
+        foreach (var formId in survey.FormIds)
+        {
+            var form = (await customFormRepository.GetItemsAsync(x => x.Id == formId && x.ChannelId == channelId)).FirstOrDefault();
+            if (form is null || form.EffectiveLifecycle != CustomFormLifecycle.Online)
+                return null;
+            forms.Add(form);
+        }
+
+        return new PublicSurvey(survey, forms);
     }
 }
 

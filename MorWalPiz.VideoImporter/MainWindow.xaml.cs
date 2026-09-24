@@ -1160,6 +1160,15 @@ namespace MorWalPiz.VideoImporter
             dialog.ShowDialog();
         }
 
+        private void ImageCreationMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ImageCreationPage
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+        }
+
         /// <summary>
         /// Crea una copia temporanea del VideoFile con disclaimers aggiunti solo per l'upload
         /// </summary>

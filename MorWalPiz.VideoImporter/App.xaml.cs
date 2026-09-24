@@ -24,6 +24,10 @@ namespace MorWalPiz.VideoImporter
         public static SocialPublishingService SocialPublishingService { get; private set; } = null!;
         public static IHashtagHistoryService HashtagHistoryService { get; private set; } = null!;
         public static IVideoThumbnailService VideoThumbnailService { get; private set; } = null!;
+        public static ImageGenerationOptions ImageGenerationOptions { get; private set; } = null!;
+        public static IImageGenerationService ImageGenerationService { get; private set; } = null!;
+        public static IImageOutputService ImageOutputService { get; private set; } = null!;
+        public static IPromptTemplateStore PromptTemplateStore { get; private set; } = null!;
         public static IConfiguration Configuration { get; private set; } = null!;
 
         public static string GetCurrentChannelId()
@@ -64,6 +68,12 @@ namespace MorWalPiz.VideoImporter
                     services.AddSingleton<DatabaseService>();
                     services.AddSingleton<ITenantService, TenantService>();
                     services.AddSingleton(provider => CreateApiSettings(context.Configuration, provider.GetRequiredService<DatabaseService>()));
+                    services.AddSingleton(provider => ImageGenerationOptions.FromConfiguration(context.Configuration));
+                    services.AddSingleton<IImageApiKeyProvider, ConfigurationImageApiKeyProvider>();
+                    services.AddSingleton<IImageGenerationService, ImageGenerationService>();
+                    services.AddSingleton<IImageOutputService, ImageOutputService>();
+                    services.AddSingleton<IPromptTemplateStore, PromptTemplateStore>();
+                    services.AddHttpClient("ImageGeneration", client => client.Timeout = TimeSpan.FromMinutes(10));
                     services.AddHttpClient("BackOffice", client => client.Timeout = TimeSpan.FromSeconds(300))
                         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
                         {
@@ -102,6 +112,10 @@ namespace MorWalPiz.VideoImporter
             SocialPublishingService = _host.Services.GetRequiredService<SocialPublishingService>();
             HashtagHistoryService = _host.Services.GetRequiredService<IHashtagHistoryService>();
             VideoThumbnailService = _host.Services.GetRequiredService<IVideoThumbnailService>();
+            ImageGenerationOptions = _host.Services.GetRequiredService<ImageGenerationOptions>();
+            ImageGenerationService = _host.Services.GetRequiredService<IImageGenerationService>();
+            ImageOutputService = _host.Services.GetRequiredService<IImageOutputService>();
+            PromptTemplateStore = _host.Services.GetRequiredService<IPromptTemplateStore>();
 
             // Inizializza il servizio di upload YouTube con Key Vault
             //var credentials = Configuration[$"credentials-{TenantContext.CurrentTenantName.ToLower()}"];

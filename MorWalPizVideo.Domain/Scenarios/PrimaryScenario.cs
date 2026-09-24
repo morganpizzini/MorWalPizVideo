@@ -47,6 +47,7 @@ public class PrimaryScenario : BaseScenario
         };
 
         Set("categories", [category]);
+        Set("surveys", Array.Empty<Survey>());
         Set("matches",
         [
             new YouTubeContent(

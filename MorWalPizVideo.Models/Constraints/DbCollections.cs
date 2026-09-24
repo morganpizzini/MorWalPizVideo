@@ -16,6 +16,7 @@
         public const string Channels = "ytChannels";
         public const string Compilations = "compilations";
         public const string CustomForms = "customForms";
+        public const string Surveys = "surveys";
         public const string CustomFormResponses = "customFormResponses";
         public const string AskCampaigns = "askCampaigns";
         public const string AskSubmissions = "askSubmissions";

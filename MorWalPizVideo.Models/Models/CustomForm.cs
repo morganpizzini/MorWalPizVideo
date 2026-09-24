@@ -12,7 +12,7 @@ namespace MorWalPizVideo.Server.Models
     public record CustomForm : BaseEntity
     {
         [JsonConstructor]
-        public CustomForm(string title, string description, string url, CustomFormQuestion[] questions, bool active = true, string? channelId = null)
+        public CustomForm(string title, string description, string url, CustomFormQuestion[] questions, bool active = true, string? channelId = null, CustomFormLifecycle? lifecycle = null, CustomFormAccessMode? accessMode = null)
         {
             Title = title;
             Description = description;
@@ -21,6 +21,8 @@ namespace MorWalPizVideo.Server.Models
             Responses = Array.Empty<CustomFormResponse>();
             Active = active;
             ChannelId = channelId;
+            Lifecycle = lifecycle;
+            AccessMode = accessMode;
         }
 
         /// <summary>
@@ -54,6 +56,20 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("active")]
         public bool Active { get; init; } = true;
+
+        [DataMember]
+        [BsonElement("lifecycle")]
+        public CustomFormLifecycle? Lifecycle { get; init; }
+
+        [DataMember]
+        [BsonElement("accessMode")]
+        public CustomFormAccessMode? AccessMode { get; init; }
+
+        [BsonIgnore]
+        public CustomFormLifecycle EffectiveLifecycle => Lifecycle ?? (Active ? CustomFormLifecycle.Online : CustomFormLifecycle.Disabled);
+
+        [BsonIgnore]
+        public CustomFormAccessMode EffectiveAccessMode => AccessMode ?? CustomFormAccessMode.Direct;
 
         /// <summary>
         /// Questions in this form

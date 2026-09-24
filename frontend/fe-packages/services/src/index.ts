@@ -1,107 +1,183 @@
 // Main barrel export file for @morwalpizvideo/services
 
 // API Service exports
-export { default as apiService } from './apiService';
+export { default as apiService } from "./apiService";
 export {
-    getSelectedChannelId,
-    resetCsrfToken,
-    selectFirstAccessibleChannel,
-    setAuthTokenProvider,
-    setCookieOnlyMode,
-    setRequestCredentialsMode,
-    setSelectedChannelId,
-    setUnauthorizedHandler
-} from './apiService';
+  getSelectedChannelId,
+  resetCsrfToken,
+  selectFirstAccessibleChannel,
+  setAuthTokenProvider,
+  setCookieOnlyMode,
+  setRequestCredentialsMode,
+  setSelectedChannelId,
+  setUnauthorizedHandler,
+} from "./apiService";
 
 // Export individual HTTP methods
-export { get, post, put, patch, Delete, postFormData, getFile, call } from './apiService';
+export {
+  get,
+  post,
+  put,
+  patch,
+  Delete,
+  postFormData,
+  getFile,
+  call,
+  ApiResponseError,
+  requireSuccessfulResponse,
+} from "./apiService";
 
 // Export entity-specific service functions
 export {
-    fetchProducts,
-    getProduct,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    fetchProductCategories,
-    getProductCategory,
-    createProductCategory,
-    updateProductCategory,
-    deleteProductCategory,
-    fetchQuickLinks,
-    getQuickLinks,
-    createQuickLinks,
-    updateQuickLinks,
-    deleteQuickLinks,
-    fetchChannelNews,
-    getChannelNews,
-    createChannelNews,
-    updateChannelNews,
-    deleteChannelNews,
-    updateChannelNewsStatus,
-    uploadChannelNewsImages,
-    deleteChannelNewsImage,
-    fetchPages,
-    getPage,
-    createPage,
-    updatePage,
-    deletePage,
-    uploadPageImages,
-    deletePageImage,
-    getNavigation,
-    saveNavigation,
-    getPublicNavigation,
-    fetchSponsors,
-    subscribeNewsletter, confirmNewsletter, unsubscribeNewsletter,
-    fetchNewsletters, getNewsletter, createNewsletter, updateNewsletter, changeNewsletterState, sendNewsletter, scheduleNewsletter, previewNewsletter, fetchNewsletterSubscribers, fetchNewsletterStats, fetchNewsletterTemplates, createNewsletterTemplate,
-    getSponsor,
-    createSponsor,
-    createSponsorWithImage,
-    updateSponsor,
-    updateSponsorWithImage,
-    deleteSponsor
-} from './apiService';
-export { getChannelTerminology, saveChannelTerminology } from './apiService';
-export { getActiveCustomForms, getCustomFormByUrl, submitCustomFormResponse } from './apiService';
-export { getAskCampaign, submitAsk, reactToAskSubmission, fetchAskCampaigns, getAskCampaignAdmin, createAskCampaign, updateAskCampaign, fetchAskSubmissions, moderateAskSubmission, respondToAskSubmission, getAskAnalytics, getAskShare, publishAskToTelegram, exportAskSubmissions } from './apiService';
-export type { AskPublicCampaign } from './apiService';
-export { getPublicFaq, getPublicFaqCategories, voteFaqAnswer } from './apiService';
-export type { FaqPublicItem, FaqPublicAnswer } from './apiService';
-export { fetchFaqs, getFaq, createFaq, updateFaq, fetchFaqCategories, saveFaqCategory, fetchFaqAnswers, createFaqAnswer, updateFaqAnswer, fetchFaqCandidates, generateFaqCandidates, reviewFaqCandidate } from './apiService';
+  fetchProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  fetchProductCategories,
+  getProductCategory,
+  createProductCategory,
+  updateProductCategory,
+  deleteProductCategory,
+  fetchQuickLinks,
+  getQuickLinks,
+  createQuickLinks,
+  updateQuickLinks,
+  deleteQuickLinks,
+  fetchChannelNews,
+  getChannelNews,
+  createChannelNews,
+  updateChannelNews,
+  deleteChannelNews,
+  updateChannelNewsStatus,
+  uploadChannelNewsImages,
+  deleteChannelNewsImage,
+  fetchPages,
+  getPage,
+  createPage,
+  updatePage,
+  deletePage,
+  uploadPageImages,
+  deletePageImage,
+  getNavigation,
+  saveNavigation,
+  getPublicNavigation,
+  fetchSponsors,
+  subscribeNewsletter,
+  confirmNewsletter,
+  unsubscribeNewsletter,
+  fetchNewsletters,
+  getNewsletter,
+  createNewsletter,
+  updateNewsletter,
+  changeNewsletterState,
+  sendNewsletter,
+  scheduleNewsletter,
+  previewNewsletter,
+  fetchNewsletterSubscribers,
+  fetchNewsletterStats,
+  fetchNewsletterTemplates,
+  createNewsletterTemplate,
+  getSponsor,
+  createSponsor,
+  createSponsorWithImage,
+  updateSponsor,
+  updateSponsorWithImage,
+  deleteSponsor,
+} from "./apiService";
+export { getChannelTerminology, saveChannelTerminology } from "./apiService";
+export {
+  getActiveCustomForms,
+  getCustomFormByUrl,
+  submitCustomFormResponse,
+  getEligibleSurveys,
+  getSurveyByUrl,
+} from "./apiService";
+export {
+  getAskCampaign,
+  submitAsk,
+  reactToAskSubmission,
+  fetchAskCampaigns,
+  getAskCampaignAdmin,
+  createAskCampaign,
+  updateAskCampaign,
+  fetchAskSubmissions,
+  moderateAskSubmission,
+  respondToAskSubmission,
+  getAskAnalytics,
+  getAskShare,
+  publishAskToTelegram,
+  exportAskSubmissions,
+} from "./apiService";
+export type { AskPublicCampaign } from "./apiService";
+export {
+  getPublicFaq,
+  getPublicFaqCategories,
+  voteFaqAnswer,
+} from "./apiService";
+export type { FaqPublicItem, FaqPublicAnswer } from "./apiService";
+export {
+  fetchFaqs,
+  getFaq,
+  createFaq,
+  updateFaq,
+  fetchFaqCategories,
+  saveFaqCategory,
+  fetchFaqAnswers,
+  createFaqAnswer,
+  updateFaqAnswer,
+  fetchFaqCandidates,
+  generateFaqCandidates,
+  reviewFaqCandidate,
+} from "./apiService";
 
 // Endpoints exports
-export { default as endpoints } from './endpoints';
-export { default as frontendEndpoints } from './endpoints-frontend';
-export { ComposeUrl } from './endpoints';
+export { default as endpoints } from "./endpoints";
+export { default as frontendEndpoints } from "./endpoints-frontend";
+export { ComposeUrl } from "./endpoints";
 
 // Shop service exports
 export {
-    fetchShopProducts,
-    getShopProduct,
-    createShopProduct,
-    updateShopProduct,
-    deleteShopProduct,
-    fetchShopProductCategories,
-    shopLogin,
-    shopVerifyEmail,
-    getShopCart,
-    addToCart,
-    updateCartItem,
-    removeFromCart,
-    checkoutCart,
-    getLegalContent,
-    createLegalContent,
-    updateLegalContent
-} from './shopService';
+  fetchShopProducts,
+  getShopProduct,
+  createShopProduct,
+  updateShopProduct,
+  deleteShopProduct,
+  fetchShopProductCategories,
+  shopLogin,
+  shopVerifyEmail,
+  getShopCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  checkoutCart,
+  getLegalContent,
+  createLegalContent,
+  updateLegalContent,
+} from "./shopService";
 
 // Insights service exports
 export {
-    insightsTopicsApi,
-    insightsNewsApi,
-    insightsContentPlansApi
-} from './insightsService';
+  insightsTopicsApi,
+  insightsNewsApi,
+  insightsContentPlansApi,
+} from "./insightsService";
 
 // Video ↔ Channel join (FR-016 / FR-017)
-export { loadChannelMap, buildOwnerMap, resolveOwner, MORWALPIZ_CHANNEL_ID } from './videoChannelMap';
-export type { ChannelBadge, ChannelWithVideos, VideoLike, VideoRefLike, MatchLike } from './videoChannelMap';
-export { getPublicChannelNews, getPublicChannelNewsByIdOrSlug } from './channelNewsService';
+export {
+  loadChannelMap,
+  buildOwnerMap,
+  resolveOwner,
+  MORWALPIZ_CHANNEL_ID,
+} from "./videoChannelMap";
+export type {
+  ChannelBadge,
+  ChannelWithVideos,
+  VideoLike,
+  VideoRefLike,
+  MatchLike,
+} from "./videoChannelMap";
+export {
+  getPublicChannelNews,
+  getPublicChannelNewsByIdOrSlug,
+} from "./channelNewsService";

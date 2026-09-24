@@ -4,6 +4,7 @@ export enum QuestionType {
   MultipleChoice = 1,
   SingleChoice = 2,
   Boolean = 3,
+  Email = 4,
 }
 
 export enum AnswerType {
@@ -12,6 +13,7 @@ export enum AnswerType {
   MultipleChoice = 1,
   SingleChoice = 2,
   Boolean = 3,
+  Email = 4,
 }
 
 export interface QuestionOption {
@@ -26,7 +28,8 @@ export interface CustomFormQuestion {
     | "OpenQuestion"
     | "MultipleChoiceQuestion"
     | "SingleChoiceQuestion"
-    | "BooleanQuestion";
+    | "BooleanQuestion"
+    | "EmailQuestion";
   questionId: string;
   questionText: string;
   questionType: QuestionType;
@@ -53,12 +56,18 @@ export interface BooleanQuestion extends CustomFormQuestion {
   questionType: QuestionType.Boolean;
 }
 
+export interface EmailQuestion extends CustomFormQuestion {
+  _t?: "EmailQuestion";
+  questionType: QuestionType.Email;
+}
+
 // Union type for all question types
 export type AnyQuestion =
   | OpenQuestion
   | MultipleChoiceQuestion
   | SingleChoiceQuestion
-  | BooleanQuestion;
+  | BooleanQuestion
+  | EmailQuestion;
 
 // Base answer interface
 export interface CustomFormAnswer {
@@ -66,7 +75,8 @@ export interface CustomFormAnswer {
     | "OpenAnswer"
     | "MultipleChoiceAnswer"
     | "SingleChoiceAnswer"
-    | "BooleanAnswer";
+    | "BooleanAnswer"
+    | "EmailAnswer";
   questionId: string;
   answerType: AnswerType;
 }
@@ -92,12 +102,19 @@ export interface BooleanAnswer extends CustomFormAnswer {
   value: boolean;
 }
 
+export interface EmailAnswer extends CustomFormAnswer {
+  _t?: "EmailAnswer";
+  answerType: AnswerType.Email;
+  email: string;
+}
+
 // Union type for all answer types
 export type AnyAnswer =
   | OpenAnswer
   | MultipleChoiceAnswer
   | SingleChoiceAnswer
-  | BooleanAnswer;
+  | BooleanAnswer
+  | EmailAnswer;
 
 export interface CustomFormResponse {
   responseId: string;
@@ -114,6 +131,20 @@ export interface CustomForm {
   questions: AnyQuestion[];
   responseCount: number;
   creationDateTime: string;
+  lifecycle?: "Draft" | "Online" | "Disabled" | "Archived" | "Deleted";
+  accessMode?: "Direct" | "SurveyOnly";
+}
+
+export interface Survey {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  fromUtc: string;
+  toUtc: string;
+  forms?: CustomForm[];
+  formIds?: string[];
+  lifecycle?: "Draft" | "Online" | "Archived" | "Closed";
 }
 
 // Request DTOs

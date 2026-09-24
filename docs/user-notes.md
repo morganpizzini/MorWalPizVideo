@@ -8,22 +8,27 @@ user note while using the application, can be related to bug, new feature, fixes
 
 #### UI enhancement
 
-- the login username/email input box should not have auto-capitalize
+Completed: the login username/email input disables automatic capitalization.
 
 #### submit and callback error feedback
 
-when a request goes wrong the navigator shouldn't navigate back. This issue right now appears on customforms/create but could be in any page : i get 400 as response (this time, could be any response not 2xx), but i don't see any alert about the request fail and the page navigates back.
-the right workflow is to show the toast about the error to inform the user and not navigate back.
+Completed for custom form create/edit: failed saves now show a danger toast and do not navigate.
 
 #### form pages ui breadcrumbs
 
-frontend\back-office-spa\src\routes\customForms\form\loader.ts and frontend\back-office-spa\src\routes\customForms\detail\loader.ts missing breadcrumbidentifier
+Completed: custom form create/edit and detail loaders now provide a breadcrumb identifier.
 
 #### form creation question type 
 
-frontend\back-office-spa\src\routes\customForms\form\component.tsx has missing default input as question possibility. check backoffice contract if single input is possible. Options should be 'Text' / 'Text Area' / 'Single choice' / 'Multiple choice' / 'True / False'  
+The contract currently supports only one text question type (`OpenText`), rendered as a text area. Adding a separate single-line `Text` option requires a new contract type and renderer support.
 
+
+Implemented: generic form submissions now keep the `api/customforms/{id}/responses` contract and show non-success responses as errors. The sponsor page keeps its dedicated `SponsorRequest` endpoint, obtains reCAPTCHA at submit time, validates named questions before mapping, and displays missing-token or server validation failures.
 ### morwalpizvideo.client
+
+#### Survey workflow
+
+Implemented: surveys are separate channel-scoped BackOffice objects containing ordered forms. Online surveys produce a home banner and open at `/survey/{url}`. Forms are presented sequentially; the next form is shown only after a successful response, and SurveyOnly forms require the active survey context when submitted.
 
 #### form implementation legacy workflow
 
@@ -55,13 +60,15 @@ the form does not contains any Email/Description/Token request, understand why h
 
 ## Backoffice
 
-### Form submit feedback [improvement]
-server.API is responsable to save all responses coming from a UI form. I want to create an automatic procedure that every 10 minutes scan the responses, understand if the responses is new (maybe create a property 'processed' which goes true when the job analyze that) and if the response contains an email, coming from 'email' form question. i want to create an email like "we receive your submission, this are the data provided, we will get in touch soon". 
+### Form submit feedback [implemented]
+Custom forms now support an explicit Email question. Standalone response documents are processed by the BackOffice Hangfire job every 10 minutes using the existing SMTP/newsletter email service. Responses use additive pending/claimed/processed/skipped/failed state with an atomic lease claim, deterministic provider key, HTML-encoded acknowledgement data, and retry-safe failure handling. Historical documents in the response collection are eligible; missing or invalid email answers are marked skipped. Legacy embedded responses and public routes remain compatible.
 
 
 ## Video importer
 
 ### Image creation [new feature]
+
+Implemented in `MorWalPiz.VideoImporter`: generation and one-image-plus-optional-mask editing use the configured serverless endpoint and model. The API key is resolved from Azure Key Vault only. Supported sizes are an explicit configuration map; unsupported ratios/dimensions are rejected without cropping or stretching. Results are saved collision-free only in the configured output directory and can be previewed in-app. Global prompt templates are stored locally in a JSON file, with no image-history persistence. Additional reference images are intentionally rejected because provider semantics are undefined. Live-provider verification still requires a configured endpoint and credentials.
 
 The functionality is completly unrelated from backoffice admin API.
 The user will create a prompt, add images, set parameters that will be send to azure foundry model gpt-image2.5-sunburst

@@ -803,7 +803,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
-        public Task<IList<CustomForm>> GetActiveAsync(string? channelId = null) => GetItemsAsync(x => x.Active && (channelId == null || x.ChannelId == channelId));
+        public Task<IList<CustomForm>> GetActiveAsync(string? channelId = null) => GetItemsAsync(x => (channelId == null || x.ChannelId == channelId) && x.EffectiveLifecycle == CustomFormLifecycle.Online && x.EffectiveAccessMode == CustomFormAccessMode.Direct);
 
         public async Task<CustomForm?> GetByUrlAsync(string url, string? channelId = null)
             => (await GetItemsAsync(x => (channelId == null || x.ChannelId == channelId) && x.Url.ToLower() == url.ToLower())).FirstOrDefault();
@@ -822,6 +822,17 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
             return ordered.Take(safeBatchSize).ToList();
         }
+    }
+
+    public class SurveyMockRepository : BaseMockRepository<Survey>, ISurveyRepository
+    {
+        public SurveyMockRepository(IMockScenario scenario) : base(scenario, "surveys") { }
+        public Task<IList<Survey>> GetEligibleAsync(string channelId, DateTime utcNow) => GetItemsAsync(x => x.ChannelId == channelId && x.IsPubliclyEligible(utcNow));
+        public async Task<Survey?> GetByUrlAsync(string url, string channelId) => (await GetItemsAsync(x => x.ChannelId == channelId && x.Url.ToLower() == url.Trim().ToLower())).FirstOrDefault();
+        public async Task<bool> ExistsReferencingFormAsync(string formId, string channelId)
+            => (await GetItemsAsync(x => x.ChannelId == channelId
+                && (x.Lifecycle == SurveyLifecycle.Draft || x.Lifecycle == SurveyLifecycle.Online)
+                && x.FormIds.Contains(formId))).Count > 0;
     }
 
     public class CustomFormResponseMockRepository : BaseMockRepository<CustomFormResponseDocument>, ICustomFormResponseRepository
@@ -854,8 +865,66 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 return true;
             }
 
-            await UpdateItemAsync(item with { Id = existing.Id });
+            await UpdateItemAsync(existing with
+            {
+                FormId = item.FormId,
+                ResponseId = item.ResponseId,
+                SubmittedAt = item.SubmittedAt,
+                Answers = item.Answers
+            });
             return false;
+        }
+
+        public async Task<IList<CustomFormResponseDocument>> ClaimBatchAsync(DateTime now, DateTime leaseUntil, string workerId, int batchSize)
+        {
+            var claimed = new List<CustomFormResponseDocument>();
+            foreach (var item in (await GetItemsAsync()).OrderBy(x => x.SubmittedAt))
+            {
+                if (claimed.Count >= Math.Clamp(batchSize, 1, 500))
+                    break;
+
+                var eligible = item.ProcessingStatus is ResponseProcessingStatus.Pending or ResponseProcessingStatus.Failed
+                    || (item.ProcessingStatus == ResponseProcessingStatus.Claimed && item.ProcessingLeaseUntil <= now);
+                if (!eligible)
+                    continue;
+
+                var updated = item with
+                {
+                    ProcessingStatus = ResponseProcessingStatus.Claimed,
+                    ProcessingWorkerId = workerId,
+                    ProcessingLeaseUntil = leaseUntil,
+                    ProcessingAttemptCount = item.ProcessingAttemptCount + 1
+                };
+                await UpdateItemAsync(updated);
+                claimed.Add(updated);
+            }
+
+            return claimed;
+        }
+
+        public Task<bool> MarkProcessedAsync(string formId, string responseId, string workerId)
+            => UpdateStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Processed, null);
+
+        public Task<bool> MarkSkippedAsync(string formId, string responseId, string workerId, string reason)
+            => UpdateStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Skipped, reason);
+
+        public Task<bool> MarkFailedAsync(string formId, string responseId, string workerId, string error)
+            => UpdateStateAsync(formId, responseId, workerId, ResponseProcessingStatus.Failed, error);
+
+        private async Task<bool> UpdateStateAsync(string formId, string responseId, string workerId, ResponseProcessingStatus state, string? error)
+        {
+            var item = (await GetItemsAsync(x => x.FormId == formId && x.ResponseId == responseId && x.ProcessingStatus == ResponseProcessingStatus.Claimed && x.ProcessingWorkerId == workerId)).FirstOrDefault();
+            if (item is null)
+                return false;
+
+            await UpdateItemAsync(item with
+            {
+                ProcessingStatus = state,
+                ProcessingWorkerId = null,
+                ProcessingLeaseUntil = null,
+                ProcessingLastError = error
+            });
+            return true;
         }
     }
 

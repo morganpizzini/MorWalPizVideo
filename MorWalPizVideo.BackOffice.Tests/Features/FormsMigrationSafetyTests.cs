@@ -87,4 +87,58 @@ public class FormsMigrationSafetyTests
         Assert.Equal(2, reconciliation.EmbeddedCount);
         Assert.Equal(2, reconciliation.CollectionCount);
     }
+
+    [Fact]
+    public async Task Delete_RejectsReferencedForm_ThenSoftDeletesAfterReferenceIsArchived()
+    {
+        var scenario = new PrimaryScenario();
+        var formRepository = new CustomFormMockRepository(scenario);
+        var responseRepository = new CustomFormResponseMockRepository(scenario);
+        var surveyRepository = new SurveyMockRepository(scenario);
+        var service = new FormsService(formRepository, responseRepository, surveyRepository);
+        var form = new CustomForm("Form", "Desc", "form-delete", [new OpenQuestion("q1", "Question", true, 1)])
+        {
+            Id = "form-delete",
+            ChannelId = PrimaryScenario.ChannelId
+        };
+        var survey = new Survey("Survey", "Desc", "survey-delete", PrimaryScenario.ChannelId,
+            DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(10), [form.Id], SurveyLifecycle.Online)
+        {
+            Id = "survey-delete"
+        };
+
+        await formRepository.AddItemAsync(form);
+        await surveyRepository.AddItemAsync(survey);
+
+        Assert.False(await service.DeleteFormAsync(form.Id, PrimaryScenario.ChannelId));
+        Assert.Equal(CustomFormLifecycle.Online, (await service.GetFormByIdAsync(form.Id, PrimaryScenario.ChannelId))!.EffectiveLifecycle);
+
+        await surveyRepository.UpdateItemAsync(survey with { Lifecycle = SurveyLifecycle.Archived });
+        Assert.True(await service.DeleteFormAsync(form.Id, PrimaryScenario.ChannelId));
+        Assert.Equal(CustomFormLifecycle.Deleted, (await service.GetFormByIdAsync(form.Id, PrimaryScenario.ChannelId))!.EffectiveLifecycle);
+    }
+
+    [Fact]
+    public async Task PublicSurvey_SubmissionRequiresEligibleReferencedForm()
+    {
+        var scenario = new PrimaryScenario();
+        var formRepository = new CustomFormMockRepository(scenario);
+        var surveyRepository = new SurveyMockRepository(scenario);
+        var form = new CustomForm("Form", "Desc", "form-survey", [new OpenQuestion("q1", "Question", true, 1)], lifecycle: CustomFormLifecycle.Online, accessMode: CustomFormAccessMode.SurveyOnly)
+        {
+            Id = "form-survey",
+            ChannelId = PrimaryScenario.ChannelId
+        };
+        var survey = new Survey("Survey", "Desc", "survey-submit", PrimaryScenario.ChannelId,
+            DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(10), [form.Id], SurveyLifecycle.Online)
+        {
+            Id = "survey-submit"
+        };
+        await formRepository.AddItemAsync(form);
+        await surveyRepository.AddItemAsync(survey);
+        var service = new SurveyService(surveyRepository, formRepository);
+
+        Assert.True(await service.CanSubmitAsync(survey.Id, form.Id, PrimaryScenario.ChannelId, DateTime.UtcNow));
+        Assert.False(await service.CanSubmitAsync("wrong-survey", form.Id, PrimaryScenario.ChannelId, DateTime.UtcNow));
+    }
 }

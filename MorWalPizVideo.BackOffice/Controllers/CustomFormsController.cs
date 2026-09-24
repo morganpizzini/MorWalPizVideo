@@ -26,6 +26,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public CustomFormQuestion[] Questions { get; set; } = [];
         
         public bool Active { get; set; } = true;
+        public CustomFormLifecycle? Lifecycle { get; set; }
+        public CustomFormAccessMode? AccessMode { get; set; }
     }
 
     public class UpdateCustomFormRequest
@@ -42,6 +44,8 @@ namespace MorWalPizVideo.BackOffice.Controllers
         public CustomFormQuestion[] Questions { get; set; } = [];
         
         public bool Active { get; set; } = true;
+        public CustomFormLifecycle? Lifecycle { get; set; }
+        public CustomFormAccessMode? AccessMode { get; set; }
     }
 
     public class SubmitFormResponseRequest
@@ -55,13 +59,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         private readonly IFormsService _formsService;
         private readonly ILogger<CustomFormsController> _logger;
+        private readonly ICrossApiService _crossApiService;
 
         public CustomFormsController(
             IFormsService formsService,
-            ILogger<CustomFormsController> logger)
+            ILogger<CustomFormsController> logger,
+            ICrossApiService crossApiService)
         {
             _formsService = formsService;
             _logger = logger;
+            _crossApiService = crossApiService;
         }
 
         /// <summary>
@@ -162,13 +169,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Body.Description,
                     request.Body.Url,
                     request.Body.Questions,
-                    request.Body.Active
+                    request.Body.Active,
+                    lifecycle: request.Body.Lifecycle,
+                    accessMode: request.Body.AccessMode
                 );
 
                 if (!await _formsService.SaveFormAsync(form, channelId))
                     return Conflict("A custom form with this URL already exists for the selected channel.");
                 
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
+                await InvalidatePublicFormCachesAsync();
                 
                 return CreatedAtAction(nameof(GetById), new { id = form.Id }, ContractUtils.Convert(form, 0));
             }
@@ -233,13 +243,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     Description = request.Body.Description,
                     Url = request.Body.Url,
                     Questions = request.Body.Questions,
-                    Active = request.Body.Active
+                    Active = request.Body.Active,
+                    Lifecycle = request.Body.Lifecycle,
+                    AccessMode = request.Body.AccessMode
                 };
 
                 if (!await _formsService.UpdateFormAsync(updatedForm, channelId))
                     return Conflict("A custom form with this URL already exists for the selected channel.");
                 
                 _logger.LogInformation("Custom form updated: {Id} - {Title}", request.Id, updatedForm.Title);
+                await InvalidatePublicFormCachesAsync();
                 
                 return NoContent();
             }
@@ -267,9 +280,13 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return NotFound($"Custom form with ID '{request.Id}' not found");
                 }
 
-                await _formsService.DeleteFormAsync(request.Id, channelId);
+                if (!await _formsService.DeleteFormAsync(request.Id, channelId))
+                {
+                    return Conflict("The custom form is referenced by a survey or has already been deleted.");
+                }
                 
                 _logger.LogInformation("Custom form deleted: {Id}", request.Id);
+                await InvalidatePublicFormCachesAsync();
                 
                 return NoContent();
             }
@@ -278,6 +295,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 _logger.LogError(ex, "Error deleting custom form with ID: {Id}", request.Id);
                 return StatusCode(500, "An error occurred while deleting the custom form");
             }
+        }
+
+        private async Task InvalidatePublicFormCachesAsync()
+        {
+            await _crossApiService.ResetCache(CacheKeys.CustomForms);
+            await _crossApiService.PurgeCache(CacheKeys.CustomForms);
+            await _crossApiService.ResetCache(CacheKeys.Surveys);
+            await _crossApiService.PurgeCache(CacheKeys.Surveys);
         }
 
         /// <summary>
