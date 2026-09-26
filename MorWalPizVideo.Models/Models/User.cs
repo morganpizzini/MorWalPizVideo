@@ -50,6 +50,15 @@ public record User : BaseEntity
     [BsonElement("isSecurityAccount")]
     public bool IsSecurityAccount { get; init; } = false;
 
+    [BsonElement("scriptStudioMonthlyQuota")]
+    public int ScriptStudioMonthlyQuota { get; init; }
+
+    [BsonElement("scriptStudioQuotaPeriod")]
+    public string? ScriptStudioQuotaPeriod { get; init; }
+
+    [BsonElement("scriptStudioQuotaUsed")]
+    public int ScriptStudioQuotaUsed { get; init; }
+
     /// <summary>
     /// Exposes the persisted access flag through the canonical permission profile.
     /// New authorization should use DirectPermissions + Groups.

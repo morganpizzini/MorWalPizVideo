@@ -11,4 +11,10 @@ namespace MorWalPizVideo.BackOffice.Configuration
     public string OpenAiEndpoint { get; set; } = null!;
     public string OpenAiKey { get; set; } = null!;
   }
+
+  public class ScriptStudioOptions
+  {
+    public int GlobalPromptMaxLength { get; set; } = 4000;
+    public string AuditRetentionCron { get; set; } = "0 2 * * *";
+  }
 }

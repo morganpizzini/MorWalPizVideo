@@ -6,6 +6,14 @@ export type {
   CreateCalendarEventRequest,
   UpdateCalendarEventRequest,
 } from "./CalendarEvent";
+export type {
+  ScriptStudioOperation,
+  ScriptStudioFormat,
+  ScriptStudioDocument,
+  ScriptStudioGenerationRequest,
+  ScriptStudioGenerationResponse,
+  ScriptStudioGlobalPrompt,
+} from "./scriptStudio";
 
 // Categories exports
 export type {

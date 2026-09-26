@@ -91,6 +91,20 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface IChannelNewsRepository : IRepository<ChannelNews> { }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
+    public interface IScriptStudioRepository : IRepository<ScriptStudioChannelData>
+    {
+        Task<ScriptStudioChannelData?> GetByChannelIdAsync(string channelId, CancellationToken cancellationToken = default);
+        Task<ScriptStudioChannelData> UpsertAsync(ScriptStudioChannelData item, CancellationToken cancellationToken = default);
+    }
+    public interface IScriptStudioGlobalPromptRepository : IRepository<ScriptStudioGlobalPrompt>
+    {
+        Task<ScriptStudioGlobalPrompt?> GetCurrentAsync(CancellationToken cancellationToken = default);
+        Task<ScriptStudioGlobalPrompt> SaveAsync(ScriptStudioGlobalPrompt item, CancellationToken cancellationToken = default);
+    }
+    public interface IScriptStudioAuditRepository : IRepository<ScriptStudioAuditEvent>
+    {
+        Task DeleteExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default);
+    }
     public interface ICategoryRepository : IRepository<Category>
     {
     }

@@ -101,6 +101,46 @@ Exposed at `/health`, `/health/live`, `/health/ready`, `/health/startup` and (de
 - JSON serializer registers custom converters for `CustomFormQuestion` / `CustomFormAnswer` (polymorphic by `QuestionType` / `AnswerType`).
 - AI / Chat endpoints use Semantic Kernel + Azure OpenAI (`AzureConfig.OpenAi`).
 
+### 2.5 Script Studio
+
+Script Studio is available at `/api/script-studio` for users with the dedicated
+`scripts.studio` permission and a resolved `X-Channel-Id`. Scripts, prompts,
+examples, styles, context, and explicitly saved results are stored per channel;
+the API never trusts the client channel and applies the existing channel
+middleware to every scoped operation. Generation is synchronous and supports
+`expand`, `rewrite`, and `structure` in plain text or Markdown.
+
+Each attempted generation consumes one monthly request atomically, including
+failed model calls. A missing or legacy quota is treated as zero. Periods are
+UTC `yyyy-MM`; changing a limit does not reset usage. Global prompt editing
+requires `scripts.globalprompt.manage`, and quota changes require
+`scripts.quota.manage`; neither operation uses `users.permissions.manage`.
+The global prompt is returned only to users with
+`scripts.globalprompt.manage` and is prepended to every generation request.
+Generated text is returned as the current draft only and never overwrites saved
+content unless the user explicitly saves it. Metadata-only generation audit
+records expire after 60 days and contain no prompt, script, example, or output
+content.
+
+The BackOffice SPA exposes the workflow at `/script-studio`. Users can edit the
+latest channel draft, choose an operation and format, review the generated text,
+explicitly apply it to the draft, copy it, or download it as `.txt` or `.md`.
+The SPA does not request or expose the global administrative prompt to ordinary
+Script Studio users.
+
+Relevant configuration is under `ScriptStudio` in `appsettings*.json`:
+
+| Key | Description | Default |
+| --- | --- | --- |
+| `ScriptStudio:GlobalPromptMaxLength` | Maximum length of the global administrative prompt, in characters. | `4000` |
+| `ScriptStudio:AuditRetentionCron` | Hangfire schedule for deleting expired Script Studio audit records. | `0 2 * * *` |
+
+When Hangfire is enabled, `script-studio-audit-retention-job` runs using
+`ScriptStudio:AuditRetentionCron`. The retention period itself is fixed at 60
+days. The Azure OpenAI deployment is the existing `AzureConfig:OpenAi`
+deployment used by the BackOffice AI services; credentials must remain in
+protected configuration (environment variables, user secrets, or Key Vault).
+
 ---
 
 ## 3. Controllers Reference

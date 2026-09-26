@@ -614,6 +614,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
     public class UserMockRepository : BaseMockRepository<User>, IUserRepository
     {
+        private static readonly object QuotaSync = new();
         public UserMockRepository(IMockScenario scenario) : base(scenario, "users")
         {
         }
@@ -626,6 +627,42 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 return null;
 
             return UserRepository.VerifyPassword(password, user.PasswordHash, user.Salt) ? user : null;
+        }
+
+        public Task<ScriptStudioQuotaConsumption> ConsumeScriptStudioQuotaAsync(string userId, string period, CancellationToken cancellationToken = default)
+        {
+            lock (QuotaSync)
+            {
+                var user = scenario.Read<User>(_fileName).FirstOrDefault(x => x.Id == userId);
+                if (user is null || user.ScriptStudioMonthlyQuota <= 0)
+                    return Task.FromResult(new ScriptStudioQuotaConsumption(false, user?.ScriptStudioMonthlyQuota ?? 0, 0, 0, period));
+                var used = user.ScriptStudioQuotaPeriod == period ? user.ScriptStudioQuotaUsed : 0;
+                if (used >= user.ScriptStudioMonthlyQuota)
+                    return Task.FromResult(new ScriptStudioQuotaConsumption(false, user.ScriptStudioMonthlyQuota, used, used, period));
+                scenario.Replace(_fileName, user with { ScriptStudioQuotaPeriod = period, ScriptStudioQuotaUsed = used + 1 });
+                return Task.FromResult(new ScriptStudioQuotaConsumption(true, user.ScriptStudioMonthlyQuota, used, used + 1, period));
+            }
+        }
+    }
+
+    public class ScriptStudioMockRepository(IMockScenario scenario) : BaseMockRepository<ScriptStudioChannelData>(scenario, "scriptStudio"), IScriptStudioRepository
+    {
+        public Task<ScriptStudioChannelData?> GetByChannelIdAsync(string channelId, CancellationToken cancellationToken = default) => Task.FromResult(scenario.Read<ScriptStudioChannelData>(_fileName).FirstOrDefault(x => x.ChannelId == channelId));
+        public Task<ScriptStudioChannelData> UpsertAsync(ScriptStudioChannelData item, CancellationToken cancellationToken = default) { scenario.Replace(_fileName, item); return Task.FromResult(item); }
+    }
+
+    public class ScriptStudioGlobalPromptMockRepository(IMockScenario scenario) : BaseMockRepository<ScriptStudioGlobalPrompt>(scenario, "scriptStudioGlobalPrompt"), IScriptStudioGlobalPromptRepository
+    {
+        public Task<ScriptStudioGlobalPrompt?> GetCurrentAsync(CancellationToken cancellationToken = default) => Task.FromResult(scenario.Read<ScriptStudioGlobalPrompt>(_fileName).FirstOrDefault());
+        public Task<ScriptStudioGlobalPrompt> SaveAsync(ScriptStudioGlobalPrompt item, CancellationToken cancellationToken = default) { scenario.Replace(_fileName, item); return Task.FromResult(item); }
+    }
+
+    public class ScriptStudioAuditMockRepository(IMockScenario scenario) : BaseMockRepository<ScriptStudioAuditEvent>(scenario, "scriptStudioAudit"), IScriptStudioAuditRepository
+    {
+        public Task DeleteExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+        {
+            foreach (var item in scenario.Read<ScriptStudioAuditEvent>(_fileName).Where(x => x.ExpiresAtUtc <= utcNow)) scenario.Delete<ScriptStudioAuditEvent>(_fileName, item.Id);
+            return Task.CompletedTask;
         }
     }
 

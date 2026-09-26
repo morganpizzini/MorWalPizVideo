@@ -50,6 +50,9 @@
         public const string ImpersonationSessions = "impersonationSessions";
         public const string ImpersonationAuditEvents = "impersonationAuditEvents";
         public const string AuditEvents = "auditEvents";
+        public const string ScriptStudio = "scriptStudio";
+        public const string ScriptStudioGlobalPrompt = "scriptStudioGlobalPrompt";
+        public const string ScriptStudioAudit = "scriptStudioAudit";
 
         // Insights Collections
         public const string InsightTopics = "insightTopics";

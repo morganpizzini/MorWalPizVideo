@@ -45,6 +45,11 @@ export const permissions = {
   },
   faq: { view: 'faq.view', manage: 'faq.manage', candidates: 'faq.candidates' },
   diagnostics: { view: 'diagnostics.view' },
+  scripts: {
+    studio: 'scripts.studio',
+    globalPromptManage: 'scripts.globalprompt.manage',
+    quotaManage: 'scripts.quota.manage',
+  },
 } as const;
 
 function resourcePermissions(resource: string) {
@@ -103,6 +108,7 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (module === 'my-channel') return [permissions.backoffice.access];
   if (module === 'newsletters') return [permissions.backoffice.access];
   if (module === 'diagnostics') return [permissions.diagnostics.view];
+  if (module === 'script-studio') return [permissions.scripts.studio];
   if (module === 'rbac') {
     if (segments[1] === 'groups') return [permissions.users.permissionsManage];
     if (segments[1] === 'users' && segments.includes('create'))

@@ -132,6 +132,9 @@ const FAQ_ADMIN_ANSWER = `${FAQ_ADMIN}/answers/{answerId}`;
 const FAQ_ADMIN_CANDIDATES = `${FAQ_ADMIN}/candidates`;
 const FAQ_ADMIN_GENERATE_CANDIDATES = `${FAQ_ADMIN_CANDIDATES}/generate`;
 const FAQ_ADMIN_REVIEW_CANDIDATE = `${FAQ_ADMIN_CANDIDATES}/{id}/review`;
+const SCRIPT_STUDIO = `${baseEndpoint}/script-studio`;
+const SCRIPT_STUDIO_GENERATE = `${SCRIPT_STUDIO}/generate`;
+const SCRIPT_STUDIO_GLOBAL_PROMPT = `${SCRIPT_STUDIO}/global-prompt`;
 
 export default {
   VIDEOS,
@@ -258,6 +261,9 @@ export default {
   FAQ_ADMIN_CANDIDATES,
   FAQ_ADMIN_GENERATE_CANDIDATES,
   FAQ_ADMIN_REVIEW_CANDIDATE,
+  SCRIPT_STUDIO,
+  SCRIPT_STUDIO_GENERATE,
+  SCRIPT_STUDIO_GLOBAL_PROMPT,
 };
 
 export function ComposeUrl(

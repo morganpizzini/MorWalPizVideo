@@ -87,6 +87,13 @@ export {
 } from "./apiService";
 export { getChannelTerminology, saveChannelTerminology } from "./apiService";
 export {
+  getScriptStudio,
+  saveScriptStudio,
+  generateScriptStudio,
+  getScriptStudioGlobalPrompt,
+  saveScriptStudioGlobalPrompt,
+} from "./scriptStudioService";
+export {
   getActiveCustomForms,
   getCustomFormByUrl,
   submitCustomFormResponse,

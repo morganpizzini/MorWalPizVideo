@@ -178,6 +178,7 @@ builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexed
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
+builder.Services.Configure<ScriptStudioOptions>(builder.Configuration.GetSection("ScriptStudio"));
 builder.Services.Configure<SocialPublishingOptions>(builder.Configuration.GetSection("SocialPublishing"));
 builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
 builder.Services.AddSingleton<ISocialPublishingSecretProtector, SocialPublishingSecretProtector>();
@@ -338,6 +339,7 @@ builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IFaqVoteReconciliationService, FaqVoteReconciliationService>();
 builder.Services.AddScoped<IFaqCandidateGenerationService, FaqCandidateGenerationService>();
+builder.Services.AddScoped<IScriptStudioService, ScriptStudioService>();
 builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
 
 if (enableMock)
@@ -371,6 +373,9 @@ if (enableMock)
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
     builder.Services.AddScoped<IUserRepository, UserMockRepository>();
+    builder.Services.AddScoped<IScriptStudioRepository, ScriptStudioMockRepository>();
+    builder.Services.AddScoped<IScriptStudioGlobalPromptRepository, ScriptStudioGlobalPromptMockRepository>();
+    builder.Services.AddScoped<IScriptStudioAuditRepository, ScriptStudioAuditMockRepository>();
     builder.Services.AddScoped<IUserGroupRepository, UserGroupMockRepository>();
     builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantMockRepository>();
     builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionMockRepository>();
@@ -477,6 +482,9 @@ else
     builder.Services.AddScoped<IPublishScheduleRepository, PublishScheduleRepository>();
     builder.Services.AddScoped<IConfigurationRepository, ConfigurationRepository>(); // Aggiungi questa linea
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IScriptStudioRepository, ScriptStudioRepository>();
+    builder.Services.AddScoped<IScriptStudioGlobalPromptRepository, ScriptStudioGlobalPromptRepository>();
+    builder.Services.AddScoped<IScriptStudioAuditRepository, ScriptStudioAuditRepository>();
     builder.Services.AddScoped<IUserGroupRepository, UserGroupRepository>();
     builder.Services.AddScoped<IImpersonationGrantRepository, ImpersonationGrantRepository>();
     builder.Services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionRepository>();
@@ -673,6 +681,12 @@ if (enableHangFire)
 
     var askRetentionCron = app.Configuration["Ask:RetentionCron"] ?? "0 2 * * *";
     RecurringJob.AddOrUpdate<AskRetentionJob>(AskRetentionJob.JobId, job => job.ExecuteAsync(), askRetentionCron);
+
+    var scriptStudioAuditRetentionCron = app.Configuration["ScriptStudio:AuditRetentionCron"] ?? "0 2 * * *";
+    RecurringJob.AddOrUpdate<ScriptStudioAuditRetentionJob>(
+        ScriptStudioAuditRetentionJob.JobId,
+        job => job.ExecuteAsync(),
+        scriptStudioAuditRetentionCron);
 
     var faqVoteReconciliationCron = app.Configuration["Faq:VoteReconciliationCron"] ?? "*/15 * * * *";
     RecurringJob.AddOrUpdate<FaqVoteReconciliationJob>(FaqVoteReconciliationJob.JobId, job => job.ExecuteAsync(), faqVoteReconciliationCron);

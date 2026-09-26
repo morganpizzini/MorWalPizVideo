@@ -1006,8 +1006,64 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
             return PasswordHashing.HashPassword(password, out salt);
         }
+
+        public async Task<ScriptStudioQuotaConsumption> ConsumeScriptStudioQuotaAsync(string userId, string period, CancellationToken cancellationToken = default)
+        {
+            var idFilter = Builders<User>.Filter.Eq(x => x.Id, userId);
+            var resetFilter = idFilter & Builders<User>.Filter.Gt(x => x.ScriptStudioMonthlyQuota, 0) &
+                Builders<User>.Filter.Ne(x => x.ScriptStudioQuotaPeriod, period);
+            var reset = await _collection.FindOneAndUpdateAsync(
+                resetFilter,
+                Builders<User>.Update.Set(x => x.ScriptStudioQuotaPeriod, period).Set(x => x.ScriptStudioQuotaUsed, 1),
+                new FindOneAndUpdateOptions<User> { ReturnDocument = ReturnDocument.Before }, cancellationToken);
+            if (reset is not null)
+                return new(true, reset.ScriptStudioMonthlyQuota, 0, 1, period);
+
+            var current = await _collection.FindOneAndUpdateAsync(
+                idFilter & Builders<User>.Filter.Eq(x => x.ScriptStudioQuotaPeriod, period) &
+                new BsonDocument("$expr", new BsonDocument("$lt", new BsonArray { "$scriptStudioQuotaUsed", "$scriptStudioMonthlyQuota" })),
+                Builders<User>.Update.Inc(x => x.ScriptStudioQuotaUsed, 1),
+                new FindOneAndUpdateOptions<User> { ReturnDocument = ReturnDocument.Before }, cancellationToken);
+            return current is null
+                ? CreateQuotaDeniedOutcome(await GetItemAsync(userId), period)
+                : new(true, current.ScriptStudioMonthlyQuota, current.ScriptStudioQuotaUsed, current.ScriptStudioQuotaUsed + 1, period);
+        }
+
+        private static ScriptStudioQuotaConsumption CreateQuotaDeniedOutcome(User? user, string period)
+        {
+            var used = user?.ScriptStudioQuotaPeriod == period ? user.ScriptStudioQuotaUsed : 0;
+            return new(false, user?.ScriptStudioMonthlyQuota ?? 0, used, used, period);
+        }
+    }
+    public sealed class ScriptStudioRepository(IMongoDatabase database) : BaseRepository<ScriptStudioChannelData>(database, DbCollections.ScriptStudio), IScriptStudioRepository
+    {
+        public Task<ScriptStudioChannelData?> GetByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
+            => _collection.Find(x => x.ChannelId == channelId).FirstOrDefaultAsync(cancellationToken);
+
+        public async Task<ScriptStudioChannelData> UpsertAsync(ScriptStudioChannelData item, CancellationToken cancellationToken = default)
+        {
+            await _collection.ReplaceOneAsync(x => x.ChannelId == item.ChannelId, item, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+            return item;
+        }
     }
 
+    public sealed class ScriptStudioGlobalPromptRepository(IMongoDatabase database) : BaseRepository<ScriptStudioGlobalPrompt>(database, DbCollections.ScriptStudioGlobalPrompt), IScriptStudioGlobalPromptRepository
+    {
+        public Task<ScriptStudioGlobalPrompt?> GetCurrentAsync(CancellationToken cancellationToken = default)
+            => _collection.Find(Builders<ScriptStudioGlobalPrompt>.Filter.Empty).FirstOrDefaultAsync(cancellationToken);
+
+        public async Task<ScriptStudioGlobalPrompt> SaveAsync(ScriptStudioGlobalPrompt item, CancellationToken cancellationToken = default)
+        {
+            await _collection.ReplaceOneAsync(x => x.Id == item.Id, item, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+            return item;
+        }
+    }
+
+    public sealed class ScriptStudioAuditRepository(IMongoDatabase database) : BaseRepository<ScriptStudioAuditEvent>(database, DbCollections.ScriptStudioAudit), IScriptStudioAuditRepository
+    {
+        public async Task DeleteExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+            => await _collection.DeleteManyAsync(x => x.ExpiresAtUtc <= utcNow, cancellationToken);
+    }
     public class UserGroupRepository : BaseRepository<UserGroup>, IUserGroupRepository
     {
         public UserGroupRepository(IMongoDatabase database) : base(database, DbCollections.UserGroups)

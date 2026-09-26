@@ -20,6 +20,9 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.UsersDelete,
           AuthorizationPermissionKeys.UsersPermissionsManage
         ],
+        [AuthorizationPermissionKeys.ScriptsStudio] = [AuthorizationPermissionKeys.ScriptsStudio],
+        [AuthorizationPermissionKeys.ScriptsGlobalPromptManage] = [AuthorizationPermissionKeys.ScriptsGlobalPromptManage],
+        [AuthorizationPermissionKeys.ScriptsQuotaManage] = [AuthorizationPermissionKeys.ScriptsQuotaManage],
         [AuthorizationPermissionKeys.VideosManage] =
         [
           AuthorizationPermissionKeys.VideosView,

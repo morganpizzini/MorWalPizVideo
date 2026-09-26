@@ -56,8 +56,9 @@ public sealed class LegacyUserBackOfficeWebApplicationFactory : BackOfficeWebApp
 internal sealed class LegacyUserRepository : IUserRepository
 {
     public static readonly string UserId = ObjectId.GenerateNewId().ToString();
+    private readonly object quotaSync = new();
 
-    private readonly User user = BsonSerializer.Deserialize<User>(new BsonDocument
+    private User user = BsonSerializer.Deserialize<User>(new BsonDocument
     {
         { "_id", ObjectId.Parse(UserId) },
         { "creationDateTime", DateTime.UtcNow },
@@ -86,4 +87,20 @@ internal sealed class LegacyUserRepository : IUserRepository
     public Task UpdateItemAsync(User item) => throw new NotSupportedException();
 
     public Task<User?> AuthenticateAsync(string username, string password) => throw new NotSupportedException();
+
+    public Task<ScriptStudioQuotaConsumption> ConsumeScriptStudioQuotaAsync(string userId, string period, CancellationToken cancellationToken = default)
+    {
+        lock (quotaSync)
+        {
+            if (!string.Equals(user.Id, userId, StringComparison.OrdinalIgnoreCase) || user.ScriptStudioMonthlyQuota <= 0)
+                return Task.FromResult(new ScriptStudioQuotaConsumption(false, user.ScriptStudioMonthlyQuota, 0, 0, period));
+
+            var used = user.ScriptStudioQuotaPeriod == period ? user.ScriptStudioQuotaUsed : 0;
+            if (used >= user.ScriptStudioMonthlyQuota)
+                return Task.FromResult(new ScriptStudioQuotaConsumption(false, user.ScriptStudioMonthlyQuota, used, used, period));
+
+            user = user with { ScriptStudioQuotaPeriod = period, ScriptStudioQuotaUsed = used + 1 };
+            return Task.FromResult(new ScriptStudioQuotaConsumption(true, user.ScriptStudioMonthlyQuota, used, used + 1, period));
+        }
+    }
 }

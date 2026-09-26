@@ -41,6 +41,9 @@ const routeDefinitions: RouteConfig[] = [
   feature('diagnostics', () => import('../../routes/diagnostics'), {
     errorElement: createErrorElement(),
   }),
+  feature('script-studio', () => import('../../routes/scriptStudio'), {
+    errorElement: createErrorElement(),
+  }),
   feature('profile', () => import('../../routes/profile'), { errorElement: createErrorElement() }),
   {
     path: 'my-channel',
