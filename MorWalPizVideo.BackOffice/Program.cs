@@ -407,6 +407,8 @@ if (enableMock)
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
     builder.Services.AddScoped<ICustomerRepository, CustomerMockRepository>();
     builder.Services.AddScoped<ICartRepository, CartMockRepository>();
+    builder.Services.AddScoped<IShopOrderRepository, ShopOrderMockRepository>();
+    builder.Services.AddScoped<IShopCustomerSessionRepository, ShopCustomerSessionMockRepository>();
 
     // Insight repositories (Mock)
     builder.Services.AddScoped<IInsightTopicRepository, InsightTopicMockRepository>();
@@ -511,6 +513,8 @@ else
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
     builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
     builder.Services.AddScoped<ICartRepository, CartRepository>();
+    builder.Services.AddScoped<IShopOrderRepository, ShopOrderRepository>();
+    builder.Services.AddScoped<IShopCustomerSessionRepository, ShopCustomerSessionRepository>();
 
     // Insight repositories (Production)
     builder.Services.AddScoped<IInsightTopicRepository, InsightTopicRepository>();

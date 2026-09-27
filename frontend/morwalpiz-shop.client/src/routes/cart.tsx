@@ -1,13 +1,18 @@
 /**
  * Shopping Cart Page Component
- * 
+ *
  * Displays the user's shopping cart with items and checkout option
  */
 
 import { useLoaderData, useNavigate, useNavigation } from 'react-router';
 import { Helmet } from 'react-helmet-async';
 import { useState, useEffect } from 'react';
-import { getShopCart, updateCartItem, removeFromCart, checkoutCart } from '@morwalpizvideo/services';
+import {
+  getShopCart,
+  updateCartItem,
+  removeFromCart,
+  checkoutCart,
+} from '@morwalpizvideo/services';
 import type { Cart } from '@morwalpizvideo/models';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthSession } from '../store/auth-storage';
@@ -108,7 +113,7 @@ export async function loader(): Promise<Cart> {
   }
 
   try {
-    const cart = await getShopCart(session.customerId);
+    const cart = await getShopCart();
     return cart;
   } catch (error) {
     console.error('Error loading cart:', error);
@@ -163,11 +168,14 @@ export default function CartPage() {
     setError(null);
 
     try {
-      const updatedCart = await updateCartItem(session.customerId, productId, { productId, quantity });
+      const updatedCart = await updateCartItem(session.customerId, productId, {
+        productId,
+        quantity,
+      });
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Error updating cart:', err);
-      setError('Errore durante l\'aggiornamento. Riprova.');
+      setError("Errore durante l'aggiornamento. Riprova.");
     } finally {
       setIsUpdatingItem(null);
     }
@@ -206,8 +214,7 @@ export default function CartPage() {
 
     try {
       const result = await checkoutCart(session.customerId, {
-        cartId: cart.id,
-        email: session.email
+        idempotencyKey: `${cart.id}:${cart.updatedAt.toISOString()}`,
       });
       navigate(`/checkout-success?orderId=${result.orderId}`);
     } catch (err: any) {
@@ -273,9 +280,16 @@ export default function CartPage() {
                   return (
                     <div key={item.productId} className="row mb-4 pb-4 border-bottom">
                       <div className="col-md-2">
-                        <div className="bg-light rounded d-flex align-items-center justify-content-center" style={{ height: '80px' }}>
+                        <div
+                          className="bg-light rounded d-flex align-items-center justify-content-center"
+                          style={{ height: '80px' }}
+                        >
                           {isItemUpdating ? (
-                            <span className="spinner-border spinner-border-sm text-muted" role="status" aria-hidden="true"></span>
+                            <span
+                              className="spinner-border spinner-border-sm text-muted"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
                           ) : (
                             <i className="bi bi-file-earmark-text fs-3 text-muted"></i>
                           )}
@@ -283,9 +297,7 @@ export default function CartPage() {
                       </div>
                       <div className="col-md-6">
                         <h5 className="mb-1">{item.productName}</h5>
-                        <p className="text-muted small mb-0">
-                          Documento digitale
-                        </p>
+                        <p className="text-muted small mb-0">Documento digitale</p>
                       </div>
                       <div className="col-md-4">
                         <div className="d-flex flex-column align-items-end">
@@ -327,7 +339,11 @@ export default function CartPage() {
                           >
                             {isItemUpdating ? (
                               <>
-                                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                <span
+                                  className="spinner-border spinner-border-sm me-1"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
                                 Rimozione...
                               </>
                             ) : (
@@ -366,9 +382,7 @@ export default function CartPage() {
 
                 <div className="d-flex justify-content-between mb-4">
                   <strong>Totale</strong>
-                  <strong className="text-primary fs-4">
-                    {formatPrice(totalAmount * 1.22)}
-                  </strong>
+                  <strong className="text-primary fs-4">{formatPrice(totalAmount * 1.22)}</strong>
                 </div>
 
                 <div className="d-grid">

@@ -3,9 +3,8 @@ export interface DigitalProduct {
   name: string;
   description: string;
   previewImageUrl: string;
-  contentStorageKey: string;
   categoryIds: string[];
-  price?: number;
+  price: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -22,9 +21,8 @@ export interface CreateDigitalProductRequest {
   name: string;
   description: string;
   previewImageUrl: string;
-  contentStorageKey: string;
   categoryIds: string[];
-  price?: number;
+  price: number;
   isActive: boolean;
 }
 
@@ -32,7 +30,6 @@ export interface UpdateDigitalProductRequest {
   name?: string;
   description?: string;
   previewImageUrl?: string;
-  contentStorageKey?: string;
   categoryIds?: string[];
   price?: number;
   isActive?: boolean;

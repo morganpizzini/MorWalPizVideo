@@ -4,6 +4,7 @@ using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.ServerAPI.Services;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
@@ -18,15 +19,36 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             IGenericDataService dataService,
             IMorWalPizCache memoryCache,
             ICartRepository cartRepository,
-            IDigitalProductRepository productRepository) : base(dataService, memoryCache)
+            IDigitalProductRepository productRepository,
+            IShopOrderRepository orderRepository,
+            IShopCustomerSessionService sessionService) : base(dataService, memoryCache)
         {
             _cartRepository = cartRepository;
             _productRepository = productRepository;
+            _orderRepository = orderRepository;
+            _sessionService = sessionService;
+        }
+
+        private readonly IShopOrderRepository _orderRepository;
+        private readonly IShopCustomerSessionService _sessionService;
+
+        [HttpGet]
+        public async Task<IActionResult> GetCurrentCart()
+        {
+            var customerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (customerId is null)
+                return Unauthorized();
+
+            var cart = (await _cartRepository.GetItemsAsync(c => c.CustomerId == customerId)).FirstOrDefault();
+            return Ok(cart ?? new Cart(customerId, [], false, null) { Id = Guid.NewGuid().ToString("N") });
         }
 
         [HttpGet("{customerId}")]
         public async Task<IActionResult> GetCart(string customerId)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null) return Unauthorized();
+            customerId = sessionCustomerId;
             var carts = await _cartRepository.GetItemsAsync(c => c.CustomerId == customerId);
             var cart = carts.FirstOrDefault();
 
@@ -51,6 +73,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpPost("{customerId}/items")]
         public async Task<IActionResult> AddToCart(string customerId, [FromBody] AddToCartRequest request)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null) return Unauthorized();
+            customerId = sessionCustomerId;
             if (string.IsNullOrWhiteSpace(request.ProductId))
                 return BadRequest(new { message = "ProductId is required" });
 
@@ -126,6 +151,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpPut("{customerId}/items/{productId}")]
         public async Task<IActionResult> UpdateCartItem(string customerId, string productId, [FromBody] UpdateCartItemRequest request)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null) return Unauthorized();
+            customerId = sessionCustomerId;
             if (request.Quantity < 0)
                 return BadRequest(new { message = "Quantity cannot be negative" });
 
@@ -162,6 +190,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpDelete("{customerId}/items/{productId}")]
         public async Task<IActionResult> RemoveFromCart(string customerId, string productId)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null) return Unauthorized();
+            customerId = sessionCustomerId;
             var carts = await _cartRepository.GetItemsAsync(c => c.CustomerId == customerId);
             var cart = carts.FirstOrDefault();
 
@@ -179,6 +210,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [HttpDelete("{customerId}")]
         public async Task<IActionResult> ClearCart(string customerId)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null) return Unauthorized();
+            customerId = sessionCustomerId;
             var carts = await _cartRepository.GetItemsAsync(c => c.CustomerId == customerId);
             var cart = carts.FirstOrDefault();
 
@@ -192,24 +226,37 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         }
 
         [HttpPost("{customerId}/checkout")]
-        public async Task<IActionResult> Checkout(string customerId)
+        public async Task<IActionResult> Checkout(string customerId, [FromBody] CreateShopOrderRequest request)
         {
+            var sessionCustomerId = await _sessionService.ResolveCustomerIdAsync(Request);
+            if (sessionCustomerId is null)
+                return Unauthorized();
+            customerId = sessionCustomerId;
+
             var carts = await _cartRepository.GetItemsAsync(c => c.CustomerId == customerId);
             var cart = carts.FirstOrDefault();
 
             if (cart == null || !cart.Items.Any())
                 return BadRequest(new { message = "Cart is empty" });
 
-            // Since checkout is free, just clear the cart and return success
+            if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
+                return BadRequest(new { message = "IdempotencyKey is required" });
+
+            var existingOrder = await _orderRepository.GetByCustomerAndIdempotencyKeyAsync(customerId, request.IdempotencyKey);
+            if (existingOrder is not null)
+                return Ok(existingOrder);
+
+            var orderItems = cart.Items.Select(item => new ShopOrderItem(item.ProductId, item.ProductName, item.Quantity, item.Price ?? 0m)).ToList();
+            var order = new ShopOrder(customerId, request.IdempotencyKey, orderItems, orderItems.Sum(item => item.LineTotal))
+            {
+                Id = Guid.NewGuid().ToString("N")
+            };
+            await _orderRepository.AddItemAsync(order);
+
             cart = cart with { Items = new List<CartItem>() };
             await _cartRepository.UpdateItemAsync(cart);
 
-            return Ok(new
-            {
-                success = true,
-                message = "Checkout completed successfully",
-                orderId = Guid.NewGuid().ToString()
-            });
+            return Ok(order);
         }
     }
 

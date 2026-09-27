@@ -1023,6 +1023,25 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class ShopOrderMockRepository : BaseMockRepository<ShopOrder>, IShopOrderRepository
+    {
+        public ShopOrderMockRepository(IMockScenario scenario) : base(scenario, "shopOrders") { }
+
+        public async Task<ShopOrder?> GetByCustomerAndIdempotencyKeyAsync(string customerId, string idempotencyKey) =>
+            (await GetItemsAsync(x => x.CustomerId == customerId && x.IdempotencyKey == idempotencyKey)).FirstOrDefault();
+
+        public async Task<IList<ShopOrder>> GetByCustomerIdAsync(string customerId) =>
+            (await GetItemsAsync(x => x.CustomerId == customerId)).OrderByDescending(x => x.CreationDateTime).ToList();
+    }
+
+    public class ShopCustomerSessionMockRepository : BaseMockRepository<ShopCustomerSession>, IShopCustomerSessionRepository
+    {
+        public ShopCustomerSessionMockRepository(IMockScenario scenario) : base(scenario, "shopCustomerSessions") { }
+
+        public async Task<ShopCustomerSession?> GetActiveByTokenHashAsync(string tokenHash, DateTime now) =>
+            (await GetItemsAsync(x => x.TokenHash == tokenHash && x.RevokedAt == null && x.ExpiresAt > now)).FirstOrDefault();
+    }
+
     public class InsightTopicMockRepository : BaseMockRepository<InsightTopic>, IInsightTopicRepository
     {
         public InsightTopicMockRepository(IMockScenario scenario) : base(scenario, "insightTopics")

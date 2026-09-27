@@ -197,6 +197,15 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     }
     public interface ICustomerRepository : IRepository<Customer> { }
     public interface ICartRepository : IRepository<Cart> { }
+    public interface IShopOrderRepository : IRepository<ShopOrder>
+    {
+        Task<ShopOrder?> GetByCustomerAndIdempotencyKeyAsync(string customerId, string idempotencyKey);
+        Task<IList<ShopOrder>> GetByCustomerIdAsync(string customerId);
+    }
+    public interface IShopCustomerSessionRepository : IRepository<ShopCustomerSession>
+    {
+        Task<ShopCustomerSession?> GetActiveByTokenHashAsync(string tokenHash, DateTime now);
+    }
 
     // Shooting ITA repositories
     public interface ICompetitionRepository : IRepository<Competition> { }

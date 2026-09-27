@@ -133,16 +133,17 @@ client may use only anonymous aggregate analytics, never sponsor IDs, titles,
 URLs, short codes, campaign/query data, or other sponsor-specific identifiers;
 navigation must not wait for analytics.
 
-## Shop Contract (Target, On Hold)
+## Shop Contract
 
-The shop is pre-production and excluded from active implementation. These rules remain the accepted future contract if the hold is explicitly lifted.
+The shop is an active commercial perimeter with manual payment handling.
 
-- Catalog returns active free-artifact DTOs.
+- Catalog returns active commercial-artifact DTOs with a mandatory non-negative price.
 - Preview image is public.
 - Add-to-cart derives cart identity from a server-issued cookie.
-- Acquisition is idempotent and durable.
-- Download validates acquisition and returns a short-lived URL or streamed response.
-- No payment intent, payment method, mutable price, or caller-supplied customer/cart owner is accepted.
+- Checkout persists an idempotent order with price snapshots before clearing the cart; zero-price orders follow the same path.
+- Customer identity comes from a persisted HttpOnly/Secure/SameSite cookie session, never from a caller-supplied customer ID.
+- Download validates customer order access and returns a read-only SAS URL valid for 24 hours; it can be regenerated without a counter.
+- Manual payment status is separate from order status. No provider, refund, or on-hold workflow is exposed.
 
 ## Pagination And Querying
 

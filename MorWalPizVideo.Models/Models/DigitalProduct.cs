@@ -15,7 +15,7 @@ namespace MorWalPizVideo.Server.Models
             string previewImageUrl,
             string contentStorageKey,
             List<string> categoryIds,
-            decimal? price,
+            decimal price,
             bool isActive)
         {
             Name = name;
@@ -50,7 +50,7 @@ namespace MorWalPizVideo.Server.Models
 
         [DataMember]
         [BsonElement("price")]
-        public decimal? Price { get; init; }
+        public decimal Price { get; init; }
 
         [DataMember]
         [BsonElement("isActive")]
@@ -92,7 +92,7 @@ namespace MorWalPizVideo.Server.Models
         string PreviewImageUrl,
         string ContentStorageKey,
         List<string> CategoryIds,
-        decimal? Price,
+        decimal Price,
         bool IsActive
     );
 

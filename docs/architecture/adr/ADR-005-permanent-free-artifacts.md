@@ -1,17 +1,19 @@
-# ADR-005: Permanent-Free Digital Artifacts
+# ADR-005: Commercial Digital Artifacts With Manual Payment
 
 - **Status:** Accepted
 - **Date:** 2026-08-01
 
 ## Context
 
-The shop is an experimental catalog for digital images/artifacts. Current APIs contain payment-shaped contracts, incompatible checkout routes, unvalidated tokens, and no durable acquisition/download behavior. Products will remain free permanently.
+The shop sells digital artifacts. Payment providers are deliberately deferred, but every checkout is commercial, including a valid zero price. Orders, customer access, and delivery must remain durable and auditable.
 
 ## Decision
 
-Model catalog items as permanently free digital artifacts. A server-owned anonymous cart cookie identifies the current cart. Adding an artifact creates an idempotent durable free acquisition. Download requires that acquisition. No payment method, payment intent, or mutable price exists in public contracts.
+Model catalog items with a mandatory non-negative price. Checkout always persists an order with item price snapshots and a manual payment status. Customer identity is derived from a persisted server-side session referenced by an HttpOnly, Secure, SameSite cookie; caller-supplied customer IDs are not authority. Orders are idempotent by customer and client idempotency key, and the cart is cleared only after order persistence succeeds.
 
-Future verified customer accounts may claim anonymous acquisitions. If paid products are ever introduced, they are separate editions and never convert an acquired free artifact.
+Original blobs remain private. Authenticated delivery issues read-only SAS URLs valid for 24 hours and may be regenerated without a download counter. Public and customer DTOs never expose the storage key.
+
+The order state and manual payment state are separate. The initial workflow is PendingPayment -> PaymentConfirmed, with Cancelled and access restoration handled by BackOffice. No provider, refund, payment-intent, or on-hold state is part of this perimeter.
 
 ## Alternatives
 
@@ -21,7 +23,7 @@ Future verified customer accounts may claim anonymous acquisitions. If paid prod
 
 ## Consequences
 
-Anonymous cookie loss means users add the free artifact again. Durable acquisitions support future account attachment without requiring current personal data.
+The customer area exposes order history and authenticated download regeneration. Zero-price orders still follow the same persistence, payment confirmation, and delivery rules.
 
 ## Migration And Rollback
 
@@ -29,4 +31,4 @@ Introduce new DTOs and acquisition storage before removing payment fields. Compa
 
 ## Validation
 
-Test idempotent acquisition, cookie tampering, cross-cart denial, permanent free semantics, and future owner attachment rules.
+Test zero-price orders, price snapshots, idempotency, cross-customer denial, false/expired sessions, manual payment transitions, SAS expiry, repeated downloads, and storage-key omission.

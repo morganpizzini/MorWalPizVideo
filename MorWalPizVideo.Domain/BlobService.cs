@@ -6,6 +6,7 @@ using Azure;
 using Azure.Core;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using System.Security.Cryptography;
 
 namespace MorWalPizVideo.Domain
@@ -40,6 +41,7 @@ namespace MorWalPizVideo.Domain
         public string GetImageUrl(string filePath, string containerName);
         public Task<Stream?> DownloadImageAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
         public Task<BlobDownloadResult> DownloadWithMetadataAsync(string filePath, bool loadInMatchFolder = false, CancellationToken cancellationToken = default);
+        public Task<string> CreateReadSasUrlAsync(string filePath, TimeSpan lifetime, CancellationToken cancellationToken = default);
     }
 
     public enum BlobMockOutcome
@@ -128,6 +130,13 @@ namespace MorWalPizVideo.Domain
                     $"\"{Convert.ToHexString(SHA256.HashData(blob.Content)).ToLowerInvariant()}\"",
                     new Dictionary<string, string>(blob.Metadata, StringComparer.OrdinalIgnoreCase)));
             }
+        }
+
+        public Task<string> CreateReadSasUrlAsync(string filePath, TimeSpan lifetime, CancellationToken cancellationToken = default)
+        {
+            ThrowIfConfigured(cancellationToken);
+            var expiresAt = DateTimeOffset.UtcNow.Add(lifetime);
+            return Task.FromResult($"mock://blob/{filePath}?sp=r&se={Uri.EscapeDataString(expiresAt.ToString("O"))}");
         }
 
         private Task UploadAsync(string filePath, MemoryStream stream, CancellationToken cancellationToken)
@@ -310,6 +319,26 @@ namespace MorWalPizVideo.Domain
                     filePath);
                 return new BlobDownloadResult(BlobDownloadStatus.Unavailable);
             }
+        }
+
+        public async Task<string> CreateReadSasUrlAsync(string filePath, TimeSpan lifetime, CancellationToken cancellationToken = default)
+        {
+            var startsOn = DateTimeOffset.UtcNow.AddMinutes(-5);
+            var expiresOn = DateTimeOffset.UtcNow.Add(lifetime);
+            var container = _serviceClient.GetBlobContainerClient(_options.ContainerName);
+            var blob = container.GetBlobClient(filePath);
+            var delegationKey = await _serviceClient.GetUserDelegationKeyAsync(startsOn, expiresOn, cancellationToken);
+            var sas = new BlobSasBuilder
+            {
+                BlobContainerName = container.Name,
+                BlobName = filePath,
+                Resource = "b",
+                StartsOn = startsOn,
+                ExpiresOn = expiresOn
+            };
+            sas.SetPermissions(BlobSasPermissions.Read);
+            var query = sas.ToSasQueryParameters(delegationKey.Value, _serviceClient.AccountName);
+            return new UriBuilder(blob.Uri) { Query = query.ToString() }.Uri.ToString();
         }
 
         private async Task UploadAsync(

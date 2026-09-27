@@ -66,6 +66,8 @@
         public const string DigitalProductCategories = "digitalProductCategories";
         public const string Customers = "customers";
         public const string Carts = "carts";
+        public const string ShopOrders = "shopOrders";
+        public const string ShopCustomerSessions = "shopCustomerSessions";
 
         // Shooting ITA Collections
         public const string Competitions = "competitions";

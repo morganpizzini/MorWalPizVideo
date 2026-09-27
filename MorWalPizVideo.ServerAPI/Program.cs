@@ -129,6 +129,7 @@ builder.Services.AddScoped<IGenericDataService, MinimalDataService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IShopService, ShopService>();
+builder.Services.AddScoped<IShopCustomerSessionService, ShopCustomerSessionService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
 //builder.Services.AddScoped<IInsightsService, InsightsService>();
 builder.Services.AddScoped<ILinksService, LinksService>();
@@ -195,6 +196,8 @@ if (enableMock)
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryMockRepository>();
     builder.Services.AddScoped<ICustomerRepository, CustomerMockRepository>();
     builder.Services.AddScoped<ICartRepository, CartMockRepository>();
+    builder.Services.AddScoped<IShopOrderRepository, ShopOrderMockRepository>();
+    builder.Services.AddScoped<IShopCustomerSessionRepository, ShopCustomerSessionMockRepository>();
 }
 else
 {
@@ -244,6 +247,8 @@ else
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
     builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
     builder.Services.AddScoped<ICartRepository, CartRepository>();
+    builder.Services.AddScoped<IShopOrderRepository, ShopOrderRepository>();
+    builder.Services.AddScoped<IShopCustomerSessionRepository, ShopCustomerSessionRepository>();
 
     //builder.Services.AddScoped<ITranslatorService, TranslatorServiceMock>();
 

@@ -57,17 +57,17 @@ Remove API-key administration routes from this application. Replace legacy `morw
 
 ## Shop Client
 
-**Status: pre-production and on hold.** Do not implement, migrate, test-expand, or deploy shop behavior until an explicit portfolio decision lifts the hold. The shop remains designed as a free digital-artifact application, not a payment application.
+The shop is the customer-facing commercial application. It uses the shared session cookie, checkout/order APIs, customer order history, and authenticated 24-hour download regeneration.
 
 Target workflow:
 
 1. Load active artifact DTOs from ServerAPI.
 2. Render public preview images in ordinary `<img>` elements.
 3. Add an artifact to a server-owned anonymous cart.
-4. Persist a permanent-free acquisition linked to that cart.
-5. Request a short-lived download URL for the private original.
+4. Persist an order with price snapshots, including zero-price items.
+5. Request or regenerate a 24-hour read-only SAS URL for the private original.
 
-The client never receives a storage key. Payment method, price-changing, and simulated paid-checkout contracts must be removed. A future customer account may claim anonymous acquisitions.
+The client never receives a storage key. Payment provider and refund flows are not part of the current perimeter.
 
 This workflow remains target design context rather than active roadmap scope.
 

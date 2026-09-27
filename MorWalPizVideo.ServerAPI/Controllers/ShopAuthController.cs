@@ -4,6 +4,7 @@ using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.ServerAPI.Services;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
@@ -16,10 +17,14 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public ShopAuthController(
             IGenericDataService dataService,
             IMorWalPizCache memoryCache,
-            ICustomerRepository customerRepository) : base(dataService, memoryCache)
+            ICustomerRepository customerRepository,
+            IShopCustomerSessionService sessionService) : base(dataService, memoryCache)
         {
             _customerRepository = customerRepository;
+            _sessionService = sessionService;
         }
+
+        private readonly IShopCustomerSessionService _sessionService;
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -57,8 +62,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 await _customerRepository.UpdateItemAsync(customer);
             }
 
-            // Generate session token (simple implementation)
-            var sessionToken = Guid.NewGuid().ToString();
+            var sessionToken = await _sessionService.CreateAsync(customer.Id, Response);
             var expiresAt = DateTime.UtcNow.AddHours(24);
 
             return Ok(new

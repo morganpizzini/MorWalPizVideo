@@ -923,6 +923,25 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public class ShopOrderRepository : BaseRepository<ShopOrder>, IShopOrderRepository
+    {
+        public ShopOrderRepository(IMongoDatabase database) : base(database, DbCollections.ShopOrders) { }
+
+        public Task<ShopOrder?> GetByCustomerAndIdempotencyKeyAsync(string customerId, string idempotencyKey) =>
+            _collection.Find(x => x.CustomerId == customerId && x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync();
+
+        public async Task<IList<ShopOrder>> GetByCustomerIdAsync(string customerId) =>
+            await _collection.Find(x => x.CustomerId == customerId).SortByDescending(x => x.CreationDateTime).ToListAsync();
+    }
+
+    public class ShopCustomerSessionRepository : BaseRepository<ShopCustomerSession>, IShopCustomerSessionRepository
+    {
+        public ShopCustomerSessionRepository(IMongoDatabase database) : base(database, DbCollections.ShopCustomerSessions) { }
+
+        public Task<ShopCustomerSession?> GetActiveByTokenHashAsync(string tokenHash, DateTime now) =>
+            _collection.Find(x => x.TokenHash == tokenHash && x.RevokedAt == null && x.ExpiresAt > now).FirstOrDefaultAsync();
+    }
+
     public class InsightTopicRepository : BaseRepository<InsightTopic>, IInsightTopicRepository
     {
         public InsightTopicRepository(IMongoDatabase database) : base(database, DbCollections.InsightTopics)

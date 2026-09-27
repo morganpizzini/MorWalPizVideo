@@ -17,7 +17,7 @@ public class DigitalProductContract
     [DataMember]
     public List<string> CategoryIds { get; set; } = new();
     [DataMember]
-    public decimal? Price { get; set; }
+    public decimal Price { get; set; }
     [DataMember]
     public bool IsActive { get; set; }
     [DataMember]

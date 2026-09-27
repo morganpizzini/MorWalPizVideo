@@ -26,12 +26,17 @@ export interface UpdateCartItemRequest {
 }
 
 export interface CheckoutRequest {
-  cartId: string;
-  email: string;
+  idempotencyKey: string;
 }
 
 export interface CheckoutResponse {
   orderId: string;
-  downloadLinks: string[];
+  status:
+    | "PendingPayment"
+    | "PaymentConfirmed"
+    | "Cancelled"
+    | "Fulfilled"
+    | "AccessRevoked";
+  paymentStatus: "Pending" | "Confirmed";
   totalAmount: number;
 }

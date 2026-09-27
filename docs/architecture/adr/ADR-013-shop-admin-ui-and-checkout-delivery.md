@@ -1,6 +1,6 @@
-# ADR-013: Shop Admin UI And Checkout Delivery Are Out Of Scope
+# ADR-013: Shop Admin UI And Manual Checkout Delivery
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-02
 
 ## Context
@@ -12,7 +12,7 @@ ADR-001 moved digital-product/category admin CRUD into BackOffice (`DigitalProdu
 
 ## Decision
 
-Treat both gaps as explicitly out of scope until scoped separately. Do not build placeholder UI pages or a placeholder checkout-delivery mechanism as a side effect of unrelated work. Admin management of digital products/categories and carts remains a manual/API-direct operation until `back-office-spa` pages are designed. Checkout remains a cart-clearing operation without content delivery until digital-delivery design is approved.
+BackOffice owns catalog/category management and order list/detail plus manual payment confirmation, cancellation, and access restoration. ServerAPI owns the customer session, persistent checkout, order history, and authenticated delivery. Checkout never invokes a payment provider. Delivery uses private originals and read-only SAS URLs with a 24-hour lifetime; authenticated customers may regenerate them and downloads are unlimited.
 
 ## Alternatives
 
@@ -21,12 +21,12 @@ Treat both gaps as explicitly out of scope until scoped separately. Do not build
 
 ## Consequences
 
-Digital product/category creation and editing require direct API calls (e.g., via BackOffice Swagger/API client) until `back-office-spa` UI ships. Admin has no cart visibility. Customers completing checkout receive an order confirmation but no working delivery of purchased content; this blocks shop launch until resolved.
+The SPA work is an operational surface over these APIs. No refund or provider workflow is implied by cancellation. A zero-price artifact remains an order and is not an acquisition bypass.
 
 ## Migration And Rollback
 
-Not applicable; no code changes are introduced by this ADR. Future work implementing either gap should land as additive `back-office-spa` routes and an additive checkout-response extension, versioned per ADR-003 if the `CheckoutResponse` contract shape changes.
+Mongo additions are additive; existing product fields remain readable during rollout. New contracts omit storage keys and use the existing endpoint aliases until consumers migrate.
 
 ## Validation
 
-None yet. Follow-up ADRs or specs must define acceptance criteria before implementation: admin cart UX requirements, and the digital-delivery mechanism (blob SAS URLs vs. redirect endpoint vs. email delivery) and its expiry/security model.
+Acceptance covers manual payment state transitions, order idempotency, customer isolation, cookie session expiry, 24-hour SAS expiry, unlimited regeneration/downloads, and admin authorization.
