@@ -1,16 +1,17 @@
 import { getProduct, fetchProductCategories } from '@morwalpizvideo/services';
+import type { Product, VideoProductCategory } from '@morwalpizvideo/models';
 import { requireChannelPayload } from '../../channels/response';
 
 export default async function loader({ params }: { params: { productId?: string } }) {
   const categoriesPromise = fetchProductCategories().then(response =>
     requireChannelPayload(response, 'Unable to load product categories')
-  );
+  ) as Promise<VideoProductCategory[]>;
 
   if (params.productId) {
     const [product, categories] = await Promise.all([
       getProduct(params.productId).then(response =>
         requireChannelPayload(response, 'Unable to load product')
-      ),
+      ) as Promise<Product>,
       categoriesPromise,
     ]);
     return { product, categories, breadcrumbIdentifier: product.title };

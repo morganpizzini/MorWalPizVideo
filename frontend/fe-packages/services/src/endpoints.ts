@@ -14,6 +14,8 @@ const QUICKLINKS = `${baseEndpoint}/quicklinks`;
 const QUICKLINKS_DETAIL = `${QUICKLINKS}/{quickLinksId}`;
 const PRODUCTS = `${baseEndpoint}/products`;
 const PRODUCTS_DETAIL = `${PRODUCTS}/{productId}`;
+const PRODUCTS_BULK = `${PRODUCTS}/bulk`;
+const PRODUCTS_CATEGORIES_BULK = `${PRODUCTS}/categories/bulk`;
 const PRODUCTCATEGORIES = `${baseEndpoint}/productcategories`;
 const PRODUCTCATEGORIES_DETAIL = `${PRODUCTCATEGORIES}/{productCategoryId}`;
 const SPONSORS = `${baseEndpoint}/sponsors`;
@@ -151,6 +153,8 @@ export default {
   QUICKLINKS_DETAIL,
   PRODUCTS,
   PRODUCTS_DETAIL,
+  PRODUCTS_BULK,
+  PRODUCTS_CATEGORIES_BULK,
   PRODUCTCATEGORIES,
   PRODUCTCATEGORIES_DETAIL,
   SPONSORS,

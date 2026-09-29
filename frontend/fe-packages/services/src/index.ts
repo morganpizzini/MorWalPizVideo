@@ -34,6 +34,8 @@ export {
   createProduct,
   updateProduct,
   deleteProduct,
+  createProductsBulk,
+  assignProductCategoriesBulk,
   fetchProductCategories,
   getProductCategory,
   createProductCategory,

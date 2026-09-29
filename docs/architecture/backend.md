@@ -81,6 +81,12 @@ validated against the same channel, and title uniqueness is enforced per
 channel. `DigitalProduct` and `DigitalProductCategory` remain shop-owned and
 are intentionally excluded.
 
+BackOffice also exposes `POST /api/products/bulk` for up to 100 product rows
+and `POST /api/products/categories/bulk` for one category merge operation over
+selected products. Both return per-row outcomes and preserve the existing CRUD
+contracts. See [BackOffice product bulk operations](../products-bulk-operations.md)
+for the CSV schema and request/response details.
+
 Existing affiliate documents may deserialize with a missing `ChannelId` for
 backward compatibility, but they are not visible to scoped or public queries.
 The manual migration in [affiliate catalog backfill](operations/affiliate-catalog-backfill.md)

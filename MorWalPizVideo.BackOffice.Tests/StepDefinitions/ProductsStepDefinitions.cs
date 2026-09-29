@@ -165,4 +165,46 @@ public class ProductsStepDefinitions
         var doc = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>(JsonOptions);
         doc!["title"].GetString().Should().Be("Updated Product Title");
     }
+
+    [When(@"I bulk create products with one valid and one invalid row")]
+    public async Task WhenIBulkCreateProductsWithOneValidAndOneInvalidRow()
+    {
+        var request = new
+        {
+            Items = new[]
+            {
+                new { RowNumber = 2, InputKey = "valid", Title = $"Bulk Product {Guid.NewGuid():N}", Description = "Valid", Url = "https://example.com/valid", CategoryIds = Array.Empty<string>(), CategoryNames = Array.Empty<string>() },
+                new { RowNumber = 3, InputKey = "invalid", Title = "Invalid", Description = "Invalid", Url = "not-a-url", CategoryIds = Array.Empty<string>(), CategoryNames = Array.Empty<string>() }
+            }
+        };
+        _context.Response = await _client.PostAsJsonAsync("/api/Products/bulk", request);
+    }
+
+    [When(@"I bulk create (.*) products")]
+    public async Task WhenIBulkCreateProducts(int count)
+    {
+        var items = Enumerable.Range(0, count).Select(index => new
+        {
+            RowNumber = index + 2,
+            InputKey = $"row-{index}",
+            Title = $"Bulk Product {Guid.NewGuid():N}-{index}",
+            Description = "Description",
+            Url = $"https://example.com/{index}",
+            CategoryIds = Array.Empty<string>(),
+            CategoryNames = Array.Empty<string>()
+        });
+        _context.Response = await _client.PostAsJsonAsync("/api/Products/bulk", new { Items = items });
+    }
+
+    [Then(@"the bulk product response should contain one success and one failure")]
+    public async Task ThenTheBulkProductResponseShouldContainOneSuccessAndOneFailure()
+    {
+        _context.Response!.StatusCode.Should().Be(HttpStatusCode.OK);
+        var response = await _context.Response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var results = response.GetProperty("results").EnumerateArray().ToArray();
+        results.Should().HaveCount(2);
+        results.Count(result => result.GetProperty("success").GetBoolean()).Should().Be(1);
+        results.Count(result => !result.GetProperty("success").GetBoolean()).Should().Be(1);
+        results.Single(result => !result.GetProperty("success").GetBoolean()).GetProperty("error").GetString().Should().Contain("URL");
+    }
 }

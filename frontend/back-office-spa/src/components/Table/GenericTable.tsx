@@ -21,6 +21,10 @@ interface GenericTableProps<T extends object> {
   emptyMessage?: string;
   previousButtonText?: string;
   nextButtonText?: string;
+  enableRowSelection?: boolean;
+  selectedRowIds?: Set<string>;
+  onSelectedRowIdsChange?: (ids: Set<string>) => void;
+  getRowId?: (row: T) => string;
 }
 
 function GenericTable<T extends object>({
@@ -31,6 +35,10 @@ function GenericTable<T extends object>({
   emptyMessage = 'No elements',
   previousButtonText = 'Previous',
   nextButtonText = 'Next',
+  enableRowSelection = false,
+  selectedRowIds = new Set<string>(),
+  onSelectedRowIdsChange,
+  getRowId = row => String((row as { id?: string }).id ?? ''),
 }: GenericTableProps<T>) {
   // State for react-table
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -52,15 +60,18 @@ function GenericTable<T extends object>({
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: updater => {
       const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
-      setSearchParams(prev => {
-        const params = new URLSearchParams(prev);
-        if (next.pageIndex === 0) {
-          params.delete('page');
-        } else {
-          params.set('page', String(next.pageIndex + 1));
-        }
-        return params;
-      }, { replace: true });
+      setSearchParams(
+        prev => {
+          const params = new URLSearchParams(prev);
+          if (next.pageIndex === 0) {
+            params.delete('page');
+          } else {
+            params.set('page', String(next.pageIndex + 1));
+          }
+          return params;
+        },
+        { replace: true }
+      );
     },
     globalFilterFn: fuzzyFilter<T>(),
     getCoreRowModel: getCoreRowModel(),
@@ -68,7 +79,19 @@ function GenericTable<T extends object>({
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: false,
+    getRowId: row => getRowId(row),
   });
+
+  const filteredRows = table.getFilteredRowModel().rows;
+  const visibleIds = filteredRows.map(row => row.id).filter(Boolean);
+  const allFilteredSelected =
+    visibleIds.length > 0 && visibleIds.every(id => selectedRowIds.has(id));
+
+  const toggleIds = (ids: string[], selected: boolean) => {
+    const next = new Set(selectedRowIds);
+    ids.forEach(id => (selected ? next.add(id) : next.delete(id)));
+    onSelectedRowIdsChange?.(next);
+  };
 
   return (
     <>
@@ -77,13 +100,16 @@ function GenericTable<T extends object>({
           <Form.Control
             value={globalFilter ?? ''}
             onChange={e => {
-            setGlobalFilter(e.target.value);
-            setSearchParams(prev => {
-              const params = new URLSearchParams(prev);
-              params.delete('page');
-              return params;
-            }, { replace: true });
-          }}
+              setGlobalFilter(e.target.value);
+              setSearchParams(
+                prev => {
+                  const params = new URLSearchParams(prev);
+                  params.delete('page');
+                  return params;
+                },
+                { replace: true }
+              );
+            }}
             placeholder={searchPlaceholder}
           />
         </InputGroup>
@@ -93,6 +119,16 @@ function GenericTable<T extends object>({
         <thead>
           {table.getHeaderGroups().map(headerGroup => (
             <tr key={headerGroup.id}>
+              {enableRowSelection && headerGroup.headers[0] && (
+                <th key="selection-header">
+                  <Form.Check
+                    type="checkbox"
+                    aria-label="Select all filtered products"
+                    checked={allFilteredSelected}
+                    onChange={event => toggleIds(visibleIds, event.target.checked)}
+                  />
+                </th>
+              )}
               {headerGroup.headers.map(header => (
                 <th key={header.id} colSpan={header.colSpan}>
                   {header.isPlaceholder ? null : (
@@ -118,6 +154,16 @@ function GenericTable<T extends object>({
           {table.getRowModel().rows.length > 0 ? (
             table.getRowModel().rows.map(row => (
               <tr key={row.id}>
+                {enableRowSelection && (
+                  <td>
+                    <Form.Check
+                      type="checkbox"
+                      aria-label={`Select row ${row.id}`}
+                      checked={selectedRowIds.has(row.id)}
+                      onChange={event => toggleIds([row.id], event.target.checked)}
+                    />
+                  </td>
+                )}
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                 ))}
@@ -125,7 +171,10 @@ function GenericTable<T extends object>({
             ))
           ) : (
             <tr>
-              <td colSpan={table.getHeaderGroups()[0].headers.length} className="text-center">
+              <td
+                colSpan={table.getHeaderGroups()[0].headers.length + (enableRowSelection ? 1 : 0)}
+                className="text-center"
+              >
                 {emptyMessage}
               </td>
             </tr>

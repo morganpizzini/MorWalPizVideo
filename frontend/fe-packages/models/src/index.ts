@@ -95,7 +95,17 @@ export type {
 export type { FontCategoryResponse, FontListResponse } from "./font";
 
 // Product exports
-export type { Product, CreateProductDTO, UpdateProductDTO } from "./product";
+export type {
+  Product,
+  CreateProductDTO,
+  UpdateProductDTO,
+  BulkCreateProductRowDTO,
+  BulkCreateProductsDTO,
+  BulkCategoryAssignmentRowDTO,
+  BulkCategoryAssignmentDTO,
+  BulkProductOperationOutcome,
+  BulkProductOperationResponse,
+} from "./product";
 
 // Product Category exports (for video content products)
 export type {

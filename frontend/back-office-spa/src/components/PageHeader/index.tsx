@@ -8,13 +8,22 @@ interface PageHeaderProps {
   editLink?: string;
   createLink?: string;
   deleteCallback?: () => void;
+  actions?: React.ReactNode;
 }
 
-const PageHeader: React.FC<PageHeaderProps> = ({ title, backLink, editLink, createLink, deleteCallback }) => {
+const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  backLink,
+  editLink,
+  createLink,
+  deleteCallback,
+  actions,
+}) => {
   return (
     <div className="d-flex justify-content-between align-items-center bg-light p-3 rounded shadow-sm mb-3">
       <h4 className="mb-0">{title}</h4>
       <div>
+        {actions}
         {backLink && (
           <Link className="btn btn-secondary me-2" to={backLink}>
             Indietro

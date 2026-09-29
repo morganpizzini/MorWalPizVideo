@@ -4,6 +4,9 @@ import type {
   Product,
   CreateProductDTO,
   UpdateProductDTO,
+  BulkCreateProductsDTO,
+  BulkCategoryAssignmentDTO,
+  BulkProductOperationResponse,
 } from "@morwalpizvideo/models";
 import type {
   VideoProductCategory,
@@ -881,6 +884,19 @@ export const updateProduct = (id: string, data: UpdateProductDTO) =>
 
 export const deleteProduct = (id: string) =>
   Delete(ComposeUrl(endpoints.PRODUCTS_DETAIL, { productId: id }));
+
+export const createProductsBulk = (
+  data: BulkCreateProductsDTO,
+): Promise<BulkProductOperationResponse> =>
+  post(endpoints.PRODUCTS_BULK, data) as Promise<BulkProductOperationResponse>;
+
+export const assignProductCategoriesBulk = (
+  data: BulkCategoryAssignmentDTO,
+): Promise<BulkProductOperationResponse> =>
+  post(
+    endpoints.PRODUCTS_CATEGORIES_BULK,
+    data,
+  ) as Promise<BulkProductOperationResponse>;
 
 // ==================== ProductCategory API Services ====================
 

@@ -47,3 +47,11 @@ Scenario: Delete a product
 Scenario: Delete a non-existent product
     When I delete a product with ID "nonexistent-product-id"
     Then the response should be Bad Request
+
+Scenario: Bulk create returns a result for every row
+     When I bulk create products with one valid and one invalid row
+     Then the bulk product response should contain one success and one failure
+
+Scenario: Bulk create rejects more than 100 rows
+     When I bulk create 101 products
+     Then the response should be Bad Request
