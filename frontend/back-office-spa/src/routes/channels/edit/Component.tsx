@@ -8,6 +8,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import { Channel, UpdateChannelDTO } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import { hasCacheInvalidationWarning } from '../response';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const EditChannel: React.FC = () => {
   const [model, setModel] = useState<UpdateChannelDTO | null>(null);
@@ -71,7 +72,7 @@ const EditChannel: React.FC = () => {
   const isDisabled = () => !model || !model.channelName || model.channelName.length === 0 || busy;
 
   if (!model) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

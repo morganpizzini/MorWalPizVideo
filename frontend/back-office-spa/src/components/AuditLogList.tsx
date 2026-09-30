@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Table } from 'react-bootstrap';
 import type { AuditLog } from '@/models/auditLog';
+import { TableSkeleton } from './LoadingSkeleton';
 
 type AuditLogListProps = {
   logs: AuditLog[];
@@ -18,26 +19,46 @@ const formatJson = (value?: string | null) => {
   }
 };
 
-const AuditLogList: React.FC<AuditLogListProps> = ({ logs, loading, error, emptyMessage = 'No logs found.' }) => {
-  if (loading) return <p className="text-muted">Loading logs...</p>;
+const AuditLogList: React.FC<AuditLogListProps> = ({
+  logs,
+  loading,
+  error,
+  emptyMessage = 'No logs found.',
+}) => {
+  if (loading) return <TableSkeleton columns={4} />;
   if (error) return <Alert variant="danger">{error}</Alert>;
   if (logs.length === 0) return <p className="text-muted">{emptyMessage}</p>;
 
   return (
     <Table responsive hover size="sm">
-      <thead><tr><th>Event</th><th>Actor</th><th>When</th><th>Details</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Actor</th>
+          <th>When</th>
+          <th>Details</th>
+        </tr>
+      </thead>
       <tbody>
         {logs.map(log => (
           <tr key={log.id}>
             <td>{log.eventType}</td>
-            <td>{log.actorId || 'System'} <small className="text-muted">({log.actorType})</small></td>
+            <td>
+              {log.actorId || 'System'} <small className="text-muted">({log.actorType})</small>
+            </td>
             <td>{new Date(log.occurredAt).toLocaleString()}</td>
             <td>
               <details>
                 <summary>View</summary>
-                {log.beforeJson && <pre className="small mb-1">Before: {formatJson(log.beforeJson)}</pre>}
-                {log.afterJson && <pre className="small mb-1">After: {formatJson(log.afterJson)}</pre>}
-                {log.metadataJson && <pre className="small mb-0">Metadata: {formatJson(log.metadataJson)}</pre>}
+                {log.beforeJson && (
+                  <pre className="small mb-1">Before: {formatJson(log.beforeJson)}</pre>
+                )}
+                {log.afterJson && (
+                  <pre className="small mb-1">After: {formatJson(log.afterJson)}</pre>
+                )}
+                {log.metadataJson && (
+                  <pre className="small mb-0">Metadata: {formatJson(log.metadataJson)}</pre>
+                )}
               </details>
             </td>
           </tr>

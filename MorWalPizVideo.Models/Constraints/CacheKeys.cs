@@ -9,6 +9,7 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Channels = "channels";
         public const string ConfigurationStream = "stream";
         public const string Products = "products";
+        public const string ProductCategories = "productcategories:v1";
         public const string Sponsors = "sponsors";
         public const string Pages = "pages";
         public const string CalendarEvents = "calendarevents";

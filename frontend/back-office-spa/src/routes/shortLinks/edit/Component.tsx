@@ -10,6 +10,7 @@ import { ShortLink, LinkType, QueryLink } from '@/models';
 import PageHeader from '@components/PageHeader';
 import { endpoints, get } from '@morwalpizvideo/services';
 import { fetchMatches, Match } from '@/services/matchesService';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const EditShortLink: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -144,7 +145,7 @@ const EditShortLink: React.FC = () => {
   };
 
   if (!model) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

@@ -1,12 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '../test/test-utils';
+import { act, render, screen, waitFor } from '../test/test-utils';
 import PrimaryLayout from './PrimaryLayout';
+import { useDeferredRouteProgress } from '../contexts/DeferredRouteProgressContext';
+
+let resolveDeferred: () => void = () => undefined;
+let deferredPromise: Promise<void> = Promise.resolve();
+
+function DeferredRouteContent() {
+  useDeferredRouteProgress(deferredPromise);
+  return <section>Route content</section>;
+}
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
   return {
     ...actual,
-    Outlet: () => <section>Route content</section>,
+    Outlet: () => <DeferredRouteContent />,
     useLoaderData: () => ({ channels: [] }),
   };
 });
@@ -18,13 +27,17 @@ vi.mock('@components/Breadcrumbs', () => ({
 vi.mock('./Header', () => ({
   default: ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => (
     <header>
-      <button type="button" onClick={onToggleSidebar}>Toggle sidebar</button>
+      <button type="button" onClick={onToggleSidebar}>
+        Toggle sidebar
+      </button>
     </header>
   ),
 }));
 
 vi.mock('./AdminSidebar', () => ({
-  default: ({ show }: { show?: boolean }) => <aside data-open={show ? 'true' : 'false'}>Sidebar</aside>,
+  default: ({ show }: { show?: boolean }) => (
+    <aside data-open={show ? 'true' : 'false'}>Sidebar</aside>
+  ),
 }));
 
 describe('PrimaryLayout', () => {
@@ -44,5 +57,19 @@ describe('PrimaryLayout', () => {
     expect(content?.textContent).toContain('Breadcrumbs');
     expect(content?.textContent).toContain('Route content');
     expect(footer).not.toHaveClass('mt-5');
+  });
+
+  it('keeps the fixed progress bar active until deferred route data resolves', async () => {
+    deferredPromise = new Promise<void>(resolve => {
+      resolveDeferred = resolve;
+    });
+
+    const { container } = render(<PrimaryLayout />);
+    const progress = container.querySelector('.router-progress');
+
+    await waitFor(() => expect(progress).toHaveClass('is-active'));
+    act(() => resolveDeferred());
+    await waitFor(() => expect(progress).not.toHaveClass('is-active'));
+    expect(screen.getByText('Route content')).toBeInTheDocument();
   });
 });

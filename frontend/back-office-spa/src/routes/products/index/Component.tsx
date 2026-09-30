@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Dropdown, Modal } from 'react-bootstrap';
 import { Link, useFetcher, useRevalidator } from 'react-router';
 import { Tags, ToggleLeft } from 'lucide-react';
@@ -41,14 +41,20 @@ const Products: React.FC = () => {
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
+  const lastDeleteData = useRef<unknown>(undefined);
 
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.success) {
-      setShowDeleteModal(false);
-      toast.show('Success', 'Product deleted successfully', { variant: 'success' });
-      revalidator.revalidate();
+    if (
+      fetcher.state !== 'idle' ||
+      !fetcher.data?.success ||
+      lastDeleteData.current === fetcher.data
+    ) {
+      return;
     }
-  }, [fetcher.state, fetcher.data, revalidator, toast]);
+    lastDeleteData.current = fetcher.data;
+    setShowDeleteModal(false);
+    toast.show('Success', 'Product deleted successfully', { variant: 'success' });
+  }, [fetcher.state, fetcher.data, toast]);
 
   const runBulk = async (operation: () => Promise<{ results: BulkProductOperationOutcome[] }>) => {
     setBulkBusy(true);

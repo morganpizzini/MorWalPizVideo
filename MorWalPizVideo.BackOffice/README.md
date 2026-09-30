@@ -4,6 +4,8 @@ Dynamic form designer (text / select / checkbox / email / etc. — see `CustomFo
 
 The admin Web API powering the MorWalPizVideo platform. It exposes the management surface used by the `back-office-spa` (React 19) SPA and by the WPF `MorWalPiz.VideoImporter` desktop tool. It owns YouTube content lifecycle, translations, the digital shop, social distribution (Discord / Telegram ), insights (AI content planning), custom forms, sponsor management and the Shooting ITA vertical (competitions / user requests / push notifications).
 
+Product category list reads use a channel-scoped service-level distributed read-through cache (`CacheKeys.ProductCategories`). The cache stores DTO response values with bounded sliding and absolute expiry, fails open to `DataService`, and is removed only after a successful category mutation. Product mutations retain their separate public product-cache reset and purge flow.
+
 > Companion docs already in the repo: [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md) · [HEALTH_CHECKS.md](HEALTH_CHECKS.md) · [docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md](../docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md) · [docs/GITHUB_PRODUCTION_DEPLOYMENT.md](../docs/GITHUB_PRODUCTION_DEPLOYMENT.md) · [memory-bank/](../memory-bank/)
 
 ---

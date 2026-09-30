@@ -16,6 +16,7 @@ import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import GenericErrorList from '@components/GenericErrorList';
 import { useChannelContext } from '../../../contexts/ChannelContext';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 import { hasCacheInvalidationWarning } from '../response';
 
 const ChannelDetail: React.FC = () => {
@@ -201,7 +202,7 @@ const ChannelDetail: React.FC = () => {
   };
 
   if (!entity) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

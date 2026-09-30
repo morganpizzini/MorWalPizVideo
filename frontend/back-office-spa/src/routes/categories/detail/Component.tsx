@@ -6,6 +6,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import { Category } from '@morwalpizvideo/models';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const CategoryDetail: React.FC = () => {
   const category = useResolvedLoaderData<Category>();
@@ -48,7 +49,7 @@ const CategoryDetail: React.FC = () => {
   };
 
   if (!category) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

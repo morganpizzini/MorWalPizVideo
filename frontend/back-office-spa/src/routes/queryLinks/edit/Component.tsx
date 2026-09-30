@@ -7,6 +7,7 @@ import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import { QueryLink } from '@/models';
 import PageHeader from '@components/PageHeader';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const EditQueryLink: React.FC = () => {
   const [model, setModel] = useState<QueryLink | null>(null);
@@ -58,7 +59,7 @@ const EditQueryLink: React.FC = () => {
   const isDisabled = () => !model || model.title.length === 0 || model.value.length === 0 || busy;
 
   if (!model) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

@@ -1,5 +1,7 @@
 import React, { Suspense } from 'react';
 import { Await, useAsyncError, useAsyncValue, useLoaderData } from 'react-router';
+import { PageSkeleton } from '@components/LoadingSkeleton';
+import { useDeferredRouteProgress } from '../contexts/DeferredRouteProgressContext';
 
 export interface DeferredRouteData<T> {
   data: Promise<T>;
@@ -32,8 +34,10 @@ interface AsyncRouteBoundaryProps {
 }
 
 export function AsyncRouteBoundary({ Component, loaderData }: AsyncRouteBoundaryProps) {
+  useDeferredRouteProgress(loaderData.data);
+
   return (
-    <Suspense fallback={<AsyncRoutePending />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Await resolve={loaderData.data} errorElement={<AsyncRouteError />}>
         <Component />
       </Await>
@@ -46,12 +50,4 @@ export function createAsyncRouteComponent(Component: React.ComponentType) {
     const loaderData = useLoaderData<DeferredRouteData<unknown>>();
     return <AsyncRouteBoundary Component={Component} loaderData={loaderData} />;
   };
-}
-
-function AsyncRoutePending() {
-  return (
-    <div role="status" aria-live="polite">
-      Loading page...
-    </div>
-  );
 }

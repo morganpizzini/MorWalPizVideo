@@ -6,6 +6,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import type { QueryLink } from '@/models/queryLink';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const QueryLinkDetail: React.FC = () => {
   const entity = useResolvedLoaderData<QueryLink>();
@@ -48,7 +49,7 @@ const QueryLinkDetail: React.FC = () => {
   };
 
   if (!entity) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

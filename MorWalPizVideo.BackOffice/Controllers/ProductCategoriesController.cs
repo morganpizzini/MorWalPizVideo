@@ -33,11 +33,16 @@ public class UpdateProductCategoryRequest
 public class ProductCategoriesController : ApplicationControllerBase
 {
     private readonly DataService _dataService;
+    private readonly ProductCategoryCacheService _productCategoryCacheService;
     private readonly ICrossApiService _crossApiService;
 
-    public ProductCategoriesController(DataService dataService, ICrossApiService crossApiService)
+    public ProductCategoriesController(
+        DataService dataService,
+        ProductCategoryCacheService productCategoryCacheService,
+        ICrossApiService crossApiService)
     {
         _dataService = dataService;
+        _productCategoryCacheService = productCategoryCacheService;
         _crossApiService = crossApiService;
     }
 
@@ -45,8 +50,8 @@ public class ProductCategoriesController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesManage)]
     public async Task<IActionResult> GetProductCategories()
     {
-        var entities = await _dataService.FetchProductCategories(null, HttpContext.GetChannelContext().ChannelId);
-        return Ok(entities.Select(ContractUtils.Convert));
+        var categories = await _productCategoryCacheService.GetAllAsync(HttpContext.GetChannelContext().ChannelId);
+        return Ok(categories);
     }
 
     [HttpGet("{id}")]
@@ -67,6 +72,7 @@ public class ProductCategoriesController : ApplicationControllerBase
         var category = new ProductCategory(request.Title, request.Description);
         if (!await _dataService.SaveProductCategory(category, channelId))
             return Conflict("A product category with this title already exists for the selected channel.");
+        await _productCategoryCacheService.RemoveAsync(channelId);
         await InvalidateProductsCacheAsync();
         return NoContent();
     }
@@ -88,6 +94,7 @@ public class ProductCategoriesController : ApplicationControllerBase
 
         if (!await _dataService.UpdateProductCategory(updatedCategory, channelId))
             return Conflict("A product category with this title already exists for the selected channel.");
+        await _productCategoryCacheService.RemoveAsync(channelId);
         await InvalidateProductsCacheAsync();
         return NoContent();
     }
@@ -103,8 +110,11 @@ public class ProductCategoriesController : ApplicationControllerBase
             return BadRequest("Product category not found");
         }
 
-        await _dataService.DeleteProductCategory(entity.Id, channelId);
-        await InvalidateProductsCacheAsync();
+        if (await _dataService.DeleteProductCategory(entity.Id, channelId))
+        {
+            await _productCategoryCacheService.RemoveAsync(channelId);
+            await InvalidateProductsCacheAsync();
+        }
         return NoContent();
     }
 

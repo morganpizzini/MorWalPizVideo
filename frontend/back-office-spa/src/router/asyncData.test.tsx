@@ -31,7 +31,12 @@ describe('async route data boundary', () => {
     );
 
     expect(screen.queryByText('ready')).not.toBeInTheDocument();
-    return waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Loading page...'));
+    return waitFor(() => {
+      const status = screen.getByRole('status');
+      expect(status).toHaveAttribute('aria-live', 'polite');
+      expect(status).toHaveTextContent('Page content is loading');
+      expect(status).not.toHaveTextContent('Loading page...');
+    });
   });
 
   it('renders the shared error state when route data rejects', async () => {

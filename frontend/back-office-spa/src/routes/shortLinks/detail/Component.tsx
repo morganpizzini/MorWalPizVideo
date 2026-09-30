@@ -11,6 +11,7 @@ import type { AuditLog } from '@/models/auditLog';
 import type { ShortLink } from '@/models/shortLink';
 import AuditLogList from '@components/AuditLogList';
 import ShareShortLink from './ShareShortLink';
+import { PageSkeleton } from '@components/LoadingSkeleton';
 
 const ShortLinkDetail: React.FC = () => {
   const entity = useResolvedLoaderData<ShortLink & { code: string; queryString: string }>();
@@ -67,7 +68,7 @@ const ShortLinkDetail: React.FC = () => {
   };
 
   if (!entity) {
-    return <div>Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

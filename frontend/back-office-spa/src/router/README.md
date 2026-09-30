@@ -105,7 +105,15 @@ createRouteGroup('newfeature', {
 - Preserve existing loader response shapes, actions, `Response` errors, and permission mappings.
 - Verify pending, resolved, rejected, revalidated, anonymous, and forbidden behavior for new loaders.
 
-`PrimaryLayout` owns the fixed, indefinite progress bar. It follows `useNavigation` for both loading and submitting states, so new protected routes get navigation feedback automatically without adding route-specific spinners.
+`PrimaryLayout` owns the fixed, indefinite progress bar. It follows `useNavigation` for loading and submitting states and also observes deferred route data through `DeferredRouteProgressProvider`, so it remains active until an `Await` promise resolves, rejects, or is abandoned by an unmounted route.
+
+## Loading ownership
+
+`src/components/LoadingSkeleton` owns the shared visual loading states. Use `PageSkeleton` for route or entity content that is not available yet and `TableSkeleton` for an initial table-shaped fetch. Skeletons expose an accessible status and visually hidden loading label; they do not render generic visible `Loading...` copy.
+
+The async route boundary owns protected route-data loading and uses `PageSkeleton`. Local components may use the same skeletons only for their initial data fetch. Keep meaningful operation feedback such as uploading, publishing, importing, analyzing, and dependent option loading visible because those states describe an action or a specific dependency rather than the route shell.
+
+When adding a route, keep its loader data contract and error/null semantics unchanged. Use the async boundary for loader promises, use a skeleton for a local initial-data branch, and reserve text labels for actionable operations or specific recovery states. Do not add route-specific spinners when the shared boundary or skeleton already represents the state.
 
 ## Route Naming Conventions
 
