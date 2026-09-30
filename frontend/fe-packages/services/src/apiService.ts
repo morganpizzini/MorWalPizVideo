@@ -80,16 +80,18 @@ function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
 }
 
 export const getActiveCustomForms = (): Promise<CustomForm[]> =>
-  get(endpoints.CUSTOMFORMS_ACTIVE);
+  publicApiService.get(endpoints.CUSTOMFORMS_ACTIVE);
 
 export const getEligibleSurveys = (): Promise<Survey[]> =>
-  get(endpoints.SURVEYS_ACTIVE);
+  publicApiService.get(endpoints.SURVEYS_ACTIVE);
 
 export const getSurveyByUrl = (url: string): Promise<Survey> =>
-  get(ComposeUrl(endpoints.SURVEYS_BY_URL, { url: encodeURIComponent(url) }));
+  publicApiService.get(
+    ComposeUrl(endpoints.SURVEYS_BY_URL, { url: encodeURIComponent(url) }),
+  );
 
 export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
-  get(
+  publicApiService.get(
     ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }),
   );
 
@@ -98,12 +100,14 @@ export const submitCustomFormResponse = (
   answers: AnyAnswer[],
   surveyId?: string,
 ): Promise<CustomFormResponse> =>
-  post(
-    ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
-      customFormId: encodeURIComponent(formId),
-    }),
-    { body: { answers: serializeFormAnswers(answers), surveyId } },
-  ).then(requireSuccessfulResponse);
+  publicApiService
+    .post(
+      ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
+        customFormId: encodeURIComponent(formId),
+      }),
+      { body: { answers: serializeFormAnswers(answers), surveyId } },
+    )
+    .then(requireSuccessfulResponse);
 
 export interface ApiErrorResponse {
   errors?: unknown[];
@@ -170,7 +174,7 @@ export const getAskCampaign = (
   channelName: string,
   campaignSlug: string,
 ): Promise<AskPublicCampaign> =>
-  get(
+  publicApiService.get(
     ComposeUrl(endpoints.ASK_CAMPAIGN, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -184,7 +188,7 @@ export const submitAsk = (
   recaptchaToken: string,
   name?: string,
 ): Promise<{ status: string }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.ASK_SUBMISSIONS, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -198,7 +202,7 @@ export const reactToAskSubmission = (
   campaignSlug: string,
   submissionId: string,
 ): Promise<{ accepted: boolean; count: number }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.ASK_REACTIONS, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -221,10 +225,12 @@ export interface FaqPublicItem {
   answers: FaqPublicAnswer[];
 }
 export const getPublicFaq = (category?: string): Promise<FaqPublicItem[]> =>
-  get(ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined));
+  publicApiService.get(
+    ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined),
+  );
 export const getPublicFaqCategories = (): Promise<
   Array<{ id: string; slug: string; name: string }>
-> => get(endpoints.FAQ_CATEGORIES);
+> => publicApiService.get(endpoints.FAQ_CATEGORIES);
 export const voteFaqAnswer = (
   faqId: string,
   channelName: string,
@@ -235,7 +241,7 @@ export const voteFaqAnswer = (
   helpfulVotes: number;
   notHelpfulVotes: number;
 }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.FAQ_VOTE, {
       faqId,
       channelName: encodeURIComponent(channelName),
@@ -337,488 +343,452 @@ export const exportAskSubmissions = (id: string, includeName = false) =>
  */
 type AuthTokenProvider = () => string | null;
 
-/**
- * Registered auth token provider
- */
-let authTokenProvider: AuthTokenProvider | null = null;
-
-/**
- * Request credentials mode type
- * Controls whether credentials (cookies, authorization headers) are included in cross-origin requests
- */
-type CredentialsMode = RequestCredentials;
-
-/**
- * Global credentials mode setting
- * Defaults to 'include' for backward compatibility with authenticated apps
- */
-let requestCredentialsMode: CredentialsMode = "include";
-let csrfTokenPromise: Promise<string> | null = null;
-let cookieOnlyMode = false;
-const selectedChannelStorageKey = "backoffice.selectedChannelId";
-let selectedChannelId: string | null =
-  typeof window !== "undefined"
-    ? window.localStorage.getItem(selectedChannelStorageKey)
-    : null;
-
-const scopedBackOfficePrefixes = [
-  "/api/videos",
-  "/api/categories",
-  "/api/channels",
-  "/api/imageupload",
-  "/api/calendarevents",
-  "/api/compilations",
-  "/api/shortlinks",
-  "/api/querylinks",
-  "/api/quicklinks",
-  "/api/pages",
-  "/api/navigation",
-  "/api/insights",
-  "/api/dashboard",
-  "/api/apikeys",
-  "/api/newsletters",
-  "/api/products",
-  "/api/productcategories",
-];
-
-function isScopedBackOfficeRequest(url: string): boolean {
-  const pathWithoutQuery = url.split("?")[0].toLowerCase();
-  const normalizedUrl = pathWithoutQuery.startsWith("/")
-    ? pathWithoutQuery
-    : `/${pathWithoutQuery}`;
-
-  if (
-    normalizedUrl === "/api/channels" ||
-    normalizedUrl === "/api/channels/accessible"
-  ) {
-    return false;
-  }
-
-  return scopedBackOfficePrefixes.some(
-    (prefix) =>
-      normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
-  );
+export interface ApiClientOptions {
+  mode: "public" | "admin" | "legacy";
+  baseUrl?: string;
 }
 
-export function getSelectedChannelId(): string | null {
-  return selectedChannelId;
-}
-
-export function setSelectedChannelId(channelId: string | null): void {
-  selectedChannelId = channelId?.trim() || null;
-  if (typeof window !== "undefined") {
-    if (selectedChannelId) {
-      window.localStorage.setItem(selectedChannelStorageKey, selectedChannelId);
-    } else {
-      window.localStorage.removeItem(selectedChannelStorageKey);
-    }
-  }
-}
-
-export function selectFirstAccessibleChannel(
-  channels: readonly { channelId: string }[],
-): string | null {
-  const selected = channels.some(
-    (channel) => channel.channelId === selectedChannelId,
-  )
-    ? selectedChannelId
-    : (channels[0]?.channelId ?? null);
-  setSelectedChannelId(selected);
-  return selected;
-}
-
-/**
- * Register an authentication token provider
- * This allows applications to inject their own auth logic
- * @param provider Function that returns the current auth token or null
- */
-export function setAuthTokenProvider(provider: AuthTokenProvider): void {
-  authTokenProvider = provider;
-}
-
-/**
- * Set the request credentials mode for all API calls
- * This controls whether credentials (cookies, authorization headers) are included in cross-origin requests
- * @param mode The credentials mode: 'include' | 'omit' | 'same-origin'
- *             - 'include': Always send credentials (default for authenticated apps)
- *             - 'omit': Never send credentials (recommended for public/unauthenticated apps)
- *             - 'same-origin': Only send credentials for same-origin requests
- */
-export function setRequestCredentialsMode(mode: CredentialsMode): void {
-  requestCredentialsMode = mode;
-}
-
-/** Enable cookie-only browser authentication for applications such as BackOffice. */
-export function setCookieOnlyMode(enabled: boolean): void {
-  cookieOnlyMode = enabled;
-}
-
-export function resetCsrfToken(): void {
-  csrfTokenPromise = null;
-}
-
-let unauthorizedHandler: (() => void) | null = null;
-
-export function setUnauthorizedHandler(handler: () => void): void {
-  unauthorizedHandler = handler;
-}
-
-/**
- * Get authentication token from registered provider or localStorage fallback
- * @returns Auth token or null
- */
-function getAuthToken(): string | null {
-  if (cookieOnlyMode) {
-    return null;
-  }
-
-  // Try registered provider first
-  if (authTokenProvider) {
-    return authTokenProvider();
-  }
-
-  // Fallback to localStorage for backward compatibility
-  if (typeof window !== "undefined" && window.localStorage) {
-    return localStorage.getItem("authToken");
-  }
-
-  return null;
-}
-
-/**
- * Get the API base URL from runtime environment or build-time environment
- * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
- */
-function getApiBaseUrl(): string {
-  // Check runtime environment (injected by Docker entrypoint)
-  if (typeof window !== "undefined" && (window as any).ENV?.VITE_API_BASE_URL) {
-    return (window as any).ENV.VITE_API_BASE_URL;
-  }
-  if (typeof window !== "undefined" && (window as any).ENV?.API_BASE_URL) {
-    return (window as any).ENV.API_BASE_URL;
-  }
-
-  // Check build-time environment (Vite)
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-
-  // Default to relative paths (for Vite dev proxy)
-  return "";
-}
-
-/**
- * Normalize URL path and optionally prepend base URL
- * Handles both '/api/...' and 'api/...' formats safely
- */
-function buildFullUrl(path: string): string {
-  if (path == null || path == undefined || path.length == 0) {
-    throw new Error("Path cannot be null/undefined or empty");
-  }
-  const baseUrl = getApiBaseUrl();
-
-  // Normalize path to have single leading slash
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-
-  // If no base URL, return relative path (for Vite proxy)
-  if (!baseUrl) {
-    return normalizedPath;
-  }
-
-  // Remove trailing slash from base URL
-  const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-
-  // Combine base URL with path
-  return `${cleanBase}${normalizedPath}`;
-}
-
-async function getCsrfToken(): Promise<string> {
-  csrfTokenPromise ??= fetch(buildFullUrl("/api/auth/csrf"), {
-    method: "GET",
-    credentials: "include",
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Unable to acquire CSRF token (${response.status})`);
-      }
-
-      const payload = (await response.json()) as { token?: string };
-      if (!payload.token) {
-        throw new Error("CSRF token response was invalid");
-      }
-
-      return payload.token;
-    })
-    .catch((error) => {
-      csrfTokenPromise = null;
-      throw error;
-    });
-
-  return csrfTokenPromise;
-}
-
-export function post(
-  url: string,
-  obj: any,
-  overrideHeaderEnv: string = "",
-  extraHeaders?: Record<string, string>,
-) {
-  return call(
-    url,
-    "POST",
-    obj,
-    overrideHeaderEnv,
-    undefined,
-    false,
-    false,
-    undefined,
-    extraHeaders,
-  );
-}
-
-export function postFormData(
-  url: string,
-  formData: FormData,
-  overrideHeaderEnv: string = "",
-) {
-  return call(url, "POST", formData, overrideHeaderEnv, undefined, false, true);
-}
-
-export function put(url: string, obj: any, overrideHeaderEnv: string = "") {
-  return call(url, "PUT", obj, overrideHeaderEnv);
-}
-
-export function patch(url: string, obj: any, overrideHeaderEnv: string = "") {
-  return call(url, "PATCH", obj, overrideHeaderEnv);
-}
-
-export function get(
-  url: string,
-  query?: any,
-  overrideHeaderEnv: string = "",
-  returnFullRresponse: boolean = false,
-) {
-  return call(url, "GET", {}, overrideHeaderEnv, query, false, false, {
-    returnFullResponse: returnFullRresponse,
-  });
-}
-
-export function getFile(
-  url: string,
-  query?: any,
-  overrideHeaderEnv: string = "",
-) {
-  return call(url, "GET", {}, overrideHeaderEnv, query, true);
-}
-
-export function Delete(
-  url: string,
-  query?: any,
-  overrideHeaderEnv: string = "",
-) {
-  return call(url, "DELETE", {}, overrideHeaderEnv, query);
-}
-
-/**
- * Response options for the call method
- */
 interface ResponseOptions {
-  /** If true, returns the full parsed response instead of extracting the 'data' property */
   returnFullResponse?: boolean;
 }
 
-/**
- * Makes API calls with automatic authentication header injection
- *
- * @param url - The API endpoint URL
- * @param method - HTTP method (GET, POST, PUT, etc.)
- * @param body - Request body
- * @param overrideHeaderEnv - Optional header environment override
- * @param query - Optional query parameters
- * @param downloadFile - If true, returns response as blob
- * @param isFormData - If true, treats body as FormData
- * @param responseOptions - Options for response handling
- * @returns Parsed response data. By default returns response.data if present, otherwise full response.
- *          Set responseOptions.returnFullResponse = true to always get the full response object.
- *
- * @example
- * // Default behavior - returns response.data if present
- * const data = await call('/api/products', 'GET', {});
- *
- * @example
- * // Get full response envelope including metadata
- * const fullResponse = await call('/api/products', 'GET', {}, '', undefined, false, false, { returnFullResponse: true });
- */
-export async function call(
-  url: string,
-  method: string,
-  body: any,
-  overrideHeaderEnv: string = "",
-  query?: any,
-  downloadFile = false,
-  isFormData = false,
-  responseOptions?: ResponseOptions,
-  extraHeaders?: Record<string, string>,
-) {
-  const headers = new Headers();
-  Object.entries(extraHeaders ?? {}).forEach(([key, value]) =>
-    headers.set(key, value),
-  );
+export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
+  /**
+   * Registered auth token provider
+   */
+  let authTokenProvider: AuthTokenProvider | null = null;
 
-  // Add authorization header if user is authenticated
-  const token = getAuthToken();
-  if (token) {
-    headers.append("Authorization", `Bearer ${token}`);
+  /**
+   * Request credentials mode type
+   * Controls whether credentials (cookies, authorization headers) are included in cross-origin requests
+   */
+  type CredentialsMode = RequestCredentials;
+
+  /**
+   * Global credentials mode setting
+   * Defaults to 'include' for backward compatibility with authenticated apps
+   */
+  let requestCredentialsMode: CredentialsMode = "include";
+  let csrfTokenPromise: Promise<string> | null = null;
+  let csrfTokenBaseUrl: string | null = null;
+  let cookieOnlyMode = mode !== "legacy";
+  const selectedChannelStorageKey = "backoffice.selectedChannelId";
+  let selectedChannelId: string | null =
+    mode !== "public" && typeof window !== "undefined"
+      ? window.localStorage.getItem(selectedChannelStorageKey)
+      : null;
+
+  const scopedBackOfficePrefixes = [
+    "/api/videos",
+    "/api/categories",
+    "/api/channels",
+    "/api/imageupload",
+    "/api/calendarevents",
+    "/api/compilations",
+    "/api/shortlinks",
+    "/api/querylinks",
+    "/api/quicklinks",
+    "/api/pages",
+    "/api/blogposts",
+    "/api/navigation",
+    "/api/insights",
+    "/api/dashboard",
+    "/api/apikeys",
+    "/api/newsletters",
+    "/api/products",
+    "/api/productcategories",
+  ];
+
+  function isScopedBackOfficeRequest(url: string): boolean {
+    const pathWithoutQuery = url.split("?")[0].toLowerCase();
+    const normalizedUrl = pathWithoutQuery.startsWith("/")
+      ? pathWithoutQuery
+      : `/${pathWithoutQuery}`;
+
+    if (
+      normalizedUrl === "/api/channels" ||
+      normalizedUrl === "/api/channels/accessible"
+    ) {
+      return false;
+    }
+
+    return scopedBackOfficePrefixes.some(
+      (prefix) =>
+        normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
+    );
   }
 
-  if (isScopedBackOfficeRequest(url) && selectedChannelId) {
-    headers.set("X-Channel-Id", selectedChannelId);
+  function getSelectedChannelId(): string | null {
+    return selectedChannelId;
   }
 
-  const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(
-    method.toUpperCase(),
-  );
-  const isAnonymousAuthRequest =
-    url.includes("/api/auth/login") || url.includes("/api/auth/csrf");
-  if (
-    requestCredentialsMode === "include" &&
-    isUnsafeMethod &&
-    !token &&
-    !isAnonymousAuthRequest
-  ) {
-    headers.append("X-CSRF-TOKEN", await getCsrfToken());
-  }
-
-  if (query) {
-    url += `?${new URLSearchParams(query).toString()}`;
-  }
-
-  const options: RequestInit = {
-    method: method,
-    headers: headers,
-  };
-
-  // Determine if we have a request body that needs to be sent
-  let hasBody = false;
-
-  if (body) {
-    if (isFormData) {
-      // For FormData, use it directly
-      // Don't set Content-Type - let the browser set it with the boundary
-      options.body = body as FormData;
-      hasBody = true;
-    } else if (Object.keys(body).length > 0) {
-      // For regular objects, stringify them and set Content-Type
-      options.body = JSON.stringify(body);
-      headers.append("Content-Type", "application/json");
-      hasBody = true;
+  function setSelectedChannelId(channelId: string | null): void {
+    selectedChannelId = channelId?.trim() || null;
+    if (mode === "legacy" && typeof window !== "undefined") {
+      if (selectedChannelId) {
+        window.localStorage.setItem(
+          selectedChannelStorageKey,
+          selectedChannelId,
+        );
+      } else {
+        window.localStorage.removeItem(selectedChannelStorageKey);
+      }
     }
   }
 
-  // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
-  // This avoids triggering CORS preflight for simple requests
-  // Only set Content-Type when we actually have a JSON body to send
+  function selectFirstAccessibleChannel(
+    channels: readonly { channelId: string }[],
+  ): string | null {
+    const selected = channels.some(
+      (channel) => channel.channelId === selectedChannelId,
+    )
+      ? selectedChannelId
+      : (channels[0]?.channelId ?? null);
+    setSelectedChannelId(selected);
+    return selected;
+  }
 
-  // Include credentials based on configured mode
-  options.credentials = requestCredentialsMode;
+  /**
+   * Register an authentication token provider
+   * This allows applications to inject their own auth logic
+   * @param provider Function that returns the current auth token or null
+   */
+  function setAuthTokenProvider(provider: AuthTokenProvider): void {
+    authTokenProvider = provider;
+  }
 
-  return fetch(buildFullUrl(url), options)
-    .then(async (response) => {
-      if (response.ok) {
-        if (downloadFile) {
-          return response.blob();
+  /**
+   * Set the request credentials mode for all API calls
+   * This controls whether credentials (cookies, authorization headers) are included in cross-origin requests
+   * @param mode The credentials mode: 'include' | 'omit' | 'same-origin'
+   *             - 'include': Always send credentials (default for authenticated apps)
+   *             - 'omit': Never send credentials (recommended for public/unauthenticated apps)
+   *             - 'same-origin': Only send credentials for same-origin requests
+   */
+  function setRequestCredentialsMode(credentials: CredentialsMode): void {
+    requestCredentialsMode = credentials;
+  }
+
+  /** Enable cookie-only browser authentication for applications such as BackOffice. */
+  function setCookieOnlyMode(enabled: boolean): void {
+    cookieOnlyMode = enabled;
+  }
+
+  function resetCsrfToken(): void {
+    csrfTokenPromise = null;
+    csrfTokenBaseUrl = null;
+  }
+
+  let unauthorizedHandler: (() => void) | null = null;
+
+  function setUnauthorizedHandler(handler: () => void): void {
+    unauthorizedHandler = handler;
+  }
+
+  /**
+   * Get authentication token from registered provider or localStorage fallback
+   * @returns Auth token or null
+   */
+  function getAuthToken(): string | null {
+    if (mode !== "legacy" || cookieOnlyMode) {
+      return null;
+    }
+
+    // Try registered provider first
+    if (authTokenProvider) {
+      return authTokenProvider();
+    }
+
+    // Fallback to localStorage for backward compatibility
+    if (typeof window !== "undefined" && window.localStorage) {
+      return localStorage.getItem("authToken");
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the API base URL from runtime environment or build-time environment
+   * Priority: window.ENV (Docker runtime) > import.meta.env (Vite build-time) > relative paths
+   */
+  function getApiBaseUrl(): string {
+    if (baseUrl !== undefined) return baseUrl;
+    // Check runtime environment (injected by Docker entrypoint)
+    if (
+      typeof window !== "undefined" &&
+      (window as any).ENV?.VITE_API_BASE_URL
+    ) {
+      return (window as any).ENV.VITE_API_BASE_URL;
+    }
+    if (typeof window !== "undefined" && (window as any).ENV?.API_BASE_URL) {
+      return (window as any).ENV.API_BASE_URL;
+    }
+
+    // Check build-time environment (Vite)
+    if (import.meta.env?.VITE_API_BASE_URL) {
+      return import.meta.env.VITE_API_BASE_URL;
+    }
+
+    // Default to relative paths (for Vite dev proxy)
+    return "";
+  }
+
+  /**
+   * Normalize URL path and optionally prepend base URL
+   * Handles both '/api/...' and 'api/...' formats safely
+   */
+  function buildFullUrl(path: string, baseUrl = getApiBaseUrl()): string {
+    if (path == null || path == undefined || path.length == 0) {
+      throw new Error("Path cannot be null/undefined or empty");
+    }
+
+    // Normalize path to have single leading slash
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+    // If no base URL, return relative path (for Vite proxy)
+    if (!baseUrl) {
+      return normalizedPath;
+    }
+
+    // Remove trailing slash from base URL
+    const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+
+    // Combine base URL with path
+    return `${cleanBase}${normalizedPath}`;
+  }
+
+  async function getCsrfToken(requestBaseUrl: string): Promise<string> {
+    if (csrfTokenBaseUrl !== requestBaseUrl) resetCsrfToken();
+    if (csrfTokenPromise) return csrfTokenPromise;
+    csrfTokenBaseUrl = requestBaseUrl;
+    const pendingToken = fetch(buildFullUrl("/api/auth/csrf", requestBaseUrl), {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to acquire CSRF token (${response.status})`);
         }
-        if (response.status === 204) {
-          return Promise.resolve({});
+
+        const payload = (await response.json()) as { token?: string };
+        if (!payload.token) {
+          throw new Error("CSRF token response was invalid");
         }
-        const parsedResponse = await response.json();
 
-        // If returnFullResponse is true, return the entire response object
-        if (
-          responseOptions?.returnFullResponse ||
-          !Object.prototype.hasOwnProperty.call(parsedResponse, "data")
-        )
-          return parsedResponse;
+        return payload.token;
+      })
+      .catch((error) => {
+        if (csrfTokenPromise === pendingToken) resetCsrfToken();
+        throw error;
+      });
 
-        // Default behavior: return data property if it exists, otherwise return full response
-        return parsedResponse.data;
-      } else {
-        // error handling
-        const errorMessages = [];
-        switch (response.status) {
-          case 400: {
-            const parsedResponse = await response.json();
-            if (typeof parsedResponse === "object") {
-              for (const key in parsedResponse) {
-                if (Array.isArray(parsedResponse[key])) {
-                  errorMessages.push(...parsedResponse[key]);
-                } else {
-                  errorMessages.push(parsedResponse[key]);
-                }
-              }
-            } else {
-              errorMessages.push(parsedResponse);
-            }
-            return {
-              errors: errorMessages,
-              fieldErrors:
-                parsedResponse?.errors &&
-                typeof parsedResponse.errors === "object"
-                  ? parsedResponse.errors
-                  : undefined,
-              status: response.status,
-              channelContextError:
-                parsedResponse?.code === "channel_context_required" ||
-                parsedResponse?.code === "channel_context_unavailable",
-            };
+    csrfTokenPromise = pendingToken;
+    return csrfTokenPromise;
+  }
+
+  function post(
+    url: string,
+    obj: any,
+    overrideHeaderEnv: string = "",
+    extraHeaders?: Record<string, string>,
+  ) {
+    return call(
+      url,
+      "POST",
+      obj,
+      overrideHeaderEnv,
+      undefined,
+      false,
+      false,
+      undefined,
+      extraHeaders,
+    );
+  }
+
+  function postFormData(
+    url: string,
+    formData: FormData,
+    overrideHeaderEnv: string = "",
+  ) {
+    return call(
+      url,
+      "POST",
+      formData,
+      overrideHeaderEnv,
+      undefined,
+      false,
+      true,
+    );
+  }
+
+  function put(url: string, obj: any, overrideHeaderEnv: string = "") {
+    return call(url, "PUT", obj, overrideHeaderEnv);
+  }
+
+  function patch(url: string, obj: any, overrideHeaderEnv: string = "") {
+    return call(url, "PATCH", obj, overrideHeaderEnv);
+  }
+
+  function get(
+    url: string,
+    query?: any,
+    overrideHeaderEnv: string = "",
+    returnFullRresponse: boolean = false,
+  ) {
+    return call(url, "GET", {}, overrideHeaderEnv, query, false, false, {
+      returnFullResponse: returnFullRresponse,
+    });
+  }
+
+  function getFile(url: string, query?: any, overrideHeaderEnv: string = "") {
+    return call(url, "GET", {}, overrideHeaderEnv, query, true);
+  }
+
+  function Delete(url: string, query?: any, overrideHeaderEnv: string = "") {
+    return call(url, "DELETE", {}, overrideHeaderEnv, query);
+  }
+
+  /**
+   * Makes API calls with automatic authentication header injection
+   *
+   * @param url - The API endpoint URL
+   * @param method - HTTP method (GET, POST, PUT, etc.)
+   * @param body - Request body
+   * @param overrideHeaderEnv - Optional header environment override
+   * @param query - Optional query parameters
+   * @param downloadFile - If true, returns response as blob
+   * @param isFormData - If true, treats body as FormData
+   * @param responseOptions - Options for response handling
+   * @returns Parsed response data. By default returns response.data if present, otherwise full response.
+   *          Set responseOptions.returnFullResponse = true to always get the full response object.
+   *
+   * @example
+   * // Default behavior - returns response.data if present
+   * const data = await call('/api/products', 'GET', {});
+   *
+   * @example
+   * // Get full response envelope including metadata
+   * const fullResponse = await call('/api/products', 'GET', {}, '', undefined, false, false, { returnFullResponse: true });
+   */
+  async function call(
+    url: string,
+    method: string,
+    body: any,
+    overrideHeaderEnv: string = "",
+    query?: any,
+    downloadFile = false,
+    isFormData = false,
+    responseOptions?: ResponseOptions,
+    extraHeaders?: Record<string, string>,
+  ) {
+    const requestBaseUrl = getApiBaseUrl();
+    const credentials =
+      mode === "public"
+        ? "omit"
+        : mode === "admin"
+          ? "include"
+          : requestCredentialsMode;
+    const onUnauthorized = unauthorizedHandler;
+    const headers = new Headers();
+    Object.entries(extraHeaders ?? {}).forEach(([key, value]) =>
+      headers.set(key, value),
+    );
+    if (mode !== "legacy") headers.delete("Authorization");
+    if (mode === "public") {
+      headers.delete("Cookie");
+      headers.delete("Cookie2");
+      headers.delete("X-Channel-Id");
+      headers.delete("X-CSRF-TOKEN");
+    }
+
+    // Add authorization header if user is authenticated
+    const token = getAuthToken();
+    if (token) {
+      headers.append("Authorization", `Bearer ${token}`);
+    }
+
+    if (
+      mode !== "public" &&
+      isScopedBackOfficeRequest(url) &&
+      selectedChannelId
+    ) {
+      headers.set("X-Channel-Id", selectedChannelId);
+    }
+
+    const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(
+      method.toUpperCase(),
+    );
+    const isAnonymousAuthRequest =
+      url.includes("/api/auth/login") || url.includes("/api/auth/csrf");
+    if (
+      credentials === "include" &&
+      isUnsafeMethod &&
+      !token &&
+      !isAnonymousAuthRequest
+    ) {
+      headers.set("X-CSRF-TOKEN", await getCsrfToken(requestBaseUrl));
+    }
+
+    if (query) {
+      url += `?${new URLSearchParams(query).toString()}`;
+    }
+
+    const options: RequestInit = {
+      method: method,
+      headers: headers,
+    };
+
+    // Determine if we have a request body that needs to be sent
+    let hasBody = false;
+
+    if (body) {
+      if (isFormData) {
+        // For FormData, use it directly
+        // Don't set Content-Type - let the browser set it with the boundary
+        options.body = body as FormData;
+        hasBody = true;
+      } else if (Object.keys(body).length > 0) {
+        // For regular objects, stringify them and set Content-Type
+        options.body = JSON.stringify(body);
+        headers.append("Content-Type", "application/json");
+        hasBody = true;
+      }
+    }
+
+    // For methods that typically don't have a body (GET, HEAD), don't set Content-Type
+    // This avoids triggering CORS preflight for simple requests
+    // Only set Content-Type when we actually have a JSON body to send
+
+    // Include credentials based on configured mode
+    options.credentials = credentials;
+
+    return fetch(buildFullUrl(url, requestBaseUrl), options)
+      .then(async (response) => {
+        if (response.ok) {
+          if (downloadFile) {
+            return response.blob();
           }
-          case 401: {
-            try {
+          if (response.status === 204) {
+            return Promise.resolve({});
+          }
+          const parsedResponse = await response.json();
+
+          // If returnFullResponse is true, return the entire response object
+          if (
+            responseOptions?.returnFullResponse ||
+            !Object.prototype.hasOwnProperty.call(parsedResponse, "data")
+          )
+            return parsedResponse;
+
+          // Default behavior: return data property if it exists, otherwise return full response
+          return parsedResponse.data;
+        } else {
+          // error handling
+          const errorMessages = [];
+          switch (response.status) {
+            case 400: {
               const parsedResponse = await response.json();
-              if (unauthorizedHandler && !url.includes("/auth/")) {
-                unauthorizedHandler();
-              }
-              return parsedResponse;
-            } catch {
-              errorMessages.push("Authentication failed");
-            }
-            break;
-          }
-          case 429: {
-            // Parse JSON response for rate limit errors
-            try {
-              const parsedResponse = await response.json();
-              return parsedResponse;
-            } catch {
-              errorMessages.push("Too many requests");
-            }
-            break;
-          }
-          case 404: {
-            try {
-              const parsedResponse = await response.json();
-              if (parsedResponse?.code === "channel_context_unavailable") {
-                return {
-                  errors: [
-                    parsedResponse.message ??
-                      "The selected channel is not accessible",
-                  ],
-                  status: response.status,
-                  channelContextError: true,
-                };
-              }
-            } catch {}
-            errorMessages.push({ api: "Not found" });
-            break;
-          }
-          case 409: {
-            const rawResponse = await response.text();
-            try {
-              const parsedResponse = JSON.parse(rawResponse);
-              if (
-                typeof parsedResponse === "object" &&
-                parsedResponse !== null
-              ) {
+              if (typeof parsedResponse === "object") {
                 for (const key in parsedResponse) {
                   if (Array.isArray(parsedResponse[key])) {
                     errorMessages.push(...parsedResponse[key]);
@@ -826,48 +796,193 @@ export async function call(
                     errorMessages.push(parsedResponse[key]);
                   }
                 }
-              } else if (parsedResponse) {
+              } else {
                 errorMessages.push(parsedResponse);
               }
-            } catch {
-              if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+              return {
+                errors: errorMessages,
+                fieldErrors:
+                  parsedResponse?.errors &&
+                  typeof parsedResponse.errors === "object"
+                    ? parsedResponse.errors
+                    : undefined,
+                status: response.status,
+                channelContextError:
+                  parsedResponse?.code === "channel_context_required" ||
+                  parsedResponse?.code === "channel_context_unavailable",
+              };
             }
-            return { errors: errorMessages, status: response.status };
-          }
-          case 503: {
-            const rawResponse = await response.text();
-            try {
-              const parsedResponse = JSON.parse(rawResponse);
-              if (
-                typeof parsedResponse === "object" &&
-                parsedResponse !== null
-              ) {
-                for (const key in parsedResponse) {
-                  if (Array.isArray(parsedResponse[key])) {
-                    errorMessages.push(...parsedResponse[key]);
-                  } else if (parsedResponse[key] !== undefined) {
-                    errorMessages.push(parsedResponse[key]);
-                  }
+            case 401: {
+              try {
+                if (
+                  mode === "admin" &&
+                  onUnauthorized &&
+                  !url.includes("/auth/")
+                ) {
+                  onUnauthorized();
                 }
-              } else if (parsedResponse) {
-                errorMessages.push(parsedResponse);
+                const parsedResponse = await response.json();
+                if (
+                  mode === "legacy" &&
+                  onUnauthorized &&
+                  !url.includes("/auth/")
+                ) {
+                  onUnauthorized();
+                }
+                return parsedResponse;
+              } catch {
+                errorMessages.push("Authentication failed");
               }
-            } catch {
-              if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+              break;
             }
-            return { errors: errorMessages, status: response.status };
+            case 429: {
+              // Parse JSON response for rate limit errors
+              try {
+                const parsedResponse = await response.json();
+                return parsedResponse;
+              } catch {
+                errorMessages.push("Too many requests");
+              }
+              break;
+            }
+            case 404: {
+              try {
+                const parsedResponse = await response.json();
+                if (parsedResponse?.code === "channel_context_unavailable") {
+                  return {
+                    errors: [
+                      parsedResponse.message ??
+                        "The selected channel is not accessible",
+                    ],
+                    status: response.status,
+                    channelContextError: true,
+                  };
+                }
+              } catch {}
+              errorMessages.push({ api: "Not found" });
+              break;
+            }
+            case 409: {
+              const rawResponse = await response.text();
+              try {
+                const parsedResponse = JSON.parse(rawResponse);
+                if (
+                  typeof parsedResponse === "object" &&
+                  parsedResponse !== null
+                ) {
+                  for (const key in parsedResponse) {
+                    if (Array.isArray(parsedResponse[key])) {
+                      errorMessages.push(...parsedResponse[key]);
+                    } else {
+                      errorMessages.push(parsedResponse[key]);
+                    }
+                  }
+                } else if (parsedResponse) {
+                  errorMessages.push(parsedResponse);
+                }
+              } catch {
+                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+              }
+              return { errors: errorMessages, status: response.status };
+            }
+            case 503: {
+              const rawResponse = await response.text();
+              try {
+                const parsedResponse = JSON.parse(rawResponse);
+                if (
+                  typeof parsedResponse === "object" &&
+                  parsedResponse !== null
+                ) {
+                  for (const key in parsedResponse) {
+                    if (Array.isArray(parsedResponse[key])) {
+                      errorMessages.push(...parsedResponse[key]);
+                    } else if (parsedResponse[key] !== undefined) {
+                      errorMessages.push(parsedResponse[key]);
+                    }
+                  }
+                } else if (parsedResponse) {
+                  errorMessages.push(parsedResponse);
+                }
+              } catch {
+                if (rawResponse.trim()) errorMessages.push(rawResponse.trim());
+              }
+              return { errors: errorMessages, status: response.status };
+            }
+            default:
+              errorMessages.push("An unexpected error occurred");
           }
-          default:
-            errorMessages.push("An unexpected error occurred");
+          return { errors: errorMessages, status: response.status };
         }
-        return { errors: errorMessages, status: response.status };
-      }
-    })
-    .catch((error) => {
-      console.log("api error", error);
-      throw error;
-    });
+      })
+      .catch((error) => {
+        console.log("api error", error);
+        throw error;
+      });
+  }
+
+  return {
+    get,
+    post,
+    put,
+    patch,
+    Delete,
+    postFormData,
+    getFile,
+    call,
+    getSelectedChannelId,
+    setSelectedChannelId,
+    selectFirstAccessibleChannel,
+    setAuthTokenProvider,
+    setRequestCredentialsMode,
+    setCookieOnlyMode,
+    resetCsrfToken,
+    setUnauthorizedHandler,
+  };
 }
+
+export const legacyApiService = createApiClient({ mode: "legacy" });
+export const publicApiService = createApiClient({ mode: "public" });
+export const adminApiService = createApiClient({ mode: "admin" });
+export const {
+  get,
+  post,
+  put,
+  patch,
+  Delete,
+  postFormData,
+  getFile,
+  call,
+  resetCsrfToken,
+  setUnauthorizedHandler,
+} = adminApiService;
+export const {
+  setAuthTokenProvider,
+  setRequestCredentialsMode,
+  setCookieOnlyMode,
+} = legacyApiService;
+export const getSelectedChannelId = adminApiService.getSelectedChannelId;
+export function setSelectedChannelId(channelId: string | null): void {
+  adminApiService.setSelectedChannelId(channelId);
+  if (typeof window !== "undefined") {
+    if (channelId?.trim())
+      window.localStorage.setItem(
+        "backoffice.selectedChannelId",
+        channelId.trim(),
+      );
+    else window.localStorage.removeItem("backoffice.selectedChannelId");
+  }
+}
+export function selectFirstAccessibleChannel(
+  channels: readonly { channelId: string }[],
+): string | null {
+  const selected = adminApiService.selectFirstAccessibleChannel(channels);
+  setSelectedChannelId(selected);
+  return selected;
+}
+export const publicGet = publicApiService.get;
+export const publicPost = publicApiService.post;
+export const publicPut = publicApiService.put;
+export const publicDelete = publicApiService.Delete;
 
 // ==================== Product API Services ====================
 
@@ -1030,7 +1145,7 @@ export const saveNavigation = (payload: SaveNavigationDTO) =>
   put(endpoints.NAVIGATION, payload) as Promise<ChannelNavigation>;
 
 export const getPublicNavigation = (): Promise<PublicNavigation | null> =>
-  get(endpoints.NAVIGATION);
+  publicApiService.get(endpoints.NAVIGATION);
 
 // ==================== Sponsor API Services ====================
 
@@ -1041,17 +1156,17 @@ export const subscribeNewsletter = (payload: {
   email: string;
   language: string;
   recaptchaToken: string;
-}) => post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
 
 export const confirmNewsletter = (payload: {
   channelId: string;
   token: string;
-}) => post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
 
 export const unsubscribeNewsletter = (payload: {
   channelId: string;
   token: string;
-}) => post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
 
 export const fetchNewsletters = () => get(endpoints.NEWSLETTERS);
 export const getNewsletter = (id: string) =>

@@ -1,36 +1,35 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button, Card, Modal, Badge } from 'react-bootstrap';
 import { Link, useFetcher, useNavigate } from 'react-router';
-import { CalendarEvent } from '@morwalpizvideo/models';
+import type { AdminCalendarEvent } from '@morwalpizvideo/models';
+import type { CalendarActionResult } from '../form';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 
 const CalendarEventDetail: React.FC = () => {
-  const calendarEvent = useResolvedLoaderData() as CalendarEvent;
+  const calendarEvent = useResolvedLoaderData() as AdminCalendarEvent;
   const [showModal, setShowModal] = useState(false);
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<CalendarActionResult>();
   const navigate = useNavigate();
   const toast = useToast();
 
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
-  const result =
-    fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
-      ? fetcher.data
-      : null;
+  const result = fetcher.state === 'idle' && fetcher.data?.success ? fetcher.data : null;
+  const lastResult = useRef<CalendarActionResult | null>(null);
 
   React.useEffect(() => {
-    if (!result) return;
+    if (!result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'Calendar event deleted successfully', { variant: 'success' });
       navigate('/calendarEvents');
     }
-  }, [result, navigate]);
+  }, [result, navigate, toast]);
 
   const handleDelete = () => {
     setShowModal(true);
@@ -39,7 +38,8 @@ const CalendarEventDetail: React.FC = () => {
   const confirmDelete = () => {
     fetcher.submit(
       {
-        title: calendarEvent.title,
+        id: calendarEvent.id,
+        revision: String(calendarEvent.revision),
       },
       {
         method: 'post',
@@ -56,11 +56,20 @@ const CalendarEventDetail: React.FC = () => {
     <>
       <PageHeader title="Calendar Event Details" backLink="/calendarEvents" />
       <GenericErrorList errors={errors?.generics} />
+      {fetcher.data?.conflict && (
+        <Button
+          variant="outline-secondary"
+          className="mb-3"
+          onClick={() => navigate('/calendarEvents')}
+        >
+          Return to Calendar Events
+        </Button>
+      )}
 
       <Card className="mb-4">
         <Card.Body>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2>{calendarEvent.title}</h2>
+          <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <h2 className="h4 text-break">{calendarEvent.title}</h2>
             <div>
               <Link
                 to={`/calendarEvents/${encodeURIComponent(calendarEvent.title)}/edit`}
@@ -82,7 +91,7 @@ const CalendarEventDetail: React.FC = () => {
             <dd className="col-sm-9">{formatDate(calendarEvent.endDate)}</dd>
 
             <dt className="col-sm-3">Description</dt>
-            <dd className="col-sm-9">
+            <dd className="col-sm-9 text-break">
               {calendarEvent.description || <em>No description provided</em>}
             </dd>
 

@@ -7,6 +7,8 @@ on:
     paths:
       - 'frontend/back-office-spa/**'
       - 'frontend/fe-packages/**'
+      - 'frontend/package.json'
+      - 'frontend/yarn.lock'
       - '.github/workflows/deploy-back-office-spa.yml'
   workflow_dispatch:
 
@@ -37,9 +39,21 @@ jobs:
         working-directory: frontend
         run: yarn install --frozen-lockfile
 
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:shared
+
       - name: Run tests
         working-directory: frontend/back-office-spa
-        run: yarn test
+        run: yarn test --passWithNoTests=false
+
+      - name: Test shared transport
+        working-directory: frontend
+        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false
+
+      - name: Checked application build
+        working-directory: frontend
+        run: yarn workspace back-office-spa build
 
   build-and-deploy:
     name: Build and Deploy to Azure

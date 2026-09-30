@@ -1,7 +1,7 @@
 # MorWalPizVideo Architecture Guide
 
 **Status:** Official architecture reference
-**Baseline:** Source reviewed through 2026-09-11
+**Baseline:** Ownership/manifests and delivery reconciled 2026-10-01; deployed state remains unverified
 **System center:** `MorWalPizVideo.BackOffice`
 
 This directory is the long-term architectural reference for MorWalPizVideo. It records both the architecture that exists in source and the approved target direction. Future work should consult this guide before performing a repository-wide analysis.
@@ -56,7 +56,7 @@ Excluded:
 - Shop and digital-artifact functionality is pre-production and on hold. Its accepted ADRs remain target design records, but no shop implementation, migration, UI, contract, or deployment work belongs in the active roadmap until the hold is explicitly lifted.
 - Shooting Range is an independently owned POC preparing for public exposure. Its target is deny-by-default authorization with anonymous access limited to login, CSRF token acquisition, and health probes; scope remains intentionally minimal and extensible.
 - JSON APIs will adopt URL-segment versioning beginning with `/api/v1`; branded redirect URLs remain unversioned.
-- Development enables only `EnableDev` and `EnableSwagger`. Local CORS is permissive; deployed CORS is explicit and least-privilege.
+- Development flags do not authorize fake authentication outside Development. BackOffice/ServerAPI local CORS is environment-gated; Range retains its exact configured origin even locally. Deployed CORS is explicit and least-privilege.
 
 ## Document Status Labels
 
@@ -83,8 +83,12 @@ Supporting security, health, feature, and setup documents should be read with th
 - `docs/AUTHENTICATION_SECURITY_IMPROVEMENTS.md`
 - `MorWalPizVideo.BackOffice/HEALTH_CHECKS.md`
 - `MorWalPizVideo.ServerAPI/KEYVAULT_SETUP.md`
-- `specs/001-cache-invalidation-fixes/`
-- `specs/002-pepperbox-clone/`
+- [Transport isolation](transport-isolation.md)
+- [Calendar compatibility](calendar-compatibility.md)
+- [Delivery/test matrix](deployment.md#delivery-and-test-matrix)
+- [Release evidence and recovery](operations/phase5-activation-and-recovery.md)
+
+The former root `specs/002-pepperbox-clone/plan.md` instruction pointer does not exist. Use this guide and current owning source, not a fabricated replacement plan. Cache reliability is explicitly deferred; shop remains on hold. The [ten-slice status](refactoring-roadmap.md#original-ten-slice-backlog-2026-10-01) separates authoring from release approval.
 
 ## Maintenance Rule
 

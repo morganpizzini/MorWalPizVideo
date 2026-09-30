@@ -12,6 +12,7 @@ public class FocusedServiceDependencyTests
         Assert.DoesNotContain(GetConstructorTypes(typeof(ShortLinksController)), t => t == typeof(DataService));
         Assert.DoesNotContain(GetConstructorTypes(typeof(VideosController)), t => t == typeof(DataService));
         Assert.DoesNotContain(GetConstructorTypes(typeof(CompilationsController)), t => t == typeof(DataService));
+        Assert.DoesNotContain(GetConstructorTypes(typeof(CalendarEventsController)), t => t == typeof(DataService));
     }
 
     [Fact]
@@ -25,6 +26,8 @@ public class FocusedServiceDependencyTests
 
         Assert.Contains(typeof(ICatalogService), GetConstructorTypes(typeof(CompilationsController)));
         Assert.Contains(typeof(IContentService), GetConstructorTypes(typeof(CompilationsController)));
+        Assert.Contains(typeof(ICalendarService), GetConstructorTypes(typeof(CalendarEventsController)));
+        Assert.Contains(typeof(ICalendarService), GetConstructorTypes(typeof(MorWalPizVideo.ServerAPI.Controllers.CalendarEventsController)));
     }
 
     private static Type[] GetConstructorTypes(Type controllerType)

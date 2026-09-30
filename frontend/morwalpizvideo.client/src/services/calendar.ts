@@ -1,5 +1,5 @@
-import { get, frontendEndpoints } from '@morwalpizvideo/services';
+import { publicGet as get, frontendEndpoints } from '@morwalpizvideo/services';
 
 export function getCalendar() {
-    return get(frontendEndpoints.CALENDAREVENTS);
+  return get(frontendEndpoints.CALENDAREVENTS);
 }

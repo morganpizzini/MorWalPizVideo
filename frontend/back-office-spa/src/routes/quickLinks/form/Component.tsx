@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import type { QuickLink, QuickLinks } from '@morwalpizvideo/models';
@@ -25,6 +25,7 @@ const QuickLinksForm: React.FC = () => {
   const [links, setLinks] = useState<QuickLink[]>([]);
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
     setTitle(quickLinks?.title ?? '');
@@ -34,7 +35,8 @@ const QuickLinksForm: React.FC = () => {
   }, [quickLinks]);
 
   useEffect(() => {
-    if (busy || !fetcher.data?.success) return;
+    if (busy || !fetcher.data?.success || lastResult.current === fetcher.data) return;
+    lastResult.current = fetcher.data;
     toast.show(
       'Success',
       params.id ? 'QuickLinks updated successfully' : 'QuickLinks created successfully',

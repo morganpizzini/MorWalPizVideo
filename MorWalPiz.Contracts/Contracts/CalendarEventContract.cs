@@ -32,4 +32,7 @@ public class CalendarEventContract
 
     [DataMember]
     public string ChannelId { get; set; } = string.Empty;
+
+    [DataMember]
+    public long Revision { get; set; }
 }

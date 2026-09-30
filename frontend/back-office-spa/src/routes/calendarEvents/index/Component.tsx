@@ -1,8 +1,10 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Modal, Badge } from 'react-bootstrap';
-import { Link, useFetcher, useLocation } from 'react-router';
-import { CalendarEvent } from '@morwalpizvideo/models';
+import { Link, useFetcher, useLocation, useRevalidator } from 'react-router';
+import type { AdminCalendarEvent } from '@morwalpizvideo/models';
+import type { CalendarActionResult } from '../form';
+import { RefreshCw } from 'lucide-react';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
@@ -11,23 +13,21 @@ import { ColumnDef } from '@tanstack/react-table';
 
 const CalendarEvents: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AdminCalendarEvent | null>(null);
+  const revalidator = useRevalidator();
   const toast = useToast();
   const location = useLocation();
 
-  const events = useResolvedLoaderData<CalendarEvent[]>();
+  const events = useResolvedLoaderData<AdminCalendarEvent[]>();
 
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<CalendarActionResult>();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
-  const result =
-    fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
-      ? fetcher.data
-      : null;
+  const result = fetcher.state === 'idle' && fetcher.data?.success ? fetcher.data : null;
+  const lastResult = useRef<CalendarActionResult | null>(null);
 
   // Define columns
-  const columns = useMemo<ColumnDef<CalendarEvent>[]>(
+  const columns = useMemo<ColumnDef<AdminCalendarEvent>[]>(
     () => [
       {
         accessorKey: 'title',
@@ -59,10 +59,10 @@ const CalendarEvents: React.FC = () => {
         accessorKey: 'categories',
         header: 'Categories',
         cell: info => {
-          const categories = (info.getValue() as any[]) || [];
+          const categories = (info.getValue() as AdminCalendarEvent['categories']) || [];
           return (
             <div>
-              {categories.map((cat: any) => (
+              {categories.map(cat => (
                 <Badge key={cat.id} bg="secondary" className="me-1">
                   {cat.title}
                 </Badge>
@@ -107,15 +107,16 @@ const CalendarEvents: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!result) return;
+    if (!result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'Calendar event deleted successfully', { variant: 'success' });
     }
-  }, [result]);
+  }, [result, toast]);
 
-  const handleDelete = (event: CalendarEvent) => {
+  const handleDelete = (event: AdminCalendarEvent) => {
     setSelectedEvent(event);
     setShowModal(true);
   };
@@ -124,7 +125,8 @@ const CalendarEvents: React.FC = () => {
     if (!selectedEvent) return;
     fetcher.submit(
       {
-        title: selectedEvent.title,
+        id: selectedEvent.id,
+        revision: String(selectedEvent.revision),
       },
       {
         method: 'post',
@@ -137,6 +139,21 @@ const CalendarEvents: React.FC = () => {
     <>
       <PageHeader title="Calendar Events" createLink="./create" />
       <GenericErrorList errors={errors?.generics} />
+      {fetcher.data?.conflict && (
+        <Button
+          variant="outline-secondary"
+          className="mb-3"
+          disabled={revalidator.state !== 'idle'}
+          onClick={() => {
+            setShowModal(false);
+            setSelectedEvent(null);
+            void revalidator.revalidate();
+          }}
+        >
+          <RefreshCw size={16} aria-hidden="true" className="me-2" />
+          Reload Events
+        </Button>
+      )}
 
       <GenericTable
         data={events}

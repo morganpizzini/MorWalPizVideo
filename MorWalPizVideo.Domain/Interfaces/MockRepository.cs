@@ -310,6 +310,45 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        public new Task<CalendarEvent> AddItemAsync(CalendarEvent entity)
+        {
+            lock (scenario) return base.AddItemAsync(entity with { Revision = 1 });
+        }
+
+        public new async Task UpdateItemAsync(CalendarEvent entity)
+        {
+            if (await GetItemAsync(entity.Id) is { } existing)
+                await new CalendarService(this).UpdateAsync(entity.Id, entity, existing.ChannelId);
+        }
+
+        public new async Task DeleteItemAsync(string id)
+        {
+            if (await GetItemAsync(id) is { } existing)
+                await new CalendarService(this).DeleteAsync(id, existing.ChannelId);
+        }
+
+        public Task<bool> ReplaceAsync(CalendarEvent entity, long expectedRevision)
+        {
+            lock (scenario)
+            {
+                if (!scenario.Read<CalendarEvent>(_fileName).Any(item => item.Id == entity.Id &&
+                    item.ChannelId == entity.ChannelId && item.Revision == expectedRevision)) return Task.FromResult(false);
+                scenario.Replace(_fileName, entity with { Revision = expectedRevision + 1 });
+                return Task.FromResult(true);
+            }
+        }
+
+        public Task<bool> DeleteAsync(string channelId, string id, long expectedRevision)
+        {
+            lock (scenario)
+            {
+                if (!scenario.Read<CalendarEvent>(_fileName).Any(item => item.Id == id &&
+                    item.ChannelId == channelId && item.Revision == expectedRevision)) return Task.FromResult(false);
+                scenario.Delete<CalendarEvent>(_fileName, id);
+                return Task.FromResult(true);
+            }
+        }
+
         public async Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit)
         {
             var safeLimit = Math.Clamp(limit, 1, 250);

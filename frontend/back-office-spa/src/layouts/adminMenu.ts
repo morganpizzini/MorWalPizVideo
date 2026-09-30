@@ -127,6 +127,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: FileText,
       },
       {
+        label: 'Blog',
+        path: '/blogposts',
+        permissions: [permissions.pages.view, permissions.pages.manage],
+        icon: FileText,
+      },
+      {
         label: 'Navigation',
         path: '/navigation',
         permissions: [permissions.navigation.view, permissions.navigation.manage],

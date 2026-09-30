@@ -1,47 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFetcher, useNavigate } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
-import type { VideoProductCategory } from '@morwalpizvideo/models';
-import { fetchProductCategories } from '@morwalpizvideo/services';
+import type { CategoryRef } from '@morwalpizvideo/models';
+import { fetchCalendarCategories } from '@morwalpizvideo/services';
+import type { CalendarActionResult } from '../form';
 
 const CreateCalendarEvent: React.FC = () => {
-  const [categories, setCategories] = useState<VideoProductCategory[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>([]);
+  const [categories, setCategories] = useState<CategoryRef[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryRef[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  
-  const fetcher = useFetcher();
+  const [categoryError, setCategoryError] = useState<string>();
+
+  const fetcher = useFetcher<CalendarActionResult>();
   const navigate = useNavigate();
   const toast = useToast();
 
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const success = fetcher.data?.success;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
-    fetchProductCategories()
-      .then(setCategories)
-      .finally(() => setLoadingCategories(false));
+    let active = true;
+    fetchCalendarCategories()
+      .then(items => {
+        if (active) setCategories(items);
+      })
+      .catch(error => {
+        if (active)
+          setCategoryError(error instanceof Error ? error.message : 'Unable to load categories.');
+      })
+      .finally(() => {
+        if (active) setLoadingCategories(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   React.useEffect(() => {
-    if (success) {
+    if (!busy && success && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
       toast.show('Success', 'Calendar event created successfully', { variant: 'success' });
       navigate('/calendarEvents');
     }
-  }, [success, navigate]);
+  }, [busy, fetcher.data, success, navigate, toast]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target as HTMLFormElement);
-    const categoryIds = selectedCategories.map(cat => cat.id);
-    
-    formData.append('categoryIds', JSON.stringify(categoryIds));
-    
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+
+    const formData = new FormData(event.currentTarget);
+
+    formData.set(
+      'categories',
+      JSON.stringify(
+        selectedCategories.map(category => ({ id: category.id, title: category.title }))
+      )
+    );
+
     fetcher.submit(formData, { method: 'post' });
   };
 
@@ -50,6 +71,7 @@ const CreateCalendarEvent: React.FC = () => {
       <PageHeader title="Create Calendar Event" backLink="/calendarEvents" />
 
       <GenericErrorList errors={errors?.generics} />
+      <GenericErrorList errors={categoryError ? [categoryError] : undefined} />
 
       <fetcher.Form method="post" className="mb-3" onSubmit={handleSubmit}>
         <Row className="mb-3">
@@ -64,9 +86,7 @@ const CreateCalendarEvent: React.FC = () => {
                 required
               />
               {errors?.fields?.title && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.fields.title}
-                </Form.Control.Feedback>
+                <Form.Control.Feedback type="invalid">{errors.fields.title}</Form.Control.Feedback>
               )}
             </Form.Group>
           </Col>
@@ -115,6 +135,7 @@ const CreateCalendarEvent: React.FC = () => {
             placeholder="Enter description"
             isInvalid={!!errors?.fields?.description}
             rows={3}
+            required
           />
           {errors?.fields?.description && (
             <Form.Control.Feedback type="invalid">
@@ -128,8 +149,8 @@ const CreateCalendarEvent: React.FC = () => {
           items={categories}
           selectedItems={selectedCategories}
           onSelectionChange={setSelectedCategories}
-          getItemId={(cat) => cat.id}
-          getItemDisplay={(cat) => cat.title}
+          getItemId={cat => cat.id}
+          getItemDisplay={cat => cat.title}
           placeholder="Select a category"
           disabled={loadingCategories}
         />
@@ -143,9 +164,7 @@ const CreateCalendarEvent: React.FC = () => {
             isInvalid={!!errors?.fields?.matchId}
           />
           {errors?.fields?.matchId && (
-            <Form.Control.Feedback type="invalid">
-              {errors.fields.matchId}
-            </Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">{errors.fields.matchId}</Form.Control.Feedback>
           )}
         </Form.Group>
 

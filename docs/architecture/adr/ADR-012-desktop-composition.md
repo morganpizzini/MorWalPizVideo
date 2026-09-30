@@ -5,7 +5,7 @@
 
 ## Context
 
-VideoImporter and InsightScanner use static `App` services, direct HttpClient construction, and significant code-behind. They are supported applications with persisted/local workflows.
+At acceptance, VideoImporter and InsightScanner relied on static `App` services and significant code-behind, with HTTP-client composition requiring incremental improvement. They are supported applications with persisted/local workflows. Current bounded implementation status is recorded below rather than treating that historical context as the current main-window composition.
 
 ## Decision
 
@@ -28,3 +28,9 @@ Introduce host composition and adapt one workflow at a time. Existing static acc
 ## Validation
 
 Windows CI builds, migration tests, tenant-isolation tests, fake-provider tests, cancellation behavior, and API contract tests gate each slice.
+
+## Slice 8 Implementation Status (2026-10-01)
+
+Both existing Generic Hosts register and resolve constructor-injected main windows; startup no longer uses `StartupUri`. Factory-managed HTTP composition and child-window static dependency facades are preserved. Importer initializes database/tenant/upload dependencies before window use and stops tenant subscriptions/window work before awaiting refresh completion and disposing the host. No SQLite schema or production visual changes are part of this slice.
+
+Source-complete is not gate-complete: Windows builds pass and the repaired STA real-App resource fixture verifies host/tenant/cancellation/shutdown behavior on temporary `EnsureCreated` SQLite. Importer's separate migration test still fails on pending model changes; existing-database upgrades are unproven. InsightScanner's unrelated fake DTO equality assertion remains failing. TD-018 is partially addressed, not closed; [Windows applications](../windows-apps.md) records exact fresh results and remaining validation.

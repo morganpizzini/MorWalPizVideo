@@ -7,6 +7,8 @@ on:
     paths:
       - 'frontend/morwalpizvideo.client/**'
       - 'frontend/fe-packages/**'
+      - 'frontend/package.json'
+      - 'frontend/yarn.lock'
       - '.github/workflows/deploy-morwalpizvideo-client.yml'
   workflow_dispatch:
   
@@ -26,6 +28,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:shared
+
+      - name: Test shared transport
+        working-directory: frontend
+        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false
+
+      - name: Test public client
+        working-directory: frontend
+        run: yarn workspace morwalpizvideo.client test --passWithNoTests=false
+
+      - name: Checked client and SSR build
+        working-directory: frontend
+        run: yarn workspace morwalpizvideo.client build:all
 
       - name: Azure Login
         uses: azure/login@v2

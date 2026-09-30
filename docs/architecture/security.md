@@ -7,8 +7,8 @@
 |---|---|
 | BackOffice SPA to BackOffice | Authenticated administrator |
 | WPF tools to BackOffice | Authenticated API-key client |
-| Public apps to ServerAPI | Anonymous by default; explicit cart/customer policies |
-| Shooting Range client to Shooting Range API | Authenticated cookie session; deny-by-default domain access |
+| Public apps to ServerAPI | Explicit anonymous public routes; host-owned authenticated fallback for undecorated endpoints |
+| Shooting Range client to Shooting Range API | Current-state revocable cookie sessions; anonymous registration/domain cutover still blocked |
 | BackOffice to ServerAPI | Authenticated internal service call |
 | Followers to ShortLinks | Anonymous untrusted input |
 | APIs to Mongo/Blob/external providers | Managed service credentials |
@@ -29,6 +29,24 @@ Required response:
 
 Rotation must occur before relying on source cleanup alone.
 
+Both API projects now mark `credentials*.json` at any depth as `CopyToOutputDirectory=Never` and `CopyToPublishDirectory=Never`; Docker context also excludes those files. Offline source files are not deleted. Evaluated non-secret sentinel tests verify the two copy metadata values, not historical artifact removal. Use a clean publish destination: stale output and previously published artifacts still require operator review.
+
+`YTService` retains its existing constructor callers and factory-managed HTTP client. `YouTube:CredentialsPath` (`YouTube__CredentialsPath` in environment configuration) selects an absolute, operator-provisioned credential file outside the application output directory. Provision it through a protected read-only mount with access limited to the service identity; do not upload it as application content or log its contents. Non-Development hosts require this external setting. Development/direct offline construction retains the legacy `credentials.json` path; no real credential file was read during verification. Historical credential rotation and artifact invalidation remain open.
+
+## ServerAPI Host Containment
+
+Fake authentication and the developer exception page require both actual `Development` and `EnableDev`. Staging, Production and Test ignore that flag for these controls and use JWT authentication with non-detailed exception responses. Configuration/database diagnostics have the same two-part gate and no longer return connection prefixes, database names or provider exception messages.
+
+The ServerAPI-only fallback requires an authenticated principal. The inventory supporting this change preserves existing access metadata without changing routes or the host-neutral controller base:
+
+- Explicit anonymous reads/interactions: Ask, Blog, CalendarEvents, Competitions, Compilations, Configuration, CustomForms/surveys, Matches, Navigation, Newsletter, newsletter webhooks (their existing verification remains), Pages, Products, QuickLinks, ShootingIta, Sponsors and V1Videos.
+- FAQ reads and Push public-key are explicit anonymous exceptions; FAQ vote and Push subscription/unsubscription retain their authentication requirements.
+- ShopAuth, ShopCart, ShopCatalog and ShopOrders retain their explicit anonymous compatibility metadata. This slice does not approve their security posture or reopen the shop hold.
+- Cache operations retain their dedicated internal-service authentication scheme. Health endpoints retain explicit anonymous probe metadata. Feature-controlled OpenAPI/Swagger behavior is unchanged.
+- ConfigTest is an explicit anonymous technical exception only to allow the environment/flag gate to return `404` outside Development; the gate remains authoritative.
+
+`HostSecurityContainmentTests` inventories MVC endpoint metadata and exercises the actual host authentication/error matrix; public-page regression coverage remains. This is not a production readiness certification or a change to Range's pending anonymous cutover.
+
 Current desktop seed source and migration artifacts use non-secret placeholders. This narrows current-source exposure but does not revoke historical credentials, remove them from repository history or old artifacts, or prove that old credentials fail. Those actions remain administrator-owned and require independently verifiable redacted evidence.
 
 ## Administrative Authentication
@@ -42,6 +60,12 @@ BackOffice uses JWT bearer and can read a secure cookie. Implemented browser pos
 - Short token lifetime, server-side revocation strategy where required, and audited login throttling.
 
 The SPA stores display-only user information in local storage; the browser JWT remains in the HttpOnly cookie.
+
+### Shared Transport Isolation
+
+Slice 7 makes the shared named admin HTTP methods intrinsically cookie-only with client-owned CSRF/channel/401 recovery. Public video, Ask and Shooting ITA use explicit public helpers/aliases with `credentials: omit`, without reading token providers/local-storage tokens or carrying admin channel/CSRF context; even manually supplied Authorization/Cookie/context headers are stripped. The frozen shop retains its independent configurable legacy instance. Existing routes, API authentication policies and payload/error contracts are preserved; legacy transport setters cannot reconfigure the new admin/public instances.
+
+SSR callers needing mutable request context must create a client per incoming request with an explicit base URL, never mutate the browser admin singleton. Active public SSR entry points no longer set global credentials. Interleaved-client, request-local SSR, browser-token negative, CSRF and unauthorized-callback tests establish local request construction, not browser/deployed CORS/cookie proof. See [transport isolation](transport-isolation.md) for the exact source/test coverage, failed full-consumer gates and outstanding browser release evidence.
 
 ## BackOffice RBAC
 
@@ -115,18 +139,18 @@ Blob authorization follows container purpose. Match, sponsor, and page previews 
 
 ## CORS And Host Security
 
-Development allow-all CORS is gated by Development plus `EnableDev`. Production policies are explicit:
+Development allow-all CORS is environment-gated; development flags cannot enable it in Production. Production policies are explicit:
 
 - ServerAPI: `https://morwalpiz.com`, no credentials for public requests; cookie endpoints require a reviewed credential policy.
 - BackOffice: `https://morwalpiz-admin-spa.azurewebsites.net`, credentials enabled.
-- Shooting Range: only its configured production client origin, credentials enabled.
+- Shooting Range: exactly `https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net`, credentials enabled; no arbitrary origins or Development exceptions currently enabled.
 - ShortLinks: no CORS required for navigation redirects.
 
 Reject lookalike suffixes. Configure AllowedHosts and forwarded-header trusted networks/proxies independently.
 
 ## Shooting Range POC Security
 
-Shooting Range is expected to become publicly reachable while remaining a minimal POC. Authorization is deny-by-default for all domain endpoints, including availability. Anonymous access is limited to login, CSRF token acquisition, and liveness/readiness probes.
+Shooting Range is expected to become publicly reachable while remaining a minimal POC. The accepted release target is deny-by-default for all domain endpoints, including availability, with anonymous technical exceptions for login, CSRF and health. This target is not yet the current anonymous-domain posture.
 
 The first administrator is inserted manually into MongoDB. There is no bootstrap-admin endpoint and no secret or reusable password hash in source or documentation. Public registration is not part of the approved release posture; administrator-created ordinary users are the working assumption pending final confirmation.
 
@@ -142,7 +166,13 @@ Required release controls are:
 - Production rejection of mock repositories and readiness coverage for MongoDB.
 - Persistent Data Protection keys when more than one instance or application restart must preserve sessions.
 
-Current source does not yet satisfy these controls. Public exposure is gated on implementation and executable authorization, CORS, CSRF, account-state, response-contract, and booking-integrity tests.
+The scoped schedule implementation now restricts CORS to the exact deployed client origin, projects admin users without password hashes while preserving legitimate fields, revalidates touched admin/admission state, and guards all repository writes with transactional per-bay interval validation. Startup fails closed when the transaction probe fails. Pending/Approved consume capacity; historical UTC intervals survive schedule changes. The period-key unique index is secondary protection only.
+
+The session/security foundation now adds pre-login CSRF, post-login/password-change CSRF refresh, per-IP login throttling (10 attempts per five minutes per process), server-side revocable eight-hour non-sliding sessions, current approved-state/role validation on every cookie request including mine/messages, and logout revocation. Password reset/change rotates an additive security version; self-change also revokes and renews the current session. Old cookies without a session claim require reauthentication. Forced-change sessions allow only session inspection, password change, logout and the technical CSRF endpoint. The client restores sessions, gates direct routes, handles expiry/retry and provides logout without persisting credentials.
+
+Mock mode is rejected outside Development/Test. Mongo readiness checks writable replica-set/mongos topology and logical sessions; the existing startup transaction rollback probe remains. A read-only username preflight rejects normalized duplicates or missing/mismatched `normalizedUsername` fields before creating the unique index; legacy data needs an operator-approved additive backfill, never an automatic merge/delete. Session expiry has a TTL index, but authorization checks expiry independently. See the Range architecture document for rollout requirements.
+
+Release remains blocked: anonymous registration/config/sessions/availability and entity/whitelist projections are deliberately preserved until slice 4's product decision (administrator-created users versus another protected registration workflow). Range fallback authorization and removal of `AllowAnonymous` are not implemented in this slice. Persistent Data Protection, distributed/gateway throttling when scaled, target-Mongo transactions/rollback/races/data/index/backfill evidence and real-browser allowed/denied-origin cookie/CSRF verification remain mandatory operational gates. Local tests, topology classification and evaluated credential metadata do not satisfy those gates. No deployment is authorized.
 
 ## Data Protection And Privacy
 
@@ -155,3 +185,5 @@ Current source does not yet satisfy these controls. Public exposure is gated on 
 ## Security Verification
 
 Required tests include authorization matrices, CSRF, CORS, cookie tampering, cookie-backed validation effective-permission responses, SPA RBAC route allow/deny cases, expired/revoked credentials, unsafe redirects, rate limits, and secret-scanner CI gates. Shop-specific cross-cart, hidden-storage-key, private-Blob, and SAS-expiry scenarios remain required only when the shop hold is lifted.
+
+Local checks are not release approval. The [release evidence checklist](operations/phase5-activation-and-recovery.md#release-evidence-checklist-2026-10-01) owns mandatory redacted records for browser/SSR, current-state sessions, Data Protection rotation, Mongo audit/recovery/races, secrets/artifact invalidation and credentials. Every unavailable proof is BLOCKED with approval NOT GRANTED; no rotation or Azure access is authorized by these docs.

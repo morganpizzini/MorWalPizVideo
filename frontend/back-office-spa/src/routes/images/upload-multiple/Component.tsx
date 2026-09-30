@@ -30,6 +30,7 @@ const MultipleImageUpload: React.FC = () => {
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -38,7 +39,8 @@ const MultipleImageUpload: React.FC = () => {
       : null;
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
 
     if (result.success) {
       toast.show('Success', 'Images uploaded successfully', { variant: 'success' });
@@ -49,7 +51,7 @@ const MultipleImageUpload: React.FC = () => {
         fileInputRef.current.value = '';
       }
     }
-  }, [result]);
+  }, [busy, result, toast]);
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {

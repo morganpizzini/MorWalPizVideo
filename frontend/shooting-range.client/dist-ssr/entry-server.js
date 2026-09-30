@@ -2392,8 +2392,8 @@ function requireReactDomServerLegacy_node_production() {
     M: preinitModuleScript
   };
   var PRELOAD_NO_CREDS = [], currentlyFlushingRenderState = null, scriptRegex = /(<\/|<)(s)(cript)/gi;
-  function scriptReplacer(match, prefix2, s, suffix2) {
-    return "" + prefix2 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
+  function scriptReplacer(match, prefix3, s, suffix2) {
+    return "" + prefix3 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
   }
   function createResumableState(identifierPrefix, externalRuntimeConfig, bootstrapScriptContent, bootstrapScripts, bootstrapModules) {
     return {
@@ -2771,8 +2771,8 @@ function requireReactDomServerLegacy_node_production() {
     return null;
   }
   var styleRegex = /(<\/|<)(s)(tyle)/gi;
-  function styleReplacer(match, prefix2, s, suffix2) {
-    return "" + prefix2 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
+  function styleReplacer(match, prefix3, s, suffix2) {
+    return "" + prefix3 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
   }
   function pushSelfClosing(target, props, tag) {
     target.push(startChunkForTag(tag));
@@ -4654,10 +4654,10 @@ function requireReactDomServerLegacy_node_production() {
       action = function(payload) {
         boundAction(payload);
       };
-      "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix2) {
-        prefix2 = boundAction.$$FORM_ACTION(prefix2);
-        void 0 !== permalink && (permalink += "", prefix2.action = permalink);
-        var formData = prefix2.data;
+      "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix3) {
+        prefix3 = boundAction.$$FORM_ACTION(prefix3);
+        void 0 !== permalink && (permalink += "", prefix3.action = permalink);
+        var formData = prefix3.data;
         formData && (null === nextPostbackStateKey && (nextPostbackStateKey = void 0 !== permalink ? "p" + permalink : "k" + murmurhash3_32_gc(
           JSON.stringify([
             componentKeyPath,
@@ -4666,7 +4666,7 @@ function requireReactDomServerLegacy_node_production() {
           ]),
           0
         )), formData.append("$ACTION_KEY", nextPostbackStateKey));
-        return prefix2;
+        return prefix3;
       });
       return [initialState, action, false];
     }
@@ -4783,17 +4783,17 @@ function requireReactDomServerLegacy_node_production() {
     cacheSignal: function() {
       throw Error("Not implemented.");
     }
-  }, prefix, suffix;
+  }, prefix2, suffix;
   function describeBuiltInComponentFrame(name) {
-    if (void 0 === prefix)
+    if (void 0 === prefix2)
       try {
         throw Error();
       } catch (x) {
         var match = x.stack.trim().match(/\n( *(at )?)/);
-        prefix = match && match[1] || "";
+        prefix2 = match && match[1] || "";
         suffix = -1 < x.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x.stack.indexOf("@") ? "@unknown:0:0" : "";
       }
-    return "\n" + prefix + name + suffix;
+    return "\n" + prefix2 + name + suffix;
   }
   var reentry = false;
   function describeNativeComponentFrame(fn, construct) {
@@ -7090,7 +7090,7 @@ var hasRequiredReactDomServer_node_production;
 function requireReactDomServer_node_production() {
   if (hasRequiredReactDomServer_node_production) return reactDomServer_node_production;
   hasRequiredReactDomServer_node_production = 1;
-  var util = require$$0, crypto = require$$1, async_hooks = require$$2, React = requireReact(), ReactDOM = requireReactDom(), stream = require$$5, REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_SCOPE_TYPE = Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator;
+  var util = require$$0, crypto2 = require$$1, async_hooks = require$$2, React = requireReact(), ReactDOM = requireReactDom(), stream = require$$5, REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_SCOPE_TYPE = Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator;
   function getIteratorFn(maybeIterable) {
     if (null === maybeIterable || "object" !== typeof maybeIterable) return null;
     maybeIterable = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable["@@iterator"];
@@ -7306,8 +7306,8 @@ function requireReactDomServer_node_production() {
   var PRELOAD_NO_CREDS = [], currentlyFlushingRenderState = null;
   stringToPrecomputedChunk('"></template>');
   var startInlineScript = stringToPrecomputedChunk("<script"), endInlineScript = stringToPrecomputedChunk("<\/script>"), startScriptSrc = stringToPrecomputedChunk('<script src="'), startModuleSrc = stringToPrecomputedChunk('<script type="module" src="'), scriptNonce = stringToPrecomputedChunk(' nonce="'), scriptIntegirty = stringToPrecomputedChunk(' integrity="'), scriptCrossOrigin = stringToPrecomputedChunk(' crossorigin="'), endAsyncScript = stringToPrecomputedChunk(' async=""><\/script>'), startInlineStyle = stringToPrecomputedChunk("<style"), scriptRegex = /(<\/|<)(s)(cript)/gi;
-  function scriptReplacer(match, prefix2, s, suffix2) {
-    return "" + prefix2 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
+  function scriptReplacer(match, prefix3, s, suffix2) {
+    return "" + prefix3 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
   }
   var importMapScriptStart = stringToPrecomputedChunk(
     '<script type="importmap">'
@@ -7885,8 +7885,8 @@ function requireReactDomServer_node_production() {
     return null;
   }
   var styleRegex = /(<\/|<)(s)(tyle)/gi;
-  function styleReplacer(match, prefix2, s, suffix2) {
-    return "" + prefix2 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
+  function styleReplacer(match, prefix3, s, suffix2) {
+    return "" + prefix3 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
   }
   function pushSelfClosing(target, props, tag) {
     target.push(startChunkForTag(tag));
@@ -9701,7 +9701,7 @@ function requireReactDomServer_node_production() {
   function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
     if (void 0 !== permalink) return "p" + permalink;
     permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-    componentKeyPath = crypto.createHash("md5");
+    componentKeyPath = crypto2.createHash("md5");
     componentKeyPath.update(permalink);
     return "k" + componentKeyPath.digest("hex");
   }
@@ -9724,16 +9724,16 @@ function requireReactDomServer_node_production() {
       action = function(payload) {
         boundAction(payload);
       };
-      "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix2) {
-        prefix2 = boundAction.$$FORM_ACTION(prefix2);
-        void 0 !== permalink && (permalink += "", prefix2.action = permalink);
-        var formData = prefix2.data;
+      "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix3) {
+        prefix3 = boundAction.$$FORM_ACTION(prefix3);
+        void 0 !== permalink && (permalink += "", prefix3.action = permalink);
+        var formData = prefix3.data;
         formData && (null === nextPostbackStateKey && (nextPostbackStateKey = createPostbackActionStateKey(
           permalink,
           componentKeyPath,
           actionStateHookIndex
         )), formData.append("$ACTION_KEY", nextPostbackStateKey));
-        return prefix2;
+        return prefix3;
       });
       return [initialState, action, false];
     }
@@ -9856,17 +9856,17 @@ function requireReactDomServer_node_production() {
       error += "\n    at " + structuredStackTrace[i].toString();
     return error;
   }
-  var prefix, suffix;
+  var prefix2, suffix;
   function describeBuiltInComponentFrame(name) {
-    if (void 0 === prefix)
+    if (void 0 === prefix2)
       try {
         throw Error();
       } catch (x) {
         var match = x.stack.trim().match(/\n( *(at )?)/);
-        prefix = match && match[1] || "";
+        prefix2 = match && match[1] || "";
         suffix = -1 < x.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x.stack.indexOf("@") ? "@unknown:0:0" : "";
       }
-    return "\n" + prefix + name + suffix;
+    return "\n" + prefix2 + name + suffix;
   }
   var reentry = false;
   function describeNativeComponentFrame(fn, construct) {
@@ -12799,11 +12799,11 @@ function requireReactDomServerLegacy_node_development() {
   if (hasRequiredReactDomServerLegacy_node_development) return reactDomServerLegacy_node_development;
   hasRequiredReactDomServerLegacy_node_development = 1;
   "production" !== process.env.NODE_ENV && (function() {
-    function styleReplacer(match, prefix2, s, suffix2) {
-      return "" + prefix2 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
+    function styleReplacer(match, prefix3, s, suffix2) {
+      return "" + prefix3 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
     }
-    function scriptReplacer(match, prefix2, s, suffix2) {
-      return "" + prefix2 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
+    function scriptReplacer(match, prefix3, s, suffix2) {
+      return "" + prefix3 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
     }
     function getIteratorFn(maybeIterable) {
       if (null === maybeIterable || "object" !== typeof maybeIterable)
@@ -13742,8 +13742,8 @@ function requireReactDomServerLegacy_node_development() {
                 case "symbol":
                   return;
                 case "boolean":
-                  var prefix2 = name.toLowerCase().slice(0, 5);
-                  if ("data-" !== prefix2 && "aria-" !== prefix2) return;
+                  var prefix3 = name.toLowerCase().slice(0, 5);
+                  if ("data-" !== prefix3 && "aria-" !== prefix3) return;
               }
               target.push(
                 attributeSeparator,
@@ -15771,10 +15771,10 @@ function requireReactDomServerLegacy_node_development() {
         action = function(payload) {
           boundAction(payload);
         };
-        "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix2) {
-          prefix2 = boundAction.$$FORM_ACTION(prefix2);
-          void 0 !== permalink && (checkAttributeStringCoercion(permalink, "target"), permalink += "", prefix2.action = permalink);
-          var formData = prefix2.data;
+        "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix3) {
+          prefix3 = boundAction.$$FORM_ACTION(prefix3);
+          void 0 !== permalink && (checkAttributeStringCoercion(permalink, "target"), permalink += "", prefix3.action = permalink);
+          var formData = prefix3.data;
           formData && (null === nextPostbackStateKey && (nextPostbackStateKey = void 0 !== permalink ? "p" + permalink : "k" + murmurhash3_32_gc(
             JSON.stringify([
               componentKeyPath,
@@ -15783,7 +15783,7 @@ function requireReactDomServerLegacy_node_development() {
             ]),
             0
           )), formData.append("$ACTION_KEY", nextPostbackStateKey));
-          return prefix2;
+          return prefix3;
         });
         return [initialState, action, false];
       }
@@ -15871,15 +15871,15 @@ function requireReactDomServerLegacy_node_development() {
       return error;
     }
     function describeBuiltInComponentFrame(name) {
-      if (void 0 === prefix)
+      if (void 0 === prefix2)
         try {
           throw Error();
         } catch (x) {
           var match = x.stack.trim().match(/\n( *(at )?)/);
-          prefix = match && match[1] || "";
+          prefix2 = match && match[1] || "";
           suffix = -1 < x.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x.stack.indexOf("@") ? "@unknown:0:0" : "";
         }
-      return "\n" + prefix + name + suffix;
+      return "\n" + prefix2 + name + suffix;
     }
     function describeNativeComponentFrame(fn, construct) {
       if (!fn || reentry) return "";
@@ -18371,7 +18371,7 @@ function requireReactDomServerLegacy_node_development() {
         var row = boundary.row;
         null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request2, row);
         if (!request2.renderState.generateStaticMarkup) {
-          var errorDigest = boundary.errorDigest, errorMessage = boundary.errorMessage;
+          var errorDigest = boundary.errorDigest, errorMessage2 = boundary.errorMessage;
           row = boundary.errorStack;
           boundary = boundary.errorComponentStack;
           destination.push(startClientRenderedSuspenseBoundary);
@@ -18379,7 +18379,7 @@ function requireReactDomServerLegacy_node_development() {
           errorDigest && (destination.push(clientRenderedSuspenseBoundaryError1A), errorDigest = escapeTextForBrowser(errorDigest), destination.push(errorDigest), destination.push(
             clientRenderedSuspenseBoundaryErrorAttrInterstitial
           ));
-          errorMessage && (destination.push(clientRenderedSuspenseBoundaryError1B), errorMessage = escapeTextForBrowser(errorMessage), destination.push(errorMessage), destination.push(
+          errorMessage2 && (destination.push(clientRenderedSuspenseBoundaryError1B), errorMessage2 = escapeTextForBrowser(errorMessage2), destination.push(errorMessage2), destination.push(
             clientRenderedSuspenseBoundaryErrorAttrInterstitial
           ));
           row && (destination.push(clientRenderedSuspenseBoundaryError1C), row = escapeTextForBrowser(row), destination.push(row), destination.push(
@@ -18622,7 +18622,7 @@ function requireReactDomServerLegacy_node_development() {
           for (i = 0; i < clientRenderedBoundaries.length; i++) {
             var boundary = clientRenderedBoundaries[i];
             renderState$jscomp$1 = destination;
-            var resumableState$jscomp$1 = request2.resumableState, renderState$jscomp$2 = request2.renderState, id = boundary.rootSegmentID, errorDigest = boundary.errorDigest, errorMessage = boundary.errorMessage, errorStack = boundary.errorStack, errorComponentStack = boundary.errorComponentStack;
+            var resumableState$jscomp$1 = request2.resumableState, renderState$jscomp$2 = request2.renderState, id = boundary.rootSegmentID, errorDigest = boundary.errorDigest, errorMessage2 = boundary.errorMessage, errorStack = boundary.errorStack, errorComponentStack = boundary.errorComponentStack;
             renderState$jscomp$1.push(renderState$jscomp$2.startInlineScript);
             renderState$jscomp$1.push(endOfStartTag);
             (resumableState$jscomp$1.instructions & SentClientRenderFunction) === NothingSent ? (resumableState$jscomp$1.instructions |= SentClientRenderFunction, renderState$jscomp$1.push(clientRenderScript1Full)) : renderState$jscomp$1.push(clientRenderScript1Partial);
@@ -18630,17 +18630,17 @@ function requireReactDomServerLegacy_node_development() {
             var chunk$jscomp$2 = id.toString(16);
             renderState$jscomp$1.push(chunk$jscomp$2);
             renderState$jscomp$1.push(clientRenderScript1A);
-            if (errorDigest || errorMessage || errorStack || errorComponentStack) {
+            if (errorDigest || errorMessage2 || errorStack || errorComponentStack) {
               renderState$jscomp$1.push(clientRenderErrorScriptArgInterstitial);
               var chunk$jscomp$3 = escapeJSStringsForInstructionScripts(
                 errorDigest || ""
               );
               renderState$jscomp$1.push(chunk$jscomp$3);
             }
-            if (errorMessage || errorStack || errorComponentStack) {
+            if (errorMessage2 || errorStack || errorComponentStack) {
               renderState$jscomp$1.push(clientRenderErrorScriptArgInterstitial);
               var chunk$jscomp$4 = escapeJSStringsForInstructionScripts(
-                errorMessage || ""
+                errorMessage2 || ""
               );
               renderState$jscomp$1.push(chunk$jscomp$4);
             }
@@ -19840,7 +19840,7 @@ function requireReactDomServerLegacy_node_development() {
       }
     }, disabledDepth = 0, prevLog, prevInfo, prevWarn, prevError, prevGroup, prevGroupCollapsed, prevGroupEnd;
     disabledLog.__reactDisabledLog = true;
-    var prefix, suffix, reentry = false;
+    var prefix2, suffix, reentry = false;
     var componentFrameCache = new ("function" === typeof WeakMap ? WeakMap : Map)();
     var callComponent = {
       react_stack_bottom_frame: function(Component, props, secondArg) {
@@ -19903,11 +19903,11 @@ function requireReactDomServer_node_development() {
   if (hasRequiredReactDomServer_node_development) return reactDomServer_node_development;
   hasRequiredReactDomServer_node_development = 1;
   "production" !== process.env.NODE_ENV && (function() {
-    function styleReplacer(match, prefix2, s, suffix2) {
-      return "" + prefix2 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
+    function styleReplacer(match, prefix3, s, suffix2) {
+      return "" + prefix3 + ("s" === s ? "\\73 " : "\\53 ") + suffix2;
     }
-    function scriptReplacer(match, prefix2, s, suffix2) {
-      return "" + prefix2 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
+    function scriptReplacer(match, prefix3, s, suffix2) {
+      return "" + prefix3 + ("s" === s ? "\\u0073" : "\\u0053") + suffix2;
     }
     function getIteratorFn(maybeIterable) {
       if (null === maybeIterable || "object" !== typeof maybeIterable)
@@ -21014,8 +21014,8 @@ function requireReactDomServer_node_development() {
                 case "symbol":
                   return;
                 case "boolean":
-                  var prefix2 = name.toLowerCase().slice(0, 5);
-                  if ("data-" !== prefix2 && "aria-" !== prefix2) return;
+                  var prefix3 = name.toLowerCase().slice(0, 5);
+                  if ("data-" !== prefix3 && "aria-" !== prefix3) return;
               }
               target.push(
                 attributeSeparator,
@@ -22901,7 +22901,7 @@ function requireReactDomServer_node_development() {
     function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
       if (void 0 !== permalink) return "p" + permalink;
       permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-      componentKeyPath = crypto.createHash("md5");
+      componentKeyPath = crypto2.createHash("md5");
       componentKeyPath.update(permalink);
       return "k" + componentKeyPath.digest("hex");
     }
@@ -22924,16 +22924,16 @@ function requireReactDomServer_node_development() {
         action = function(payload) {
           boundAction(payload);
         };
-        "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix2) {
-          prefix2 = boundAction.$$FORM_ACTION(prefix2);
-          void 0 !== permalink && (checkAttributeStringCoercion(permalink, "target"), permalink += "", prefix2.action = permalink);
-          var formData = prefix2.data;
+        "function" === typeof boundAction.$$FORM_ACTION && (action.$$FORM_ACTION = function(prefix3) {
+          prefix3 = boundAction.$$FORM_ACTION(prefix3);
+          void 0 !== permalink && (checkAttributeStringCoercion(permalink, "target"), permalink += "", prefix3.action = permalink);
+          var formData = prefix3.data;
           formData && (null === nextPostbackStateKey && (nextPostbackStateKey = createPostbackActionStateKey(
             permalink,
             componentKeyPath,
             actionStateHookIndex
           )), formData.append("$ACTION_KEY", nextPostbackStateKey));
-          return prefix2;
+          return prefix3;
         });
         return [initialState, action, false];
       }
@@ -23027,15 +23027,15 @@ function requireReactDomServer_node_development() {
       return error;
     }
     function describeBuiltInComponentFrame(name) {
-      if (void 0 === prefix)
+      if (void 0 === prefix2)
         try {
           throw Error();
         } catch (x) {
           var match = x.stack.trim().match(/\n( *(at )?)/);
-          prefix = match && match[1] || "";
+          prefix2 = match && match[1] || "";
           suffix = -1 < x.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x.stack.indexOf("@") ? "@unknown:0:0" : "";
         }
-      return "\n" + prefix + name + suffix;
+      return "\n" + prefix2 + name + suffix;
     }
     function describeNativeComponentFrame(fn, construct) {
       if (!fn || reentry) return "";
@@ -25657,7 +25657,7 @@ function requireReactDomServer_node_development() {
         var row = boundary.row;
         null !== row && 0 === --row.pendingTasks && finishSuspenseListRow(request2, row);
         row = boundary.errorDigest;
-        var errorMessage = boundary.errorMessage, errorStack = boundary.errorStack;
+        var errorMessage2 = boundary.errorMessage, errorStack = boundary.errorStack;
         boundary = boundary.errorComponentStack;
         writeChunkAndReturn(destination, startClientRenderedSuspenseBoundary);
         writeChunk(destination, clientRenderedSuspenseBoundaryError1);
@@ -25665,7 +25665,7 @@ function requireReactDomServer_node_development() {
           destination,
           clientRenderedSuspenseBoundaryErrorAttrInterstitial
         ));
-        errorMessage && (writeChunk(destination, clientRenderedSuspenseBoundaryError1B), writeChunk(destination, escapeTextForBrowser(errorMessage)), writeChunk(
+        errorMessage2 && (writeChunk(destination, clientRenderedSuspenseBoundaryError1B), writeChunk(destination, escapeTextForBrowser(errorMessage2)), writeChunk(
           destination,
           clientRenderedSuspenseBoundaryErrorAttrInterstitial
         ));
@@ -25913,7 +25913,7 @@ function requireReactDomServer_node_development() {
           for (i = 0; i < clientRenderedBoundaries.length; i++) {
             var boundary = clientRenderedBoundaries[i];
             renderState$jscomp$1 = destination;
-            var resumableState$jscomp$1 = request2.resumableState, renderState$jscomp$2 = request2.renderState, id = boundary.rootSegmentID, errorDigest = boundary.errorDigest, errorMessage = boundary.errorMessage, errorStack = boundary.errorStack, errorComponentStack = boundary.errorComponentStack;
+            var resumableState$jscomp$1 = request2.resumableState, renderState$jscomp$2 = request2.renderState, id = boundary.rootSegmentID, errorDigest = boundary.errorDigest, errorMessage2 = boundary.errorMessage, errorStack = boundary.errorStack, errorComponentStack = boundary.errorComponentStack;
             writeChunk(
               renderState$jscomp$1,
               renderState$jscomp$2.startInlineScript
@@ -25926,7 +25926,7 @@ function requireReactDomServer_node_development() {
             );
             writeChunk(renderState$jscomp$1, id.toString(16));
             writeChunk(renderState$jscomp$1, clientRenderScript1A);
-            if (errorDigest || errorMessage || errorStack || errorComponentStack)
+            if (errorDigest || errorMessage2 || errorStack || errorComponentStack)
               writeChunk(
                 renderState$jscomp$1,
                 clientRenderErrorScriptArgInterstitial
@@ -25934,13 +25934,13 @@ function requireReactDomServer_node_development() {
                 renderState$jscomp$1,
                 escapeJSStringsForInstructionScripts(errorDigest || "")
               );
-            if (errorMessage || errorStack || errorComponentStack)
+            if (errorMessage2 || errorStack || errorComponentStack)
               writeChunk(
                 renderState$jscomp$1,
                 clientRenderErrorScriptArgInterstitial
               ), writeChunk(
                 renderState$jscomp$1,
-                escapeJSStringsForInstructionScripts(errorMessage || "")
+                escapeJSStringsForInstructionScripts(errorMessage2 || "")
               );
             if (errorStack || errorComponentStack)
               writeChunk(
@@ -26260,7 +26260,7 @@ function requireReactDomServer_node_development() {
         }
       };
     }
-    var util = require$$0, crypto = require$$1, async_hooks = require$$2, React = requireReact(), ReactDOM = requireReactDom(), stream = require$$5, REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_SCOPE_TYPE = Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
+    var util = require$$0, crypto2 = require$$1, async_hooks = require$$2, React = requireReact(), ReactDOM = requireReactDom(), stream = require$$5, REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_SCOPE_TYPE = Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
       "^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"
     ), illegalAttributeNameCache = {}, validatedAttributeNameCache = {}, unitlessNumbers = new Set(
       "animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth boxFlex boxFlexGroup boxOrdinalGroup columnCount columns flex flexGrow flexPositive flexShrink flexNegative flexOrder gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth MozAnimationIterationCount MozBoxFlex MozBoxFlexGroup MozLineClamp msAnimationIterationCount msFlex msZoom msFlexGrow msFlexNegative msFlexOrder msFlexPositive msFlexShrink msGridColumn msGridColumnSpan msGridRow msGridRowSpan WebkitAnimationIterationCount WebkitBoxFlex WebKitBoxFlexGroup WebkitBoxOrdinalGroup WebkitColumnCount WebkitColumns WebkitFlex WebkitFlexGrow WebkitFlexPositive WebkitFlexShrink WebkitLineClamp".split(
@@ -27312,7 +27312,7 @@ function requireReactDomServer_node_development() {
       }
     }, disabledDepth = 0, prevLog, prevInfo, prevWarn, prevError, prevGroup, prevGroupCollapsed, prevGroupEnd;
     disabledLog.__reactDisabledLog = true;
-    var prefix, suffix, reentry = false;
+    var prefix2, suffix, reentry = false;
     var componentFrameCache = new ("function" === typeof WeakMap ? WeakMap : Map)();
     var callComponent = {
       react_stack_bottom_frame: function(Component, props, secondArg) {
@@ -30100,32 +30100,32 @@ function getInternalRouterError(status, {
   message
 } = {}) {
   let statusText = "Unknown Server Error";
-  let errorMessage = "Unknown @remix-run/router error";
+  let errorMessage2 = "Unknown @remix-run/router error";
   if (status === 400) {
     statusText = "Bad Request";
     if (method && pathname && routeId) {
-      errorMessage = `You made a ${method} request to "${pathname}" but did not provide a \`loader\` for route "${routeId}", so there is no way to handle the request.`;
+      errorMessage2 = `You made a ${method} request to "${pathname}" but did not provide a \`loader\` for route "${routeId}", so there is no way to handle the request.`;
     } else if (type === "invalid-body") {
-      errorMessage = "Unable to encode submission body";
+      errorMessage2 = "Unable to encode submission body";
     }
   } else if (status === 403) {
     statusText = "Forbidden";
-    errorMessage = `Route "${routeId}" does not match URL "${pathname}"`;
+    errorMessage2 = `Route "${routeId}" does not match URL "${pathname}"`;
   } else if (status === 404) {
     statusText = "Not Found";
-    errorMessage = `No route matches URL "${pathname}"`;
+    errorMessage2 = `No route matches URL "${pathname}"`;
   } else if (status === 405) {
     statusText = "Method Not Allowed";
     if (method && pathname && routeId) {
-      errorMessage = `You made a ${method.toUpperCase()} request to "${pathname}" but did not provide an \`action\` for route "${routeId}", so there is no way to handle the request.`;
+      errorMessage2 = `You made a ${method.toUpperCase()} request to "${pathname}" but did not provide an \`action\` for route "${routeId}", so there is no way to handle the request.`;
     } else if (method) {
-      errorMessage = `Invalid request method "${method.toUpperCase()}"`;
+      errorMessage2 = `Invalid request method "${method.toUpperCase()}"`;
     }
   }
   return new ErrorResponseImpl(
     status || 500,
     statusText,
-    new Error(errorMessage),
+    new Error(errorMessage2),
     true
   );
 }
@@ -30975,9 +30975,9 @@ function getFormSubmissionInfo(target, basename) {
     if (!isFormDataSubmitterSupported()) {
       let { name, type, value } = target;
       if (type === "image") {
-        let prefix = name ? `${name}.` : "";
-        formData.append(`${prefix}x`, "0");
-        formData.append(`${prefix}y`, "0");
+        let prefix2 = name ? `${name}.` : "";
+        formData.append(`${prefix2}x`, "0");
+        formData.append(`${prefix2}y`, "0");
       } else if (name) {
         formData.append(name, value);
       }
@@ -32060,44 +32060,85 @@ function encodeLocation(to) {
   };
 }
 var ABSOLUTE_URL_REGEX3 = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
-let csrf = "";
+const prefix = "/api/shooting-range";
 const apiBaseUrl = typeof window !== "undefined" ? ((_a = window.ENV) == null ? void 0 : _a.API_BASE_URL) ?? void 0 ?? "" : "";
 function apiUrl(path) {
   return apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
 }
+class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
 async function request(path, init = {}) {
-  const response = await fetch(apiUrl(path), { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init.method && init.method !== "GET" ? { "X-CSRF-TOKEN": csrf } : {}, ...init.headers } });
+  const headers = new Headers(init.headers);
+  headers.set("Content-Type", "application/json");
+  if (init.method && init.method !== "GET" && !path.includes("/auth/register")) {
+    headers.set("X-CSRF-TOKEN", await getCsrf());
+  }
+  const response = await fetch(apiUrl(path), { ...init, credentials: "include", headers });
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined" && !path.includes("/auth/")) window.dispatchEvent(new Event("range-session-expired"));
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.message ?? `HTTP ${response.status}`);
+    throw new ApiError(response.status, body.message ?? body.title ?? `HTTP ${response.status}`);
   }
   return response.status === 204 ? void 0 : response.json();
 }
 async function getCsrf() {
-  const result = await request("/api/shooting-range/csrf");
-  csrf = result.token;
+  return (await request(`${prefix}/csrf`)).token;
 }
-const register = (body) => request("/api/shooting-range/auth/register", { method: "POST", body: JSON.stringify(body) });
-const login = async (body) => {
+const register = (body) => request(`${prefix}/auth/register`, { method: "POST", body: JSON.stringify(body) });
+async function login(body) {
+  const account = await request(`${prefix}/auth/login`, { method: "POST", body: JSON.stringify(body) });
   await getCsrf();
-  return request("/api/shooting-range/auth/login", { method: "POST", body: JSON.stringify(body) });
-};
-const availability = (date, period) => request(`/api/shooting-range/availability?date=${date}&period=${encodeURIComponent(period)}`);
-const book = (body) => request("/api/shooting-range/bookings", { method: "POST", body: JSON.stringify(body) });
-const messages = () => request("/api/shooting-range/messages");
-const openMessage = (body) => request("/api/shooting-range/messages", { method: "POST", body: JSON.stringify(body) });
-const adminUsers = () => request("/api/shooting-range/admin/users");
-function Shell({ account, children }) {
+  return account;
+}
+async function changePassword(body) {
+  await request(`${prefix}/auth/password`, { method: "POST", body: JSON.stringify(body) });
+  await getCsrf();
+}
+const getSession = (signal) => request(`${prefix}/auth/session`, { signal });
+const logout = () => request(`${prefix}/auth/logout`, { method: "POST" });
+const sessions = (date, signal) => request(`${prefix}/sessions?date=${encodeURIComponent(date)}`, { signal });
+const availability = (date, period, signal) => request(`${prefix}/availability?date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`, { signal });
+const book = (body) => request(`${prefix}/bookings`, { method: "POST", body: JSON.stringify(body) });
+const myBookings = () => request(`${prefix}/bookings/mine`);
+const messages = () => request(`${prefix}/messages`);
+const openMessage = (body) => request(`${prefix}/messages`, { method: "POST", body: JSON.stringify(body) });
+const adminUsers = () => request(`${prefix}/admin/users`);
+const adminConfig = () => request(`${prefix}/admin/config`);
+const saveConfig = (body) => request(`${prefix}/admin/config`, { method: "PUT", body: JSON.stringify(body) });
+const adminBays = () => request(`${prefix}/admin/bays`);
+const saveBay = (body) => request(`${prefix}/admin/bays/${encodeURIComponent(body.id)}`, { method: "PUT", body: JSON.stringify(body) });
+const adminClosures = () => request(`${prefix}/admin/exceptions`);
+const addClosure = (body) => request(`${prefix}/admin/exceptions`, { method: "POST", body: JSON.stringify(body) });
+const saveClosure = (body) => request(`${prefix}/admin/exceptions/${encodeURIComponent(body.id)}`, { method: "PUT", body: JSON.stringify(body) });
+const adminBookings = () => request(`${prefix}/admin/bookings`);
+const decideBooking = (id, approved) => request(`${prefix}/admin/bookings/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify({ approved }) });
+const approveUser = (id) => request(`${prefix}/admin/users/${encodeURIComponent(id)}/approve`, { method: "POST" });
+function sessionLabel(session, timeZone) {
+  const format = new Intl.DateTimeFormat("it-IT", { timeZone, hour: "2-digit", minute: "2-digit" });
+  const name = session.periodKey.toLowerCase() === "morning" ? "Mattina " : session.periodKey.toLowerCase() === "afternoon" ? "Pomeriggio " : "";
+  return `${name}${format.format(new Date(session.startUtc))} - ${format.format(new Date(session.endUtc))}`;
+}
+function availabilityMatches(data, offered, date, period) {
+  return data.localDate === date && data.periodKey === period && offered.some((session) => session.periodKey === period && session.startUtc === data.startUtc && session.endUtc === data.endUtc);
+}
+const accountStatus = (status) => ["In attesa", "Approvato", "Disabilitato"][status] ?? "Stato sconosciuto";
+const bookingStatus = (status) => ["In attesa", "Approvata", "Rifiutata", "Annullata"][status] ?? "Stato sconosciuto";
+function Shell({ account, children, onLogout, loggingOut = false }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "eyebrow", children: "PEPPERBOX" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Campo da tiro" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { "aria-label": "Navigazione principale", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", children: "Prenota" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/messages", children: "Messaggi" }),
-        (account == null ? void 0 : account.isAdmin) && /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/admin", children: "Admin" })
+        !(account == null ? void 0 : account.forcePasswordChange) && /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/messages", children: "Messaggi" }),
+        (account == null ? void 0 : account.isAdmin) && !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/admin", children: "Admin" }),
+        account && onLogout && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", disabled: loggingOut, onClick: onLogout, children: loggingOut ? "Uscita..." : "Esci" })
       ] })
     ] }),
     children
@@ -32107,90 +32148,329 @@ function Auth({ onLogin }) {
   const [mode, setMode] = reactExports.useState("login");
   const [form, setForm] = reactExports.useState({ username: "", password: "", firstName: "", lastName: "" });
   const [error, setError] = reactExports.useState("");
-  const submit = async (event) => {
+  const [pending, setPending] = reactExports.useState(false);
+  const [notice, setNotice] = reactExports.useState("");
+  async function submit(event) {
     event.preventDefault();
+    if (pending) return;
+    setPending(true);
     setError("");
+    setNotice("");
     try {
       const result = mode === "login" ? await login(form) : await register(form);
       if (mode === "login") onLogin(result);
-      else setMode("login");
-    } catch (error2) {
-      setError(error2 instanceof Error ? error2.message : "Operazione non riuscita");
+      else {
+        setMode("login");
+        setNotice("Richiesta inviata. Attendi l'approvazione dell'amministratore.");
+      }
+    } catch (reason) {
+      setError(reason instanceof ApiError && reason.status === 429 ? "Troppi tentativi. Riprova tra cinque minuti." : reason instanceof Error ? reason.message : "Operazione non riuscita");
+    } finally {
+      setPending(false);
     }
-  };
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "auth", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "eyebrow", children: "ACCESSO" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: mode === "login" ? "Bentornato" : "Richiedi un account" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Gli account nuovi restano in attesa dell'approvazione dell'amministratore." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submit, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submit, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { disabled: pending, className: "auth-fields", children: [
       mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, placeholder: "Nome", onChange: (e) => setForm({ ...form, firstName: e.target.value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, placeholder: "Cognome", onChange: (e) => setForm({ ...form, lastName: e.target.value }) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, placeholder: "Username", onChange: (e) => setForm({ ...form, username: e.target.value }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, minLength: 12, type: "password", placeholder: "Password", onChange: (e) => setForm({ ...form, password: e.target.value }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { children: mode === "login" ? "Accedi" : "Invia richiesta" })
-    ] }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "error", children: error }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "link-button", onClick: () => setMode(mode === "login" ? "register" : "login"), children: mode === "login" ? "Non hai un account?" : "Hai già un account?" })
-  ] });
-}
-function Booking({ account }) {
-  const [date, setDate] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
-  const [period, setPeriod] = reactExports.useState("morning");
-  const [data, setData] = reactExports.useState(null);
-  const [error, setError] = reactExports.useState("");
-  const search = async () => {
-    try {
-      setError("");
-      setData(await availability(date, period));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore");
-    }
-  };
-  const reserve = async (bayId) => {
-    try {
-      await book({ bayId, localDate: date, periodKey: period, request: "" });
-      await search();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Conflitto: scegli un altro slot");
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "hero", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "eyebrow", children: "PRENOTAZIONI" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Trova il tuo prossimo turno." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Disponibilità calcolata nel fuso del campo. Le richieste pending bloccano lo slot." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "toolbar", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        "Data",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: date, onChange: (e) => setDate(e.target.value) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        "Sessione",
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: period, onChange: (e) => setPeriod(e.target.value), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "morning", children: "Mattina" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "afternoon", children: "Pomeriggio" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Nome",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: form.firstName, autoComplete: "given-name", onChange: (event) => setForm({ ...form, firstName: event.target.value }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Cognome",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: form.lastName, autoComplete: "family-name", onChange: (event) => setForm({ ...form, lastName: event.target.value }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: search, children: "Cerca disponibilità" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        "Username",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: form.username, autoComplete: "username", onChange: (event) => setForm({ ...form, username: event.target.value }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        "Password",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, minLength: 12, type: "password", value: form.password, autoComplete: mode === "login" ? "current-password" : "new-password", onChange: (event) => setForm({ ...form, password: event.target.value }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { children: pending ? "Attendi..." : mode === "login" ? "Accedi" : "Invia richiesta" })
+    ] }) }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "error", children: error }),
+    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "success", children: notice }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: pending, className: "link-button", onClick: () => {
+      setMode(mode === "login" ? "register" : "login");
+      setError("");
+    }, children: mode === "login" ? "Non hai un account?" : "Hai già un account?" })
+  ] });
+}
+function SessionGate({ children }) {
+  const [account, setAccount] = reactExports.useState(null);
+  const [restoring, setRestoring] = reactExports.useState(true);
+  const [loggingOut, setLoggingOut] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  const [revision, setRevision] = reactExports.useState(0);
+  const navigate = useNavigate();
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setRestoring(true);
+    setError("");
+    getSession(controller.signal).then((value) => {
+      if (!controller.signal.aborted) setAccount(value);
+    }).catch((reason) => {
+      if (!controller.signal.aborted) {
+        setAccount(null);
+        if (!(reason instanceof ApiError && reason.status === 401)) setError("Sessione non disponibile. Riprova.");
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setRestoring(false);
+    });
+    return () => controller.abort();
+  }, [revision]);
+  reactExports.useEffect(() => {
+    function expired() {
+      setAccount(null);
+      navigate("/");
+    }
+    function refresh() {
+      setRevision((value) => value + 1);
+    }
+    window.addEventListener("range-session-expired", expired);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("range-session-expired", expired);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [navigate]);
+  async function signOut() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setError("");
+    try {
+      await logout();
+      setAccount(null);
+      navigate("/");
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) {
+        setAccount(null);
+        navigate("/");
+      } else setError("Uscita non riuscita. Riprova.");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+  if (restoring) return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "session-status", children: "Ripristino sessione..." }) });
+  if (!account) return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account: null, children: [
+    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { role: "alert", className: "error", children: [
+      error,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", onClick: () => setRevision((value) => value + 1), children: "Riprova" })
     ] }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "error", children: error }),
-    data && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-heading", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Auth, { onLogin: setAccount })
+  ] });
+  const props = { account, loggingOut, onLogout: () => void signOut(), onPasswordChanged: () => setRevision((value) => value + 1) };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "error session-error", children: error }),
+    account.forcePasswordChange || !children ? /* @__PURE__ */ jsxRuntimeExports.jsx(Booking, { ...props }) : children(props)
+  ] });
+}
+function Booking({ account, onPasswordChanged, onLogout, loggingOut }) {
+  const [date, setDate] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+  const [period, setPeriod] = reactExports.useState("");
+  const [offered, setOffered] = reactExports.useState(null);
+  const [data, setData] = reactExports.useState(null);
+  const [history, setHistory] = reactExports.useState([]);
+  const [error, setError] = reactExports.useState("");
+  const [historyError, setHistoryError] = reactExports.useState("");
+  const [notice, setNotice] = reactExports.useState("");
+  const [loading, setLoading] = reactExports.useState(true);
+  const [pending, setPending] = reactExports.useState(false);
+  const [refresh, setRefresh] = reactExports.useState(0);
+  const [passwords, setPasswords] = reactExports.useState({ currentPassword: "", newPassword: "" });
+  const queryVersion = reactExports.useRef(0);
+  function invalidate() {
+    queryVersion.current++;
+    setData(null);
+    setError("");
+  }
+  function reload() {
+    invalidate();
+    setPeriod("");
+    setOffered(null);
+    setRefresh((value) => value + 1);
+  }
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    if (account.forcePasswordChange) {
+      setLoading(false);
+      return () => controller.abort();
+    }
+    setLoading(true);
+    setOffered(null);
+    setPeriod("");
+    setData(null);
+    if (!date) {
+      setLoading(false);
+      return () => controller.abort();
+    }
+    sessions(date, controller.signal).then((result) => {
+      var _a2;
+      if (controller.signal.aborted) return;
+      setOffered(result);
+      setPeriod(((_a2 = result.sessions[0]) == null ? void 0 : _a2.periodKey) ?? "");
+    }).catch((reason) => {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Sessioni non disponibili");
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [date, refresh, account.forcePasswordChange]);
+  reactExports.useEffect(() => {
+    if (account.forcePasswordChange) return;
+    let active = true;
+    myBookings().then((result) => {
+      if (active) {
+        setHistory(result);
+        setHistoryError("");
+      }
+    }).catch(() => {
+      if (active) setHistoryError("Cronologia non disponibile.");
+    });
+    return () => {
+      active = false;
+    };
+  }, [refresh, account.forcePasswordChange]);
+  async function search() {
+    const version = ++queryVersion.current;
+    setPending(true);
+    setError("");
+    setData(null);
+    try {
+      const result = await availability(date, period);
+      if (version !== queryVersion.current) return;
+      if (!availabilityMatches(result, (offered == null ? void 0 : offered.sessions) ?? [], date, period)) {
+        reload();
+        setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
+      } else setData(result);
+    } catch (reason) {
+      if (version === queryVersion.current) {
+        if (reason instanceof ApiError && reason.status === 400) reload();
+        setError(reason instanceof Error ? reason.message : "Disponibilita non disponibile");
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+  async function reserve(bayId) {
+    if (!data || !availabilityMatches(data, (offered == null ? void 0 : offered.sessions) ?? [], date, period)) return;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      await book({ bayId, localDate: date, periodKey: period, request: "", expectedStartUtc: data.startUtc, expectedEndUtc: data.endUtc });
+      setNotice("Richiesta inviata, in attesa di approvazione.");
+      reload();
+    } catch (reason) {
+      reload();
+      setError(reason instanceof ApiError && reason.status === 409 ? "La bay non e piu disponibile. Seleziona un altro turno." : reason instanceof Error ? reason.message : "Prenotazione non riuscita");
+    } finally {
+      setPending(false);
+    }
+  }
+  async function updatePassword(event) {
+    event.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      await changePassword(passwords);
+      setPasswords({ currentPassword: "", newPassword: "" });
+      onPasswordChanged();
+      setNotice("Password aggiornata.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Password non aggiornata");
+    } finally {
+      setPending(false);
+    }
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "booking-heading", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: account.forcePasswordChange ? "Aggiorna la password" : "Trova il tuo prossimo turno." }),
+      !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: (offered == null ? void 0 : offered.timeZone) ?? "Orari del campo" })
+    ] }),
+    account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Aggiorna la password" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "form-grid", onSubmit: updatePassword, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Password attuale",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "password", required: true, autoComplete: "current-password", value: passwords.currentPassword, onChange: (event) => setPasswords({ ...passwords, currentPassword: event.target.value }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Nuova password",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "password", required: true, minLength: 12, maxLength: 100, autoComplete: "new-password", value: passwords.newPassword, onChange: (event) => setPasswords({ ...passwords, newPassword: event.target.value }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: pending, children: "Aggiorna password" })
+      ] })
+    ] }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "error", children: error }),
+    !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "toolbar", disabled: pending, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "sr-only", children: "Selezione del turno" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Data",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", required: true, value: date, onChange: (event) => {
+            invalidate();
+            setDate(event.target.value);
+            setPeriod("");
+            setOffered(null);
+          } })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Sessione",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { disabled: loading || !(offered == null ? void 0 : offered.sessions.length), value: period, onChange: (event) => {
+            invalidate();
+            setPeriod(event.target.value);
+          }, children: [
+            !period && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: loading ? "Caricamento..." : "Nessuna sessione" }),
+            offered == null ? void 0 : offered.sessions.map((session) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: session.periodKey, children: sessionLabel(session, offered.timeZone) }, session.periodKey))
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: loading || !period || account.forcePasswordChange, onClick: () => void search(), children: "Cerca disponibilita" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", onClick: reload, children: "Aggiorna sessioni" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "aria-live": "polite", children: [
+        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Caricamento sessioni..." }),
+        pending && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Operazione in corso..." }),
+        !loading && offered && !offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Nessuna sessione prenotabile per questa data." }),
+        notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "success", children: notice })
+      ] }),
+      data && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-label": "Bay disponibili", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { children: [
           data.bays.length,
           " bay disponibili"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(data.startUtc).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+        ] }) }),
+        !data.bays.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Nessuna bay disponibile per questo turno." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid", children: data.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { disabled: pending || account.forcePasswordChange, onClick: () => void reserve(bay.id), children: [
+            "Richiedi bay ",
+            bay.code
+          ] })
+        ] }, bay.id)) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid", children: data.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => reserve(bay.id), children: "Richiedi bay" })
-      ] }, bay.id)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Le mie prenotazioni" }),
+        historyError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", children: historyError }),
+        !historyError && !history.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Nessuna prenotazione." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: history.map((booking) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            booking.localDate,
+            " · ",
+            new Date(booking.startUtc).toLocaleString("it-IT", { timeZone: (offered == null ? void 0 : offered.timeZone) ?? "Europe/Rome" }),
+            " - ",
+            new Date(booking.endUtc).toLocaleTimeString("it-IT", { timeZone: (offered == null ? void 0 : offered.timeZone) ?? "Europe/Rome", hour: "2-digit", minute: "2-digit" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: bookingStatus(booking.status) })
+        ] }, booking.id)) })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "muted account-note", children: [
       "Account: ",
@@ -32198,17 +32478,330 @@ function Booking({ account }) {
       " ",
       account.lastName,
       " · ",
-      account.status
+      accountStatus(account.status)
     ] })
   ] });
 }
 function App() {
-  const [account, setAccount] = reactExports.useState(null);
-  const navigate = useNavigate();
-  return account ? /* @__PURE__ */ jsxRuntimeExports.jsx(Booking, { account }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Auth, { onLogin: (value) => {
-    setAccount(value);
-    navigate("/");
-  } }) });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, {});
+}
+const dayNames = ["Domenica", "Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi", "Sabato"];
+function errorMessage(reason) {
+  if (reason instanceof ApiError && reason.status === 401) return "Accedi con un account amministratore.";
+  if (reason instanceof ApiError && reason.status === 403) return "Account non autorizzato o cambio password richiesto.";
+  return reason instanceof Error ? reason.message : "Operazione non riuscita.";
+}
+function TimeField({ label, value, onChange }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    label,
+    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", required: true, step: 60, value: (value == null ? void 0 : value.slice(0, 5)) ?? "", onChange: (event) => onChange(event.target.value ? `${event.target.value}:00` : null) })
+  ] });
+}
+function ConfigForm({ initial, busy, onSave }) {
+  const [config, setConfig] = reactExports.useState(initial);
+  reactExports.useEffect(() => setConfig(initial), [initial]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: (event) => {
+    event.preventDefault();
+    void onSave({ ...config, hourlyMinutes: 60 });
+  }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "form-grid", disabled: busy, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { children: "Calendario e sessioni" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Nome del campo",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, maxLength: 120, value: config.name, onChange: (event) => setConfig({ ...config, name: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Fuso orario",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: config.timeZone, onChange: (event) => setConfig({ ...config, timeZone: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "wide-field", children: [
+      "Modalita",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: config.sessionMode, onChange: (event) => setConfig({ ...config, sessionMode: Number(event.target.value) }), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 0, children: "Mattina o pomeriggio intero" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 1, children: "60 minuti, mattina e pomeriggio con pausa" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 2, children: "60 minuti, apertura continua" })
+      ] })
+    ] }),
+    config.sessionMode === 2 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Apertura continua", value: config.continuousStart, onChange: (value) => setConfig({ ...config, continuousStart: value }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Chiusura continua", value: config.continuousEnd, onChange: (value) => setConfig({ ...config, continuousEnd: value }) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Apertura mattina", value: config.morningStart, onChange: (value) => setConfig({ ...config, morningStart: value ?? "" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Chiusura mattina", value: config.morningEnd, onChange: (value) => setConfig({ ...config, morningEnd: value ?? "" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Apertura pomeriggio", value: config.afternoonStart, onChange: (value) => setConfig({ ...config, afternoonStart: value ?? "" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimeField, { label: "Chiusura pomeriggio", value: config.afternoonEnd, onChange: (value) => setConfig({ ...config, afternoonEnd: value ?? "" }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "wide-field", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Giorni di apertura" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "check-group", children: dayNames.map((name, day) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "check-label", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: config.openingDays.includes(day), onChange: (event) => setConfig({ ...config, openingDays: event.target.checked ? [...config.openingDays, day] : config.openingDays.filter((value) => value !== day) }) }),
+        name
+      ] }, day)) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Rilascio bay riservate (giorni prima)",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, max: 365, required: true, value: config.reservedReleaseDaysBefore, onChange: (event) => setConfig({ ...config, reservedReleaseDaysBefore: Number(event.target.value) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Durata slot orari" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("output", { children: "60 minuti" })
+    ] }),
+    initial.hourlyMinutes !== 60 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "error wide-field", children: [
+      "Durata precedente non valida: ",
+      initial.hourlyMinutes,
+      " minuti. Correggi la configurazione prima di accettare nuove prenotazioni."
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", children: "Salva configurazione" })
+  ] }) });
+}
+function BayForm({ initial, users, busy, onSave }) {
+  const [bay, setBay] = reactExports.useState(initial);
+  reactExports.useEffect(() => setBay(initial), [initial]);
+  function updateMechanism(index, update) {
+    setBay({ ...bay, mechanisms: bay.mechanisms.map((mechanism, position) => position === index ? { ...mechanism, ...update } : mechanism) });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: (event) => {
+    event.preventDefault();
+    void onSave(bay);
+  }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "form-grid", disabled: busy, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { children: [
+      "Bay ",
+      initial.code || "nuova"
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Codice",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, maxLength: 40, value: bay.code, onChange: (event) => setBay({ ...bay, code: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Stato",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: bay.status, onChange: (event) => setBay({ ...bay, status: Number(event.target.value) }), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 0, children: "Disponibile" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 1, children: "Manutenzione" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 2, children: "Disabilitata" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "wide-field", children: [
+      "Descrizione",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { maxLength: 1e3, value: bay.description, onChange: (event) => setBay({ ...bay, description: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Paratie",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, required: true, value: bay.partitions, onChange: (event) => setBay({ ...bay, partitions: Number(event.target.value) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Piastre",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, required: true, value: bay.plates, onChange: (event) => setBay({ ...bay, plates: Number(event.target.value) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "check-label", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: bay.pepper, onChange: (event) => setBay({ ...bay, pepper: event.target.checked }) }),
+      "Pepper"
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "wide-field", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Utenti in whitelist" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "check-group", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "check-label", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: bay.whitelistUserIds.includes(user.id), onChange: (event) => setBay({ ...bay, whitelistUserIds: event.target.checked ? [...bay.whitelistUserIds, user.id] : bay.whitelistUserIds.filter((id) => id !== user.id) }) }),
+        user.username
+      ] }, user.id)) }),
+      !users.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Nessun utente." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "wide-field", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Meccanismi" }),
+      bay.mechanisms.map((mechanism, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mechanism-row", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Tipo",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: mechanism.type, onChange: (event) => updateMechanism(index, { type: event.target.value }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Quantita",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", required: true, min: 1, value: mechanism.quantity, onChange: (event) => updateMechanism(index, { quantity: Number(event.target.value) }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "secondary-button", "aria-label": `Rimuovi meccanismo ${index + 1}`, onClick: () => setBay({ ...bay, mechanisms: bay.mechanisms.filter((_, position) => position !== index) }), children: "Rimuovi" })
+      ] }, index)),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "secondary-button", onClick: () => setBay({ ...bay, mechanisms: [...bay.mechanisms, { type: "", quantity: 1 }] }), children: "Aggiungi meccanismo" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "submit", children: [
+      "Salva bay ",
+      bay.code
+    ] })
+  ] }) });
+}
+function ClosureForm({ bays, busy, onSave }) {
+  const [closure, setClosure] = reactExports.useState({ localDate: "", bayId: "", reason: "" });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: (event) => {
+    event.preventDefault();
+    void onSave({ ...closure, bayId: closure.bayId || null, isClosed: true });
+  }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "form-grid", disabled: busy, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { children: "Nuova chiusura" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Data",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", required: true, value: closure.localDate, onChange: (event) => setClosure({ ...closure, localDate: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+      "Campo o bay",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: closure.bayId, onChange: (event) => setClosure({ ...closure, bayId: event.target.value }), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Tutto il campo" }),
+        bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: bay.id, children: bay.code }, bay.id))
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "wide-field", children: [
+      "Motivo",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, maxLength: 1e3, value: closure.reason, onChange: (event) => setClosure({ ...closure, reason: event.target.value }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", children: "Aggiungi chiusura" })
+  ] }) });
+}
+function Admin({ account, onLogout, loggingOut } = {}) {
+  const [data, setData] = reactExports.useState(null);
+  const [loading, setLoading] = reactExports.useState(true);
+  const [busy, setBusy] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  const [notice, setNotice] = reactExports.useState("");
+  const [newBay, setNewBay] = reactExports.useState(null);
+  async function load() {
+    const [config, users, bays, closures, bookings] = await Promise.all([adminConfig(), adminUsers(), adminBays(), adminClosures(), adminBookings()]);
+    return { config, users, bays, closures, bookings };
+  }
+  reactExports.useEffect(() => {
+    let active = true;
+    load().then((result) => {
+      if (active) setData(result);
+    }).catch((reason) => {
+      if (active) setError(errorMessage(reason));
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  async function perform(action, success) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await action();
+      setData(await load());
+      setNotice(success);
+      setNewBay(null);
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+  function createBay() {
+    setNewBay({ id: crypto.randomUUID(), creationDateTime: (/* @__PURE__ */ new Date()).toISOString(), code: "", description: "", mechanisms: [], partitions: 0, plates: 0, pepper: false, status: 0, reservedUntilUtc: null, whitelistUserIds: [] });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account: account ?? null, onLogout, loggingOut, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "booking-heading", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Amministrazione" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", children: "Prenotazioni" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "aria-live": "polite", children: [
+      loading && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Caricamento amministrazione..." }),
+      busy && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Salvataggio in corso..." }),
+      notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "success", children: notice })
+    ] }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "error", children: error }),
+    !loading && !data && /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", children: "Torna all'accesso" }),
+    data && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Configurazione del campo" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ConfigForm, { initial: data.config, busy, onSave: (config) => perform(() => saveConfig(config), "Configurazione salvata.") })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-heading", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Bay" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: busy || !!newBay, className: "secondary-button", onClick: createBay, children: "Nuova bay" })
+        ] }),
+        !data.bays.length && !newBay && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Nessuna bay configurata." }),
+        data.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("summary", { children: [
+            "Bay ",
+            bay.code,
+            " · ",
+            ["Disponibile", "Manutenzione", "Disabilitata"][bay.status] ?? "Stato sconosciuto"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(BayForm, { initial: bay, users: data.users, busy, onSave: (value) => perform(() => saveBay(value), "Bay salvata.") })
+        ] }, bay.id)),
+        newBay && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(BayForm, { initial: newBay, users: data.users, busy, onSave: (value) => perform(() => saveBay(value), "Bay creata.") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", disabled: busy, onClick: () => setNewBay(null), children: "Annulla nuova bay" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Chiusure" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ClosureForm, { bays: data.bays, busy, onSave: (closure) => perform(() => addClosure(closure), "Chiusura salvata.") }),
+        !data.closures.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Nessuna eccezione al calendario." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: data.closures.map((closure) => {
+          var _a2;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              closure.localDate,
+              " · ",
+              closure.bayId ? ((_a2 = data.bays.find((bay) => bay.id === closure.bayId)) == null ? void 0 : _a2.code) ?? closure.bayId : "Tutto il campo",
+              " · ",
+              closure.reason
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: closure.isClosed ? "Chiuso" : "Nessuna chiusura" }),
+            closure.isClosed && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", disabled: busy, onClick: () => void perform(() => saveClosure({ ...closure, isClosed: false }), "Chiusura rimossa."), children: "Riapri" })
+          ] }, closure.id);
+        }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Account" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: data.users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+              user.firstName,
+              " ",
+              user.lastName
+            ] }),
+            " · ",
+            user.username,
+            " · ",
+            accountStatus(user.status),
+            user.forcePasswordChange && " · Cambio password richiesto"
+          ] }),
+          user.status === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { disabled: busy, onClick: () => void perform(() => approveUser(user.id), "Account approvato."), children: [
+            "Approva ",
+            user.username
+          ] })
+        ] }, user.id)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-section", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Richieste di prenotazione" }),
+        !data.bookings.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Nessuna richiesta." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: data.bookings.map((booking) => {
+          var _a2, _b;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                booking.localDate,
+                " · Bay ",
+                ((_a2 = data.bays.find((bay) => bay.id === booking.bayId)) == null ? void 0 : _a2.code) ?? booking.bayId
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                new Date(booking.startUtc).toLocaleString("it-IT", { timeZone: data.config.timeZone }),
+                " - ",
+                new Date(booking.endUtc).toLocaleTimeString("it-IT", { timeZone: data.config.timeZone, hour: "2-digit", minute: "2-digit" }),
+                " · ",
+                bookingStatus(booking.status)
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                ((_b = data.users.find((user) => user.id === booking.userId)) == null ? void 0 : _b.username) ?? booking.userId,
+                " · ",
+                booking.request
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-group", children: [
+              booking.status !== 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: busy, onClick: () => void perform(() => decideBooking(booking.id, true), "Prenotazione approvata."), children: "Approva" }),
+              booking.status !== 2 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "secondary-button", disabled: busy, onClick: () => void perform(() => decideBooking(booking.id, false), "Prenotazione rifiutata."), children: "Rifiuta" })
+            ] })
+          ] }, booking.id);
+        }) })
+      ] })
+    ] })
+  ] });
 }
 function Messages() {
   const [items, setItems] = reactExports.useState([]);
@@ -32233,19 +32826,13 @@ function Messages() {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "message-list", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("article", { className: "message", children: JSON.stringify(item) }, index)) })
   ] });
 }
-function Admin() {
-  const [users, setUsers] = reactExports.useState([]);
-  reactExports.useEffect(() => {
-    adminUsers().then(setUsers).catch(() => setUsers([]));
-  }, []);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "panel", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "eyebrow", children: "CONTROL ROOM" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Approvazioni" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "muted", children: "Gestisci gli account in attesa e supervisiona le richieste." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "message-list", children: users.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("article", { className: "message", children: JSON.stringify(item) }, index)) })
-  ] });
+function MessagesRoute() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, { children: (props) => /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: props.account, onLogout: props.onLogout, loggingOut: props.loggingOut, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Messages, {}) }) });
 }
-const routes = [{ path: "/", Component: App }, { path: "/messages", Component: Messages }, { path: "/admin", Component: Admin }];
+function AdminRoute() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, { children: (props) => props.account.isAdmin ? /* @__PURE__ */ jsxRuntimeExports.jsx(Admin, { ...props }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: props.account, onLogout: props.onLogout, loggingOut: props.loggingOut, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", children: "Account non autorizzato." }) }) });
+}
+const routes = [{ path: "/", Component: App }, { path: "/messages", Component: MessagesRoute }, { path: "/admin", Component: AdminRoute }];
 async function render(request2) {
   const handler = createStaticHandler2(routes);
   const context = await handler.query(request2);

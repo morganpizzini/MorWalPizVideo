@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { useFetcher } from 'react-router';
 import { NavigationItemType } from '@morwalpizvideo/models';
@@ -108,13 +108,16 @@ export default function NavigationPage(): React.ReactElement {
   };
   const fetcher = useFetcher();
   const toast = useToast();
+  const lastResult = useRef<unknown>(undefined);
   const [active, setActive] = useState(data.navigation?.isActive ?? true);
   const [columns, setColumns] = useState(data.navigation?.footerColumnCount ?? 1);
   const [header, setHeader] = useState<NavigationMenuItem[]>(data.navigation?.headerItems ?? []);
   const [footer, setFooter] = useState<NavigationMenuItem[]>(data.navigation?.footerItems ?? []);
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.success)
+    if (fetcher.state === 'idle' && fetcher.data?.success && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
       toast.show('Success', 'Navigation saved successfully', { variant: 'success' });
+    }
   }, [fetcher.data, fetcher.state, toast]);
   const submit = () => {
     const payload: SaveNavigationDTO = {

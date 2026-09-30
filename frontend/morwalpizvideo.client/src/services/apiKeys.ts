@@ -2,7 +2,14 @@
  * API Keys management service
  */
 
-import { Delete, get, post, put, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
+import {
+  publicDelete as Delete,
+  publicGet as get,
+  publicPost as post,
+  publicPut as put,
+  frontendEndpoints,
+  ComposeUrl,
+} from '@morwalpizvideo/services';
 
 /**
  * Get all API keys
@@ -52,13 +59,16 @@ export async function createApiKey(data: {
  * @param {string} [data.expiresAt] - Expiration date (ISO string)
  * @returns {Promise<Object>} Response message
  */
-export async function updateApiKey(id: string, data: {
-  name?: string;
-  description?: string;
-  rateLimitPerMinute?: number;
-  allowedIpAddresses?: string[];
-  expiresAt?: string;
-}): Promise<any> {
+export async function updateApiKey(
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    rateLimitPerMinute?: number;
+    allowedIpAddresses?: string[];
+    expiresAt?: string;
+  }
+): Promise<any> {
   return put(ComposeUrl(frontendEndpoints.APIKEYS_DETAIL, { id }), data);
 }
 

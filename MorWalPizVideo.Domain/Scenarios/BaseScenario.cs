@@ -116,6 +116,9 @@ public abstract class BaseScenario : IMockScenario
             return (T)(object)(target with { LatestPublishedAt = source.LatestPublishedAt });
         }
 
+        if (item is CalendarEvent calendarSource && clone is CalendarEvent calendarTarget)
+            return (T)(object)(calendarTarget with { Revision = calendarSource.Revision });
+
         return clone;
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Card, Row, Col } from 'react-bootstrap';
 import { useFetcher, useNavigate } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -22,14 +22,16 @@ const CreateConfiguration: React.FC = () => {
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const isSuccess = fetcher.data?.success;
+  const lastResult = useRef<unknown>(undefined);
 
   // Handle redirect after successful creation
   useEffect(() => {
-    if (isSuccess) {
+    if (!busy && isSuccess && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
       toast.show('Success', 'Configuration created successfully', { variant: 'success' });
       navigate('/morwalpizconfigurations');
     }
-  }, [isSuccess, toast, navigate]);
+  }, [busy, fetcher.data, isSuccess, toast, navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +48,7 @@ const CreateConfiguration: React.FC = () => {
 
   return (
     <>
-      <PageHeader
-        title="Create New Configuration"
-        backLink="/morwalpizconfigurations"
-      />
+      <PageHeader title="Create New Configuration" backLink="/morwalpizconfigurations" />
 
       <Card>
         <Card.Body>

@@ -1,13 +1,13 @@
-import { get, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
+import { publicGet as get, frontendEndpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 export function getMatches(returnFullRresponse: boolean = false) {
-    return get(frontendEndpoints.MATCHES, undefined, undefined, returnFullRresponse);
+  return get(frontendEndpoints.MATCHES, undefined, undefined, returnFullRresponse);
 }
 
 export function getMatch(id: string) {
-    return get(ComposeUrl(frontendEndpoints.MATCHES_DETAIL, { matchId: id }));
+  return get(ComposeUrl(frontendEndpoints.MATCHES_DETAIL, { matchId: id }));
 }
 
 export function getMatchImages(id: string) {
-    return get(ComposeUrl(frontendEndpoints.MATCHES_IMAGES, { matchId: id }));
+  return get(ComposeUrl(frontendEndpoints.MATCHES_IMAGES, { matchId: id }));
 }

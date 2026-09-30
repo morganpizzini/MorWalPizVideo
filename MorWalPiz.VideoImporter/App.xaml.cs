@@ -8,6 +8,8 @@ using Azure.Identity;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("MorWalPiz.VideoImporter.Tests")]
+
 namespace MorWalPiz.VideoImporter
 {
     /// <summary>
@@ -37,28 +39,44 @@ namespace MorWalPiz.VideoImporter
                 ?? ApiSettings.ChannelId;
         }
         private IHost? _host;
+        private ITenantContext? _tenantContext;
+        private IYouTubeUploadService? _youTubeUploadService;
+        private IConfiguration? _configuration;
+        private Task _tenantRefreshTask = Task.CompletedTask;
+        private bool _isStopping;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            _host = new HostBuilder()
-                .ConfigureAppConfiguration(configuration =>
-                {
-                    configuration.SetBasePath(Directory.GetCurrentDirectory())
-                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                        .AddUserSecrets<App>()
-                        .AddEnvironmentVariables();
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddUserSecrets<App>()
+                .AddEnvironmentVariables();
+            var initialConfiguration = configuration.Build();
+            var keyVaultUrl = initialConfiguration["KeyVaultUrl"];
+            if (!string.IsNullOrEmpty(keyVaultUrl))
+                configuration.AddAzureKeyVault(new Uri(keyVaultUrl), new DefaultAzureCredential());
 
-                    var initialConfiguration = configuration.Build();
-                    var keyVaultUrl = initialConfiguration["KeyVaultUrl"];
-                    if (!string.IsNullOrEmpty(keyVaultUrl))
-                    {
-                        configuration.AddAzureKeyVault(new Uri(keyVaultUrl), new DefaultAzureCredential());
-                    }
-                })
+            MainWindow = await StartHostAsync(CreateHost(configuration.Build()));
+            MainWindow.Show();
+        }
+
+        internal static IHost CreateHost(IConfiguration configuration, Action<IServiceCollection>? configureServices = null)
+            => new HostBuilder()
+                .ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration))
                 .ConfigureServices((context, services) =>
                 {
+                    services.AddSingleton<MainWindow>();
+                    services.AddSingleton<IYouTubeUploadService>(provider =>
+                    {
+                        var tenant = provider.GetRequiredService<ITenantContext>();
+                        var credentials = context.Configuration["credentials-morwalpiz"];
+                        if (string.IsNullOrEmpty(credentials))
+                            throw new InvalidOperationException($"YouTube credentials for tenant '{tenant.CurrentTenantName}' are not configured in Key Vault.");
+                        return new YouTubeUploadService(credentials, tenant.CurrentTenantName);
+                    });
                     var useFake = context.Configuration.GetValue<bool>("UseFake");
                     var fakeScenario = context.Configuration["FakeScenario"] ?? "success";
                     var environment = context.Configuration["DOTNET_ENVIRONMENT"] ?? context.Configuration["ASPNETCORE_ENVIRONMENT"];
@@ -98,14 +116,21 @@ namespace MorWalPiz.VideoImporter
                     services.AddSingleton<ISocialProvider>(provider => new OfficialGraphSocialProvider(provider.GetRequiredService<IHttpClientFactory>()) { Provider = SocialProviderKind.Threads });
                     services.AddSingleton<ISocialProvider>(new UnavailableSocialProvider(SocialProviderKind.FacebookPersonalProfile));
                     services.AddSingleton<SocialPublishingService>();
+                    configureServices?.Invoke(services);
                 })
                 .Build();
 
+        internal async Task<MainWindow> StartHostAsync(IHost host, Action<DatabaseService>? initializeDatabase = null)
+        {
+            _host = host;
             await _host.StartAsync();
             Configuration = _host.Services.GetRequiredService<IConfiguration>();
             TenantContext = _host.Services.GetRequiredService<ITenantContext>();
             DatabaseService = _host.Services.GetRequiredService<DatabaseService>();
-            DatabaseService.InitializeDatabase();
+            if (initializeDatabase is null)
+                DatabaseService.InitializeDatabase();
+            else
+                initializeDatabase(DatabaseService);
             TenantService = _host.Services.GetRequiredService<ITenantService>();
             ApiSettings = _host.Services.GetRequiredService<ApiSettings>();
             ApiServiceFactory = _host.Services.GetRequiredService<IApiServiceFactory>();
@@ -117,29 +142,41 @@ namespace MorWalPiz.VideoImporter
             ImageOutputService = _host.Services.GetRequiredService<IImageOutputService>();
             PromptTemplateStore = _host.Services.GetRequiredService<IPromptTemplateStore>();
 
-            // Inizializza il servizio di upload YouTube con Key Vault
-            //var credentials = Configuration[$"credentials-{TenantContext.CurrentTenantName.ToLower()}"];
-            var credentials = Configuration["credentials-morwalpiz"];
-            if (string.IsNullOrEmpty(credentials))
-            {
-                throw new InvalidOperationException($"YouTube credentials for tenant '{TenantContext.CurrentTenantName}' are not configured in Key Vault.");
-            }
-
-            YouTubeUploadService = new YouTubeUploadService(credentials, TenantContext.CurrentTenantName);
+            YouTubeUploadService = _host.Services.GetRequiredService<IYouTubeUploadService>();
+            _tenantContext = TenantContext;
+            _youTubeUploadService = YouTubeUploadService;
+            _configuration = Configuration;
 
             // Sottoscrivi al cambio di tenant per reinizializzare YouTube service
-            TenantContext.TenantChanged += OnTenantChanged;
+            _tenantContext.TenantChanged += OnTenantChanged;
+            return _host.Services.GetRequiredService<MainWindow>();
         }
 
         protected override async void OnExit(ExitEventArgs e)
         {
+            await StopHostAsync();
+            base.OnExit(e);
+        }
+
+        internal async Task StopHostAsync()
+        {
+            _isStopping = true;
+            if (_tenantContext is not null)
+                _tenantContext.TenantChanged -= OnTenantChanged;
             if (_host is not null)
             {
-                await _host.StopAsync();
-                _host.Dispose();
+                try
+                {
+                    _host.Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+                    await _tenantRefreshTask;
+                    await _host.StopAsync();
+                }
+                finally
+                {
+                    _host.Dispose();
+                    _host = null;
+                }
             }
-
-            base.OnExit(e);
         }
 
         private static ApiSettings CreateApiSettings(IConfiguration configuration, DatabaseService databaseService)
@@ -167,24 +204,30 @@ namespace MorWalPiz.VideoImporter
         /// <summary>
         /// Gestisce il cambio di tenant reinizializzando il servizio YouTube con le nuove credenziali da Key Vault
         /// </summary>
-        private async void OnTenantChanged(object sender, TenantChangedEventArgs e)
+        private void OnTenantChanged(object? sender, TenantChangedEventArgs e)
         {
+            if (!_isStopping)
+                _tenantRefreshTask = RefreshTenantAsync(_tenantRefreshTask, e.TenantName);
+        }
+
+        private async Task RefreshTenantAsync(Task previousRefresh, string tenantName)
+        {
+            await previousRefresh;
+            if (_isStopping)
+                return;
             try
             {
-                // Inizializza il servizio di upload YouTube con Key Vault
-                //var credentials = Configuration[$"credentials-{TenantContext.CurrentTenantName.ToLower()}"];
-                var credentials = Configuration["credentials-morwalpiz"];
+                var credentials = _configuration!["credentials-morwalpiz"];
                 if (string.IsNullOrEmpty(credentials))
                 {
-                    throw new InvalidOperationException($"YouTube credentials for tenant '{TenantContext.CurrentTenantName}' are not configured in Key Vault.");
+                    throw new InvalidOperationException($"YouTube credentials for tenant '{tenantName}' are not configured in Key Vault.");
                 }
-                // Reinizializza il servizio YouTube con le nuove credenziali dal Key Vault
-                await YouTubeUploadService.ReinitializeWithNewCredentialsAsync(credentials, e.TenantName);
+                await _youTubeUploadService!.ReinitializeWithNewCredentialsAsync(credentials, tenantName);
             }
             catch (Exception ex)
             {
                 // Log dell'errore ma non interrompere l'applicazione
-                System.Diagnostics.Debug.WriteLine($"Errore nella reinizializzazione del servizio YouTube per il tenant {e.TenantName}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Errore nella reinizializzazione del servizio YouTube per il tenant {tenantName}: {ex.Message}");
             }
         }
     }

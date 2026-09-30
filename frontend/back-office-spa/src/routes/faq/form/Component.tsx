@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import type { FaqFormData } from './loader';
@@ -16,6 +16,7 @@ export default function FaqForm(): React.ReactElement {
   const { id } = useParams();
   const navigate = useNavigate();
   const fetcher = useFetcher();
+  const lastResult = useRef<unknown>(undefined);
   const [question, setQuestion] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState('0');
@@ -27,7 +28,10 @@ export default function FaqForm(): React.ReactElement {
     setStatus(String(faq?.status ?? 0));
   }, [faq, categories]);
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.success) navigate('/faq');
+    if (fetcher.state === 'idle' && fetcher.data?.success && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
+      navigate('/faq');
+    }
   }, [fetcher.data, fetcher.state, navigate]);
 
   return (

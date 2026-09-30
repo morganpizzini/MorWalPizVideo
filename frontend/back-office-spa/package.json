@@ -19,6 +19,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@morwalpiz/layout": "1.0.0",
+    "@puckeditor/core": "0.23.0",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "@morwalpizvideo/models": "1.0.0",
     "@morwalpizvideo/services": "1.0.0",
     "@tanstack/match-sorter-utils": "^8.19.4",
@@ -28,7 +34,7 @@
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",
-    "react-router": "^7.4.0",
+    "react-router": "^7.18.2",
     "recharts": "^3.10.1",
     "zustand": "^5.0.3"
   },
@@ -54,6 +60,6 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
-    "vitest": "^2.1.9"
+    "vitest": "3.2.6"
   }
 }

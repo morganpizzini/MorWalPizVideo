@@ -52,7 +52,7 @@ jobs:
 
       - name: Test Shooting Range client
         working-directory: frontend
-        run: yarn workspace shooting-range.client test --passWithNoTests
+        run: yarn workspace shooting-range.client test --passWithNoTests=false
 
       - name: Azure Login
         uses: azure/login@v2

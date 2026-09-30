@@ -40,7 +40,7 @@ Owns reusable visual components used by more than one application. App-specific 
 - Feature routes use loaders, actions, and fetchers.
 - React Bootstrap, Lucide icons, shared services, and local reusable management components.
 
-Target authentication is secure HttpOnly cookie based. Local-storage JWT support is transitional and should be removed after CSRF and cross-origin cookie behavior is verified.
+Current authentication is secure HttpOnly cookie based with CSRF protection; the SPA neither stores a raw JWT nor sends browser Bearer headers. Real-browser cross-origin verification remains a release gate, not proof supplied by unit tests. Public video, Ask and Shooting ITA use isolated public transport; frozen shop retains its independent legacy instance. See [transport isolation](transport-isolation.md).
 
 Administrative capabilities, including API-key and digital-artifact management, belong only here.
 
@@ -57,7 +57,7 @@ Remove API-key administration routes from this application. Replace legacy `morw
 
 ## Shop Client
 
-The shop is the customer-facing commercial application. It uses the shared session cookie, checkout/order APIs, customer order history, and authenticated 24-hour download regeneration.
+The shop is pre-production and on hold. Shared session cookies, checkout/order history and authenticated download regeneration below are intended target behavior, not a verified current release. Its existing legacy transport remains compatible and frozen.
 
 Target workflow:
 
@@ -96,8 +96,8 @@ instead of treating them as catalog DTOs. Request DTOs contain no channel id.
 - Relative paths are development-only through Vite proxying.
 - The Aruba deployment must publish the Azure ServerAPI base URL.
 
-The shop deployment currently uses inconsistent variable names and must be aligned with the shared service package.
+Shop configuration differences remain frozen compatibility debt; no alignment change is authorized while the hold applies.
 
 ## Testing
 
-BackOffice SPA and Shooting ITA use Vitest, Testing Library, and jsdom. Add focused route/action/service tests for changed behavior. BackOffice RBAC coverage includes route allow/deny cases, while the BackOffice test project covers the cookie validation contract. The public and shop applications need test coverage before their contracts become release gates.
+All six active applications and shared services have Vitest suites executed by central CI using their own configs; BackOffice, Shooting ITA and Shoot Recorder additionally use Testing Library/jsdom. Public video has existing Blog coverage; Ask and Range include SSR/session tests. Empty suites fail. See the [delivery/test matrix](deployment.md#delivery-and-test-matrix). Existing tests do not imply complete UI/browser coverage. Shop tests are not expanded while on hold.

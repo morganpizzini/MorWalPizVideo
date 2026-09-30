@@ -25,7 +25,8 @@ Quando scrivi codice, attieniti alle seguenti linee guida per garantire chiarezz
 - L’obiettivo è scrivere codice moderno, manutenibile e chiaro al primo colpo d’occhio. Evita overengineering: semplicità prima di tutto.
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-[specs/002-pepperbox-clone/plan.md](../specs/002-pepperbox-clone/plan.md)
+For technologies, project ownership, commands, and current versus target scope,
+read the source-aligned architecture guide and the owning feature document:
+[Architecture guide](../docs/architecture/README.md)
+[Development commands](../docs/architecture/development.md)
 <!-- SPECKIT END -->

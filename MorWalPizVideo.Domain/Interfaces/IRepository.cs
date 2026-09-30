@@ -70,6 +70,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public interface ICalendarEventRepository : IRepository<CalendarEvent>
     {
         Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit);
+        Task<bool> ReplaceAsync(CalendarEvent entity, long expectedRevision);
+        Task<bool> DeleteAsync(string channelId, string id, long expectedRevision);
     }
     public interface ICompilationRepository : IRepository<Compilation>
     {

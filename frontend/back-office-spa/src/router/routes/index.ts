@@ -77,7 +77,7 @@ const routeDefinitions: RouteConfig[] = [
     index: true,
     path: '',
     Component: Home,
-    errorElement: createErrorElement()
+    errorElement: createErrorElement(),
   },
 
   { path: 'diagnostics', Component: Diagnostics, errorElement: createErrorElement() },
@@ -104,7 +104,11 @@ const routeDefinitions: RouteConfig[] = [
     action: CalendarEvents.Action,
     children: [
       { index: true, path: '', loader: CalendarEvents.Loader, Component: CalendarEvents.Component },
-      { path: 'create', Component: CalendarEventCreate.Component, action: CalendarEventCreate.Action },
+      {
+        path: 'create',
+        Component: CalendarEventCreate.Component,
+        action: CalendarEventCreate.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -117,7 +121,7 @@ const routeDefinitions: RouteConfig[] = [
           },
           {
             path: 'edit',
-            loader: CalendarEventDetail.Loader,
+            loader: CalendarEventEdit.Loader,
             action: CalendarEventEdit.Action,
             Component: CalendarEventEdit.Component,
           },
@@ -126,7 +130,7 @@ const routeDefinitions: RouteConfig[] = [
     ],
   }),
 
-  // Query Links  
+  // Query Links
   createRouteGroup('querylinks', {
     action: QueryLinks.Action,
     children: [
@@ -158,7 +162,12 @@ const routeDefinitions: RouteConfig[] = [
     action: ShortLinks.Action,
     children: [
       { index: true, path: '', loader: ShortLinks.Loader, Component: ShortLinks.Component },
-      { path: 'create', loader: ShortLinkForm.Loader, Component: ShortLinkForm.Component, action: ShortLinkForm.Action },
+      {
+        path: 'create',
+        loader: ShortLinkForm.Loader,
+        Component: ShortLinkForm.Component,
+        action: ShortLinkForm.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -185,7 +194,12 @@ const routeDefinitions: RouteConfig[] = [
     action: ChannelLinks.Action,
     children: [
       { index: true, path: '', loader: ChannelLinks.Loader, Component: ChannelLinks.Component },
-      { path: 'create', loader: ChannelForm.Loader, Component: ChannelForm.Component, action: ChannelForm.Action },
+      {
+        path: 'create',
+        loader: ChannelForm.Loader,
+        Component: ChannelForm.Component,
+        action: ChannelForm.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -241,7 +255,12 @@ const routeDefinitions: RouteConfig[] = [
     errorElement: createErrorElement(),
     children: [
       { index: true, path: '', loader: Videos.loader, Component: Videos.Component },
-      { path: 'import', Component: ImportVideo.Component, loader: ImportVideo.loader, action: ImportVideo.Action },
+      {
+        path: 'import',
+        Component: ImportVideo.Component,
+        loader: ImportVideo.loader,
+        action: ImportVideo.Action,
+      },
       { path: 'translate', Component: TranslateVideo.Component, action: TranslateVideo.Action },
       {
         path: ':id',
@@ -290,8 +309,17 @@ const routeDefinitions: RouteConfig[] = [
   createRouteGroup('morwalpizconfigurations', {
     action: MorWalPizConfigurations.Action,
     children: [
-      { index: true, path: '', loader: MorWalPizConfigurations.Loader, Component: MorWalPizConfigurations.Component },
-      { path: 'create', Component: MorWalPizConfigurationCreate.Component, action: MorWalPizConfigurationCreate.Action },
+      {
+        index: true,
+        path: '',
+        loader: MorWalPizConfigurations.Loader,
+        Component: MorWalPizConfigurations.Component,
+      },
+      {
+        path: 'create',
+        Component: MorWalPizConfigurationCreate.Component,
+        action: MorWalPizConfigurationCreate.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -317,8 +345,18 @@ const routeDefinitions: RouteConfig[] = [
   createRouteGroup('productcategories', {
     action: ProductCategories.action,
     children: [
-      { index: true, path: '', loader: ProductCategories.loader, Component: ProductCategories.Component },
-      { path: 'create', loader: ProductCategoryForm.Loader, Component: ProductCategoryForm.Component, action: ProductCategoryForm.Action },
+      {
+        index: true,
+        path: '',
+        loader: ProductCategories.loader,
+        Component: ProductCategories.Component,
+      },
+      {
+        path: 'create',
+        loader: ProductCategoryForm.Loader,
+        Component: ProductCategoryForm.Component,
+        action: ProductCategoryForm.Action,
+      },
       {
         path: ':categoryId/edit',
         loader: ProductCategoryForm.Loader,
@@ -348,7 +386,12 @@ const routeDefinitions: RouteConfig[] = [
     action: Products.action,
     children: [
       { index: true, path: '', loader: Products.loader, Component: Products.Component },
-      { path: 'create', loader: ProductForm.Loader, Component: ProductForm.Component, action: ProductForm.Action },
+      {
+        path: 'create',
+        loader: ProductForm.Loader,
+        Component: ProductForm.Component,
+        action: ProductForm.Action,
+      },
       {
         path: ':productId',
         Component: Outlet,
@@ -375,7 +418,12 @@ const routeDefinitions: RouteConfig[] = [
     action: Compilations.Action,
     children: [
       { index: true, path: '', loader: Compilations.Loader, Component: Compilations.Component },
-      { path: 'create', loader: CompilationForm.Loader, Component: CompilationForm.Component, action: CompilationForm.Action },
+      {
+        path: 'create',
+        loader: CompilationForm.Loader,
+        Component: CompilationForm.Component,
+        action: CompilationForm.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -402,7 +450,12 @@ const routeDefinitions: RouteConfig[] = [
     action: CustomForms.Action,
     children: [
       { index: true, path: '', loader: CustomForms.Loader, Component: CustomForms.Component },
-      { path: 'create', loader: CustomFormForm.Loader, Component: CustomFormForm.Component, action: CustomFormForm.Action },
+      {
+        path: 'create',
+        loader: CustomFormForm.Loader,
+        Component: CustomFormForm.Component,
+        action: CustomFormForm.Action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -429,7 +482,12 @@ const routeDefinitions: RouteConfig[] = [
     action: Insights.Action,
     children: [
       { index: true, path: '', loader: Insights.Loader, Component: Insights.Component },
-      { path: 'create', loader: InsightForm.Loader, Component: InsightForm.Component, action: InsightForm.Action },
+      {
+        path: 'create',
+        loader: InsightForm.Loader,
+        Component: InsightForm.Component,
+        action: InsightForm.Action,
+      },
       {
         path: 'news/:newsId',
         loader: InsightNews.Loader,
@@ -466,7 +524,12 @@ const routeDefinitions: RouteConfig[] = [
     action: ApiKeys.action,
     children: [
       { index: true, path: '', loader: ApiKeys.loader, Component: ApiKeys.component },
-      { path: 'create', loader: ApiKeyForm.loader, Component: ApiKeyForm.component, action: ApiKeyForm.action },
+      {
+        path: 'create',
+        loader: ApiKeyForm.loader,
+        Component: ApiKeyForm.component,
+        action: ApiKeyForm.action,
+      },
       {
         path: ':id',
         Component: Outlet,
@@ -496,12 +559,12 @@ function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {
   const loader = typeof route.loader === 'function' ? route.loader : undefined;
   const action = typeof route.action === 'function' ? route.action : undefined;
 
-  return ({
+  return {
     ...route,
     loader: withPermission(loaderPermissions, loader),
     action: action ? withActionPermission(actionPermissions, action) : undefined,
     children: route.children?.map(child => protectRoute(child, currentPath)),
-  }) as RouteConfig;
+  } as RouteConfig;
 }
 
 export const protectedRoutes = lazyProtectedRoutes;

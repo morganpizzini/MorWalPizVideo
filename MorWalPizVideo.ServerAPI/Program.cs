@@ -27,7 +27,7 @@ builder.Services.Configure<NewsletterSmtpOptions>(builder.Configuration.GetSecti
 builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
 
-var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableDev = builder.Environment.IsDevelopment() && builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
@@ -128,6 +128,7 @@ if (enableSwagger)
 builder.Services.AddScoped<IGenericDataService, MinimalDataService>();
 builder.Services.AddScoped<IContentService, ContentService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<ICalendarService, CalendarService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopCustomerSessionService, ShopCustomerSessionService>();
 builder.Services.AddScoped<IFormsService, FormsService>();
@@ -136,6 +137,7 @@ builder.Services.AddScoped<ILinksService, LinksService>();
 builder.Services.AddScoped<IQuickLinksService, QuickLinksService>();
 builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
 builder.Services.AddScoped<IPageService, PageService>();
+builder.Services.AddScoped<BlogService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
 builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IFaqService, FaqService>();
@@ -154,6 +156,7 @@ if (enableMock)
     builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
+    builder.Services.AddSingleton<IBlogRepository, BlogMockRepository>();
     builder.Services.AddScoped<IChannelNavigationRepository, ChannelNavigationMockRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventMockRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
@@ -208,6 +211,7 @@ else
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
     builder.Services.AddScoped<IPageRepository, PageRepository>();
+    builder.Services.AddScoped<IBlogRepository, BlogRepository>();
     builder.Services.AddScoped<IChannelNavigationRepository, ChannelNavigationRepository>();
     builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
@@ -330,7 +334,7 @@ else
     });
 }
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 // ADR-002: internal cache operations authenticated service identity (BackOffice -> ServerAPI CacheController).
 builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSection("InternalServiceSettings"));

@@ -1,4 +1,4 @@
-import { CategoryRef } from './video/types';
+import { CategoryRef } from "./video/types";
 
 export interface CalendarEvent {
   id: string;
@@ -8,7 +8,28 @@ export interface CalendarEvent {
   endDate: string; // DateOnly from backend will be represented as string in ISO format
   categories: CategoryRef[];
   matchId: string;
-  calendarEventId: string; // This is the same as title
+  calendarEventId?: string;
+  channelId?: string;
+  revision?: number;
+  matchUrl?: string | null;
+  oldEvent?: boolean;
+  creationDateTime?: string;
+}
+
+export interface AdminCalendarEvent extends CalendarEvent {
+  channelId: string;
+  revision: number;
+}
+
+export interface SaveCalendarEventRequest {
+  id?: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  categories: CategoryRef[];
+  matchId: string;
+  revision?: number;
 }
 
 export interface CreateCalendarEventRequest {

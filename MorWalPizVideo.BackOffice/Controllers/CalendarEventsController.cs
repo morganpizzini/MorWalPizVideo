@@ -17,14 +17,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
     [RequireChannelScope]
     public class CalendarEventsController : ControllerBase
     {
-        private readonly DataService _dataService;
+        private readonly ICalendarService _calendarService;
         private readonly ILogger<CalendarEventsController> _logger;
 
         public CalendarEventsController(
-            DataService dataService,
+            ICalendarService calendarService,
             ILogger<CalendarEventsController> logger)
         {
-            _dataService = dataService;
+            _calendarService = calendarService;
             _logger = logger;
         }
 
@@ -37,7 +37,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         {
             try
             {
-                var events = await _dataService.GetCalendarEvents(HttpContext.GetChannelContext().ChannelId);
+                var events = await _calendarService.ListAsync(HttpContext.GetChannelContext().ChannelId);
                 return Ok(events.Select(ContractUtils.Convert));
             }
             catch (Exception ex)
@@ -61,7 +61,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("Title cannot be empty");
                 }
 
-                var calendarEvent = await _dataService.GetCalendarEventByTitle(title, HttpContext.GetChannelContext().ChannelId);
+                var calendarEvent = await _calendarService.GetByTitleAsync(title, HttpContext.GetChannelContext().ChannelId);
                 if (calendarEvent == null)
                 {
                     return NotFound($"Calendar event with title '{title}' not found");
@@ -76,59 +76,32 @@ namespace MorWalPizVideo.BackOffice.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        [AllowUser(AuthorizationPermissionKeys.CalendarView, AuthorizationPermissionKeys.CalendarManage)]
+        public async Task<ActionResult<CalendarEventContract>> GetById(string id)
+        {
+            var entity = await _calendarService.GetAsync(id, HttpContext.GetChannelContext().ChannelId);
+            return entity is null ? NotFound("Calendar event not found") : Ok(ContractUtils.Convert(entity));
+        }
+
         /// <summary>
         /// Create a new calendar event
         /// </summary>
         [HttpPost]
         [AllowUser(AuthorizationPermissionKeys.CalendarCreate, AuthorizationPermissionKeys.CalendarManage)]
-        public async Task<ActionResult<CalendarEventContract>> Create([FromBody] CalendarEvent calendarEvent)
+        public async Task<ActionResult<CalendarEventContract>> Create([FromBody] SaveCalendarEventRequest request)
         {
             try
             {
-                if (calendarEvent == null)
-                {
-                    return BadRequest("Calendar event data is required");
-                }
-
-                if (string.IsNullOrWhiteSpace(calendarEvent.Title))
-                {
-                    return BadRequest("Title is required");
-                }
-
-                if (string.IsNullOrWhiteSpace(calendarEvent.Description))
-                {
-                    return BadRequest("Description is required");
-                }
-
-                if (calendarEvent.StartDate == default)
-                {
-                    return BadRequest("Start date is required");
-                }
-
-                if (calendarEvent.EndDate == default)
-                {
-                    return BadRequest("End date is required");
-                }
-
-                if (calendarEvent.EndDate < calendarEvent.StartDate)
-                {
-                    return BadRequest("End date must be after start date");
-                }
-
-                // Check if event with same title already exists
-                var existingEvent = await _dataService.GetCalendarEventByTitle(calendarEvent.Title);
-                if (existingEvent != null)
-                {
-                    return Conflict($"Calendar event with title '{calendarEvent.Title}' already exists");
-                }
-
-                calendarEvent = calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId };
-                await _dataService.SaveCalendarEvent(calendarEvent);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var calendarEvent = await _calendarService.CreateAsync(request.ToEntity(channelId), channelId);
 
                 _logger.LogInformation("Calendar event created: {Title}", calendarEvent.Title);
 
                 return CreatedAtAction(nameof(GetByTitle), new { title = calendarEvent.Title }, ContractUtils.Convert(calendarEvent));
             }
+            catch (CalendarValidationException ex) { return BadRequest(ex.Message); }
+            catch (CalendarConflictException ex) { return Conflict(ex.Message); }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating calendar event");
@@ -141,7 +114,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [AllowUser(AuthorizationPermissionKeys.CalendarUpdate, AuthorizationPermissionKeys.CalendarManage)]
-        public async Task<ActionResult<CalendarEventContract>> Update(string id, [FromBody] CalendarEvent calendarEvent)
+        public async Task<ActionResult<CalendarEventContract>> Update(string id, [FromBody] SaveCalendarEventRequest request)
         {
             try
             {
@@ -150,50 +123,16 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("ID is required");
                 }
 
-                if (calendarEvent == null)
-                {
-                    return BadRequest("Calendar event data is required");
-                }
-
-                if (string.IsNullOrWhiteSpace(calendarEvent.Title))
-                {
-                    return BadRequest("Title is required");
-                }
-
-                if (string.IsNullOrWhiteSpace(calendarEvent.Description))
-                {
-                    return BadRequest("Description is required");
-                }
-
-                if (calendarEvent.StartDate == default)
-                {
-                    return BadRequest("Start date is required");
-                }
-
-                if (calendarEvent.EndDate == default)
-                {
-                    return BadRequest("End date is required");
-                }
-
-                if (calendarEvent.EndDate < calendarEvent.StartDate)
-                {
-                    return BadRequest("End date must be after start date");
-                }
-
-
-
-                if (await _dataService.GetCalendarEventByTitle(calendarEvent.Title, HttpContext.GetChannelContext().ChannelId) is null &&
-                    string.IsNullOrWhiteSpace(calendarEvent.Id))
-                {
-                    return NotFound("Calendar event not found");
-                }
-
-                await _dataService.UpdateCalendarEvent(calendarEvent with { ChannelId = HttpContext.GetChannelContext().ChannelId }, HttpContext.GetChannelContext().ChannelId);
+                var channelId = HttpContext.GetChannelContext().ChannelId;
+                var calendarEvent = await _calendarService.UpdateAsync(id, request.ToEntity(channelId), channelId, request.Revision);
+                if (calendarEvent is null) return NotFound("Calendar event not found");
 
                 _logger.LogInformation("Calendar event updated: {Id} - {Title}", id, calendarEvent.Title);
 
                 return Ok(ContractUtils.Convert(calendarEvent));
             }
+            catch (CalendarValidationException ex) { return BadRequest(ex.Message); }
+            catch (CalendarConflictException ex) { return Conflict(ex.Message); }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating calendar event with ID: {Id}", id);
@@ -206,7 +145,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// </summary>
         [HttpDelete("{id}")]
         [AllowUser(AuthorizationPermissionKeys.CalendarDelete, AuthorizationPermissionKeys.CalendarManage)]
-        public async Task<ActionResult> Delete(string id)
+        public async Task<ActionResult> Delete(string id, [FromQuery] long? revision = null)
         {
             try
             {
@@ -215,18 +154,17 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     return BadRequest("ID is required");
                 }
 
-                if (await _dataService.GetCalendarEvents(HttpContext.GetChannelContext().ChannelId) is var events &&
-                    events.All(calendarEvent => calendarEvent.Id != id))
+                if (!await _calendarService.DeleteAsync(id, HttpContext.GetChannelContext().ChannelId, revision))
                 {
                     return NotFound("Calendar event not found");
                 }
-
-                await _dataService.DeleteCalendarEvent(id, HttpContext.GetChannelContext().ChannelId);
 
                 _logger.LogInformation("Calendar event deleted: {Id}", id);
 
                 return NoContent();
             }
+            catch (CalendarValidationException ex) { return BadRequest(ex.Message); }
+            catch (CalendarConflictException ex) { return Conflict(ex.Message); }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting calendar event with ID: {Id}", id);

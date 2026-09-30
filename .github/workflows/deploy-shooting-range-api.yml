@@ -7,6 +7,7 @@ on:
     paths:
       - 'MorWalPizVideo.ShootingRange/**'
       - 'MorWalPizVideo.Domain/**'
+      - 'MorWalPizVideo.YouTubeUtilities/**'
       - 'MorWalPizVideo.Models/**'
       - 'MorWalPizVideo.MvcHelpers/**'
       - 'MorWalPizVideo.ServiceDefaults/**'
@@ -46,6 +47,16 @@ jobs:
         env:
           FeatureManagement__EnableMock: 'true'
         run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange
+
+      - name: Require real Mongo transaction and concurrency release gate
+        env:
+          SHOOTING_RANGE_TEST_MONGO_URI: ${{ secrets.SHOOTING_RANGE_TEST_MONGO_URI }}
+        run: |
+          if [ -z "$SHOOTING_RANGE_TEST_MONGO_URI" ]; then
+            echo "Release blocked: configure a disposable transaction-capable Mongo test server in the production environment." >&2
+            exit 1
+          fi
+          dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeMongoTests
 
       - name: Publish API
         run: dotnet publish MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-build --output ./publish

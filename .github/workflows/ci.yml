@@ -10,6 +10,84 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-frontend:
+    name: Test Frontend - ${{ matrix.workspace }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shoot-recorder, '@morwalpizvideo/services']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:shared
+
+      - name: Run collected tests
+        working-directory: frontend
+        run: yarn workspace ${{ matrix.workspace }} test --passWithNoTests=false
+
+  test-windows-clients:
+    name: Test Windows Client - ${{ matrix.project }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [MorWalPiz.InsightScanner.Tests, MorWalPiz.VideoImporter.Tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore tests
+        run: dotnet restore ${{ matrix.project }}/${{ matrix.project }}.csproj -p:Platform=AnyCPU
+
+      - name: Test
+        run: dotnet test ${{ matrix.project }}/${{ matrix.project }}.csproj --configuration Release --no-restore -p:Platform=AnyCPU --logger trx --results-directory TestResults
+
+      - name: Require nonempty test results
+        shell: pwsh
+        run: |
+          $reports = @(Get-ChildItem TestResults -Filter *.trx -Recurse)
+          if ($reports.Count -eq 0) { throw 'No desktop test reports collected.' }
+          foreach ($report in $reports) {
+            [xml]$result = Get-Content $report.FullName
+            if ([int]$result.TestRun.ResultSummary.Counters.executed -le 0) {
+              throw "No desktop tests executed in $($report.Name)."
+            }
+          }
+
+  build-api-containers:
+    name: Clean API Container - ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [MorWalPizVideo.BackOffice, MorWalPizVideo.ServerAPI]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build from repository context
+        run: docker build --no-cache --file ${{ matrix.project }}/Dockerfile .
+
   build-frontend:
     name: Build Frontend Applications
     runs-on: ubuntu-latest
@@ -39,7 +117,7 @@ jobs:
 
       - name: Build ${{ matrix.app }}
         working-directory: frontend
-        run: if [ "${{ matrix.app }}" = "ask.client" ] || [ "${{ matrix.app }}" = "shooting-range.client" ]; then yarn workspace ${{ matrix.app }} build:all; else yarn workspace ${{ matrix.app }} build; fi
+        run: if [ "${{ matrix.app }}" = "back-office-spa" ] || [ "${{ matrix.app }}" = "shoot-recorder" ]; then yarn workspace ${{ matrix.app }} build; else yarn workspace ${{ matrix.app }} build:all; fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

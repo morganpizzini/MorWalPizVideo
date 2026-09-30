@@ -32,6 +32,7 @@ import type { RouteObject } from 'react-router';
 import Newsletter from './newsletter/Component';
 import Survey from './survey/Component';
 import surveyLoader from './survey/loader';
+import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
 
 export const routes: RouteObject[] = [
   {
@@ -87,6 +88,8 @@ export const routes: RouteObject[] = [
             loader: pageLoader,
             element: <Pages />,
           },
+          { path: 'blog', loader: blogLoader, element: <BlogList /> },
+          { path: 'blog/:slug', loader: articleLoader, element: <BlogArticle /> },
           {
             path: 'bluetooth',
             element: <Bluetooth />,

@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -28,6 +28,7 @@ const ProductForm: React.FC = () => {
   const toast = useToast();
 
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result = fetcher.data != undefined && !fetcher.data.errors ? fetcher.data : null;
 
@@ -45,7 +46,8 @@ const ProductForm: React.FC = () => {
   }, [product, categories]);
 
   useEffect(() => {
-    if (!result || busy) return;
+    if (!result || busy || lastResult.current === result) return;
+    lastResult.current = result;
     if (result.success) {
       toast.show(
         'Success',
@@ -54,7 +56,7 @@ const ProductForm: React.FC = () => {
       );
       navigate('/products');
     }
-  }, [result, busy, navigate, isEditMode]);
+  }, [result, busy, navigate, isEditMode, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

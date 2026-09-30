@@ -1,12 +1,11 @@
-import { get, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import { getCalendarEventByTitle, fetchCalendarCategories } from '@morwalpizvideo/services';
 import type { LoaderFunctionArgs } from 'react-router';
 
 export default async function loader({ params }: LoaderFunctionArgs) {
-  const title = decodeURIComponent(params.title!);
-  try {
-    const response = await get(ComposeUrl(endpoints.CALENDAREVENTS_DETAIL, { title: encodeURIComponent(title) }));
-    return response;
-  } catch (error) {
-    throw new Response('Calendar event not found', { status: 404 });
-  }
+  if (!params.id) throw new Response('Calendar event title is required', { status: 400 });
+  const [calendarEvent, categories] = await Promise.all([
+    getCalendarEventByTitle(params.id),
+    fetchCalendarCategories(),
+  ]);
+  return { calendarEvent, categories };
 }

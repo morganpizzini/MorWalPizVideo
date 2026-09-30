@@ -2,7 +2,7 @@ name: Deploy Ask Client
 on:
   push:
     branches: [main]
-    paths: ['frontend/ask.client/**', 'frontend/fe-packages/**', 'frontend/package.json', '.github/workflows/deploy-ask-client.yml']
+    paths: ['frontend/ask.client/**', 'frontend/fe-packages/**', 'frontend/package.json', 'frontend/yarn.lock', '.github/workflows/deploy-ask-client.yml']
   workflow_dispatch:
 permissions:
   id-token: write
@@ -15,6 +15,26 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:shared
+      - name: Test shared transport
+        working-directory: frontend
+        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false
+      - name: Test Ask client
+        working-directory: frontend
+        run: yarn workspace ask.client test --passWithNoTests=false
+      - name: Checked client and SSR build
+        working-directory: frontend
+        run: yarn workspace ask.client build:all
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}

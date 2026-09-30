@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MorWalPizVideo.ShootingRange.Contracts;
 using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
@@ -12,7 +13,7 @@ using MorWalPizVideo.ShootingRange.Services;
 namespace MorWalPizVideo.ShootingRange.Controllers;
 
 [ApiController, Route("api/shooting-range")]
-public sealed class ShootingRangeController(ShootingRangeService service, IShootingRangeRepositorySet repositories) : ControllerBase
+public sealed class ShootingRangeController(ShootingRangeService service, IShootingRangeRepositorySet repositories, ShootingRangeSessions localSessions) : ControllerBase
 {
     [HttpGet("csrf"), AllowAnonymous]
     public IActionResult Csrf([FromServices] IAntiforgery antiforgery) => Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
@@ -20,30 +21,50 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpPost("auth/register"), AllowAnonymous]
     public async Task<IActionResult> Register(RegisterShootingRangeUserRequest request) { try { var user = await service.RegisterAsync(request); return Ok(new AccountDto(user.Id, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange)); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
 
-    [HttpPost("auth/login"), AllowAnonymous]
-    public async Task<IActionResult> Login(ShootingRangeLoginRequest request)
+    [HttpPost("auth/login"), AllowAnonymous, ValidateAntiForgeryToken, EnableRateLimiting("range-login")]
+    public async Task<IActionResult> Login(ShootingRangeLoginRequest request, CancellationToken cancellationToken)
     {
-        var user = await service.AuthenticateAsync(request.Username, request.Password);
-        if (user is null) return Unauthorized(new { message = "Credentials invalid or account not approved." });
-        await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim(ClaimTypes.Name, user.Username), new Claim(ClaimTypes.Role, user.IsAdmin ? "admin" : "user")], "shooting-range")));
-        return Ok(new AccountDto(user.Id, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange));
+        return await repositories.ExecuteGuardedAsync<IActionResult>(async () =>
+        {
+            var user = await service.AuthenticateAsync(request.Username, request.Password);
+            if (user is null) return Unauthorized(new { message = "Credentials invalid or account not approved." });
+            await localSessions.RevokeAsync(User, cancellationToken);
+            await localSessions.SignInAsync(HttpContext, user, cancellationToken);
+            return Ok(ToAccount(user));
+        }, cancellationToken);
+    }
+
+    [HttpGet("auth/session"), Authorize]
+    public async Task<IActionResult> Session(CancellationToken cancellationToken)
+    {
+        var user = await repositories.Users.GetAsync(UserId(), cancellationToken);
+        return user is null ? Unauthorized() : Ok(ToAccount(user));
     }
 
     [HttpPost("auth/logout"), Authorize, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Logout() { await HttpContext.SignOutAsync(); return NoContent(); }
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken) { await localSessions.RevokeAsync(User, cancellationToken); await HttpContext.SignOutAsync(); return NoContent(); }
 
     [HttpPost("auth/password"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(PasswordChangeRequest request, CancellationToken cancellationToken)
+        => await repositories.ExecuteGuardedAsync<IActionResult>(async () =>
     {
         var user = await repositories.Users.GetAsync(UserId(), cancellationToken);
-        if (user is null || !PasswordMatches(user, request.CurrentPassword)) return Unauthorized();
+        if (user is null || user.Status != ShootingRangeAccountStatus.Approved || !PasswordMatches(user, request.CurrentPassword)) return Unauthorized();
         var hash = PasswordHashing.HashPassword(request.NewPassword, out var salt);
-        await repositories.Users.ReplaceAsync(user with { PasswordHash = $"{hash}:{salt}", ForcePasswordChange = false }, cancellationToken);
+        var updated = await repositories.Users.ReplaceAsync(user with { PasswordHash = $"{hash}:{salt}", ForcePasswordChange = false, SecurityVersion = Guid.NewGuid().ToString("N") }, cancellationToken);
+        await localSessions.RevokeAsync(User, cancellationToken);
+        await localSessions.SignInAsync(HttpContext, updated, cancellationToken);
         return NoContent();
-    }
+    }, cancellationToken);
+
+    [HttpGet("config"), AllowAnonymous]
+    public Task<ShootingRangeConfig> Config(CancellationToken cancellationToken) => service.GetConfigAsync(cancellationToken);
+
+    [HttpGet("sessions"), AllowAnonymous]
+    public Task<SessionsDto> Sessions([FromQuery] DateOnly date, CancellationToken cancellationToken) => service.GetSessionsAsync(date, cancellationToken);
 
     [HttpGet("availability"), AllowAnonymous]
-    public Task<AvailabilityDto> Availability([FromQuery] DateOnly date, [FromQuery] string period = "morning", CancellationToken cancellationToken = default) => service.GetAvailabilityAsync(date, period, cancellationToken);
+    public Task<AvailabilityDto> Availability([FromQuery] DateOnly date, [FromQuery] string period = "morning", CancellationToken cancellationToken = default) => service.GetAvailabilityAsync(date, period, cancellationToken, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
     [HttpPost("bookings"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> Book(BookingRequest request, CancellationToken cancellationToken) { try { var booking = await service.CreateBookingAsync(UserId(), request, cancellationToken); return Created($"api/shooting-range/bookings/{booking.Id}", booking); } catch (UnauthorizedAccessException error) { return StatusCode(403, new { message = error.Message }); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
@@ -52,31 +73,48 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public async Task<IReadOnlyList<ShootingRangeBooking>> Mine(CancellationToken cancellationToken) => (await repositories.Bookings.GetAllAsync(cancellationToken)).Where(x => x.UserId == UserId()).OrderByDescending(x => x.StartUtc).ToArray();
 
     [HttpGet("admin/users"), Authorize(Roles = "admin")]
-    public async Task<IReadOnlyList<ShootingRangeUser>> Users(CancellationToken cancellationToken) => await repositories.Users.GetAllAsync(cancellationToken);
+    public async Task<IReadOnlyList<AdminUserDto>> Users(CancellationToken cancellationToken)
+    {
+        await service.RequireAdminAsync(UserId(), cancellationToken);
+        return (await repositories.Users.GetAllAsync(cancellationToken)).Select(user => new AdminUserDto(user.Id, user.CreationDateTime, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange)).ToArray();
+    }
 
     [HttpPost("admin/users/{id}/approve"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Approve(string id, CancellationToken cancellationToken) { var user = await repositories.Users.GetAsync(id, cancellationToken); if (user is null) return NotFound(); await repositories.Users.ReplaceAsync(user with { Status = ShootingRangeAccountStatus.Approved }, cancellationToken); return NoContent(); }
+    public Task<IActionResult> Approve(string id, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var user = await repositories.Users.GetAsync(id, cancellationToken); if (user is null) return NotFound(); await repositories.Users.ReplaceAsync(user with { Status = ShootingRangeAccountStatus.Approved }, cancellationToken); return NoContent(); }, cancellationToken);
 
     [HttpPost("admin/users/{id}/password"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetPassword(string id, AdminPasswordResetRequest request, CancellationToken cancellationToken) { var user = await repositories.Users.GetAsync(id, cancellationToken); if (user is null) return NotFound(); var hash = PasswordHashing.HashPassword(request.NewPassword, out var salt); await repositories.Users.ReplaceAsync(user with { PasswordHash = $"{hash}:{salt}", ForcePasswordChange = true }, cancellationToken); return NoContent(); }
+    public Task<IActionResult> ResetPassword(string id, AdminPasswordResetRequest request, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var user = await repositories.Users.GetAsync(id, cancellationToken); if (user is null) return NotFound(); var hash = PasswordHashing.HashPassword(request.NewPassword, out var salt); await repositories.Users.ReplaceAsync(user with { PasswordHash = $"{hash}:{salt}", ForcePasswordChange = true, SecurityVersion = Guid.NewGuid().ToString("N") }, cancellationToken); return NoContent(); }, cancellationToken);
 
     [HttpGet("admin/bays"), Authorize(Roles = "admin")]
-    public Task<IReadOnlyList<ShootingRangeBay>> Bays(CancellationToken cancellationToken) => repositories.Bays.GetAllAsync(cancellationToken);
+    public async Task<IReadOnlyList<ShootingRangeBay>> Bays(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Bays.GetAllAsync(cancellationToken); }
 
     [HttpPut("admin/bays/{id}"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveBay(string id, ShootingRangeBay bay, CancellationToken cancellationToken) { await repositories.Bays.ReplaceAsync(bay with { Id = id }, cancellationToken); return Ok(bay with { Id = id }); }
+    public Task<IActionResult> SaveBay(string id, ShootingRangeBay bay, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var saved = await repositories.Bays.ReplaceAsync(bay with { Id = id }, cancellationToken); return Ok(saved); }, cancellationToken);
+
+    [HttpGet("admin/config"), Authorize(Roles = "admin")]
+    public async Task<ShootingRangeConfig> AdminConfig(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await service.GetConfigAsync(cancellationToken); }
 
     [HttpPut("admin/config"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveConfig(ShootingRangeConfig config, CancellationToken cancellationToken) { await repositories.Configs.ReplaceAsync(config with { Id = "default" }, cancellationToken); return Ok(config with { Id = "default" }); }
+    public Task<IActionResult> SaveConfig(ShootingRangeConfig config, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var saved = await repositories.Configs.ReplaceAsync(config with { Id = "default" }, cancellationToken); return Ok(saved); }, cancellationToken);
+
+    [HttpGet("admin/exceptions"), Authorize(Roles = "admin")]
+    public async Task<IReadOnlyList<ShootingRangeException>> Exceptions(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Exceptions.GetAllAsync(cancellationToken); }
 
     [HttpPost("admin/exceptions"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public Task<ShootingRangeException> AddException(ShootingRangeException exception, CancellationToken cancellationToken) => repositories.Exceptions.InsertAsync(exception with { Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString() }, cancellationToken);
+    public Task<ShootingRangeException> AddException(ShootingRangeException exception, CancellationToken cancellationToken) => service.AdminMutationAsync(UserId(), () => repositories.Exceptions.InsertAsync(exception with { Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString() }, cancellationToken), cancellationToken);
+
+    [HttpPut("admin/exceptions/{id}"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public Task<ShootingRangeException> SaveException(string id, ShootingRangeException exception, CancellationToken cancellationToken) => service.AdminMutationAsync(UserId(), async () =>
+    {
+        var previous = await repositories.Exceptions.GetAsync(id, cancellationToken) ?? throw new KeyNotFoundException("Closure not found.");
+        return await repositories.Exceptions.ReplaceAsync(exception with { Id = id, CreationDateTime = previous.CreationDateTime }, cancellationToken);
+    }, cancellationToken);
 
     [HttpGet("admin/bookings"), Authorize(Roles = "admin")]
-    public Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) => repositories.Bookings.GetAllAsync(cancellationToken);
+    public async Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Bookings.GetAllAsync(cancellationToken); }
 
     [HttpPost("admin/bookings/{id}/decision"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> DecideBooking(string id, BookingDecisionRequest request, CancellationToken cancellationToken) { var booking = await repositories.Bookings.GetAsync(id, cancellationToken); if (booking is null) return NotFound(); await repositories.Bookings.ReplaceAsync(booking with { Status = request.Approved ? ShootingRangeBookingStatus.Approved : ShootingRangeBookingStatus.Rejected }, cancellationToken); return NoContent(); }
+    public async Task<IActionResult> DecideBooking(string id, BookingDecisionRequest request, CancellationToken cancellationToken) { await service.DecideBookingAsync(UserId(), id, request.Approved, cancellationToken); return NoContent(); }
 
     [HttpGet("messages"), Authorize]
     public async Task<IReadOnlyList<ShootingRangeThread>> Messages(CancellationToken cancellationToken)
@@ -101,5 +139,6 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     }
 
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException();
+    private static AccountDto ToAccount(ShootingRangeUser user) => new(user.Id, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange);
     private static bool PasswordMatches(ShootingRangeUser user, string password) { var parts = user.PasswordHash.Split(':', 2); return parts.Length == 2 && PasswordHashing.VerifyPassword(password, parts[0], parts[1]); }
 }

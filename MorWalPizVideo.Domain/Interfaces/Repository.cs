@@ -492,6 +492,36 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
 
+        public new Task<CalendarEvent> AddItemAsync(CalendarEvent entity) => base.AddItemAsync(entity with { Revision = 1 });
+
+        public new async Task UpdateItemAsync(CalendarEvent entity)
+        {
+            if (await GetItemAsync(entity.Id) is { } existing)
+                await new CalendarService(this).UpdateAsync(entity.Id, entity, existing.ChannelId);
+        }
+
+        public new async Task DeleteItemAsync(string id)
+        {
+            if (await GetItemAsync(id) is { } existing)
+                await new CalendarService(this).DeleteAsync(id, existing.ChannelId);
+        }
+
+        public async Task<bool> ReplaceAsync(CalendarEvent entity, long expectedRevision) =>
+            (await _collection.ReplaceOneAsync(RevisionFilter(entity.ChannelId, entity.Id, expectedRevision),
+                entity with { Revision = expectedRevision + 1 })).ModifiedCount == 1;
+
+        public async Task<bool> DeleteAsync(string channelId, string id, long expectedRevision) =>
+            (await _collection.DeleteOneAsync(RevisionFilter(channelId, id, expectedRevision))).DeletedCount == 1;
+
+        private static FilterDefinition<CalendarEvent> RevisionFilter(string channelId, string id, long revision)
+        {
+            var filters = Builders<CalendarEvent>.Filter;
+            var identity = ObjectId.TryParse(id, out var objectId) ? filters.Eq("_id", objectId) : filters.Eq("_id", id);
+            var expected = filters.Eq(entity => entity.Revision, revision);
+            if (revision == 0) expected |= filters.Exists("revision", false);
+            return identity & filters.Eq(entity => entity.ChannelId, channelId) & expected;
+        }
+
         public async Task<IList<CalendarEvent>> GetRecentAsync(DateTime fromInclusive, int limit)
         {
             var safeLimit = Math.Clamp(limit, 1, 250);

@@ -12,6 +12,7 @@ namespace MorWalPizVideo.Models.Constraints
         public const string ProductCategories = "productcategories:v1";
         public const string Sponsors = "sponsors";
         public const string Pages = "pages";
+        public const string Blog = "blog";
         public const string CalendarEvents = "calendarevents";
         public const string Compilations = "compilations";
         public const string CustomForms = "customforms";

@@ -24,7 +24,8 @@
     "react-router": "^7.0.0"
   },
   "dependencies": {
-    "@morwalpizvideo/models": "1.0.0"
+    "@morwalpizvideo/models": "1.0.0",
+    "lucide-react": "^0.555.0"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

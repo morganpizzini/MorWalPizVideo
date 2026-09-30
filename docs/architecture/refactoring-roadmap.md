@@ -1,5 +1,24 @@
 # Refactoring Roadmap
 
+## Original Ten-Slice Backlog (2026-10-01)
+
+Numbering follows the supplied Architect/Repository Expert handoff, not the separate TD identifiers. Current source wins over historical completion labels. This table records bounded authoring completion, not blanket backlog or release closure.
+
+| Slice | Owning boundary | Authoring status | Release/remaining status |
+|---|---|---|---|
+| 1 | Docs, source/project inventories and instruction pointers | COMPLETE: maps, current/target/hold labels and delivery matrix reconciled | Deployed state UNKNOWN; historical samples are not production proof |
+| 2 | ServerAPI containment; both API manifests/credential provisioning | Source IMPLEMENTED in existing worktree; focused evidence in security docs | Rotation, old artifacts and clean container execution BLOCKED |
+| 3 | Project-local Range sessions/repositories and client restoration | Foundation IMPLEMENTED in existing worktree | Browser, Data Protection, target Mongo/data/index proof BLOCKED; does not implement slice 4 |
+| 4 | Range anonymous-domain/onboarding cutover | NOT READY; deliberately UNTOUCHED | Product decision: administrator-created ordinary users versus protected registration; no invented onboarding or removed anonymous registration |
+| 5 | Contracts/Domain Calendar service; API/client consumers | Bounded authoring COMPLETE; compatibility delegates retained | Remaining non-Calendar DataService consumers are separate slices; browser proof BLOCKED |
+| 6 | Calendar-only revision/CAS across Mongo/mock and contracts | Bounded authoring COMPLETE; legacy revision compatibility documented | Real Mongo independent-writer evidence BLOCKED; no generic repository rewrite |
+| 7 | Shared public/admin transport and active consumers | Bounded authoring COMPLETE; legacy shop exports retained | PARTIAL convergence: full admin typecheck, Ask SSR and public API-key lint fail; browser proof BLOCKED |
+| 8 | Existing Windows hosts/main-window constructor DI | Bounded authoring COMPLETE; child facades retained | PARTIAL: both full suites fail on existing unrelated defects; existing-database upgrades unproven |
+| 9 | CI/deployment test gates and API container restore closure | COMPLETE authoring; actual runners collect nonempty suites; existing Docker fixes retained | Gate results include Ask/desktop FAIL; clean containers NOT RUN locally; GitHub execution pending |
+| 10 | Existing operational/recovery runbooks | COMPLETE authoring: evidence fields, expected results, owners, recovery and approvals | Operational closure BLOCKED; no Azure operations, rotation or deployment performed/approved |
+
+Cache reliability is explicitly DEFERRED, not closed by the existing cache-tag/auth implementation. Shop is FROZEN. Source-complete slices do not close all TD items, Phase 4, Phase 5 or production release. Exact current delivery checks are in [deployment](deployment.md); operator records are in [activation/recovery](operations/phase5-activation-and-recovery.md).
+
 ## Phase 0: Containment
 
 ### Work
@@ -82,11 +101,13 @@ The canonical short-link implementation is now in place and validated for the cu
 
 ### Status Note (2026-08-03)
 
-Phase 4 is complete (Completed 2026-08-03).
+The 2026-08-03 completion claim applies to the documented feature slices, not all service decomposition. Remaining `DataService` consumers still require independent migration slices; repository-wide Phase 4 closure is not established by those results.
 
-Exit-criteria evidence:
+Calendar slices 5 and 6 now have scoped contract/service/revision authoring and focused verification. See [Calendar compatibility and revisions](calendar-compatibility.md) for boundaries, commands, and outstanding Mongo/browser release evidence. Cache reliability remains deferred and shop work remains frozen.
 
-- Representative query plans use intended indexes: committed audit/apply outputs and explain evidence are recorded under `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-audit-output.json`, `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-apply-output.json`, and `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-explain-evidence.md`.
+Historical/local exit-criteria evidence (not target-environment or repository-wide closure):
+
+- Representative local query-plan samples: committed audit/apply outputs and explain examples are recorded under `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-audit-output.json`, `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-sample-apply-output.json`, and `docs/architecture/operations/mongo-index-audits/phase4-2026-08-03-explain-evidence.md`. These are historical samples, not deployed index/explain proof.
 - Focused services have bounded dependencies and tests: high-impact BackOffice controllers use focused services instead of `DataService` and are covered by `MorWalPizVideo.BackOffice.Tests/Features/FocusedServiceDependencyTests.cs`.
 - Response backfill counts reconcile exactly: form response migration safety coverage is green in `MorWalPizVideo.BackOffice.Tests/Features/FormsMigrationSafetyTests.cs`.
 - No unbounded public query materializes full collections: public shop endpoints enforce bounded parameters and repository pushdown, covered by `MorWalPizVideo.BackOffice.Tests/Features/ShopCatalogQueryPushdownTests.cs`.
@@ -107,14 +128,24 @@ Exit-criteria evidence:
 
 ## Phase 5: Clients And Operations
 
+### Transport Slice 7 (2026-10-01)
+
+The bounded public/admin transport-isolation slice is implemented: shared per-client URL/credentials/CSRF/channel/recovery state, public omit without admin auth context, cookie-only admin, and independent frozen-shop legacy transport. Active BackOffice/public video/Ask/Shooting ITA callers and exports are covered without UI, route, Calendar contract/revision or Range session changes. See [transport isolation](transport-isolation.md) for exact files, fresh test/build results, and failed full-consumer gates. This is not repository-wide Phase 5 or TD-019 closure: admin full typecheck, Ask SSR error-path tests, legacy public API-key lint, shop Sass build and browser release evidence remain distinct gates. Cache reliability and shop feature work remain deferred; desktop/CI work is outside this slice.
+
+### Desktop Slice 8 (2026-10-01)
+
+Main-window constructor DI is source-complete for InsightScanner and VideoImporter within their existing Generic Hosts. Both resolve/show the registered window without `StartupUri`; Importer preserves database/tenant/upload initialization order and tenant-refresh/shutdown handling. Existing static `App` dependency facades remain for untouched child workflows; there is no architecture, visual, or schema redesign.
+
+The bounded Importer WPF fixture repair passes both host tests using the real application resources and main window on STA. Temporary SQLite checks cover data retention, tenant filters/switching, cancellation, pending refresh completion and host disposal, not existing-database migration upgrades. Both Windows application builds pass. Full suites remain FAILED: Importer 8 passed/1 failed/0 skipped (`PendingModelChangesWarning`); InsightScanner 3 passed/1 failed/0 skipped (pre-existing fake DTO equality). Source completion does not close TD-018 or the full desktop/Phase 5 gate. See [Windows applications](windows-apps.md) for exact commands, fixture boundaries and residual gates. CI expansion remains a separate slice.
+
 ### Work
 
-- Standardize frontend calls through shared services.
+- Standardize frontend calls through shared services (slice 7 transport isolation implemented; remaining route ownership/full-consumer gates are separate).
 - Complete BackOffice cookie auth and CSRF protection.
-- Adopt Generic Host/DI in WPF applications incrementally.
+- Adopt Generic Host/DI in WPF applications incrementally (slice 8 main windows source-complete; child facades and failed full-desktop gates remain).
 - Add durable Hangfire configuration and dashboard protection.
 - Add Blob health, metadata, lifecycle, and recovery controls.
-- Include Shooting ITA and WPF builds in CI.
+- Retain Shooting ITA/WPF/AppHost builds and execute active frontend/shared transport/Windows suites (slice 9 authored); failed full-suite/typecheck/lint and clean-container/GitHub evidence remain release gates.
 - Close the Shooting Range public-release gate without expanding its product scope: deny-by-default authorization, explicit production CORS, safe DTOs, current account-state enforcement, authoritative booking validation, MongoDB uniqueness/readiness, and focused tests.
 - Keep the Shooting Range UI limited to authentication/session lifecycle, availability, booking, own bookings, and only the administrator operations required by the selected onboarding flow.
 
@@ -132,7 +163,7 @@ Only start when product need is confirmed:
 
 - Shop customer accounts, acquisition claiming, download analytics, and transactional delivery remain on hold with the rest of the shop.
 - Detailed short-link analytics.
-- Shooting Range cancellation/rescheduling, schedule administration, messages, notifications, waitlists, custom-duration sessions, reporting, and invite onboarding. Promote only when observed POC use establishes the requirement.
+- Shooting Range cancellation/rescheduling, richer messaging, notifications, waitlists, custom-duration sessions, reporting, and invite onboarding. Existing schedule/bay/closure administration and message routes are accepted current scope, not deferred removal targets. Further expansion requires observed POC need.
 
 ## Phase 7: Operational Verification And Convergence
 

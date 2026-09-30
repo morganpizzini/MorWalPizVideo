@@ -27,6 +27,7 @@ export default function PageForm(): React.ReactElement {
   const [imageError, setImageError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const busy = fetcher.state !== 'idle';
+  const lastSuccessData = useRef<unknown>(undefined);
 
   useEffect(() => {
     setTitle(entity?.title ?? '');
@@ -39,7 +40,8 @@ export default function PageForm(): React.ReactElement {
     setSelectedFiles([]);
   }, [entity]);
   useEffect(() => {
-    if (!busy && fetcher.data?.success) {
+    if (!busy && fetcher.data?.success && lastSuccessData.current !== fetcher.data) {
+      lastSuccessData.current = fetcher.data;
       toast.show('Success', id ? 'Page updated successfully' : 'Page created successfully', {
         variant: 'success',
       });

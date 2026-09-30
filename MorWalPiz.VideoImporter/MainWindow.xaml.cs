@@ -10,6 +10,7 @@ using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Views;
 using MorWalPiz.VideoImporter.Services;
 using System.Windows.Input;
+using Microsoft.Extensions.Hosting;
 using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
 using Cursors = System.Windows.Input.Cursors;
@@ -68,8 +69,29 @@ namespace MorWalPiz.VideoImporter
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public MainWindow()
+        private readonly DatabaseService _databaseService;
+        private readonly ApiSettings _apiSettings;
+        private readonly IYouTubeUploadService _youTubeUploadService;
+        private readonly ITenantContext _tenantContext;
+        private readonly ITenantService _tenantService;
+        private readonly IApiServiceFactory _apiServiceFactory;
+        private readonly CancellationTokenSource _windowCancellation;
+        private Task? _initializationTask;
+        internal CancellationToken WindowCancellationToken { get; }
+
+        public MainWindow(DatabaseService databaseService, ApiSettings apiSettings,
+            IYouTubeUploadService youTubeUploadService, ITenantContext tenantContext,
+            ITenantService tenantService, IApiServiceFactory apiServiceFactory,
+            IHostApplicationLifetime hostLifetime)
         {
+            _databaseService = databaseService;
+            _apiSettings = apiSettings;
+            _youTubeUploadService = youTubeUploadService;
+            _tenantContext = tenantContext;
+            _tenantService = tenantService;
+            _apiServiceFactory = apiServiceFactory;
+            _windowCancellation = CancellationTokenSource.CreateLinkedTokenSource(hostLifetime.ApplicationStopping);
+            WindowCancellationToken = _windowCancellation.Token;
             InitializeComponent();
             FileListView.ItemsSource = VideoFiles;
             DataContext = this;
@@ -80,11 +102,30 @@ namespace MorWalPiz.VideoImporter
             // Initialize button states
             UpdateButtonStates();
             
-            // Initialize tenant dropdown
-            LoadTenants();
+            Loaded += MainWindow_Loaded;
+            Closed += MainWindow_Closed;
+        }
 
-            // Validate YouTube credentials on startup
-            _ = ValidateYouTubeCredentialsOnStartup();
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+            => await InitializeAsync();
+
+        internal Task InitializeAsync() => _initializationTask ??= InitializeWindowAsync();
+
+        private async Task InitializeWindowAsync()
+        {
+            await LoadTenantsAsync();
+            if (!WindowCancellationToken.IsCancellationRequested)
+                await ValidateYouTubeCredentialsOnStartup();
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            _windowCancellation.Cancel();
+            _windowCancellation.Dispose();
+            Loaded -= MainWindow_Loaded;
+            VideoFiles.CollectionChanged -= VideoFiles_CollectionChanged;
+            foreach (var video in VideoFiles)
+                video.PropertyChanged -= VideoFile_PropertyChanged;
         }
 
         /// <summary>
@@ -92,14 +133,11 @@ namespace MorWalPiz.VideoImporter
         /// </summary>
         private async Task ValidateYouTubeCredentialsOnStartup()
         {
-            if (App.YouTubeUploadService == null)
-            {
-                return; // Servizio non disponibile
-            }
-
             try
             {
-                bool isValid = await App.YouTubeUploadService.ValidateCredentialsAsync();
+                bool isValid = await _youTubeUploadService.ValidateCredentialsAsync();
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
 
                 if (!isValid)
                 {
@@ -134,7 +172,7 @@ namespace MorWalPiz.VideoImporter
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                bool success = await App.YouTubeUploadService.ReinitializeServiceAsync();
+                bool success = await _youTubeUploadService.ReinitializeServiceAsync();
 
                 if (success)
                 {
@@ -301,7 +339,7 @@ namespace MorWalPiz.VideoImporter
 
             // Ottieni la lingua predefinita dai settings
             string defaultLanguage;
-            using (var context = App.DatabaseService.CreateContext())
+            using (var context = _databaseService.CreateContext())
             {
                 defaultLanguage = context.Languages.FirstOrDefault(l => l.IsDefault)?.Code ?? "it";
             }
@@ -320,7 +358,7 @@ namespace MorWalPiz.VideoImporter
             }
 
             // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
-            var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+            var publishScheduleService = new Services.PublishScheduleService(_databaseService);
             var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(SelectedPublishDate, allFiles.Count);
 
             var orderIndex = 1;
@@ -464,7 +502,7 @@ namespace MorWalPiz.VideoImporter
 
         private void TranslateVideoMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var translationDialog = new Views.VideoTranslationDialog(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+            var translationDialog = new Views.VideoTranslationDialog(_apiSettings.ApiEndpoint, _apiSettings.ApiKey);
             translationDialog.Owner = this;
             translationDialog.ShowDialog();
         }
@@ -547,7 +585,7 @@ namespace MorWalPiz.VideoImporter
                 {
                     Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
-                    var result = await App.YouTubeUploadService.AutoTranslateVideoAsync(youtubeVideoId);
+                    var result = await _youTubeUploadService.AutoTranslateVideoAsync(youtubeVideoId);
 
                     Mouse.OverrideCursor = null;
 
@@ -627,7 +665,7 @@ namespace MorWalPiz.VideoImporter
 
             // Estrai i nomi puliti dei file selezionati
             // Apri la finestra di dialogo per il contesto video
-            var contextDialog = new Views.VideoContextDialog(selectedItems, App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+            var contextDialog = new Views.VideoContextDialog(selectedItems, _apiSettings.ApiEndpoint, _apiSettings.ApiKey);
             contextDialog.Owner = this;
 
             // Mostra la finestra di dialogo
@@ -652,7 +690,7 @@ namespace MorWalPiz.VideoImporter
                     }
                     
                     // Ottieni la lingua predefinita dal database
-                    using var dbContext = App.DatabaseService.CreateContext();
+                    using var dbContext = _databaseService.CreateContext();
                     var defaultLanguage = dbContext.Languages.FirstOrDefault(l => l.IsDefault);
                     var allLanguages = dbContext.Languages.ToList();
 
@@ -708,7 +746,7 @@ namespace MorWalPiz.VideoImporter
             // Carica i disclaimer dal database
             Dictionary<int, string> disclaimers;
             int defaultLanguageId;
-            var context = App.DatabaseService.CreateContext();
+            var context = _databaseService.CreateContext();
 
             disclaimers = context.Disclaimers.ToDictionary(d => d.LanguageId, d => d.Text);
             defaultLanguageId = context.Languages.FirstOrDefault(l => l.IsDefault)?.Id ?? 0; // Assumi 0 se non trovata, anche se dovrebbe esserci
@@ -739,7 +777,9 @@ namespace MorWalPiz.VideoImporter
                     UploadToYouTubeButton.IsEnabled = false;
 
                     // Esegui il caricamento in modo asincrono con progress callback
-                    var uploadResults = await App.YouTubeUploadService.UploadVideosAsync(videosForUpload, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries), OnUploadProgress);
+                    var uploadResults = await _youTubeUploadService.UploadVideosAsync(videosForUpload, settings.DefaultHashtags.Split(",",StringSplitOptions.TrimEntries), OnUploadProgress, WindowCancellationToken);
+                    if (WindowCancellationToken.IsCancellationRequested)
+                        return;
 
                     // Mostra un riepilogo dei risultati
                     int successCount = uploadResults.Count(r => r.Success);
@@ -774,6 +814,9 @@ namespace MorWalPiz.VideoImporter
                         MessageBoxButton.OK,
                         failCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
                 }
+                catch (OperationCanceledException) when (WindowCancellationToken.IsCancellationRequested)
+                {
+                }
                 catch (Exception ex)
                 {
                     System.Windows.MessageBox.Show($"Errore durante il caricamento: {ex.Message}",
@@ -804,9 +847,13 @@ namespace MorWalPiz.VideoImporter
         /// </summary>
         private void OnUploadProgress(UploadProgressInfo progressInfo)
         {
+            if (WindowCancellationToken.IsCancellationRequested)
+                return;
             // Ensure UI updates happen on the UI thread
             Dispatcher.Invoke(() =>
             {
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
                 ProgressStatusText.Text = $"Video {progressInfo.CurrentVideoNumber} di {progressInfo.TotalVideos}: {progressInfo.Status}";
                 CurrentFileText.Text = progressInfo.CurrentFileName;
                 UploadProgressBar.Value = progressInfo.OverallProgress;
@@ -833,7 +880,7 @@ namespace MorWalPiz.VideoImporter
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
 
-                    bool success = App.YouTubeUploadService.ClearStoredCredentials();
+                    bool success = _youTubeUploadService.ClearStoredCredentials();
 
                     if (success)
                     {
@@ -852,7 +899,7 @@ namespace MorWalPiz.VideoImporter
                             Mouse.OverrideCursor = Cursors.Wait;
                             
                             // Forza una nuova autenticazione
-                            bool loginSuccess = App.YouTubeUploadService.ForceReauthenticationAsync().GetAwaiter().GetResult();
+                            bool loginSuccess = _youTubeUploadService.ForceReauthenticationAsync().GetAwaiter().GetResult();
                             
                             if (loginSuccess)
                             {
@@ -918,7 +965,7 @@ namespace MorWalPiz.VideoImporter
                 DateTime baseDate = PublishDatePicker.SelectedDate.Value;
 
                 // Usa il servizio di pianificazione per ottenere le date e orari di pubblicazione
-                var publishScheduleService = new Services.PublishScheduleService(App.DatabaseService);
+                var publishScheduleService = new Services.PublishScheduleService(_databaseService);
                 var publishDateTimes = publishScheduleService.GetPublishDateTimesForVideos(baseDate, VideoFiles.Count);
 
                 // Applica le date e orari calcolati in base alle pianificazioni attive
@@ -1045,15 +1092,17 @@ namespace MorWalPiz.VideoImporter
         }
 
         // Tenant-related methods
-        private async void LoadTenants()
+        private async Task LoadTenantsAsync()
         {
             try
             {
-                var tenants = await App.TenantService.GetActiveTenantsAsync();
+                var tenants = await _tenantService.GetActiveTenantsAsync();
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
                 TenantComboBox.ItemsSource = tenants;
                 
                 // Set the current tenant
-                var currentTenant = tenants.FirstOrDefault(t => t.Id == App.TenantContext.CurrentTenantId);
+                var currentTenant = tenants.FirstOrDefault(t => t.Id == _tenantContext.CurrentTenantId);
                 if (currentTenant != null)
                 {
                     TenantComboBox.SelectedItem = currentTenant;
@@ -1063,12 +1112,14 @@ namespace MorWalPiz.VideoImporter
                 {
                     // Select the first tenant if current is not found
                     TenantComboBox.SelectedItem = tenants.First();
-                    App.TenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
+                    _tenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
                     await EnsureTenantChannelAsync(tenants.First(), false);
                 }
             }
             catch (Exception ex)
             {
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
                 MessageBox.Show($"Errore nel caricamento dei tenant: {ex.Message}", "Errore", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -1078,7 +1129,7 @@ namespace MorWalPiz.VideoImporter
         {
             if (TenantComboBox.SelectedItem is Tenant selectedTenant)
             {
-                App.TenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                _tenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
                 _ = EnsureTenantChannelAsync(selectedTenant, false);
                 
                 // Clear current data and reload for the new tenant
@@ -1095,13 +1146,15 @@ namespace MorWalPiz.VideoImporter
         {
             try
             {
-                using var context = App.DatabaseService.CreateContext();
-                var stored = await context.Tenants.FindAsync(tenant.Id);
+                using var context = _databaseService.CreateContext();
+                var stored = await context.Tenants.FindAsync([tenant.Id], WindowCancellationToken);
                 var shouldDiscover = forceRefresh || string.IsNullOrWhiteSpace(stored?.ChannelId);
                 if (!shouldDiscover) return;
 
-                var service = App.ApiServiceFactory.Create(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+                var service = _apiServiceFactory.Create(_apiSettings.ApiEndpoint, _apiSettings.ApiKey);
                 var channels = await service.GetAccessibleChannelsAsync();
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
                 if (channels.Count == 0)
                 {
                     MessageBox.Show("Nessun canale accessibile per questo tenant.", "Canale non configurato", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1112,10 +1165,12 @@ namespace MorWalPiz.VideoImporter
                 selection.Owner = this;
                 if (selection.ShowDialog() != true || selection.SelectedChannel is null) return;
                 stored!.ChannelId = selection.SelectedChannel.ChannelId;
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(WindowCancellationToken);
             }
             catch (Exception ex)
             {
+                if (WindowCancellationToken.IsCancellationRequested)
+                    return;
                 MessageBox.Show($"Errore nel caricamento dei canali: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -1126,11 +1181,11 @@ namespace MorWalPiz.VideoImporter
                 await EnsureTenantChannelAsync(tenant, true);
         }
 
-        private void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)
+        private async void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var tenantManagementPage = new TenantManagementPage(App.TenantService, App.TenantContext);
+                var tenantManagementPage = new TenantManagementPage(_tenantService, _tenantContext);
                 var dialog = new Window
                 {
                     Content = tenantManagementPage,
@@ -1144,7 +1199,7 @@ namespace MorWalPiz.VideoImporter
                 dialog.ShowDialog();
                 
                 // Reload tenants after the dialog closes
-                LoadTenants();
+                await LoadTenantsAsync();
             }
             catch (Exception ex)
             {
@@ -1155,7 +1210,7 @@ namespace MorWalPiz.VideoImporter
 
         private void AnalyzeTranscriptMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new VideoTranscriptAnalysisDialog(App.ApiSettings.ApiEndpoint, App.ApiSettings.ApiKey);
+            var dialog = new VideoTranscriptAnalysisDialog(_apiSettings.ApiEndpoint, _apiSettings.ApiKey);
             dialog.Owner = this;
             dialog.ShowDialog();
         }

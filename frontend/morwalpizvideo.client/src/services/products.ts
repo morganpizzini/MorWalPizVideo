@@ -1,5 +1,5 @@
-import { get, frontendEndpoints } from '@morwalpizvideo/services';
+import { publicGet as get, frontendEndpoints } from '@morwalpizvideo/services';
 
 export function getProducts() {
-    return get(frontendEndpoints.PRODUCTS);
+  return get(frontendEndpoints.PRODUCTS);
 }

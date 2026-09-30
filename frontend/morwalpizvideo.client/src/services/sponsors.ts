@@ -1,4 +1,9 @@
-import { get, post, frontendEndpoints, requireSuccessfulResponse } from '@morwalpizvideo/services';
+import {
+  publicGet as get,
+  publicPost as post,
+  frontendEndpoints,
+  requireSuccessfulResponse,
+} from '@morwalpizvideo/services';
 import type { AnyAnswer, CustomForm, OpenAnswer } from '@morwalpizvideo/models';
 
 export function getSponsors() {

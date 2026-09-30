@@ -12,6 +12,7 @@ WORKDIR /src
 COPY ["MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj", "MorWalPizVideo.ServerAPI/"]
 COPY ["MorWalPiz.Contracts/MorWalPiz.Contracts.csproj", "MorWalPiz.Contracts/"]
 COPY ["MorWalPizVideo.Domain/MorWalPizVideo.Domain.csproj", "MorWalPizVideo.Domain/"]
+COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", "MorWalPizVideo.YouTubeUtilities/"]
 COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Models/"]
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]

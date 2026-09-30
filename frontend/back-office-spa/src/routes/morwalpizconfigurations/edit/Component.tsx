@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Card, Row, Col } from 'react-bootstrap';
 import { useFetcher, useNavigate } from 'react-router';
 import { MorWalPizConfiguration } from '@/models/configuration';
@@ -18,6 +18,7 @@ const EditConfiguration: React.FC = () => {
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const isSuccess = fetcher.data?.success;
+  const lastResult = useRef<unknown>(undefined);
 
   // Reset form when data is loaded
   useEffect(() => {
@@ -28,11 +29,12 @@ const EditConfiguration: React.FC = () => {
 
   // Handle redirect after successful update
   useEffect(() => {
-    if (isSuccess) {
+    if (!busy && isSuccess && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
       toast.show('Success', 'Configuration updated successfully', { variant: 'success' });
       navigate(`/morwalpizconfigurations/${configuration.id}`);
     }
-  }, [isSuccess, toast, navigate, configuration.id]);
+  }, [busy, fetcher.data, isSuccess, toast, navigate, configuration.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

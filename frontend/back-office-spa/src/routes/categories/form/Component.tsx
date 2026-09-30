@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import type { Category } from '@morwalpizvideo/models';
@@ -19,6 +19,7 @@ const CategoryForm: React.FC = () => {
   const toast = useToast();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
     setTitle(category?.title ?? '');
@@ -26,7 +27,8 @@ const CategoryForm: React.FC = () => {
   }, [category]);
 
   useEffect(() => {
-    if (busy || !fetcher.data) return;
+    if (busy || !fetcher.data || lastResult.current === fetcher.data) return;
+    lastResult.current = fetcher.data;
     if (fetcher.data.success) {
       toast.show(
         'Success',

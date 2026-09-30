@@ -1,38 +1,16 @@
-import { ActionFunctionArgs } from 'react-router';
-import { Delete, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+import { data, type ActionFunctionArgs } from 'react-router';
+import { deleteCalendarEvent, ApiResponseError } from '@morwalpizvideo/services';
+import { calendarRevision, calendarActionError, type CalendarActionResult } from '../form';
 
 export default async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const title = formData.get('title');
-
-  if (!title) {
-    return {
-      success: false,
-      errors: {
-        generics: ['Calendar event title is required']
-      }
-    };
-  }
-
   try {
-    const result = await Delete(ComposeUrl(endpoints.CALENDAREVENTS_DETAIL, { title: title.toString() }));
-    
-    if (result?.errors) {
-      return {
-        success: false,
-        errors: result.errors
-      };
-    }
-
-    return {
-      success: true
-    };
+    const formData = await request.formData();
+    const id = String(formData.get('id') ?? '');
+    if (!id)
+      throw new ApiResponseError({ status: 400, errors: ['Calendar event ID is required.'] });
+    await deleteCalendarEvent(id, calendarRevision(formData));
+    return data<CalendarActionResult>({ success: true }, { status: 200 });
   } catch (error) {
-    return {
-      success: false,
-      errors: {
-        generics: [(error as Error).message || 'An unexpected error occurred']
-      }
-    };
+    return calendarActionError(error);
   }
 }

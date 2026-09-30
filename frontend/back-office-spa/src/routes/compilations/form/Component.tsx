@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
 import { useNavigate, useFetcher, useParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
@@ -35,6 +35,7 @@ const CompilationForm: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -84,7 +85,8 @@ const CompilationForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
@@ -93,7 +95,7 @@ const CompilationForm: React.FC = () => {
       });
       navigate('/compilations');
     }
-  }, [result, navigate, isEditMode]);
+  }, [busy, result, navigate, isEditMode, toast]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 using MongoDB.Driver;
@@ -8,19 +9,23 @@ using MorWalPizVideo.Server.Utils;
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class ConfigTestController : ControllerBase
     {
         private readonly IFeatureManager _featureManager;
+        private readonly IWebHostEnvironment _environment;
         private readonly IOptions<MorWalPizDatabaseSettings> _dbSettings;
         private readonly IMongoDbService? _mongoDbService;
 
         public ConfigTestController(
             IFeatureManager featureManager,
             IOptions<MorWalPizDatabaseSettings> dbSettings,
+            IWebHostEnvironment environment,
             IMongoDbService? mongoDbService = null)
         {
             _featureManager = featureManager;
+            _environment = environment;
             _dbSettings = dbSettings;
             _mongoDbService = mongoDbService;
         }
@@ -29,7 +34,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> TestConfiguration()
         {
             // Check if EnableDev feature flag is enabled for security
-            if (!await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableDev))
+            if (!_environment.IsDevelopment() || !await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableDev))
             {
                 return NotFound();
             }
@@ -48,9 +53,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                     EnableCache = enableCache,
                     ConfigurationLoaded = !string.IsNullOrEmpty(settings?.ConnectionString),
                     HasConnectionString = !string.IsNullOrEmpty(settings?.ConnectionString),
-                    HasDatabaseName = !string.IsNullOrEmpty(settings?.DatabaseName),
-                    ConnectionStringPrefix = settings?.ConnectionString?.Substring(0, Math.Min(20, settings.ConnectionString?.Length ?? 0)),
-                    DatabaseName = settings?.DatabaseName
+                    HasDatabaseName = !string.IsNullOrEmpty(settings?.DatabaseName)
                 };
 
                 return Ok(result);
@@ -60,7 +63,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 return Ok(new
                 {
                     Success = false,
-                    Error = ex.Message,
+                    Error = "Configuration check failed.",
                     Type = ex.GetType().Name
                 });
             }
@@ -70,7 +73,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         public async Task<IActionResult> TestDatabaseConnection()
         {
             // Check if EnableDev feature flag is enabled for security
-            if (!await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableDev))
+            if (!_environment.IsDevelopment() || !await _featureManager.IsEnabledAsync(MyFeatureFlags.EnableDev))
             {
                 return NotFound();
             }
@@ -88,7 +91,6 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 return Ok(new
                 {
                     Success = true,
-                    DatabaseName = database.DatabaseNamespace.DatabaseName,
                     Message = "Database connection successful"
                 });
             }
@@ -97,7 +99,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 return Ok(new
                 {
                     Success = false,
-                    Error = ex.Message,
+                    Error = "Database check failed.",
                     Type = ex.GetType().Name
                 });
             }

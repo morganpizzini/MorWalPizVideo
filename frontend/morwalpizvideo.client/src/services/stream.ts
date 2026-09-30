@@ -1,5 +1,5 @@
-import { get, frontendEndpoints } from '@morwalpizvideo/services';
+import { publicGet as get, frontendEndpoints } from '@morwalpizvideo/services';
 
 export function getConfiguration() {
-    return get(frontendEndpoints.CONFIGURATION_STREAM);
+  return get(frontendEndpoints.CONFIGURATION_STREAM);
 }

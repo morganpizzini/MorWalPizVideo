@@ -1,0 +1,30 @@
+.blog-surface {
+  color: #1f1f1f;
+  overflow-wrap: anywhere;
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+  .blog-document {
+    max-width: 75ch;
+    margin-inline: auto;
+  }
+  .blog-document h2,
+  .blog-document h3,
+  .blog-document h4 {
+    margin-top: 1.5rem;
+  }
+  a {
+    text-underline-offset: 0.2em;
+  }
+  :focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: 3px;
+  }
+  .blog-cover {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+}

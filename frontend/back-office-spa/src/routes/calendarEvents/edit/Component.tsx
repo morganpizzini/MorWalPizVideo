@@ -1,57 +1,85 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
-import { Form, Button, Row, Col } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Alert, Form, Button, Row, Col } from 'react-bootstrap';
+import { RefreshCw } from 'lucide-react';
 import { useFetcher, useNavigate } from 'react-router';
-import { CalendarEvent, VideoProductCategory } from '@morwalpizvideo/models';
+import type { AdminCalendarEvent, CategoryRef } from '@morwalpizvideo/models';
+import { getCalendarEventById } from '@morwalpizvideo/services';
+import type { CalendarActionResult } from '../form';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 
 const EditCalendarEvent: React.FC = () => {
-  const { calendarEvent, categories } = useResolvedLoaderData() as {
-    calendarEvent: CalendarEvent;
-    categories: VideoProductCategory[];
+  const { calendarEvent: loadedEvent, categories } = useResolvedLoaderData() as {
+    calendarEvent: AdminCalendarEvent;
+    categories: CategoryRef[];
   };
 
-  const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>(
-    (calendarEvent.categories || [])
-      .map(cat => categories.find(c => c.id === cat.id))
-      .filter(Boolean) as VideoProductCategory[]
+  const [calendarEvent, setCalendarEvent] = useState(loadedEvent);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryRef[]>(
+    calendarEvent.categories || []
   );
+  const [reloading, setReloading] = useState(false);
+  const [reloadError, setReloadError] = useState<string>();
+  const [recoveredResult, setRecoveredResult] = useState<CalendarActionResult>();
 
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<CalendarActionResult>();
   const navigate = useNavigate();
   const toast = useToast();
 
-  const busy = fetcher.state !== 'idle';
-  const errors = fetcher.data?.errors;
+  const busy = fetcher.state !== 'idle' || reloading;
+  const conflict = fetcher.data?.conflict && fetcher.data !== recoveredResult;
+  const errors = fetcher.data !== recoveredResult ? fetcher.data?.errors : undefined;
   const success = fetcher.data?.success;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
-    if (success) {
+    if (!busy && success && lastResult.current !== fetcher.data) {
+      lastResult.current = fetcher.data;
       toast.show('Success', 'Calendar event updated successfully', { variant: 'success' });
       navigate(
-        `/calendarEvents/${encodeURIComponent(fetcher.data.updatedTitle || calendarEvent.title)}`
+        `/calendarEvents/${encodeURIComponent(fetcher.data?.updatedTitle || calendarEvent.title)}`
       );
     }
-  }, [success, navigate, toast, calendarEvent.title, fetcher.data?.updatedTitle]);
+  }, [busy, fetcher.data, success, navigate, toast, calendarEvent.title]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const reloadLatest = async () => {
+    setReloading(true);
+    setReloadError(undefined);
+    try {
+      const latest = await getCalendarEventById(calendarEvent.id);
+      setCalendarEvent(latest);
+      setSelectedCategories(latest.categories || []);
+      setRecoveredResult(fetcher.data);
+    } catch (error) {
+      setReloadError(
+        error instanceof Error ? error.message : 'Unable to reload the Calendar event.'
+      );
+    } finally {
+      setReloading(false);
+    }
+  };
 
-    const formData = new FormData(e.target as HTMLFormElement);
-    const categoryIds = selectedCategories.map(cat => cat.id);
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy || conflict) return;
 
-    formData.append('categoryIds', JSON.stringify(categoryIds));
+    const formData = new FormData(event.currentTarget);
+    formData.set(
+      'categories',
+      JSON.stringify(
+        selectedCategories.map(category => ({ id: category.id, title: category.title }))
+      )
+    );
 
     fetcher.submit(formData, { method: 'post' });
   };
 
   // Format date for input
   const formatDateForInput = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    return dateString.slice(0, 10);
   };
 
   return (
@@ -62,10 +90,27 @@ const EditCalendarEvent: React.FC = () => {
       />
 
       <GenericErrorList errors={errors?.generics} />
+      <GenericErrorList errors={reloadError ? [reloadError] : undefined} />
+      {conflict && (
+        <Alert variant="warning" role="alert">
+          <p>This event changed after you opened it. Your draft has not been saved.</p>
+          <Button variant="outline-secondary" onClick={reloadLatest} disabled={busy}>
+            <RefreshCw size={16} aria-hidden="true" className="me-2" />
+            {reloading ? 'Reloading...' : 'Reload Latest and Discard Draft'}
+          </Button>
+        </Alert>
+      )}
 
-      <fetcher.Form method="post" className="mb-3" onSubmit={handleSubmit}>
+      <fetcher.Form
+        key={`${calendarEvent.id}:${calendarEvent.revision}`}
+        method="post"
+        className="mb-3"
+        onSubmit={handleSubmit}
+      >
         {/* Original title (hidden) for identifying the event */}
         <input type="hidden" name="title" value={calendarEvent.title} />
+        <input type="hidden" name="id" value={calendarEvent.id} />
+        <input type="hidden" name="revision" value={calendarEvent.revision} />
 
         <Row className="mb-3">
           <Col md={12}>
@@ -76,13 +121,11 @@ const EditCalendarEvent: React.FC = () => {
                 name="newTitle"
                 placeholder="Enter title"
                 defaultValue={calendarEvent.title}
-                isInvalid={!!errors?.fields?.newTitle}
+                isInvalid={!!errors?.fields?.title}
                 required
               />
-              {errors?.fields?.newTitle && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.fields.newTitle}
-                </Form.Control.Feedback>
+              {errors?.fields?.title && (
+                <Form.Control.Feedback type="invalid">{errors.fields.title}</Form.Control.Feedback>
               )}
             </Form.Group>
           </Col>
@@ -134,6 +177,7 @@ const EditCalendarEvent: React.FC = () => {
             defaultValue={calendarEvent.description}
             isInvalid={!!errors?.fields?.description}
             rows={3}
+            required
           />
           {errors?.fields?.description && (
             <Form.Control.Feedback type="invalid">
@@ -150,6 +194,8 @@ const EditCalendarEvent: React.FC = () => {
           getItemId={cat => cat.id}
           getItemDisplay={cat => cat.title}
           placeholder="Select a category"
+          disabled={busy}
+          error={errors?.fields?.categories}
         />
 
         <Form.Group className="mb-3" controlId="matchId">
@@ -174,7 +220,7 @@ const EditCalendarEvent: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy || !!conflict}>
             {busy ? 'Updating...' : 'Update'}
           </Button>
         </div>

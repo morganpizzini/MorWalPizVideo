@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
 import { useNavigate, useFetcher } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
@@ -62,6 +62,7 @@ const ChannelForm: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -87,7 +88,8 @@ const ChannelForm: React.FC = () => {
   }, [entity]);
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
     if (result.success) {
       toast.show(
@@ -105,7 +107,7 @@ const ChannelForm: React.FC = () => {
       }
       navigate('..');
     }
-  }, [result, navigate, isEditMode]);
+  }, [busy, result, navigate, isEditMode, toast]);
 
   const isDisabled = () => {
     if (!channelName || channelName.trim().length === 0 || busy) return true;

@@ -80,6 +80,7 @@ const routeResources: Record<string, StandardResource> = {
   querylinks: permissions.querylinks,
   quicklinks: permissions.quicklinks,
   pages: permissions.pages,
+  blogposts: permissions.pages,
   navigation: permissions.navigation,
   shortlinks: permissions.shortlinks,
   channels: permissions.channels,

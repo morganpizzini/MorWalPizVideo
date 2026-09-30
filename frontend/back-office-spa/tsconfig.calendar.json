@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [
+    "src/vite-env.d.ts",
+    "src/test/setup.ts",
+    "src/routes/calendarEvents/**/*.ts",
+    "src/routes/calendarEvents/**/*.tsx"
+  ]
+}

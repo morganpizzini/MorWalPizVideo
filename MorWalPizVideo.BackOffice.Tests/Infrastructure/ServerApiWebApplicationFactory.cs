@@ -35,6 +35,9 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Test");
+        builder.UseSetting("JwtSettings:Secret", "test-only-signing-material-not-a-live-secret-123456");
+        builder.UseSetting("JwtSettings:Issuer", "security-tests");
+        builder.UseSetting("JwtSettings:Audience", "security-tests");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>

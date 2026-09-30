@@ -22,6 +22,7 @@ const ImageUpload: React.FC = () => {
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -34,7 +35,8 @@ const ImageUpload: React.FC = () => {
   const selectedMatchName = selectedMatch?.title || folderName;
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
 
     if (result.success) {
       toast.show('Success', 'Image uploaded successfully', { variant: 'success' });
@@ -46,7 +48,7 @@ const ImageUpload: React.FC = () => {
         fileInputRef.current.value = '';
       }
     }
-  }, [result]);
+  }, [busy, result, toast]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

@@ -4,7 +4,7 @@ namespace MorWalPizVideo.ShootingRange.Models;
 
 public enum ShootingRangeAccountStatus { Pending, Approved, Disabled }
 public enum ShootingRangeBookingStatus { Pending, Approved, Rejected, Cancelled }
-public enum ShootingRangeSessionMode { Periods, Hourly }
+public enum ShootingRangeSessionMode { Periods = 0, Hourly = 1, HourlyContinuous = 2 }
 public enum ShootingRangeBayStatus { Available, Maintenance, Disabled }
 
 public sealed record Mechanism(string Type, int Quantity);
@@ -20,6 +20,8 @@ public sealed record ShootingRangeConfig : BaseEntity
     [BsonElement("afternoonStart")] public TimeSpan AfternoonStart { get; init; } = new(14, 0, 0);
     [BsonElement("afternoonEnd")] public TimeSpan AfternoonEnd { get; init; } = new(18, 0, 0);
     [BsonElement("hourlyMinutes")] public int HourlyMinutes { get; init; } = 60;
+    [BsonElement("continuousStart")] public TimeSpan? ContinuousStart { get; init; }
+    [BsonElement("continuousEnd")] public TimeSpan? ContinuousEnd { get; init; }
     [BsonElement("reservedReleaseDaysBefore")] public int ReservedReleaseDaysBefore { get; init; } = 2;
 }
 
@@ -47,12 +49,22 @@ public sealed record ShootingRangeException : BaseEntity
 public sealed record ShootingRangeUser : BaseEntity
 {
     [BsonElement("username")] public string Username { get; init; } = string.Empty;
+    [BsonElement("normalizedUsername"), System.Text.Json.Serialization.JsonIgnore] public string NormalizedUsername { get; init; } = string.Empty;
     [BsonElement("firstName")] public string FirstName { get; init; } = string.Empty;
     [BsonElement("lastName")] public string LastName { get; init; } = string.Empty;
     [BsonElement("passwordHash")] public string PasswordHash { get; init; } = string.Empty;
     [BsonElement("status")] public ShootingRangeAccountStatus Status { get; init; } = ShootingRangeAccountStatus.Pending;
     [BsonElement("isAdmin")] public bool IsAdmin { get; init; }
     [BsonElement("forcePasswordChange")] public bool ForcePasswordChange { get; init; }
+    [BsonElement("securityVersion"), System.Text.Json.Serialization.JsonIgnore] public string SecurityVersion { get; init; } = string.Empty;
+}
+
+public sealed record ShootingRangeLocalSession : BaseEntity
+{
+    [BsonElement("userId")] public string UserId { get; init; } = string.Empty;
+    [BsonElement("securityVersion")] public string SecurityVersion { get; init; } = string.Empty;
+    [BsonElement("expiresUtc")] public DateTime ExpiresUtc { get; init; }
+    [BsonElement("revoked")] public bool Revoked { get; init; }
 }
 
 public sealed record ShootingRangeBooking : BaseEntity

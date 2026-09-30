@@ -33,7 +33,8 @@ const SURVEYS = `${baseEndpoint}/surveys`;
 const SURVEYS_DETAIL = `${SURVEYS}/{surveyId}`;
 const COMPILATIONS_BY_URL = `${baseEndpoint}/compilations/{url}`;
 const CALENDAREVENTS = `${baseEndpoint}/calendarEvents`;
-const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/{title}`;
+const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/by-title/{title}`;
+const CALENDAREVENTS_ID = `${CALENDAREVENTS}/{id}`;
 const CHANNELS = `${baseEndpoint}/channels`;
 const CHANNELS_ACCESSIBLE = `${CHANNELS}/accessible`;
 const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
@@ -54,6 +55,10 @@ const NEWSLETTERS_SUBSCRIBERS = `${NEWSLETTERS_DETAIL}/subscribers`;
 const NEWSLETTERS_STATS = `${NEWSLETTERS_DETAIL}/stats`;
 const NEWSLETTER_TEMPLATES = `${NEWSLETTERS}/templates`;
 const PAGES = `${baseEndpoint}/pages`;
+const BLOG_POSTS = `${baseEndpoint}/blogposts`;
+const BLOG_POST_DETAIL = `${BLOG_POSTS}/{id}`;
+const BLOG = `${baseEndpoint}/blog`;
+const BLOG_DETAIL = `${BLOG}/{slug}`;
 const PAGES_DETAIL = `${PAGES}/{id}`;
 const PAGES_IMAGES = `${PAGES_DETAIL}/images`;
 const PAGES_IMAGE_DETAIL = `${PAGES_IMAGES}/{imageIndex}`;
@@ -173,6 +178,7 @@ export default {
   SURVEYS_DETAIL,
   CALENDAREVENTS,
   CALENDAREVENTS_DETAIL,
+  CALENDAREVENTS_ID,
   CHANNELS,
   CHANNELS_ACCESSIBLE,
   CHANNELS_DETAIL,
@@ -193,6 +199,10 @@ export default {
   NEWSLETTERS_STATS,
   NEWSLETTER_TEMPLATES,
   PAGES,
+  BLOG_POSTS,
+  BLOG_POST_DETAIL,
+  BLOG,
+  BLOG_DETAIL,
   PAGES_DETAIL,
   PAGES_IMAGES,
   PAGES_IMAGE_DETAIL,

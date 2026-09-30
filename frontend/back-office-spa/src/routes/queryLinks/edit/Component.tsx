@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFetcher, useNavigate } from 'react-router';
 import { Form, Button, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
@@ -24,6 +24,7 @@ const EditQueryLink: React.FC = () => {
   const fetcher = useFetcher();
 
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -32,14 +33,15 @@ const EditQueryLink: React.FC = () => {
       : null;
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'Query link updated successfully', { variant: 'success' });
       navigate('..');
     }
-  }, [result, navigate]);
+  }, [busy, result, navigate, toast]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

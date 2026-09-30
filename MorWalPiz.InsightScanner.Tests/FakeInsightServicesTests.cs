@@ -1,11 +1,65 @@
 using MorWalPiz.Contracts.DTOs;
 using MorWalPiz.InsightScanner.Models;
 using MorWalPiz.InsightScanner.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System.Runtime.ExceptionServices;
 
 namespace MorWalPiz.InsightScanner.Tests;
 
 public sealed class FakeInsightServicesTests
 {
+    [Fact]
+    public void Host_resolves_main_window_with_fake_services_and_stops()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["DOTNET_ENVIRONMENT"] = "Test",
+                    ["Scanner:UseFake"] = "true",
+                    ["Scanner:DefaultMaxPostsPerSource"] = "7"
+                }).Build();
+                using var host = App.CreateHost(configuration);
+                host.StartAsync().GetAwaiter().GetResult();
+                var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+                Assert.IsType<FakeBackOfficeInsightClient>(host.Services.GetRequiredService<IBackOfficeInsightClient>());
+                Assert.Equal(7, host.Services.GetRequiredService<ScannerAppSettings>().DefaultMaxPostsPerSource);
+                var window = host.Services.GetRequiredService<MainWindow>();
+                Assert.Same(window, host.Services.GetRequiredService<MainWindow>());
+                Assert.False(window.IsVisible);
+                window.Close();
+                host.StopAsync().GetAwaiter().GetResult();
+                Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
+                Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(30)), "Desktop host test did not complete.");
+        if (failure is not null)
+            ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    [Fact]
+    public void Host_rejects_production_fake_mode()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["DOTNET_ENVIRONMENT"] = "Production",
+            ["Scanner:UseFake"] = "true"
+        }).Build();
+        Assert.Throws<InvalidOperationException>(() => App.CreateHost(configuration));
+    }
+
     [Fact]
     public async Task Fake_source_returns_reproducible_bounded_posts()
     {

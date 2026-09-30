@@ -300,6 +300,11 @@ namespace MorWalPiz.Contracts
                 ChannelId = entity.ChannelId
             };
         }
+        public static PublicCalendarEventResponse ConvertPublic(CalendarEvent entity) => new(
+            entity.Id, entity.CreationDateTime, entity.Title, entity.Description,
+            entity.StartDate, entity.EndDate, entity.Categories, entity.MatchId,
+            entity.ChannelId, entity.MatchUrl, entity.OldEvent);
+
         public static CalendarEventContract Convert(CalendarEvent entity)
         {
             return new CalendarEventContract
@@ -312,7 +317,8 @@ namespace MorWalPiz.Contracts
                 Categories = entity.Categories,
                 MatchId = entity.MatchId,
                 MatchUrl = entity.MatchUrl,
-                ChannelId = entity.ChannelId
+                ChannelId = entity.ChannelId,
+                Revision = entity.Revision
             };
         }
         public static ConfigurationContract Convert(MorWalPizConfiguration entity)

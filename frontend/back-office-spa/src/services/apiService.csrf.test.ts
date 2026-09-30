@@ -9,6 +9,7 @@ import {
   setCookieOnlyMode,
   setSelectedChannelId,
   setRequestCredentialsMode,
+  publicApiService,
 } from '@morwalpizvideo/services';
 
 describe('shared API client CSRF integration', () => {
@@ -87,7 +88,13 @@ describe('shared API client CSRF integration', () => {
   it('sends the selected channel header for scoped routes and skips channel collection endpoints', async () => {
     setSelectedChannelId('channel-one');
     setRequestCredentialsMode('omit');
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ data: [] })));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          jsonResponse(url.endsWith('/csrf') ? { token: 'csrf-token' } : { data: [] })
+        )
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await get('api/videos');
@@ -99,7 +106,8 @@ describe('shared API client CSRF integration', () => {
     await get('/api/products');
     await get('/api/productcategories/one');
 
-    expect(fetchMock.mock.calls.slice(0, 8).map(([url]) => url)).toEqual([
+    const requests = fetchMock.mock.calls.filter(([url]) => !url.endsWith('/csrf'));
+    expect(requests.map(([url]) => url)).toEqual([
       '/api/videos',
       '/api/channels/channel-one',
       '/api/channels/channel-one',
@@ -109,24 +117,25 @@ describe('shared API client CSRF integration', () => {
       '/api/products',
       '/api/productcategories/one',
     ]);
-    expect(
-      fetchMock.mock.calls.slice(0, 4).map(([, request]) => (request as RequestInit).method)
-    ).toEqual(['GET', 'GET', 'PUT', 'DELETE']);
+    expect(requests.slice(0, 4).map(([, request]) => (request as RequestInit).method)).toEqual([
+      'GET',
+      'GET',
+      'PUT',
+      'DELETE',
+    ]);
 
-    for (const [, request] of fetchMock.mock.calls.slice(0, 4)) {
+    for (const [, request] of requests.slice(0, 4)) {
       expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
     }
 
-    for (const [, request] of fetchMock.mock.calls.slice(6, 8)) {
+    for (const [, request] of requests.slice(6, 8)) {
       expect(new Headers((request as RequestInit).headers).get('X-Channel-Id')).toBe('channel-one');
     }
 
-    const collectionHeaders = new Headers((fetchMock.mock.calls[4][1] as RequestInit).headers);
+    const collectionHeaders = new Headers((requests[4][1] as RequestInit).headers);
     expect(collectionHeaders.has('X-Channel-Id')).toBe(false);
 
-    const accessibleCollectionHeaders = new Headers(
-      (fetchMock.mock.calls[5][1] as RequestInit).headers
-    );
+    const accessibleCollectionHeaders = new Headers((requests[5][1] as RequestInit).headers);
     expect(accessibleCollectionHeaders.has('X-Channel-Id')).toBe(false);
   });
 
@@ -146,6 +155,25 @@ describe('shared API client CSRF integration', () => {
     const headers = request.headers as Headers;
     expect(headers.has('Authorization')).toBe(false);
     expect(request.credentials).toBe('include');
+  });
+
+  it('never reads or sends browser tokens or admin context from public calls', async () => {
+    localStorage.setItem('authToken', 'stale-browser-token');
+    setSelectedChannelId('private-channel');
+    const tokenProvider = vi.fn(() => 'injected-bearer');
+    setAuthTokenProvider(tokenProvider);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ saved: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await publicApiService.post('/api/videos', { title: 'public' });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(tokenProvider).not.toHaveBeenCalled();
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(request.credentials).toBe('omit');
+    for (const header of ['Authorization', 'X-CSRF-TOKEN', 'X-Channel-Id']) {
+      expect(new Headers(request.headers).has(header)).toBe(false);
+    }
   });
 });
 

@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
 import { useNavigate, useFetcher, useParams, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
@@ -32,6 +32,7 @@ const ShortLinkForm: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -89,7 +90,8 @@ const ShortLinkForm: React.FC = () => {
   }, [entity]);
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
     if (result.success) {
       toast.show(
@@ -99,7 +101,7 @@ const ShortLinkForm: React.FC = () => {
       );
       navigate(isEditMode ? '/shortlinks' : '..');
     }
-  }, [result, navigate, isEditMode]);
+  }, [busy, result, navigate, isEditMode, toast]);
 
   const isDisabled = () => target.length === 0 || (isEditMode && code.trim().length === 0) || busy;
 

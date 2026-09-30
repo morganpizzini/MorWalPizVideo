@@ -22,9 +22,11 @@ const SponsorForm: React.FC = () => {
   const busy = fetcher.state !== 'idle';
   const result = fetcher.data;
   const errors = result?.errors;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
-    if (busy || result?.success !== true) return;
+    if (busy || result?.success !== true || lastResult.current === result) return;
+    lastResult.current = result;
 
     toast.show(
       'Success',

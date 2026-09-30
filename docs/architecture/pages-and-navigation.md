@@ -4,6 +4,33 @@ This document is the current feature reference for the Pages and Navigation slic
 Runtime controllers, contracts, and the current Mongo index manifest are authoritative
 when this document and an older sample disagree.
 
+## Structured Blog Delivery Status
+
+The structured blog is implemented in the worktree as a separate aggregate, not an
+extension of Page HTML or ChannelNews. Public browser routes are `/blog` and
+`/blog/:slug`; ServerAPI serves published-only `/api/blog` and `/api/blog/{slug}`.
+Public ownership resolves configured `YouTubeChannelId` through the existing channel
+lookup to `YTChannel.ChannelId`, not a Mongo ObjectId or visitor override.
+BackOffice `/api/blogposts` and admin `/blogposts`, `/blogposts/create`,
+`/blogposts/:id/edit` use ChannelContext / `X-Channel-Id` and the existing Pages
+operation permissions; publishing/unpublishing requires `pages.manage`.
+
+See [Structured Blog](structured-blog.md) for canonical JSON, Puck/Tiptap editing,
+revision-checked draft/published snapshots, frozen published slugs, retained media,
+lowercase blog cache tags and lazy first-write Mongo uniqueness provisioning. Blog's
+index is not part of the Page index manifest described below.
+
+Navigation uses an explicitly configured `Internal` link to `/blog`, without a new
+type, automatic entries or channel endpoint configuration. Existing page URLs,
+Page/ChannelNews routes and navigation behavior below remain unchanged.
+
+The completion pass verified 17 admin/shared blog tests, 4 public tests, 4 strict
+compatibility tests, shared builds, public client/SSR builds and admin Vite bundling.
+The full admin build remains blocked by eight errors outside blog. Workspace audit
+has 46 advisory-path findings (2 low, 18 moderate, 26 high); only the isolated probe
+is audit-zero. Real Mongo/upload/media cleanup and browser desktop/mobile gates remain
+as documented in Structured Blog. This is implementation status, not deployment approval.
+
 ## Behavior and Ownership
 
 - The public browser route is `/pages/{url}`. It does not carry public channel identity.

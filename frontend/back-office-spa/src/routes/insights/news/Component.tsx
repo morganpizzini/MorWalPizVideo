@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Form, Button, Modal, Badge } from 'react-bootstrap';
 import { useFetcher, useNavigate } from 'react-router';
 import { InsightNewsItem, InsightNewsStatus } from '@morwalpizvideo/models';
@@ -17,6 +17,7 @@ const InsightNewsReview: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -25,14 +26,15 @@ const InsightNewsReview: React.FC = () => {
       : null;
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
       toast.show('Success', 'News item reviewed successfully', { variant: 'success' });
       navigate(`/insights/${newsItem.topicId}`);
     }
-  }, [result, navigate]);
+  }, [busy, result, navigate, newsItem.topicId, toast]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

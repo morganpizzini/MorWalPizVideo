@@ -1,6 +1,6 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
 import { InsightTopic, InsightTopicCreationMode } from '@morwalpizvideo/models';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
 import { useNavigate, useFetcher, useParams, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
@@ -29,6 +29,7 @@ const InsightTopicForm: React.FC = () => {
   const toast = useToast();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -47,7 +48,8 @@ const InsightTopicForm: React.FC = () => {
   }, [isEditMode, existingTopic]);
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
     setShowModal(false);
 
     if (result.success) {
@@ -56,7 +58,7 @@ const InsightTopicForm: React.FC = () => {
       });
       navigate(searchParams.get('returnTo') || '/insights');
     }
-  }, [result, navigate, isEditMode]);
+  }, [busy, result, navigate, isEditMode, searchParams, toast]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

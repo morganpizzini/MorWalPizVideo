@@ -78,15 +78,17 @@ Vitest/Testing Library with route-aware helpers and mocked shared services. Test
 ### End To End
 
 - BackOffice mutation to public cache refresh.
-- Public catalog to anonymous cart to private download.
+- Public catalog to anonymous cart to private download remains on hold with shop; no active test expansion.
 - Short-link management to redirect and count.
-- Desktop API-key submission to BackOffice (deferred; VideoImporter and InsightScanner are excluded from this backend-only iteration).
+- Desktop API-key submission to BackOffice remains an interactive/provider verification gate; existing Windows test suites now execute in CI.
 
-Browser runners and frontend E2E are also deferred. Backend coverage and HTTP contract tests are the primary validation target.
+Existing frontend Vitest and Windows VSTest runners execute in CI alongside backend HTTP tests. Real-browser desktop/mobile/SSR cookie/CSRF/CORS proof is still BLOCKED, not satisfied by Node or HTTP tests; see the [operational checklist](operations/phase5-activation-and-recovery.md).
 
 ## Common Commands
 
 Use project scripts and solution commands as defined by current manifests. Shared frontend packages build in models, services, layout order. Run the narrowest affected test/build first, then broaden to consumers.
+
+The [delivery/test matrix](deployment.md#delivery-and-test-matrix) lists actual runners and fresh pass/fail/not-run results. Empty active frontend suites fail (`--passWithNoTests=false`); desktop tests require Windows. `build-uncheck` is not a substitute for a failed TypeScript gate. CI changes do not authorize production operations.
 
 ## Documentation Discipline
 

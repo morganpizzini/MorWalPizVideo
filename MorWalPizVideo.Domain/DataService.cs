@@ -38,6 +38,7 @@ namespace MorWalPizVideo.Server.Services
         protected readonly ICompilationRepository _compilationRepository;
         protected readonly ICustomFormRepository _customFormRepository;
         protected readonly ICalendarEventRepository _calendarEventRepository;
+        protected readonly ICalendarService _calendarService;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IPageRepository _pageRepository;
         protected readonly IProductRepository _productRepository;
@@ -53,6 +54,7 @@ namespace MorWalPizVideo.Server.Services
             _compilationRepository = compilationRepository;
             _customFormRepository = customFormRepository;
             _calendarEventRepository = calendarEventRepository;
+            _calendarService = new CalendarService(calendarEventRepository);
             _configurationRepository = configurationRepository;
             _pageRepository = pageRepository;
             _productRepository = productRepository;
@@ -63,9 +65,9 @@ namespace MorWalPizVideo.Server.Services
             _competitionRepository = competitionRepository;
             _indexedCache = indexedCache;
         }
-        public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarEventRepository.GetItemsAsync();
+        public Task<IList<CalendarEvent>> GetCalendarEvents() => _calendarService.ListAsync();
         public Task<IList<CalendarEvent>> GetCalendarEvents(string channelId) =>
-            _calendarEventRepository.GetItemsAsync(x => x.ChannelId == channelId);
+            _calendarService.ListAsync(channelId);
 
         public Task<IList<MorWalPizConfiguration>> FetchConfigurationByKeys(IList<string> keys)
         {
@@ -850,44 +852,36 @@ namespace MorWalPizVideo.Server.Services
                 await _categoryRepository.DeleteItemAsync(category.Id);
         }
 
-        public async Task<CalendarEvent?> GetCalendarEventByTitle(string title) =>
-            (await _calendarEventRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower())).FirstOrDefault();
-        public async Task<CalendarEvent?> GetCalendarEventByTitle(string title, string channelId) =>
-            (await _calendarEventRepository.GetItemsAsync(x => x.Title.ToLower() == title.ToLower() && x.ChannelId == channelId)).FirstOrDefault();
+        public Task<CalendarEvent?> GetCalendarEventByTitle(string title) => _calendarService.GetByTitleAsync(title);
+        public Task<CalendarEvent?> GetCalendarEventByTitle(string title, string channelId) => _calendarService.GetByTitleAsync(title, channelId);
 
         public async Task SaveCalendarEvent(CalendarEvent entity)
         {
-            var existingEvent = await _calendarEventRepository.GetItemsAsync(x => x.Title.ToLower() == entity.Title.ToLower());
-            if (existingEvent.Count > 0)
+            if (await _calendarService.GetByTitleAsync(entity.Title) is not null)
                 return;
-
-            await _calendarEventRepository.AddItemAsync(entity);
+            await _calendarService.CreateAsync(entity, entity.ChannelId);
         }
 
         public async Task UpdateCalendarEvent(CalendarEvent entity)
         {
-            var existingEvent = await _calendarEventRepository.GetItemsAsync(x => x.Id == entity.Id);
-            if (existingEvent.Count == 0)
-                return;
-
-            await _calendarEventRepository.UpdateItemAsync(entity);
+            if (await _calendarService.GetAsync(entity.Id) is { } existing)
+                await _calendarService.UpdateAsync(entity.Id, entity, existing.ChannelId);
         }
 
         public async Task UpdateCalendarEvent(CalendarEvent entity, string channelId)
         {
-            if ((await _calendarEventRepository.GetItemsAsync(x => x.Id == entity.Id && x.ChannelId == channelId)).Count > 0)
-                await _calendarEventRepository.UpdateItemAsync(entity with { ChannelId = channelId });
+            await _calendarService.UpdateAsync(entity.Id, entity, channelId);
         }
 
         public async Task DeleteCalendarEvent(string calendarEventId)
         {
-            await _calendarEventRepository.DeleteItemAsync(calendarEventId);
+            if (await _calendarService.GetAsync(calendarEventId) is { } existing)
+                await _calendarService.DeleteAsync(calendarEventId, existing.ChannelId);
         }
 
         public async Task DeleteCalendarEvent(string calendarEventId, string channelId)
         {
-            if ((await _calendarEventRepository.GetItemsAsync(x => x.Id == calendarEventId && x.ChannelId == channelId)).FirstOrDefault() is { } entity)
-                await _calendarEventRepository.DeleteItemAsync(entity.Id);
+            await _calendarService.DeleteAsync(calendarEventId, channelId);
         }
 
         // Compilation methods

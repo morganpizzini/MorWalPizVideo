@@ -122,6 +122,13 @@ const routeDefinitions: RouteConfig[] = [
   feature('navigation', () => import('../../routes/navigation'), {
     errorElement: createErrorElement(),
   }),
+  feature('blogposts', () => import('../../routes/blog'), { errorElement: createErrorElement() }),
+  feature('blogposts/create', () => import('../../routes/blog/form'), {
+    errorElement: createErrorElement(),
+  }),
+  feature('blogposts/:id/edit', () => import('../../routes/blog/form'), {
+    errorElement: createErrorElement(),
+  }),
   group('shortlinks', () => import('../../routes/shortLinks/index'), [
     indexFeature('', () => import('../../routes/shortLinks/index')),
     feature('create', () => import('../../routes/shortLinks/form')),

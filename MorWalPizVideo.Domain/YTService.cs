@@ -3,6 +3,7 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Contracts;
@@ -55,7 +56,7 @@ namespace MorWalPizVideo.Server.Services
         //private readonly ITranslatorService _translatorService;
         private readonly string _apiKey;
         private readonly YouTubeOperationExecutor _operationExecutor = new(new YouTubeRetryOptions());
-        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory)//, ITranslatorService translatorService)
+        public YTService(IConfiguration configuration, IHttpClientFactory httpClientFactory, IHostEnvironment? environment = null)//, ITranslatorService translatorService)
         {
             //_translatorService = translatorService;
             _apiKey = configuration["YTApiKey"] ?? string.Empty;
@@ -68,7 +69,7 @@ namespace MorWalPizVideo.Server.Services
 
             //using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
 
-            var credential = GoogleCredential.FromFile("credentials.json")
+            var credential = GoogleCredential.FromFile(YouTubeCredentialProvisioning.ResolvePath(configuration, environment))
                .CreateScoped(YouTubeService.Scope.YoutubeForceSsl);
 
             //var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(

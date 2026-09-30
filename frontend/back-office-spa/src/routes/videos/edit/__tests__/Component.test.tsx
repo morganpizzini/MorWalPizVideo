@@ -86,6 +86,31 @@ async function renderComponent() {
 }
 
 describe('Edit Video', () => {
+  it('handles save responses once across dependency changes and a subsequent identical save', async () => {
+    const view = await renderComponent();
+    saveFetcher.data = { success: true };
+    saveFetcher.state = 'submitting';
+    view.rerender(<Component />);
+    expect(mockToastShow).not.toHaveBeenCalled();
+    saveFetcher.state = 'idle';
+    view.rerender(<Component />);
+    expect(mockToastShow).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const nextNavigate = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(nextNavigate);
+    view.rerender(<Component />);
+    saveFetcher.state = 'submitting';
+    view.rerender(<Component />);
+    saveFetcher.state = 'idle';
+    view.rerender(<Component />);
+    expect(mockToastShow).toHaveBeenCalledTimes(1);
+    expect(nextNavigate).not.toHaveBeenCalled();
+    saveFetcher.data = { success: true };
+    view.rerender(<Component />);
+    expect(mockToastShow).toHaveBeenCalledTimes(2);
+    expect(nextNavigate).toHaveBeenCalledTimes(1);
+  });
+
   it('submits a minimal add request and renders the row only after success', async () => {
     const user = userEvent.setup();
     const view = await renderComponent();

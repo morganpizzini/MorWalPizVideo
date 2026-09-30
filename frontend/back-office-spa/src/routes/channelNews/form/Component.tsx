@@ -37,6 +37,7 @@ export default function ChannelNewsForm(): React.ReactElement {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
+  const lastResult = useRef<unknown>(undefined);
 
   useEffect(() => {
     setTitle(entity?.title ?? '');
@@ -54,7 +55,8 @@ export default function ChannelNewsForm(): React.ReactElement {
   }, [entity]);
 
   useEffect(() => {
-    if (busy || !fetcher.data?.success) return;
+    if (busy || !fetcher.data?.success || lastResult.current === fetcher.data) return;
+    lastResult.current = fetcher.data;
     toast.show(
       'Success',
       id ? 'ChannelNews updated successfully' : 'ChannelNews created successfully',

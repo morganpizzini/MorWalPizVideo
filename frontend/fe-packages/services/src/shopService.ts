@@ -1,4 +1,5 @@
-import { get, post, put, Delete } from "./apiService";
+import { legacyApiService } from "./apiService";
+const { get, post, put, Delete } = legacyApiService;
 import endpoints, { ComposeUrl } from "./endpoints";
 import type {
   DigitalProduct,

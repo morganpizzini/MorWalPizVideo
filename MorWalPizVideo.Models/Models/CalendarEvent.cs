@@ -53,6 +53,12 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("channelId")]
         public string ChannelId { get; init; } = string.Empty;
 
+        [DataMember]
+        [BsonElement("revision")]
+        [BsonDefaultValue(0L)]
+        [JsonIgnore]
+        public long Revision { get; init; }
+
         [BsonIgnore]
         public string MatchUrl { get; set; } = string.Empty;
 

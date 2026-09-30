@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 import { Form, Button, InputGroup } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
@@ -12,6 +12,7 @@ const TranslateVideo: React.FC = () => {
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
+  const lastResult = useRef<unknown>(undefined);
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
@@ -20,7 +21,8 @@ const TranslateVideo: React.FC = () => {
       : null;
 
   useEffect(() => {
-    if (!result) return;
+    if (busy || !result || lastResult.current === result) return;
+    lastResult.current = result;
 
     if (result.success) {
       toast.show('Success', 'Video translation process started successfully', {
@@ -29,7 +31,7 @@ const TranslateVideo: React.FC = () => {
       // Reset form
       setVideoIds(['']);
     }
-  }, [result]);
+  }, [busy, result, toast]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

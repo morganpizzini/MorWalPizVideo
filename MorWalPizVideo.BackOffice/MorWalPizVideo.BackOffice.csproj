@@ -48,11 +48,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Content Update="credentials.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<Content Update="**/credentials*.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</Content>
+		<None Update="**/credentials*.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -7,7 +7,7 @@
 
 `MorWalPizVideo.ShootingRange` and `frontend/shooting-range.client` form an independent booking proof of concept. They are not publicly exposed yet but are expected to be soon, and their deployment workflows remain bound to the GitHub `production` environment.
 
-Current source allows anonymous registration and availability, accepts credentialed CORS from arbitrary origins, lacks a fallback authorization policy, and exposes some persistence entities. The POC must remain simple without making imminent public exposure unsafe or coupling it to the main publishing architecture.
+Current source still allows anonymous domain reads/registration, lacks a fallback authorization policy, and exposes some persistence entities. The schedule guard and session/security foundation restrict credentialed CORS to the exact deployed range client, exclude password hashes from admin-user responses, and revalidate revocable sessions against current account state. They do not complete the broader public-release posture. The POC must remain simple without making imminent public exposure unsafe or coupling it to the main publishing architecture.
 
 ## Decision
 
@@ -30,19 +30,27 @@ Production exposure is gated on explicit credentialed CORS, safe response DTOs, 
 
 ## Consequences
 
+The implemented foundation protects login with pre-login CSRF and per-IP throttling (10 attempts per five minutes per process), refreshes CSRF after identity changes, and uses revocable eight-hour non-sliding sessions. Logout revokes the current session; password reset/change invalidates older sessions, while successful self-change renews the current session. Disabled accounts and demoted roles are enforced on each cookie request. Forced-change sessions permit only session inspection, password change, logout and technical CSRF acquisition. Production/Staging reject mock storage; Mongo readiness supplements the startup transaction probe.
+
+The remaining anonymous-domain/onboarding cutover is NOT READY pending the ordinary-user onboarding decision. Registration, anonymous configuration/sessions/availability, and existing entity/whitelist projections remain unchanged for compatibility. Do not interpret the accepted target as implemented fallback authorization or approval for public exposure.
+
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
-Messaging, bay/configuration/closure management, cancellation, rescheduling, notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred. Existing implementation does not make those features part of the committed UI.
+Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. Messaging expansion, cancellation, rescheduling, notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
+
+All local repository writes participate in a field-scoped transaction guard; Pending/Approved capacity is checked using stored UTC overlap, not period-key uniqueness. Unsupported transactional storage fails closed. Real target-Mongo capability, independent-writer races, historical data/index audit and browser CORS/CSRF checks remain mandatory release gates; local mock tests cannot satisfy them.
 
 Manual administrator insertion remains an operational responsibility. The procedure must use the current normalized username and password-hashing representation without recording secrets.
 
 ## Migration And Rollback
 
-Audit normalized usernames before adding a unique index. Keep existing collections and documents readable through additive changes. Deploy API authorization and compatibility behavior before the client.
+Old cookies without the new session claim require reauthentication. Sessions use the additive `shootingRangeLocalSessions` collection; account `securityVersion` and `normalizedUsername` fields are additive. A read-only startup preflight rejects normalized duplicates and missing/mismatched normalized fields before creating `normalized_username_unique`. With writes paused, operators must review duplicates, approve an additive backfill using the current trim/lowercase-invariant normalization, and verify the index; never automatically merge or delete accounts. Session TTL cleanup is not an authorization boundary: expired sessions are rejected independently. Keep existing collections and documents readable. Deploy the compatible security API before the client; full domain authorization remains a separate cutover.
 
-Application rollback must not restore unrestricted credentialed CORS, anonymous domain access, password-hash responses, or production mock repositories.
+Pause writes for guarded API cutover, ensure all instances use the guard, deploy the client next and enable new modes last. Application rollback must use a compatible guarded version; otherwise suspend mutations. Never restore unrestricted credentialed CORS, password-hash responses, or production mock repositories. See the Shooting Range architecture procedure for data preflight and unresolved public-release controls.
 
 ## Validation
+
+These are full release acceptance criteria, not a claim that every item passes in the current foundation. Anonymous-domain rejection and broad safe DTO projections remain blocked by the cutover decision; live Mongo/browser/Data Protection evidence remains required separately from local executable tests.
 
 - Anonymous domain requests return `401`; normal users receive `403` from administrator operations.
 - Login, CSRF token acquisition, and health probes remain reachable anonymously.

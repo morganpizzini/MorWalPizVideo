@@ -1,13 +1,12 @@
 import { data } from 'react-router';
-import { post, endpoints } from '@morwalpizvideo/services';
+import { createCalendarEvent } from '@morwalpizvideo/services';
+import { calendarPayload, calendarActionError, type CalendarActionResult } from '../form';
 
 export default async function action({ request }: { request: Request }) {
-  const values = Object.fromEntries(await request.formData());
-
   try {
-    await post(endpoints.CALENDAREVENTS, values);
-    return data({ success: true }, { status: 201 });
+    await createCalendarEvent(calendarPayload(await request.formData(), false));
+    return data<CalendarActionResult>({ success: true }, { status: 201 });
   } catch (error) {
-    return data({ success: false, errors: { generics: ['API error found'] } }, { status: 500 });
+    return calendarActionError(error);
   }
 }

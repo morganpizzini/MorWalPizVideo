@@ -1,6 +1,7 @@
 using System.Windows;
 using MorWalPiz.Contracts.DTOs;
 using MorWalPiz.InsightScanner.Models;
+using MorWalPiz.InsightScanner.Services;
 
 namespace MorWalPiz.InsightScanner
 {
@@ -14,9 +15,15 @@ namespace MorWalPiz.InsightScanner
     {
         private readonly Dictionary<string, List<RawSocialPostDto>> _collectedPostsBySource = new();
         private List<InsightTopicSummary> _topics = [];
+        private readonly ScannerAppSettings _settings;
+        private readonly IBackOfficeInsightClient _backOfficeClient;
+        private readonly HybridInsightScanner _scanner;
 
-        public MainWindow()
+        public MainWindow(ScannerAppSettings settings, IBackOfficeInsightClient backOfficeClient, HybridInsightScanner scanner)
         {
+            _settings = settings;
+            _backOfficeClient = backOfficeClient;
+            _scanner = scanner;
             InitializeComponent();
             Loaded += MainWindow_Loaded;
         }
@@ -24,7 +31,7 @@ namespace MorWalPiz.InsightScanner
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             await Browser.EnsureCoreWebView2Async();
-            MaxPostsTextBox.Text = App.Settings.DefaultMaxPostsPerSource.ToString();
+            MaxPostsTextBox.Text = _settings.DefaultMaxPostsPerSource.ToString();
 
             await LoadTopicsAsync();
         }
@@ -33,7 +40,7 @@ namespace MorWalPiz.InsightScanner
         {
             try
             {
-                _topics = await App.BackOfficeClient.GetTopicsAsync();
+                _topics = await _backOfficeClient.GetTopicsAsync();
                 TopicComboBox.ItemsSource = _topics;
                 if (_topics.Count > 0)
                     TopicComboBox.SelectedIndex = 0;
@@ -54,7 +61,7 @@ namespace MorWalPiz.InsightScanner
 
         private int GetMaxPosts() => int.TryParse(MaxPostsTextBox.Text, out var value) && value > 0
             ? value
-            : App.Settings.DefaultMaxPostsPerSource;
+            : _settings.DefaultMaxPostsPerSource;
 
         private string? GetSelectedSourceUrl() => SourceComboBox.SelectedItem as string;
 
@@ -74,7 +81,7 @@ namespace MorWalPiz.InsightScanner
             if (string.IsNullOrWhiteSpace(sourceUrl))
                 return;
 
-            if (App.Scanner.RequiresInteractiveBrowser(sourceUrl))
+            if (_scanner.RequiresInteractiveBrowser(sourceUrl))
             {
                 AppendResult($"'{sourceUrl}' richiede la raccolta interattiva dal browser (login manuale necessario).");
                 return;
@@ -82,7 +89,7 @@ namespace MorWalPiz.InsightScanner
 
             try
             {
-                var posts = await App.Scanner.CollectAutomaticallyAsync(sourceUrl, GetMaxPosts(), CancellationToken.None);
+                var posts = await _scanner.CollectAutomaticallyAsync(sourceUrl, GetMaxPosts(), CancellationToken.None);
                 AddCollectedPosts(sourceUrl, posts);
             }
             catch (Exception ex)
@@ -165,7 +172,7 @@ namespace MorWalPiz.InsightScanner
             RunScanButton.IsEnabled = false;
             try
             {
-                var result = await App.BackOfficeClient.SubmitManualScanAsync(topic.Id, request);
+                var result = await _backOfficeClient.SubmitManualScanAsync(topic.Id, request);
                 AppendResult(FormatScanResult(result));
 
                 _collectedPostsBySource.Clear();

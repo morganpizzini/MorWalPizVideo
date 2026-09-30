@@ -1,4 +1,6 @@
 // Components
+export { BlogRenderer } from "./components/BlogRenderer.js";
+export type { BlogRendererProps } from "./components/BlogRenderer.js";
 export { AppShell } from "./components/AppShell.js";
 export { SiteHeader } from "./components/SiteHeader.js";
 export { SiteFooter } from "./components/SiteFooter.js";

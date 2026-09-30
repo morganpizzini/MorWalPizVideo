@@ -90,15 +90,15 @@ Pre-production and on hold. Its intended ownership of free-artifact discovery, c
 
 ### Shooting ITA
 
-Owns its focused content experience while reusing shared services and layout. Placeholder app-local API clients should be replaced with the shared package.
+Owns its focused content experience while reusing shared services and layout. Maintained calls use the isolated public shared transport; the unused Axios placeholder was removed.
 
 ### Shooting Range POC
 
 `MorWalPizVideo.ShootingRange` owns its account, booking, bay, configuration, exception, message, repository, and project-local contract behavior. `frontend/shooting-range.client` owns only the minimal authenticated POC experience.
 
-The POC stays independent from BackOffice and the shared publishing libraries. Its domain endpoints are deny-by-default; only login, CSRF token acquisition, and health probes are anonymous. The first administrator is inserted manually into MongoDB. Ordinary-user onboarding remains unresolved, with admin-created users as the current working assumption.
+The POC stays independent from BackOffice and the shared publishing libraries. Deny-by-default domain authorization is the release target, not current source: registration/configuration/sessions/availability remain anonymous pending slice 4. Current source implements guarded admission and revocable/current-state sessions. The first administrator is inserted manually into MongoDB. Ordinary-user onboarding remains unresolved, with admin-created users only a working assumption, not an implemented or approved flow.
 
-Future messaging, schedule administration, cancellation, rescheduling, notifications, waitlists, custom sessions, and reporting remain deferred until observed use justifies them.
+Schedule, bay, closure and booking-decision administration are accepted implemented scope. Existing message routes remain compatible; richer messaging, cancellation, rescheduling, notifications, waitlists, custom sessions, and reporting remain deferred.
 
 ## Windows Applications
 

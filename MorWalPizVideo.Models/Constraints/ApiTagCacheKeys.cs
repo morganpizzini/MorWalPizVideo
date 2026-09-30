@@ -8,6 +8,7 @@ namespace MorWalPizVideo.Models.Constraints
         public const string Sponsors = "tag-sponsors";
         public const string ShortLinks = "tag-shortlinks";
         public const string Pages = "tag-pages";
+        public const string Blog = "tag-blog";
         public const string CalendarEvents = "tag-calendarevents";
         public const string QuickLinks = "tag-quicklinks";
         public const string ChannelNews = "tag-channelnews";
