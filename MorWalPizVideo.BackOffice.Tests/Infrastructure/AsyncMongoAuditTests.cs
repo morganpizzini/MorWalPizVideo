@@ -42,7 +42,7 @@ public class AsyncMongoAuditTests
                 var line = lines[i];
 
                 // Quick filter: only flag lines that look like they call into a Mongo collection / cursor.
-                if (!line.Contains("Find(") && !line.Contains("Collection<") && !line.Contains("collection.") && !line.Contains("Builders<"))
+                if (!SyncMongoCall.IsMatch(line) && !line.Contains("Collection<") && !line.Contains("collection.") && !line.Contains("Builders<"))
                     continue;
 
                 if (CursorSync.IsMatch(line))

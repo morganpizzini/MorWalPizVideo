@@ -35,7 +35,7 @@ public sealed class FakeInsightServicesTests
         {
             Sources =
             [
-                new SourceScanRequestDto
+                new SourceScanBatchDto
                 {
                     SourceUrl = "https://example.test/source",
                     Posts = posts
