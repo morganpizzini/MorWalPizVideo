@@ -40,10 +40,11 @@ export function DeferredRouteProgressProvider({ children }: React.PropsWithChild
 
 export function useDeferredRouteProgress(promise: Promise<unknown>): void {
   const context = useContext(DeferredRouteProgressContext);
+  const track = context?.track;
 
   React.useEffect(() => {
-    return context?.track(promise);
-  }, [context, promise]);
+    return track?.(promise);
+  }, [track, promise]);
 }
 
 export function useDeferredRoutePending(): boolean {
