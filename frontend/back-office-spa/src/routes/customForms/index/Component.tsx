@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Badge } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useLocation } from 'react-router';
+import { Link, useFetcher, useLocation } from 'react-router';
 import { CustomForm } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -14,7 +15,7 @@ const CustomForms: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
 
-  const forms = useLoaderData<CustomForm[]>();
+  const forms = useResolvedLoaderData<CustomForm[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';

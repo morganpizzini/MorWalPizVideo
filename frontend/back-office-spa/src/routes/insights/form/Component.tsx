@@ -1,7 +1,8 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import { InsightTopic, InsightTopicCreationMode } from '@morwalpizvideo/models';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
-import { useNavigate, useFetcher, useLoaderData, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useFetcher, useParams, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -11,7 +12,7 @@ const InsightTopicForm: React.FC = () => {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const isEditMode = !!params.id;
-  const existingTopic = useLoaderData<InsightTopic | null>();
+  const existingTopic = useResolvedLoaderData<InsightTopic | null>();
   const creationMode = searchParams.get('returnTo')?.includes('/insights/comments')
     ? InsightTopicCreationMode.YouTubeCommentAnalysis
     : InsightTopicCreationMode.General;
@@ -50,11 +51,9 @@ const InsightTopicForm: React.FC = () => {
     setShowModal(false);
 
     if (result.success) {
-      toast.show(
-        'Success',
-        `Topic ${isEditMode ? 'updated' : 'created'} successfully`,
-        { variant: 'success' }
-      );
+      toast.show('Success', `Topic ${isEditMode ? 'updated' : 'created'} successfully`, {
+        variant: 'success',
+      });
       navigate(searchParams.get('returnTo') || '/insights');
     }
   }, [result, navigate, isEditMode]);
@@ -181,9 +180,7 @@ const InsightTopicForm: React.FC = () => {
               </div>
             </div>
           )}
-          <Form.Text className="text-muted">
-            Keywords that help AI discover relevant news
-          </Form.Text>
+          <Form.Text className="text-muted">Keywords that help AI discover relevant news</Form.Text>
           <FieldError error={errors?.seedArguments} />
         </Form.Group>
 
@@ -205,7 +202,11 @@ const InsightTopicForm: React.FC = () => {
             <div className="border rounded p-3 bg-light">
               <div className="d-flex flex-wrap gap-2">
                 {preferredSources.map(source => (
-                  <Badge key={source} bg="secondary" className="d-flex align-items-center gap-2 p-2">
+                  <Badge
+                    key={source}
+                    bg="secondary"
+                    className="d-flex align-items-center gap-2 p-2"
+                  >
                     <span>{source}</span>
                     <button
                       type="button"
@@ -219,9 +220,7 @@ const InsightTopicForm: React.FC = () => {
               </div>
             </div>
           )}
-          <Form.Text className="text-muted">
-            URLs or names of trusted news sources
-          </Form.Text>
+          <Form.Text className="text-muted">URLs or names of trusted news sources</Form.Text>
           <FieldError error={errors?.preferredSources} />
         </Form.Group>
 

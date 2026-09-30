@@ -1,16 +1,17 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React from 'react';
 import { Card, Badge } from 'react-bootstrap';
-import { Link, useLoaderData } from 'react-router';
+import { Link } from 'react-router';
 import { Compilation } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 
 const CompilationDetail: React.FC = () => {
-  const compilation = useLoaderData<Compilation>();
+  const compilation = useResolvedLoaderData<Compilation>();
 
   return (
     <>
       <PageHeader title="Compilation Details" />
-      
+
       <Card className="mb-3">
         <Card.Header as="h5">Basic Information</Card.Header>
         <Card.Body>
@@ -38,9 +39,7 @@ const CompilationDetail: React.FC = () => {
       </Card>
 
       <Card className="mb-3">
-        <Card.Header as="h5">
-          Videos ({compilation.videos?.length || 0})
-        </Card.Header>
+        <Card.Header as="h5">Videos ({compilation.videos?.length || 0})</Card.Header>
         <Card.Body>
           {compilation.videos && compilation.videos.length > 0 ? (
             <div className="d-flex flex-column gap-3">
@@ -55,9 +54,7 @@ const CompilationDetail: React.FC = () => {
                         <p className="text-muted mb-2">
                           <small>YouTube ID: {video.youtubeId}</small>
                         </p>
-                        {video.description && (
-                          <p className="mb-2">{video.description}</p>
-                        )}
+                        {video.description && <p className="mb-2">{video.description}</p>}
                         {video.categories && video.categories.length > 0 && (
                           <div className="d-flex gap-1 flex-wrap">
                             {video.categories.map((cat: any, idx: number) => (

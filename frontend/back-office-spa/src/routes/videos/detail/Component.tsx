@@ -1,10 +1,10 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React from 'react';
-import { useLoaderData } from 'react-router';
+import {} from 'react-router';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
 import { Match, ContentType, Channel, LinkType } from '@morwalpizvideo/models';
 import { composeShortLinkUrl } from '@components/VideoList';
-
 
 interface Category {
   categoryId: string;
@@ -18,7 +18,7 @@ interface LoaderData {
 }
 
 const Component: React.FC = () => {
-  const { match, channels } = useLoaderData() as LoaderData;
+  const { match, channels } = useResolvedLoaderData() as LoaderData;
   const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
 
   return (
@@ -26,16 +26,13 @@ const Component: React.FC = () => {
       <PageHeader title={`Video Details: ${match.title}`} />
 
       <div className="mb-3">
-        <Button
-          variant="outline-secondary"
-          onClick={() => window.location.href = '/videos'}
-        >
+        <Button variant="outline-secondary" onClick={() => (window.location.href = '/videos')}>
           ← Back to Videos
         </Button>
         <Button
           variant="primary"
           className="ms-2"
-          onClick={() => window.location.href = `/videos/${match.id}/edit`}
+          onClick={() => (window.location.href = `/videos/${match.id}/edit`)}
         >
           Edit Video
         </Button>
@@ -49,22 +46,32 @@ const Component: React.FC = () => {
             </Card.Header>
             <Card.Body>
               <Row>
-                <Col sm={3}><strong>Match ID:</strong></Col>
-                <Col sm={9}><code>{match.id}</code></Col>
+                <Col sm={3}>
+                  <strong>Match ID:</strong>
+                </Col>
+                <Col sm={9}>
+                  <code>{match.id}</code>
+                </Col>
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Title:</strong></Col>
+                <Col sm={3}>
+                  <strong>Title:</strong>
+                </Col>
                 <Col sm={9}>{match.title}</Col>
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Description:</strong></Col>
+                <Col sm={3}>
+                  <strong>Description:</strong>
+                </Col>
                 <Col sm={9}>{match.description || <em>No description</em>}</Col>
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>URL:</strong></Col>
+                <Col sm={3}>
+                  <strong>URL:</strong>
+                </Col>
                 <Col sm={9}>
                   {match.url ? (
                     <a href={match.url} target="_blank" rel="noopener noreferrer">
@@ -77,12 +84,16 @@ const Component: React.FC = () => {
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Categories:</strong></Col>
+                <Col sm={3}>
+                  <strong>Categories:</strong>
+                </Col>
                 <Col sm={9}>
                   <div className="d-flex gap-1 flex-wrap">
                     {match.categories && match.categories.length > 0 ? (
                       match.categories.map((cat, idx) => (
-                        <Badge key={idx} bg="secondary">{cat.title}</Badge>
+                        <Badge key={idx} bg="secondary">
+                          {cat.title}
+                        </Badge>
                       ))
                     ) : (
                       <em className="text-muted">No categories</em>
@@ -92,12 +103,16 @@ const Component: React.FC = () => {
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Tags:</strong></Col>
+                <Col sm={3}>
+                  <strong>Tags:</strong>
+                </Col>
                 <Col sm={9}>
                   <div className="d-flex gap-1 flex-wrap">
                     {match.tags && match.tags.length > 0 ? (
                       match.tags.map((tag, idx) => (
-                        <Badge key={idx} bg="info">{tag}</Badge>
+                        <Badge key={idx} bg="info">
+                          {tag}
+                        </Badge>
                       ))
                     ) : (
                       <em className="text-muted">No tags</em>
@@ -107,23 +122,31 @@ const Component: React.FC = () => {
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Match Type:</strong></Col>
+                <Col sm={3}>
+                  <strong>Match Type:</strong>
+                </Col>
                 <Col sm={9}>
-                  <Badge bg={match.contentType === ContentType.SingleVideo ? "info" : "warning"}>
-                    {match.contentType === ContentType.SingleVideo ? "Single Video" : "Collection"}
+                  <Badge bg={match.contentType === ContentType.SingleVideo ? 'info' : 'warning'}>
+                    {match.contentType === ContentType.SingleVideo ? 'Single Video' : 'Collection'}
                   </Badge>
                 </Col>
               </Row>
               <hr />
               <Row>
-                <Col sm={3}><strong>Thumbnail Video:</strong></Col>
-                <Col sm={9}><code>{match.thumbnailVideoId}</code></Col>
+                <Col sm={3}>
+                  <strong>Thumbnail Video:</strong>
+                </Col>
+                <Col sm={9}>
+                  <code>{match.thumbnailVideoId}</code>
+                </Col>
               </Row>
               {match.creationDateTime && (
                 <>
                   <hr />
                   <Row>
-                    <Col sm={3}><strong>Created:</strong></Col>
+                    <Col sm={3}>
+                      <strong>Created:</strong>
+                    </Col>
                     <Col sm={9}>{new Date(match.creationDateTime).toLocaleString()}</Col>
                   </Row>
                 </>
@@ -144,25 +167,45 @@ const Component: React.FC = () => {
                     <div key={index} className="p-2 border rounded">
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="flex-grow-1">
-                          <div><strong>YouTube ID:</strong></div>
+                          <div>
+                            <strong>YouTube ID:</strong>
+                          </div>
                           <code className="text-primary">{videoRef.youtubeId}</code>
                           {(() => {
                             const shortLinkUrl = composeShortLinkUrl(
                               channel?.shortLinkUrl,
-                              match.shortLinks?.find(link =>
-                                link.linkType === LinkType.YouTubeVideo &&
-                                link.target === videoRef.youtubeId)?.code);
+                              match.shortLinks?.find(
+                                link =>
+                                  link.linkType === LinkType.YouTubeVideo &&
+                                  link.target === videoRef.youtubeId
+                              )?.code
+                            );
                             return shortLinkUrl ? (
                               <div className="mt-1 d-flex align-items-center gap-2">
-                                <a href={shortLinkUrl} target="_blank" rel="noopener noreferrer" className="text-truncate">{shortLinkUrl}</a>
-                                <Button size="sm" variant="outline-secondary" onClick={() => void navigator.clipboard.writeText(shortLinkUrl)}>Copy short link</Button>
+                                <a
+                                  href={shortLinkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-truncate"
+                                >
+                                  {shortLinkUrl}
+                                </a>
+                                <Button
+                                  size="sm"
+                                  variant="outline-secondary"
+                                  onClick={() => void navigator.clipboard.writeText(shortLinkUrl)}
+                                >
+                                  Copy short link
+                                </Button>
                               </div>
                             ) : null;
                           })()}
                           <div className="mt-1 d-flex gap-1 flex-wrap">
                             {videoRef.categories && videoRef.categories.length > 0 ? (
                               videoRef.categories.map((cat, catIdx) => (
-                                <Badge key={catIdx} bg="secondary">{cat.title}</Badge>
+                                <Badge key={catIdx} bg="secondary">
+                                  {cat.title}
+                                </Badge>
                               ))
                             ) : (
                               <span className="text-muted small">No categories</span>
@@ -181,10 +224,8 @@ const Component: React.FC = () => {
               )}
             </Card.Body>
           </Card>
-
         </Col>
       </Row>
-
     </>
   );
 };

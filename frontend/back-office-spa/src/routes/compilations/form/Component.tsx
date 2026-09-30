@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal, Badge } from 'react-bootstrap';
-import { useNavigate, useFetcher, useLoaderData, useParams } from 'react-router';
+import { useNavigate, useFetcher, useParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -19,7 +20,7 @@ interface VideoRef {
 const CompilationForm: React.FC = () => {
   const params = useParams();
   const isEditMode = !!params.id;
-  const existingCompilation = useLoaderData<Compilation | null>();
+  const existingCompilation = useResolvedLoaderData<Compilation | null>();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -61,7 +62,7 @@ const CompilationForm: React.FC = () => {
         const videos: VideoRef[] = [];
         data.forEach((match: Match) => {
           if (match.videoRefs) {
-              match.videoRefs.forEach(video => {
+            match.videoRefs.forEach(video => {
               videos.push({
                 youtubeId: video.youtubeId,
                 title: video.title || video.youtubeId,
@@ -87,11 +88,9 @@ const CompilationForm: React.FC = () => {
     setShowModal(false);
 
     if (result.success) {
-      toast.show(
-        'Success',
-        `Compilation ${isEditMode ? 'updated' : 'created'} successfully`,
-        { variant: 'success' }
-      );
+      toast.show('Success', `Compilation ${isEditMode ? 'updated' : 'created'} successfully`, {
+        variant: 'success',
+      });
       navigate('/compilations');
     }
   }, [result, navigate, isEditMode]);
@@ -133,7 +132,12 @@ const CompilationForm: React.FC = () => {
   };
 
   const isDisabled = () => {
-    return title.trim().length === 0 || description.trim().length === 0 || url.trim().length === 0 || busy;
+    return (
+      title.trim().length === 0 ||
+      description.trim().length === 0 ||
+      url.trim().length === 0 ||
+      busy
+    );
   };
 
   return (
@@ -210,7 +214,7 @@ const CompilationForm: React.FC = () => {
             </Button>
           </div>
           {loading && <div className="text-muted mb-2">Loading videos...</div>}
-          
+
           {selectedVideoIds.length > 0 && (
             <div className="border rounded p-3 bg-light">
               <strong className="d-block mb-2">Selected Videos ({selectedVideoIds.length}):</strong>

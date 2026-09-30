@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { QueryLink } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -13,7 +14,7 @@ const QueryLinks: React.FC = () => {
   const [selectedLink, setSelectedLink] = useState<QueryLink | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<QueryLink[]>();
+  const entities = useResolvedLoaderData<QueryLink[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -110,8 +111,8 @@ const QueryLinks: React.FC = () => {
           <p>
             <strong>Title:</strong> {selectedLink?.title}
           </p>
-                  <p>
-                      <strong>Value:</strong> {selectedLink?.value}
+          <p>
+            <strong>Value:</strong> {selectedLink?.value}
           </p>
         </Modal.Body>
         <Modal.Footer>

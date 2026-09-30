@@ -1,12 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
+import type { QueryLink } from '@/models/queryLink';
 
 const QueryLinkDetail: React.FC = () => {
-  const entity = useLoaderData();
+  const entity = useResolvedLoaderData<QueryLink>();
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();

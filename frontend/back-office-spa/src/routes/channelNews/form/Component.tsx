@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import { deleteChannelNewsImage, uploadChannelNewsImages } from '@morwalpizvideo/services';
 import type { ChannelNewsAdmin, ChannelNewsImage } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -17,7 +18,7 @@ const statusOptions = [
 ] as const;
 
 export default function ChannelNewsForm(): React.ReactElement {
-  const entity = useLoaderData() as ChannelNewsAdmin | null;
+  const entity = useResolvedLoaderData() as ChannelNewsAdmin | null;
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();

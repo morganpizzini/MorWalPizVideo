@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState } from 'react';
-import { useFetcher, useNavigate, useLoaderData, useSearchParams } from 'react-router';
+import { useFetcher, useNavigate, useSearchParams } from 'react-router';
 import { Form, Button, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -23,7 +24,7 @@ const EditShortLink: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const entity = useLoaderData<ShortLink>();
+  const entity = useResolvedLoaderData<ShortLink>();
   useEffect(() => {
     setModel(entity);
   }, [entity]);
@@ -88,7 +89,7 @@ const EditShortLink: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -176,17 +177,19 @@ const EditShortLink: React.FC = () => {
             <>
               <Form.Select
                 value={model.target}
-                onChange={e => setModel({ ...model, target: e.target.value, videoId: e.target.value })}
+                onChange={e =>
+                  setModel({ ...model, target: e.target.value, videoId: e.target.value })
+                }
                 disabled={loading}
               >
                 <option value="">Select a video</option>
                 {matches.map(match => (
                   <React.Fragment key={match.id}>
-                      {match.videoRefs.map(video => (
-                        <option key={video.youtubeId} value={video.youtubeId}>
-                          {video.title || video.youtubeId}
-                        </option>
-                      ))}
+                    {match.videoRefs.map(video => (
+                      <option key={video.youtubeId} value={video.youtubeId}>
+                        {video.title || video.youtubeId}
+                      </option>
+                    ))}
                   </React.Fragment>
                 ))}
               </Form.Select>
@@ -196,14 +199,19 @@ const EditShortLink: React.FC = () => {
             <Form.Control
               type="text"
               value={model.target}
-              onChange={e => setModel({ ...model, target: e.target.value, videoId: e.target.value })}
+              onChange={e =>
+                setModel({ ...model, target: e.target.value, videoId: e.target.value })
+              }
             />
           )}
 
           <FieldError error={errors?.target} />
           <Form.Text className="text-muted">
-            {model.linkType === LinkType.CustomUrl && "Enter the full URL including http:// or https://"}
-            {model.linkType === LinkType.YouTubeVideo && !matches.length && "Loading available videos..."}
+            {model.linkType === LinkType.CustomUrl &&
+              'Enter the full URL including http:// or https://'}
+            {model.linkType === LinkType.YouTubeVideo &&
+              !matches.length &&
+              'Loading available videos...'}
           </Form.Text>
         </Form.Group>
 
@@ -211,8 +219,8 @@ const EditShortLink: React.FC = () => {
           items={availableQueryLinks}
           selectedItems={selectedQueryLinks}
           onSelectionChange={setSelectedQueryLinks}
-          getItemId={(item) => item.queryLinkId}
-          getItemDisplay={(item) => item.title}
+          getItemId={item => item.queryLinkId}
+          getItemDisplay={item => item.title}
           label="Query Links"
           placeholder="Select query links..."
           helpText="Select query parameters to append to the URL"
@@ -228,7 +236,8 @@ const EditShortLink: React.FC = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Edit</Modal.Title>
-        </Modal.Header>        <Modal.Body>
+        </Modal.Header>{' '}
+        <Modal.Body>
           <p>Are you sure you want to save the following changes?</p>
           <p>
             <strong>Link Type:</strong> {LinkType[model.linkType]}{' '}

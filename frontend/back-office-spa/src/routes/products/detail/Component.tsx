@@ -1,10 +1,11 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React from 'react';
-import { useLoaderData, Link } from 'react-router';
+import { Link } from 'react-router';
 import { Card, Badge } from 'react-bootstrap';
 import type { Product } from '@morwalpizvideo/models';
 
 const ProductDetail: React.FC = () => {
-  const { product } = useLoaderData() as { product: Product };
+  const { product } = useResolvedLoaderData() as { product: Product };
 
   return (
     <div>
@@ -45,7 +46,7 @@ const ProductDetail: React.FC = () => {
             <strong>Categories:</strong>
             <div className="mt-2">
               {product.categories && product.categories.length > 0 ? (
-                product.categories.map((cat) => (
+                product.categories.map(cat => (
                   <Badge key={cat.id} bg="secondary" className="me-1">
                     {cat.title}
                   </Badge>

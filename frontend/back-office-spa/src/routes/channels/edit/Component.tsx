@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState } from 'react';
-import { useFetcher, useNavigate, useLoaderData } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { Form, Button, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -14,7 +15,7 @@ const EditChannel: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const entity = useLoaderData<Channel>();
+  const entity = useResolvedLoaderData<Channel>();
 
   useEffect(() => {
     if (entity) {
@@ -41,7 +42,12 @@ const EditChannel: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Channel updated successfully', { variant: 'success' });
       if (hasCacheInvalidationWarning(result)) {
-        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          result.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
       navigate('..');
     }

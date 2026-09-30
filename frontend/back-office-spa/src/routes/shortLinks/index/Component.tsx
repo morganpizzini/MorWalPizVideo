@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { ShortLink, LinkType } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -13,7 +14,7 @@ const ShortLinks: React.FC = () => {
   const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<ShortLink[]>();
+  const entities = useResolvedLoaderData<ShortLink[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -53,12 +54,12 @@ const ShortLinks: React.FC = () => {
   };
   // Definizione delle colonne
   const columns = useMemo<ColumnDef<ShortLink>[]>(
-      () => [
-          {
-              accessorKey: 'code',
-              header: 'Code',
-              cell: info => info.getValue(),
-          },
+    () => [
+      {
+        accessorKey: 'code',
+        header: 'Code',
+        cell: info => info.getValue(),
+      },
       {
         accessorKey: 'target',
         header: 'Target',
@@ -132,7 +133,8 @@ const ShortLinks: React.FC = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Delete</Modal.Title>
-        </Modal.Header>        <Modal.Body>
+        </Modal.Header>{' '}
+        <Modal.Body>
           <p>Are you sure you want to delete the following short link?</p>
           <p>
             <strong>Link Type:</strong> {selectedLink ? LinkType[selectedLink.linkType] : ''}

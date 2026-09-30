@@ -1,21 +1,27 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, Link } from 'react-router';
+import { useFetcher, useNavigate, Link } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 import type { Product, VideoProductCategory } from '@morwalpizvideo/models';
 
 const EditProduct: React.FC = () => {
-  const { product, categories } = useLoaderData() as { product: Product; categories: VideoProductCategory[] };
-  
+  const { product, categories } = useResolvedLoaderData() as {
+    product: Product;
+    categories: VideoProductCategory[];
+  };
+
   const [title, setTitle] = useState(product.title);
   const [description, setDescription] = useState(product.description);
   const [url, setUrl] = useState(product.url);
   const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>(
-    (product.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as VideoProductCategory[]
+    (product.categories || [])
+      .map(cat => categories.find(c => c.id === cat.id))
+      .filter(Boolean) as VideoProductCategory[]
   );
-  
+
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
@@ -49,23 +55,34 @@ const EditProduct: React.FC = () => {
           Back to List
         </Link>
       </div>
-      
+
       <GenericErrorList errors={errors?.generics} />
 
       <fetcher.Form method="post" onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
           <Form.Label>Title</Form.Label>
-          <Form.Control type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <Form.Control
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            required
+          />
         </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>Description</Form.Label>
-          <Form.Control as="textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} required />
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            required
+          />
         </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>URL</Form.Label>
-          <Form.Control type="url" value={url} onChange={(e) => setUrl(e.target.value)} required />
+          <Form.Control type="url" value={url} onChange={e => setUrl(e.target.value)} required />
         </Form.Group>
 
         <MultiSelectWithBadges
@@ -73,8 +90,8 @@ const EditProduct: React.FC = () => {
           items={categories}
           selectedItems={selectedCategories}
           onSelectionChange={setSelectedCategories}
-          getItemId={(cat) => cat.id}
-          getItemDisplay={(cat) => cat.title}
+          getItemId={cat => cat.id}
+          getItemDisplay={cat => cat.title}
           placeholder="Select a category"
         />
 
@@ -82,7 +99,12 @@ const EditProduct: React.FC = () => {
           <Button type="submit" variant="primary" disabled={busy}>
             {busy ? 'Saving...' : 'Save Changes'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate('/products')} disabled={busy}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => navigate('/products')}
+            disabled={busy}
+          >
             Cancel
           </Button>
         </div>

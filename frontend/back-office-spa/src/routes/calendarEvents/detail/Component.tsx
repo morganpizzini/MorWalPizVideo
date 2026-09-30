@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
 import { Button, Card, Modal, Badge } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { Link, useFetcher, useNavigate } from 'react-router';
 import { CalendarEvent } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 
 const CalendarEventDetail: React.FC = () => {
-  const calendarEvent = useLoaderData() as CalendarEvent;
+  const calendarEvent = useResolvedLoaderData() as CalendarEvent;
   const [showModal, setShowModal] = useState(false);
   const fetcher = useFetcher();
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const CalendarEventDetail: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -42,7 +43,7 @@ const CalendarEventDetail: React.FC = () => {
       },
       {
         method: 'post',
-        action: `/calendarEvents/${encodeURIComponent(calendarEvent.title)}`
+        action: `/calendarEvents/${encodeURIComponent(calendarEvent.title)}`,
       }
     );
   };
@@ -88,7 +89,7 @@ const CalendarEventDetail: React.FC = () => {
             <dt className="col-sm-3">Categories</dt>
             <dd className="col-sm-9">
               {calendarEvent.categories && calendarEvent.categories.length > 0 ? (
-                calendarEvent.categories.map((cat) => (
+                calendarEvent.categories.map(cat => (
                   <Badge key={cat.id} bg="secondary" className="me-1">
                     {cat.title}
                   </Badge>
@@ -99,9 +100,7 @@ const CalendarEventDetail: React.FC = () => {
             </dd>
 
             <dt className="col-sm-3">Match ID</dt>
-            <dd className="col-sm-9">
-              {calendarEvent.matchId || <em>No match ID provided</em>}
-            </dd>
+            <dd className="col-sm-9">{calendarEvent.matchId || <em>No match ID provided</em>}</dd>
           </dl>
         </Card.Body>
       </Card>

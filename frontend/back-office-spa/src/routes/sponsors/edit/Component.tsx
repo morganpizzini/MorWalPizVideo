@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState, useRef } from 'react';
 import { Form, Button, Card, Image } from 'react-bootstrap';
-import { useLoaderData, useNavigate, useFetcher } from 'react-router';
+import { useNavigate, useFetcher } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import type { Sponsor } from '@morwalpizvideo/models';
 
 const EditSponsor: React.FC = () => {
-  const sponsor = useLoaderData() as Sponsor;
+  const sponsor = useResolvedLoaderData() as Sponsor;
   const navigate = useNavigate();
   const toast = useToast();
   const fetcher = useFetcher();
@@ -127,11 +128,7 @@ const EditSponsor: React.FC = () => {
         <Button variant="primary" type="submit" disabled={busy}>
           {busy ? 'Updating...' : 'Update Sponsor'}
         </Button>
-        <Button
-          variant="secondary"
-          className="ms-2"
-          onClick={() => navigate('/sponsors')}
-        >
+        <Button variant="secondary" className="ms-2" onClick={() => navigate('/sponsors')}>
           Cancel
         </Button>
       </Form>

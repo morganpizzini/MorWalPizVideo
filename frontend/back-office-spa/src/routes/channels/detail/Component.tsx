@@ -1,7 +1,15 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useFetcher, useNavigate, useLocation } from 'react-router';
+import { useFetcher, useNavigate, useLocation } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
-import { ComposeUrl, Delete, endpoints, getChannelTerminology, postFormData, saveChannelTerminology } from '@morwalpizvideo/services';
+import {
+  ComposeUrl,
+  Delete,
+  endpoints,
+  getChannelTerminology,
+  postFormData,
+  saveChannelTerminology,
+} from '@morwalpizvideo/services';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import { Channel, ChannelTerminology, TerminologyMapping } from '@morwalpizvideo/models';
 import DetailPanel from '@components/DetailPanel';
@@ -11,12 +19,15 @@ import { useChannelContext } from '../../../contexts/ChannelContext';
 import { hasCacheInvalidationWarning } from '../response';
 
 const ChannelDetail: React.FC = () => {
-  const entity = useLoaderData<Channel>();
+  const entity = useResolvedLoaderData<Channel>();
   const [showModal, setShowModal] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState(entity?.channelLogoUrl ?? '');
   const [logoBusy, setLogoBusy] = useState(false);
-  const [terminology, setTerminology] = useState<ChannelTerminology>({ italianToEnglish: [], invariantEnglish: [] });
+  const [terminology, setTerminology] = useState<ChannelTerminology>({
+    italianToEnglish: [],
+    invariantEnglish: [],
+  });
   const [terminologyBusy, setTerminologyBusy] = useState(false);
   const [terminologyError, setTerminologyError] = useState('');
   const navigate = useNavigate();
@@ -36,21 +47,48 @@ const ChannelDetail: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    getChannelTerminology().then(value => active && setTerminology(value)).catch(() => active && setTerminologyError('Unable to load terminology.'));
-    return () => { active = false; };
+    getChannelTerminology()
+      .then(value => active && setTerminology(value))
+      .catch(() => active && setTerminologyError('Unable to load terminology.'));
+    return () => {
+      active = false;
+    };
   }, [entity.channelId]);
 
-  const updateTerminology = (group: keyof ChannelTerminology, index: number, field: keyof TerminologyMapping, value: string) => {
-    setTerminology(current => ({ ...current, [group]: current[group].map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item) }));
+  const updateTerminology = (
+    group: keyof ChannelTerminology,
+    index: number,
+    field: keyof TerminologyMapping,
+    value: string
+  ) => {
+    setTerminology(current => ({
+      ...current,
+      [group]: current[group].map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      ),
+    }));
   };
 
-  const addTerminology = (group: keyof ChannelTerminology) => setTerminology(current => ({ ...current, [group]: [...current[group], { source: '', target: '' }] }));
-  const removeTerminology = (group: keyof ChannelTerminology, index: number) => setTerminology(current => ({ ...current, [group]: current[group].filter((_, itemIndex) => itemIndex !== index) }));
+  const addTerminology = (group: keyof ChannelTerminology) =>
+    setTerminology(current => ({
+      ...current,
+      [group]: [...current[group], { source: '', target: '' }],
+    }));
+  const removeTerminology = (group: keyof ChannelTerminology, index: number) =>
+    setTerminology(current => ({
+      ...current,
+      [group]: current[group].filter((_, itemIndex) => itemIndex !== index),
+    }));
   const saveTerminology = async () => {
-    setTerminologyBusy(true); setTerminologyError('');
-    try { setTerminology(await saveChannelTerminology(terminology)); }
-    catch { setTerminologyError('Unable to save terminology. Check your channel permission.'); }
-    finally { setTerminologyBusy(false); }
+    setTerminologyBusy(true);
+    setTerminologyError('');
+    try {
+      setTerminology(await saveChannelTerminology(terminology));
+    } catch {
+      setTerminologyError('Unable to save terminology. Check your channel permission.');
+    } finally {
+      setTerminologyBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -61,7 +99,12 @@ const ChannelDetail: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Channel deleted successfully', { variant: 'success' });
       if (hasCacheInvalidationWarning(result)) {
-        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          result.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
       navigate('..');
     }
@@ -99,7 +142,11 @@ const ChannelDetail: React.FC = () => {
         formData
       );
       if (response?.errors) {
-        toast.show('Logo upload failed', String(response.errors[0] ?? 'Unable to upload channel logo'), { variant: 'danger' });
+        toast.show(
+          'Logo upload failed',
+          String(response.errors[0] ?? 'Unable to upload channel logo'),
+          { variant: 'danger' }
+        );
         return;
       }
 
@@ -107,7 +154,12 @@ const ChannelDetail: React.FC = () => {
       setLogoFile(null);
       toast.show('Success', 'Channel logo uploaded successfully', { variant: 'success' });
       if (hasCacheInvalidationWarning(response)) {
-        toast.show('Warning', response.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          response.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
     } catch {
       toast.show('Logo upload failed', 'Unable to upload channel logo', { variant: 'danger' });
@@ -119,16 +171,27 @@ const ChannelDetail: React.FC = () => {
   const removeLogo = async () => {
     setLogoBusy(true);
     try {
-      const response = await Delete(ComposeUrl(endpoints.CHANNEL_LOGO, { channelId: entity.channelId }));
+      const response = await Delete(
+        ComposeUrl(endpoints.CHANNEL_LOGO, { channelId: entity.channelId })
+      );
       if (response?.errors) {
-        toast.show('Logo removal failed', String(response.errors[0] ?? 'Unable to remove channel logo'), { variant: 'danger' });
+        toast.show(
+          'Logo removal failed',
+          String(response.errors[0] ?? 'Unable to remove channel logo'),
+          { variant: 'danger' }
+        );
         return;
       }
 
       setLogoUrl('');
       toast.show('Success', 'Channel logo removed successfully', { variant: 'success' });
       if (hasCacheInvalidationWarning(response)) {
-        toast.show('Warning', response.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          response.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
     } catch {
       toast.show('Logo removal failed', 'Unable to remove channel logo', { variant: 'danger' });
@@ -164,10 +227,14 @@ const ChannelDetail: React.FC = () => {
           {entity.socials?.length ? (
             <ul>
               {entity.socials.map((social, index) => (
-                <li key={`${social.provider}-${index}`}>{social.provider}: {social.handler}</li>
+                <li key={`${social.provider}-${index}`}>
+                  {social.provider}: {social.handler}
+                </li>
               ))}
             </ul>
-          ) : <span> None configured</span>}
+          ) : (
+            <span> None configured</span>
+          )}
         </div>
         <div className="mt-3">
           <strong>Social publishing:</strong>
@@ -177,7 +244,8 @@ const ChannelDetail: React.FC = () => {
               const configured = Boolean(settings?.destinationId && settings.credentialConfigured);
               return (
                 <li key={provider}>
-                  {provider}: {configured ? `configured for ${settings?.destinationId}` : 'not configured'}
+                  {provider}:{' '}
+                  {configured ? `configured for ${settings?.destinationId}` : 'not configured'}
                 </li>
               );
             })}
@@ -185,7 +253,14 @@ const ChannelDetail: React.FC = () => {
         </div>
         <div className="mt-3">
           <strong>Channel logo:</strong>
-          {logoUrl && <img src={logoUrl} alt={`${entity.channelName} logo`} className="d-block my-2" style={{ maxWidth: 250, maxHeight: 150 }} />}
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={`${entity.channelName} logo`}
+              className="d-block my-2"
+              style={{ maxWidth: 250, maxHeight: 150 }}
+            />
+          )}
           <div className="d-flex gap-2 align-items-center mt-2">
             <input
               type="file"
@@ -194,19 +269,41 @@ const ChannelDetail: React.FC = () => {
               onChange={event => setLogoFile(event.target.files?.[0] ?? null)}
               disabled={logoBusy}
             />
-            <Button type="button" variant="outline-primary" onClick={uploadLogo} disabled={!logoFile || logoBusy}>
+            <Button
+              type="button"
+              variant="outline-primary"
+              onClick={uploadLogo}
+              disabled={!logoFile || logoBusy}
+            >
               Upload PNG logo
             </Button>
-            {logoUrl && <Button type="button" variant="outline-danger" onClick={removeLogo} disabled={logoBusy}>Remove logo</Button>}
+            {logoUrl && (
+              <Button
+                type="button"
+                variant="outline-danger"
+                onClick={removeLogo}
+                disabled={logoBusy}
+              >
+                Remove logo
+              </Button>
+            )}
           </div>
         </div>
       </DetailPanel>
       <DetailPanel title="Channel content management">
         <div className="d-flex flex-wrap gap-2">
-          <Button type="button" variant="outline-primary" onClick={() => navigateToChannelManagement('/pages')}>
+          <Button
+            type="button"
+            variant="outline-primary"
+            onClick={() => navigateToChannelManagement('/pages')}
+          >
             Pages
           </Button>
-          <Button type="button" variant="outline-primary" onClick={() => navigateToChannelManagement('/navigation')}>
+          <Button
+            type="button"
+            variant="outline-primary"
+            onClick={() => navigateToChannelManagement('/navigation')}
+          >
             Navigation
           </Button>
         </div>
@@ -215,18 +312,68 @@ const ChannelDetail: React.FC = () => {
         {terminologyError && <div className="alert alert-danger">{terminologyError}</div>}
         {(['italianToEnglish', 'invariantEnglish'] as const).map(group => (
           <div key={group} className="mb-3">
-            <h6>{group === 'italianToEnglish' ? 'Italian to English mappings' : 'Invariant English terms'}</h6>
+            <h6>
+              {group === 'italianToEnglish'
+                ? 'Italian to English mappings'
+                : 'Invariant English terms'}
+            </h6>
             {terminology[group].map((mapping, index) => (
               <div className="row g-2 mb-2" key={`${group}-${index}`}>
-                <div className="col"><input className="form-control" aria-label="Source term" value={mapping.source} onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateTerminology(group, index, 'source', event.target.value)} /></div>
-                <div className="col"><input className="form-control" aria-label="Target term" value={mapping.target} onChange={(event: React.ChangeEvent<HTMLInputElement>) => updateTerminology(group, index, 'target', event.target.value)} placeholder="Keep source as-is" /></div>
-                <div className="col-auto"><Button variant="outline-danger" onClick={() => removeTerminology(group, index)} disabled={terminologyBusy}>Remove</Button></div>
+                <div className="col">
+                  <input
+                    className="form-control"
+                    aria-label="Source term"
+                    value={mapping.source}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                      updateTerminology(group, index, 'source', event.target.value)
+                    }
+                  />
+                </div>
+                <div className="col">
+                  <input
+                    className="form-control"
+                    aria-label="Target term"
+                    value={mapping.target}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                      updateTerminology(group, index, 'target', event.target.value)
+                    }
+                    placeholder="Keep source as-is"
+                  />
+                </div>
+                <div className="col-auto">
+                  <Button
+                    variant="outline-danger"
+                    onClick={() => removeTerminology(group, index)}
+                    disabled={terminologyBusy}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
-            <Button variant="outline-secondary" onClick={() => addTerminology(group)} disabled={terminologyBusy}>Add term</Button>
+            <Button
+              variant="outline-secondary"
+              onClick={() => addTerminology(group)}
+              disabled={terminologyBusy}
+            >
+              Add term
+            </Button>
           </div>
         ))}
-        <Button variant="primary" onClick={saveTerminology} disabled={terminologyBusy || Boolean(terminologyError && terminology.italianToEnglish.length === 0 && terminology.invariantEnglish.length === 0)}>Save terminology</Button>
+        <Button
+          variant="primary"
+          onClick={saveTerminology}
+          disabled={
+            terminologyBusy ||
+            Boolean(
+              terminologyError &&
+              terminology.italianToEnglish.length === 0 &&
+              terminology.invariantEnglish.length === 0
+            )
+          }
+        >
+          Save terminology
+        </Button>
       </DetailPanel>
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>

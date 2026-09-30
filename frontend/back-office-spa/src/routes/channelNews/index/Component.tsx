@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useFetcher, useLoaderData } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import type { ChannelNewsAdmin } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -11,7 +12,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 const statusLabels = ['Draft', 'Scheduled', 'Published', 'Archived'];
 
 export default function ChannelNewsIndex(): React.ReactElement {
-  const entities = useLoaderData() as ChannelNewsAdmin[];
+  const entities = useResolvedLoaderData() as ChannelNewsAdmin[];
   const fetcher = useFetcher();
   const toast = useToast();
   const [selected, setSelected] = useState<ChannelNewsAdmin | null>(null);

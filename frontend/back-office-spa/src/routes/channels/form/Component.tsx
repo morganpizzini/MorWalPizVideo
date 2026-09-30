@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useNavigate, useFetcher, useLoaderData } from 'react-router';
+import { useNavigate, useFetcher } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -24,7 +25,12 @@ const publishingProviders: ReadonlyArray<{
 }> = [
   { key: 'telegram', name: 'Telegram', destinationLabel: 'Chat ID', credentialLabel: 'Bot token' },
   { key: 'discord', name: 'Discord', destinationLabel: 'Channel ID', credentialLabel: 'Bot token' },
-  { key: 'facebook', name: 'Facebook', destinationLabel: 'Page ID', credentialLabel: 'Access token' },
+  {
+    key: 'facebook',
+    name: 'Facebook',
+    destinationLabel: 'Page ID',
+    credentialLabel: 'Access token',
+  },
 ];
 
 const emptyPublishingProvider = (): EditablePublishingProvider => ({
@@ -35,7 +41,7 @@ const emptyPublishingProvider = (): EditablePublishingProvider => ({
 });
 
 const ChannelForm: React.FC = () => {
-  const entity = useLoaderData() as Channel | null;
+  const entity = useResolvedLoaderData() as Channel | null;
   const isEditMode = entity !== null;
 
   const [channelName, setChannelName] = useState(entity?.channelName || '');
@@ -44,7 +50,9 @@ const ChannelForm: React.FC = () => {
   const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [socials, setSocials] = useState<ChannelSocial[]>([]);
-  const [socialPublishing, setSocialPublishing] = useState<Record<PublishingProviderKey, EditablePublishingProvider>>({
+  const [socialPublishing, setSocialPublishing] = useState<
+    Record<PublishingProviderKey, EditablePublishingProvider>
+  >({
     telegram: emptyPublishingProvider(),
     discord: emptyPublishingProvider(),
     facebook: emptyPublishingProvider(),
@@ -66,7 +74,10 @@ const ChannelForm: React.FC = () => {
       setChannelName(entity.channelName);
       setIsSHIT(entity.isSHIT ?? false);
       setShortLinkUrl(entity.shortLinkUrl ?? '');
-      setSocials(entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ?? []);
+      setSocials(
+        entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ??
+          []
+      );
       setSocialPublishing({
         telegram: { ...emptyPublishingProvider(), ...entity.socialPublishing?.telegram },
         discord: { ...emptyPublishingProvider(), ...entity.socialPublishing?.discord },
@@ -85,7 +96,12 @@ const ChannelForm: React.FC = () => {
         { variant: 'success' }
       );
       if (hasCacheInvalidationWarning(result)) {
-        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          result.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
       navigate('..');
     }
@@ -119,9 +135,11 @@ const ChannelForm: React.FC = () => {
   };
 
   const updateSocial = (index: number, field: keyof ChannelSocial, value: string) => {
-    setSocials(current => current.map((social, socialIndex) =>
-      socialIndex === index ? { ...social, [field]: value } : social
-    ));
+    setSocials(current =>
+      current.map((social, socialIndex) =>
+        socialIndex === index ? { ...social, [field]: value } : social
+      )
+    );
   };
 
   const updatePublishing = (
@@ -167,7 +185,12 @@ const ChannelForm: React.FC = () => {
 
         <Form.Group controlId="formShortLinkUrl" className="mb-3">
           <Form.Label>Short link base URL</Form.Label>
-          <Form.Control type="url" value={shortLinkUrl} onChange={e => setShortLinkUrl(e.target.value)} placeholder="https://example.com/sl" />
+          <Form.Control
+            type="url"
+            value={shortLinkUrl}
+            onChange={e => setShortLinkUrl(e.target.value)}
+            placeholder="https://example.com/sl"
+          />
         </Form.Group>
 
         <Form.Check
@@ -183,25 +206,50 @@ const ChannelForm: React.FC = () => {
         {socials.map((social, index) => (
           <div className="row g-2 align-items-center mb-2" key={`${social.provider}-${index}`}>
             <div className="col-12 col-md-3">
-              <Form.Select aria-label={`Social provider ${index + 1}`} value={social.provider} onChange={e => updateSocial(index, 'provider', e.target.value)}>
-              <option value="">Select provider</option>
-              <option value="instagram">Instagram</option>
-              <option value="youtube">YouTube</option>
-              <option value="reddit">Reddit</option>
-              <option value="x">X</option>
-              <option value="patreon">Patreon</option>
+              <Form.Select
+                aria-label={`Social provider ${index + 1}`}
+                value={social.provider}
+                onChange={e => updateSocial(index, 'provider', e.target.value)}
+              >
+                <option value="">Select provider</option>
+                <option value="instagram">Instagram</option>
+                <option value="youtube">YouTube</option>
+                <option value="reddit">Reddit</option>
+                <option value="x">X</option>
+                <option value="patreon">Patreon</option>
               </Form.Select>
             </div>
             <div className="col-12 col-md">
-              <Form.Control aria-label={`Social handler ${index + 1}`} value={social.handler} onChange={e => updateSocial(index, 'handler', e.target.value)} placeholder="Handle or public identifier" />
+              <Form.Control
+                aria-label={`Social handler ${index + 1}`}
+                value={social.handler}
+                onChange={e => updateSocial(index, 'handler', e.target.value)}
+                placeholder="Handle or public identifier"
+              />
             </div>
             <div className="col-12 col-md-auto">
-              <Button type="button" variant="outline-danger" className="w-100" aria-label={`Remove social ${index + 1}`} onClick={() => setSocials(current => current.filter((_, socialIndex) => socialIndex !== index))}>Remove</Button>
+              <Button
+                type="button"
+                variant="outline-danger"
+                className="w-100"
+                aria-label={`Remove social ${index + 1}`}
+                onClick={() =>
+                  setSocials(current => current.filter((_, socialIndex) => socialIndex !== index))
+                }
+              >
+                Remove
+              </Button>
             </div>
           </div>
         ))}
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <Button type="button" variant="outline-secondary" onClick={() => setSocials(current => [...current, { provider: '', handler: '' }])}>Add social</Button>
+          <Button
+            type="button"
+            variant="outline-secondary"
+            onClick={() => setSocials(current => [...current, { provider: '', handler: '' }])}
+          >
+            Add social
+          </Button>
         </div>
 
         <h2 className="h5 mt-4 mb-3">Social publishing</h2>
@@ -216,7 +264,9 @@ const ChannelForm: React.FC = () => {
                   <Form.Label>{provider.destinationLabel}</Form.Label>
                   <Form.Control
                     value={settings.destinationId}
-                    onChange={event => updatePublishing(provider.key, { destinationId: event.target.value })}
+                    onChange={event =>
+                      updatePublishing(provider.key, { destinationId: event.target.value })
+                    }
                   />
                 </Form.Group>
                 <Form.Group className="col-12 col-md-6" controlId={`${provider.key}Credential`}>
@@ -225,15 +275,21 @@ const ChannelForm: React.FC = () => {
                     type="password"
                     autoComplete="new-password"
                     value={settings.credential}
-                    placeholder={settings.credentialConfigured ? 'Configured - leave blank to keep' : ''}
+                    placeholder={
+                      settings.credentialConfigured ? 'Configured - leave blank to keep' : ''
+                    }
                     disabled={settings.clearCredential}
-                    onChange={event => updatePublishing(provider.key, {
-                      credential: event.target.value,
-                      clearCredential: false,
-                    })}
+                    onChange={event =>
+                      updatePublishing(provider.key, {
+                        credential: event.target.value,
+                        clearCredential: false,
+                      })
+                    }
                   />
                   {settings.credentialConfigured && (
-                    <Form.Text className="text-muted">A credential is configured for this channel.</Form.Text>
+                    <Form.Text className="text-muted">
+                      A credential is configured for this channel.
+                    </Form.Text>
                   )}
                 </Form.Group>
               </div>
@@ -244,10 +300,12 @@ const ChannelForm: React.FC = () => {
                   type="checkbox"
                   label={`Remove the existing ${provider.credentialLabel.toLowerCase()}`}
                   checked={settings.clearCredential}
-                  onChange={event => updatePublishing(provider.key, {
-                    clearCredential: event.target.checked,
-                    credential: event.target.checked ? '' : settings.credential,
-                  })}
+                  onChange={event =>
+                    updatePublishing(provider.key, {
+                      clearCredential: event.target.checked,
+                      credential: event.target.checked ? '' : settings.credential,
+                    })
+                  }
                 />
               )}
             </fieldset>
@@ -267,8 +325,8 @@ const ChannelForm: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <p>
-            Are you sure you want to{' '}
-            {isEditMode ? 'save the changes to' : 'create'} the following channel?
+            Are you sure you want to {isEditMode ? 'save the changes to' : 'create'} the following
+            channel?
           </p>
           <p>
             <strong>Channel Name:</strong> {channelName}

@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { InsightTopic } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -13,7 +14,7 @@ const InsightTopics: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<InsightTopic | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<InsightTopic[]>();
+  const entities = useResolvedLoaderData<InsightTopic[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';

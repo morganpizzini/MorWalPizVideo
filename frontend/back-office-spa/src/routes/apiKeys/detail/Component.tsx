@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
-import { useLoaderData, Link, useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Card, Badge, Button, Modal, Alert } from 'react-bootstrap';
 import { ApiKeyDto, RegenerateApiKeyResponse } from '../../../models';
 import PageHeader from '@components/PageHeader';
@@ -7,7 +8,7 @@ import { post, ComposeUrl, endpoints } from '@morwalpizvideo/services';
 import { useToast } from '@components/ToastNotification/ToastContext';
 
 const ApiKeyDetail: React.FC = () => {
-  const apiKey = useLoaderData<ApiKeyDto>();
+  const apiKey = useResolvedLoaderData<ApiKeyDto>();
   const navigate = useNavigate();
   const toast = useToast();
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
@@ -17,10 +18,10 @@ const ApiKeyDetail: React.FC = () => {
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     try {
-      const response = await post(
+      const response = (await post(
         ComposeUrl(endpoints.APIKEYS_REGENERATE, { id: encodeURIComponent(apiKey.id) }),
         {}
-      ) as RegenerateApiKeyResponse;
+      )) as RegenerateApiKeyResponse;
 
       if (response && response.key) {
         setRegeneratedKey(response.key);
@@ -89,28 +90,18 @@ const ApiKeyDetail: React.FC = () => {
             <div className="col-md-6 mb-3">
               <label className="text-muted small">Last Used</label>
               <div>
-                {apiKey.lastUsedAt
-                  ? new Date(apiKey.lastUsedAt).toLocaleString()
-                  : 'Never'}
+                {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString() : 'Never'}
               </div>
             </div>
 
             <div className="col-md-6 mb-3">
               <label className="text-muted small">Expires At</label>
-              <div>
-                {apiKey.expiresAt
-                  ? new Date(apiKey.expiresAt).toLocaleString()
-                  : 'Never'}
-              </div>
+              <div>{apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleString() : 'Never'}</div>
             </div>
           </div>
 
           <div className="mt-4">
-            <Button
-              variant="warning"
-              onClick={() => setShowRegenerateModal(true)}
-              className="me-2"
-            >
+            <Button variant="warning" onClick={() => setShowRegenerateModal(true)} className="me-2">
               Regenerate Key
             </Button>
             <Link to={`/keys/${apiKey.id}/edit`} className="btn btn-primary">
@@ -120,12 +111,7 @@ const ApiKeyDetail: React.FC = () => {
         </Card.Body>
       </Card>
 
-      <Modal
-        show={showRegenerateModal}
-        onHide={handleCloseRegenerateModal}
-        centered
-        size="lg"
-      >
+      <Modal show={showRegenerateModal} onHide={handleCloseRegenerateModal} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Regenerate API Key</Modal.Title>
         </Modal.Header>
@@ -133,8 +119,8 @@ const ApiKeyDetail: React.FC = () => {
           {!regeneratedKey ? (
             <>
               <Alert variant="warning">
-                <strong>Warning:</strong> Regenerating this API key will invalidate the
-                current key. Any applications using the old key will lose access immediately.
+                <strong>Warning:</strong> Regenerating this API key will invalidate the current key.
+                Any applications using the old key will lose access immediately.
               </Alert>
               <p>Are you sure you want to regenerate the API key for "{apiKey.name}"?</p>
             </>
@@ -144,8 +130,8 @@ const ApiKeyDetail: React.FC = () => {
                 <strong>Success!</strong> Your new API key has been generated.
               </Alert>
               <Alert variant="danger">
-                <strong>Important:</strong> This is the only time you will see this key.
-                Please copy it now and store it securely.
+                <strong>Important:</strong> This is the only time you will see this key. Please copy
+                it now and store it securely.
               </Alert>
               <div className="mb-3">
                 <label className="form-label fw-bold">New API Key</label>
@@ -174,11 +160,7 @@ const ApiKeyDetail: React.FC = () => {
               <Button variant="secondary" onClick={handleCloseRegenerateModal}>
                 Cancel
               </Button>
-              <Button
-                variant="warning"
-                onClick={handleRegenerate}
-                disabled={isRegenerating}
-              >
+              <Button variant="warning" onClick={handleRegenerate} disabled={isRegenerating}>
                 {isRegenerating ? 'Regenerating...' : 'Regenerate'}
               </Button>
             </>

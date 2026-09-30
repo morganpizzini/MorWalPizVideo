@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React from 'react';
-import { Link, useLoaderData } from 'react-router';
+import { Link } from 'react-router';
 import PageHeader from '@components/PageHeader';
 import VideoList from '@components/VideoList';
 import { Match } from '@morwalpizvideo/models';
@@ -8,10 +9,19 @@ import { hasPermission, permissions } from '../../../authorization/permissions';
 import { useAppStore } from '../../../state/appStore';
 
 const Component: React.FC = () => {
-  const { matches, channels } = useLoaderData() as { matches: Match[]; channels: import('@morwalpizvideo/models').Channel[] };
+  const { matches, channels } = useResolvedLoaderData() as {
+    matches: Match[];
+    channels: import('@morwalpizvideo/models').Channel[];
+  };
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
-  const canImport = hasPermission(effectivePermissions, [permissions.videos.import, permissions.videos.manage]);
-  const canTranslate = hasPermission(effectivePermissions, [permissions.videos.translate, permissions.videos.manage]);
+  const canImport = hasPermission(effectivePermissions, [
+    permissions.videos.import,
+    permissions.videos.manage,
+  ]);
+  const canTranslate = hasPermission(effectivePermissions, [
+    permissions.videos.translate,
+    permissions.videos.manage,
+  ]);
 
   return (
     <>

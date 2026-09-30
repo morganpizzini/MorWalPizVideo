@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import type { Category } from '@morwalpizvideo/models';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -8,7 +9,7 @@ import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
 
 const CategoryForm: React.FC = () => {
-  const category = useLoaderData<Category | null>();
+  const category = useResolvedLoaderData<Category | null>();
   const isEditMode = !!useParams().id;
   const [title, setTitle] = useState(category?.title ?? '');
   const [description, setDescription] = useState(category?.description ?? '');

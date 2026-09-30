@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Row, Col } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { CalendarEvent, VideoProductCategory } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -8,12 +9,17 @@ import PageHeader from '@components/PageHeader';
 import MultiSelectWithBadges from '@components/MultiSelectWithBadges';
 
 const EditCalendarEvent: React.FC = () => {
-  const { calendarEvent, categories } = useLoaderData() as { calendarEvent: CalendarEvent; categories: VideoProductCategory[] };
-  
+  const { calendarEvent, categories } = useResolvedLoaderData() as {
+    calendarEvent: CalendarEvent;
+    categories: VideoProductCategory[];
+  };
+
   const [selectedCategories, setSelectedCategories] = useState<VideoProductCategory[]>(
-    (calendarEvent.categories || []).map(cat => categories.find(c => c.id === cat.id)).filter(Boolean) as VideoProductCategory[]
+    (calendarEvent.categories || [])
+      .map(cat => categories.find(c => c.id === cat.id))
+      .filter(Boolean) as VideoProductCategory[]
   );
-  
+
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
@@ -25,18 +31,20 @@ const EditCalendarEvent: React.FC = () => {
   useEffect(() => {
     if (success) {
       toast.show('Success', 'Calendar event updated successfully', { variant: 'success' });
-      navigate(`/calendarEvents/${encodeURIComponent(fetcher.data.updatedTitle || calendarEvent.title)}`);
+      navigate(
+        `/calendarEvents/${encodeURIComponent(fetcher.data.updatedTitle || calendarEvent.title)}`
+      );
     }
   }, [success, navigate, toast, calendarEvent.title, fetcher.data?.updatedTitle]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target as HTMLFormElement);
     const categoryIds = selectedCategories.map(cat => cat.id);
-    
+
     formData.append('categoryIds', JSON.stringify(categoryIds));
-    
+
     fetcher.submit(formData, { method: 'post' });
   };
 
@@ -139,8 +147,8 @@ const EditCalendarEvent: React.FC = () => {
           items={categories}
           selectedItems={selectedCategories}
           onSelectionChange={setSelectedCategories}
-          getItemId={(cat) => cat.id}
-          getItemDisplay={(cat) => cat.title}
+          getItemId={cat => cat.id}
+          getItemDisplay={cat => cat.title}
           placeholder="Select a category"
         />
 
@@ -154,9 +162,7 @@ const EditCalendarEvent: React.FC = () => {
             isInvalid={!!errors?.fields?.matchId}
           />
           {errors?.fields?.matchId && (
-            <Form.Control.Feedback type="invalid">
-              {errors.fields.matchId}
-            </Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">{errors.fields.matchId}</Form.Control.Feedback>
           )}
         </Form.Group>
 

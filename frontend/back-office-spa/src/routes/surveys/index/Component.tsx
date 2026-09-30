@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import { useEffect, useState } from 'react';
 import { Badge, Button, Modal } from 'react-bootstrap';
-import { Link, useFetcher, useLoaderData, useLocation } from 'react-router';
+import { Link, useFetcher, useLocation } from 'react-router';
 import type { Survey } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import GenericTable from '@components/Table';
 import { useToast } from '@components/ToastNotification/ToastContext';
 
 export default function Surveys() {
-  const surveys = useLoaderData<Survey[]>();
+  const surveys = useResolvedLoaderData<Survey[]>();
   const fetcher = useFetcher();
   const location = useLocation();
   const toast = useToast();

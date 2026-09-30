@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import type { VideoProductCategory } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -13,7 +14,7 @@ const ProductCategories: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<VideoProductCategory | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<VideoProductCategory[]>();
+  const entities = useResolvedLoaderData<VideoProductCategory[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';

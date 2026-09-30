@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useRef, useState } from 'react';
 import { Form, Button, Card, Image } from 'react-bootstrap';
-import { useLoaderData, useNavigate, useFetcher, useParams } from 'react-router';
+import { useNavigate, useFetcher, useParams } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
@@ -8,7 +9,7 @@ import type { Sponsor } from '@morwalpizvideo/models';
 import type { SponsorActionResult } from './action';
 
 const SponsorForm: React.FC = () => {
-  const sponsor = useLoaderData() as Sponsor | null;
+  const sponsor = useResolvedLoaderData() as Sponsor | null;
   const { sponsorId } = useParams<{ sponsorId?: string }>();
   const isEditMode = Boolean(sponsorId);
   const navigate = useNavigate();

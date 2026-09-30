@@ -1,7 +1,8 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import { useEffect, useState } from 'react';
 import { Button, Col, Form, Row, Spinner } from 'react-bootstrap';
 import { Copy, Download, Save, WandSparkles } from 'lucide-react';
-import { useLoaderData } from 'react-router';
+import {} from 'react-router';
 import type {
   ScriptStudioDocument,
   ScriptStudioFormat,
@@ -20,7 +21,7 @@ import { useAppStore } from '../../state/appStore';
 type LoaderData = { document: ScriptStudioDocument };
 
 export default function Component() {
-  const { document: initial } = useLoaderData() as LoaderData;
+  const { document: initial } = useResolvedLoaderData() as LoaderData;
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const [draft, setDraft] = useState<ScriptStudioDocument>(initial);
   const [globalPrompt, setGlobalPrompt] = useState('');

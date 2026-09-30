@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useFetcher, useNavigate, useLocation } from 'react-router';
+import { useFetcher, useNavigate, useLocation } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
@@ -7,11 +8,12 @@ import PageHeader from '@components/PageHeader';
 import { LinkType } from '@morwalpizvideo/models';
 import { ComposeUrl, endpoints, get } from '@morwalpizvideo/services';
 import type { AuditLog } from '@/models/auditLog';
+import type { ShortLink } from '@/models/shortLink';
 import AuditLogList from '@components/AuditLogList';
 import ShareShortLink from './ShareShortLink';
 
 const ShortLinkDetail: React.FC = () => {
-  const entity = useLoaderData();
+  const entity = useResolvedLoaderData<ShortLink & { code: string; queryString: string }>();
   const [showModal, setShowModal] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -74,7 +76,8 @@ const ShortLinkDetail: React.FC = () => {
         title="Short Link Detail"
         editLink={`/shortlinks/${entity.code}/edit`}
         deleteCallback={handleDelete}
-      />      <DetailPanel title="Dettagli dell'entità">
+      />{' '}
+      <DetailPanel title="Dettagli dell'entità">
         <p>
           <strong>Code:</strong> {entity.code}
         </p>
@@ -99,17 +102,14 @@ const ShortLinkDetail: React.FC = () => {
           <strong>Clicks Count:</strong> {entity.clicksCount}
         </p>
       </DetailPanel>
-
       <Button variant="primary" onClick={() => setShowShare(value => !value)} className="mt-3">
         {showShare ? 'Close Share' : 'Share'}
       </Button>
       {showShare && <ShareShortLink shortLinkId={entity.shortLinkId} />}
-
       <section className="mt-4">
         <h2 className="h5">History</h2>
         <AuditLogList logs={logs} loading={logsLoading} error={logsError} />
       </section>
-
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Delete</Modal.Title>

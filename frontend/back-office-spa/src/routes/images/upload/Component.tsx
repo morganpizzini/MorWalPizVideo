@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState, useRef } from 'react';
-import { useFetcher, useLoaderData } from 'react-router';
+import { useFetcher } from 'react-router';
 import { Form, Button, Card, Image, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -17,14 +18,14 @@ const ImageUpload: React.FC = () => {
   const toast = useToast();
 
   // Load matches from the API using the loader
-  const { matches } = useLoaderData() as LoaderData;
+  const { matches } = useResolvedLoaderData() as LoaderData;
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -120,10 +121,7 @@ const ImageUpload: React.FC = () => {
           <Form.Label>
             Match Folder <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Select
-            value={folderName}
-            onChange={e => setFolderName(e.target.value)}
-          >
+          <Form.Select value={folderName} onChange={e => setFolderName(e.target.value)}>
             <option value="">Select a match folder</option>
             {matches.map(match => (
               <option key={match.id} value={match.url}>
@@ -156,11 +154,21 @@ const ImageUpload: React.FC = () => {
           <Modal.Title>Confirm Image Upload</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p><strong>Please confirm the following details:</strong></p>
-          <p><strong>Image:</strong> {image?.name}</p>
-          <p><strong>Size:</strong> {image ? (image.size / 1024).toFixed(2) + ' KB' : ''}</p>
-          <p><strong>Match Folder:</strong> {selectedMatchName}</p>
-          <p><strong>Load In Match Folder:</strong> {loadInMatchFolder ? 'Yes' : 'No'}</p>
+          <p>
+            <strong>Please confirm the following details:</strong>
+          </p>
+          <p>
+            <strong>Image:</strong> {image?.name}
+          </p>
+          <p>
+            <strong>Size:</strong> {image ? (image.size / 1024).toFixed(2) + ' KB' : ''}
+          </p>
+          <p>
+            <strong>Match Folder:</strong> {selectedMatchName}
+          </p>
+          <p>
+            <strong>Load In Match Folder:</strong> {loadInMatchFolder ? 'Yes' : 'No'}
+          </p>
 
           {imagePreview && (
             <div className="text-center mt-3">

@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Badge } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useLocation } from 'react-router';
+import { Link, useFetcher, useLocation } from 'react-router';
 import { CalendarEvent } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -14,14 +15,14 @@ const CalendarEvents: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
 
-  const events = useLoaderData<CalendarEvent[]>();
+  const events = useResolvedLoaderData<CalendarEvent[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -58,7 +59,7 @@ const CalendarEvents: React.FC = () => {
         accessorKey: 'categories',
         header: 'Categories',
         cell: info => {
-          const categories = info.getValue() as any[] || [];
+          const categories = (info.getValue() as any[]) || [];
           return (
             <div>
               {categories.map((cat: any) => (
@@ -82,10 +83,16 @@ const CalendarEvents: React.FC = () => {
           const event = props.row.original;
           return (
             <div className="text-end">
-              <Link className="btn btn-link px-1" to={`/calendarEvents/${encodeURIComponent(event.title)}`}>
+              <Link
+                className="btn btn-link px-1"
+                to={`/calendarEvents/${encodeURIComponent(event.title)}`}
+              >
                 Detail
               </Link>
-              <Link className="btn btn-link px-1" to={`/calendarEvents/${encodeURIComponent(event.title)}/edit`}>
+              <Link
+                className="btn btn-link px-1"
+                to={`/calendarEvents/${encodeURIComponent(event.title)}/edit`}
+              >
                 Edit
               </Link>
               <Button variant="link" className="px-1" onClick={() => handleDelete(event)}>

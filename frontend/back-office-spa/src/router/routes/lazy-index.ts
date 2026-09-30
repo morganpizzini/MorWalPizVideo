@@ -4,7 +4,8 @@ import { createErrorElement, createRouteGroup } from '../utils';
 import type { RouteConfig } from '../types';
 import { lazyAction, lazyRoute } from '../lazyRoute';
 import { getRoutePermissions } from '../../authorization/permissions';
-import { withActionPermission, withPermission } from '../guards';
+import { withActionPermission, withDeferredPermission } from '../guards';
+import { createAsyncRouteComponent } from '../asyncData';
 
 const feature = (
   path: string,
@@ -331,7 +332,7 @@ function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {
     ...route,
     loader:
       typeof route.loader === 'function'
-        ? withPermission(loaderPermissions, route.loader)
+        ? withDeferredPermission(loaderPermissions, route.loader)
         : undefined,
     action:
       typeof route.action === 'function'
@@ -344,8 +345,12 @@ function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {
             ...resolved,
             loader:
               typeof resolved.loader === 'function'
-                ? withPermission(loaderPermissions, resolved.loader)
+                ? withDeferredPermission(loaderPermissions, resolved.loader)
                 : undefined,
+            Component:
+              typeof resolved.loader === 'function' && resolved.Component
+                ? createAsyncRouteComponent(resolved.Component)
+                : resolved.Component,
             action:
               typeof resolved.action === 'function'
                 ? withActionPermission(actionPermissions, resolved.action)

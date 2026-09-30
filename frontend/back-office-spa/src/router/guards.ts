@@ -1,6 +1,7 @@
 import { redirect, type ActionFunction, type LoaderFunction } from 'react-router';
 import { authService, type AuthValidationResponse } from '../services/authService';
 import { hasPermission, permissions } from '../authorization/permissions';
+import { deferRouteData } from './asyncData';
 
 export const CAN_ACCESS_BACKOFFICE = permissions.backoffice.access;
 
@@ -8,7 +9,7 @@ export async function requirePermissions(
   requiredPermissions: readonly string[],
   validatedSession?: AuthValidationResponse | null
 ) {
-  const session = validatedSession ?? await authService.validateSession();
+  const session = validatedSession ?? (await authService.validateSession());
 
   if (!session) {
     return redirect('/login');
@@ -42,5 +43,15 @@ export function withActionPermission(
   return async args => {
     const denial = await requirePermissions(requiredPermissions);
     return denial ?? action(args);
+  };
+}
+
+export function withDeferredPermission(
+  requiredPermissions: readonly string[],
+  loader: LoaderFunction
+): LoaderFunction {
+  return async args => {
+    const denial = await requirePermissions(requiredPermissions);
+    return denial ?? deferRouteData(loader(args));
   };
 }

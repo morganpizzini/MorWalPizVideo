@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
 import { Button, Card, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useNavigate, useFetcher } from 'react-router';
+import { Link, useNavigate, useFetcher } from 'react-router';
 import { MorWalPizConfiguration } from '@/models/configuration';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
@@ -8,7 +9,7 @@ import GenericErrorList from '@components/GenericErrorList';
 
 const ConfigurationDetail: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
-  const configuration = useLoaderData<MorWalPizConfiguration>();
+  const configuration = useResolvedLoaderData<MorWalPizConfiguration>();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -60,7 +61,10 @@ const ConfigurationDetail: React.FC = () => {
           </dl>
         </Card.Body>
         <Card.Footer className="d-flex justify-content-between">
-          <Link to={`/morwalpizconfigurations/${configuration.id}/edit`} className="btn btn-primary">
+          <Link
+            to={`/morwalpizconfigurations/${configuration.id}/edit`}
+            className="btn btn-primary"
+          >
             Edit
           </Link>
           <Button variant="danger" onClick={handleDelete}>

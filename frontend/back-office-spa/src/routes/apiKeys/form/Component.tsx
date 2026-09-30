@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Card, Row, Col, Alert, Modal } from 'react-bootstrap';
-import { useFetcher, useNavigate, useLoaderData, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import { ApiKeyDto, CreateApiKeyResponse } from '../../../models/apiKey';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -10,14 +11,18 @@ import { permissions } from '../../../authorization/permissions';
 import { useAppStore } from '../../../state/appStore';
 
 const ApiKeyForm: React.FC = () => {
-  const existingApiKey = useLoaderData() as ApiKeyDto | null;
+  const existingApiKey = useResolvedLoaderData() as ApiKeyDto | null;
   const params = useParams();
   const isEditMode = !!params.id;
-  
+
   const [name, setName] = useState(existingApiKey?.name || '');
   const [description, setDescription] = useState(existingApiKey?.description || '');
-  const [rateLimitPerMinute, setRateLimitPerMinute] = useState(existingApiKey?.rateLimitPerMinute?.toString() || '60');
-  const [expiresAt, setExpiresAt] = useState(existingApiKey?.expiresAt ? existingApiKey.expiresAt.split('T')[0] : '');
+  const [rateLimitPerMinute, setRateLimitPerMinute] = useState(
+    existingApiKey?.rateLimitPerMinute?.toString() || '60'
+  );
+  const [expiresAt, setExpiresAt] = useState(
+    existingApiKey?.expiresAt ? existingApiKey.expiresAt.split('T')[0] : ''
+  );
   const [allowedIpAddresses, setAllowedIpAddresses] = useState(
     existingApiKey?.allowedIpAddresses?.join('\n') || ''
   );
@@ -25,10 +30,10 @@ const ApiKeyForm: React.FC = () => {
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canReassignChannel = effectivePermissions.includes(permissions.apikeys.manage);
   const [channelId, setChannelId] = useState(existingApiKey?.channelId ?? selectedChannelId ?? '');
-  
+
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [newApiKey, setNewApiKey] = useState<string>('');
-  
+
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
@@ -46,7 +51,7 @@ const ApiKeyForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const formData = new FormData();
     formData.append('name', name);
     formData.append('description', description);
@@ -75,7 +80,7 @@ const ApiKeyForm: React.FC = () => {
   return (
     <>
       <PageHeader title={isEditMode ? 'Edit API Key' : 'Create API Key'} />
-      
+
       <Card>
         <Card.Body>
           {errors?.generics && errors.generics.length > 0 && (
@@ -90,7 +95,7 @@ const ApiKeyForm: React.FC = () => {
                   <Form.Control
                     type="text"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={e => setName(e.target.value)}
                     isInvalid={!!errors?.fields?.name}
                     disabled={busy}
                     placeholder="Enter API key name"
@@ -110,7 +115,7 @@ const ApiKeyForm: React.FC = () => {
                     type="number"
                     min="1"
                     value={rateLimitPerMinute}
-                    onChange={(e) => setRateLimitPerMinute(e.target.value)}
+                    onChange={e => setRateLimitPerMinute(e.target.value)}
                     isInvalid={!!errors?.fields?.rateLimitPerMinute}
                     disabled={busy}
                     placeholder="60"
@@ -133,7 +138,7 @@ const ApiKeyForm: React.FC = () => {
                 as="textarea"
                 rows={3}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 disabled={busy}
                 placeholder="Enter description (optional)"
               />
@@ -144,12 +149,10 @@ const ApiKeyForm: React.FC = () => {
               <Form.Control
                 type="date"
                 value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
+                onChange={e => setExpiresAt(e.target.value)}
                 disabled={busy}
               />
-              <Form.Text className="text-muted">
-                Leave empty for no expiration
-              </Form.Text>
+              <Form.Text className="text-muted">Leave empty for no expiration</Form.Text>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -158,7 +161,7 @@ const ApiKeyForm: React.FC = () => {
                 as="textarea"
                 rows={4}
                 value={allowedIpAddresses}
-                onChange={(e) => setAllowedIpAddresses(e.target.value)}
+                onChange={e => setAllowedIpAddresses(e.target.value)}
                 disabled={busy}
                 placeholder="Enter one IP address per line (optional)&#10;Example:&#10;192.168.1.1&#10;10.0.0.1"
               />
@@ -168,18 +171,10 @@ const ApiKeyForm: React.FC = () => {
             </Form.Group>
 
             <div className="d-flex justify-content-between">
-              <Button
-                variant="secondary"
-                onClick={() => navigate('/keys')}
-                disabled={busy}
-              >
+              <Button variant="secondary" onClick={() => navigate('/keys')} disabled={busy}>
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={busy}
-              >
+              <Button variant="primary" type="submit" disabled={busy}>
                 {busy ? 'Saving...' : isEditMode ? 'Update API Key' : 'Create API Key'}
               </Button>
             </div>
@@ -194,19 +189,16 @@ const ApiKeyForm: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <Alert variant="warning">
-            <strong>Important:</strong> This is the only time you will see this key. 
-            Please copy it now and store it securely.
+            <strong>Important:</strong> This is the only time you will see this key. Please copy it
+            now and store it securely.
           </Alert>
-          
+
           <Form.Group className="mb-3">
-            <Form.Label><strong>Your API Key:</strong></Form.Label>
+            <Form.Label>
+              <strong>Your API Key:</strong>
+            </Form.Label>
             <div className="d-flex gap-2">
-              <Form.Control
-                type="text"
-                value={newApiKey}
-                readOnly
-                className="font-monospace"
-              />
+              <Form.Control type="text" value={newApiKey} readOnly className="font-monospace" />
               <Button variant="outline-primary" onClick={copyToClipboard}>
                 Copy
               </Button>
@@ -216,9 +208,15 @@ const ApiKeyForm: React.FC = () => {
           {isEditMode && canReassignChannel && channels.length > 0 && (
             <Form.Group className="mb-3">
               <Form.Label>Bound channel</Form.Label>
-              <Form.Select value={channelId} onChange={event => setChannelId(event.target.value)} disabled={busy}>
+              <Form.Select
+                value={channelId}
+                onChange={event => setChannelId(event.target.value)}
+                disabled={busy}
+              >
                 {channels.map(channel => (
-                  <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>
+                  <option key={channel.channelId} value={channel.channelId}>
+                    {channel.channelName}
+                  </option>
                 ))}
               </Form.Select>
             </Form.Group>

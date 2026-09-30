@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Card, Row, Col, Badge } from 'react-bootstrap';
-import { useFetcher, useNavigate, useLoaderData, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import {
   CustomForm,
   QuestionType,
@@ -24,7 +25,7 @@ interface QuestionFormData {
 }
 
 const CustomFormForm: React.FC = () => {
-  const existingForm = useLoaderData() as CustomForm | null;
+  const existingForm = useResolvedLoaderData() as CustomForm | null;
   const params = useParams();
   const isEditMode = !!params.id;
 

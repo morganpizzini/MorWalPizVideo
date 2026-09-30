@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Button, Modal, Badge } from 'react-bootstrap';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { InsightNewsItem, InsightNewsStatus } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 
 const InsightNewsReview: React.FC = () => {
-  const newsItem = useLoaderData<InsightNewsItem>();
+  const newsItem = useResolvedLoaderData<InsightNewsItem>();
   const [starRating, setStarRating] = useState(newsItem.starRating);
   const [status, setStatus] = useState(newsItem.status);
   const [reason, setReason] = useState(newsItem.reviewReason);
@@ -89,13 +90,20 @@ const InsightNewsReview: React.FC = () => {
           </div>
           {newsItem.status === InsightNewsStatus.AutoDetected && (
             <div className="mb-3">
-              <Badge bg="primary" className="me-2">Auto-Detected</Badge>
+              <Badge bg="primary" className="me-2">
+                Auto-Detected
+              </Badge>
               <span className="text-muted">
-                {newsItem.platformSource || 'Social'} scan{newsItem.analysisReason ? ` — ${newsItem.analysisReason}` : ''}
+                {newsItem.platformSource || 'Social'} scan
+                {newsItem.analysisReason ? ` — ${newsItem.analysisReason}` : ''}
               </span>
             </div>
           )}
-          {newsItem.reviewReason ? <div className="mb-3"><strong>Review reason:</strong> {newsItem.reviewReason}</div> : null}
+          {newsItem.reviewReason ? (
+            <div className="mb-3">
+              <strong>Review reason:</strong> {newsItem.reviewReason}
+            </div>
+          ) : null}
         </Card.Body>
       </Card>
 
@@ -143,7 +151,13 @@ const InsightNewsReview: React.FC = () => {
             {(status === InsightNewsStatus.Accepted || status === InsightNewsStatus.Rejected) && (
               <Form.Group className="mt-3">
                 <Form.Label>Reason</Form.Label>
-                <Form.Control as="textarea" rows={3} value={reason} onChange={event => setReason(event.target.value)} required />
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={reason}
+                  onChange={event => setReason(event.target.value)}
+                  required
+                />
               </Form.Group>
             )}
           </Card.Body>
@@ -153,10 +167,7 @@ const InsightNewsReview: React.FC = () => {
           <Button variant="success" type="submit" disabled={busy}>
             Submit Review
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/insights/${newsItem.topicId}`)}
-          >
+          <Button variant="secondary" onClick={() => navigate(`/insights/${newsItem.topicId}`)}>
             Cancel
           </Button>
         </div>

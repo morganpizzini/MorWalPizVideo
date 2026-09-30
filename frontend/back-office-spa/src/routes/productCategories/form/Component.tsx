@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -8,7 +9,7 @@ import PageHeader from '@components/PageHeader';
 import type { VideoProductCategory } from '@morwalpizvideo/models';
 
 const ProductCategoryForm: React.FC = () => {
-  const { productCategory } = useLoaderData() as {
+  const { productCategory } = useResolvedLoaderData() as {
     productCategory: VideoProductCategory | null;
   };
   const params = useParams();

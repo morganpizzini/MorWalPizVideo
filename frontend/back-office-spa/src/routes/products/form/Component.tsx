@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -9,7 +10,7 @@ import PageHeader from '@components/PageHeader';
 import type { Product, VideoProductCategory } from '@morwalpizvideo/models';
 
 const ProductForm: React.FC = () => {
-  const { product, categories } = useLoaderData() as {
+  const { product, categories } = useResolvedLoaderData() as {
     product: Product | null;
     categories: VideoProductCategory[];
   };
@@ -105,12 +106,7 @@ const ProductForm: React.FC = () => {
           <Form.Label>
             URL <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Control
-            type="url"
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            required
-          />
+          <Form.Control type="url" value={url} onChange={e => setUrl(e.target.value)} required />
           <FieldError error={errors?.url} />
         </Form.Group>
 
@@ -145,8 +141,8 @@ const ProductForm: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <p>
-            Are you sure you want to{' '}
-            {isEditMode ? 'save the changes to' : 'create'} the following product?
+            Are you sure you want to {isEditMode ? 'save the changes to' : 'create'} the following
+            product?
           </p>
           <p>
             <strong>Title:</strong> {title}
@@ -156,8 +152,7 @@ const ProductForm: React.FC = () => {
           </p>
           {selectedCategories.length > 0 && (
             <p>
-              <strong>Categories:</strong>{' '}
-              {selectedCategories.map(c => c.title).join(', ')}
+              <strong>Categories:</strong> {selectedCategories.map(c => c.title).join(', ')}
             </p>
           )}
         </Modal.Body>

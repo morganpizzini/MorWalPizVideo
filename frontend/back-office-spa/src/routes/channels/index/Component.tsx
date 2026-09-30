@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useLocation } from 'react-router';
+import { Link, useFetcher, useLocation } from 'react-router';
 import { Channel } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -15,14 +16,14 @@ const ChannelLinks: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
 
-  const entities = useLoaderData<Channel[]>();
+  const entities = useResolvedLoaderData<Channel[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -70,7 +71,12 @@ const ChannelLinks: React.FC = () => {
     if (result.success) {
       toast.show('Success', 'Channel deleted successfully', { variant: 'success' });
       if (hasCacheInvalidationWarning(result)) {
-        toast.show('Warning', result.cacheInvalidation?.message ?? 'The operation completed, but the public cache was not reset.', { variant: 'warning' });
+        toast.show(
+          'Warning',
+          result.cacheInvalidation?.message ??
+            'The operation completed, but the public cache was not reset.',
+          { variant: 'warning' }
+        );
       }
     }
   }, [result]);

@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
 import { Button, Card, Modal, Badge, Accordion, Table } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { Link, useFetcher, useNavigate } from 'react-router';
 import {
   CustomForm,
   QuestionType,
@@ -19,7 +20,7 @@ import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 
 const CustomFormDetail: React.FC = () => {
-  const form = useLoaderData() as CustomForm & { responses: CustomFormResponse[] };
+  const form = useResolvedLoaderData() as CustomForm & { responses: CustomFormResponse[] };
   const [showModal, setShowModal] = useState(false);
   const fetcher = useFetcher();
   const navigate = useNavigate();

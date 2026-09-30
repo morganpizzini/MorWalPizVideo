@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { MorWalPizConfiguration } from '@/models/configuration';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -10,17 +11,19 @@ import { ColumnDef } from '@tanstack/react-table';
 
 const ConfigurationsIndex: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
-  const [selectedConfiguration, setSelectedConfiguration] = useState<MorWalPizConfiguration | null>(null);
+  const [selectedConfiguration, setSelectedConfiguration] = useState<MorWalPizConfiguration | null>(
+    null
+  );
   const toast = useToast();
 
-  const configurations = useLoaderData<MorWalPizConfiguration[]>();
+  const configurations = useResolvedLoaderData<MorWalPizConfiguration[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors === undefined || fetcher.data.errors.length === 0)
+    (fetcher.data.errors === undefined || fetcher.data.errors.length === 0)
       ? fetcher.data
       : null;
 
@@ -81,10 +84,16 @@ const ConfigurationsIndex: React.FC = () => {
           const configuration = props.row.original;
           return (
             <div className="text-end">
-              <Link className="btn btn-link px-1" to={`/morwalpizconfigurations/${configuration.id}`}>
+              <Link
+                className="btn btn-link px-1"
+                to={`/morwalpizconfigurations/${configuration.id}`}
+              >
                 Detail
               </Link>
-              <Link className="btn btn-link px-1" to={`/morwalpizconfigurations/${configuration.id}/edit`}>
+              <Link
+                className="btn btn-link px-1"
+                to={`/morwalpizconfigurations/${configuration.id}/edit`}
+              >
                 Edit
               </Link>
               <Button variant="link" className="px-1" onClick={() => handleDelete(configuration)}>
@@ -118,8 +127,8 @@ const ConfigurationsIndex: React.FC = () => {
         <Modal.Body>
           {selectedConfiguration && (
             <p>
-              Are you sure you want to delete the configuration <strong>{selectedConfiguration.key}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete the configuration{' '}
+              <strong>{selectedConfiguration.key}</strong>? This action cannot be undone.
             </p>
           )}
         </Modal.Body>

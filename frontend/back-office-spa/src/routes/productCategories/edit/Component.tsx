@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect } from 'react';
 import { Form, Button } from 'react-bootstrap';
-import { useLoaderData, useNavigate, useFetcher } from 'react-router';
+import { useNavigate, useFetcher } from 'react-router';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import PageHeader from '@components/PageHeader';
 import type { VideoProductCategory } from '@morwalpizvideo/models';
 
 const EditProductCategory: React.FC = () => {
-  const { productCategory } = useLoaderData() as { productCategory: VideoProductCategory };
+  const { productCategory } = useResolvedLoaderData() as { productCategory: VideoProductCategory };
   const navigate = useNavigate();
   const toast = useToast();
   const fetcher = useFetcher();
@@ -59,11 +60,7 @@ const EditProductCategory: React.FC = () => {
         <Button variant="primary" type="submit" disabled={busy}>
           {busy ? 'Updating...' : 'Update Product Category'}
         </Button>
-        <Button
-          variant="secondary"
-          className="ms-2"
-          onClick={() => navigate('/productcategories')}
-        >
+        <Button variant="secondary" className="ms-2" onClick={() => navigate('/productcategories')}>
           Cancel
         </Button>
       </fetcher.Form>

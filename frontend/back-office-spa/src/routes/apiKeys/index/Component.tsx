@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Badge } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher, useLocation } from 'react-router';
+import { Link, useFetcher, useLocation } from 'react-router';
 import { ApiKeyDto } from '../../../models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -15,14 +16,14 @@ const ApiKeys: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
 
-  const apiKeys = useLoaderData<ApiKeyDto[]>();
+  const apiKeys = useResolvedLoaderData<ApiKeyDto[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -83,11 +84,7 @@ const ApiKeys: React.FC = () => {
               <Link className="btn btn-link px-1" to={`/keys/${apiKey.id}/edit`}>
                 Edit
               </Link>
-              <Button
-                variant="link"
-                className="px-1"
-                onClick={() => handleToggle(apiKey)}
-              >
+              <Button variant="link" className="px-1" onClick={() => handleToggle(apiKey)}>
                 {apiKey.isActive ? 'Deactivate' : 'Activate'}
               </Button>
               <Button variant="link" className="px-1" onClick={() => handleDelete(apiKey)}>
@@ -166,8 +163,8 @@ const ApiKeys: React.FC = () => {
             <>
               Are you sure you want to delete the API key "{selectedApiKey?.name}"?
               <div className="alert alert-warning mt-3">
-                <strong>Warning:</strong> This action cannot be undone. Any applications using
-                this API key will lose access immediately.
+                <strong>Warning:</strong> This action cannot be undone. Any applications using this
+                API key will lose access immediately.
               </div>
             </>
           ) : (

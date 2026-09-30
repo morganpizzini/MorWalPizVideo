@@ -1,7 +1,16 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
 import { Card, Badge, Button, Tabs, Tab, Form } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
-import { InsightTopic, InsightNewsItem, InsightContentPlan, InsightNewsStatus, InsightSourceKind, ContentPlanType, InsightTopicCreationMode } from '@morwalpizvideo/models';
+import { Link, useFetcher } from 'react-router';
+import {
+  InsightTopic,
+  InsightNewsItem,
+  InsightContentPlan,
+  InsightNewsStatus,
+  InsightSourceKind,
+  ContentPlanType,
+  InsightTopicCreationMode,
+} from '@morwalpizvideo/models';
 import { insightsContentPlansApi, insightsTopicsApi } from '@morwalpizvideo/services';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -18,31 +27,50 @@ export function getCommentPreview(text: string, expanded: boolean): string {
   return expanded ? text : text.slice(0, COMMENT_PREVIEW_LENGTH);
 }
 
-export function getCommentTextParts(fullText: string, highlightText: string, expanded: boolean): [string, string, string] | undefined {
+export function getCommentTextParts(
+  fullText: string,
+  highlightText: string,
+  expanded: boolean
+): [string, string, string] | undefined {
   if (!expanded || !highlightText) return undefined;
   const highlightStart = fullText.indexOf(highlightText);
   return highlightStart >= 0
-    ? [fullText.slice(0, highlightStart), highlightText, fullText.slice(highlightStart + highlightText.length)]
+    ? [
+        fullText.slice(0, highlightStart),
+        highlightText,
+        fullText.slice(highlightStart + highlightText.length),
+      ]
     : undefined;
 }
 
 export function orderInsightNewsItems(newsItems: InsightNewsItem[]): InsightNewsItem[] {
-  const statusPriority = (status: InsightNewsStatus) => status === InsightNewsStatus.Accepted ? 0 : status === InsightNewsStatus.Pending || status === InsightNewsStatus.AutoDetected ? 1 : 2;
-  return [...newsItems].sort((left, right) =>
-    statusPriority(left.status) - statusPriority(right.status) ||
-    right.aiRelevanceScore - left.aiRelevanceScore ||
-    new Date(right.discoveredAt).getTime() - new Date(left.discoveredAt).getTime());
+  const statusPriority = (status: InsightNewsStatus) =>
+    status === InsightNewsStatus.Accepted
+      ? 0
+      : status === InsightNewsStatus.Pending || status === InsightNewsStatus.AutoDetected
+        ? 1
+        : 2;
+  return [...newsItems].sort(
+    (left, right) =>
+      statusPriority(left.status) - statusPriority(right.status) ||
+      right.aiRelevanceScore - left.aiRelevanceScore ||
+      new Date(right.discoveredAt).getTime() - new Date(left.discoveredAt).getTime()
+  );
 }
 
 const InsightTopicDetail: React.FC = () => {
-  const { topic, newsItems, contentPlans } = useLoaderData<LoaderData>();
+  const { topic, newsItems, contentPlans } = useResolvedLoaderData<LoaderData>();
   const [scanning, setScanning] = useState(false);
   const [selectedNewsIds, setSelectedNewsIds] = useState<string[]>([]);
   const [contentType, setContentType] = useState(ContentPlanType.Article);
   const [targetPlatforms, setTargetPlatforms] = useState<string[]>([]);
   const [generatingPlan, setGeneratingPlan] = useState(false);
-  const hasCommentDerivedInsights = newsItems.some(item => item.sourceKind === InsightSourceKind.ShortContent);
-  const isCommentAnalysisTopic = topic.creationMode === InsightTopicCreationMode.YouTubeCommentAnalysis || hasCommentDerivedInsights;
+  const hasCommentDerivedInsights = newsItems.some(
+    item => item.sourceKind === InsightSourceKind.ShortContent
+  );
+  const isCommentAnalysisTopic =
+    topic.creationMode === InsightTopicCreationMode.YouTubeCommentAnalysis ||
+    hasCommentDerivedInsights;
   const toast = useToast();
   const fetcher = useFetcher();
 
@@ -51,26 +79,60 @@ const InsightTopicDetail: React.FC = () => {
   const availablePlatforms = ['YouTube', 'Instagram', 'TikTok', 'Newsletter'];
 
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
-  const renderSourceComment = (item: InsightNewsItem) => item.sourceComments?.map((comment, index) => {
-    const expanded = expandedComments[`${item.id}-${index}`];
-    const visibleText = getCommentPreview(comment.fullText, expanded);
-    const textParts = getCommentTextParts(comment.fullText, comment.highlightText, expanded);
-    return <div key={`${item.id}-comment-${index}`} className="mb-2">
-      <small className="text-muted">{comment.author}</small>
-      <div>{textParts ? <>{textParts[0]}<strong>{textParts[1]}</strong>{textParts[2]}</> : visibleText}{!expanded && comment.fullText.length > COMMENT_PREVIEW_LENGTH ? '...' : null}</div>
-      {comment.fullText.length > 200 ? <Button variant="link" size="sm" className="p-0" onClick={() => setExpandedComments(current => ({ ...current, [`${item.id}-${index}`]: !expanded }))}>{expanded ? 'Show less' : 'Show more'}</Button> : null}
-    </div>;
-  });
+  const renderSourceComment = (item: InsightNewsItem) =>
+    item.sourceComments?.map((comment, index) => {
+      const expanded = expandedComments[`${item.id}-${index}`];
+      const visibleText = getCommentPreview(comment.fullText, expanded);
+      const textParts = getCommentTextParts(comment.fullText, comment.highlightText, expanded);
+      return (
+        <div key={`${item.id}-comment-${index}`} className="mb-2">
+          <small className="text-muted">{comment.author}</small>
+          <div>
+            {textParts ? (
+              <>
+                {textParts[0]}
+                <strong>{textParts[1]}</strong>
+                {textParts[2]}
+              </>
+            ) : (
+              visibleText
+            )}
+            {!expanded && comment.fullText.length > COMMENT_PREVIEW_LENGTH ? '...' : null}
+          </div>
+          {comment.fullText.length > 200 ? (
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0"
+              onClick={() =>
+                setExpandedComments(current => ({ ...current, [`${item.id}-${index}`]: !expanded }))
+              }
+            >
+              {expanded ? 'Show less' : 'Show more'}
+            </Button>
+          ) : null}
+        </div>
+      );
+    });
 
   const generateContentPlan = async () => {
     if (selectedNewsIds.length === 0 || targetPlatforms.length === 0) return;
     setGeneratingPlan(true);
     try {
-      await insightsContentPlansApi.generate({ topicId: topic.id, newsItemIds: selectedNewsIds, contentType, targetPlatforms });
+      await insightsContentPlansApi.generate({
+        topicId: topic.id,
+        newsItemIds: selectedNewsIds,
+        contentType,
+        targetPlatforms,
+      });
       toast.show('Success', 'Content plan generated', { variant: 'success' });
       window.location.reload();
     } catch (error) {
-      toast.show('Error', error instanceof Error ? error.message : 'Content plan generation failed', { variant: 'danger' });
+      toast.show(
+        'Error',
+        error instanceof Error ? error.message : 'Content plan generation failed',
+        { variant: 'danger' }
+      );
     } finally {
       setGeneratingPlan(false);
     }
@@ -86,7 +148,9 @@ const InsightTopicDetail: React.FC = () => {
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      toast.show('Error', error instanceof Error ? error.message : 'CSV export failed', { variant: 'danger' });
+      toast.show('Error', error instanceof Error ? error.message : 'CSV export failed', {
+        variant: 'danger',
+      });
     }
   };
 
@@ -104,7 +168,9 @@ const InsightTopicDetail: React.FC = () => {
       if (fetcher.data.success) {
         toast.show('Success', 'News scan completed', { variant: 'success' });
       } else {
-        toast.show('Error', fetcher.data.errors?.generics?.[0] || 'News scan failed', { variant: 'danger' });
+        toast.show('Error', fetcher.data.errors?.generics?.[0] || 'News scan failed', {
+          variant: 'danger',
+        });
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -184,7 +250,9 @@ const InsightTopicDetail: React.FC = () => {
         <Link to="/insights" className="btn btn-secondary">
           Back to List
         </Link>
-        <Button variant="outline-primary" onClick={downloadCsv}>Download CSV</Button>
+        <Button variant="outline-primary" onClick={downloadCsv}>
+          Download CSV
+        </Button>
       </div>
 
       <Tabs defaultActiveKey="news">
@@ -193,26 +261,80 @@ const InsightTopicDetail: React.FC = () => {
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>Discovered News</span>
               {!isCommentAnalysisTopic && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleScanNews}
-                  disabled={scanning}
-                >
+                <Button variant="primary" size="sm" onClick={handleScanNews} disabled={scanning}>
                   {scanning ? 'Scanning...' : 'Scan for News'}
                 </Button>
               )}
             </Card.Header>
             <Card.Body>
-              {acceptedNews.length > 0 && <Card className="border mb-3"><Card.Body>
-                <h6>Generate a content plan from accepted news</h6>
-                <Form.Group className="mb-2"><Form.Label>Accepted news items</Form.Label>{acceptedNews.map(item => <Form.Check key={item.id} type="checkbox" label={item.title} checked={selectedNewsIds.includes(item.id)} onChange={event => setSelectedNewsIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />)}</Form.Group>
-                <div className="d-flex gap-2 flex-wrap">
-                  <Form.Select aria-label="Content type" value={contentType} onChange={event => setContentType(Number(event.target.value) as ContentPlanType)} className="w-auto"><option value={ContentPlanType.Article}>Article</option><option value={ContentPlanType.Podcast}>Podcast</option><option value={ContentPlanType.SocialPost}>Social post</option><option value={ContentPlanType.VideoScript}>Video script</option><option value={ContentPlanType.Newsletter}>Newsletter</option></Form.Select>
-                  {availablePlatforms.map(platform => <Form.Check key={platform} inline type="checkbox" label={platform} checked={targetPlatforms.includes(platform)} onChange={event => setTargetPlatforms(current => event.target.checked ? [...current, platform] : current.filter(value => value !== platform))} />)}
-                  <Button size="sm" onClick={generateContentPlan} disabled={generatingPlan || selectedNewsIds.length === 0 || targetPlatforms.length === 0}>{generatingPlan ? 'Generating...' : 'Generate content plan'}</Button>
-                </div>
-              </Card.Body></Card>}
+              {acceptedNews.length > 0 && (
+                <Card className="border mb-3">
+                  <Card.Body>
+                    <h6>Generate a content plan from accepted news</h6>
+                    <Form.Group className="mb-2">
+                      <Form.Label>Accepted news items</Form.Label>
+                      {acceptedNews.map(item => (
+                        <Form.Check
+                          key={item.id}
+                          type="checkbox"
+                          label={item.title}
+                          checked={selectedNewsIds.includes(item.id)}
+                          onChange={event =>
+                            setSelectedNewsIds(current =>
+                              event.target.checked
+                                ? [...current, item.id]
+                                : current.filter(id => id !== item.id)
+                            )
+                          }
+                        />
+                      ))}
+                    </Form.Group>
+                    <div className="d-flex gap-2 flex-wrap">
+                      <Form.Select
+                        aria-label="Content type"
+                        value={contentType}
+                        onChange={event =>
+                          setContentType(Number(event.target.value) as ContentPlanType)
+                        }
+                        className="w-auto"
+                      >
+                        <option value={ContentPlanType.Article}>Article</option>
+                        <option value={ContentPlanType.Podcast}>Podcast</option>
+                        <option value={ContentPlanType.SocialPost}>Social post</option>
+                        <option value={ContentPlanType.VideoScript}>Video script</option>
+                        <option value={ContentPlanType.Newsletter}>Newsletter</option>
+                      </Form.Select>
+                      {availablePlatforms.map(platform => (
+                        <Form.Check
+                          key={platform}
+                          inline
+                          type="checkbox"
+                          label={platform}
+                          checked={targetPlatforms.includes(platform)}
+                          onChange={event =>
+                            setTargetPlatforms(current =>
+                              event.target.checked
+                                ? [...current, platform]
+                                : current.filter(value => value !== platform)
+                            )
+                          }
+                        />
+                      ))}
+                      <Button
+                        size="sm"
+                        onClick={generateContentPlan}
+                        disabled={
+                          generatingPlan ||
+                          selectedNewsIds.length === 0 ||
+                          targetPlatforms.length === 0
+                        }
+                      >
+                        {generatingPlan ? 'Generating...' : 'Generate content plan'}
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              )}
               {newsItems.length > 0 ? (
                 <div className="d-flex flex-column gap-3">
                   {orderedNewsItems.map(item => (
@@ -222,22 +344,45 @@ const InsightTopicDetail: React.FC = () => {
                           <h6 className="mb-0">
                             {item.title}
                             {item.sourceKind === InsightSourceKind.ShortContent && (
-                              <Badge bg="dark" className="ms-2">Short Content</Badge>
+                              <Badge bg="dark" className="ms-2">
+                                Short Content
+                              </Badge>
                             )}
                           </h6>
-                          {item.status === InsightNewsStatus.Accepted && <Form.Check aria-label={`Select ${item.title}`} checked={selectedNewsIds.includes(item.id)} onChange={event => setSelectedNewsIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />}
+                          {item.status === InsightNewsStatus.Accepted && (
+                            <Form.Check
+                              aria-label={`Select ${item.title}`}
+                              checked={selectedNewsIds.includes(item.id)}
+                              onChange={event =>
+                                setSelectedNewsIds(current =>
+                                  event.target.checked
+                                    ? [...current, item.id]
+                                    : current.filter(id => id !== item.id)
+                                )
+                              }
+                            />
+                          )}
                           {getStatusBadge(item.status)}
                         </div>
                         <p className="mb-2">{item.summary}</p>
-                        {item.sourceComments?.length ? <div className="mb-2"><small className="text-muted">Source comments</small>{renderSourceComment(item)}</div> : null}
+                        {item.sourceComments?.length ? (
+                          <div className="mb-2">
+                            <small className="text-muted">Source comments</small>
+                            {renderSourceComment(item)}
+                          </div>
+                        ) : null}
                         <div className="d-flex justify-content-between align-items-center">
                           <div>
                             <small className="text-muted">
-                              Source: <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{item.sourceName}</a>
+                              Source:{' '}
+                              <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                {item.sourceName}
+                              </a>
                             </small>
                             <br />
                             <small className="text-muted">
-                              AI Score: {item.aiRelevanceScore.toFixed(2)} | Stars: {renderStars(item.starRating)}
+                              AI Score: {item.aiRelevanceScore.toFixed(2)} | Stars:{' '}
+                              {renderStars(item.starRating)}
                             </small>
                           </div>
                           <Link
@@ -268,9 +413,13 @@ const InsightTopicDetail: React.FC = () => {
                     <Card key={plan.id} className="border">
                       <Card.Body>
                         <h6>{plan.title}</h6>
-                        <Badge bg="info" className="mb-2">{plan.type}</Badge>
+                        <Badge bg="info" className="mb-2">
+                          {plan.type}
+                        </Badge>
                         <p className="mb-2" style={{ whiteSpace: 'pre-line' }}>
-                          {plan.outline.length > 200 ? `${plan.outline.substring(0, 200)}...` : plan.outline}
+                          {plan.outline.length > 200
+                            ? `${plan.outline.substring(0, 200)}...`
+                            : plan.outline}
                         </p>
                         <div className="d-flex gap-2">
                           <small className="text-muted">
@@ -294,7 +443,6 @@ const InsightTopicDetail: React.FC = () => {
           </Card>
         </Tab>
       </Tabs>
-
     </>
   );
 };

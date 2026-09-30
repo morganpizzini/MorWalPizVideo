@@ -5,7 +5,12 @@ import { authService } from '../services/authService';
 import * as apiServices from '@morwalpizvideo/services';
 import { useAppStore } from '../state/appStore';
 import { getRoutePermissions, permissions } from '../authorization/permissions';
-import { requireBackOfficeAccess, requirePermissions, withPermission } from './guards';
+import {
+  requireBackOfficeAccess,
+  requirePermissions,
+  withDeferredPermission,
+  withPermission,
+} from './guards';
 
 describe('BackOffice route guards', () => {
   beforeEach(() => {
@@ -15,13 +20,18 @@ describe('BackOffice route guards', () => {
   });
 
   it('hydrates the app store once with session, feature, and channel state', async () => {
-    localStorage.setItem('auth_user', JSON.stringify({ id: 'user-1', username: 'Ada', email: 'ada@example.test' }));
+    localStorage.setItem(
+      'auth_user',
+      JSON.stringify({ id: 'user-1', username: 'Ada', email: 'ada@example.test' })
+    );
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-1',
       effectivePermissions: [permissions.backoffice.access],
     });
     vi.spyOn(apiServices, 'get')
-      .mockResolvedValueOnce([{ channelId: 'channel-1', channelName: 'Main', yTChannelId: 'yt-1' }] as never)
+      .mockResolvedValueOnce([
+        { channelId: 'channel-1', channelName: 'Main', yTChannelId: 'yt-1' },
+      ] as never)
       .mockResolvedValueOnce({ videoBulkImportEnabled: false } as never);
 
     await expect(authLoader()).resolves.toMatchObject({ selectedChannelId: 'channel-1' });
@@ -80,6 +90,20 @@ describe('BackOffice route guards', () => {
     expect(loader).not.toHaveBeenCalled();
   });
 
+  it('does not start deferred route data before authorization succeeds', async () => {
+    vi.spyOn(authService, 'validateSession').mockResolvedValue({
+      userId: 'user-without-videos',
+      effectivePermissions: ['backoffice.access'],
+    });
+    const loader = vi.fn().mockResolvedValue({ items: ['should-not-load'] });
+    const guardedLoader = withDeferredPermission([permissions.videos.view], loader);
+
+    const result = await guardedLoader({} as never);
+
+    expect(result).toEqual(redirect('/forbidden'));
+    expect(loader).not.toHaveBeenCalled();
+  });
+
   it('denies Insights before its loader runs without view or manage permission', async () => {
     vi.spyOn(authService, 'validateSession').mockResolvedValue({
       userId: 'user-without-insights',
@@ -100,8 +124,9 @@ describe('BackOffice route guards', () => {
       effectivePermissions: [permissions.users.manage],
     });
 
-    await expect(requirePermissions([permissions.users.permissionsManage]))
-      .resolves.toEqual(redirect('/forbidden'));
+    await expect(requirePermissions([permissions.users.permissionsManage])).resolves.toEqual(
+      redirect('/forbidden')
+    );
   });
 
   it('accepts manage-all as the frontend global override', async () => {
@@ -116,7 +141,9 @@ describe('BackOffice route guards', () => {
   it('maps RBAC lifecycle reads separately from permission administration', () => {
     expect(getRoutePermissions('rbac/users', false)).toContain(permissions.users.view);
     expect(getRoutePermissions('rbac/users/:id', false)).toContain(permissions.users.view);
-    expect(getRoutePermissions('rbac/groups', false)).toEqual([permissions.users.permissionsManage]);
+    expect(getRoutePermissions('rbac/groups', false)).toEqual([
+      permissions.users.permissionsManage,
+    ]);
   });
 
   it('fails closed when a protected route module has no permission mapping', () => {

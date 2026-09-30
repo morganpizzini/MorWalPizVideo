@@ -1,13 +1,14 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import { useEffect, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
-import { useFetcher, useLoaderData, useNavigate, useParams } from 'react-router';
+import { useFetcher, useNavigate, useParams } from 'react-router';
 import { endpoints, get } from '@morwalpizvideo/services';
 import type { CustomForm, Survey } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
 
 export default function SurveyForm() {
-  const existing = useLoaderData() as Survey | null;
+  const existing = useResolvedLoaderData() as Survey | null;
   const [forms, setForms] = useState<CustomForm[]>([]);
   const [title, setTitle] = useState(existing?.title ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');

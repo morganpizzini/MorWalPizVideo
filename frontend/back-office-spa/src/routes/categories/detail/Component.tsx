@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
@@ -7,7 +8,7 @@ import PageHeader from '@components/PageHeader';
 import { Category } from '@morwalpizvideo/models';
 
 const CategoryDetail: React.FC = () => {
-  const category = useLoaderData<Category>();
+  const category = useResolvedLoaderData<Category>();
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();

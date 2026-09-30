@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Footer from './Footer';
 import Header from './Header';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useNavigation } from 'react-router';
 import Breadcrumbs from '@components/Breadcrumbs';
 import AdminSidebar from './AdminSidebar';
 import { ChannelProvider } from '../contexts/ChannelContext';
@@ -15,6 +15,7 @@ interface AuthLoaderData {
 const PrimaryLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigation = useNavigation();
   const { channels } = useLoaderData() as AuthLoaderData;
 
   useEffect(() => {
@@ -23,6 +24,12 @@ const PrimaryLayout: React.FC = () => {
 
   return (
     <ChannelProvider channels={channels}>
+      <div
+        className={`router-progress ${navigation.state === 'idle' ? '' : 'is-active'}`}
+        role="status"
+        aria-live="polite"
+        aria-label={navigation.state === 'submitting' ? 'Saving changes' : 'Loading page'}
+      />
       <div className="admin-shell">
         <AdminSidebar show={sidebarOpen} onHide={() => setSidebarOpen(false)} />
         <div className="admin-main admin-main-layout">

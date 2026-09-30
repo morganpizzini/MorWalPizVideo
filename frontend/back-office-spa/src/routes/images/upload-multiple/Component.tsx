@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useState, useRef } from 'react';
-import { useFetcher, useLoaderData } from 'react-router';
+import { useFetcher } from 'react-router';
 import { Form, Button, Card, Row, Col, CloseButton, Modal } from 'react-bootstrap';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -21,7 +22,7 @@ const MultipleImageUpload: React.FC = () => {
   const toast = useToast();
 
   // Load matches from the API using the loader
-  const { matches } = useLoaderData() as LoaderData;
+  const { matches } = useResolvedLoaderData() as LoaderData;
 
   // Get selected match name
   const selectedMatch = matches.find(match => match.url === folderName);
@@ -32,7 +33,7 @@ const MultipleImageUpload: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -58,7 +59,7 @@ const MultipleImageUpload: React.FC = () => {
       const newImages = selectedFiles.map(file => {
         return {
           file,
-          preview: URL.createObjectURL(file)
+          preview: URL.createObjectURL(file),
         };
       });
 
@@ -144,7 +145,7 @@ const MultipleImageUpload: React.FC = () => {
                               top: '5px',
                               right: '5px',
                               backgroundColor: 'rgba(255,255,255,0.7)',
-                              borderRadius: '50%'
+                              borderRadius: '50%',
                             }}
                             onClick={() => handleRemoveImage(index)}
                           />
@@ -171,10 +172,7 @@ const MultipleImageUpload: React.FC = () => {
           <Form.Label>
             Match Folder <span className="text-danger">*</span>
           </Form.Label>
-          <Form.Select
-            value={folderName}
-            onChange={e => setFolderName(e.target.value)}
-          >
+          <Form.Select value={folderName} onChange={e => setFolderName(e.target.value)}>
             <option value="">Select a match folder</option>
             {matches.map(match => (
               <option key={match.id} value={match.url}>
@@ -207,11 +205,21 @@ const MultipleImageUpload: React.FC = () => {
           <Modal.Title>Confirm Multiple Image Upload</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p><strong>Please confirm the following details:</strong></p>
-          <p><strong>Number of Images:</strong> {images.length}</p>
-          <p><strong>Total Size:</strong> {totalSizeKB} KB</p>
-          <p><strong>Match Folder:</strong> {selectedMatchName}</p>
-          <p><strong>Load In Match Folder:</strong> {loadInMatchFolder ? 'Yes' : 'No'}</p>
+          <p>
+            <strong>Please confirm the following details:</strong>
+          </p>
+          <p>
+            <strong>Number of Images:</strong> {images.length}
+          </p>
+          <p>
+            <strong>Total Size:</strong> {totalSizeKB} KB
+          </p>
+          <p>
+            <strong>Match Folder:</strong> {selectedMatchName}
+          </p>
+          <p>
+            <strong>Load In Match Folder:</strong> {loadInMatchFolder ? 'Yes' : 'No'}
+          </p>
 
           {images.length > 0 && (
             <div className="mt-3">
@@ -227,7 +235,10 @@ const MultipleImageUpload: React.FC = () => {
                         style={{ height: '100px', objectFit: 'cover' }}
                       />
                       <Card.Body className="p-2">
-                        <small className="text-muted" style={{ fontSize: '0.7rem' }}>{image.file.name.substring(0, 15)}{image.file.name.length > 15 ? '...' : ''}</small>
+                        <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                          {image.file.name.substring(0, 15)}
+                          {image.file.name.length > 15 ? '...' : ''}
+                        </small>
                       </Card.Body>
                     </Card>
                   </Col>

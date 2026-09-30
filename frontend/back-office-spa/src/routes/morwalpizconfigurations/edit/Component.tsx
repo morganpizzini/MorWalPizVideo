@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Card, Row, Col } from 'react-bootstrap';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { MorWalPizConfiguration } from '@/models/configuration';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
@@ -8,7 +9,7 @@ import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 
 const EditConfiguration: React.FC = () => {
-  const configuration = useLoaderData<MorWalPizConfiguration>();
+  const configuration = useResolvedLoaderData<MorWalPizConfiguration>();
   const [model, setModel] = useState<MorWalPizConfiguration>(configuration);
   const navigate = useNavigate();
   const toast = useToast();

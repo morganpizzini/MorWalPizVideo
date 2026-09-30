@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useRef, useState } from 'react';
-import { useLoaderData, useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate } from 'react-router';
 import { Card, Row, Col, Form as BootstrapForm, Button, Badge, Table } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -20,7 +21,7 @@ const getCanonicalShortLinkCode = (match: Match, youtubeId: string): string | un
   )?.code;
 
 const Component: React.FC = () => {
-  const { match, categories, tagSuggestions } = useLoaderData() as {
+  const { match, categories, tagSuggestions } = useResolvedLoaderData() as {
     match: Match;
     categories: CategoryRef[];
     tagSuggestions?: string[];

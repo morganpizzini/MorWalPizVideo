@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal } from 'react-bootstrap';
-import { Link, useLoaderData, useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { Compilation } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
@@ -13,7 +14,7 @@ const Compilations: React.FC = () => {
   const [selectedCompilation, setSelectedCompilation] = useState<Compilation | null>(null);
   const toast = useToast();
 
-  const entities = useLoaderData<Compilation[]>();
+  const entities = useResolvedLoaderData<Compilation[]>();
 
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
@@ -43,13 +44,10 @@ const Compilations: React.FC = () => {
     const actionPath = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
     const formData = new FormData();
     if (selectedCompilation.id) formData.append('id', selectedCompilation.id);
-    fetcher.submit(
-      formData,
-      {
-        method: 'post',
-        action: actionPath,
-      }
-    );
+    fetcher.submit(formData, {
+      method: 'post',
+      action: actionPath,
+    });
   };
 
   // Define columns

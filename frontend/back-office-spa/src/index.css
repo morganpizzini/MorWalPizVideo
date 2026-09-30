@@ -33,6 +33,39 @@ body {
   min-height: 100vh;
 }
 
+.router-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1100;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.router-progress.is-active {
+  opacity: 1;
+  background: #d9e2ec;
+}
+
+.router-progress.is-active::after {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: #2f6f8f;
+  content: '';
+  animation: router-progress 1.1s ease-in-out infinite;
+}
+
+@keyframes router-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
 .admin-shell {
   min-height: 100vh;
   display: flex;

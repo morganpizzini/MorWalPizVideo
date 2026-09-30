@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Modal } from 'react-bootstrap';
-import { useNavigate, useFetcher, useLoaderData, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useFetcher, useParams, useSearchParams } from 'react-router';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -11,7 +12,7 @@ import { endpoints, get } from '@morwalpizvideo/services';
 import { fetchMatches, Match } from '@/services/matchesService';
 
 const ShortLinkForm: React.FC = () => {
-  const entity = useLoaderData() as ShortLink | null;
+  const entity = useResolvedLoaderData() as ShortLink | null;
   const params = useParams();
   const isEditMode = !!params.id;
   const [searchParams] = useSearchParams();
@@ -34,7 +35,7 @@ const ShortLinkForm: React.FC = () => {
   const errors = fetcher.data?.errors;
   const result =
     fetcher.data != undefined &&
-      (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
+    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
       ? fetcher.data
       : null;
 
@@ -110,7 +111,12 @@ const ShortLinkForm: React.FC = () => {
   const confirmSubmit = () => {
     const queryLinkIds = selectedQueryLinks.map(ql => ql.queryLinkId);
     fetcher.submit(
-      { ...(isEditMode ? { code } : {}), target, linkType, queryLinkIds: JSON.stringify(queryLinkIds) },
+      {
+        ...(isEditMode ? { code } : {}),
+        target,
+        linkType,
+        queryLinkIds: JSON.stringify(queryLinkIds),
+      },
       { method: 'post', action: location.pathname }
     );
   };
@@ -165,10 +171,11 @@ const ShortLinkForm: React.FC = () => {
                 disabled={loading}
               >
                 <option value="">Select a video</option>
-                {entity && entity.videoTitle && !matches.some(match =>
-                  match.videoRefs?.some(video => video.youtubeId === entity.target)) && (
-                  <option value={entity.target}>{entity.videoTitle}</option>
-                )}
+                {entity &&
+                  entity.videoTitle &&
+                  !matches.some(match =>
+                    match.videoRefs?.some(video => video.youtubeId === entity.target)
+                  ) && <option value={entity.target}>{entity.videoTitle}</option>}
                 {matches.map(match => (
                   <React.Fragment key={match.id}>
                     {match.videoRefs?.map(video => (
@@ -182,11 +189,7 @@ const ShortLinkForm: React.FC = () => {
               {loading && <div className="text-muted mt-1">Loading videos...</div>}
             </>
           ) : (
-            <Form.Control
-              type="text"
-              value={target}
-              onChange={e => setTarget(e.target.value)}
-            />
+            <Form.Control type="text" value={target} onChange={e => setTarget(e.target.value)} />
           )}
           <FieldError error={errors?.target} />
           <Form.Text className="text-muted">
@@ -234,8 +237,8 @@ const ShortLinkForm: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <p>
-            Are you sure you want to{' '}
-            {isEditMode ? 'save the changes to' : 'create'} the following short link?
+            Are you sure you want to {isEditMode ? 'save the changes to' : 'create'} the following
+            short link?
           </p>
           <p>
             <strong>Link Type:</strong> {LinkType[linkType]}
@@ -257,8 +260,7 @@ const ShortLinkForm: React.FC = () => {
           </p>
           {selectedQueryLinks.length > 0 && (
             <p>
-              <strong>Query Links:</strong>{' '}
-              {selectedQueryLinks.map(ql => ql.title).join(', ')}
+              <strong>Query Links:</strong> {selectedQueryLinks.map(ql => ql.title).join(', ')}
             </p>
           )}
         </Modal.Body>

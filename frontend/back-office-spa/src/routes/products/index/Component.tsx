@@ -1,6 +1,7 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Dropdown, Modal } from 'react-bootstrap';
-import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router';
+import { Link, useFetcher, useRevalidator } from 'react-router';
 import { Tags, ToggleLeft } from 'lucide-react';
 import type {
   BulkProductOperationOutcome,
@@ -18,7 +19,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { parseCsv, parseProductImport } from './csvImport';
 
 const Products: React.FC = () => {
-  const { products: entities, categories } = useLoaderData<{
+  const { products: entities, categories } = useResolvedLoaderData<{
     products: Product[];
     categories: VideoProductCategory[];
   }>();

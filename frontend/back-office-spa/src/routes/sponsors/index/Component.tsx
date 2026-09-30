@@ -1,5 +1,6 @@
+import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLoaderData, useFetcher, Link } from 'react-router';
+import { useFetcher, Link } from 'react-router';
 import { Button, Modal } from 'react-bootstrap';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import PageHeader from '@components/PageHeader';
@@ -9,7 +10,7 @@ import GenericTable from '@components/Table';
 import { ColumnDef } from '@tanstack/react-table';
 
 const SponsorsIndex: React.FC = () => {
-  const { sponsors: entities } = useLoaderData<{ sponsors: Sponsor[] }>();
+  const { sponsors: entities } = useResolvedLoaderData<{ sponsors: Sponsor[] }>();
   const fetcher = useFetcher();
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
