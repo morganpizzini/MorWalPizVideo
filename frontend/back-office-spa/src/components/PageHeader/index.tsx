@@ -21,8 +21,8 @@ const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div className="d-flex justify-content-between align-items-center bg-light p-3 rounded shadow-sm mb-3">
-      <h4 className="mb-0">{title}</h4>
-      <div>
+      <h4 className="mb-0 flex-shrink-0">{title}</h4>
+      <div className="d-flex flex-grow-1 justify-content-end align-items-center flex-nowrap overflow-auto ms-3">
         {actions}
         {backLink && (
           <Link className="btn btn-secondary me-2" to={backLink}>
