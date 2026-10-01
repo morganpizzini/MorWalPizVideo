@@ -123,6 +123,27 @@ export interface UpdateContentPlanRequest {
   targetPlatforms?: string[];
 }
 
+export type InsightArticleDraftMode =
+  | "direct"
+  | "firstDraft"
+  | "expandContext"
+  | "additionalInformation";
+
+export interface CreateInsightArticleDraftRequest {
+  topicId: string;
+  contentPlanId?: string;
+  mode: InsightArticleDraftMode;
+  additionalInformation?: string;
+}
+
+export interface InsightArticleDraft {
+  title: string;
+  summary: string;
+  body: string;
+  topicId: string;
+  contentPlanId?: string | null;
+}
+
 export enum InsightCommentSourceType {
   StoredChannel = 0,
   StoredVideo = 1,

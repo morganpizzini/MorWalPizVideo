@@ -30,4 +30,23 @@ public sealed class ScriptStudioServiceTests
         prompt.Should().Contain("Original script");
         prompt.Should().Contain("Make it concise");
     }
+
+    [Fact]
+    public void ComposePromptForPrettifyRequiresContentPreservation()
+    {
+        var request = new ScriptStudioGenerationRequest
+        {
+            Operation = "prettify",
+            Script = "Use {{customerName}} at https://example.test and <code>x</code>.",
+            Prompt = "Use short paragraphs",
+            Format = "markdown"
+        };
+
+        var prompt = ScriptStudioService.ComposePrompt(null, request, ScriptStudioOperation.Prettify);
+
+        prompt.Should().Contain("Preserve Markdown, HTML, placeholders, URLs, code-like tokens");
+        prompt.Should().Contain(request.Script);
+        prompt.Should().Contain(request.Prompt);
+        prompt.Should().Contain("Return only the article content");
+    }
 }

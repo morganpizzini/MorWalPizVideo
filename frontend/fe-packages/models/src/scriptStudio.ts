@@ -1,4 +1,8 @@
-export type ScriptStudioOperation = "expand" | "rewrite" | "structure";
+export type ScriptStudioOperation =
+  | "expand"
+  | "rewrite"
+  | "structure"
+  | "prettify";
 export type ScriptStudioFormat = "plain" | "markdown";
 
 export interface ScriptStudioDocument {

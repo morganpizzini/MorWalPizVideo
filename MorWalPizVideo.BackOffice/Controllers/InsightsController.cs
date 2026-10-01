@@ -320,6 +320,49 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
         #region Content Plans
 
+        [HttpPost("article-drafts")]
+        [AllowUser(AuthorizationPermissionKeys.InsightsView, AuthorizationPermissionKeys.InsightsManage)]
+        public async Task<IActionResult> CreateArticleDraft([FromBody] CreateInsightArticleDraftRequest request)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var topic = await _insightsService.GetTopicByIdAsync(request.TopicId, SelectedChannelId);
+            if (topic == null)
+                return NotFound("Topic not found");
+
+            var plan = string.IsNullOrWhiteSpace(request.ContentPlanId)
+                ? null
+                : await _insightsService.GetContentPlanByIdAsync(request.ContentPlanId, SelectedChannelId);
+            if (!string.IsNullOrWhiteSpace(request.ContentPlanId) && (plan == null || plan.TopicId != topic.Id))
+                return NotFound("Content plan not found");
+
+            var news = await _insightsService.GetNewsItemsByTopicIdAsync(topic.Id!, SelectedChannelId);
+            var context = string.Join(
+                Environment.NewLine,
+                new[]
+                {
+                    plan == null ? string.Empty : $"Content plan: {plan.Title}\n{plan.Outline}",
+                    string.Join(Environment.NewLine, news.Select(item => $"- {item.Title}: {item.Summary}"))
+                }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+            if (request.Mode == "direct")
+            {
+                var title = plan?.Title ?? topic.Title;
+                var summary = topic.Description;
+                var body = plan?.Outline ?? string.Join("\n\n", news.Select(item => $"## {item.Title}\n\n{item.Summary}"));
+                return Ok(new InsightArticleDraftResponse(title, summary, body, topic.Id!, plan?.Id));
+            }
+
+            var generated = await _insightAgentService.GenerateArticleDraftAsync(
+                topic.Title,
+                topic.Description,
+                context,
+                request.Mode,
+                request.AdditionalInformation);
+            return Ok(generated with { TopicId = topic.Id!, ContentPlanId = plan?.Id });
+        }
+
         [HttpPost("content-plans")]
         [AllowUser(AuthorizationPermissionKeys.InsightsCreate, AuthorizationPermissionKeys.InsightsManage)]
         public async Task<IActionResult> GenerateContentPlan([FromBody] GenerateContentPlanRequest request)

@@ -68,6 +68,9 @@ az keyvault create --name myKeyVault --resource-group myResourceGroup --location
 az keyvault secret set --vault-name myKeyVault --name "MorWalPizDatabase--ConnectionString" --value "your-connection-string"
 az keyvault secret set --vault-name myKeyVault --name "BlobStorage--ConnectionString" --value "your-blob-connection-string"
 az keyvault secret set --vault-name myKeyVault --name "RecaptchaSecretKey" --value "your-recaptcha-key"
+az keyvault secret set --vault-name myKeyVault --name "JwtSettings--Secret" --value "<strong-production-secret>"
+az keyvault secret set --vault-name myKeyVault --name "JwtSettings--Issuer" --value "MorWalPizVideo.BackOffice"
+az keyvault secret set --vault-name myKeyVault --name "JwtSettings--Audience" --value "MorWalPizVideo.BackOffice"
 ```
 
 **Note**: Use double dashes (`--`) in secret names to represent configuration hierarchy. For example, `MorWalPizDatabase--ConnectionString` becomes `MorWalPizDatabase:ConnectionString` in configuration.
@@ -127,6 +130,9 @@ When KeyVault is enabled, secrets override local configuration values. The confi
 - `BlobStorage--ConnectionString`: Azure Blob Storage connection string
 - `RecaptchaSecretKey`: Google reCAPTCHA secret key
 - `YouTubeApiKey`: YouTube Data API key
+- `JwtSettings--Secret`: production JWT signing secret
+- `JwtSettings--Issuer`: JWT issuer accepted by ServerAPI
+- `JwtSettings--Audience`: JWT audience accepted by ServerAPI
 - Any other sensitive configuration values
 
 ## Error Handling
@@ -177,6 +183,31 @@ Enable detailed logging by setting log level to `Debug` in appsettings:
 ```
 
 ## Example Production Configuration
+
+### Azure App Service application settings
+
+Configure these settings on the ServerAPI App Service. Do not commit the secret to
+`appsettings.Production.json` or the repository:
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+FeatureManagement__EnableKeyVault=true
+KeyVaultUrl=https://myapp-prod-kv.vault.azure.net/
+```
+
+The App Service managed identity must have the **Key Vault Secrets User** role.
+Key Vault must contain `JwtSettings--Secret`, `JwtSettings--Issuer`, and
+`JwtSettings--Audience` in addition to the other required production settings.
+
+For a deployment that intentionally does not use Key Vault, disable it and provide
+the equivalent values as App Service settings instead:
+
+```text
+FeatureManagement__EnableKeyVault=false
+JwtSettings__Secret=<strong-production-secret>
+JwtSettings__Issuer=MorWalPizVideo.BackOffice
+JwtSettings__Audience=MorWalPizVideo.BackOffice
+```
 
 ### appsettings.Production.json
 ```json

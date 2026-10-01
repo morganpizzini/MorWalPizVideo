@@ -21,7 +21,9 @@ lowercase blog cache tags and lazy first-write Mongo uniqueness provisioning. Bl
 index is not part of the Page index manifest described below.
 
 Navigation uses an explicitly configured `Internal` link to `/blog`, without a new
-type, automatic entries or channel endpoint configuration. Existing page URLs,
+type, automatic entries or channel endpoint configuration. This persisted navigation
+data cannot be guaranteed or changed by source-only Blog work; operators must configure
+the link for each active channel. Existing page URLs,
 Page/ChannelNews routes and navigation behavior below remain unchanged.
 
 The completion pass verified 17 admin/shared blog tests, 4 public tests, 4 strict

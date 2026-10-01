@@ -1,7 +1,7 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState } from 'react';
-import { Card, Badge, Button, Tabs, Tab, Form } from 'react-bootstrap';
-import { Link, useFetcher } from 'react-router';
+import { Card, Badge, Button, Tabs, Tab, Form, Modal } from 'react-bootstrap';
+import { Link, useFetcher, useNavigate } from 'react-router';
 import {
   InsightTopic,
   InsightNewsItem,
@@ -11,9 +11,16 @@ import {
   ContentPlanType,
   InsightTopicCreationMode,
 } from '@morwalpizvideo/models';
-import { insightsContentPlansApi, insightsTopicsApi } from '@morwalpizvideo/services';
+import {
+  insightsArticleDraftsApi,
+  insightsContentPlansApi,
+  insightsTopicsApi,
+} from '@morwalpizvideo/services';
+import type { InsightArticleDraftMode } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
+import { hasPermission, permissions } from '@/authorization/permissions';
+import { useAppStore } from '@/state/appStore';
 
 interface LoaderData {
   topic: InsightTopic;
@@ -73,10 +80,46 @@ const InsightTopicDetail: React.FC = () => {
     hasCommentDerivedInsights;
   const toast = useToast();
   const fetcher = useFetcher();
+  const navigate = useNavigate();
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
+  const canCreateArticle = hasPermission(effectivePermissions, [
+    permissions.pages.create,
+    permissions.pages.manage,
+  ]);
+  const [articlePlan, setArticlePlan] = useState<InsightContentPlan>();
+  const [showArticleModal, setShowArticleModal] = useState(false);
+  const [articleMode, setArticleMode] = useState<InsightArticleDraftMode>('firstDraft');
+  const [additionalInformation, setAdditionalInformation] = useState('');
+  const [creatingArticle, setCreatingArticle] = useState(false);
 
   const orderedNewsItems = orderInsightNewsItems(newsItems);
   const acceptedNews = orderedNewsItems.filter(item => item.status === InsightNewsStatus.Accepted);
   const availablePlatforms = ['YouTube', 'Instagram', 'TikTok', 'Newsletter'];
+
+  const createArticle = async () => {
+    if (!articlePlan || !canCreateArticle) return;
+    setCreatingArticle(true);
+    try {
+      const draft = await insightsArticleDraftsApi.create({
+        topicId: topic.id,
+        contentPlanId: articlePlan.id,
+        mode: articleMode,
+        additionalInformation,
+      });
+      navigate('/blogposts/create', { state: { insightDraft: draft } });
+      setShowArticleModal(false);
+    } catch (error) {
+      toast.show(
+        'Error',
+        error instanceof Error ? error.message : 'Unable to create article draft',
+        {
+          variant: 'danger',
+        }
+      );
+    } finally {
+      setCreatingArticle(false);
+    }
+  };
 
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const renderSourceComment = (item: InsightNewsItem) =>
@@ -422,6 +465,20 @@ const InsightTopicDetail: React.FC = () => {
                             : plan.outline}
                         </p>
                         <div className="d-flex gap-2">
+                          {canCreateArticle && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => {
+                                setArticlePlan(plan);
+                                setArticleMode('firstDraft');
+                                setAdditionalInformation('');
+                                setShowArticleModal(true);
+                              }}
+                            >
+                              Create article
+                            </Button>
+                          )}
                           <small className="text-muted">
                             Platforms: {plan.targetPlatforms.join(', ')}
                           </small>
@@ -443,6 +500,63 @@ const InsightTopicDetail: React.FC = () => {
           </Card>
         </Tab>
       </Tabs>
+      <Modal
+        show={showArticleModal}
+        onHide={() => !creatingArticle && setShowArticleModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Create article from insight</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-muted">
+            The result opens in the blog editor as an unsaved draft and is never published
+            automatically.
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label>Starting point</Form.Label>
+            <Form.Select
+              value={articleMode}
+              onChange={event => setArticleMode(event.target.value as InsightArticleDraftMode)}
+              disabled={creatingArticle}
+            >
+              <option value="firstDraft">AI first draft</option>
+              <option value="expandContext">AI expand context</option>
+              <option value="additionalInformation">AI use additional information</option>
+              <option value="direct">Go directly to the new blog post page</option>
+            </Form.Select>
+          </Form.Group>
+          {articleMode !== 'direct' && (
+            <Form.Group>
+              <Form.Label>Additional information (optional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={5}
+                value={additionalInformation}
+                onChange={event => setAdditionalInformation(event.target.value)}
+                maxLength={10000}
+                disabled={creatingArticle}
+              />
+            </Form.Group>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowArticleModal(false)}
+            disabled={creatingArticle}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={createArticle}
+            disabled={creatingArticle || !articlePlan}
+          >
+            {creatingArticle ? 'Preparing...' : 'Continue'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };

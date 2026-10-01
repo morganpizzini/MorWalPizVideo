@@ -90,24 +90,23 @@ builder.Services.AddRateLimiter(options =>
 if (enableKeyVault)
 {
     var keyVaultUrl = builder.Configuration["KeyVaultUrl"];
-    if (!string.IsNullOrEmpty(keyVaultUrl))
+    if (string.IsNullOrWhiteSpace(keyVaultUrl))
     {
-        try
-        {
-            builder.Configuration.AddAzureKeyVault(
-                new Uri(keyVaultUrl),
-                new DefaultAzureCredential());
-        }
-        catch (Exception ex)
-        {
-            // Log the exception and continue without KeyVault
-            // This allows the application to start even if KeyVault is unavailable
-            Console.WriteLine($"Warning: Could not connect to KeyVault at {keyVaultUrl}: {ex.Message}");
-        }
+        throw new InvalidOperationException(
+            "Azure Key Vault is enabled but KeyVaultUrl is not configured.");
     }
-    else
+
+    try
     {
-        Console.WriteLine("Warning: EnableKeyVault is true but KeyVaultUrl is not configured");
+        builder.Configuration.AddAzureKeyVault(
+            new Uri(keyVaultUrl, UriKind.Absolute),
+            new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException(
+            $"Azure Key Vault configuration could not be loaded from {GetSafeHost(keyVaultUrl)}.",
+            ex);
     }
 }
 
@@ -311,7 +310,19 @@ if (enableDev)
 else
 {
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
+    var secret = jwtSettings["Secret"];
+    var issuer = jwtSettings["Issuer"];
+    var audience = jwtSettings["Audience"];
+
+    if (string.IsNullOrWhiteSpace(secret) ||
+        string.IsNullOrWhiteSpace(issuer) ||
+        string.IsNullOrWhiteSpace(audience))
+    {
+        throw new InvalidOperationException(
+            "Production JWT configuration is incomplete. Configure JwtSettings:Secret, " +
+            "JwtSettings:Issuer, and JwtSettings:Audience through App Service settings or Azure Key Vault.");
+    }
+
     var key = System.Text.Encoding.ASCII.GetBytes(secret);
 
     builder.Services.AddAuthentication(options =>
@@ -326,9 +337,9 @@ else
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
             ValidateIssuer = true,
-            ValidIssuer = jwtSettings["Issuer"],
+            ValidIssuer = issuer,
             ValidateAudience = true,
-            ValidAudience = jwtSettings["Audience"],
+            ValidAudience = audience,
             ClockSkew = System.TimeSpan.Zero
         };
     });
@@ -363,6 +374,9 @@ builder.Services.AddProblemDetails();
 
 // Add health checks
 builder.Services.AddHealthChecks();
+
+static string GetSafeHost(string value)
+    => Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri.Host : "invalid-url";
 
 var app = builder.Build();
 

@@ -1,4 +1,5 @@
 using MorWalPiz.Contracts.DTOs;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Services.Interfaces
@@ -32,6 +33,13 @@ namespace MorWalPizVideo.BackOffice.Services.Interfaces
             IList<string> newsItemIds,
             ContentPlanType contentType,
             IList<string> targetPlatforms);
+
+        Task<InsightArticleDraftResponse> GenerateArticleDraftAsync(
+            string topicTitle,
+            string topicDescription,
+            string context,
+            string mode,
+            string additionalInformation);
 
         /// <summary>
         /// Classifies a raw social post collected by the scanner as news or not, relative to the given topic

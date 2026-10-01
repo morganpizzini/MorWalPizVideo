@@ -71,4 +71,34 @@ public sealed class InsightsAuthorizationTests : IClassFixture<BackOfficeWebAppl
 
     Assert.Equal(expectedStatus, response.StatusCode);
   }
+
+  [Theory]
+  [InlineData(AuthorizationPermissionKeys.InsightsView, HttpStatusCode.NotFound)]
+  [InlineData(AuthorizationPermissionKeys.BackofficeAccess, HttpStatusCode.Forbidden)]
+  public async Task Article_draft_requires_insight_access(string permission, HttpStatusCode expectedStatus)
+  {
+    using var client = _factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", permission);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync(
+        "/api/Insights/article-drafts",
+        new { topicId = "missing-topic", mode = "direct", additionalInformation = "" });
+
+    Assert.Equal(expectedStatus, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Article_draft_rejects_unknown_mode_before_topic_lookup()
+  {
+    using var client = _factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.InsightsView);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync(
+        "/api/Insights/article-drafts",
+        new { topicId = "missing-topic", mode = "unknown" });
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
 }

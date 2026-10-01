@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react';
-import { data, redirect, useFetcher } from 'react-router';
-import type { BlogPostAdmin, BlogSnapshot, SaveBlogPost } from '@morwalpizvideo/models';
+import { useEffect, useRef, useState } from 'react';
+import { data, redirect, useFetcher, useLocation } from 'react-router';
+import type {
+  BlogPostAdmin,
+  BlogSnapshot,
+  SaveBlogPost,
+  InsightArticleDraft,
+} from '@morwalpizvideo/models';
 import {
   ApiResponseError,
   createBlogPost,
@@ -8,9 +13,10 @@ import {
   saveBlogPost,
   publishBlogPost,
   uploadBlogImage,
+  generateScriptStudio,
 } from '@morwalpizvideo/services';
 import { BlogRenderer } from '@morwalpiz/layout';
-import { Save, Upload, Eye, Send, EyeOff } from 'lucide-react';
+import { Save, Upload, Eye, Send, EyeOff, WandSparkles, X } from 'lucide-react';
 import { useResolvedLoaderData } from '@/router/asyncData';
 import PageHeader from '@components/PageHeader';
 import { hasPermission, permissions } from '@/authorization/permissions';
@@ -18,6 +24,8 @@ import { useAppStore } from '@/state/appStore';
 import { useChannelContext } from '@/contexts/ChannelContext';
 import { requirePermissions } from '@/router/guards';
 import { BlogEditor } from './Editor';
+import { buildInsightBlogSnapshot } from './prefill';
+import { applyPrettifiedContent, extractBlogContent } from './prettify';
 
 const emptyDraft = (): BlogSnapshot => ({
   title: '',
@@ -30,6 +38,7 @@ const emptyDraft = (): BlogSnapshot => ({
   seoDescription: '',
   document: { version: 1, blocks: [] },
 });
+
 export const loader = ({ params }: { params: { id?: string } }) =>
   params.id ? getBlogPost(params.id) : null;
 
@@ -77,10 +86,25 @@ export async function action({ request, params }: { request: Request; params: { 
 export function Component() {
   const initial = useResolvedLoaderData() as BlogPostAdmin | null;
   const { selectedChannelId } = useChannelContext();
-  return <BlogForm key={`${selectedChannelId}-${initial?.id ?? 'new'}`} initial={initial} />;
+  const location = useLocation();
+  const insightDraft = (location.state as { insightDraft?: InsightArticleDraft } | null)
+    ?.insightDraft;
+  return (
+    <BlogForm
+      key={`${selectedChannelId}-${initial?.id ?? 'new'}-${insightDraft?.topicId ?? ''}`}
+      initial={initial}
+      insightDraft={insightDraft}
+    />
+  );
 }
 
-function BlogForm({ initial }: { initial: BlogPostAdmin | null }) {
+function BlogForm({
+  initial,
+  insightDraft,
+}: {
+  initial: BlogPostAdmin | null;
+  insightDraft?: InsightArticleDraft;
+}) {
   const fetcher = useFetcher<{ post?: BlogPostAdmin; error?: string }>();
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canSave = hasPermission(effectivePermissions, [
@@ -88,12 +112,22 @@ function BlogForm({ initial }: { initial: BlogPostAdmin | null }) {
     permissions.pages.manage,
   ]);
   const canPublish = hasPermission(effectivePermissions, [permissions.pages.manage]);
+  const canPrettify = hasPermission(effectivePermissions, [permissions.scripts.studio]);
   const [post, setPost] = useState(initial);
-  const [draft, setDraft] = useState<BlogSnapshot>(initial?.draft ?? emptyDraft());
+  const [draft, setDraft] = useState<BlogSnapshot>(
+    () => initial?.draft ?? (insightDraft ? buildInsightBlogSnapshot(insightDraft) : emptyDraft())
+  );
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [preview, setPreview] = useState(false);
+  const [prettifyOpen, setPrettifyOpen] = useState(false);
+  const [prettifyInstructions, setPrettifyInstructions] = useState('');
+  const [prettifyBusy, setPrettifyBusy] = useState(false);
+  const [prettifyError, setPrettifyError] = useState('');
+  const [prettifySource, setPrettifySource] = useState('');
+  const prettifyRun = useRef(0);
   const slugLocked = post?.firstPublishedAt != null;
   const busy = fetcher.state !== 'idle';
+  const content = extractBlogContent(draft.document);
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(post?.draft ?? emptyDraft()) ||
     slug !== (post?.slug ?? '');
@@ -106,6 +140,52 @@ function BlogForm({ initial }: { initial: BlogPostAdmin | null }) {
   }, [fetcher.data, busy]);
   const field = (key: keyof BlogSnapshot, value: string) =>
     setDraft(current => ({ ...current, [key]: value }));
+  const openPrettify = () => {
+    prettifyRun.current += 1;
+    setPrettifySource(content);
+    setPrettifyError('');
+    setPrettifyOpen(true);
+  };
+  const prettify = async () => {
+    if (!prettifySource.trim()) {
+      setPrettifyError('Add article content before prettifying.');
+      return;
+    }
+    setPrettifyBusy(true);
+    setPrettifyError('');
+    const runId = prettifyRun.current;
+    try {
+      const response = await generateScriptStudio({
+        operation: 'prettify',
+        script: prettifySource,
+        prompt: prettifyInstructions,
+        examples: '',
+        style: '',
+        generalContext: '',
+        format: 'markdown',
+      });
+      if (prettifyRun.current !== runId) return;
+      if (extractBlogContent(draft.document) !== prettifySource) {
+        setPrettifyError(
+          'The article changed while generation was running. Review it and try again.'
+        );
+        return;
+      }
+      setDraft(current => ({
+        ...current,
+        document: applyPrettifiedContent(current.document, response.result),
+      }));
+      setPrettifyOpen(false);
+    } catch (error) {
+      setPrettifyError(error instanceof Error ? error.message : 'Unable to prettify the article.');
+    } finally {
+      setPrettifyBusy(false);
+    }
+  };
+  const cancelPrettify = () => {
+    prettifyRun.current += 1;
+    setPrettifyOpen(false);
+  };
   return (
     <>
       <PageHeader title={post ? 'Edit article' : 'Create article'} backLink="/blogposts" />
@@ -237,6 +317,15 @@ function BlogForm({ initial }: { initial: BlogPostAdmin | null }) {
               {busy ? 'Saving...' : 'Save draft'}
             </button>
             <button
+              className="btn btn-outline-primary"
+              type="button"
+              onClick={openPrettify}
+              disabled={busy || prettifyBusy || !canPrettify}
+            >
+              <WandSparkles size={16} className="me-2" />
+              Prettify article
+            </button>
+            <button
               className="btn btn-outline-secondary"
               type="button"
               onClick={() => setPreview(value => !value)}
@@ -324,6 +413,72 @@ function BlogForm({ initial }: { initial: BlogPostAdmin | null }) {
             images={post?.images ?? []}
             onChange={document => setDraft(current => ({ ...current, document }))}
           />
+        </div>
+      )}
+      {prettifyOpen && (
+        <div
+          className="modal d-block"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prettify-title"
+          onKeyDown={event => {
+            if (event.key === 'Escape') cancelPrettify();
+          }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2 id="prettify-title" className="modal-title h5">
+                  Prettify article
+                </h2>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Cancel"
+                  onClick={cancelPrettify}
+                />
+              </div>
+              <div className="modal-body">
+                <p>Improve the current unsaved article without saving or publishing it.</p>
+                <label htmlFor="prettify-instructions" className="form-label">
+                  Optional instructions
+                </label>
+                <textarea
+                  id="prettify-instructions"
+                  className="form-control"
+                  rows={4}
+                  maxLength={2000}
+                  autoFocus
+                  value={prettifyInstructions}
+                  onChange={event => setPrettifyInstructions(event.target.value)}
+                />
+                {prettifyError && (
+                  <div className="alert alert-danger mt-3" role="alert">
+                    {prettifyError}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={cancelPrettify}
+                >
+                  <X size={16} className="me-2" />
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={prettify}
+                  disabled={prettifyBusy || !prettifySource.trim()}
+                >
+                  <WandSparkles size={16} className="me-2" />
+                  {prettifyBusy ? 'Prettifying...' : 'Prettify'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>

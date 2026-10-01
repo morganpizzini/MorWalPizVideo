@@ -4,6 +4,26 @@
 
 Current implementation for the BackOffice SPA. The dashboard uses the existing unversioned `/api/...` convention and does not add a MongoDB collection.
 
+### Insight-to-article workflow
+
+Users with both insight viewing and Pages create/manage permissions can select **Create
+article** from an insight content plan. The modal supports a direct editor prefill, an AI
+first draft, expanded context, or additional editor information. The authenticated
+`POST /api/insights/article-drafts` endpoint validates the channel-scoped topic and plan,
+uses the existing insight agent for AI modes, and returns a typed unsaved draft. The SPA
+passes that result into the existing Blog editor; it never creates or publishes a Blog
+post until the user explicitly saves it.
+
+### Blog article prettify
+
+The Blog create/edit editor exposes an authenticated **Prettify article** action. It
+uses the existing channel-scoped Script Studio generation endpoint with the dedicated
+`prettify` operation, so the existing permission, quota, audit, provider, and
+cancellation behavior remains shared. The operation validates non-empty, bounded
+content and asks the provider to preserve Markdown, HTML, placeholders, URLs,
+code-like tokens, and meaning. The response is applied only to the current unsaved
+editor draft after a stale-source check; it never saves or publishes automatically.
+
 ## Authorization
 
 `backoffice.access` grants access to the administrative shell and dashboard. Module permissions are lowercase and use the resource-operation form: `<resource>.view`, `<resource>.create`, `<resource>.update`, `<resource>.delete`, and `<resource>.manage`.
@@ -32,6 +52,9 @@ Videos without a valid `PublishedAt` are excluded. Historical click analytics an
 
 - `PrimaryLayout` composes header, responsive sidebar, breadcrumbs, content outlet, and footer.
 - `adminMenu.ts` is the single navigation catalog and associates every module with a permission.
+- The Blog menu item targets `/blogposts`; the protected route catalog owns `/blogposts`,
+  `/blogposts/create`, and `/blogposts/:id/edit`. These routes and their existing
+  draft/save/publish workflow remain the Blog reachability contract.
 - `AdminSidebar` renders one permission-filtered navigation tree inside one Bootstrap `Offcanvas` with `responsive="lg"`.
 - `Home` renders KPI panels, the 21-day Recharts publication chart, operational values, and clickable recent publications.
 - Existing CRUD routes and `GenericTable` remain the module implementation surface.

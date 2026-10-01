@@ -197,6 +197,7 @@ export {
   insightsTopicsApi,
   insightsNewsApi,
   insightsContentPlansApi,
+  insightsArticleDraftsApi,
 } from "./insightsService";
 
 // Video ↔ Channel join (FR-016 / FR-017)

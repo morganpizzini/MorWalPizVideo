@@ -58,6 +58,15 @@ public sealed class ScriptStudioService(
     {
         if (!Enum.TryParse<ScriptStudioOperation>(request.Operation, true, out var operation)) throw new ArgumentException("Unsupported operation.");
         ValidateFormat(request.Format);
+        if (operation == ScriptStudioOperation.Prettify)
+        {
+            if (string.IsNullOrWhiteSpace(request.Script))
+                throw new ArgumentException("Article content is required.", nameof(request.Script));
+            if (request.Script.Length > options.PrettifyMaxLength)
+                throw new ArgumentException($"Article content cannot exceed {options.PrettifyMaxLength} characters.", nameof(request.Script));
+            if ((request.Prompt?.Length ?? 0) > options.PrettifyInstructionsMaxLength)
+                throw new ArgumentException($"Additional instructions cannot exceed {options.PrettifyInstructionsMaxLength} characters.", nameof(request.Prompt));
+        }
         var period = DateTime.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
         var quota = await userRepository.ConsumeScriptStudioQuotaAsync(userId, period, cancellationToken);
         if (!quota.Consumed)
@@ -74,6 +83,8 @@ public sealed class ScriptStudioService(
 #pragma warning disable SKEXP0010
             var result = await kernel.InvokePromptAsync(prompt, cancellationToken: cancellationToken);
 #pragma warning restore SKEXP0010
+            if (string.IsNullOrWhiteSpace(result.ToString()))
+                throw new InvalidOperationException("The AI provider returned empty content.");
             await WriteAuditAsync(userId, channelId, operation, true, false, quota, correlationId, global?.Version, started, cancellationToken);
             return new ScriptStudioGenerationResponse { Result = result.ToString(), Format = request.Format.Trim().ToLowerInvariant(), QuotaLimit = quota.Limit, QuotaUsed = quota.UsedAfter };
         }
@@ -115,6 +126,13 @@ public sealed class ScriptStudioService(
         builder.AppendLine($"Examples:\n{request.Examples}");
         builder.AppendLine($"User prompt:\n{request.Prompt}");
         builder.AppendLine($"Script:\n{request.Script}");
+        if (operation == ScriptStudioOperation.Prettify)
+        {
+            builder.AppendLine("Prettify instructions:");
+            builder.AppendLine("Improve readability, grammar, structure, and consistency without changing meaning.");
+            builder.AppendLine("Return only the article content. Preserve Markdown, HTML, placeholders, URLs, code-like tokens, and intentional formatting exactly unless a readability correction requires surrounding text to change.");
+            builder.AppendLine("Do not add a title, commentary, citations, or invented facts.");
+        }
         return builder.ToString();
     }
 

@@ -7,7 +7,8 @@ public enum ScriptStudioOperation
 {
     Expand,
     Rewrite,
-    Structure
+    Structure,
+    Prettify
 }
 
 public record ScriptStudioChannelData : BaseEntity

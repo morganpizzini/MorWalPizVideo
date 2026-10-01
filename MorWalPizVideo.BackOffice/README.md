@@ -135,6 +135,8 @@ Relevant configuration is under `ScriptStudio` in `appsettings*.json`:
 | Key | Description | Default |
 | --- | --- | --- |
 | `ScriptStudio:GlobalPromptMaxLength` | Maximum length of the global administrative prompt, in characters. | `4000` |
+| `ScriptStudio:PrettifyMaxLength` | Maximum article content length accepted by the Blog prettify operation. | `30000` |
+| `ScriptStudio:PrettifyInstructionsMaxLength` | Maximum optional instruction length for Blog prettify. | `2000` |
 | `ScriptStudio:AuditRetentionCron` | Hangfire schedule for deleting expired Script Studio audit records. | `0 2 * * *` |
 
 When Hangfire is enabled, `script-studio-audit-retention-job` runs using

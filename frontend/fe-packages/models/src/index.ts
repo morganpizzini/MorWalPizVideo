@@ -248,6 +248,9 @@ export type {
   ReviewNewsItemRequest,
   GenerateContentPlanRequest,
   UpdateContentPlanRequest,
+  InsightArticleDraftMode,
+  CreateInsightArticleDraftRequest,
+  InsightArticleDraft,
   AnalyzeInsightCommentsRequest,
   AnalyzeInsightCommentsResponse,
 } from "./insights";
