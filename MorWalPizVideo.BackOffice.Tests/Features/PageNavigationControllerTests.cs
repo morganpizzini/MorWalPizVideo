@@ -75,8 +75,9 @@ public sealed class PageNavigationControllerTests : IClassFixture<PageController
         var page = await GetPages().GetItemAsync(created.Id);
 
         Assert.Equal(HttpStatusCode.OK, uploadResponse.StatusCode);
-        Assert.Equal(1920, Assert.Single(uploaded!).Width);
-        Assert.Equal(960, uploaded[0].Height);
+        var uploadedImage = Assert.Single(uploaded!);
+        Assert.Equal(1920, uploadedImage.Width);
+        Assert.Equal(960, uploadedImage.Height);
         Assert.Equal("page-media", factory.BlobService.LastContainerName);
         Assert.NotNull(page);
         Assert.NotNull(await factory.BlobService.DownloadImageAsync(page!.InlineImages[0].StorageKey));

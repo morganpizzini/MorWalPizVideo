@@ -40,6 +40,16 @@ public sealed class ServerFaqEndpointTests : IClassFixture<ServerApiWebApplicati
     }
 
     [Fact]
+    public async Task Vote_rejects_anonymous_requests()
+    {
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/faq/missing/answers/channel/vote", 1);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public void Vote_uses_authenticated_faq_rate_limit_policy()
     {
         var method = typeof(FaqController).GetMethod(nameof(FaqController.Vote));

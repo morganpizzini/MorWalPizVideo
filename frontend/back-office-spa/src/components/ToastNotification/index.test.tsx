@@ -1,5 +1,4 @@
 import { StrictMode } from 'react';
-import { URLSearchParams as NodeURLSearchParams } from 'node:url';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
@@ -42,11 +41,7 @@ describe('ToastProvider', () => {
     );
   });
 
-  it('keeps a single page success toast visible after real router navigation', async ({
-    onTestFinished,
-  }) => {
-    vi.stubGlobal('URLSearchParams', NodeURLSearchParams);
-    onTestFinished(() => vi.unstubAllGlobals());
+  it('keeps a single page success toast visible after real router navigation', async () => {
     const action = vi.fn(async () => ({ success: true }));
     const router = createMemoryRouter(
       [
@@ -65,22 +60,27 @@ describe('ToastProvider', () => {
       ],
       { initialEntries: ['/pages/new'] }
     );
-    const { container } = render(
-      <StrictMode>
-        <RouterProvider router={router} />
-      </StrictMode>
-    );
-    await screen.findByRole('button', { name: 'Save page' });
-    fireEvent.change(container.querySelector('input[name="title"]')!, {
-      target: { value: 'About' },
-    });
-    fireEvent.change(container.querySelector('input[name="url"]')!, { target: { value: 'about' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save page' }));
-    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
-    await screen.findByRole('heading', { name: 'Pages destination' });
-    expect(action).toHaveBeenCalledTimes(1);
-    expect(router.state.location.pathname).toBe('/pages');
-    expect(screen.getAllByText('Page created successfully')).toHaveLength(1);
-    router.dispose();
+    try {
+      const { container } = render(
+        <StrictMode>
+          <RouterProvider router={router} />
+        </StrictMode>
+      );
+      await screen.findByRole('button', { name: 'Save page' });
+      fireEvent.change(container.querySelector('input[name="title"]')!, {
+        target: { value: 'About' },
+      });
+      fireEvent.change(container.querySelector('input[name="url"]')!, {
+        target: { value: 'about' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save page' }));
+      await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+      await screen.findByRole('heading', { name: 'Pages destination' });
+      expect(action).toHaveBeenCalledTimes(1);
+      expect(router.state.location.pathname).toBe('/pages');
+      expect(screen.getAllByText('Page created successfully')).toHaveLength(1);
+    } finally {
+      router.dispose();
+    }
   });
 });
