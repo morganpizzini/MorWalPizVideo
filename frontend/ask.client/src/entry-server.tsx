@@ -9,12 +9,58 @@ import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import { routes } from "./routes";
 import "./styles.css";
 
+function isResponseLike(value: unknown): value is Response {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "status" in value &&
+    typeof value.status === "number"
+  );
+}
+
+function renderErrorPage(status: number, message: string) {
+  return renderToString(
+    <main role="alert">
+      <h1>{status}</h1>
+      <p>{message}</p>
+    </main>,
+  );
+}
+
 export async function render(
   request: Request,
-): Promise<{ html: string; head: string }> {
+): Promise<{ html: string; head: string; status: number }> {
   const handler = createStaticHandler(routes);
-  const context = await handler.query(request);
-  if (context instanceof Response) throw context;
+  let context: Awaited<ReturnType<typeof handler.query>>;
+  try {
+    context = await handler.query(request);
+  } catch (error) {
+    const status = isResponseLike(error) ? error.status : 500;
+    const message =
+      error instanceof Error ? error.message : "Unable to load this campaign.";
+    return { html: renderErrorPage(status, message), head: "", status };
+  }
+  if (isResponseLike(context)) {
+    return {
+      html: renderErrorPage(
+        context.status,
+        context.statusText || `${context.status}`,
+      ),
+      head: "",
+      status: context.status,
+    };
+  }
+  const routeError = Object.values(context.errors ?? {})[0] as
+    | { status?: number; statusText?: string; message?: string }
+    | undefined;
+  if (routeError) {
+    const status = routeError.status ?? 500;
+    const message =
+      routeError.statusText ||
+      routeError.message ||
+      "Unable to load this campaign.";
+    return { html: renderErrorPage(status, message), head: "", status };
+  }
   const router = createStaticRouter(handler.dataRoutes, context);
   const helmetContext: {
     helmet?: import("react-helmet-async").HelmetServerState | null;
@@ -40,5 +86,6 @@ export async function render(
     head: helmet
       ? `${helmet.title.toString()}${helmet.meta.toString()}${helmet.link.toString()}`
       : "",
+    status: 200,
   };
 }

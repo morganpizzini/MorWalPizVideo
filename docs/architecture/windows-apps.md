@@ -57,7 +57,7 @@ InsightScanner is a .NET 10 WPF application that scans external sources and subm
 - UI errors are user-safe while structured diagnostic details go to logs.
 - Cancellation and progress reporting are required for long-running work.
 - Desktop builds are included in CI on a Windows runner.
-- Both existing desktop xUnit/VSTest suites now execute on Windows in central CI with positive TRX executed-count checks. Local Release/AnyCPU reruns reproduce Importer 8 passed/1 failed and InsightScanner 3 passed/1 failed; neither failure is waived. See [delivery matrix](deployment.md#delivery-and-test-matrix).
+- Both existing desktop xUnit/VSTest suites now execute on Windows in central CI with positive TRX executed-count checks. Local Release reruns pass: VideoImporter 9/9 and InsightScanner 4/4. See [delivery matrix](deployment.md#delivery-and-test-matrix).
 
 ## Testing Gaps
 
@@ -65,11 +65,11 @@ Neither WPF application has a complete automated suite. Prioritize tests for con
 
 ## Desktop Slice 8 Verification (2026-10-01)
 
-The bounded main-window constructor-DI source work is complete, but the full desktop gate FAILED. Child-window static facades remain; this is not TD-018 closure or a full MVVM migration. No production visuals, SQLite schema/migrations, routes, DTOs, or child dependency APIs were changed by the fixture repair.
+The bounded main-window constructor-DI source work is complete, and the full local desktop test gate now passes. Child-window static facades remain; this is not TD-018 closure or a full MVVM migration. No production visuals, SQLite schema/migrations, routes, DTOs, or child dependency APIs were changed by the fixture repair.
 
 The Importer fixture runs on an STA dispatcher and constructs the real `App` and host-resolved base `MainWindow`. It captures/aborts the application's queued automatic startup callback before calling `InitializeComponent`, then explicitly starts the test host. This avoids real startup configuration/user-secret/Key Vault access. The generated resource URI is `/MorWalPiz.VideoImporter;component/app.xaml`, owned by the Importer assembly, not the test assembly. The fixture checks the loaded `BackgroundBrush` is the window's actual background; no replacement styles are supplied.
 
-Only a unique temporary directory is used for SQLite, with an asserted connection path. The host test uses `EnsureCreated` and the existing initializer seam to preserve seeded local data, switch tenants, check tenant filters/channel selection, validate initialization once, cancel window work, unsubscribe tenant events, await an in-flight refresh before service disposal, and reopen the temporary database. It does NOT exercise production `Migrate()` or prove existing-database upgrades. The separate migration test remains failing and unsuppressed; no production database was read.
+Only a unique temporary directory is used for SQLite, with an asserted connection path. The host test uses `EnsureCreated` and the existing initializer seam to preserve seeded local data, switch tenants, check tenant filters/channel selection, validate initialization once, cancel window work, unsubscribe tenant events, await an in-flight refresh before service disposal, and reopen the temporary database. It does NOT prove existing-database upgrades beyond the compatibility fixture; no production database was read.
 
 Fresh commands, run on Windows with SDK `10.0.400-preview.0.26322.102` (VSTest/xUnit):
 
@@ -78,7 +78,7 @@ Fresh commands, run on Windows with SDK `10.0.400-preview.0.26322.102` (VSTest/x
 | `dotnet test MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj --filter FullyQualifiedName~Desktop_host --verbosity minimal` | After repair: 2 passed, 0 failed, 0 skipped; exit 0. Before repair: 1 passed, 1 failed, 0 skipped (test-subclass WPF resource mismatch). |
 | `dotnet build MorWalPiz.VideoImporter/MorWalPiz.VideoImporter.csproj --verbosity minimal` | Passed; exit 0. |
 | `dotnet build MorWalPiz.InsightScanner/MorWalPiz.InsightScanner.csproj --verbosity minimal` | Passed; exit 0. |
-| `dotnet test MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj --verbosity minimal` | 8 passed, 1 failed, 0 skipped; exit 1. `Desktop_database_migration_compatibility` fails with EF Core `PendingModelChangesWarning` at `DatabaseService.InitializeDatabase()` before migration. |
-| `dotnet test MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj --verbosity minimal` | 3 passed, 1 failed, 0 skipped; exit 1. Both host tests pass. Existing `Fake_source_returns_reproducible_bounded_posts` fails comparing separately allocated `RawSocialPostDto` collections by equality; it directly constructs the fake strategy without host/DI. |
+| `dotnet test MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj --configuration Release --no-restore --verbosity minimal` | 9 passed, 0 failed, 0 skipped. |
+| `dotnet test MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj --configuration Release --no-restore --verbosity minimal` | 4 passed, 0 failed, 0 skipped. |
 
-Residual gates: resolve model/snapshot migration drift in a separately approved schema slice, prove existing-database compatibility, address the unrelated fake DTO equality test separately, and complete real interactive startup/child-window/long-running-operation validation. The fixture's manually controlled startup is not end-to-end WPF launch evidence. No assertions were deleted or waived; no commit, deployment, production access, or secret retrieval was performed.
+Residual gates: complete real interactive startup/child-window/long-running-operation validation and prove existing-database upgrades beyond the compatibility fixture. The fixture's manually controlled startup is not end-to-end WPF launch evidence. No assertions were deleted or waived; no commit, deployment, production access, or secret retrieval was performed.

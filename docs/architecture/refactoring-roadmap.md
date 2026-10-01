@@ -13,8 +13,8 @@ Numbering follows the supplied Architect/Repository Expert handoff, not the sepa
 | 5 | Contracts/Domain Calendar service; API/client consumers | Bounded authoring COMPLETE; compatibility delegates retained | Remaining non-Calendar DataService consumers are separate slices; browser proof BLOCKED |
 | 6 | Calendar-only revision/CAS across Mongo/mock and contracts | Bounded authoring COMPLETE; legacy revision compatibility documented | Real Mongo independent-writer evidence BLOCKED; no generic repository rewrite |
 | 7 | Shared public/admin transport and active consumers | Bounded authoring COMPLETE; legacy shop exports retained | PARTIAL convergence: full admin typecheck, Ask SSR and public API-key lint fail; browser proof BLOCKED |
-| 8 | Existing Windows hosts/main-window constructor DI | Bounded authoring COMPLETE; child facades retained | PARTIAL: both full suites fail on existing unrelated defects; existing-database upgrades unproven |
-| 9 | CI/deployment test gates and API container restore closure | COMPLETE authoring; actual runners collect nonempty suites; existing Docker fixes retained | Gate results include Ask/desktop FAIL; clean containers NOT RUN locally; GitHub execution pending |
+| 8 | Existing Windows hosts/main-window constructor DI | Bounded authoring COMPLETE; child facades retained | Local desktop suites PASS after test and snapshot repairs; existing-database upgrades beyond the compatibility fixture remain unproven |
+| 9 | CI/deployment test gates and API container restore closure | COMPLETE authoring; actual runners collect nonempty suites; existing Docker fixes retained | Gate results include Ask/frontend FAIL; local .NET suites PASS; clean containers NOT RUN locally; GitHub execution pending |
 | 10 | Existing operational/recovery runbooks | COMPLETE authoring: evidence fields, expected results, owners, recovery and approvals | Operational closure BLOCKED; no Azure operations, rotation or deployment performed/approved |
 
 Cache reliability is explicitly DEFERRED, not closed by the existing cache-tag/auth implementation. Shop is FROZEN. Source-complete slices do not close all TD items, Phase 4, Phase 5 or production release. Exact current delivery checks are in [deployment](deployment.md); operator records are in [activation/recovery](operations/phase5-activation-and-recovery.md).
@@ -136,16 +136,16 @@ The bounded public/admin transport-isolation slice is implemented: shared per-cl
 
 Main-window constructor DI is source-complete for InsightScanner and VideoImporter within their existing Generic Hosts. Both resolve/show the registered window without `StartupUri`; Importer preserves database/tenant/upload initialization order and tenant-refresh/shutdown handling. Existing static `App` dependency facades remain for untouched child workflows; there is no architecture, visual, or schema redesign.
 
-The bounded Importer WPF fixture repair passes both host tests using the real application resources and main window on STA. Temporary SQLite checks cover data retention, tenant filters/switching, cancellation, pending refresh completion and host disposal, not existing-database migration upgrades. Both Windows application builds pass. Full suites remain FAILED: Importer 8 passed/1 failed/0 skipped (`PendingModelChangesWarning`); InsightScanner 3 passed/1 failed/0 skipped (pre-existing fake DTO equality). Source completion does not close TD-018 or the full desktop/Phase 5 gate. See [Windows applications](windows-apps.md) for exact commands, fixture boundaries and residual gates. CI expansion remains a separate slice.
+The bounded Importer WPF fixture repair passes both host tests using the real application resources and main window on STA. Temporary SQLite checks cover data retention, tenant filters/switching, cancellation, pending refresh completion and host disposal, not all existing-database migration upgrades. Both Windows application builds pass. Full suites now pass: Importer 9/9 and InsightScanner 4/4. Source completion does not close TD-018 or the full desktop/Phase 5 gate. See [Windows applications](windows-apps.md) for exact commands, fixture boundaries and residual gates. CI expansion remains a separate slice.
 
 ### Work
 
 - Standardize frontend calls through shared services (slice 7 transport isolation implemented; remaining route ownership/full-consumer gates are separate).
 - Complete BackOffice cookie auth and CSRF protection.
-- Adopt Generic Host/DI in WPF applications incrementally (slice 8 main windows source-complete; child facades and failed full-desktop gates remain).
+- Adopt Generic Host/DI in WPF applications incrementally (slice 8 main windows source-complete; child facades and interactive validation remain).
 - Add durable Hangfire configuration and dashboard protection.
 - Add Blob health, metadata, lifecycle, and recovery controls.
-- Retain Shooting ITA/WPF/AppHost builds and execute active frontend/shared transport/Windows suites (slice 9 authored); failed full-suite/typecheck/lint and clean-container/GitHub evidence remain release gates.
+- Retain Shooting ITA/WPF/AppHost builds and execute active frontend/shared transport/Windows suites (slice 9 authored); frontend typecheck/lint and clean-container/GitHub evidence remain release gates.
 - Close the Shooting Range public-release gate without expanding its product scope: deny-by-default authorization, explicit production CORS, safe DTOs, current account-state enforcement, authoritative booking validation, MongoDB uniqueness/readiness, and focused tests.
 - Keep the Shooting Range UI limited to authentication/session lifecycle, availability, booking, own bookings, and only the administrator operations required by the selected onboarding flow.
 

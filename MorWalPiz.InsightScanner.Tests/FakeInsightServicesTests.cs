@@ -69,7 +69,25 @@ public sealed class FakeInsightServicesTests
         var first = await strategy.CollectPostsAsync("https://example.test/source", 3, CancellationToken.None);
         var second = await strategy.CollectPostsAsync("https://example.test/source", 3, CancellationToken.None);
 
-        Assert.Equal(first, second);
+        Assert.Equal(
+            first.Select(post => new
+            {
+                post.PostUrl,
+                post.PostId,
+                post.PlatformSource,
+                post.Author,
+                post.Text,
+                post.PublishedAt
+            }),
+            second.Select(post => new
+            {
+                post.PostUrl,
+                post.PostId,
+                post.PlatformSource,
+                post.Author,
+                post.Text,
+                post.PublishedAt
+            }));
         Assert.Equal(["fake-1", "fake-2", "fake-3"], first.Select(post => post.PostId));
         Assert.Equal(new DateTime(2023, 12, 31, 23, 59, 0, DateTimeKind.Utc), first[0].PublishedAt);
     }

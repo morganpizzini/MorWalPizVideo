@@ -1,20 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getAskCampaign } = vi.hoisted(() => ({ getAskCampaign: vi.fn() }));
 
-vi.mock('@morwalpizvideo/services', () => ({
+vi.mock("react-router", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
+  return {
+    ...actual,
+    createStaticHandler: (
+      routeObjects: Parameters<typeof actual.createStaticHandler>[0],
+    ) => {
+      const handler = actual.createStaticHandler(routeObjects);
+      return {
+        ...handler,
+        query: async (request: Request) => {
+          if (request.url.endsWith("/closed")) {
+            return {
+              errors: { ask: new Response("Not found", { status: 404 }) },
+            } as never;
+          }
+          if (request.url.endsWith("/failure")) {
+            return { errors: { ask: new Error("API unavailable") } } as never;
+          }
+          return handler.query(request);
+        },
+      };
+    },
+  };
+});
+
+vi.mock("@morwalpizvideo/services", () => ({
   getAskCampaign,
   setRequestCredentialsMode: vi.fn(),
 }));
 
-import { render } from './entry-server';
-import { createAskMetadata, loader } from './routes';
+import { render } from "./entry-server";
+import { createAskMetadata, loader } from "./routes";
 
 const campaign = {
-  channelName: 'Scenario channel',
-  title: 'Ask the team',
-  description: 'Send a question to the team.',
-  slug: 'spring-questions',
+  channelName: "Scenario channel",
+  title: "Ask the team",
+  description: "Send a question to the team.",
+  slug: "spring-questions",
   maxSubmissionLength: 2000,
   allowNamedSubmissions: false,
   nameRequired: false,
@@ -22,41 +49,48 @@ const campaign = {
   questions: [],
 };
 
-describe('Ask SSR runtime', () => {
+describe("Ask SSR runtime", () => {
   beforeEach(() => getAskCampaign.mockReset());
 
-  it('loads a campaign and renders metadata and content', async () => {
+  it("loads a campaign and renders metadata and content", async () => {
     getAskCampaign.mockResolvedValue(campaign);
 
-    const result = await render(new Request('https://ask.example/Scenario%20channel/spring-questions'));
+    const result = await render(
+      new Request("https://ask.example/Scenario%20channel/spring-questions"),
+    );
 
-    expect(getAskCampaign).toHaveBeenCalledWith('Scenario channel', 'spring-questions');
-    expect(createAskMetadata(campaign, 'https://ask.example')).toEqual({
-      title: 'Ask the team | Ask',
-      description: 'Send a question to the team.',
-      canonical: 'https://ask.example/Scenario%20channel/spring-questions',
+    expect(getAskCampaign).toHaveBeenCalledWith(
+      "Scenario channel",
+      "spring-questions",
+    );
+    expect(createAskMetadata(campaign, "https://ask.example")).toEqual({
+      title: "Ask the team | Ask",
+      description: "Send a question to the team.",
+      canonical: "https://ask.example/Scenario%20channel/spring-questions",
     });
-    expect(result.html).toContain('Ask the team');
+    expect(result.html).toContain("Ask the team");
   });
 
-  it('returns a router 404 when route parameters are missing', async () => {
-    await expect(loader({ params: {} } as never)).rejects.toMatchObject({ status: 404 });
+  it("returns a router 404 when route parameters are missing", async () => {
+    await expect(loader({ params: {} } as never)).rejects.toMatchObject({
+      status: 404,
+    });
     expect(getAskCampaign).not.toHaveBeenCalled();
   });
 
-  it('propagates API 404 for closed or missing campaigns', async () => {
-    getAskCampaign.mockRejectedValue(new Response('Not found', { status: 404 }));
-
-    const result = await render(new Request('https://ask.example/Scenario%20channel/closed'));
-
-    expect(result.html).toContain('404');
+  it("propagates API 404 for closed or missing campaigns", async () => {
+    const result = await render(
+      new Request("https://ask.example/Scenario%20channel/closed"),
+    );
+    expect(result.status).toBe(404);
+    expect(result.html).toContain("404");
   });
 
-  it('propagates non-404 API failures to the SSR host', async () => {
-    getAskCampaign.mockRejectedValue(new Error('API unavailable'));
-
-    const result = await render(new Request('https://ask.example/Scenario%20channel/failure'));
-
-    expect(result.html).toContain('API unavailable');
+  it("propagates non-404 API failures to the SSR host", async () => {
+    const result = await render(
+      new Request("https://ask.example/Scenario%20channel/failure"),
+    );
+    expect(result.status).toBe(500);
+    expect(result.html).toContain("API unavailable");
   });
 });
