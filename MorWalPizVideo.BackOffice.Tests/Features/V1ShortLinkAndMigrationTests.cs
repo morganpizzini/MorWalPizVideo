@@ -12,6 +12,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:ShortLinks")]
 public sealed class V1ShortLinkAndMigrationTests
 {
     [Fact]

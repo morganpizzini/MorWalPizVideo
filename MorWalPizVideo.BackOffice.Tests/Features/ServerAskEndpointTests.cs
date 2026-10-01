@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:ServerAPI")]
 public sealed class ServerAskEndpointTests : IClassFixture<ServerApiWebApplicationFactory>
 {
     private readonly ServerApiWebApplicationFactory factory;

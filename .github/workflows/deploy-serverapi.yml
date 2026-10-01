@@ -37,7 +37,16 @@ jobs:
         run: dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
 
       - name: Test BackOffice
-        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity normal
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:ServerAPI|Category=TestGroup:Shared|Category=TestGroup:CrossApi" --logger "trx;LogFileName=serverapi-related.trx" --results-directory ./TestResults/serverapi --verbosity normal
+
+      - name: Assert ServerAPI test selection is non-empty
+        shell: pwsh
+        run: |
+          $result = [xml](Get-Content ./TestResults/serverapi/serverapi-related.trx)
+          $total = [int]$result.TestRun.ResultSummary.Counters.total
+          if ($total -le 0) {
+            throw "ServerAPI-related test filter selected no tests."
+          }
 
       - name: Restore YouTubeUtilities tests
         run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj

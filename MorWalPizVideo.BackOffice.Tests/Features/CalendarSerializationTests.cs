@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public class CalendarSerializationTests
 {
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);

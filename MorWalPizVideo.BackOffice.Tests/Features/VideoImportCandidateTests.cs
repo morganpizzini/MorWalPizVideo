@@ -11,6 +11,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class VideoImportCandidateTests : IClassFixture<PaginatedCandidateWebApplicationFactory>
 {
     private readonly PaginatedCandidateWebApplicationFactory _factory;

@@ -84,11 +84,13 @@ Vitest/Testing Library with route-aware helpers and mocked shared services. Test
 
 Existing frontend Vitest and Windows VSTest runners execute in CI alongside backend HTTP tests. Real-browser desktop/mobile/SSR cookie/CSRF/CORS proof is still BLOCKED, not satisfied by Node or HTTP tests; see the [operational checklist](operations/phase5-activation-and-recovery.md).
 
+`MorWalPizVideo.BackOffice.Tests` remains the owner of BackOffice, ServerAPI, shared, cross-API, and ShortLinks management/Reqnroll coverage. Host-owned redirect/resolution/click coverage lives in `MorWalPizVideo.ShortLinks.Tests`, while all five ShootingRange test files and their local fixtures/support live in `MorWalPizVideo.ShootingRange.Tests`. Reqnroll metadata remains declared in `.feature` sources and generated `.feature.cs` files must not be edited. Central CI runs all three backend test projects; deployment workflows use the dedicated host projects for ShortLinks and ShootingRange, while BackOffice and ServerAPI retain their existing mixed-project owner filters.
+
 ## Common Commands
 
 Use project scripts and solution commands as defined by current manifests. Shared frontend packages build in models, services, layout order. Run the narrowest affected test/build first, then broaden to consumers.
 
-The [delivery/test matrix](deployment.md#delivery-and-test-matrix) lists actual runners and fresh pass/fail/not-run results. Empty active frontend suites fail (`--passWithNoTests=false`); desktop tests require Windows. `build-uncheck` is not a substitute for a failed TypeScript gate. CI changes do not authorize production operations.
+The [delivery/test matrix](deployment.md#delivery-and-test-matrix) lists actual runners and fresh pass/fail/not-run results. Empty active frontend suites fail (`--passWithNoTests=false`); filtered backend deployment suites emit TRX results and fail when the selected count is zero; desktop tests require Windows. `build-uncheck` is not a substitute for a failed TypeScript gate. CI changes do not authorize production operations.
 
 ## Documentation Discipline
 

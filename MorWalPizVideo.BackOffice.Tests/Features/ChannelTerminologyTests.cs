@@ -8,6 +8,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ChannelTerminologyTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
     private readonly BackOfficeWebApplicationFactory factory;

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
@@ -6,180 +8,11 @@ using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Services;
-using System.Security.Cryptography;
-using System.Text;
-
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:ShortLinks")]
 public class ShortLinksMockScenarioTests
 {
-    [Fact]
-    public async Task Ask_shortlink_redirects_to_the_current_slug_and_hides_inactive_or_foreign_campaigns()
-    {
-        await using var factory = new ShortLinksWebApplicationFactory();
-        var campaigns = factory.Services.GetRequiredService<IAskCampaignRepository>();
-        var channels = factory.Services.GetRequiredService<IYTChannelRepository>();
-        var links = factory.Services.GetRequiredService<IShortLinkRepository>();
-        var channel = (await channels.GetItemsAsync()).Single(item => item.ChannelId == PrimaryScenario.ChannelId);
-        var campaign = await campaigns.AddItemAsync(new AskCampaign
-        {
-            Id = "ask-campaign-1",
-            ChannelId = channel.ChannelId,
-            Slug = "first-slug",
-            Status = AskCampaignStatus.Published
-        });
-        var link = await links.AddItemAsync(new ShortLink("ask-test-1", campaign.Id, [])
-        {
-            Id = "ask-link-1",
-            LinkType = LinkType.AskCampaign,
-            CampaignId = campaign.Id,
-            ChannelId = campaign.ChannelId
-        });
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-
-        var first = await client.GetAsync($"/{link.Code}");
-        Assert.Equal("https://ask.morwalpiz.com/Scenario channel/first-slug", Uri.UnescapeDataString(first.Headers.Location?.ToString() ?? string.Empty));
-
-        await campaigns.UpdateItemAsync(campaign with { Slug = "second-slug" });
-        var renamed = await client.GetAsync($"/{link.Code}");
-        Assert.Equal("https://ask.morwalpiz.com/Scenario channel/second-slug", Uri.UnescapeDataString(renamed.Headers.Location?.ToString() ?? string.Empty));
-
-        await campaigns.UpdateItemAsync(campaign with { Status = AskCampaignStatus.Draft });
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
-
-        await campaigns.UpdateItemAsync(campaign with { Status = AskCampaignStatus.Published, ChannelId = "other-channel" });
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
-    }
-
-    [Fact]
-    public async Task Newsletter_redirect_aggregates_click_context_without_identity_data()
-    {
-        await using var factory = new ShortLinksWebApplicationFactory();
-        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
-        await shortLinkRepository.AddItemAsync(new ShortLink("newsletter-link", "@morwalpiz", [])
-        {
-            LinkType = LinkType.YouTubeChannel,
-            Id = "newsletter-link-id"
-        });
-
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var response = await client.GetAsync("/newsletter-link?newsletterId=newsletter-1&channelId=channel-a");
-
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        var events = factory.Services.GetRequiredService<INewsletterEventRepository>();
-        var click = (await events.GetItemsAsync(item => item.Type == NewsletterEventType.Click)).Single();
-        Assert.Equal("channel-a", click.ChannelId);
-        Assert.Equal("newsletter-1", click.NewsletterId);
-        Assert.Equal("newsletter-link", click.ShortLinkContext);
-        Assert.Equal(1, click.Count);
-        Assert.Null(click.ProviderMessageId);
-    }
-
-    [Fact]
-    public async Task Ensure_video_short_link_creates_a_canonical_standalone_record()
-    {
-        await using var factory = new BackOfficeWebApplicationFactory();
-        var linksService = factory.Services.GetRequiredService<ILinksService>();
-
-        var shortLink = await linksService.EnsureVideoShortLinkAsync(PrimaryScenario.VideoId, PrimaryScenario.ChannelId);
-
-        Assert.NotNull(shortLink);
-        Assert.Equal(PrimaryScenario.VideoId, shortLink.Target);
-        Assert.Equal(PrimaryScenario.MatchId, shortLink.ContentId);
-        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
-        var persistedLink = (await shortLinkRepository.GetItemsAsync())
-            .Single(link => link.Id == shortLink!.Id);
-        Assert.Equal(LinkType.YouTubeVideo, persistedLink.LinkType);
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var match = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        Assert.Empty(match.ShortLinks);
-    }
-
-    [Fact]
-    public async Task Ensure_video_short_link_uses_the_explicit_match_when_a_video_is_shared()
-    {
-        await using var factory = new BackOfficeWebApplicationFactory();
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        var secondMatch = await matchRepository.AddItemAsync(source with
-        {
-            Id = "200000000000000000000099",
-            ContentId = "second-content",
-            ShortLinks = []
-        });
-        var linksService = factory.Services.GetRequiredService<ILinksService>();
-
-        var shortLink = await linksService.EnsureVideoShortLinkAsync(
-            secondMatch.Id,
-            PrimaryScenario.VideoId,
-            PrimaryScenario.ChannelId);
-
-        Assert.Equal(secondMatch.Id, shortLink?.ContentId);
-        Assert.Equal(PrimaryScenario.VideoId, shortLink?.Target);
-    }
-
-    [Fact]
-    public async Task Failed_standalone_allocation_preserves_legacy_embedded_links()
-    {
-        await using var factory = new BackOfficeWebApplicationFactory();
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        var legacyLink = new ShortLink("legacy-video", PrimaryScenario.VideoId, [])
-        {
-            Id = "400000000000000000000090",
-            LinkType = LinkType.YouTubeVideo,
-            ContentId = source.Id,
-            ManagementChannelId = PrimaryScenario.ChannelId
-        };
-        await matchRepository.UpdateItemAsync(source with { ShortLinks = [legacyLink] });
-
-        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            await shortLinkRepository.AddItemAsync(new ShortLink(CreateVideoCode(PrimaryScenario.VideoId, attempt), "occupied", []));
-        }
-
-        var linksService = factory.Services.GetRequiredService<ILinksService>();
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            linksService.EnsureVideoShortLinkAsync(source.Id, PrimaryScenario.VideoId, PrimaryScenario.ChannelId));
-
-        var persistedMatch = await matchRepository.GetItemAsync(source.Id);
-        Assert.Contains(persistedMatch!.ShortLinks, link => link.Id == legacyLink.Id);
-    }
-
-    [Fact]
-    public async Task Legacy_cleanup_does_not_replace_a_concurrent_video_reference()
-    {
-        await using var factory = new BackOfficeWebApplicationFactory();
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        await matchRepository.UpdateItemAsync(source with
-        {
-            ShortLinks =
-            [
-                new ShortLink("legacy-video", PrimaryScenario.VideoId, [])
-                {
-                    LinkType = LinkType.YouTubeVideo,
-                    ContentId = source.Id
-                }
-            ]
-        });
-
-        var linksService = factory.Services.GetRequiredService<ILinksService>();
-        var appendTask = matchRepository.AddVideoReferenceAsync(
-            source.Id,
-            new VideoRef("concurrent-video", title: "Concurrent", channelIds: [PrimaryScenario.ChannelId]));
-        var ensureTask = linksService.EnsureVideoShortLinkAsync(
-            source.Id,
-            PrimaryScenario.VideoId,
-            PrimaryScenario.ChannelId);
-
-        await Task.WhenAll(appendTask, ensureTask);
-
-        var persistedMatch = await matchRepository.GetItemAsync(source.Id);
-        Assert.Contains(persistedMatch!.VideoRefs, reference => reference.YoutubeId == "concurrent-video");
-        Assert.Empty(persistedMatch.ShortLinks);
-    }
 
     [Fact]
     public async Task Cleanup_failure_preserves_new_link_for_idempotent_retry()
@@ -228,56 +61,110 @@ public class ShortLinksMockScenarioTests
                 link.Target == PrimaryScenario.VideoId);
     }
 
-    [Fact]
-    public async Task Standalone_link_resolves_from_the_code_initialized_scenario()
+[Fact]
+    public async Task Ensure_video_short_link_creates_a_canonical_standalone_record()
     {
-        await using var factory = new ShortLinksWebApplicationFactory();
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
+        await using var factory = new BackOfficeWebApplicationFactory();
+        var linksService = factory.Services.GetRequiredService<ILinksService>();
 
-        var response = await client.GetAsync($"/{PrimaryScenario.StandaloneShortLinkCode}");
+        var shortLink = await linksService.EnsureVideoShortLinkAsync(PrimaryScenario.VideoId, PrimaryScenario.ChannelId);
 
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal("https://example.test/scenario", response.Headers.Location?.ToString());
-        var repository = factory.Services.GetRequiredService<IShortLinkRepository>();
-        var updatedLink = (await repository.GetItemsAsync())
-            .Single(link => link.Code == PrimaryScenario.StandaloneShortLinkCode);
-        Assert.Equal(1, updatedLink.ClicksCount);
+        Assert.NotNull(shortLink);
+        Assert.Equal(PrimaryScenario.VideoId, shortLink.Target);
+        Assert.Equal(PrimaryScenario.MatchId, shortLink.ContentId);
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        var persistedLink = (await shortLinkRepository.GetItemsAsync())
+            .Single(link => link.Id == shortLink!.Id);
+        Assert.Equal(LinkType.YouTubeVideo, persistedLink.LinkType);
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var match = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        Assert.Empty(match.ShortLinks);
     }
 
-    [Fact]
-    public async Task Canonical_video_link_outside_configured_channel_is_not_resolvable()
+[Fact]
+    public async Task Ensure_video_short_link_uses_the_explicit_match_when_a_video_is_shared()
     {
-        await using var factory = new ShortLinksWebApplicationFactory();
+        await using var factory = new BackOfficeWebApplicationFactory();
         var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
         var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        const string otherMatchId = "200000000000000000000099";
-        await matchRepository.AddItemAsync(source with
+        var secondMatch = await matchRepository.AddItemAsync(source with
         {
-            Id = otherMatchId,
-            OwnerChannelId = "other-channel",
-            VideoRefs = source.VideoRefs.Select(video => video with { ChannelIds = ["other-channel"] }).ToArray(),
+            Id = "200000000000000000000099",
+            ContentId = "second-content",
             ShortLinks = []
         });
-        await shortLinkRepository.AddItemAsync(new ShortLink("other1", PrimaryScenario.VideoId, [])
+        var linksService = factory.Services.GetRequiredService<ILinksService>();
+
+        var shortLink = await linksService.EnsureVideoShortLinkAsync(
+            secondMatch.Id,
+            PrimaryScenario.VideoId,
+            PrimaryScenario.ChannelId);
+
+        Assert.Equal(secondMatch.Id, shortLink?.ContentId);
+        Assert.Equal(PrimaryScenario.VideoId, shortLink?.Target);
+    }
+
+[Fact]
+    public async Task Failed_standalone_allocation_preserves_legacy_embedded_links()
+    {
+        await using var factory = new BackOfficeWebApplicationFactory();
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        var legacyLink = new ShortLink("legacy-video", PrimaryScenario.VideoId, [])
         {
-            Id = "400000000000000000000099",
+            Id = "400000000000000000000090",
             LinkType = LinkType.YouTubeVideo,
-            ContentId = otherMatchId,
-            ManagementChannelId = "other-channel"
-        });
+            ContentId = source.Id,
+            ManagementChannelId = PrimaryScenario.ChannelId
+        };
+        await matchRepository.UpdateItemAsync(source with { ShortLinks = [legacyLink] });
 
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        for (var attempt = 0; attempt < 5; attempt++)
         {
-            AllowAutoRedirect = false
+            await shortLinkRepository.AddItemAsync(new ShortLink(CreateVideoCode(PrimaryScenario.VideoId, attempt), "occupied", []));
+        }
+
+        var linksService = factory.Services.GetRequiredService<ILinksService>();
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            linksService.EnsureVideoShortLinkAsync(source.Id, PrimaryScenario.VideoId, PrimaryScenario.ChannelId));
+
+        var persistedMatch = await matchRepository.GetItemAsync(source.Id);
+        Assert.Contains(persistedMatch!.ShortLinks, link => link.Id == legacyLink.Id);
+    }
+
+[Fact]
+    public async Task Legacy_cleanup_does_not_replace_a_concurrent_video_reference()
+    {
+        await using var factory = new BackOfficeWebApplicationFactory();
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        await matchRepository.UpdateItemAsync(source with
+        {
+            ShortLinks =
+            [
+                new ShortLink("legacy-video", PrimaryScenario.VideoId, [])
+                {
+                    LinkType = LinkType.YouTubeVideo,
+                    ContentId = source.Id
+                }
+            ]
         });
 
-        var response = await client.GetAsync("/other1");
+        var linksService = factory.Services.GetRequiredService<ILinksService>();
+        var appendTask = matchRepository.AddVideoReferenceAsync(
+            source.Id,
+            new VideoRef("concurrent-video", title: "Concurrent", channelIds: [PrimaryScenario.ChannelId]));
+        var ensureTask = linksService.EnsureVideoShortLinkAsync(
+            source.Id,
+            PrimaryScenario.VideoId,
+            PrimaryScenario.ChannelId);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await Task.WhenAll(appendTask, ensureTask);
+
+        var persistedMatch = await matchRepository.GetItemAsync(source.Id);
+        Assert.Contains(persistedMatch!.VideoRefs, reference => reference.YoutubeId == "concurrent-video");
+        Assert.Empty(persistedMatch.ShortLinks);
     }
 
     private static string CreateVideoCode(string videoId, int attempt)
@@ -293,37 +180,5 @@ public class ShortLinksMockScenarioTests
     {
         public override Task<bool> RemoveEmbeddedYouTubeLinksAsync(string matchId)
             => throw new InvalidOperationException("Simulated cleanup failure.");
-    }
-
-    [Fact]
-    public async Task Canonical_video_link_resolves_without_embedded_data_and_counts_clicks_atomically()
-    {
-        await using var factory = new ShortLinksWebApplicationFactory();
-        var repository = factory.Services.GetRequiredService<IShortLinkRepository>();
-        await repository.AddItemAsync(new ShortLink("canonical1", PrimaryScenario.VideoId, [])
-        {
-            Id = "400000000000000000000099",
-            LinkType = LinkType.YouTubeVideo,
-            ContentId = PrimaryScenario.MatchId,
-            ManagementChannelId = PrimaryScenario.ChannelId
-        });
-        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
-        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
-        await matchRepository.UpdateItemAsync(source with { ShortLinks = [] });
-
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        var responses = await Task.WhenAll(client.GetAsync("/canonical1"), client.GetAsync("/canonical1"));
-
-        Assert.All(responses, response => Assert.Equal(HttpStatusCode.Redirect, response.StatusCode));
-        Assert.All(responses, response => Assert.Equal(
-            $"https://www.youtube.com/watch?v={PrimaryScenario.VideoId}",
-            response.Headers.Location?.ToString()));
-        var updatedLink = (await repository.GetItemsAsync()).Single(link => link.Code == "canonical1");
-        Assert.Equal(2, updatedLink.ClicksCount);
-        Assert.Empty((await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId).ShortLinks);
     }
 }

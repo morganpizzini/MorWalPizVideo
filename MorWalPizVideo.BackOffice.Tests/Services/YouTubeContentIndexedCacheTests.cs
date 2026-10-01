@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Services;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class YouTubeContentIndexedCacheTests
 {
     [Fact]

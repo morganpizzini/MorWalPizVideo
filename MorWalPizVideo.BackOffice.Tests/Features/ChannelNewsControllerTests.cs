@@ -12,6 +12,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ChannelNewsControllerTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
     private readonly BackOfficeWebApplicationFactory factory;

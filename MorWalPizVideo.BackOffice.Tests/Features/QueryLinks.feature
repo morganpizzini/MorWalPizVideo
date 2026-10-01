@@ -1,3 +1,4 @@
+@TestGroup:BackOffice
 Feature: QueryLinks Management
     As a BackOffice user
     I want to manage query links

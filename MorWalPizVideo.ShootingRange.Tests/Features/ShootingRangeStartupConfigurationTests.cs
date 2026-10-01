@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 
+[Trait("Category", "TestGroup:ShootingRange")]
 public sealed class ShootingRangeStartupConfigurationTests
 {
     [Fact]

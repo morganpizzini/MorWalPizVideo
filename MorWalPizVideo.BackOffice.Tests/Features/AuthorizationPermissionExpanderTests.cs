@@ -3,6 +3,7 @@ using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class AuthorizationPermissionExpanderTests
 {
   public static TheoryData<string, string[]> ManagePermissionImplications => new()

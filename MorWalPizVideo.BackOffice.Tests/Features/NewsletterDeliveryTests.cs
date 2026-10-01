@@ -6,6 +6,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class NewsletterDeliveryTests
 {
     [Fact]

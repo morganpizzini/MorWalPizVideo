@@ -217,11 +217,29 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+      - name: Restore backend test projects
+        run: |
+          dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+          dotnet restore MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj
+          dotnet restore MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj
 
-      - name: Test
-        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --verbosity normal
+      - name: Test BackOffice regression
+        run: |
+          dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --list-tests > backoffice-tests.txt
+          grep -Eq '^    .+' backoffice-tests.txt
+          dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity normal
+
+      - name: Test ShortLinks host
+        run: |
+          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --list-tests > shortlinks-tests.txt
+          grep -Eq '^    .+' shortlinks-tests.txt
+          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --verbosity normal
+
+      - name: Test ShootingRange host
+        run: |
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --list-tests > shooting-range-tests.txt
+          grep -Eq '^    .+' shooting-range-tests.txt
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --verbosity normal
 
   test-youtube-utilities:
     name: Test YouTube Utilities

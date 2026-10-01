@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using MorWalPizVideo.Domain.Scenarios;
 
-namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
+namespace MorWalPizVideo.ShortLinks.Tests.Infrastructure;
 
 public sealed class ShortLinksWebApplicationFactory : WebApplicationFactory<MorWalPizVideo.ShortLinks.Program>
 {

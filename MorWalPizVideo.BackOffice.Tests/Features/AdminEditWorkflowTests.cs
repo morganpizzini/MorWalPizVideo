@@ -17,6 +17,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebApplicationFactory>
 {
   private readonly VideoReferenceWebApplicationFactory _factory;

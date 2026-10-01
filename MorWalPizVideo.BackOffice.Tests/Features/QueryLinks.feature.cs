@@ -17,12 +17,14 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [global::Xunit.TraitAttribute("Category", "TestGroup:BackOffice")]
     public partial class QueryLinksManagementFeature : object, global::Xunit.IClassFixture<QueryLinksManagementFeature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
-        private static string[] featureTags = ((string[])(null));
+        private static string[] featureTags = new string[] {
+                "TestGroup:BackOffice"};
         
         private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "QueryLinks Management", "    As a BackOffice user\r\n    I want to manage query links\r\n    So that I can att" +
                 "ach reusable query-string snippets to shortlinks", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
@@ -106,9 +108,9 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         
         public virtual async global::System.Threading.Tasks.Task FeatureBackgroundAsync()
         {
-#line 6
-#line hidden
 #line 7
+#line hidden
+#line 8
     await testRunner.GivenAsync("the application is running in mock mode", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
         }
@@ -154,7 +156,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Fetch all query links", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 9
+#line 10
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -164,16 +166,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 10
+#line 11
     await testRunner.WhenAsync("I request all query links", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 11
+#line 12
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 12
+#line 13
     await testRunner.AndAsync("the response should contain a list of query links", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -191,7 +193,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get query link by ID", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 14
+#line 15
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -201,19 +203,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 15
+#line 16
     await testRunner.GivenAsync("a query link exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 16
+#line 17
     await testRunner.WhenAsync("I request the query link by its ID", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 17
+#line 18
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 18
+#line 19
     await testRunner.AndAsync("the response should contain the query link details", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -231,7 +233,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get non-existent query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 20
+#line 21
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -241,13 +243,13 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 21
+#line 22
     await testRunner.WhenAsync("I request a query link with ID \"nonexistent-query-id\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 22
+#line 23
     await testRunner.ThenAsync("the response should be Not Found", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -265,7 +267,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Create a new query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 24
+#line 25
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -275,16 +277,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 25
+#line 26
     await testRunner.WhenAsync("I create a query link with title \"Test QL\" and value \"list=PLTEST123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 26
+#line 27
     await testRunner.ThenAsync("the response should be No Content", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 27
+#line 28
     await testRunner.AndAsync("the query link should appear in the list", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -302,7 +304,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Create a query link with empty title", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 29
+#line 30
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -312,13 +314,13 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 30
+#line 31
     await testRunner.WhenAsync("I create a query link with title \"\" and value \"list=ANY\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 31
+#line 32
     await testRunner.ThenAsync("the response should be Bad Request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -336,7 +338,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update an existing query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 33
+#line 34
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -346,19 +348,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 34
+#line 35
     await testRunner.GivenAsync("a query link exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 35
+#line 36
     await testRunner.WhenAsync("I update the query link with new title \"Updated QL Title\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 36
+#line 37
     await testRunner.ThenAsync("the response should be No Content", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 37
+#line 38
     await testRunner.AndAsync("the query link should have the new title", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -376,7 +378,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update a non-existent query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 39
+#line 40
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -386,13 +388,13 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 40
+#line 41
     await testRunner.WhenAsync("I update a query link with ID \"nonexistent-query-id\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 41
+#line 42
     await testRunner.ThenAsync("the response should be Bad Request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -410,7 +412,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Delete a query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 43
+#line 44
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -420,16 +422,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 44
+#line 45
     await testRunner.GivenAsync("a query link exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 45
+#line 46
     await testRunner.WhenAsync("I delete the query link", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 46
+#line 47
     await testRunner.ThenAsync("the response should be No Content", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -447,7 +449,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Delete a non-existent query link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 48
+#line 49
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -457,13 +459,13 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 49
+#line 50
     await testRunner.WhenAsync("I delete a query link with ID \"nonexistent-query-id\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 50
+#line 51
     await testRunner.ThenAsync("the response should be Bad Request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }

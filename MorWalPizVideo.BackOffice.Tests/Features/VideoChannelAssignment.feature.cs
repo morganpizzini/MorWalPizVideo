@@ -17,12 +17,14 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [global::Xunit.TraitAttribute("Category", "TestGroup:BackOffice")]
     public partial class VideoChannelAssignmentFeature : object, global::Xunit.IClassFixture<VideoChannelAssignmentFeature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
-        private static string[] featureTags = ((string[])(null));
+        private static string[] featureTags = new string[] {
+                "TestGroup:BackOffice"};
         
         private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Video Channel Assignment", "    As a BackOffice user\r\n    I want to assign a YouTube video to a specific chan" +
                 "nel\r\n    So that the video-to-channel ownership is consistent in the embedded YT" +
@@ -107,9 +109,9 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         
         public virtual async global::System.Threading.Tasks.Task FeatureBackgroundAsync()
         {
-#line 6
-#line hidden
 #line 7
+#line hidden
+#line 8
     await testRunner.GivenAsync("the application is running in mock mode", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
         }
@@ -155,7 +157,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assign an existing video to a known channel", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 9
+#line 10
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -165,22 +167,22 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 10
+#line 11
     await testRunner.GivenAsync("a video exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 11
+#line 12
     await testRunner.AndAsync("a channel exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 12
+#line 13
     await testRunner.WhenAsync("I assign the video to the channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 13
+#line 14
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 14
+#line 15
     await testRunner.AndAsync("the channel should contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -198,7 +200,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assigning the same video twice is idempotent", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 16
+#line 17
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -208,25 +210,25 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 17
+#line 18
     await testRunner.GivenAsync("a video exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 18
+#line 19
     await testRunner.AndAsync("a channel exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 19
+#line 20
     await testRunner.WhenAsync("I assign the video to the channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 20
+#line 21
     await testRunner.AndAsync("I assign the video to the channel again", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 21
+#line 22
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 22
+#line 23
     await testRunner.AndAsync("the channel should contain the video exactly once", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -244,7 +246,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assigning to an unknown channel returns 400", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 24
+#line 25
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -254,16 +256,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 25
+#line 26
     await testRunner.GivenAsync("a video exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 26
+#line 27
     await testRunner.WhenAsync("I assign the video to a channel with ID \"nonexistent-channel-id\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 27
+#line 28
     await testRunner.ThenAsync("the response should be Bad Request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -281,7 +283,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assigning with empty channel ID returns 400", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 29
+#line 30
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -291,16 +293,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 30
+#line 31
     await testRunner.GivenAsync("a video exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 31
+#line 32
     await testRunner.WhenAsync("I assign the video to a channel with ID \"\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 32
+#line 33
     await testRunner.ThenAsync("the response should be Bad Request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -318,7 +320,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assigning an unknown video returns 404", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 34
+#line 35
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -328,16 +330,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 35
+#line 36
     await testRunner.GivenAsync("a channel exists in the system", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 36
+#line 37
     await testRunner.WhenAsync("I assign video with ID \"nonexistent-video-id\" to the channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 37
+#line 38
     await testRunner.ThenAsync("the response should be Not Found", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -355,7 +357,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Reassigning a video moves it between channels", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 39
+#line 40
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -365,25 +367,25 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 40
+#line 41
     await testRunner.GivenAsync("a video exists on a source channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 41
+#line 42
     await testRunner.AndAsync("a different target channel exists", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 42
+#line 43
     await testRunner.WhenAsync("I assign the video to the target channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 43
+#line 44
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 44
+#line 45
     await testRunner.AndAsync("the target channel should contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 45
+#line 46
     await testRunner.AndAsync("the source channel should contain the video", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }

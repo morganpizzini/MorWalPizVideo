@@ -12,6 +12,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class UserControllerProfileAndSecurityTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
     private readonly BackOfficeWebApplicationFactory _factory;

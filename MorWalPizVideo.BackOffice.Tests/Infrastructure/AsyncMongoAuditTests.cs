@@ -5,6 +5,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 /// <summary>
 /// Source-scan audit ensuring controllers don't mix sync Mongo calls with async methods (FR-016).
 /// </summary>
+[Trait("Category", "TestGroup:Shared")]
 public class AsyncMongoAuditTests
 {
     private static string ControllersRoot

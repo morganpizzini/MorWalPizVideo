@@ -15,6 +15,7 @@ using System.Net;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class BlobStorageConfigurationTests
 {
   [Fact]

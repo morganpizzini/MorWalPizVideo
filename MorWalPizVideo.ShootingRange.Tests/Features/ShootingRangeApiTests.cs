@@ -12,8 +12,9 @@ using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Security;
 
-namespace MorWalPizVideo.BackOffice.Tests.Features;
+namespace MorWalPizVideo.ShootingRange.Tests.Features;
 
+[Trait("Category", "TestGroup:ShootingRange")]
 public sealed class ShootingRangeApiTests
 {
     private const string Origin = "https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net";

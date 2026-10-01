@@ -1,3 +1,4 @@
+@TestGroup:ShortLinks
 Feature: ShortLinks Management
     As a BackOffice user
     I want to manage short links

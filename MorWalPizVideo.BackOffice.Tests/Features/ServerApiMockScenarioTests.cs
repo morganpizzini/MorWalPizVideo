@@ -9,6 +9,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:ServerAPI")]
 public class ServerApiMockScenarioTests
 {
     [Fact]

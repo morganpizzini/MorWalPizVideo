@@ -6,6 +6,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:Shared")]
 public class MockScenarioLifecycleTests
 {
     [Fact]

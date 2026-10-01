@@ -17,6 +17,7 @@ to establish the approved authorization and data-integrity boundary.
 | 3 | TD-008 | Source addressed; execution pending | Docker runtime versions did not match .NET 10 | Both API Dockerfiles use `aspnet`/`sdk` 10.0 and copy Contracts, Domain, Models, MvcHelpers, ServiceDefaults and transitive YouTubeUtilities before restore. Clean-container CI added; local execution NOT RUN without daemon. |
 | 4 | TD-017 | Closed | BackOffice browser tokens remained in local storage | Login no longer returns the raw JWT in the response body; `back-office-spa` no longer stores or sends a bearer token. `/api/auth/validate` now reads the `auth_token` HttpOnly cookie server-side instead of accepting a client-supplied token. |
 | 5 | TD-001 | Partially addressed; release blocking | Credential artifacts and unverified rotation | Both API manifests/context exclude credential JSON; production YouTube credentials require external provisioning. Sentinel metadata tests do not prove historical artifact invalidation, revocation or rotation. |
+| 6 | TD-018 | Source addressed; execution pending | Backend test ownership was concentrated in one mixed project | ShortLinks host redirect/resolution/click tests and all five ShootingRange tests now have dedicated projects; BackOffice retains ShortLinks management/Reqnroll coverage. CI and deployment gates are updated, but GitHub execution and the transaction-capable Mongo gate remain pending. |
 
 ## Prioritization
 

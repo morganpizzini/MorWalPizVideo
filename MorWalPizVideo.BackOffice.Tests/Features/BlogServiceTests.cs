@@ -6,6 +6,7 @@ using MongoDB.Bson.Serialization;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class BlogServiceTests
 {
     private static BlogSnapshot Draft(string title = "First") => new() { Title = title };

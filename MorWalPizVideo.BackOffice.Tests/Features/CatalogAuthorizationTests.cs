@@ -5,6 +5,7 @@ using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class CatalogAuthorizationTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
     private readonly BackOfficeWebApplicationFactory _factory;

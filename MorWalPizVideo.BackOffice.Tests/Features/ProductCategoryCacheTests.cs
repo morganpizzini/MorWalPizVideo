@@ -13,6 +13,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ProductCategoryCacheTests : IClassFixture<ProductCategoryCacheFactory>
 {
     private readonly ProductCategoryCacheFactory factory;

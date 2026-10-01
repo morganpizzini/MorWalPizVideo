@@ -6,6 +6,7 @@ using System.Security.Claims;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public class JwtRoleClaimTests
 {
     [Fact]

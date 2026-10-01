@@ -7,6 +7,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class CalendarRevisionTests(PageControllerWebApplicationFactory factory) : IClassFixture<PageControllerWebApplicationFactory>
 {
     private ICalendarEventRepository Repository => factory.Services.GetRequiredService<ICalendarEventRepository>();

@@ -22,6 +22,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 
 // ADR-002 (Explicit Host Authentication): regression guards for the shared base and the
 // most security-sensitive endpoints across BackOffice/ServerAPI hosts.
+[Trait("Category", "TestGroup:BackOffice")]
 public class AuthorizationPolicyTests
 {
     [Fact]

@@ -3,6 +3,7 @@ using MorWalPizVideo.BackOffice.Jobs;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class JobSignalTests
 {
   [Fact]

@@ -57,13 +57,13 @@ Local development keeps the relative `/api` Vite proxy and Development credentia
 
 Current central CI builds six active frontend applications (including their existing SSR builds), four backend hosts, both Windows clients, and Aspire AppHost. It executes the existing backend/YouTubeUtilities, seven frontend workspace suites and two Windows desktop suites, plus clean BackOffice/ServerAPI container builds. Shop is excluded while on hold. Jobs fail on errors; frontend/desktop test gates reject empty collections. Matrix `fail-fast: false` collects independent failures; it does not permit failure.
 
-The BackOffice and ServerAPI deployment workflows run both backend test projects before their build, publish, and Azure deployment jobs. A failed test job prevents publish. The focused `CatalogAuthorizationTests` class now passes all 16 theory cases in `MorWalPizVideo.BackOffice.Tests`; broader baseline status requires separate validation.
+The BackOffice and ServerAPI deployment workflows use the mixed `MorWalPizVideo.BackOffice.Tests` project with stable group filters before their build, publish, and Azure deployment jobs. BackOffice runs `BackOffice`, `Shared`, and `CrossApi`; ServerAPI runs `ServerAPI`, `Shared`, and `CrossApi`. ShortLinks has a focused pre-publish gate in `MorWalPizVideo.ShortLinks.Tests`, containing only host-owned redirect/resolution/click coverage; BackOffice-owned management and Reqnroll coverage remains in the mixed project. ShootingRange uses `MorWalPizVideo.ShootingRange.Tests` for both mock and real-Mongo gates. Each active focused job rejects an empty test list. Neither workflow creates a separate ServerAPI test project. A failed test job prevents publish.
 
 Required improvements for active surfaces:
 
 - Keep shared frontend packages built in dependency order.
 - Keep AppHost build verification and the active backend test projects green.
-- Keep BackOffice and ServerAPI deployments gated by `MorWalPizVideo.BackOffice.Tests` and `MorWalPizVideo.YouTubeUtilities.Tests`; their path filters include `MorWalPizVideo.YouTubeUtilities/**` so shared YouTube changes cannot publish without those tests passing.
+- Keep central CI's full `MorWalPizVideo.BackOffice.Tests` regression gate plus the dedicated ShortLinks and ShootingRange projects. Keep BackOffice and ServerAPI deployments gated by their owner-specific mixed-project filters plus `Shared`/`CrossApi` coverage, and retain the independent `MorWalPizVideo.YouTubeUtilities.Tests` gate; their path filters include `MorWalPizVideo.YouTubeUtilities/**` so shared YouTube changes cannot publish without those tests passing.
 - Require focused Shooting Range API authorization/integrity tests and non-empty client tests before its production deployment.
 - Build Docker images for deployed active containers.
 - Add secret scanning, dependency/security review, and documentation link validation.
@@ -72,7 +72,7 @@ Required improvements for active surfaces:
 
 | Owner/surface | Central gate | Delivery gate | Local evidence 2026-10-01 |
 |---|---|---|---|
-| BackOffice, ServerAPI, ShortLinks, Range | .NET 10 Release builds; existing BackOffice.Tests | Existing backend test jobs; Range additionally requires disposable real Mongo before publish | PASS: BackOffice.Tests 887 total, 884 passed, 0 failed, 3 skipped |
+| BackOffice, ServerAPI, ShortLinks, Range | .NET 10 Release builds; full `BackOffice.Tests`, `ShortLinks.Tests`, and `ShootingRange.Tests` regression | BackOffice: `BackOffice|Shared|CrossApi`; ServerAPI: `ServerAPI|Shared|CrossApi`; ShortLinks host tests before publish; Range dedicated mock and disposable real Mongo gates before publish | Split-project validation is tracked with this phase; the real-Mongo gate remains environment-dependent |
 | YouTubeUtilities | Existing xUnit suite | Both publishing APIs retain tests and dependency path filters | PASS: 6 passed, 0 failed, 0 skipped |
 | AppHost | Existing .NET 10 build | Local orchestration, not a production deployable | Not rerun in this slice |
 | Shared models/services/layout | `yarn --cwd frontend build:shared` in dependency order | Required before active frontend checks | PASS |

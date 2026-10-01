@@ -8,6 +8,7 @@ using MorWalPizVideo.Models.Configuration;
 
 namespace MorWalPizVideo.BackOffice.Tests.Services;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class SocialAssetBlobServiceTests
 {
     [Fact]

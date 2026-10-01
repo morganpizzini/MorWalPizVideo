@@ -13,6 +13,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 /// Verifies that swallowed exceptions in the fire-and-forget UpdateLastUsedAsync path produce
 /// structured Error logs (so silent failures can be observed in production).
 /// </summary>
+[Trait("Category", "TestGroup:BackOffice")]
 public class ApiKeyTelemetryTests
 {
     [Fact]

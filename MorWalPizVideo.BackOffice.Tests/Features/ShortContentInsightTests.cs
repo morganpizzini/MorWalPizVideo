@@ -12,6 +12,7 @@ using Microsoft.SemanticKernel;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public class ShortContentInsightTests
 {
   [Fact]

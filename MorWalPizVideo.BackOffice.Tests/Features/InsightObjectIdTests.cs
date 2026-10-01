@@ -9,6 +9,7 @@ using System.Net.Http.Json;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class InsightObjectIdTests
 {
   [Fact]

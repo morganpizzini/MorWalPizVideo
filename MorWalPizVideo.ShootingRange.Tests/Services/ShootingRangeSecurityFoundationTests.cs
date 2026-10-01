@@ -7,8 +7,9 @@ using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Security;
 
-namespace MorWalPizVideo.BackOffice.Tests.Services;
+namespace MorWalPizVideo.ShootingRange.Tests.Services;
 
+[Trait("Category", "TestGroup:ShootingRange")]
 public sealed class ShootingRangeSecurityFoundationTests
 {
     [Theory]

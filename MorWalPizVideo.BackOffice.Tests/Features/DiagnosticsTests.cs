@@ -6,6 +6,7 @@ using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class DiagnosticsTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
     private readonly BackOfficeWebApplicationFactory _factory;

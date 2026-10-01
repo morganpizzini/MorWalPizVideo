@@ -17,12 +17,14 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [global::Xunit.TraitAttribute("Category", "TestGroup:ShortLinks")]
     public partial class ShortLinksManagementFeature : object, global::Xunit.IClassFixture<ShortLinksManagementFeature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
-        private static string[] featureTags = ((string[])(null));
+        private static string[] featureTags = new string[] {
+                "TestGroup:ShortLinks"};
         
         private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "ShortLinks Management", "    As a BackOffice user\r\n    I want to manage short links\r\n    So that I can cre" +
                 "ate and track shortened URLs for content", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
@@ -106,9 +108,9 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         
         public virtual async global::System.Threading.Tasks.Task FeatureBackgroundAsync()
         {
-#line 6
-#line hidden
 #line 7
+#line hidden
+#line 8
     await testRunner.GivenAsync("the application is running in mock mode", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
         }
@@ -154,7 +156,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Fetch all short links", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 9
+#line 10
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -164,16 +166,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 10
+#line 11
     await testRunner.WhenAsync("I request all short links", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 11
+#line 12
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 12
+#line 13
     await testRunner.AndAsync("the response should contain a list of short links", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -191,7 +193,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get short link by code", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 14
+#line 15
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -201,19 +203,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 15
+#line 16
     await testRunner.GivenAsync("a short link with code \"test1\" exists", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 16
+#line 17
     await testRunner.WhenAsync("I request the short link with code \"test1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 17
+#line 18
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 18
+#line 19
     await testRunner.AndAsync("the response should contain the short link details", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -231,7 +233,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get non-existent short link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 20
+#line 21
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -241,16 +243,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 21
+#line 22
     await testRunner.WhenAsync("I request the short link with code \"nonexistent\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 22
+#line 23
     await testRunner.ThenAsync("the response should be Not Found", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 23
+#line 24
     await testRunner.AndAsync("the response should contain message \"No shortlink found for this video\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -268,7 +270,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Create a new standalone short link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 25
+#line 26
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -278,16 +280,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 26
+#line 27
     await testRunner.WhenAsync("I create a short link with target \"https://example.com\" and link type \"Other\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 27
+#line 28
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 28
+#line 29
     await testRunner.AndAsync("the response should contain a short link URL", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -305,7 +307,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Delete a short link", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 30
+#line 31
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -315,16 +317,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 31
+#line 32
     await testRunner.GivenAsync("a standalone short link exists", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 32
+#line 33
     await testRunner.WhenAsync("I delete the short link", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 33
+#line 34
     await testRunner.ThenAsync("the response should be No Content", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -342,7 +344,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Fetch includes short links from channels", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 35
+#line 36
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -352,16 +354,16 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 36
+#line 37
     await testRunner.WhenAsync("I request all short links", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 37
+#line 38
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 38
+#line 39
     await testRunner.AndAsync("the response should contain short links from channels", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -379,7 +381,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Reject unsafe destination targets for generic short links", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 40
+#line 41
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -389,13 +391,13 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 41
+#line 42
     await testRunner.WhenAsync("I create a short link with target \"javascript:alert(1)\" and link type \"Other\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 42
+#line 43
     await testRunner.ThenAsync("the response should be a bad request", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -413,7 +415,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get standalone short link from channel by code", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 44
+#line 45
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -423,19 +425,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 45
+#line 46
     await testRunner.GivenAsync("a standalone channel short link exists", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 46
+#line 47
     await testRunner.WhenAsync("I request the short link by its code", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 47
+#line 48
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 48
+#line 49
     await testRunner.AndAsync("the response should contain the short link details", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -453,7 +455,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Delete standalone short link from channel", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 50
+#line 51
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -463,19 +465,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 51
+#line 52
     await testRunner.GivenAsync("a standalone channel short link exists", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 52
+#line 53
     await testRunner.WhenAsync("I delete the standalone short link by code", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 53
+#line 54
     await testRunner.ThenAsync("the response should be No Content", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 54
+#line 55
     await testRunner.AndAsync("the standalone short link should be removed from the channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -493,7 +495,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Create short link for match sets correct LinkType", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 56
+#line 57
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -503,19 +505,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 57
+#line 58
     await testRunner.GivenAsync("a match exists for short link creation", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 58
+#line 59
     await testRunner.WhenAsync("I create a short link for the match", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 59
+#line 60
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 60
+#line 61
     await testRunner.AndAsync("the short link should have LinkType YouTubeVideo", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
@@ -533,7 +535,7 @@ await this.FeatureBackgroundAsync();
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Create short link for channel sets correct LinkType", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 62
+#line 63
 this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -543,19 +545,19 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
             else
             {
                 await this.ScenarioStartAsync();
-#line 6
+#line 7
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 63
+#line 64
     await testRunner.GivenAsync("a channel exists for short link creation", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 64
+#line 65
     await testRunner.WhenAsync("I create a short link for the channel", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 65
+#line 66
     await testRunner.ThenAsync("the response should be successful", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 66
+#line 67
     await testRunner.AndAsync("the short link should have LinkType YouTubeChannel", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }

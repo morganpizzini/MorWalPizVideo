@@ -10,6 +10,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Services;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class SocialPublishingServiceTests
 {
     private const string ChannelId = "channel-one";

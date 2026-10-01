@@ -14,6 +14,7 @@ using MorWalPiz.Contracts.Contracts;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private readonly BackOfficeWebApplicationFactory _factory;

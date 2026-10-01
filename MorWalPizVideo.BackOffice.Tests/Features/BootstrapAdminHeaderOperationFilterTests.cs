@@ -6,6 +6,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class BootstrapAdminHeaderOperationFilterTests
 {
     [Fact]

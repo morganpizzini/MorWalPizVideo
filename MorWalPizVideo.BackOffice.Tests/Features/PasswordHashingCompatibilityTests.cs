@@ -3,6 +3,7 @@ using MorWalPizVideo.Domain.Security;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public class PasswordHashingCompatibilityTests
 {
     [Fact]

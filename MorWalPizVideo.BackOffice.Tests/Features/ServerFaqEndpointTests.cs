@@ -11,6 +11,7 @@ using MorWalPizVideo.ServerAPI.Controllers;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:ServerAPI")]
 public sealed class ServerFaqEndpointTests : IClassFixture<ServerApiWebApplicationFactory>
 {
     private readonly ServerApiWebApplicationFactory factory;

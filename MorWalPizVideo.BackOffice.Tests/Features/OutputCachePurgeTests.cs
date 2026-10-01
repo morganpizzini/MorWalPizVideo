@@ -7,6 +7,7 @@ using MorWalPizVideo.ServerAPI.Controllers;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public class OutputCachePurgeTests
 {
     private sealed class CapturingOutputCacheStore : IOutputCacheStore

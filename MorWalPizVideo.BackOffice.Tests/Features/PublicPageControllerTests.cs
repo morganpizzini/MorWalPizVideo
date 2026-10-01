@@ -9,6 +9,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class PublicPageControllerTests : IClassFixture<ServerApiWebApplicationFactory>
 {
     private readonly ServerApiWebApplicationFactory factory;

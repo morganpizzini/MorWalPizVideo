@@ -6,6 +6,7 @@ using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
+[Trait("Category", "TestGroup:CrossApi")]
 public class CrossApiServiceContractTests
 {
     private static (CrossApiService sut, StubHttpMessageHandler handler) BuildSut()

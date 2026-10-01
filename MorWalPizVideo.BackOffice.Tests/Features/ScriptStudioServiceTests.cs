@@ -5,6 +5,7 @@ using FluentAssertions;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ScriptStudioServiceTests
 {
     [Fact]

@@ -4,6 +4,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:Shared")]
 public class FocusedServiceDependencyTests
 {
     [Fact]

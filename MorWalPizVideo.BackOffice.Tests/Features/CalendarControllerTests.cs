@@ -10,6 +10,7 @@ using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class CalendarControllerTests(PageControllerWebApplicationFactory factory) : IClassFixture<PageControllerWebApplicationFactory>
 {
     private static SaveCalendarEventRequest Request() => new()

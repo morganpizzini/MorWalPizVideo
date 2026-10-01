@@ -19,6 +19,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class PageNavigationControllerTests : IClassFixture<PageControllerWebApplicationFactory>
 {
     private readonly PageControllerWebApplicationFactory factory;

@@ -2,6 +2,7 @@ using MorWalPizVideo.BackOffice.Controllers;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class ApiKeyDtoTests
 {
     [Fact]

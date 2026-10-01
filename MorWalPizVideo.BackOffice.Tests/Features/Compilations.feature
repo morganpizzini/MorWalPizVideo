@@ -1,3 +1,4 @@
+@TestGroup:BackOffice
 Feature: Compilations Management
     As a BackOffice user
     I want to manage video compilations

@@ -11,6 +11,7 @@ using MorWalPizVideo.BackOffice.Services;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:Shared")]
 public sealed class MongoIndexOperationsTests
 {
     [Fact]

@@ -10,6 +10,7 @@ using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class VideoPermissionAuthorizationTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private readonly BackOfficeWebApplicationFactory _factory;

@@ -1,3 +1,4 @@
+@TestGroup:BackOffice
 Feature: Videos Management
     As a BackOffice user
     I want to manage YouTube videos and collections

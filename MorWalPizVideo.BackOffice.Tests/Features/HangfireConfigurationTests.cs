@@ -17,6 +17,7 @@ using MorWalPizVideo.Models.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class HangfireConfigurationTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private readonly BackOfficeWebApplicationFactory _factory;

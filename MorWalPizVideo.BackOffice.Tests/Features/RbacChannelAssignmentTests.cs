@@ -11,6 +11,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class RbacChannelAssignmentTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private readonly BackOfficeWebApplicationFactory _factory;

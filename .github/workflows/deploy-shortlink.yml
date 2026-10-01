@@ -10,6 +10,7 @@ on:
       - 'MorWalPizVideo.Models/**'
       - 'MorWalPizVideo.MvcHelpers/**'
       - 'MorWalPizVideo.ServiceDefaults/**'
+      - 'MorWalPizVideo.ShortLinks.Tests/**'
       - '.github/workflows/deploy-shortlink.yml'
   workflow_dispatch:
   
@@ -33,7 +34,14 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj
+        run: |
+          dotnet restore MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj
+          dotnet restore MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj
+
+      - name: Run focused ShortLinks tests
+        run: |
+          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:ShortLinks" --logger "trx;LogFileName=shortlinks-related.trx" --results-directory ./TestResults/shortlinks --verbosity normal
+          pwsh -Command '$result = [xml](Get-Content ./TestResults/shortlinks/shortlinks-related.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; if ($total -le 0) { throw "ShortLinks test filter selected no tests." }'
 
       - name: Build
         run: dotnet build MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj --configuration Release --no-restore

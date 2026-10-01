@@ -11,6 +11,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class CookieAntiforgeryTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private const string AdminSpaOrigin = "https://morwalpiz-admin-spa.azurewebsites.net";

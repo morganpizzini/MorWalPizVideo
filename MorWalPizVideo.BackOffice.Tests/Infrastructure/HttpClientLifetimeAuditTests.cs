@@ -5,6 +5,7 @@ namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 /// <summary>
 /// Source-scan audits enforcing HttpClient lifecycle invariants (FR-014, FR-015) in MorWalPizVideo.BackOffice.
 /// </summary>
+[Trait("Category", "TestGroup:Shared")]
 public class HttpClientLifetimeAuditTests
 {
     private static string BackOfficeRoot

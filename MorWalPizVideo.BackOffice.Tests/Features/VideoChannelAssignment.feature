@@ -1,3 +1,4 @@
+@TestGroup:BackOffice
 Feature: Video Channel Assignment
     As a BackOffice user
     I want to assign a YouTube video to a specific channel

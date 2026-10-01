@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
+[Trait("Category", "TestGroup:BackOffice")]
 public sealed class RbacCrudAssignmentTests : IClassFixture<BackOfficeWebApplicationFactory>
 {
   private readonly BackOfficeWebApplicationFactory _factory;
