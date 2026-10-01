@@ -25,7 +25,10 @@ Owns:
 - Runtime `window.ENV` and build-time `VITE_*` API base resolution.
 - Fetch-based HTTP behavior.
 - Credential mode and token-provider injection.
-- Shared domain API functions.
+- Shared domain API functions, organized behind the compatibility `apiService`
+  facade into the stateful transport core and explicit context modules such as
+  the BackOffice admin service. Direct imports from `apiService.ts` remain
+  supported for compatibility.
 
 Applications must not introduce direct `fetch` or Axios clients when this package already owns the call. Public applications set credentials to `omit`; authenticated applications use the established token/cookie flow. Service-worker network interception and downloads from arbitrary URLs issued by the API remain direct-fetch exceptions because they do not call a repository-owned endpoint.
 

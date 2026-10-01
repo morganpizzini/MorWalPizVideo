@@ -16,11 +16,15 @@ import {
   getPublicFaqCategories,
   voteFaqAnswer,
   getPublicNavigation,
+  adminApiService,
+  publicApiService,
   subscribeNewsletter,
   confirmNewsletter,
   unsubscribeNewsletter,
   setSelectedChannelId,
 } from "./apiService";
+import { fetchSponsors, createSponsorWithImage } from "./adminService";
+import endpoints from "./endpoints";
 import { getPublicBlog, getPublicBlogPost } from "./blogService";
 import {
   getPublicChannelNews,
@@ -48,6 +52,47 @@ afterEach(() => {
 });
 
 describe("transport response contracts", () => {
+  it("sends the selected channel for admin sponsor reads and mutations", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          url.endsWith("/csrf")
+            ? Response.json({ token: "csrf-token" })
+            : Response.json([]),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    adminApiService.setSelectedChannelId("selected-channel");
+
+    await fetchSponsors();
+    await createSponsorWithImage(new FormData());
+
+    const sponsorRequests = fetchMock.mock.calls.filter(([url]) =>
+      url.endsWith("/api/sponsors"),
+    );
+    expect(sponsorRequests).toHaveLength(2);
+    for (const [, options] of sponsorRequests) {
+      expect(new Headers(options.headers).get("X-Channel-Id")).toBe(
+        "selected-channel",
+      );
+    }
+  });
+
+  it("keeps public sponsor requests anonymous and free of channel headers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    publicApiService.setSelectedChannelId("injected-channel");
+
+    await publicApiService.get(endpoints.SPONSORS);
+
+    const request = fetchMock.mock.calls[0][1];
+    expect(request.credentials).toBe("omit");
+    expect(new Headers(request.headers).has("X-Channel-Id")).toBe(false);
+    expect(new Headers(request.headers).has("Authorization")).toBe(false);
+    expect(new Headers(request.headers).has("X-CSRF-TOKEN")).toBe(false);
+  });
+
   it("routes every active public helper through omit without bearer, CSRF or admin channel", async () => {
     setSelectedChannelId("private-channel");
     setAuthTokenProvider(() => "legacy-token");
