@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '../test/test-utils';
 import PrimaryLayout from './PrimaryLayout';
 import { useDeferredRouteProgress } from '../contexts/DeferredRouteProgressContext';
 
 let resolveDeferred: () => void = () => undefined;
-let deferredPromise: Promise<void> = Promise.resolve();
+let deferredPromise: Promise<void> = new Promise(() => undefined);
 
 function DeferredRouteContent() {
   useDeferredRouteProgress(deferredPromise);
@@ -40,6 +40,10 @@ vi.mock('./AdminSidebar', () => ({
   ),
 }));
 
+beforeEach(() => {
+  deferredPromise = new Promise(() => undefined);
+});
+
 describe('PrimaryLayout', () => {
   it('keeps the protected shell composition and renders the footer after content', () => {
     const { container } = render(<PrimaryLayout />);
@@ -68,7 +72,7 @@ describe('PrimaryLayout', () => {
     const progress = container.querySelector('.router-progress');
 
     await waitFor(() => expect(progress).toHaveClass('is-active'));
-    act(() => resolveDeferred());
+    await act(async () => resolveDeferred());
     await waitFor(() => expect(progress).not.toHaveClass('is-active'));
     expect(screen.getByText('Route content')).toBeInTheDocument();
   });

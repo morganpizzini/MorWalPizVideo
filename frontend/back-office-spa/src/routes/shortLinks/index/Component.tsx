@@ -125,6 +125,7 @@ const ShortLinks: React.FC = () => {
       <GenericTable
         data={entities}
         columns={columns}
+        getRowId={link => link.shortLinkId}
         pageSize={10}
         searchPlaceholder="Search short links..."
         emptyMessage="No short links found"

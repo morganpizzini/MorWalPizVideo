@@ -28,7 +28,7 @@ describe('deferred route progress', () => {
     await waitFor(() => expect(trackPromise).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('progress-state')).toHaveTextContent('active');
 
-    act(() => resolve());
+    await act(async () => resolve());
     await waitFor(() => expect(screen.getByTestId('progress-state')).toHaveTextContent('idle'));
   });
 
@@ -44,7 +44,7 @@ describe('deferred route progress', () => {
     );
 
     expect(screen.getByTestId('progress-state')).toHaveTextContent('active');
-    act(() => resolve());
+    await act(async () => resolve());
     await waitFor(() => expect(screen.getByTestId('progress-state')).toHaveTextContent('idle'));
 
     let reject: (reason?: unknown) => void = () => undefined;
@@ -57,7 +57,7 @@ describe('deferred route progress', () => {
       </DeferredRouteProgressProvider>
     );
     expect(screen.getByTestId('progress-state')).toHaveTextContent('active');
-    act(() => reject(new Error('failed')));
+    await act(async () => reject(new Error('failed')));
     await waitFor(() => expect(screen.getByTestId('progress-state')).toHaveTextContent('idle'));
 
     let resolveAbandoned: () => void = () => undefined;
@@ -81,9 +81,9 @@ describe('deferred route progress', () => {
       </DeferredRouteProgressProvider>
     );
     expect(screen.getByTestId('progress-state')).toHaveTextContent('active');
-    act(() => resolveAbandoned());
+    await act(async () => resolveAbandoned());
     expect(screen.getByTestId('progress-state')).toHaveTextContent('active');
-    act(() => resolveReplacement());
+    await act(async () => resolveReplacement());
     await waitFor(() => expect(screen.getByTestId('progress-state')).toHaveTextContent('idle'));
 
     view.unmount();

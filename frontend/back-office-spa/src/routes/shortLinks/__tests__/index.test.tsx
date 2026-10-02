@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, screen, fireEvent, waitFor } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
 import { useLoaderData, useFetcher, useNavigate, useSearchParams } from 'react-router';
 import { ShortLink, LinkType } from '@morwalpizvideo/models';
@@ -50,7 +50,9 @@ beforeEach(() => {
 
 async function renderComponent() {
   const { default: Component } = await import('../index/Component');
-  return render(<Component />);
+  const view = render(<Component />);
+  await act(async () => undefined);
+  return view;
 }
 
 describe('ShortLinks Index', () => {

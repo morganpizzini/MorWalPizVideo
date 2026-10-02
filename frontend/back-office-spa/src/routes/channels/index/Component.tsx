@@ -107,6 +107,7 @@ const ChannelLinks: React.FC = () => {
       <GenericTable
         data={entities}
         columns={columns}
+        getRowId={channel => channel.channelId}
         pageSize={10}
         searchPlaceholder="Search channels..."
         emptyMessage="No channels found"

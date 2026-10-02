@@ -97,6 +97,7 @@ const QueryLinks: React.FC = () => {
       <GenericTable
         data={entities}
         columns={columns}
+        getRowId={link => link.queryLinkId}
         pageSize={10}
         searchPlaceholder="Search query links..."
         emptyMessage="No query links found"

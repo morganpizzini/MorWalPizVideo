@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { render } from '../../../test/test-utils';
 import { useLoaderData, useNavigate } from 'react-router';
 import { Match } from '@morwalpizvideo/models';
@@ -47,7 +47,9 @@ beforeEach(() => {
 
 async function renderComponent() {
   const { default: Component } = await import('../index/Component');
-  return render(<Component />);
+  const view = render(<Component />);
+  await act(async () => undefined);
+  return view;
 }
 
 describe('Videos Index', () => {

@@ -97,6 +97,7 @@ const Categories: React.FC = () => {
       <GenericTable
         data={entities}
         columns={columns}
+        getRowId={category => category.categoryId}
         pageSize={10}
         searchPlaceholder="Search categories..."
         emptyMessage="No categories found"

@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, render, act } from '@testing-library/react';
 import { useState } from 'react';
-import { createMemoryRouter, RouterProvider, useLoaderData, useFetcher, useNavigate } from 'react-router';
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLoaderData,
+  useFetcher,
+  useNavigate,
+} from 'react-router';
 import { Channel } from '@morwalpizvideo/models';
 import { ToastProvider } from '@components/ToastNotification';
 
@@ -23,6 +29,19 @@ vi.mock('react-router', async () => {
 vi.mock('../../../contexts/ChannelContext', () => ({
   useChannelContext: () => ({ selectChannel: mockSelectChannel }),
 }));
+
+vi.mock('@morwalpizvideo/services', async () => {
+  const actual = await vi.importActual<typeof import('@morwalpizvideo/services')>(
+    '@morwalpizvideo/services'
+  );
+  return {
+    ...actual,
+    getChannelTerminology: vi.fn().mockResolvedValue({
+      italianToEnglish: [],
+      invariantEnglish: [],
+    }),
+  };
+});
 
 const mockChannel: Channel = {
   channelId: '1',
@@ -64,11 +83,22 @@ async function renderComponent() {
     return <Component />;
   };
   const router = createMemoryRouter(
-    [{ path: '*', element: <ToastProvider><TestHarness /></ToastProvider> }],
+    [
+      {
+        path: '*',
+        element: (
+          <ToastProvider>
+            <TestHarness />
+          </ToastProvider>
+        ),
+      },
+    ],
     { initialEntries: ['/channels/1'] }
   );
+  const view = render(<RouterProvider router={router} />);
+  await act(async () => undefined);
   return {
-    view: render(<RouterProvider router={router} />),
+    view,
     refresh: () => act(() => refresh()),
   };
 }
@@ -80,7 +110,9 @@ describe('Channel Detail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pages' }));
     expect(mockSelectChannel).toHaveBeenCalledWith('1');
     expect(mockNavigate).toHaveBeenCalledWith('/pages');
-    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
+    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(
+      mockNavigate.mock.invocationCallOrder[0]
+    );
 
     mockSelectChannel.mockClear();
     mockNavigate.mockClear();
@@ -88,7 +120,9 @@ describe('Channel Detail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Navigation' }));
     expect(mockSelectChannel).toHaveBeenCalledWith('1');
     expect(mockNavigate).toHaveBeenCalledWith('/navigation');
-    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
+    expect(mockSelectChannel.mock.invocationCallOrder[0]).toBeLessThan(
+      mockNavigate.mock.invocationCallOrder[0]
+    );
   });
 
   it('renders the short-link base and every social entry', async () => {
