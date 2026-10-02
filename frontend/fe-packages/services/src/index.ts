@@ -1,34 +1,8 @@
 // Main barrel export file for @morwalpizvideo/services
-export {
-  getCalendarEventByTitle,
-  getCalendarEventById,
-  fetchCalendarCategories,
-  createCalendarEvent,
-  updateCalendarEvent,
-  deleteCalendarEvent,
-} from "./calendarService";
-export {
-  fetchBlogPosts,
-  getBlogPost,
-  createBlogPost,
-  saveBlogPost,
-  publishBlogPost,
-  uploadBlogImage,
-  getPublicBlog,
-  getPublicBlogPost,
-} from "./blogService";
 
 // API Service exports
 export { default as apiService } from "./apiService";
 export {
-  createApiClient,
-  adminApiService,
-  publicApiService,
-  legacyApiService,
-  publicGet,
-  publicPost,
-  publicPut,
-  publicDelete,
   getSelectedChannelId,
   resetCsrfToken,
   selectFirstAccessibleChannel,
@@ -38,7 +12,6 @@ export {
   setSelectedChannelId,
   setUnauthorizedHandler,
 } from "./apiService";
-export type { ApiClientOptions } from "./apiService";
 
 // Export individual HTTP methods
 export {
@@ -197,7 +170,6 @@ export {
   insightsTopicsApi,
   insightsNewsApi,
   insightsContentPlansApi,
-  insightsArticleDraftsApi,
 } from "./insightsService";
 
 // Video ↔ Channel join (FR-016 / FR-017)

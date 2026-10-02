@@ -1,4 +1,3 @@
-@TestGroup:BackOffice
 Feature: Products Management
     As a BackOffice user
     I want to manage products

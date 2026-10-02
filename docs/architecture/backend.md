@@ -103,7 +103,7 @@ is a deployment prerequisite.
 
 Redirect resolution is anonymous. Administrative authentication does not belong in this host.
 
-`ApplicationControllerBase` is host-neutral. BackOffice and ServerAPI own their separate authenticated fallback policies and explicit anonymous exceptions. Range's session foundation is implemented, but its domain fallback/onboarding cutover remains NOT READY; see [security](security.md). Calendar controllers use `ICalendarService` and explicit contracts with additive revision checks; remaining `DataService` consumers do not become migrated by association. See [Calendar compatibility](calendar-compatibility.md).
+The current shared controller base applies `[Authorize]` across host boundaries. Replace it with host-neutral base behavior and explicit host policies.
 
 ## Caching
 
