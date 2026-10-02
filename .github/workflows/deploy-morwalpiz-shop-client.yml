@@ -17,7 +17,7 @@ permissions:
 env:
   AZURE_WEBAPP_NAME: morwalpiz-shop-client
   IMAGE_NAME: morwalpiz-shop-client
-  NODE_VERSION: "20.x"
+  NODE_VERSION: '22.x'
 
 jobs:
   build-and-deploy:
