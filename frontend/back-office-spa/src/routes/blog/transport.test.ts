@@ -94,6 +94,7 @@ describe('blog HTTP contracts', () => {
     expect(fetchMock.mock.calls[1][0]).toContain('/api/blog/article');
   });
   it('surfaces revision conflicts instead of treating them as successful saves', async () => {
+    setSelectedChannelId('channel-1');
     vi.stubGlobal(
       'fetch',
       vi

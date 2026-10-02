@@ -79,6 +79,7 @@ describe('shared API client CSRF integration', () => {
 
   it('rethrows network failures from delete requests', async () => {
     const networkError = new TypeError('Failed to fetch');
+    setSelectedChannelId('channel-one');
     setRequestCredentialsMode('omit');
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(networkError));
 
