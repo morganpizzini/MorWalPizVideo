@@ -51,6 +51,12 @@ import type {
   FaqCategoryAdmin,
 } from "@morwalpizvideo/models";
 import type { ChannelTerminology } from "@morwalpizvideo/models";
+import {
+  createApiClient,
+  legacyApiService,
+  publicApiService,
+  adminApiService,
+} from "./apiTransport";
 
 export const getChannelTerminology = (): Promise<ChannelTerminology> =>
   get(endpoints.CHANNEL_TERMINOLOGY);
@@ -80,16 +86,18 @@ function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
 }
 
 export const getActiveCustomForms = (): Promise<CustomForm[]> =>
-  get(endpoints.CUSTOMFORMS_ACTIVE);
+  publicApiService.get(endpoints.CUSTOMFORMS_ACTIVE);
 
 export const getEligibleSurveys = (): Promise<Survey[]> =>
-  get(endpoints.SURVEYS_ACTIVE);
+  publicApiService.get(endpoints.SURVEYS_ACTIVE);
 
 export const getSurveyByUrl = (url: string): Promise<Survey> =>
-  get(ComposeUrl(endpoints.SURVEYS_BY_URL, { url: encodeURIComponent(url) }));
+  publicApiService.get(
+    ComposeUrl(endpoints.SURVEYS_BY_URL, { url: encodeURIComponent(url) }),
+  );
 
 export const getCustomFormByUrl = (url: string): Promise<CustomForm> =>
-  get(
+  publicApiService.get(
     ComposeUrl(endpoints.CUSTOMFORMS_BY_URL, { url: encodeURIComponent(url) }),
   );
 
@@ -98,12 +106,14 @@ export const submitCustomFormResponse = (
   answers: AnyAnswer[],
   surveyId?: string,
 ): Promise<CustomFormResponse> =>
-  post(
-    ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
-      customFormId: encodeURIComponent(formId),
-    }),
-    { body: { answers: serializeFormAnswers(answers), surveyId } },
-  ).then(requireSuccessfulResponse);
+  publicApiService
+    .post(
+      ComposeUrl(endpoints.CUSTOMFORMS_RESPONSES, {
+        customFormId: encodeURIComponent(formId),
+      }),
+      { body: { answers: serializeFormAnswers(answers), surveyId } },
+    )
+    .then(requireSuccessfulResponse);
 
 export interface ApiErrorResponse {
   errors?: unknown[];
@@ -170,7 +180,7 @@ export const getAskCampaign = (
   channelName: string,
   campaignSlug: string,
 ): Promise<AskPublicCampaign> =>
-  get(
+  publicApiService.get(
     ComposeUrl(endpoints.ASK_CAMPAIGN, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -184,7 +194,7 @@ export const submitAsk = (
   recaptchaToken: string,
   name?: string,
 ): Promise<{ status: string }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.ASK_SUBMISSIONS, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -198,7 +208,7 @@ export const reactToAskSubmission = (
   campaignSlug: string,
   submissionId: string,
 ): Promise<{ accepted: boolean; count: number }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.ASK_REACTIONS, {
       channelName: encodeURIComponent(channelName),
       campaignSlug: encodeURIComponent(campaignSlug),
@@ -221,10 +231,12 @@ export interface FaqPublicItem {
   answers: FaqPublicAnswer[];
 }
 export const getPublicFaq = (category?: string): Promise<FaqPublicItem[]> =>
-  get(ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined));
+  publicApiService.get(
+    ComposeUrl(endpoints.FAQ, {}, category ? { category } : undefined),
+  );
 export const getPublicFaqCategories = (): Promise<
   Array<{ id: string; slug: string; name: string }>
-> => get(endpoints.FAQ_CATEGORIES);
+> => publicApiService.get(endpoints.FAQ_CATEGORIES);
 export const voteFaqAnswer = (
   faqId: string,
   channelName: string,
@@ -235,7 +247,7 @@ export const voteFaqAnswer = (
   helpfulVotes: number;
   notHelpfulVotes: number;
 }> =>
-  post(
+  publicApiService.post(
     ComposeUrl(endpoints.FAQ_VOTE, {
       faqId,
       channelName: encodeURIComponent(channelName),
@@ -1031,7 +1043,7 @@ export const saveNavigation = (payload: SaveNavigationDTO) =>
   put(endpoints.NAVIGATION, payload) as Promise<ChannelNavigation>;
 
 export const getPublicNavigation = (): Promise<PublicNavigation | null> =>
-  get(endpoints.NAVIGATION);
+  publicApiService.get(endpoints.NAVIGATION);
 
 // ==================== Sponsor API Services ====================
 
@@ -1042,17 +1054,17 @@ export const subscribeNewsletter = (payload: {
   email: string;
   language: string;
   recaptchaToken: string;
-}) => post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_SUBSCRIBE, payload);
 
 export const confirmNewsletter = (payload: {
   channelId: string;
   token: string;
-}) => post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_CONFIRM, payload);
 
 export const unsubscribeNewsletter = (payload: {
   channelId: string;
   token: string;
-}) => post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
+}) => publicApiService.post(frontendEndpoints.NEWSLETTER_UNSUBSCRIBE, payload);
 
 export const fetchNewsletters = () => get(endpoints.NEWSLETTERS);
 export const getNewsletter = (id: string) =>
@@ -1149,9 +1161,4 @@ const apiService = {
 
 export default apiService;
 
-export {
-  createApiClient,
-  legacyApiService,
-  publicApiService,
-  adminApiService,
-} from "./apiTransport";
+export { createApiClient, legacyApiService, publicApiService, adminApiService };
