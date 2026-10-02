@@ -1,4 +1,4 @@
-import { legacyApiService } from "./apiService";
+import { legacyApiService } from "./apiTransport";
 const { get, post, put, Delete } = legacyApiService;
 import endpoints, { ComposeUrl } from "./endpoints";
 import type {

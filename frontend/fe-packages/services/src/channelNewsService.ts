@@ -1,5 +1,5 @@
 import type { ChannelNews } from "@morwalpizvideo/models";
-import { publicGet as get } from "./apiService";
+import { publicGet as get } from "./apiTransport";
 import frontendEndpoints from "./endpoints-frontend";
 
 export function getPublicChannelNews(): Promise<ChannelNews[]> {

@@ -26,7 +26,7 @@ function safeHref(href?: string | null): string | undefined {
 }
 
 function RichText({ node }: { node: BlogText }): ReactNode {
-  const children = node.content?.map((child, index) => (
+  const children = node.content?.map((child: BlogText, index: number) => (
     <RichText key={index} node={child} />
   ));
   switch (node.type) {
@@ -168,8 +168,8 @@ function Block({
   block: BlogBlock;
   images: BlogImage[];
 }): ReactNode {
-  const selected = (block.imageIds ?? []).flatMap((id) => {
-    const image = images.find((item) => item.id === id);
+  const selected = (block.imageIds ?? []).flatMap((id: string) => {
+    const image = images.find((item: BlogImage) => item.id === id);
     return image ? [image] : [];
   });
   switch (block.type) {
@@ -193,7 +193,7 @@ function Block({
     case "gallery":
       return (
         <div className="row g-3">
-          {selected.map((image) => (
+          {selected.map((image: BlogImage) => (
             <figure key={image.id} className="col-12 col-sm-6">
               <Picture image={image} />
             </figure>
@@ -218,13 +218,13 @@ function Block({
     case "columns":
       return (
         <div className="row g-4">
-          {block.columns?.map((column, index) => (
+          {block.columns?.map((column: BlogBlock[], index: number) => (
             <div
               key={index}
               className={`col-12 ${block.columns?.length === 3 ? "col-md-4" : block.columns?.length === 2 ? "col-md-6" : ""}`}
               style={{ minWidth: 0 }}
             >
-              {column.map((child) => (
+              {column.map((child: BlogBlock) => (
                 <Fragment key={child.id}>
                   <div className="mb-4">
                     <Block block={child} images={images} />
@@ -247,7 +247,7 @@ export function BlogRenderer({ document, images }: BlogRendererProps) {
       className="blog-document"
       style={{ overflowWrap: "anywhere", lineHeight: 1.7 }}
     >
-      {document.blocks.map((block) => (
+      {document.blocks.map((block: BlogBlock) => (
         <div key={block.id} className="mb-4">
           <Block block={block} images={images} />
         </div>

@@ -4,7 +4,8 @@ description: "Use for safe delivery routing. Narrow bug fixes go directly to Mor
 tools: [read, search, agent]
 agents: ["MorWalPiz Repository Expert", "MorWalPiz Solution Architect", "MorWalPiz Delivery Architect", "MorWalPiz Senior Developer"]
 user-invocable: true
-disable-model-invocation: false
+model: MAI-Code-1.1-Flash (copilot)
+disable-model-invocation: true
 ---
 
 You are the permanent Delivery Handoff gatekeeper for the MorWalPizVideo repository.

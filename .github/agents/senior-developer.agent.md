@@ -3,7 +3,8 @@ name: "MorWalPiz Senior Developer"
 description: "Use when implementing features, fixing bugs, refactoring, adding tests, or making production code changes in the MorWalPizVideo repository. Follows existing backend, frontend, data, authentication, dependency injection, API, and testing conventions without redesigning the architecture."
 tools: [read, search, edit, execute, todo, agent]
 agents: ["MorWalPiz Repository Expert"]
-user-invocable: true
+user-invocable: false
+model: GPT-5.6 Luna (copilot)
 disable-model-invocation: false
 ---
 

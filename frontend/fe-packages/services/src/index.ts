@@ -12,6 +12,15 @@ export {
   setSelectedChannelId,
   setUnauthorizedHandler,
 } from "./apiService";
+export {
+  adminApiService,
+  legacyApiService,
+  publicApiService,
+  publicGet,
+  publicPost,
+  publicPut,
+  publicDelete,
+} from "./apiTransport";
 
 // Export individual HTTP methods
 export {
@@ -170,7 +179,26 @@ export {
   insightsTopicsApi,
   insightsNewsApi,
   insightsContentPlansApi,
+  insightsArticleDraftsApi,
 } from "./insightsService";
+export {
+  getCalendarEventByTitle,
+  getCalendarEventById,
+  fetchCalendarCategories,
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+} from "./calendarService";
+export {
+  fetchBlogPosts,
+  getBlogPost,
+  createBlogPost,
+  saveBlogPost,
+  publishBlogPost,
+  uploadBlogImage,
+  getPublicBlog,
+  getPublicBlogPost,
+} from "./blogService";
 
 // Video ↔ Channel join (FR-016 / FR-017)
 export {

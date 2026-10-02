@@ -86,16 +86,16 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: Tags,
       },
       {
-        label: 'Sponsors',
-        path: '/sponsors',
-        permissions: [permissions.sponsors.view, permissions.sponsors.manage],
-        icon: Package,
-      },
-      {
         label: 'Products',
         path: '/products',
         permissions: [permissions.products.view, permissions.products.manage],
         icon: ShoppingBag,
+      },
+      {
+        label: 'Sponsors',
+        path: '/sponsors',
+        permissions: [permissions.sponsors.view, permissions.sponsors.manage],
+        icon: Package,
       },
     ],
   },

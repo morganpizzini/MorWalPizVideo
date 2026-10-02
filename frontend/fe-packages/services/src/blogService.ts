@@ -9,9 +9,9 @@ import {
   post,
   put,
   postFormData,
-  publicGet,
   requireSuccessfulResponse,
 } from "./apiService";
+import { publicGet } from "./apiTransport";
 import endpoints, { ComposeUrl } from "./endpoints";
 
 const detail = (id: string) => ComposeUrl(endpoints.BLOG_POST_DETAIL, { id });

@@ -6,7 +6,7 @@
  *   (b) `YTChannel.videos[*].videoId` (legacy fallback, source of truth today)
  */
 
-import { publicGet as get } from "./apiService";
+import { publicGet as get } from "./apiTransport";
 import frontendEndpoints from "./endpoints-frontend";
 
 export const MORWALPIZ_CHANNEL_ID = "UCQRMDE-gxoD43w2q-QCVmIA";

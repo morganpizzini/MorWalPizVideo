@@ -3,7 +3,8 @@ name: "MorWalPiz Solution Architect"
 description: "Use when analyzing architecture, planning features or refactors, identifying impacted projects and files, assessing backend/frontend/database effects, technical debt, risks, tests, or migrations for the MorWalPizVideo solution. Produces implementation plans only and never production code."
 tools: [read, search, agent]
 agents: ["MorWalPiz Repository Expert"]
-user-invocable: true
+user-invocable: false
+model: GPT-5.6 Sol (copilot)
 disable-model-invocation: false
 ---
 

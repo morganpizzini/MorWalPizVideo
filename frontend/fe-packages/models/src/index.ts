@@ -3,6 +3,8 @@
 // Calendar Event exports
 export type {
   CalendarEvent,
+  AdminCalendarEvent,
+  SaveCalendarEventRequest,
   CreateCalendarEventRequest,
   UpdateCalendarEventRequest,
 } from "./CalendarEvent";
@@ -48,6 +50,20 @@ export type {
   CreatePageDTO,
   UpdatePageDTO,
 } from "./page";
+export type {
+  BlogMark,
+  BlogText,
+  BlogBlockType,
+  BlogBlock,
+  BlogDocument,
+  BlogSnapshot,
+  BlogImage,
+  BlogPostAdmin,
+  SaveBlogPost,
+  BlogSummary,
+  BlogPostPublic,
+  BlogPage,
+} from "./blog";
 export { NavigationItemType } from "./navigation";
 export type {
   NavigationMenuItem,
@@ -232,6 +248,9 @@ export type {
   ReviewNewsItemRequest,
   GenerateContentPlanRequest,
   UpdateContentPlanRequest,
+  InsightArticleDraftMode,
+  CreateInsightArticleDraftRequest,
+  InsightArticleDraft,
   AnalyzeInsightCommentsRequest,
   AnalyzeInsightCommentsResponse,
 } from "./insights";
