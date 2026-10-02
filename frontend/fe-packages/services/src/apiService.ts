@@ -377,6 +377,7 @@ const scopedBackOfficePrefixes = [
   "/api/dashboard",
   "/api/apikeys",
   "/api/newsletters",
+  "/api/blogposts",
   "/api/products",
   "/api/productcategories",
 ];

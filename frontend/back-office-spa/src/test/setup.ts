@@ -1,4 +1,14 @@
 import '@testing-library/jest-dom';
+import { URLSearchParams as NodeURLSearchParams } from 'node:url';
+
+Object.defineProperty(globalThis, 'URLSearchParams', {
+  configurable: true,
+  value: NodeURLSearchParams,
+});
+Object.defineProperty(window, 'URLSearchParams', {
+  configurable: true,
+  value: NodeURLSearchParams,
+});
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

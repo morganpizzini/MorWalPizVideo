@@ -37,13 +37,14 @@ Excluded:
 10. [Security](security.md)
 11. [Deployment](deployment.md)
 12. [Development](development.md)
-13. [MongoDB Operations](mongo-operations.md)
-14. [Architecture Decisions](architecture-decisions.md)
-15. [Technical Debt](technical-debt.md)
-16. [Future Improvements](future-improvements.md)
-17. [Refactoring Roadmap](refactoring-roadmap.md)
-18. [BackOffice Admin Dashboard](admin-dashboard.md)
-19. [Shooting Range POC](../shooting-range-architecture.md)
+13. [Test Execution Runbook](testing.md)
+14. [MongoDB Operations](mongo-operations.md)
+15. [Architecture Decisions](architecture-decisions.md)
+16. [Technical Debt](technical-debt.md)
+17. [Future Improvements](future-improvements.md)
+18. [Refactoring Roadmap](refactoring-roadmap.md)
+19. [BackOffice Admin Dashboard](admin-dashboard.md)
+20. [Shooting Range POC](../shooting-range-architecture.md)
 
 ## Architectural Baseline
 
@@ -85,6 +86,7 @@ Supporting security, health, feature, and setup documents should be read with th
 - `MorWalPizVideo.ServerAPI/KEYVAULT_SETUP.md`
 - [Transport isolation](transport-isolation.md)
 - [Calendar compatibility](calendar-compatibility.md)
+- [Test execution runbook](testing.md)
 - [Delivery/test matrix](deployment.md#delivery-and-test-matrix)
 - [Release evidence and recovery](operations/phase5-activation-and-recovery.md)
 

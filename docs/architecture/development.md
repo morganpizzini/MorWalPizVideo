@@ -88,7 +88,7 @@ Existing frontend Vitest and Windows VSTest runners execute in CI alongside back
 
 ## Common Commands
 
-Use project scripts and solution commands as defined by current manifests. Shared frontend packages build in models, services, layout order. Run the narrowest affected test/build first, then broaden to consumers.
+Use project scripts and solution commands as defined by current manifests. Shared frontend packages build in models, services, layout order. Run the narrowest affected test/build first, then broaden to consumers. See the [test execution runbook](testing.md) for selected-test paths, exact commands, and CI-equivalent filters.
 
 The [delivery/test matrix](deployment.md#delivery-and-test-matrix) lists actual runners and fresh pass/fail/not-run results. Empty active frontend suites fail (`--passWithNoTests=false`); filtered backend deployment suites emit TRX results and fail when the selected count is zero; desktop tests require Windows. `build-uncheck` is not a substitute for a failed TypeScript gate. CI changes do not authorize production operations.
 

@@ -29,4 +29,5 @@ For technologies, project ownership, commands, and current versus target scope,
 read the source-aligned architecture guide and the owning feature document:
 [Architecture guide](../docs/architecture/README.md)
 [Development commands](../docs/architecture/development.md)
+[Test execution runbook](../docs/architecture/testing.md)
 <!-- SPECKIT END -->
