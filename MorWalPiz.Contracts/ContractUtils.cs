@@ -23,6 +23,43 @@ namespace MorWalPiz.Contracts
                 ChannelId = entity.ChannelId,
             };
         }
+
+        public static CompetitionContract Convert(Competition entity) => new()
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description,
+            Location = entity.Location,
+            StartDate = entity.StartDate,
+            EndDate = entity.EndDate,
+            Status = entity.Status,
+            Type = entity.Type,
+            MaxParticipants = entity.MaxParticipants,
+            RegistrationDeadline = entity.RegistrationDeadline,
+            Rules = entity.Rules,
+            Stages = entity.Stages.Select(stage => new CompetitionStageContract
+            {
+                StageId = stage.StageId,
+                StageNumber = stage.StageNumber,
+                Name = stage.Name,
+                Description = stage.Description,
+                TargetCount = stage.TargetCount,
+                RoundCount = stage.RoundCount,
+                MinScore = stage.MinScore,
+                MaxScore = stage.MaxScore,
+                TimeLimitSeconds = stage.TimeLimitSeconds,
+                Briefing = stage.Briefing,
+                Order = stage.Order,
+                Images = stage.Images,
+                Stats = new CompetitionStageStatsContract
+                {
+                    AverageRating = stage.Stats.AverageRating,
+                    TotalReviews = stage.Stats.TotalReviews
+                }
+            }).ToArray(),
+            ImageUrl = entity.ImageUrl,
+            WebsiteUrl = entity.WebsiteUrl
+        };
         public static ShortLinkContract Convert(ShortLink entity, string endpointBasePath, string? videoTitle = null)
         {
             return new ShortLinkContract

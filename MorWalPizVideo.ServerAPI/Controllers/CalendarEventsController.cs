@@ -16,10 +16,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         private readonly ICalendarService _calendarService;
         private readonly IContentService _contentService;
         public CalendarEventsController(
-            IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
             ICalendarService calendarService,
-            IContentService contentService) : base(_dataService, _memoryCache)
+            IContentService contentService) : base(_memoryCache)
         {
             _calendarService = calendarService;
             _contentService = contentService;

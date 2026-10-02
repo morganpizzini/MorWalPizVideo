@@ -9,8 +9,13 @@ namespace MorWalPizVideo.Server.Controllers
 {
     public abstract class ApplicationController : ApplicationControllerBase
     {   
-        protected readonly IGenericDataService dataService;
+        protected readonly IGenericDataService? dataService;
         protected readonly IMorWalPizCache cache;
+
+        protected ApplicationController(IMorWalPizCache _memoryCache)
+        {
+            cache = _memoryCache;
+        }
         
         protected ApplicationController(IGenericDataService _dataService, IMorWalPizCache _memoryCache)
         {
@@ -29,7 +34,8 @@ namespace MorWalPizVideo.Server.Controllers
         {
             return (await cache.GetOrCreateAsync<IList<YouTubeContent>>(CacheKeys.Matches, async () =>
             {
-                return (await dataService.FetchMatches())
+                return (await (dataService ?? throw new InvalidOperationException(
+                    "The match helpers require an IGenericDataService dependency." )).FetchMatches())
                             .OrderByDescending(x => x.CreationDateTime)
                             .ToList();
             })).Skip(skip).Take(take).ToList();

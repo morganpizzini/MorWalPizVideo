@@ -10,6 +10,32 @@ on:
   workflow_dispatch:
 
 jobs:
+  secret-artifact-guard:
+    name: Secret and Credential Artifact Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for source guard
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run source-safe secret and artifact guard
+        run: node scripts/secret-artifact-guard.mjs --tracked
+
+      - name: Test source-safe secret and artifact guard
+        run: node --test scripts/secret-artifact-guard.test.mjs
+
+      - name: Verify credential artifacts stay out of build output
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run credential artifact tests
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --filter FullyQualifiedName~CredentialArtifactExclusionTests --configuration Release
+
   test-frontend:
     name: Test Frontend - ${{ matrix.workspace }}
     runs-on: ubuntu-latest

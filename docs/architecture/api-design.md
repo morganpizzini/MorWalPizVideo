@@ -1,5 +1,13 @@
 # API Design
 
+## Active versioned slice
+
+The competitions read API has an additive `/api/v1/competitions` surface backed by
+`MorWalPiz.Contracts.Contracts.CompetitionContract`. It maps persistence entities to
+public-safe DTOs and returns RFC 9457 Problem Details for missing competition IDs.
+The existing unversioned `/api/competitions` routes remain unchanged for compatibility.
+This is a feature slice, not a repository-wide versioning or error-response migration.
+
 ## API Surfaces
 
 ### BackOffice API

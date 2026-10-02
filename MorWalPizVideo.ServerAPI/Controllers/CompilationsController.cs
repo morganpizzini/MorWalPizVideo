@@ -13,9 +13,8 @@ namespace MorWalPizVideo.ServerAPI.Controllers
     {
         private readonly ICatalogService _catalogService;
         public CompilationsController(
-            IGenericDataService _dataService,
             IMorWalPizCache _memoryCache,
-            ICatalogService catalogService) : base(_dataService, _memoryCache)
+            ICatalogService catalogService) : base(_memoryCache)
         {
             _catalogService = catalogService;
         }

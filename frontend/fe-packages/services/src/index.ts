@@ -16,10 +16,22 @@ export {
   adminApiService,
   legacyApiService,
   publicApiService,
+  awaitChannelReadiness,
+  coalesceAccessibleChannelsRequest,
+  isScopedBackOfficeRequest,
+  rejectChannelBootstrap,
+  resolveChannelBootstrap,
+  startChannelBootstrap,
+  ChannelContextError,
   publicGet,
   publicPost,
   publicPut,
   publicDelete,
+} from "./apiTransport";
+export type {
+  ChannelBootstrapHandle,
+  ChannelBootstrapState,
+  ChannelContextErrorCode,
 } from "./apiTransport";
 
 // Export individual HTTP methods

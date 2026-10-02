@@ -7,7 +7,7 @@ MongoDB is owned and operated by the project owner.
 Source-owned index operations now exist:
 
 - BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit`, `POST /api/mongoindexes/apply`, and the explicit legacy-removal route `POST /api/mongoindexes/remove`.
-- Index definitions are maintained in source via `MongoIndexOperationsService` (runtime manifest) and the operational file `docs/architecture/operations/mongo-index-manifest.phase4.json`.
+- The executable allowlist in `MongoIndexOperationsService` is the runtime authority for audit/apply/remove operations. The operational file `docs/architecture/operations/mongo-index-manifest.phase4.json` is a phase-4 review snapshot, is not loaded dynamically at runtime, and must not be used for an apply request until it has been reconciled against the executable allowlist.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 
 Operational evidence is now recorded for the Phase 4 verification baseline under `docs/architecture/operations/mongo-index-audits/`:
@@ -18,7 +18,7 @@ Operational evidence is now recorded for the Phase 4 verification baseline under
 - `phase4-2026-08-03-verification-bundle.md`
 - `phase4-2026-08-16-sample-remove-output.json`
 
-Per-environment production records should continue to be added for each rollout window.
+Per-environment production records should continue to be added for each rollout window. Source alignment and sanitized sample evidence do not prove that any target index was applied; no target changes are authorized by this source-only reconciliation.
 
 ## Safety Sequence
 

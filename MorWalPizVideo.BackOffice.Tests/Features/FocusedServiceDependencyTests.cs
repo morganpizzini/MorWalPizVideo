@@ -14,6 +14,9 @@ public class FocusedServiceDependencyTests
         Assert.DoesNotContain(GetConstructorTypes(typeof(VideosController)), t => t == typeof(DataService));
         Assert.DoesNotContain(GetConstructorTypes(typeof(CompilationsController)), t => t == typeof(DataService));
         Assert.DoesNotContain(GetConstructorTypes(typeof(CalendarEventsController)), t => t == typeof(DataService));
+        Assert.DoesNotContain(GetConstructorTypes(typeof(MorWalPizVideo.ServerAPI.Controllers.CompilationsController)), t => t == typeof(IGenericDataService));
+        Assert.DoesNotContain(GetConstructorTypes(typeof(MorWalPizVideo.ServerAPI.Controllers.CalendarEventsController)), t => t == typeof(IGenericDataService));
+        Assert.DoesNotContain(GetConstructorTypes(typeof(MorWalPizVideo.ServerAPI.Controllers.MatchesController)), t => t == typeof(IGenericDataService));
     }
 
     [Fact]

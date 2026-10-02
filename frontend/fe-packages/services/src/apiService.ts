@@ -52,7 +52,11 @@ import type {
 } from "@morwalpizvideo/models";
 import type { ChannelTerminology } from "@morwalpizvideo/models";
 import {
+  awaitChannelReadiness,
+  ChannelContextError,
+  coalesceAccessibleChannelsRequest,
   createApiClient,
+  isScopedBackOfficeRequest,
   legacyApiService,
   publicApiService,
   adminApiService,
@@ -367,77 +371,18 @@ type CredentialsMode = RequestCredentials;
 let requestCredentialsMode: CredentialsMode = "include";
 let csrfTokenPromise: Promise<string> | null = null;
 let cookieOnlyMode = false;
-const selectedChannelStorageKey = "backoffice.selectedChannelId";
-let selectedChannelId: string | null =
-  typeof window !== "undefined"
-    ? window.localStorage.getItem(selectedChannelStorageKey)
-    : null;
-
-const scopedBackOfficePrefixes = [
-  "/api/videos",
-  "/api/categories",
-  "/api/channels",
-  "/api/imageupload",
-  "/api/calendarevents",
-  "/api/compilations",
-  "/api/shortlinks",
-  "/api/querylinks",
-  "/api/quicklinks",
-  "/api/pages",
-  "/api/navigation",
-  "/api/insights",
-  "/api/dashboard",
-  "/api/apikeys",
-  "/api/newsletters",
-  "/api/blogposts",
-  "/api/products",
-  "/api/productcategories",
-];
-
-function isScopedBackOfficeRequest(url: string): boolean {
-  const pathWithoutQuery = url.split("?")[0].toLowerCase();
-  const normalizedUrl = pathWithoutQuery.startsWith("/")
-    ? pathWithoutQuery
-    : `/${pathWithoutQuery}`;
-
-  if (
-    normalizedUrl === "/api/channels" ||
-    normalizedUrl === "/api/channels/accessible"
-  ) {
-    return false;
-  }
-
-  return scopedBackOfficePrefixes.some(
-    (prefix) =>
-      normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
-  );
-}
-
 export function getSelectedChannelId(): string | null {
-  return selectedChannelId;
+  return adminApiService.getSelectedChannelId();
 }
 
 export function setSelectedChannelId(channelId: string | null): void {
-  selectedChannelId = channelId?.trim() || null;
-  if (typeof window !== "undefined") {
-    if (selectedChannelId) {
-      window.localStorage.setItem(selectedChannelStorageKey, selectedChannelId);
-    } else {
-      window.localStorage.removeItem(selectedChannelStorageKey);
-    }
-  }
+  adminApiService.setSelectedChannelId(channelId);
 }
 
 export function selectFirstAccessibleChannel(
   channels: readonly { channelId: string }[],
 ): string | null {
-  const selected = channels.some(
-    (channel) => channel.channelId === selectedChannelId,
-  )
-    ? selectedChannelId
-    : (channels[0]?.channelId ?? null);
-  setSelectedChannelId(selected);
-  return selected;
+  return adminApiService.selectFirstAccessibleChannel(channels);
 }
 
 /**
@@ -672,7 +617,27 @@ export async function call(
   isFormData = false,
   responseOptions?: ResponseOptions,
   extraHeaders?: Record<string, string>,
-) {
+  skipAccessibleChannelsCoalescing = false,
+): Promise<any> {
+  if (
+    !skipAccessibleChannelsCoalescing &&
+    url.split("?")[0].toLowerCase() === "/api/channels/accessible"
+  ) {
+    return coalesceAccessibleChannelsRequest(() =>
+      call(
+        url,
+        method,
+        body,
+        overrideHeaderEnv,
+        query,
+        downloadFile,
+        isFormData,
+        responseOptions,
+        extraHeaders,
+        true,
+      ),
+    );
+  }
   const headers = new Headers();
   Object.entries(extraHeaders ?? {}).forEach(([key, value]) =>
     headers.set(key, value),
@@ -684,8 +649,13 @@ export async function call(
     headers.append("Authorization", `Bearer ${token}`);
   }
 
-  if (isScopedBackOfficeRequest(url) && selectedChannelId) {
-    headers.set("X-Channel-Id", selectedChannelId);
+  if (isScopedBackOfficeRequest(url)) {
+    const readyChannelId = await awaitChannelReadiness();
+    const channelId = readyChannelId ?? adminApiService.getSelectedChannelId();
+    if (!channelId) {
+      throw new ChannelContextError("channel_unavailable");
+    }
+    headers.set("X-Channel-Id", channelId);
   }
 
   const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(

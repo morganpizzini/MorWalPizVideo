@@ -47,6 +47,192 @@ import type {
 } from "@morwalpizvideo/models";
 import type { ChannelTerminology } from "@morwalpizvideo/models";
 
+const selectedChannelStorageKey = "backoffice.selectedChannelId";
+
+const scopedBackOfficePrefixes = [
+  "/api/videos",
+  "/api/categories",
+  "/api/channels",
+  "/api/imageupload",
+  "/api/calendarevents",
+  "/api/compilations",
+  "/api/shortlinks",
+  "/api/querylinks",
+  "/api/quicklinks",
+  "/api/pages",
+  "/api/blogposts",
+  "/api/navigation",
+  "/api/insights",
+  "/api/dashboard",
+  "/api/apikeys",
+  "/api/newsletters",
+  "/api/products",
+  "/api/productcategories",
+  "/api/sponsors",
+];
+
+export function isScopedBackOfficeRequest(url: string): boolean {
+  const normalizedUrl = `/${url.split("?")[0].toLowerCase().replace(/^\/+/, "")}`;
+  if (
+    normalizedUrl === "/api/channels" ||
+    normalizedUrl === "/api/channels/accessible" ||
+    normalizedUrl === "/api/features"
+  ) {
+    return false;
+  }
+
+  return scopedBackOfficePrefixes.some(
+    (prefix) =>
+      normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
+  );
+}
+
+export type ChannelBootstrapState =
+  | "pending"
+  | "ready"
+  | "unavailable"
+  | "failed";
+
+export type ChannelBootstrapHandle = {
+  readonly generation: number;
+};
+
+export type ChannelContextErrorCode =
+  | "channel_unavailable"
+  | "channel_initialization_failed";
+
+export class ChannelContextError extends Error {
+  readonly code: ChannelContextErrorCode;
+  readonly cause?: unknown;
+
+  constructor(code: ChannelContextErrorCode, cause?: unknown) {
+    super(
+      code === "channel_unavailable"
+        ? "No accessible channel is assigned."
+        : "Channel context initialization failed or was aborted.",
+    );
+    this.name = "ChannelContextError";
+    this.code = code;
+    this.cause = cause;
+  }
+}
+
+interface ChannelBootstrapGeneration {
+  handle: ChannelBootstrapHandle;
+  state: ChannelBootstrapState;
+  channelId: string | null;
+  readiness: Promise<string>;
+  resolve: (channelId: string) => void;
+  reject: (error: ChannelContextError) => void;
+  accessibleChannelsRequest?: Promise<unknown>;
+}
+
+let bootstrapGeneration = 0;
+let currentBootstrap: ChannelBootstrapGeneration | null = null;
+
+function settleBootstrap(
+  generation: ChannelBootstrapGeneration,
+  state: Exclude<ChannelBootstrapState, "pending">,
+  channelId: string | null,
+  error?: ChannelContextError,
+): void {
+  if (generation.state !== "pending") return;
+  generation.state = state;
+  generation.channelId = channelId;
+  if (state === "ready" && channelId) {
+    generation.resolve(channelId);
+  } else {
+    generation.reject(
+      error ??
+        new ChannelContextError(
+          state === "unavailable"
+            ? "channel_unavailable"
+            : "channel_initialization_failed",
+        ),
+    );
+  }
+}
+
+export function startChannelBootstrap(): ChannelBootstrapHandle {
+  if (currentBootstrap?.state === "pending") {
+    settleBootstrap(
+      currentBootstrap,
+      "failed",
+      null,
+      new ChannelContextError("channel_initialization_failed"),
+    );
+  }
+
+  const handle: ChannelBootstrapHandle = { generation: ++bootstrapGeneration };
+  let resolveReadiness!: (channelId: string) => void;
+  let rejectReadiness!: (error: ChannelContextError) => void;
+  const generation: ChannelBootstrapGeneration = {
+    handle,
+    state: "pending",
+    channelId: null,
+    readiness: new Promise<string>((resolve, reject) => {
+      resolveReadiness = resolve;
+      rejectReadiness = reject;
+    }),
+    resolve: resolveReadiness,
+    reject: rejectReadiness,
+  };
+  generation.readiness.catch(() => undefined);
+  currentBootstrap = generation;
+  return handle;
+}
+
+function isCurrentBootstrap(handle: ChannelBootstrapHandle): boolean {
+  return currentBootstrap?.handle.generation === handle.generation;
+}
+
+export function resolveChannelBootstrap(
+  handle: ChannelBootstrapHandle,
+  channelId: string | null,
+): void {
+  const generation = currentBootstrap;
+  if (!generation || !isCurrentBootstrap(handle)) return;
+  settleBootstrap(generation, channelId ? "ready" : "unavailable", channelId);
+}
+
+export function rejectChannelBootstrap(
+  handle: ChannelBootstrapHandle,
+  cause?: unknown,
+): void {
+  const generation = currentBootstrap;
+  if (!generation || !isCurrentBootstrap(handle)) return;
+  settleBootstrap(
+    generation,
+    "failed",
+    null,
+    new ChannelContextError("channel_initialization_failed", cause),
+  );
+}
+
+export async function awaitChannelReadiness(): Promise<string | null> {
+  const generation = currentBootstrap;
+  if (!generation) return null;
+  if (generation.state === "ready") return generation.channelId;
+  if (generation.state === "unavailable") {
+    throw new ChannelContextError("channel_unavailable");
+  }
+  if (generation.state === "failed") {
+    throw new ChannelContextError("channel_initialization_failed");
+  }
+  return generation.readiness;
+}
+
+export function coalesceAccessibleChannelsRequest<T>(
+  request: () => Promise<T>,
+): Promise<T> {
+  const generation = currentBootstrap;
+  if (!generation) return request();
+  if (!generation.accessibleChannelsRequest) {
+    generation.accessibleChannelsRequest = request();
+  }
+  return generation.accessibleChannelsRequest as Promise<T>;
+}
+
 export const getChannelTerminology = (): Promise<ChannelTerminology> =>
   get(endpoints.CHANNEL_TERMINOLOGY);
 export const saveChannelTerminology = (
@@ -341,13 +527,18 @@ type AuthTokenProvider = () => string | null;
 export interface ApiClientOptions {
   mode: "public" | "admin" | "legacy";
   baseUrl?: string;
+  bootstrapAware?: boolean;
 }
 
 export interface ResponseOptions {
   returnFullResponse?: boolean;
 }
 
-export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
+export function createApiClient({
+  mode,
+  baseUrl,
+  bootstrapAware = false,
+}: ApiClientOptions) {
   /**
    * Registered auth token provider
    */
@@ -367,52 +558,10 @@ export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
   let csrfTokenPromise: Promise<string> | null = null;
   let csrfTokenBaseUrl: string | null = null;
   let cookieOnlyMode = mode !== "legacy";
-  const selectedChannelStorageKey = "backoffice.selectedChannelId";
   let selectedChannelId: string | null =
     mode !== "public" && typeof window !== "undefined"
       ? window.localStorage.getItem(selectedChannelStorageKey)
       : null;
-
-  const scopedBackOfficePrefixes = [
-    "/api/videos",
-    "/api/categories",
-    "/api/channels",
-    "/api/imageupload",
-    "/api/calendarevents",
-    "/api/compilations",
-    "/api/shortlinks",
-    "/api/querylinks",
-    "/api/quicklinks",
-    "/api/pages",
-    "/api/blogposts",
-    "/api/navigation",
-    "/api/insights",
-    "/api/dashboard",
-    "/api/apikeys",
-    "/api/newsletters",
-    "/api/products",
-    "/api/productcategories",
-    "/api/sponsors",
-  ];
-
-  function isScopedBackOfficeRequest(url: string): boolean {
-    const pathWithoutQuery = url.split("?")[0].toLowerCase();
-    const normalizedUrl = pathWithoutQuery.startsWith("/")
-      ? pathWithoutQuery
-      : `/${pathWithoutQuery}`;
-
-    if (
-      normalizedUrl === "/api/channels" ||
-      normalizedUrl === "/api/channels/accessible"
-    ) {
-      return false;
-    }
-
-    return scopedBackOfficePrefixes.some(
-      (prefix) =>
-        normalizedUrl === prefix || normalizedUrl.startsWith(`${prefix}/`),
-    );
-  }
 
   function getSelectedChannelId(): string | null {
     return selectedChannelId;
@@ -676,7 +825,29 @@ export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
     isFormData = false,
     responseOptions?: ResponseOptions,
     extraHeaders?: Record<string, string>,
-  ) {
+    skipAccessibleChannelsCoalescing = false,
+  ): Promise<any> {
+    if (
+      !skipAccessibleChannelsCoalescing &&
+      bootstrapAware &&
+      mode === "admin" &&
+      url.split("?")[0].toLowerCase() === "/api/channels/accessible"
+    ) {
+      return coalesceAccessibleChannelsRequest(() =>
+        call(
+          url,
+          method,
+          body,
+          overrideHeaderEnv,
+          query,
+          downloadFile,
+          isFormData,
+          responseOptions,
+          extraHeaders,
+          true,
+        ),
+      );
+    }
     const requestBaseUrl = getApiBaseUrl();
     const credentials =
       mode === "public"
@@ -703,7 +874,14 @@ export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
       headers.append("Authorization", `Bearer ${token}`);
     }
 
-    if (
+    if (bootstrapAware && mode === "admin" && isScopedBackOfficeRequest(url)) {
+      const readyChannelId = await awaitChannelReadiness();
+      const channelId = readyChannelId ?? selectedChannelId;
+      if (!channelId) {
+        throw new ChannelContextError("channel_unavailable");
+      }
+      headers.set("X-Channel-Id", channelId);
+    } else if (
       mode !== "public" &&
       isScopedBackOfficeRequest(url) &&
       selectedChannelId
@@ -938,7 +1116,10 @@ export function createApiClient({ mode, baseUrl }: ApiClientOptions) {
 
 export const legacyApiService = createApiClient({ mode: "legacy" });
 export const publicApiService = createApiClient({ mode: "public" });
-export const adminApiService = createApiClient({ mode: "admin" });
+export const adminApiService = createApiClient({
+  mode: "admin",
+  bootstrapAware: true,
+});
 export const {
   get,
   post,

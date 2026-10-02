@@ -20,12 +20,11 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         private readonly IContentService _contentService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<MatchesController> _logger;
-        public MatchesController(IGenericDataService _dataService,
-            IMorWalPizCache _memoryCache,
+        public MatchesController(IMorWalPizCache _memoryCache,
             IBlobService blobService,
             IContentService contentService,
             IConfiguration configuration,
-            ILogger<MatchesController> logger) : base(_dataService, _memoryCache)
+            ILogger<MatchesController> logger) : base(_memoryCache)
         {
             _blobService = blobService;
             _contentService = contentService;
