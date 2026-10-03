@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Footer from './Footer';
 import Header from './Header';
-import { Outlet, useLocation, useNavigation } from 'react-router';
+import { Outlet, useFetchers, useLocation, useNavigation } from 'react-router';
 import Breadcrumbs from '@components/Breadcrumbs';
 import AdminSidebar from './AdminSidebar';
 import { ChannelProvider } from '../contexts/ChannelContext';
@@ -20,6 +20,7 @@ const PrimaryLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigation = useNavigation();
+  const fetchers = useFetchers();
   const { channels } = useLoaderData() as AuthLoaderData;
 
   useEffect(() => {
@@ -31,6 +32,7 @@ const PrimaryLayout: React.FC = () => {
       <PrimaryLayoutContent
         channels={channels}
         navigationState={navigation.state}
+        fetcherPending={fetchers.some(fetcher => fetcher.state !== 'idle')}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
@@ -41,6 +43,7 @@ const PrimaryLayout: React.FC = () => {
 interface PrimaryLayoutContentProps {
   channels: readonly Channel[];
   navigationState: ReturnType<typeof useNavigation>['state'];
+  fetcherPending: boolean;
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -48,6 +51,7 @@ interface PrimaryLayoutContentProps {
 const PrimaryLayoutContent: React.FC<PrimaryLayoutContentProps> = ({
   channels,
   navigationState,
+  fetcherPending,
   sidebarOpen,
   setSidebarOpen,
 }) => {
@@ -56,7 +60,9 @@ const PrimaryLayoutContent: React.FC<PrimaryLayoutContentProps> = ({
   return (
     <ChannelProvider channels={channels}>
       <div
-        className={`router-progress ${navigationState === 'idle' && !deferredPending ? '' : 'is-active'}`}
+        className={`router-progress ${
+          navigationState === 'idle' && !fetcherPending && !deferredPending ? '' : 'is-active'
+        }`}
         role="status"
         aria-live="polite"
         aria-label={navigationState === 'submitting' ? 'Saving changes' : 'Loading page'}

@@ -10,18 +10,12 @@ function isApiError(value: unknown): value is { errors: unknown[]; status?: numb
   );
 }
 
-function formatError(error: unknown): string {
-  if (typeof error === 'string') return error;
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === 'string') return message;
-  }
-  return String(error);
-}
-
 export default async function loader() {
   const formUrl = 'sponsor';
-  const [sponsors, formResponse] = await Promise.all([getSponsors(), getCustomFormByUrl(formUrl)]);
+  const [sponsors, formResponse] = await Promise.all([
+    getSponsors(),
+    getCustomFormByUrl(formUrl).catch(() => undefined),
+  ]);
   if (!sponsors) {
     // throw to ErrorBoundary
     throw data(null, { status: 404 });
@@ -30,14 +24,11 @@ export default async function loader() {
   if (isApiError(formResponse)) {
     if (formResponse.status === 404) return { sponsors, form: undefined };
 
-    const message =
-      formResponse.errors.map(formatError).filter(Boolean).join('\n') || 'Sponsor form unavailable';
-    throw new Response(message, { status: formResponse.status ?? 500 });
+    return { sponsors, form: undefined };
   }
 
   if (!formResponse) {
-    // throw to ErrorBoundary
-    throw data(null, { status: 404 });
+    return { sponsors, form: undefined };
   }
 
   return { sponsors, form: formResponse };

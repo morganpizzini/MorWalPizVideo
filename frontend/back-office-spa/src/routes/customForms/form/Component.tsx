@@ -8,6 +8,7 @@ import {
   AnyQuestion,
   QuestionOption,
   OpenQuestion,
+  TextInputQuestion,
   MultipleChoiceQuestion,
   SingleChoiceQuestion,
 } from '@morwalpizvideo/models';
@@ -78,7 +79,7 @@ const CustomFormForm: React.FC = () => {
     const newQuestion: QuestionFormData = {
       questionId: `q_${Date.now()}`,
       questionText: '',
-      questionType: QuestionType.Open,
+      questionType: QuestionType.TextInput,
       isRequired: false,
       order: questions.length,
       options: [],
@@ -99,7 +100,7 @@ const CustomFormForm: React.FC = () => {
     // If changing question type, handle options accordingly
     if (field === 'questionType') {
       const newType = value as QuestionType;
-      if (newType === QuestionType.Open) {
+      if (newType === QuestionType.Open || newType === QuestionType.TextInput) {
         newQuestions[index].options = undefined;
       } else if (!newQuestions[index].options) {
         newQuestions[index].options = [];
@@ -180,9 +181,11 @@ const CustomFormForm: React.FC = () => {
               ? 'EmailQuestion'
               : q.questionType === QuestionType.Open
                 ? 'OpenQuestion'
-                : q.questionType === QuestionType.MultipleChoice
-                  ? 'MultipleChoiceQuestion'
-                  : 'SingleChoiceQuestion',
+                : q.questionType === QuestionType.TextInput
+                  ? 'TextInputQuestion'
+                  : q.questionType === QuestionType.MultipleChoice
+                    ? 'MultipleChoiceQuestion'
+                    : 'SingleChoiceQuestion',
         questionId: q.questionId,
         questionText: q.questionText,
         questionType: q.questionType,
@@ -192,6 +195,8 @@ const CustomFormForm: React.FC = () => {
 
       if (q.questionType === QuestionType.Open || q.questionType === QuestionType.Email) {
         return base as OpenQuestion;
+      } else if (q.questionType === QuestionType.TextInput) {
+        return base as TextInputQuestion;
       } else if (q.questionType === QuestionType.Boolean) {
         return base as AnyQuestion;
       } else if (q.questionType === QuestionType.MultipleChoice) {
@@ -223,6 +228,8 @@ const CustomFormForm: React.FC = () => {
     switch (type) {
       case QuestionType.Open:
         return 'Text Area';
+      case QuestionType.TextInput:
+        return 'Text Input';
       case QuestionType.MultipleChoice:
         return 'Multiple Choice';
       case QuestionType.SingleChoice:
@@ -425,6 +432,7 @@ const CustomFormForm: React.FC = () => {
                               updateQuestion(qIndex, 'questionType', parseInt(e.target.value))
                             }
                           >
+                            <option value={QuestionType.TextInput}>Text Input</option>
                             <option value={QuestionType.Open}>Text Area</option>
                             <option value={QuestionType.SingleChoice}>Single Choice</option>
                             <option value={QuestionType.MultipleChoice}>Multiple Choice</option>

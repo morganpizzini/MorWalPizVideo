@@ -35,7 +35,9 @@ namespace MorWalPizVideo.Server.Models
         Boolean = 3,
 
         [EnumMember]
-        Email = 4
+        Email = 4,
+        [EnumMember]
+        TextInput = 5
     }
 
     /// <summary>

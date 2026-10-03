@@ -67,6 +67,7 @@ describe("transport response contracts", () => {
 
     await fetchSponsors();
     await createSponsorWithImage(new FormData());
+    await adminApiService.get(endpoints.CUSTOMFORMS);
 
     const sponsorRequests = fetchMock.mock.calls.filter(([url]) =>
       url.endsWith("/api/sponsors"),
@@ -77,6 +78,13 @@ describe("transport response contracts", () => {
         "selected-channel",
       );
     }
+    const customFormRequest = fetchMock.mock.calls.find(([url]) =>
+      url.endsWith("/api/customforms"),
+    );
+    expect(customFormRequest).toBeDefined();
+    expect(
+      new Headers(customFormRequest?.[1]?.headers).get("X-Channel-Id"),
+    ).toBe("selected-channel");
   });
 
   it("keeps public sponsor requests anonymous and free of channel headers", async () => {

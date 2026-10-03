@@ -446,7 +446,6 @@ function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
   const [isDocumentHidden, setIsDocumentHidden] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const visibleCount = isDesktop ? 3 : 2;
-  const pageCount = Math.ceil(sponsors.length / visibleCount);
   const hasControls = sponsors.length > visibleCount;
 
   useEffect(() => {
@@ -480,8 +479,7 @@ function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
 
     const timer = window.setInterval(() => {
       setActiveIndex((currentIndex) => {
-        const nextIndex = currentIndex + visibleCount;
-        return nextIndex < sponsors.length ? nextIndex : 0;
+        return (currentIndex + 1) % sponsors.length;
       });
     }, 5000);
 
@@ -490,17 +488,17 @@ function Sponsors({ sponsors }: { sponsors: SponsorItem[] }) {
 
   if (sponsors.length === 0) return null;
 
-  const visibleSponsors = sponsors.slice(activeIndex, activeIndex + visibleCount);
+  const visibleSponsors = Array.from(
+    { length: Math.min(visibleCount, sponsors.length) },
+    (_, offset) => sponsors[(activeIndex + offset) % sponsors.length]
+  );
   const visibleStart = activeIndex + 1;
   const visibleEnd = Math.min(activeIndex + visibleSponsors.length, sponsors.length);
   const goToPrevious = () =>
     setActiveIndex((currentIndex) =>
-      currentIndex - visibleCount < 0 ? (pageCount - 1) * visibleCount : currentIndex - visibleCount
+      currentIndex - 1 < 0 ? sponsors.length - 1 : currentIndex - 1
     );
-  const goToNext = () =>
-    setActiveIndex((currentIndex) =>
-      currentIndex + visibleCount < sponsors.length ? currentIndex + visibleCount : 0
-    );
+  const goToNext = () => setActiveIndex((currentIndex) => (currentIndex + 1) % sponsors.length);
   const handleBlur = (event: React.FocusEvent<HTMLElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsPaused(false);
   };

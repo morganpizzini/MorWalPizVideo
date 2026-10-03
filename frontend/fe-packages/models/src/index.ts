@@ -87,6 +87,7 @@ export type {
   QuestionOption,
   CustomFormQuestion,
   OpenQuestion,
+  TextInputQuestion,
   MultipleChoiceQuestion,
   SingleChoiceQuestion,
   BooleanQuestion,

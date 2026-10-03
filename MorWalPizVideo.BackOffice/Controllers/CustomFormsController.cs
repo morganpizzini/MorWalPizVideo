@@ -351,7 +351,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     }
 
                     // Validate answer type matches question type
-                    if (question is OpenQuestion && answer is not OpenAnswer)
+                    if ((question is OpenQuestion or TextInputQuestion) && answer is not OpenAnswer)
                     {
                         return BadRequest($"Question '{question.QuestionText}' expects an open text answer");
                     }

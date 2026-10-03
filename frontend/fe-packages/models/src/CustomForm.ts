@@ -5,6 +5,7 @@ export enum QuestionType {
   SingleChoice = 2,
   Boolean = 3,
   Email = 4,
+  TextInput = 5,
 }
 
 export enum AnswerType {
@@ -41,6 +42,10 @@ export interface OpenQuestion extends CustomFormQuestion {
   questionType: QuestionType.Open;
 }
 
+export interface TextInputQuestion extends CustomFormQuestion {
+  questionType: QuestionType.TextInput;
+}
+
 export interface MultipleChoiceQuestion extends CustomFormQuestion {
   questionType: QuestionType.MultipleChoice;
   options: QuestionOption[];
@@ -64,6 +69,7 @@ export interface EmailQuestion extends CustomFormQuestion {
 // Union type for all question types
 export type AnyQuestion =
   | OpenQuestion
+  | TextInputQuestion
   | MultipleChoiceQuestion
   | SingleChoiceQuestion
   | BooleanQuestion

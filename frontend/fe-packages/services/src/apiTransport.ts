@@ -69,6 +69,7 @@ const scopedBackOfficePrefixes = [
   "/api/products",
   "/api/productcategories",
   "/api/sponsors",
+  "/api/customforms",
 ];
 
 export function isScopedBackOfficeRequest(url: string): boolean {

@@ -53,6 +53,7 @@ namespace MorWalPizVideo.Models.Converters
             return discriminator switch
             {
                 "OpenQuestion" => JsonSerializer.Deserialize<OpenQuestion>(ref reader, options),
+                "TextInputQuestion" => JsonSerializer.Deserialize<TextInputQuestion>(ref reader, options),
                 "MultipleChoiceQuestion" => JsonSerializer.Deserialize<MultipleChoiceQuestion>(ref reader, options),
                 "SingleChoiceQuestion" => JsonSerializer.Deserialize<SingleChoiceQuestion>(ref reader, options),
                 "BooleanQuestion" => JsonSerializer.Deserialize<BooleanQuestion>(ref reader, options),
@@ -69,6 +70,7 @@ namespace MorWalPizVideo.Models.Converters
             writer.WriteString(DiscriminatorPropertyName, value switch
             {
                 OpenQuestion => "OpenQuestion",
+                TextInputQuestion => "TextInputQuestion",
                 MultipleChoiceQuestion => "MultipleChoiceQuestion",
                 SingleChoiceQuestion => "SingleChoiceQuestion",
                 BooleanQuestion => "BooleanQuestion",

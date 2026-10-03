@@ -1,6 +1,6 @@
 # Frontend Custom Forms
 
-Custom form definitions are loaded from the anonymous ServerAPI custom-form endpoints. The reusable `CustomFormRenderer` is exported by `@morwalpiz/layout` and supports open text, single choice, multiple choice, required validation, loading, errors, success, and an injectable reCAPTCHA token provider.
+Custom form definitions are loaded from the anonymous ServerAPI custom-form endpoints. The reusable `CustomFormRenderer` is exported by `@morwalpiz/layout` and supports open text (textarea and single-line text input), single choice, multiple choice, required validation, loading, errors, success, and an injectable reCAPTCHA token provider.
 
 Form answer requests are serialized by `@morwalpizvideo/services`. Each polymorphic question or answer includes the backend-compatible `_t` discriminator (`OpenQuestion`, `MultipleChoiceQuestion`, `SingleChoiceQuestion`, `BooleanQuestion`, `EmailQuestion`, `OpenAnswer`, `MultipleChoiceAnswer`, `SingleChoiceAnswer`, `BooleanAnswer`, or `EmailAnswer`).
 

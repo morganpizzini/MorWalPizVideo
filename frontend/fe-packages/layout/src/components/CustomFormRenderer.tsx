@@ -18,6 +18,7 @@ export interface CustomFormRendererProps {
 function emptyAnswer(question: AnyQuestion): AnyAnswer {
   switch (question.questionType) {
     case QuestionType.Open:
+    case QuestionType.TextInput:
       return {
         _t: "OpenAnswer",
         questionId: question.questionId,
@@ -143,25 +144,45 @@ export function CustomFormRenderer({
                 {index + 1}. {question.questionText}
                 {question.isRequired && <span className="text-danger"> *</span>}
               </legend>
-              {question.questionType === QuestionType.Open && (
-                <textarea
-                  className="form-control"
-                  rows={7}
-                  value={
-                    answer.answerType === AnswerType.Open
-                      ? answer.textResponse
-                      : ""
-                  }
-                  onChange={(event) =>
-                    updateAnswer(question, {
-                      _t: "OpenAnswer",
-                      questionId: question.questionId,
-                      answerType: AnswerType.Open,
-                      textResponse: event.target.value,
-                    })
-                  }
-                />
-              )}
+              {(question.questionType === QuestionType.Open ||
+                question.questionType === QuestionType.TextInput) &&
+                (question.questionType === QuestionType.Open ? (
+                  <textarea
+                    className="form-control"
+                    rows={7}
+                    value={
+                      answer.answerType === AnswerType.Open
+                        ? answer.textResponse
+                        : ""
+                    }
+                    onChange={(event) =>
+                      updateAnswer(question, {
+                        _t: "OpenAnswer",
+                        questionId: question.questionId,
+                        answerType: AnswerType.Open,
+                        textResponse: event.target.value,
+                      })
+                    }
+                  />
+                ) : (
+                  <input
+                    className="form-control"
+                    type="text"
+                    value={
+                      answer.answerType === AnswerType.Open
+                        ? answer.textResponse
+                        : ""
+                    }
+                    onChange={(event) =>
+                      updateAnswer(question, {
+                        _t: "OpenAnswer",
+                        questionId: question.questionId,
+                        answerType: AnswerType.Open,
+                        textResponse: event.target.value,
+                      })
+                    }
+                  />
+                ))}
               {(question.questionType === QuestionType.SingleChoice ||
                 question.questionType === QuestionType.MultipleChoice) &&
                 question.options.map(
