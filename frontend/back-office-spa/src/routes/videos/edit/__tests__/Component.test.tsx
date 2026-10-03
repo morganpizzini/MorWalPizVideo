@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useFetcher, useLoaderData, useNavigate } from 'react-router';
+import { useFetcher, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import { LinkType } from '@morwalpizvideo/models';
 import type { CategoryRef, Match, VideoRef } from '@morwalpizvideo/models';
 import { render } from '../../../../test/test-utils';
@@ -25,12 +25,14 @@ vi.mock('react-router', async () => {
     useFetcher: vi.fn(),
     useLoaderData: vi.fn(),
     useNavigate: vi.fn(),
+    useRevalidator: vi.fn(),
   };
 });
 
 const mockSaveSubmit = vi.fn();
 const mockAddSubmit = vi.fn();
 const mockNavigate = vi.fn();
+const mockRevalidate = vi.fn();
 const categories: CategoryRef[] = [{ id: 'category-1', title: 'News' }];
 
 const match = {
@@ -71,6 +73,7 @@ beforeEach(() => {
   saveFetcher = { state: 'idle', data: undefined, submit: mockSaveSubmit };
   addFetcher = { state: 'idle', data: undefined, submit: mockAddSubmit };
   vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+  vi.mocked(useRevalidator).mockReturnValue({ state: 'idle', revalidate: mockRevalidate });
   vi.mocked(useLoaderData).mockReturnValue({ match, categories });
   let fetcherCall = 0;
   vi.mocked(useFetcher).mockImplementation(
