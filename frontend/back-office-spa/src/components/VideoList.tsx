@@ -22,7 +22,10 @@ interface RefreshingState {
   [key: string]: boolean;
 }
 
-export function composeShortLinkUrl(baseUrl: string | undefined, code: string | undefined): string | undefined {
+export function composeShortLinkUrl(
+  baseUrl: string | undefined,
+  code: string | undefined
+): string | undefined {
   if (!baseUrl || !code) return undefined;
   return `${baseUrl.replace(/\/+$/, '')}/${code.replace(/^\/+/, '')}`;
 }
@@ -48,14 +51,23 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
   const [refreshing, setRefreshing] = useState<RefreshingState>({});
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
-  const canEdit = hasPermission(effectivePermissions, [permissions.videos.update, permissions.videos.manage]);
-  const canPublish = hasPermission(effectivePermissions, [permissions.videos.publish, permissions.videos.manage]);
-  const canDelete = hasPermission(effectivePermissions, [permissions.videos.delete, permissions.videos.manage]);
+  const canEdit = hasPermission(effectivePermissions, [
+    permissions.videos.update,
+    permissions.videos.manage,
+  ]);
+  const canPublish = hasPermission(effectivePermissions, [
+    permissions.videos.publish,
+    permissions.videos.manage,
+  ]);
+  const canDelete = hasPermission(effectivePermissions, [
+    permissions.videos.delete,
+    permissions.videos.manage,
+  ]);
 
   const toggleExpand = (matchId: string) => {
     setExpanded(prev => ({
       ...prev,
-      [matchId]: !prev[matchId]
+      [matchId]: !prev[matchId],
     }));
   };
 
@@ -67,9 +79,10 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
       match.title?.toLowerCase().includes(term) ||
       match.description?.toLowerCase().includes(term) ||
       match.id?.toLowerCase().includes(term) ||
-      match.videoRefs?.some(ref =>
-        ref.youtubeId.toLowerCase().includes(term) ||
-        ref.categories?.some(cat => cat.title.toLowerCase().includes(term))
+      match.videoRefs?.some(
+        ref =>
+          ref.youtubeId.toLowerCase().includes(term) ||
+          ref.categories?.some(cat => cat.title.toLowerCase().includes(term))
       )
     );
   });
@@ -162,7 +175,8 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
     <div>
       <h2 className="h5">Video library</h2>
       <p className="text-muted mb-3">
-        {matches.length} YouTube content(s) with {matches.reduce((sum, m) => sum + (m.videoRefs?.length || 0), 0)} total video(s)
+        {matches.length} YouTube content(s) with{' '}
+        {matches.reduce((sum, m) => sum + (m.videoRefs?.length || 0), 0)} total video(s)
       </p>
 
       {refreshError && (
@@ -185,11 +199,14 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
         <thead>
           <tr>
             <th style={{ width: '40px' }}></th>
+            <th>Category</th>
             <th>Title</th>
             <th>Description</th>
             <th>URL</th>
             <th>Videos</th>
-            <th style={{ width: '120px' }}>Actions</th>
+            <th colSpan={3} style={{ width: '120px' }}>
+              Links / Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -211,48 +228,82 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                     )}
                   </td>
                   <td>
-                    <div className="fw-semibold">{match.title || <em>Untitled</em>}</div>
+                    <div className="d-flex gap-1 flex-wrap">
+                      {match.categories && match.categories.length > 0 ? (
+                        match.categories.map((category, categoryIndex) => (
+                          <Badge key={`${match.id}-${category.id}-${categoryIndex}`} bg="secondary">
+                            {category.title}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted">No category</span>
+                      )}
+                    </div>
                   </td>
                   <td>
+                    <div className="fw-semibold">{match.title || <em>Untitled</em>}</div>
+                  </td>
+                  <td colSpan={3}>
                     <div className="text-truncate" style={{ maxWidth: '200px' }}>
                       {match.description || <em className="text-muted">No description</em>}
                     </div>
                   </td>
                   <td>
-                    {shouldShowMainUrl(match.videoRefs?.length || 0) && (match.url ? (
-                      <a href={`https://morwalpiz.com/matches/${match.url}`} target="_blank" rel="noopener noreferrer" className="text-truncate d-block" style={{ maxWidth: '150px' }}>
-                        {match.url}
-                      </a>
-                    ) : (
-                      <em className="text-muted">No URL</em>
-                    ))}
+                    {shouldShowMainUrl(match.videoRefs?.length || 0) &&
+                      (match.url ? (
+                        <a
+                          href={`https://morwalpiz.com/matches/${match.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-truncate d-block"
+                          style={{ maxWidth: '150px' }}
+                        >
+                          {match.url}
+                        </a>
+                      ) : (
+                        <em className="text-muted">No URL</em>
+                      ))}
                   </td>
                   <td>
                     <Badge bg="info">{match.videoRefs?.length || 0} video(s)</Badge>
                   </td>
                   <td>
                     <Dropdown data-bs-boundary="window">
-                      <Dropdown.Toggle variant="outline-primary" size="sm" id={`dropdown-${match.id}`}>
+                      <Dropdown.Toggle
+                        variant="outline-primary"
+                        size="sm"
+                        id={`dropdown-${match.id}`}
+                      >
                         Actions
                       </Dropdown.Toggle>
                       <Dropdown.Menu renderOnMount popperConfig={{ strategy: 'fixed' }}>
-                        <Dropdown.Item onClick={() => handleView(match.id)}>
-                          View
-                        </Dropdown.Item>
-                        {canEdit ? <Dropdown.Item onClick={() => handleEdit(match.id)}>Edit</Dropdown.Item> : null}
+                        <Dropdown.Item onClick={() => handleView(match.id)}>View</Dropdown.Item>
+                        {canEdit ? (
+                          <Dropdown.Item onClick={() => handleEdit(match.id)}>Edit</Dropdown.Item>
+                        ) : null}
                         {canPublish && getSocialPublishingVideoId(match) ? (
-                          <Dropdown.Item onClick={() => handleOpenPublishModal(getSocialPublishingVideoId(match)!)}>
+                          <Dropdown.Item
+                            onClick={() =>
+                              handleOpenPublishModal(getSocialPublishingVideoId(match)!)
+                            }
+                          >
                             Publish to Social
                           </Dropdown.Item>
                         ) : null}
                         {canEdit ? (
-                          <Dropdown.Item onClick={() => handleRefresh(match.id)} disabled={refreshing[match.id]}>
+                          <Dropdown.Item
+                            onClick={() => handleRefresh(match.id)}
+                            disabled={refreshing[match.id]}
+                          >
                             {refreshing[match.id] ? 'Refreshing...' : 'Refresh YouTube Data'}
                           </Dropdown.Item>
                         ) : null}
                         {canDelete ? <Dropdown.Divider /> : null}
                         {canDelete ? (
-                          <Dropdown.Item onClick={() => void handleDelete(match.id)} className="text-danger">
+                          <Dropdown.Item
+                            onClick={() => void handleDelete(match.id)}
+                            className="text-danger"
+                          >
                             Delete
                           </Dropdown.Item>
                         ) : null}
@@ -262,19 +313,43 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                 </tr>
 
                 {/* Sub-rows - VideoRefs */}
-                {expanded[match.id] && match.videoRefs && match.videoRefs.length > 0 && (
-                  match.videoRefs.map((videoRef) => {
+                {expanded[match.id] &&
+                  match.videoRefs &&
+                  match.videoRefs.length > 0 &&
+                  match.videoRefs.map(videoRef => {
                     // Find shortlink for this specific video
                     const videoShortLink = match.shortLinks?.find(
-                      sl => sl.linkType === LinkType.YouTubeVideo && sl.target === videoRef.youtubeId
+                      sl =>
+                        sl.linkType === LinkType.YouTubeVideo && sl.target === videoRef.youtubeId
                     );
-                    const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
-                    const shortLinkUrl = composeShortLinkUrl(channel?.shortLinkUrl, videoShortLink?.code);
+                    const channel = channels.find(
+                      candidate => candidate.channelId === match.ownerChannelId
+                    );
+                    const shortLinkUrl = composeShortLinkUrl(
+                      channel?.shortLinkUrl,
+                      videoShortLink?.code
+                    );
 
                     return (
                       <tr key={`${match.id}-${videoRef.youtubeId}`} className="table-light">
                         <td></td>
-                        <td colSpan={2} className="ps-5">
+                        <td className="align-top">
+                          <div className="d-flex gap-1 flex-wrap">
+                            {videoRef.categories && videoRef.categories.length > 0 ? (
+                              videoRef.categories.map((category, categoryIndex) => (
+                                <Badge
+                                  key={`${videoRef.youtubeId}-${category.id}-${categoryIndex}`}
+                                  bg="secondary"
+                                >
+                                  {category.title}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted">No category</span>
+                            )}
+                          </div>
+                        </td>
+                        <td colSpan={4} className="ps-3">
                           <div className="d-flex align-items-center gap-2">
                             <code className="text-primary">{videoRef.youtubeId}</code>
                             {videoRef.youtubeId === match.thumbnailVideoId && (
@@ -282,27 +357,34 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                             )}
                           </div>
                         </td>
-                        <td colSpan={2}>
-                          <div className="d-flex gap-1 flex-wrap">
-                            {videoRef.categories && videoRef.categories.length > 0 ? (
-                              videoRef.categories.map((cat, catIdx) => (
-                                <Badge key={`${videoRef.youtubeId}-${cat.title}-${catIdx}`} bg="secondary">
-                                  {cat.title}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted">No categories</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="d-flex align-items-center gap-2">
+                        <td colSpan={3}>
+                          <div className="d-flex align-items-center gap-2 flex-wrap">
                             {videoShortLink ? (
                               <>
-                                {shortLinkUrl ? <>
-                                  <a href={shortLinkUrl} target="_blank" rel="noopener noreferrer" className="text-truncate" style={{ maxWidth: '180px' }}>{shortLinkUrl}</a>
-                                  <Button size="sm" variant="outline-secondary" onClick={() => void navigator.clipboard.writeText(shortLinkUrl)} title="Copy short link">Copy</Button>
-                                </> : <Badge bg="success">{videoShortLink.code}</Badge>}
+                                {shortLinkUrl ? (
+                                  <>
+                                    <a
+                                      href={shortLinkUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-break"
+                                    >
+                                      {shortLinkUrl}
+                                    </a>
+                                    <Button
+                                      size="sm"
+                                      variant="outline-secondary"
+                                      onClick={() =>
+                                        void navigator.clipboard.writeText(shortLinkUrl)
+                                      }
+                                      title="Copy short link"
+                                    >
+                                      Copy
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Badge bg="success">{videoShortLink.code}</Badge>
+                                )}
                                 <Link
                                   to={`/shortlinks/${videoShortLink.code}/edit?videoId=${videoRef.youtubeId}`}
                                   className="btn btn-sm btn-outline-primary"
@@ -316,15 +398,14 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                                 to={`/shortlinks/create?target=${videoRef.youtubeId}&linkType=0`}
                                 className="btn btn-sm btn-outline-success"
                               >
-                                <i className="bi bi-plus-circle"></i>  + ShortLink
+                                <i className="bi bi-plus-circle"></i> + ShortLink
                               </Link>
                             )}
                           </div>
                         </td>
                       </tr>
                     );
-                  })
-                )}
+                  })}
               </React.Fragment>
             ))
           ) : (
@@ -348,11 +429,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
               {publishError}
             </Alert>
           )}
-          {publishSuccess && (
-            <Alert variant="success">
-              {publishSuccess}
-            </Alert>
-          )}
+          {publishSuccess && <Alert variant="success">{publishSuccess}</Alert>}
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>Message</Form.Label>
@@ -360,12 +437,13 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                 as="textarea"
                 rows={4}
                 value={publishMessage}
-                onChange={(e) => setPublishMessage(e.target.value)}
+                onChange={e => setPublishMessage(e.target.value)}
                 placeholder="Enter your message to post on Facebook, Telegram, and Discord..."
                 disabled={publishLoading || !!publishSuccess}
               />
               <Form.Text className="text-muted">
-                This message will be posted to Facebook, Telegram, and Discord with the video shortlink.
+                This message will be posted to Facebook, Telegram, and Discord with the video
+                shortlink.
               </Form.Text>
             </Form.Group>
           </Form>

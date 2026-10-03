@@ -546,6 +546,13 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     Assert.Equal(new[] { CacheKeys.Matches, CacheKeys.ShortLinks }, _factory.CrossApiService.ResetKeys);
     Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.PurgedTags);
     Assert.Equal([match.Id], _factory.CrossApiService.RefreshedVideoIds);
+
+    using var retrievalClient = _factory.CreateClientWithPermissions(AuthorizationPermissionKeys.ShortLinksView);
+    using var retrievalResponse = await retrievalClient.GetAsync($"/api/ShortLinks/{returned.ShortLinkCode}");
+    Assert.Equal(HttpStatusCode.OK, retrievalResponse.StatusCode);
+    var retrievedLink = await retrievalResponse.Content.ReadFromJsonAsync<ShortLinkContract>();
+    Assert.Equal(videoId, retrievedLink!.Target);
+    Assert.Equal(match.Id, retrievedLink.ContentId);
   }
 
   [Fact]
@@ -605,6 +612,9 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     Assert.Equal($"Description for {videoId}", importedVideo.Description);
     Assert.Equal(PrimaryScenario.ChannelId, Assert.Single(importedVideo.ChannelIds));
     Assert.Equal(LinkType.YouTubeVideo, canonicalLink.LinkType);
+    Assert.DoesNotContain(' ', importedMatch.Url);
+    Assert.DoesNotContain("--", importedMatch.Url, StringComparison.Ordinal);
+    Assert.Matches("^[a-z0-9]+(?:-[a-z0-9]+)*$", importedMatch.Url);
   }
 
   [Fact]

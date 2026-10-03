@@ -2,7 +2,7 @@
 name: "MorWalPiz Repository Expert"
 description: "Use when locating features, tracing dependencies, identifying repository structure, architecture, services, components, extension points, conventions, tests, build or deployment paths, technical debt, and architectural constraints in MorWalPizVideo. Read-only repository authority that documents evidence and never implements code."
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 disable-model-invocation: false
 ---
 

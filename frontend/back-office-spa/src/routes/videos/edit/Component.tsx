@@ -1,6 +1,6 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useEffect, useRef, useState } from 'react';
-import { useFetcher, useNavigate } from 'react-router';
+import { useFetcher, useNavigate, useRevalidator } from 'react-router';
 import { Card, Row, Col, Form as BootstrapForm, Button, Badge, Table } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
 import { useToast } from '@components/ToastNotification/ToastContext';
@@ -28,6 +28,7 @@ const Component: React.FC = () => {
   };
   const saveFetcher = useFetcher();
   const addFetcher = useFetcher();
+  const revalidator = useRevalidator();
   const navigate = useNavigate();
   const toast = useToast();
   const normalizedCategories = (categories as CategoryWithFallbackId[])
@@ -55,6 +56,10 @@ const Component: React.FC = () => {
   const saveErrors = saveFetcher.data?.errors;
   const lastSaveData = useRef<unknown>(undefined);
   const lastAddData = useRef<unknown>(undefined);
+
+  useEffect(() => {
+    setVideoRefs(match.videoRefs || []);
+  }, [match.videoRefs]);
 
   useEffect(() => {
     if (saveBusy || !saveFetcher.data || lastSaveData.current === saveFetcher.data) {
@@ -166,6 +171,7 @@ const Component: React.FC = () => {
       setNewVideoRefId('');
       setNewVideoRefCategories([]);
       setAddVideoRefAttempted(false);
+      revalidator.revalidate();
       if (addFetcher.data.videoRef.cacheStatus === 'degraded') {
         toast.show('Video reference added', 'Saved, but cache refresh is degraded.', {
           variant: 'warning',
@@ -182,7 +188,7 @@ const Component: React.FC = () => {
 
     const message = addFetcher.data.errors?.generics?.[0] ?? 'Unable to add video reference.';
     toast.show('Video reference add failed', message, { variant: 'danger' });
-  }, [addFetcher.data, addFetcher.state, toast]);
+  }, [addFetcher.data, addFetcher.state, revalidator, toast]);
 
   return (
     <>

@@ -1,6 +1,8 @@
 ﻿using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
+using System.Globalization;
+using System.Text;
 
 namespace MorWalPizVideo.Server.Services
 {
@@ -120,14 +122,35 @@ namespace MorWalPizVideo.Server.Services
         {
             if (string.IsNullOrWhiteSpace(title))
                 return string.Empty;
-            
-            // Trim and replace spaces with dashes
-            var slug = title.Replace("-", "").Trim().Replace(" ", "-");
-            
-            // URL encode to handle special characters
-            slug = Uri.EscapeDataString(slug);
-            
-            return slug;
+
+            var normalized = title.Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            var separatorPending = false;
+
+            foreach (var character in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
+                {
+                    continue;
+                }
+
+                if (character is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9')
+                {
+                    if (separatorPending && builder.Length > 0)
+                    {
+                        builder.Append('-');
+                    }
+
+                    builder.Append(char.ToLowerInvariant(character));
+                    separatorPending = false;
+                }
+                else
+                {
+                    separatorPending = builder.Length > 0;
+                }
+            }
+
+            return builder.ToString();
         }
 
         private IList<YouTubeContent> ParseMatches(IList<YouTubeContent> matches, IList<Video> videos)
