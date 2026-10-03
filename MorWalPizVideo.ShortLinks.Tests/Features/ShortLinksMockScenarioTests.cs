@@ -115,6 +115,35 @@ public class ShortLinksMockScenarioTests
         Assert.Empty((await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId).ShortLinks);
     }
 
+    [Fact]
+    public async Task Video_reference_shortlink_redirects_to_the_referenced_video_for_single_video_content()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var matchRepository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var shortLinkRepository = factory.Services.GetRequiredService<IShortLinkRepository>();
+        var source = (await matchRepository.GetItemsAsync()).Single(item => item.Id == PrimaryScenario.MatchId);
+        const string referencedVideoId = "scenario-video-ref";
+        await matchRepository.UpdateItemAsync(source with
+        {
+            ContentType = YoutubeContentType.SingleVideo,
+            ThumbnailVideoId = "scenario-main-video",
+            VideoRefs = [new VideoRef(referencedVideoId, [], "Referenced video", channelIds: [PrimaryScenario.ChannelId])]
+        });
+        await shortLinkRepository.AddItemAsync(new ShortLink("video-ref-link", referencedVideoId, [])
+        {
+            Id = "400000000000000000000098",
+            LinkType = LinkType.YouTubeVideo,
+            ContentId = PrimaryScenario.MatchId,
+            ManagementChannelId = PrimaryScenario.ChannelId
+        });
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var response = await client.GetAsync("/video-ref-link");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal($"https://www.youtube.com/watch?v={referencedVideoId}", response.Headers.Location?.ToString());
+    }
+
 [Fact]
     public async Task Newsletter_redirect_aggregates_click_context_without_identity_data()
     {

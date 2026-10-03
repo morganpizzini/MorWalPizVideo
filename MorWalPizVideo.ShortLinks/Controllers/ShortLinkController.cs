@@ -252,17 +252,14 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                     if (existingMatch == null)
                         return BadRequest("Video not found");
 
-                    string videoId = string.Empty;
-                    if (existingMatch.ContentType == YoutubeContentType.SingleVideo)
+                    var selectedVideo = existingMatch.VideoRefs.FirstOrDefault(x => x.YoutubeId == shortLink.Target);
+                    var videoId = selectedVideo?.YoutubeId;
+                    if (videoId is null)
                     {
-                        videoId = existingMatch.ThumbnailVideoId;
-                    }
-                    else
-                    {
-                        var selectedVideo = existingMatch.VideoRefs.FirstOrDefault(x => x.YoutubeId == shortLink.Target);
-                        if (selectedVideo == null)
+                        if (existingMatch.ContentType != YoutubeContentType.SingleVideo)
                             return BadRequest("Video shortLink not found");
-                        videoId = selectedVideo.YoutubeId;
+
+                        videoId = existingMatch.ThumbnailVideoId;
                     }
 
                     return RedirectYouTubeVideo(videoId, linkQuerystring, isAndroid, isIOS);

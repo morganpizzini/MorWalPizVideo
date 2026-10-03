@@ -12,7 +12,10 @@ vi.mock('react-router', async () => {
 
 vi.mock('@morwalpizvideo/services', () => ({
   get: vi.fn(),
-  endpoints: { DASHBOARD_SUMMARY: '/api/dashboard/summary', DASHBOARD_VIDEO_PUBLICATIONS: '/api/dashboard/video-publications' },
+  endpoints: {
+    DASHBOARD_SUMMARY: '/api/dashboard/summary',
+    DASHBOARD_VIDEO_PUBLICATIONS: '/api/dashboard/video-publications',
+  },
 }));
 
 vi.mock('recharts', () => ({
@@ -28,23 +31,37 @@ vi.mock('recharts', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useNavigate).mockReturnValue(vi.fn());
-  vi.mocked(get).mockImplementation((url: string) => Promise.resolve(url.includes('summary') ? {
-    totalShortLinks: 3,
-    totalShortLinkClicks: 42,
-    lastBackOfficeLoginAt: '2026-08-07T10:00:00Z',
-    activeUsers: 2,
-    publishedVideos: 2,
-    activeForms: 1,
-    formResponses: 4,
-    pendingInsights: 1,
-    generatedAt: '2026-08-08T10:00:00Z',
-  } : [{ date: '2026-08-07T00:00:00Z', count: 2, videos: [{ id: 'video-1', title: 'Video uno', publishedAt: '2026-08-07T10:00:00Z' }] }]));
+  vi.mocked(get).mockImplementation((url: string) =>
+    Promise.resolve(
+      url.includes('summary')
+        ? {
+            totalShortLinks: 3,
+            totalShortLinkClicks: 42,
+            lastBackOfficeLoginAt: '2026-08-07T10:00:00Z',
+            activeUsers: 2,
+            publishedVideos: 2,
+            activeForms: 1,
+            formResponses: 4,
+            pendingInsights: 1,
+            generatedAt: '2026-08-08T10:00:00Z',
+          }
+        : [
+            {
+              date: '2026-08-07T00:00:00Z',
+              count: 2,
+              videos: [{ id: 'video-1', title: 'Video uno', publishedAt: '2026-08-07T10:00:00Z' }],
+            },
+          ]
+    )
+  );
 });
 
 async function renderComponent() {
   const { default: Component } = await import('./Home');
   render(<Component />);
-  await waitFor(() => expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+  );
 }
 
 describe('Home dashboard', () => {
@@ -52,6 +69,39 @@ describe('Home dashboard', () => {
     await renderComponent();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pubblicazione video' })).toBeInTheDocument();
+    expect(screen.getByText('Video uno')).toBeInTheDocument();
+  });
+
+  it('keeps days without publications in the dashboard timeline response', async () => {
+    vi.mocked(get).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes('summary')
+          ? {
+              totalShortLinks: 0,
+              totalShortLinkClicks: 0,
+              lastBackOfficeLoginAt: null,
+              activeUsers: 0,
+              publishedVideos: 1,
+              activeForms: 0,
+              formResponses: 0,
+              pendingInsights: 0,
+              generatedAt: '2026-08-08T10:00:00Z',
+            }
+          : [
+              { date: '2026-08-06T00:00:00Z', count: 0, videos: [] },
+              {
+                date: '2026-08-07T00:00:00Z',
+                count: 1,
+                videos: [
+                  { id: 'video-1', title: 'Video uno', publishedAt: '2026-08-07T10:00:00Z' },
+                ],
+              },
+            ]
+      )
+    );
+
+    await renderComponent();
+
     expect(screen.getByText('Video uno')).toBeInTheDocument();
   });
 });

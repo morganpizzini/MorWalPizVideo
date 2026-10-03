@@ -5,12 +5,22 @@ export default async function loader({ params }: LoaderFunctionArgs) {
   const [video, categories, channelsResult] = await Promise.all([
     get(ComposeUrl(endpoints.VIDEOS_DETAIL, { videoId: params.id! })),
     get(endpoints.CATEGORIES),
-    get(endpoints.CHANNELS_ACCESSIBLE).then(value => ({ value, error: undefined })).catch(error => ({ value: [], error }))
+    get(endpoints.CHANNELS_ACCESSIBLE)
+      .then(value => ({ value, error: undefined }))
+      .catch(error => ({ value: [], error })),
   ]);
 
   if (channelsResult.error) {
-    console.warn('Accessible channel metadata unavailable while loading video detail.', channelsResult.error);
+    console.warn(
+      'Accessible channel metadata unavailable while loading video detail.',
+      channelsResult.error
+    );
   }
 
-  return { match: video, categories, channels: channelsResult.value };
+  return {
+    match: video,
+    categories,
+    channels: channelsResult.value,
+    breadcrumbIdentifier: (video as { title?: string }).title,
+  };
 }

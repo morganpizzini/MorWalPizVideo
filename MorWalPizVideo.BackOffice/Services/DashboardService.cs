@@ -88,15 +88,20 @@ public sealed class DashboardService(
         var toExclusive = today.AddDays(1);
         var publications = await youTubeContentRepository.GetPublicationsAsync(fromInclusive, toExclusive, channelId);
 
-        return publications
+        var publicationsByDate = publications
             .GroupBy(publication => publication.PublishedAt.ToUniversalTime().Date)
-            .OrderBy(group => group.Key)
-            .Select(group => new VideoPublicationDayResponse(
-                group.Key,
-                group.Count(),
-                group.Select(video => new VideoPublicationItemResponse(video.VideoId, video.Title, video.PublishedAt))
-                    .OrderBy(video => video.PublishedAt)
-                    .ToArray()))
+            .ToDictionary(group => group.Key, group => group
+                .Select(video => new VideoPublicationItemResponse(video.VideoId, video.Title, video.PublishedAt))
+                .OrderBy(video => video.PublishedAt)
+                .ToArray());
+
+        return Enumerable.Range(0, safeDays)
+            .Select(offset =>
+            {
+                var date = fromInclusive.AddDays(offset);
+                var videos = publicationsByDate.GetValueOrDefault(date) ?? [];
+                return new VideoPublicationDayResponse(date, videos.Length, videos);
+            })
             .ToArray();
     }
 }
