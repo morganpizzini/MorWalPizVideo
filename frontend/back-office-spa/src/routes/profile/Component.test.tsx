@@ -11,6 +11,12 @@ vi.mock('@morwalpizvideo/services', () => ({
   },
   get: vi.fn(),
   put: vi.fn(),
+  getPushSupport: vi.fn(() => ({ supported: false, permission: 'unsupported' })),
+  getBackOfficePushSubscriptionSettings: vi.fn(),
+  revokeBackOfficePushSubscription: vi.fn(),
+  saveBackOfficePushSubscription: vi.fn(),
+  getPushPublicKey: vi.fn(),
+  urlBase64ToUint8Array: vi.fn(() => new Uint8Array()),
 }));
 
 vi.mock('../../services/authService', () => ({

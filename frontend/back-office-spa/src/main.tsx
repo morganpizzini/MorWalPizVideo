@@ -23,6 +23,9 @@ const loadEnvConfig = () => {
 // Load env config then mount the React app
 async function bootstrap() {
   await loadEnvConfig();
+  if ('serviceWorker' in navigator) {
+    void navigator.serviceWorker.register('/push-sw.js', { scope: '/' });
+  }
   const [{ RouterProvider }, { default: router }] = await Promise.all([
     import('react-router'),
     import('./router'),

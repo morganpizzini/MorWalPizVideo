@@ -1,5 +1,6 @@
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
 using System.Security.Cryptography;
@@ -1154,5 +1155,173 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class UserRequestMockRepository : BaseMockRepository<UserRequest>, IUserRequestRepository
     {
         public UserRequestMockRepository(IMockScenario scenario) : base(scenario, "userRequests") { }
+    }
+
+    public sealed class PushSubscriptionMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushChannelSubscription>(scenario, DbCollections.PushSubscriptions), IPushSubscriptionRepository
+    {
+        private readonly object sync = new();
+
+        public Task<PushChannelSubscription?> GetByEndpointHashAsync(string endpointHash, CancellationToken cancellationToken = default)
+            => Task.FromResult(scenario.Read<PushChannelSubscription>(_fileName).FirstOrDefault(item => item.EndpointHash == endpointHash));
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default)
+            => GetActiveByChannelsAndApplicationAsync(channelIds, string.Empty, cancellationToken);
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default)
+        {
+            if (channelIds.Count == 0) return Task.FromResult<IReadOnlyList<PushChannelSubscription>>([]);
+            var wanted = channelIds.ToHashSet(StringComparer.Ordinal);
+            IReadOnlyList<PushChannelSubscription> result = scenario.Read<PushChannelSubscription>(_fileName)
+                .Where(item => item.IsActive && item.Scope == PushSubscriptionScope.Channel && item.ChannelIds.Any(wanted.Contains) &&
+                    (string.IsNullOrWhiteSpace(applicationKey) || item.ApplicationKey == applicationKey))
+                .ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PushChannelSubscription>>(scenario.Read<PushChannelSubscription>(_fileName)
+                .Where(item => item.IsActive && item.Scope == PushSubscriptionScope.Platform &&
+                    item.ChannelIds.Count == 0 && item.ApplicationKey == applicationKey)
+                .ToList());
+
+        public Task<PushChannelSubscription> UpsertAsync(PushChannelSubscription subscription, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var existing = scenario.Read<PushChannelSubscription>(_fileName).FirstOrDefault(item => item.EndpointHash == subscription.EndpointHash);
+                if (existing is null)
+                    return Task.FromResult(scenario.Add(_fileName, subscription));
+
+                var merged = existing with
+                {
+                    Endpoint = subscription.Endpoint,
+                    Keys = subscription.Keys,
+                    ChannelIds = subscription.ChannelIds,
+                    ApplicationKey = subscription.ApplicationKey,
+                    Language = subscription.Language,
+                    IsActive = subscription.IsActive,
+                    UpdatedAt = subscription.UpdatedAt,
+                    RevokedAt = subscription.RevokedAt
+                };
+                scenario.Replace(_fileName, merged);
+                return Task.FromResult(merged);
+            }
+        }
+
+        public Task<bool> DeactivateAsync(string endpointHash, DateTime revokedAt, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var existing = scenario.Read<PushChannelSubscription>(_fileName).FirstOrDefault(item => item.EndpointHash == endpointHash);
+                if (existing is null || !existing.IsActive) return Task.FromResult(false);
+                scenario.Replace(_fileName, existing with { IsActive = false, RevokedAt = revokedAt, UpdatedAt = revokedAt });
+                return Task.FromResult(true);
+            }
+        }
+    }
+
+    public sealed class PushAudienceMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushAudience>(scenario, DbCollections.PushAudiences), IPushAudienceRepository
+    {
+        public Task<PushAudience?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
+            => Task.FromResult(scenario.Read<PushAudience>(_fileName).FirstOrDefault(item => item.Code == code));
+
+        public Task<IList<PushAudience>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+        {
+            var wanted = ids.ToHashSet(StringComparer.Ordinal);
+            IList<PushAudience> result = scenario.Read<PushAudience>(_fileName).Where(item => wanted.Contains(item.Id)).ToList();
+            return Task.FromResult(result);
+        }
+    }
+
+    public sealed class PushNotificationTemplateMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushNotificationTemplate>(scenario, DbCollections.PushNotificationTemplates), IPushNotificationTemplateRepository;
+
+    public sealed class PushDispatchMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushDispatch>(scenario, DbCollections.PushDispatches), IPushDispatchRepository
+    {
+        private readonly object sync = new();
+
+        public Task<PushDispatch?> ClaimForSendingAsync(string dispatchId, PushDispatchState expectedState, DateTime now, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var item = scenario.Read<PushDispatch>(_fileName).FirstOrDefault(candidate => candidate.Id == dispatchId && candidate.State == expectedState);
+                if (item is null) return Task.FromResult<PushDispatch?>(null);
+                var updated = item with { State = PushDispatchState.Sending, QueuedAt = now };
+                scenario.Replace(_fileName, updated);
+                return Task.FromResult<PushDispatch?>(updated);
+            }
+        }
+
+        public Task<IList<PushDispatch>> GetStalledAsync(DateTime olderThan, int limit, CancellationToken cancellationToken = default)
+        {
+            IList<PushDispatch> result = scenario.Read<PushDispatch>(_fileName)
+                .Where(item => (item.State == PushDispatchState.Queued || item.State == PushDispatchState.Sending) && item.QueuedAt < olderThan)
+                .OrderBy(item => item.QueuedAt)
+                .Take(Math.Clamp(limit, 1, 1000))
+                .ToList();
+            return Task.FromResult(result);
+        }
+    }
+
+    public sealed class PushDispatchRecipientMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushDispatchRecipient>(scenario, DbCollections.PushDispatchRecipients), IPushDispatchRecipientRepository
+    {
+        private readonly object sync = new();
+
+        public Task EnsurePendingAsync(PushDispatchRecipient recipient, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                if (!scenario.Read<PushDispatchRecipient>(_fileName).Any(item => item.IdempotencyKey == recipient.IdempotencyKey))
+                    scenario.Add(_fileName, recipient);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<PushDispatchRecipient>> ClaimBatchAsync(string dispatchId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default)
+        {
+            lock (sync)
+            {
+                var claimed = scenario.Read<PushDispatchRecipient>(_fileName)
+                    .Where(item => item.DispatchId == dispatchId &&
+                        (item.Status == PushDeliveryStatus.Pending ||
+                         item.Status == PushDeliveryStatus.Sending && item.LastAttemptAt < now - lease))
+                    .OrderBy(item => item.CreationDateTime)
+                    .Take(batchSize)
+                    .Select(item => item with { Status = PushDeliveryStatus.Sending, LastAttemptAt = now, AttemptCount = item.AttemptCount + 1 })
+                    .ToList();
+                foreach (var item in claimed) scenario.Replace(_fileName, item);
+                return Task.FromResult<IReadOnlyList<PushDispatchRecipient>>(claimed);
+            }
+        }
+
+        public Task MarkSentAsync(string recipientId, DateTime sentAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, PushDeliveryStatus.Sent, sentAt, null);
+
+        public Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, PushDeliveryStatus.Suppressed, suppressedAt, reason);
+
+        public Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, retryable ? PushDeliveryStatus.Pending : PushDeliveryStatus.Failed, failedAt, reason);
+
+        private Task UpdateStatusAsync(string recipientId, PushDeliveryStatus status, DateTime at, string? reason)
+        {
+            lock (sync)
+            {
+                var item = scenario.Read<PushDispatchRecipient>(_fileName).FirstOrDefault(candidate => candidate.Id == recipientId);
+                if (item is not null)
+                    scenario.Replace(_fileName, item with
+                    {
+                        Status = status,
+                        FailureReason = reason,
+                        SentAt = status == PushDeliveryStatus.Sent ? at : item.SentAt,
+                        FailedAt = status is PushDeliveryStatus.Failed or PushDeliveryStatus.Suppressed ? at : item.FailedAt
+                    });
+            }
+            return Task.CompletedTask;
+        }
     }
 }

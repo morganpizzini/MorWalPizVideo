@@ -36,6 +36,12 @@ const NEWSLETTER_SUBSCRIBE = `${baseEndpoint}/newsletter/subscribe`;
 const NEWSLETTER_CONFIRM = `${baseEndpoint}/newsletter/confirm`;
 const NEWSLETTER_UNSUBSCRIBE = `${baseEndpoint}/newsletter/unsubscribe`;
 
+// Web Push (anonymous, per-channel)
+const PUSH_PUBLIC_KEY = `${baseEndpoint}/push/subscriptions/public-key`;
+const PUSH_SUBSCRIPTIONS = `${baseEndpoint}/push/subscriptions`;
+const PUSH_SUBSCRIPTION_SETTINGS = `${PUSH_SUBSCRIPTIONS}/settings`;
+const PUSH_SUBSCRIPTION_REVOKE = `${PUSH_SUBSCRIPTIONS}/revoke`;
+
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
 
@@ -69,6 +75,10 @@ export default {
     NEWSLETTER_SUBSCRIBE,
     NEWSLETTER_CONFIRM,
     NEWSLETTER_UNSUBSCRIBE,
+    PUSH_PUBLIC_KEY,
+    PUSH_SUBSCRIPTIONS,
+    PUSH_SUBSCRIPTION_SETTINGS,
+    PUSH_SUBSCRIPTION_REVOKE,
     CONFIGURATION_STREAM,
     QUICK_LINKS,
     QUICK_LINKS_DETAIL,

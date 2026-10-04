@@ -7,7 +7,12 @@ import {
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css'
 
+import { registerSW } from 'virtual:pwa-register';
+
 import { routes } from './routes/config';
+
+// The PWA manifest was already configured; registering the worker is what makes offline caching and Web Push live.
+registerSW({ immediate: true });
 
 const router = createBrowserRouter(routes);
 

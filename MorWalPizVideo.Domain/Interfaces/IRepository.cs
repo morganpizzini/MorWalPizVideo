@@ -248,6 +248,38 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task RecordClickAsync(string channelId, string newsletterId, string shortLinkCode, DateTime occurredAt, CancellationToken cancellationToken = default);
     }
 
+    public interface IPushSubscriptionRepository : IRepository<PushChannelSubscription>
+    {
+        Task<PushChannelSubscription?> GetByEndpointHashAsync(string endpointHash, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default);
+        Task<PushChannelSubscription> UpsertAsync(PushChannelSubscription subscription, CancellationToken cancellationToken = default);
+        Task<bool> DeactivateAsync(string endpointHash, DateTime revokedAt, CancellationToken cancellationToken = default);
+    }
+
+    public interface IPushAudienceRepository : IRepository<PushAudience>
+    {
+        Task<PushAudience?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
+        Task<IList<PushAudience>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default);
+    }
+    public interface IPushNotificationTemplateRepository : IRepository<PushNotificationTemplate> { }
+
+    public interface IPushDispatchRepository : IRepository<PushDispatch>
+    {
+        Task<PushDispatch?> ClaimForSendingAsync(string dispatchId, PushDispatchState expectedState, DateTime now, CancellationToken cancellationToken = default);
+        Task<IList<PushDispatch>> GetStalledAsync(DateTime olderThan, int limit, CancellationToken cancellationToken = default);
+    }
+
+    public interface IPushDispatchRecipientRepository : IRepository<PushDispatchRecipient>
+    {
+        Task EnsurePendingAsync(PushDispatchRecipient recipient, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushDispatchRecipient>> ClaimBatchAsync(string dispatchId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default);
+        Task MarkSentAsync(string recipientId, DateTime sentAt, CancellationToken cancellationToken = default);
+        Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default);
+        Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default);
+    }
+
     public interface IUserGroupRepository : IRepository<UserGroup>
     {
         Task<UserGroup?> GetByCodeAsync(string code);

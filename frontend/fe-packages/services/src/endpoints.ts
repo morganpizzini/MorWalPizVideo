@@ -130,6 +130,19 @@ const ASK_REACTIONS = `${ASK_SUBMISSIONS}/{submissionId}/reactions`;
 const FAQ = `${baseEndpoint}/faq`;
 const FAQ_CATEGORIES = `${FAQ}/categories`;
 const FAQ_VOTE = `${FAQ}/{faqId}/answers/{channelName}/vote`;
+// Web Push administration
+const PUSH_AUDIENCES = `${baseEndpoint}/pushaudiences`;
+const PUSH_AUDIENCE_DETAIL = `${PUSH_AUDIENCES}/{id}`;
+const PUSH_CAMPAIGN_TARGETS = `${baseEndpoint}/pushcampaigns/targets`;
+const PUSH_CAMPAIGNS_PLATFORM = `${baseEndpoint}/pushcampaigns/platform`;
+const PUSH_CAMPAIGNS_CHANNEL = `${baseEndpoint}/pushcampaigns/channel`;
+const PUSH_TEMPLATES = `${baseEndpoint}/pushnotificationtemplates`;
+const PUSH_TEMPLATE_DETAIL = `${PUSH_TEMPLATES}/{id}`;
+const PUSH_BACKOFFICE_SUBSCRIPTIONS = `${baseEndpoint}/push/subscriptions`;
+const PUSH_BACKOFFICE_SUBSCRIBE = `${PUSH_BACKOFFICE_SUBSCRIPTIONS}/register`;
+const PUSH_BACKOFFICE_STATUS = `${PUSH_BACKOFFICE_SUBSCRIPTIONS}/status`;
+const PUSH_BACKOFFICE_REVOKE = `${PUSH_BACKOFFICE_SUBSCRIPTIONS}/revoke`;
+
 const FAQ_ADMIN = `${baseEndpoint}/faq`;
 const FAQ_ADMIN_DETAIL = `${FAQ_ADMIN}/{id}`;
 const FAQ_ADMIN_CATEGORIES = `${FAQ_ADMIN}/categories`;
@@ -193,6 +206,16 @@ export default {
   CHANNEL_NEWS_STATUS,
   CHANNEL_NEWS_IMAGES,
   CHANNEL_NEWS_IMAGE_DETAIL,
+  PUSH_AUDIENCES,
+  PUSH_AUDIENCE_DETAIL,
+  PUSH_CAMPAIGN_TARGETS,
+  PUSH_CAMPAIGNS_PLATFORM,
+  PUSH_CAMPAIGNS_CHANNEL,
+  PUSH_TEMPLATES,
+  PUSH_TEMPLATE_DETAIL,
+  PUSH_BACKOFFICE_SUBSCRIBE,
+  PUSH_BACKOFFICE_STATUS,
+  PUSH_BACKOFFICE_REVOKE,
   NEWSLETTERS,
   NEWSLETTERS_DETAIL,
   NEWSLETTERS_STATE,

@@ -13,6 +13,7 @@ import { quickLinkLoader } from './quickLink/loader';
 import ChannelNewsDetail from './channelNews/Component';
 import { channelNewsLoader } from './channelNews/loader';
 import FaqPage from './faq/Component';
+import PushSettings from './pushSettings/Component';
 import { faqLoader } from './faq/loader';
 
 export const routes = [{ path: '/', element: <RootShell />, children: [
@@ -24,5 +25,6 @@ export const routes = [{ path: '/', element: <RootShell />, children: [
     { path: 'quick-link/:custom-linktree', element: <QuickLinkRoute />, loader: quickLinkLoader },
     { path: 'channel-news/:idOrSlug', element: <ChannelNewsDetail />, loader: channelNewsLoader },
     { path: 'faq', element: <FaqPage />, loader: faqLoader },
+    { path: 'notifiche', element: <PushSettings /> },
     { path: '*', element: <div>404 Not Found</div> },
 ] }];

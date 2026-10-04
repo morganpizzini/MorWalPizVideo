@@ -8,6 +8,7 @@ import {
   KeyRound,
   Link,
   ListVideo,
+  Bell,
   Package,
   Settings,
   ShieldCheck,
@@ -149,6 +150,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         path: '/surveys',
         permissions: [permissions.forms.view, permissions.forms.manage],
         icon: FileText,
+      },
+      {
+        label: 'Push notifications',
+        path: '/push',
+        permissions: [BACKOFFICE_ACCESS],
+        icon: Bell,
       },
       {
         label: 'Insights',

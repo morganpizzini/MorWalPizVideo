@@ -9,6 +9,7 @@
         public const string Facebook = "Facebook";
         public const string YouTube = "YouTube";
         public const string Recaptcha = "Recaptcha";
+        public const string WebPush = "WebPush";
     }
     public static class DbCollections
     {
@@ -75,6 +76,12 @@
         public const string UserChannels = "userChannels";
         public const string UserChannelOwners = "userChannelOwners";
         public const string UserRequests = "userRequests";
+
+        public const string PushSubscriptions = "pushSubscriptions";
+        public const string PushAudiences = "pushAudiences";
+        public const string PushDispatches = "pushDispatches";
+        public const string PushDispatchRecipients = "pushDispatchRecipients";
+        public const string PushNotificationTemplates = "pushNotificationTemplates";
 
         public const string Newsletters = "newsletters";
         public const string NewsletterTemplates = "newsletterTemplates";

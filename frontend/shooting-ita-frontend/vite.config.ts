@@ -9,6 +9,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Web Push handlers live in a static script so Workbox keeps owning precaching and offline behaviour.
+      workbox: {
+        importScripts: ['/push-sw.js'],
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'Shooting ITA',

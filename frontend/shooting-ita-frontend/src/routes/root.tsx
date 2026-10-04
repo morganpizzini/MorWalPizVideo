@@ -1,5 +1,6 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { PepperboxSidebar, PepperboxTopBar, type SidebarNavItem } from '@morwalpiz/layout';
+import PushOptIn from '../components/PushOptIn';
 import '../styles/theme.scss';
 
 const PRIMARY_NAV: SidebarNavItem[] = [
@@ -29,6 +30,7 @@ export default function RootShell() {
             <main className="pepperbox-shell__main">
                 <Outlet />
             </main>
+            <PushOptIn />
         </div>
     );
 }

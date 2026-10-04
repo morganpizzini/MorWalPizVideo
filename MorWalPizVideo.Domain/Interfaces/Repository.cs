@@ -1322,4 +1322,176 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         public UserRequestRepository(IMongoDatabase database) : base(database, DbCollections.UserRequests) { }
     }
+
+    public sealed class PushSubscriptionRepository(IMongoDatabase database)
+        : BaseRepository<PushChannelSubscription>(database, DbCollections.PushSubscriptions), IPushSubscriptionRepository
+    {
+        public Task<PushChannelSubscription?> GetByEndpointHashAsync(string endpointHash, CancellationToken cancellationToken = default)
+            => _collection.Find(Builders<PushChannelSubscription>.Filter.Eq(item => item.EndpointHash, endpointHash))
+                .FirstOrDefaultAsync(cancellationToken)!;
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default)
+            => GetActiveByChannelsAndApplicationAsync(channelIds, string.Empty, cancellationToken);
+
+        public async Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default)
+        {
+            if (channelIds.Count == 0) return [];
+            var filters = new List<FilterDefinition<PushChannelSubscription>>
+            {
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.IsActive, true),
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.Scope, PushSubscriptionScope.Channel),
+                Builders<PushChannelSubscription>.Filter.AnyIn(item => item.ChannelIds, channelIds)
+            };
+            if (!string.IsNullOrWhiteSpace(applicationKey))
+                filters.Add(Builders<PushChannelSubscription>.Filter.Eq(item => item.ApplicationKey, applicationKey));
+            var filter = Builders<PushChannelSubscription>.Filter.And(filters);
+            return await _collection.Find(filter).ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PushChannelSubscription>.Filter.And(
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.IsActive, true),
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.ApplicationKey, applicationKey),
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.Scope, PushSubscriptionScope.Platform),
+                Builders<PushChannelSubscription>.Filter.Size(item => item.ChannelIds, 0));
+            return await _collection.Find(filter).ToListAsync(cancellationToken);
+        }
+
+        public async Task<PushChannelSubscription> UpsertAsync(PushChannelSubscription subscription, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PushChannelSubscription>.Filter.Eq(item => item.EndpointHash, subscription.EndpointHash);
+            var update = Builders<PushChannelSubscription>.Update
+                .Set(item => item.Endpoint, subscription.Endpoint)
+                .Set(item => item.Keys, subscription.Keys)
+                .Set(item => item.ChannelIds, subscription.ChannelIds)
+                .Set(item => item.ApplicationKey, subscription.ApplicationKey)
+                .Set(item => item.Scope, subscription.Scope)
+                .Set(item => item.Language, subscription.Language)
+                .Set(item => item.IsActive, subscription.IsActive)
+                .Set(item => item.UpdatedAt, subscription.UpdatedAt)
+                .Set(item => item.RevokedAt, subscription.RevokedAt)
+                .SetOnInsert(item => item.EndpointHash, subscription.EndpointHash)
+                .SetOnInsert(item => item.CredentialHash, subscription.CredentialHash)
+                .SetOnInsert(item => item.ConsentedAt, subscription.ConsentedAt)
+                .SetOnInsert(item => item.CreationDateTime, subscription.CreationDateTime);
+            return await _collection.FindOneAndUpdateAsync(filter, update,
+                new FindOneAndUpdateOptions<PushChannelSubscription> { IsUpsert = true, ReturnDocument = ReturnDocument.After },
+                cancellationToken);
+        }
+
+        public async Task<bool> DeactivateAsync(string endpointHash, DateTime revokedAt, CancellationToken cancellationToken = default)
+        {
+            var update = Builders<PushChannelSubscription>.Update
+                .Set(item => item.IsActive, false)
+                .Set(item => item.RevokedAt, revokedAt)
+                .Set(item => item.UpdatedAt, revokedAt);
+            var result = await _collection.UpdateOneAsync(
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.EndpointHash, endpointHash), update, cancellationToken: cancellationToken);
+            return result.ModifiedCount > 0;
+        }
+    }
+
+    public sealed class PushAudienceRepository(IMongoDatabase database)
+        : BaseRepository<PushAudience>(database, DbCollections.PushAudiences), IPushAudienceRepository
+    {
+        public Task<PushAudience?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
+            => _collection.Find(Builders<PushAudience>.Filter.Eq(item => item.Code, code)).FirstOrDefaultAsync(cancellationToken)!;
+
+        public async Task<IList<PushAudience>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+            => ids.Count == 0 ? [] : await _collection.Find(Builders<PushAudience>.Filter.In(item => item.Id, ids)).ToListAsync(cancellationToken);
+    }
+    public sealed class PushNotificationTemplateRepository(IMongoDatabase database)
+        : BaseRepository<PushNotificationTemplate>(database, DbCollections.PushNotificationTemplates), IPushNotificationTemplateRepository;
+
+    public sealed class PushDispatchRepository(IMongoDatabase database)
+        : BaseRepository<PushDispatch>(database, DbCollections.PushDispatches), IPushDispatchRepository
+    {
+        public Task<PushDispatch?> ClaimForSendingAsync(string dispatchId, PushDispatchState expectedState, DateTime now, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PushDispatch>.Filter.And(
+                Builders<PushDispatch>.Filter.Eq(item => item.Id, dispatchId),
+                Builders<PushDispatch>.Filter.Eq(item => item.State, expectedState));
+            var update = Builders<PushDispatch>.Update
+                .Set(item => item.State, PushDispatchState.Sending)
+                .Set(item => item.QueuedAt, now);
+            return _collection.FindOneAndUpdateAsync(filter, update,
+                new FindOneAndUpdateOptions<PushDispatch> { ReturnDocument = ReturnDocument.After }, cancellationToken);
+        }
+
+        public async Task<IList<PushDispatch>> GetStalledAsync(DateTime olderThan, int limit, CancellationToken cancellationToken = default)
+            => await _collection.Find(Builders<PushDispatch>.Filter.And(
+                    Builders<PushDispatch>.Filter.In(item => item.State, new[] { PushDispatchState.Queued, PushDispatchState.Sending }),
+                    Builders<PushDispatch>.Filter.Lt(item => item.QueuedAt, olderThan)))
+                .SortBy(item => item.QueuedAt)
+                .Limit(Math.Clamp(limit, 1, 1000))
+                .ToListAsync(cancellationToken);
+    }
+
+    public sealed class PushDispatchRecipientRepository(IMongoDatabase database)
+        : BaseRepository<PushDispatchRecipient>(database, DbCollections.PushDispatchRecipients), IPushDispatchRecipientRepository
+    {
+        public async Task EnsurePendingAsync(PushDispatchRecipient recipient, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PushDispatchRecipient>.Filter.Eq(item => item.IdempotencyKey, recipient.IdempotencyKey);
+            var update = Builders<PushDispatchRecipient>.Update
+                .SetOnInsert(item => item.DispatchId, recipient.DispatchId)
+                .SetOnInsert(item => item.SubscriptionId, recipient.SubscriptionId)
+                .SetOnInsert(item => item.EndpointHash, recipient.EndpointHash)
+                .SetOnInsert(item => item.Status, PushDeliveryStatus.Pending)
+                .SetOnInsert(item => item.IdempotencyKey, recipient.IdempotencyKey)
+                .SetOnInsert(item => item.CreationDateTime, recipient.CreationDateTime);
+            await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<PushDispatchRecipient>> ClaimBatchAsync(string dispatchId, int batchSize, DateTime now, TimeSpan lease, CancellationToken cancellationToken = default)
+        {
+            var claimed = new List<PushDispatchRecipient>();
+            var filter = Builders<PushDispatchRecipient>.Filter.And(
+                Builders<PushDispatchRecipient>.Filter.Eq(item => item.DispatchId, dispatchId),
+                Builders<PushDispatchRecipient>.Filter.Or(
+                    Builders<PushDispatchRecipient>.Filter.Eq(item => item.Status, PushDeliveryStatus.Pending),
+                    Builders<PushDispatchRecipient>.Filter.And(
+                        Builders<PushDispatchRecipient>.Filter.Eq(item => item.Status, PushDeliveryStatus.Sending),
+                        Builders<PushDispatchRecipient>.Filter.Lt(item => item.LastAttemptAt, now - lease))));
+            var update = Builders<PushDispatchRecipient>.Update
+                .Set(item => item.Status, PushDeliveryStatus.Sending)
+                .Set(item => item.LastAttemptAt, now)
+                .Inc(item => item.AttemptCount, 1);
+            for (var index = 0; index < batchSize; index++)
+            {
+                var item = await _collection.FindOneAndUpdateAsync(filter, update,
+                    new FindOneAndUpdateOptions<PushDispatchRecipient>
+                    {
+                        ReturnDocument = ReturnDocument.After,
+                        Sort = Builders<PushDispatchRecipient>.Sort.Ascending(candidate => candidate.CreationDateTime)
+                    }, cancellationToken);
+                if (item is null) break;
+                claimed.Add(item);
+            }
+            return claimed;
+        }
+
+        public Task MarkSentAsync(string recipientId, DateTime sentAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, PushDeliveryStatus.Sent, sentAt, null, cancellationToken);
+
+        public Task MarkSuppressedAsync(string recipientId, string reason, DateTime suppressedAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, PushDeliveryStatus.Suppressed, suppressedAt, reason, cancellationToken);
+
+        public Task MarkFailedAsync(string recipientId, string reason, bool retryable, DateTime failedAt, CancellationToken cancellationToken = default)
+            => UpdateStatusAsync(recipientId, retryable ? PushDeliveryStatus.Pending : PushDeliveryStatus.Failed, failedAt, reason, cancellationToken);
+
+        private async Task UpdateStatusAsync(string id, PushDeliveryStatus status, DateTime at, string? reason, CancellationToken cancellationToken)
+        {
+            var filter = ObjectId.TryParse(id, out var objectId)
+                ? Builders<PushDispatchRecipient>.Filter.Eq("_id", objectId)
+                : Builders<PushDispatchRecipient>.Filter.Eq("_id", id);
+            var update = Builders<PushDispatchRecipient>.Update
+                .Set(item => item.Status, status)
+                .Set(item => item.FailureReason, reason);
+            if (status == PushDeliveryStatus.Sent) update = update.Set(item => item.SentAt, at);
+            if (status is PushDeliveryStatus.Failed or PushDeliveryStatus.Suppressed) update = update.Set(item => item.FailedAt, at);
+            await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        }
+    }
 }

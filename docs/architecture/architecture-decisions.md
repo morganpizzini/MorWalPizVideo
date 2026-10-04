@@ -20,6 +20,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-014](adr/ADR-014-directional-permission-implications.md) | Domain-owned directional permission implications | Accepted |
 | [ADR-015](adr/ADR-015-backoffice-app-store.md) | BackOffice SPA app-store ownership and bootstrap hydration | Accepted |
 | [ADR-016](adr/ADR-016-shooting-range-public-poc.md) | Authorization-first public posture for the Shooting Range POC | Accepted |
+| [ADR-017](adr/ADR-017-anonymous-web-push.md) | Anonymous per-channel Web Push with snapshot fanout | Accepted |
 
 ## ADR Process
 

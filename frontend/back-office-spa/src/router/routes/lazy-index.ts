@@ -162,6 +162,9 @@ const routeDefinitions: RouteConfig[] = [
       children: [feature('edit', () => import('../../routes/channelNews/form'))],
     },
   ]),
+  feature('push', () => import('../../routes/push'), {
+    errorElement: createErrorElement(),
+  }),
   group('newsletters', () => import('../../routes/newsletters'), [
     indexFeature('', () => import('../../routes/newsletters')),
   ]),
