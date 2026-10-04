@@ -1,5 +1,7 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
+using System.Net;
+using System.Net.Sockets;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +21,7 @@ using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
+using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
@@ -197,6 +200,7 @@ if (!enableMock)
     });
     builder.Services.AddTransient<Kernel>();
 }
+builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -251,6 +255,28 @@ if (!enableMock)
     builder.Services.AddHttpClient(HttpClientNames.WebPush, httpClient =>
     {
         httpClient.Timeout = TimeSpan.FromSeconds(30);
+    }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        ConnectCallback = async (context, cancellationToken) =>
+        {
+            var addresses = await PushEndpointValidator.GetSafeAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
+            Exception? last = null;
+            foreach (var address in addresses)
+            {
+                try
+                {
+                    var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                    await socket.ConnectAsync(address, context.DnsEndPoint.Port, cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch (Exception exception) when (exception is SocketException or OperationCanceledException)
+                {
+                    last = exception;
+                }
+            }
+            throw new HttpRequestException("Web Push endpoint did not resolve to a reachable public address.", last);
+        }
     }).RemoveAllLoggers();
 }
 
@@ -434,6 +460,7 @@ if (enableMock)
     builder.Services.AddSingleton<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
     builder.Services.AddScoped<IPushAudienceRepository, PushAudienceMockRepository>();
+    builder.Services.AddScoped<IPushNotificationTemplateRepository, PushNotificationTemplateMockRepository>();
     builder.Services.AddScoped<IPushDispatchRepository, PushDispatchMockRepository>();
     builder.Services.AddScoped<IPushDispatchRecipientRepository, PushDispatchRecipientMockRepository>();
     builder.Services.AddSingleton<IWebPushSender, WebPushSenderMock>();
@@ -545,6 +572,7 @@ else
     builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
     builder.Services.AddScoped<IPushAudienceRepository, PushAudienceRepository>();
+    builder.Services.AddScoped<IPushNotificationTemplateRepository, PushNotificationTemplateRepository>();
     builder.Services.AddScoped<IPushDispatchRepository, PushDispatchRepository>();
     builder.Services.AddScoped<IPushDispatchRecipientRepository, PushDispatchRecipientRepository>();
     builder.Services.AddScoped<IWebPushSender, WebPushSender>();

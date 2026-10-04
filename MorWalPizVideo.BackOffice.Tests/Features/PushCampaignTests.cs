@@ -172,12 +172,46 @@ public sealed class PushCampaignTests : IClassFixture<BackOfficeWebApplicationFa
                 new { action = "c", title = "C", destination = "/c" }
             }
         });
-        var dispatch = await tooManyActions.Content.ReadFromJsonAsync<PushDispatchContract>();
 
         Assert.Equal(HttpStatusCode.BadRequest, absoluteDestination.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, protocolRelativeAction.StatusCode);
-        Assert.Equal(HttpStatusCode.Accepted, tooManyActions.StatusCode);
-        Assert.Equal(2, dispatch!.Actions.Count);
+        Assert.Equal(HttpStatusCode.BadRequest, tooManyActions.StatusCode);
+    }
+
+    [Fact]
+    public async Task Platform_send_includes_only_platform_scoped_backoffice_subscriptions_without_channels()
+    {
+        using var scope = factory.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IPushSubscriptionRepository>();
+        var endpoint = $"https://push.example.com/platform/{Guid.NewGuid():N}";
+        var platformHash = PushEndpointProtection.HashEndpoint(endpoint);
+        await repository.UpsertAsync(new PushChannelSubscription(
+            platformHash, endpoint, new PushSubscriptionKeys("BPublicKeyMaterial", "AuthSecret"),
+            PushEndpointProtection.HashCredential(PushEndpointProtection.CreateCredential()), [])
+        {
+            ApplicationKey = "backoffice",
+            Scope = PushSubscriptionScope.Platform,
+            IsActive = true,
+            ConsentedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreationDateTime = DateTime.UtcNow
+        });
+        using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PushPlatformSend);
+
+        var response = await client.PostAsJsonAsync("/api/pushcampaigns/platform", new
+        {
+            title = "Platform only",
+            body = "Administrative alert.",
+            destination = "/",
+            actions = Array.Empty<object>()
+        });
+        var dispatch = await response.Content.ReadFromJsonAsync<PushDispatchContract>();
+        var recipients = await scope.ServiceProvider.GetRequiredService<IPushDispatchRecipientRepository>()
+            .GetItemsAsync(item => item.DispatchId == dispatch!.Id);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Single(recipients);
+        Assert.Equal(platformHash, recipients[0].EndpointHash);
     }
 
     [Fact]

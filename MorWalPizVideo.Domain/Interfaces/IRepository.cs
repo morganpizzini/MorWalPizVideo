@@ -252,6 +252,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
         Task<PushChannelSubscription?> GetByEndpointHashAsync(string endpointHash, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default);
         Task<PushChannelSubscription> UpsertAsync(PushChannelSubscription subscription, CancellationToken cancellationToken = default);
         Task<bool> DeactivateAsync(string endpointHash, DateTime revokedAt, CancellationToken cancellationToken = default);
     }
@@ -261,6 +263,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<PushAudience?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
         Task<IList<PushAudience>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default);
     }
+    public interface IPushNotificationTemplateRepository : IRepository<PushNotificationTemplate> { }
 
     public interface IPushDispatchRepository : IRepository<PushDispatch>
     {

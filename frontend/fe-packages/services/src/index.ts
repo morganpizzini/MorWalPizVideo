@@ -246,6 +246,13 @@ export {
   fetchPushChannelDispatches,
   sendPushPlatform,
   sendPushChannel,
+  saveBackOfficePushSubscription,
+  getBackOfficePushSubscriptionSettings,
+  revokeBackOfficePushSubscription,
+  fetchPushNotificationTemplates,
+  createPushNotificationTemplate,
+  updatePushNotificationTemplate,
+  deletePushNotificationTemplate,
 } from "./pushService";
 export {
   getPushSupport,

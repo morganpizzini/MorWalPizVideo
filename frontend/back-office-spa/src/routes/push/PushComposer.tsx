@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { Plus, Trash2 } from 'lucide-react';
-import type { PushNotificationActionRequest } from '@morwalpizvideo/models';
+import type { PushNotificationActionRequest, PushNotificationTemplate } from '@morwalpizvideo/models';
 
 export interface PushMessageDraft {
   title: string;
   body: string;
   destination: string;
   actions: PushNotificationActionRequest[];
+  templateId?: string;
 }
 
 interface PushComposerProps {
@@ -18,6 +19,7 @@ interface PushComposerProps {
   busy: boolean;
   disabled?: boolean;
   onSend: (message: PushMessageDraft) => void;
+  templates?: readonly PushNotificationTemplate[];
 }
 
 /**
@@ -31,11 +33,13 @@ export default function PushComposer({
   busy,
   disabled = false,
   onSend,
+  templates = [],
 }: PushComposerProps): React.ReactElement {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [destination, setDestination] = useState('/');
   const [actions, setActions] = useState<PushNotificationActionRequest[]>([]);
+  const [templateId, setTemplateId] = useState('');
 
   const updateAction = (index: number, patch: Partial<PushNotificationActionRequest>) =>
     setActions(
@@ -44,11 +48,22 @@ export default function PushComposer({
 
   return (
     <>
+      {templates.length > 0 && <Form.Group className="mb-3" controlId={`${idPrefix}-template`}>
+        <Form.Label>Template</Form.Label>
+        <Form.Select value={templateId} onChange={event => {
+          const value = event.target.value; setTemplateId(value);
+          const template = templates.find(item => item.id === value);
+          if (template) { setTitle(template.title); setBody(template.body); setDestination(template.destination); setActions(template.actions.slice(0, maxActions)); }
+        }}>
+          <option value="">Custom message</option>
+          {templates.map(template => <option key={template.id} value={template.id}>{template.name} (v{template.version})</option>)}
+        </Form.Select>
+      </Form.Group>}
       <Form.Group className="mb-3" controlId={`${idPrefix}-title`}>
         <Form.Label>Title</Form.Label>
         <Form.Control
           value={title}
-          onChange={event => setTitle(event.target.value)}
+          onChange={event => { setTemplateId(''); setTitle(event.target.value); }}
           maxLength={120}
         />
       </Form.Group>
@@ -58,13 +73,13 @@ export default function PushComposer({
           as="textarea"
           rows={3}
           value={body}
-          onChange={event => setBody(event.target.value)}
+          onChange={event => { setTemplateId(''); setBody(event.target.value); }}
           maxLength={400}
         />
       </Form.Group>
       <Form.Group className="mb-3" controlId={`${idPrefix}-destination`}>
         <Form.Label>Destination</Form.Label>
-        <Form.Control value={destination} onChange={event => setDestination(event.target.value)} />
+        <Form.Control value={destination} onChange={event => { setTemplateId(''); setDestination(event.target.value); }} />
         <Form.Text>
           Relative path on this site, for example /videos/latest. External URLs are rejected.
         </Form.Text>
@@ -84,7 +99,7 @@ export default function PushComposer({
                 aria-label={`${idPrefix} action ${index + 1} id`}
                 placeholder="id"
                 value={action.action}
-                onChange={event => updateAction(index, { action: event.target.value })}
+                onChange={event => { setTemplateId(''); updateAction(index, { action: event.target.value }); }}
               />
             </div>
             <div className="col-md-4">
@@ -92,7 +107,7 @@ export default function PushComposer({
                 aria-label={`${idPrefix} action ${index + 1} label`}
                 placeholder="Label"
                 value={action.title}
-                onChange={event => updateAction(index, { title: event.target.value })}
+                onChange={event => { setTemplateId(''); updateAction(index, { title: event.target.value }); }}
               />
             </div>
             <div className="col-md-4">
@@ -100,14 +115,14 @@ export default function PushComposer({
                 aria-label={`${idPrefix} action ${index + 1} destination`}
                 placeholder="/path"
                 value={action.destination}
-                onChange={event => updateAction(index, { destination: event.target.value })}
+                onChange={event => { setTemplateId(''); updateAction(index, { destination: event.target.value }); }}
               />
             </div>
             <div className="col-md-1 d-grid">
               <Button
                 variant="outline-danger"
                 aria-label={`Remove ${idPrefix} action ${index + 1}`}
-                onClick={() => setActions(actions.filter((_, position) => position !== index))}
+                onClick={() => { setTemplateId(''); setActions(actions.filter((_, position) => position !== index)); }}
               >
                 <Trash2 size={16} />
               </Button>
@@ -119,7 +134,7 @@ export default function PushComposer({
           size="sm"
           disabled={actions.length >= maxActions}
           onClick={() =>
-            setActions([...actions, { action: '', title: '', destination: '/' }])
+            { setTemplateId(''); setActions([...actions, { action: '', title: '', destination: '/' }]); }
           }
         >
           <Plus size={16} className="me-1" />
@@ -138,6 +153,7 @@ export default function PushComposer({
             body,
             destination,
             actions: actions.filter(action => action.action && action.title),
+            templateId: templateId || undefined,
           })
         }
       >

@@ -6,6 +6,7 @@ import { render } from '../../../test/test-utils';
 
 const sendPushPlatform = vi.fn();
 const sendPushChannel = vi.fn();
+const createPushNotificationTemplate = vi.fn();
 
 vi.mock('@morwalpizvideo/services', () => ({
   sendPushPlatform: (request: unknown) => sendPushPlatform(request),
@@ -13,6 +14,10 @@ vi.mock('@morwalpizvideo/services', () => ({
   createPushAudience: vi.fn(),
   deletePushAudience: vi.fn(),
   getPushTargets: vi.fn(),
+  fetchPushNotificationTemplates: vi.fn().mockResolvedValue([]),
+  createPushNotificationTemplate,
+  updatePushNotificationTemplate: vi.fn(),
+  deletePushNotificationTemplate: vi.fn(),
 }));
 
 const targets: PushTargets = {
@@ -55,6 +60,7 @@ beforeEach(() => {
   effectivePermissions = ['push.platform.send'];
   sendPushPlatform.mockResolvedValue({ recipientCount: 15 });
   sendPushChannel.mockResolvedValue({ recipientCount: 12 });
+  createPushNotificationTemplate.mockResolvedValue({ id: 'template-1', name: 'Release', title: 'Release', body: 'New video', destination: '/', actions: [], version: 1, isActive: true, updatedAt: '' });
 });
 
 describe('Push notifications', () => {
@@ -128,5 +134,21 @@ describe('Push notifications', () => {
     expect(sendPushChannel).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Channel news', body: 'For my subscribers.' })
     );
+  });
+
+  it('creates a reusable template from the editor', async () => {
+    await renderPush();
+    await userEvent.type(screen.getByLabelText('Name', { selector: '#template-name' }), 'Release');
+    await userEvent.type(screen.getByLabelText('Title', { selector: '#template-title' }), 'Release');
+    await userEvent.type(screen.getByLabelText('Body', { selector: '#template-body' }), 'New video');
+    await userEvent.click(screen.getByRole('button', { name: 'Add action' }));
+    await userEvent.type(screen.getByLabelText('Template action 1 id'), 'open');
+    await userEvent.type(screen.getByLabelText('Template action 1 label'), 'Open');
+    await userEvent.click(screen.getByRole('button', { name: 'Create template' }));
+    expect(createPushNotificationTemplate).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Release', title: 'Release', body: 'New video',
+      actions: [expect.objectContaining({ action: 'open', title: 'Open' })],
+    }));
+    expect((await screen.findAllByText('Release')).length).toBeGreaterThan(0);
   });
 });

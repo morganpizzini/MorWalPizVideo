@@ -63,9 +63,24 @@ public sealed class PushDispatchService(
     private async Task<int> ProvisionRecipientsAsync(PushDispatch dispatch, CancellationToken cancellationToken)
     {
         var channelIds = await ResolveChannelIdsAsync(dispatch, cancellationToken);
-        if (channelIds.Count == 0) return 0;
 
-        var subscriptions = await subscriptionRepository.GetActiveByChannelsAsync(channelIds, cancellationToken);
+        var applications = dispatch.ApplicationKeys.Count > 0
+            ? dispatch.ApplicationKeys
+            : [dispatch.ApplicationKey];
+        var channelSubscriptions = channelIds.Count == 0
+            ? []
+            : (await Task.WhenAll(applications
+                .Where(application => !string.IsNullOrWhiteSpace(application))
+                .Distinct(StringComparer.Ordinal)
+                .Select(application => subscriptionRepository.GetActiveByChannelsAndApplicationAsync(channelIds, application, cancellationToken))))
+            .SelectMany(items => items);
+        var platformSubscriptions = dispatch.Scope == PushDispatchScope.Platform
+            ? await subscriptionRepository.GetActivePlatformByApplicationAsync("backoffice", cancellationToken)
+            : [];
+        var subscriptions = channelSubscriptions.Concat(platformSubscriptions)
+            .GroupBy(subscription => subscription.EndpointHash, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
         var now = DateTime.UtcNow;
         foreach (var subscription in subscriptions)
         {
@@ -76,7 +91,7 @@ public sealed class PushDispatchService(
                 CreationDateTime = now
             }, cancellationToken);
         }
-        return subscriptions.Count;
+        return subscriptions.Length;
     }
 
     private async Task<IReadOnlyCollection<string>> ResolveChannelIdsAsync(PushDispatch dispatch, CancellationToken cancellationToken)
@@ -115,6 +130,11 @@ public sealed class PushDispatchService(
                 continue;
             }
 
+            if (!await PushEndpointValidator.IsSafeAsync(subscription.Endpoint, cancellationToken))
+            {
+                await recipientRepository.MarkSuppressedAsync(recipient.Id, "Endpoint rejected by outbound safety policy.", DateTime.UtcNow, cancellationToken);
+                continue;
+            }
             var result = await webPushSender.SendAsync(subscription, payload, cancellationToken);
             switch (result.Outcome)
             {

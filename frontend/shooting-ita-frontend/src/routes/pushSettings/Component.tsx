@@ -29,6 +29,10 @@ export default function PushSettings() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (import.meta.env.PROD && !import.meta.env.VITE_SHOOTING_ITA_PUSH_ORIGIN) {
+      setStatus('unsupported');
+      return;
+    }
     if (!getPushSupport().supported) {
       setStatus('unsupported');
       return;

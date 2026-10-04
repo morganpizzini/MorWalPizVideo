@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Form, Table } from 'react-bootstrap';
-import { Trash2 } from 'lucide-react';
-import type { PushDispatch, PushTargets } from '@morwalpizvideo/models';
+import { Edit3, Trash2 } from 'lucide-react';
+import type { PushDispatch, PushTargets, PushNotificationTemplate } from '@morwalpizvideo/models';
 import {
   createPushAudience,
   deletePushAudience,
   sendPushChannel,
   sendPushPlatform,
+  fetchPushNotificationTemplates,
+  createPushNotificationTemplate,
+  updatePushNotificationTemplate,
+  deletePushNotificationTemplate,
 } from '@morwalpizvideo/services';
 import { useResolvedLoaderData } from '@/router/asyncData';
 import PageHeader from '@components/PageHeader';
@@ -33,6 +37,12 @@ export default function Push(): React.ReactElement {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PushDispatch | null>(null);
+  const [templates, setTemplates] = useState<PushNotificationTemplate[]>([]);
+  const [templateDraft, setTemplateDraft] = useState<{
+    id: string; name: string; title: string; body: string; destination: string;
+    actions: PushNotificationTemplate['actions'];
+  }>({ id: '', name: '', title: '', body: '', destination: '/', actions: [] });
+  useEffect(() => { void fetchPushNotificationTemplates().then(setTemplates).catch(() => undefined); }, []);
 
   const allChannelsSelected =
     targets.channels.length > 0 && channelIds.length === targets.channels.length;
@@ -90,6 +100,19 @@ export default function Push(): React.ReactElement {
       setAudiences(audiences.filter(audience => audience.id !== id));
       setAudienceIds(audienceIds.filter(audienceId => audienceId !== id));
     });
+
+  const saveTemplate = () => void run(async () => {
+    const request = { name: templateDraft.name, title: templateDraft.title, body: templateDraft.body, destination: templateDraft.destination, actions: templateDraft.actions };
+    const saved = templateDraft.id
+      ? await updatePushNotificationTemplate(templateDraft.id, request)
+      : await createPushNotificationTemplate(request);
+    setTemplates(current => templateDraft.id ? current.map(item => item.id === saved.id ? saved : item) : [...current, saved]);
+    setTemplateDraft({ id: '', name: '', title: '', body: '', destination: '/', actions: [] });
+  });
+  const removeTemplate = (id: string) => void run(async () => {
+    await deletePushNotificationTemplate(id);
+    setTemplates(current => current.filter(item => item.id !== id));
+  });
 
   return (
     <>
@@ -174,6 +197,34 @@ export default function Push(): React.ReactElement {
                   ))}
                 </>
               )}
+
+              <Card className="mb-4">
+                <Card.Body>
+                  <Card.Title as="h2" className="h5">Reusable templates</Card.Title>
+                  <Table responsive className="align-middle">
+                    <thead><tr><th>Name</th><th>Title</th><th>Version</th><th aria-label="Actions" /></tr></thead>
+                    <tbody>{templates.map(template => <tr key={template.id}><td>{template.name}</td><td>{template.title}</td><td>{template.version}</td><td className="text-end">
+                      <Button size="sm" variant="outline-secondary" aria-label={`Edit template ${template.name}`} onClick={() => setTemplateDraft({ id: template.id, name: template.name, title: template.title, body: template.body, destination: template.destination, actions: [...template.actions] })}><Edit3 size={16} /></Button>{' '}
+                      <Button size="sm" variant="outline-danger" aria-label={`Delete template ${template.name}`} onClick={() => removeTemplate(template.id)}><Trash2 size={16} /></Button>
+                    </td></tr>)}</tbody>
+                  </Table>
+                  <Form.Group className="mb-2" controlId="template-name"><Form.Label>Name</Form.Label><Form.Control value={templateDraft.name} onChange={event => setTemplateDraft({ ...templateDraft, name: event.target.value })} /></Form.Group>
+                  <div className="row g-2"><div className="col-md-6"><Form.Group controlId="template-title"><Form.Label>Title</Form.Label><Form.Control value={templateDraft.title} onChange={event => setTemplateDraft({ ...templateDraft, title: event.target.value })} /></Form.Group></div><div className="col-md-6"><Form.Group controlId="template-destination"><Form.Label>Destination</Form.Label><Form.Control value={templateDraft.destination} onChange={event => setTemplateDraft({ ...templateDraft, destination: event.target.value })} /></Form.Group></div></div>
+                  <Form.Group className="my-2" controlId="template-body"><Form.Label>Body</Form.Label><Form.Control as="textarea" rows={3} value={templateDraft.body} onChange={event => setTemplateDraft({ ...templateDraft, body: event.target.value })} /></Form.Group>
+                  <fieldset className="mb-2">
+                    <legend className="h6">Action buttons</legend>
+                    {templateDraft.actions.map((action, index) => <div className="row g-2 mb-2" key={index}>
+                      <div className="col-md-3"><Form.Control aria-label={`Template action ${index + 1} id`} placeholder="id" value={action.action} onChange={event => setTemplateDraft({ ...templateDraft, actions: templateDraft.actions.map((item, position) => position === index ? { ...item, action: event.target.value } : item) })} /></div>
+                      <div className="col-md-4"><Form.Control aria-label={`Template action ${index + 1} label`} placeholder="Label" value={action.title} onChange={event => setTemplateDraft({ ...templateDraft, actions: templateDraft.actions.map((item, position) => position === index ? { ...item, title: event.target.value } : item) })} /></div>
+                      <div className="col-md-4"><Form.Control aria-label={`Template action ${index + 1} destination`} placeholder="/path" value={action.destination} onChange={event => setTemplateDraft({ ...templateDraft, actions: templateDraft.actions.map((item, position) => position === index ? { ...item, destination: event.target.value } : item) })} /></div>
+                      <div className="col-md-1 d-grid"><Button variant="outline-danger" aria-label={`Remove template action ${index + 1}`} onClick={() => setTemplateDraft({ ...templateDraft, actions: templateDraft.actions.filter((_, position) => position !== index) })}><Trash2 size={16} /></Button></div>
+                    </div>)}
+                    <Button size="sm" variant="outline-secondary" disabled={templateDraft.actions.length >= targets.maxActions} onClick={() => setTemplateDraft({ ...templateDraft, actions: [...templateDraft.actions, { action: '', title: '', destination: '/' }] })}>Add action</Button>
+                  </fieldset>
+                  <Button disabled={busy || !templateDraft.name || !templateDraft.title || !templateDraft.body} onClick={saveTemplate}>{templateDraft.id ? 'Save template' : 'Create template'}</Button>
+                  {templateDraft.id && <Button variant="link" onClick={() => setTemplateDraft({ id: '', name: '', title: '', body: '', destination: '/', actions: [] })}>Cancel</Button>}
+                </Card.Body>
+              </Card>
             </fieldset>
 
             <PushComposer
@@ -181,8 +232,8 @@ export default function Push(): React.ReactElement {
               maxActions={targets.maxActions}
               submitLabel="Send to platform"
               busy={busy}
-              disabled={channelIds.length === 0 && audienceIds.length === 0}
               onSend={sendPlatform}
+              templates={templates}
             />
           </Card.Body>
         </Card>
@@ -203,6 +254,7 @@ export default function Push(): React.ReactElement {
             submitLabel="Send to my subscribers"
             busy={busy}
             onSend={sendChannel}
+            templates={templates}
           />
         </Card.Body>
       </Card>

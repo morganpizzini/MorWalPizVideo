@@ -10,6 +10,7 @@ public enum PushDeliveryStatus { Pending, Sending, Sent, Suppressed, Failed }
 
 /// <summary>Which BackOffice section originated the dispatch.</summary>
 public enum PushDispatchScope { Platform, Channel }
+public enum PushSubscriptionScope { Channel, Platform }
 
 /// <summary>Browser-supplied encryption material for a Web Push endpoint (RFC 8291).</summary>
 [BsonIgnoreExtraElements]
@@ -30,6 +31,8 @@ public sealed record PushChannelSubscription(
     /// <summary>Public application that captured the consent (for example <c>morwalpizvideo</c> or <c>shooting-ita</c>).</summary>
     [BsonElement("applicationKey")]
     public string ApplicationKey { get; init; } = string.Empty;
+    [BsonElement("scope")]
+    public PushSubscriptionScope Scope { get; init; } = PushSubscriptionScope.Channel;
 
     /// <summary>False once revoked by the visitor or pruned after a permanent delivery failure.</summary>
     [BsonElement("isActive")]
@@ -75,6 +78,20 @@ public sealed record PushAudience(
 [BsonIgnoreExtraElements]
 public sealed record PushNotificationAction(string Action, string Title, string? Destination);
 
+[BsonIgnoreExtraElements]
+public sealed record PushNotificationTemplate(
+    string Name,
+    string Title,
+    string Body,
+    string Destination,
+    IReadOnlyList<PushNotificationAction> Actions,
+    int Version = 1) : BaseEntity
+{
+    [BsonElement("isActive")] public bool IsActive { get; init; } = true;
+    [BsonElement("updatedAt")] public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
+    [BsonElement("createdBy")] public string CreatedBy { get; init; } = string.Empty;
+}
+
 /// <summary>Durable push campaign. Recipients are snapshotted at queue time into <see cref="PushDispatchRecipient"/>.</summary>
 [BsonIgnoreExtraElements]
 public sealed record PushDispatch(
@@ -84,6 +101,14 @@ public sealed record PushDispatch(
     IReadOnlyList<string> ChannelIds,
     PushDispatchState State = PushDispatchState.Draft) : BaseEntity
 {
+    /// <summary>Recipient application discriminator. Legacy records remain unscoped and are never platform recipients.</summary>
+    [BsonElement("applicationKey")]
+    public string ApplicationKey { get; init; } = "backoffice";
+    /// <summary>Explicit recipient application scopes. Missing on legacy records, which remain BackOffice-only.</summary>
+    [BsonElement("applicationKeys")]
+    public IReadOnlyList<string> ApplicationKeys { get; init; } = [];
+    [BsonElement("templateId")] public string? TemplateId { get; init; }
+    [BsonElement("templateVersion")] public int? TemplateVersion { get; init; }
     /// <summary>Same-origin relative destination used as the notification body-click fallback.</summary>
     [BsonElement("destination")]
     public string Destination { get; init; } = "/";

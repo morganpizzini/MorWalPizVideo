@@ -99,6 +99,21 @@ public sealed class PushSubscriptionEndpointTests : IClassFixture<ServerApiWebAp
     }
 
     [Fact]
+    public async Task Subscribe_rejects_ipv4_mapped_loopback_endpoints()
+    {
+        using var client = factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/push/subscriptions", new
+        {
+            endpoint = "https://[::ffff:127.0.0.1]/push",
+            keys = new { p256dh = "key", auth = "auth" },
+            channelIds = new[] { PrimaryScenario.ChannelId },
+            applicationKey = "morwalpizvideo"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Public_key_endpoint_is_anonymous_and_reports_unconfigured_state()
     {
         using var client = factory.CreateClient();

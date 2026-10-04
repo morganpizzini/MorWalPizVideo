@@ -6,6 +6,7 @@ import {
   readStoredPushCredential,
   requestPushOptIn,
   revokePushOptIn,
+  updatePushChannels,
 } from '@morwalpizvideo/services';
 import { PUSH_APPLICATION_KEY, getPushChannelIds } from '@services/push';
 
@@ -21,6 +22,8 @@ export default function PushSettings(): ReactElement {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const channels = getPushChannelIds();
 
   useEffect(() => {
     if (!getPushSupport().supported) {
@@ -33,6 +36,7 @@ export default function PushSettings(): ReactElement {
     }
     loadPushSettings().then(state => {
       setSubscription(state);
+      setSelected(state ? [...state.channelIds] : []);
       setStatus(state && state.channelIds.length > 0 ? 'subscribed' : 'unsubscribed');
     });
   }, []);
@@ -43,7 +47,7 @@ export default function PushSettings(): ReactElement {
     setMessage('');
     const result = await requestPushOptIn({
       applicationKey: PUSH_APPLICATION_KEY,
-      channelIds: getPushChannelIds(),
+      channelIds: selected.length ? selected : channels,
       language: 'IT',
     });
     if (result.status === 'subscribed') {
@@ -55,6 +59,15 @@ export default function PushSettings(): ReactElement {
     } else {
       setError('Le notifiche non sono disponibili in questo momento. Riprova più tardi.');
     }
+    setBusy(false);
+  };
+
+  const saveChannels = async () => {
+    if (!selected.length) { await disable(); return; }
+    setBusy(true); setError(''); setMessage('');
+    const result = await updatePushChannels({ applicationKey: PUSH_APPLICATION_KEY, channelIds: selected, language: 'IT' });
+    if (result) { setSubscription(result); setStatus('subscribed'); setMessage('Preferenze salvate.'); }
+    else setError('Non è stato possibile salvare le preferenze.');
     setBusy(false);
   };
 
@@ -104,6 +117,7 @@ export default function PushSettings(): ReactElement {
           <p className="mb-3" role="status">
             Notifiche attive per {subscription?.channelIds.length ?? 0} canale/i su questo browser.
           </p>
+          {channels.length > 1 && <fieldset className="mb-3"><legend className="h6">Canali</legend>{channels.map(channel => <label className="d-block" key={channel}><input type="checkbox" checked={selected.includes(channel)} onChange={() => setSelected(current => current.includes(channel) ? current.filter(id => id !== channel) : [...current, channel])} /> <span className="ms-2">{channel}</span></label>)}<button type="button" className="btn btn-primary mt-2" onClick={saveChannels} disabled={busy}>Salva canali</button></fieldset>}
           <button type="button" className="btn btn-outline-danger" onClick={disable} disabled={busy}>
             {busy ? 'Disattivazione…' : 'Disattiva le notifiche'}
           </button>

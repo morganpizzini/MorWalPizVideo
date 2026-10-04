@@ -20,7 +20,7 @@ export default function PushOptIn(): ReactElement | null {
   const [state, setState] = useState<PromptState>('hidden');
 
   useEffect(() => {
-    if (shouldShowPushPrompt() && getPushChannelIds().length > 0) {
+    if (shouldShowPushPrompt(PUSH_APPLICATION_KEY) && getPushChannelIds().length > 0) {
       setState('visible');
     }
   }, []);
@@ -38,7 +38,7 @@ export default function PushOptIn(): ReactElement | null {
   };
 
   const dismiss = () => {
-    dismissPushPrompt();
+    dismissPushPrompt(PUSH_APPLICATION_KEY);
     setState('hidden');
   };
 

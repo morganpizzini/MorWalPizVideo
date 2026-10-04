@@ -88,6 +88,7 @@ export type PushPlatformSendRequest = Readonly<{
   channelIds?: readonly string[];
   audienceIds?: readonly string[];
   allChannels?: boolean;
+  templateId?: string;
 }>;
 
 export type PushChannelSendRequest = Readonly<{
@@ -95,6 +96,7 @@ export type PushChannelSendRequest = Readonly<{
   body: string;
   destination?: string;
   actions?: readonly PushNotificationActionRequest[];
+  templateId?: string;
 }>;
 
 export type PushDispatch = Readonly<{
@@ -112,4 +114,24 @@ export type PushDispatch = Readonly<{
   creationDateTime: string;
   queuedAt?: string;
   completedAt?: string;
+}>;
+
+export type PushNotificationTemplate = Readonly<{
+  id: string;
+  name: string;
+  title: string;
+  body: string;
+  destination: string;
+  actions: readonly PushNotificationActionRequest[];
+  version: number;
+  isActive: boolean;
+  updatedAt: string;
+}>;
+
+export type PushNotificationTemplateRequest = Readonly<{
+  name: string;
+  title: string;
+  body: string;
+  destination?: string;
+  actions?: readonly PushNotificationActionRequest[];
 }>;

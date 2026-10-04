@@ -28,11 +28,12 @@ public sealed class PushCampaignsController(
     IPushDispatchRepository dispatchRepository,
     IPushSubscriptionRepository subscriptionRepository,
     IPushAudienceRepository audienceRepository,
+    IPushNotificationTemplateRepository templateRepository,
     IYTChannelRepository channelRepository,
     IPushDispatchService dispatchService,
     IConfiguration configuration) : ControllerBase
 {
-    private const int MaxActionsCeiling = 4;
+    private const int MaxActionsCeiling = 2;
 
     /// <summary>Channels and audiences available to the platform composer, with current consenting subscriber counts.</summary>
     [HttpGet("targets")]
@@ -41,7 +42,10 @@ public sealed class PushCampaignsController(
     {
         var channels = await channelRepository.GetItemsAsync();
         var channelIds = channels.Select(channel => channel.ChannelId).ToArray();
-        var subscriptions = await subscriptionRepository.GetActiveByChannelsAsync(channelIds, cancellationToken);
+        var subscriptions = (await Task.WhenAll(new[] { "morwalpizvideo", "shooting-ita", "backoffice" }
+                .Select(application => subscriptionRepository.GetActiveByChannelsAndApplicationAsync(channelIds, application, cancellationToken))))
+            .SelectMany(items => items)
+            .ToArray();
         var counts = subscriptions
             .SelectMany(subscription => subscription.ChannelIds.Distinct(StringComparer.Ordinal))
             .GroupBy(channelId => channelId, StringComparer.Ordinal)
@@ -99,10 +103,16 @@ public sealed class PushCampaignsController(
     [AllowUser(AuthorizationPermissionKeys.PushPlatformSend)]
     public async Task<ActionResult<PushDispatchContract>> SendPlatform(PushPlatformSendRequest request, CancellationToken cancellationToken)
     {
-        var destination = PushDestination.Normalize(request.Destination);
+        var template = await ResolveTemplateAsync(request.TemplateId, cancellationToken);
+        if (request.TemplateId is not null && template is null) return NotFound("Template not found.");
+        var title = template?.Title ?? request.Title;
+        var body = template?.Body ?? request.Body;
+        var requestedDestination = template?.Destination ?? request.Destination;
+        var requestedActions = template is null ? request.Actions : template.Actions.Select(a => new PushNotificationActionRequest { Action = a.Action, Title = a.Title, Destination = a.Destination }).ToArray();
+        var destination = PushDestination.Normalize(requestedDestination);
         if (destination is null) return BadRequest("Destination must be a same-origin relative path.");
 
-        var actions = NormalizeActions(request.Actions, out var invalidAction);
+        var actions = NormalizeActions(requestedActions, out var invalidAction);
         if (invalidAction) return BadRequest("Action destinations must be same-origin relative paths.");
 
         var knownChannelIds = (await channelRepository.GetItemsAsync()).Select(channel => channel.ChannelId).ToHashSet(StringComparer.Ordinal);
@@ -111,19 +121,20 @@ public sealed class PushCampaignsController(
             : request.ChannelIds.Where(knownChannelIds.Contains).ToHashSet(StringComparer.Ordinal);
 
         var audienceIds = await ResolveAudienceIdsAsync(request.AudienceIds, cancellationToken);
-        if (channelIds.Count == 0 && audienceIds.Count == 0)
-            return BadRequest("Select at least one channel or audience.");
-
         return await CreateAndQueueAsync(new PushDispatch(
             PushDispatchScope.Platform,
-            request.Title.Trim(),
-            request.Body.Trim(),
+            title.Trim(),
+            body.Trim(),
             [.. channelIds],
             PushDispatchState.Queued)
         {
             Destination = destination,
             Actions = actions,
             AudienceIds = audienceIds,
+            ApplicationKey = "backoffice",
+            ApplicationKeys = ["morwalpizvideo", "shooting-ita", "backoffice"],
+            TemplateId = template?.Id,
+            TemplateVersion = template?.Version,
             CreatedBy = CurrentUserId,
             CreationDateTime = DateTime.UtcNow
         }, cancellationToken);
@@ -138,23 +149,29 @@ public sealed class PushCampaignsController(
     [AllowUser(AuthorizationPermissionKeys.BackofficeAccess)]
     public async Task<ActionResult<PushDispatchContract>> SendChannel(PushChannelSendRequest request, CancellationToken cancellationToken)
     {
+        var template = await ResolveTemplateAsync(request.TemplateId, cancellationToken);
+        if (request.TemplateId is not null && template is null) return NotFound("Template not found.");
         var channelId = HttpContext.GetChannelContext().ChannelId;
-        var destination = PushDestination.Normalize(request.Destination);
+        var destination = PushDestination.Normalize(template?.Destination ?? request.Destination);
         if (destination is null) return BadRequest("Destination must be a same-origin relative path.");
 
-        var actions = NormalizeActions(request.Actions, out var invalidAction);
+        var actions = NormalizeActions(template is null ? request.Actions : template.Actions.Select(a => new PushNotificationActionRequest { Action = a.Action, Title = a.Title, Destination = a.Destination }).ToArray(), out var invalidAction);
         if (invalidAction) return BadRequest("Action destinations must be same-origin relative paths.");
 
         return await CreateAndQueueAsync(new PushDispatch(
             PushDispatchScope.Channel,
-            request.Title.Trim(),
-            request.Body.Trim(),
+            (template?.Title ?? request.Title).Trim(),
+            (template?.Body ?? request.Body).Trim(),
             [channelId],
             PushDispatchState.Queued)
         {
             Destination = destination,
             Actions = actions,
             OwnerChannelId = channelId,
+            ApplicationKey = "backoffice",
+            ApplicationKeys = ["morwalpizvideo", "shooting-ita", "backoffice"],
+            TemplateId = template?.Id,
+            TemplateVersion = template?.Version,
             CreatedBy = CurrentUserId,
             CreationDateTime = DateTime.UtcNow
         }, cancellationToken);
@@ -181,6 +198,11 @@ public sealed class PushCampaignsController(
         return [.. audiences.Where(audience => audience.IsActive).Select(audience => audience.Id)];
     }
 
+    private Task<PushNotificationTemplate?> ResolveTemplateAsync(string? id, CancellationToken cancellationToken)
+        => string.IsNullOrWhiteSpace(id)
+            ? Task.FromResult<PushNotificationTemplate?>(null)
+            : templateRepository.GetItemAsync(id);
+
     /// <summary>
     /// Caps action buttons at the configured <c>WebPush:MaxActions</c>. Browsers expose their own
     /// <c>Notification.maxActions</c>; the service worker slices again at display time.
@@ -189,7 +211,12 @@ public sealed class PushCampaignsController(
     {
         invalid = false;
         var normalized = new List<PushNotificationAction>();
-        foreach (var action in requested.Take(MaxActions))
+        if (requested.Count > MaxActions)
+        {
+            invalid = true;
+            return [];
+        }
+        foreach (var action in requested)
         {
             if (string.IsNullOrWhiteSpace(action.Action) || string.IsNullOrWhiteSpace(action.Title)) continue;
             var destination = PushDestination.Normalize(action.Destination);

@@ -40,11 +40,15 @@ public sealed class PushSubscriptionService(
     ILogger<PushSubscriptionService> logger) : IPushSubscriptionService
 {
     private const int MaxChannelsPerSubscription = 50;
+    private static readonly HashSet<string> AllowedApplications =
+        ["morwalpizvideo", "shooting-ita", "backoffice"];
 
     public async Task<PushSubscriptionResult> SubscribeAsync(PushSubscriptionRequest request, CancellationToken cancellationToken = default)
     {
         var channelIds = NormalizeChannels(request.ChannelIds);
-        if (!IsWellFormed(request) || channelIds.Count == 0)
+        if (!IsWellFormed(request) || !AllowedApplications.Contains(request.ApplicationKey) ||
+            (channelIds.Count == 0 && !string.Equals(request.ApplicationKey, "backoffice", StringComparison.Ordinal)) ||
+            !await PushEndpointValidator.IsSafeAsync(request.Endpoint, cancellationToken))
             return new(PushSubscriptionOutcome.Invalid, []);
 
         var endpointHash = PushEndpointProtection.HashEndpoint(request.Endpoint);
@@ -67,6 +71,9 @@ public sealed class PushSubscriptionService(
                 Keys = new PushSubscriptionKeys(request.P256dh, request.Auth),
                 ChannelIds = channelIds,
                 ApplicationKey = request.ApplicationKey,
+                Scope = string.Equals(request.ApplicationKey, "backoffice", StringComparison.Ordinal)
+                    ? PushSubscriptionScope.Platform
+                    : PushSubscriptionScope.Channel,
                 Language = request.Language,
                 IsActive = true,
                 RevokedAt = null,
@@ -87,6 +94,9 @@ public sealed class PushSubscriptionService(
             channelIds)
         {
             ApplicationKey = request.ApplicationKey,
+            Scope = string.Equals(request.ApplicationKey, "backoffice", StringComparison.Ordinal)
+                ? PushSubscriptionScope.Platform
+                : PushSubscriptionScope.Channel,
             Language = request.Language,
             ConsentedAt = now,
             UpdatedAt = now,

@@ -32,6 +32,8 @@ public sealed class PushSubscriptionsController(
     [HttpPost]
     public async Task<ActionResult<PushSubscriptionStateContract>> Subscribe(PushSubscribeRequest request, CancellationToken cancellationToken)
     {
+        if (string.Equals(request.ApplicationKey, "backoffice", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("BackOffice subscriptions must use the authenticated BackOffice API.");
         var result = await pushSubscriptionService.SubscribeAsync(new PushSubscriptionRequest(
             request.Endpoint,
             request.Keys.P256dh,

@@ -55,6 +55,8 @@ public sealed class WebPushSender : IWebPushSender
     {
         if (vapidDetails is null)
             return new(PushSendOutcome.Rejected, "WebPush VAPID keys are not configured.");
+        if (!await PushEndpointValidator.IsSafeAsync(subscription.Endpoint, cancellationToken))
+            return new(PushSendOutcome.Rejected, "Push endpoint rejected by outbound safety policy.");
 
         // The factory owns the handler lifetime; the client must not be disposed here.
         var client = new WebPushClient(httpClientFactory.CreateClient(HttpClientNames.WebPush));

@@ -17,6 +17,9 @@ import {
 
 const CREDENTIAL_STORAGE_KEY = "mwp.push.credential";
 const PROMPT_STORAGE_KEY = "mwp.push.prompt";
+function promptStorageKey(applicationKey = "default"): string {
+  return `${PROMPT_STORAGE_KEY}.${applicationKey.trim().toLowerCase() || "default"}`;
+}
 
 export type PushPromptDecision = "accepted" | "dismissed";
 
@@ -80,12 +83,12 @@ export function getPushSupport(): PushSupport {
   return { supported: true, permission: window.Notification.permission };
 }
 
-export function readPushPromptRecord(): PushPromptRecord | null {
-  return readJson<PushPromptRecord>(PROMPT_STORAGE_KEY);
+export function readPushPromptRecord(applicationKey?: string): PushPromptRecord | null {
+  return readJson<PushPromptRecord>(promptStorageKey(applicationKey));
 }
 
-export function recordPushPromptDecision(decision: PushPromptDecision): void {
-  writeJson(PROMPT_STORAGE_KEY, {
+export function recordPushPromptDecision(decision: PushPromptDecision, applicationKey?: string): void {
+  writeJson(promptStorageKey(applicationKey), {
     decision,
     decidedAt: new Date().toISOString(),
   } satisfies PushPromptRecord);
@@ -104,14 +107,14 @@ export function clearStoredPushCredential(): void {
  * The prompt is shown once per browser: never when push is unsupported, already decided, or already granted or
  * blocked at the browser level.
  */
-export function shouldShowPushPrompt(): boolean {
+export function shouldShowPushPrompt(applicationKey?: string): boolean {
   const support = getPushSupport();
   if (!support.supported || support.permission !== "default") return false;
-  return readPushPromptRecord() === null;
+  return readPushPromptRecord(applicationKey) === null;
 }
 
-export function dismissPushPrompt(): void {
-  recordPushPromptDecision("dismissed");
+export function dismissPushPrompt(applicationKey?: string): void {
+  recordPushPromptDecision("dismissed", applicationKey);
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -164,7 +167,7 @@ export async function requestPushOptIn(
 
   const permission = await window.Notification.requestPermission();
   if (permission !== "granted") {
-    recordPushPromptDecision("dismissed");
+    recordPushPromptDecision("dismissed", options.applicationKey);
     return { status: "denied" };
   }
 
@@ -176,7 +179,7 @@ export async function requestPushOptIn(
     existing ??
     (await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+      applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
     }));
 
   const payload = subscription.toJSON();
@@ -202,7 +205,7 @@ export async function requestPushOptIn(
       credential: state.credential,
     } satisfies StoredPushCredential);
   }
-  recordPushPromptDecision("accepted");
+  recordPushPromptDecision("accepted", options.applicationKey);
   return { status: "subscribed", state };
 }
 

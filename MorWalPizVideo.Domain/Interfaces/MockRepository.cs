@@ -1166,14 +1166,24 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => Task.FromResult(scenario.Read<PushChannelSubscription>(_fileName).FirstOrDefault(item => item.EndpointHash == endpointHash));
 
         public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default)
+            => GetActiveByChannelsAndApplicationAsync(channelIds, string.Empty, cancellationToken);
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default)
         {
             if (channelIds.Count == 0) return Task.FromResult<IReadOnlyList<PushChannelSubscription>>([]);
             var wanted = channelIds.ToHashSet(StringComparer.Ordinal);
             IReadOnlyList<PushChannelSubscription> result = scenario.Read<PushChannelSubscription>(_fileName)
-                .Where(item => item.IsActive && item.ChannelIds.Any(wanted.Contains))
+                .Where(item => item.IsActive && item.Scope == PushSubscriptionScope.Channel && item.ChannelIds.Any(wanted.Contains) &&
+                    (string.IsNullOrWhiteSpace(applicationKey) || item.ApplicationKey == applicationKey))
                 .ToList();
             return Task.FromResult(result);
         }
+
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PushChannelSubscription>>(scenario.Read<PushChannelSubscription>(_fileName)
+                .Where(item => item.IsActive && item.Scope == PushSubscriptionScope.Platform &&
+                    item.ChannelIds.Count == 0 && item.ApplicationKey == applicationKey)
+                .ToList());
 
         public Task<PushChannelSubscription> UpsertAsync(PushChannelSubscription subscription, CancellationToken cancellationToken = default)
         {
@@ -1224,6 +1234,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             return Task.FromResult(result);
         }
     }
+
+    public sealed class PushNotificationTemplateMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PushNotificationTemplate>(scenario, DbCollections.PushNotificationTemplates), IPushNotificationTemplateRepository;
 
     public sealed class PushDispatchMockRepository(IMockScenario scenario)
         : BaseMockRepository<PushDispatch>(scenario, DbCollections.PushDispatches), IPushDispatchRepository

@@ -1330,12 +1330,31 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             => _collection.Find(Builders<PushChannelSubscription>.Filter.Eq(item => item.EndpointHash, endpointHash))
                 .FirstOrDefaultAsync(cancellationToken)!;
 
-        public async Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAsync(IReadOnlyCollection<string> channelIds, CancellationToken cancellationToken = default)
+            => GetActiveByChannelsAndApplicationAsync(channelIds, string.Empty, cancellationToken);
+
+        public async Task<IReadOnlyList<PushChannelSubscription>> GetActiveByChannelsAndApplicationAsync(IReadOnlyCollection<string> channelIds, string applicationKey, CancellationToken cancellationToken = default)
         {
             if (channelIds.Count == 0) return [];
+            var filters = new List<FilterDefinition<PushChannelSubscription>>
+            {
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.IsActive, true),
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.Scope, PushSubscriptionScope.Channel),
+                Builders<PushChannelSubscription>.Filter.AnyIn(item => item.ChannelIds, channelIds)
+            };
+            if (!string.IsNullOrWhiteSpace(applicationKey))
+                filters.Add(Builders<PushChannelSubscription>.Filter.Eq(item => item.ApplicationKey, applicationKey));
+            var filter = Builders<PushChannelSubscription>.Filter.And(filters);
+            return await _collection.Find(filter).ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<PushChannelSubscription>> GetActivePlatformByApplicationAsync(string applicationKey, CancellationToken cancellationToken = default)
+        {
             var filter = Builders<PushChannelSubscription>.Filter.And(
                 Builders<PushChannelSubscription>.Filter.Eq(item => item.IsActive, true),
-                Builders<PushChannelSubscription>.Filter.AnyIn(item => item.ChannelIds, channelIds));
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.ApplicationKey, applicationKey),
+                Builders<PushChannelSubscription>.Filter.Eq(item => item.Scope, PushSubscriptionScope.Platform),
+                Builders<PushChannelSubscription>.Filter.Size(item => item.ChannelIds, 0));
             return await _collection.Find(filter).ToListAsync(cancellationToken);
         }
 
@@ -1347,6 +1366,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 .Set(item => item.Keys, subscription.Keys)
                 .Set(item => item.ChannelIds, subscription.ChannelIds)
                 .Set(item => item.ApplicationKey, subscription.ApplicationKey)
+                .Set(item => item.Scope, subscription.Scope)
                 .Set(item => item.Language, subscription.Language)
                 .Set(item => item.IsActive, subscription.IsActive)
                 .Set(item => item.UpdatedAt, subscription.UpdatedAt)
@@ -1381,6 +1401,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public async Task<IList<PushAudience>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
             => ids.Count == 0 ? [] : await _collection.Find(Builders<PushAudience>.Filter.In(item => item.Id, ids)).ToListAsync(cancellationToken);
     }
+    public sealed class PushNotificationTemplateRepository(IMongoDatabase database)
+        : BaseRepository<PushNotificationTemplate>(database, DbCollections.PushNotificationTemplates), IPushNotificationTemplateRepository;
 
     public sealed class PushDispatchRepository(IMongoDatabase database)
         : BaseRepository<PushDispatch>(database, DbCollections.PushDispatches), IPushDispatchRepository

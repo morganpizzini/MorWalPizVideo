@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Row } from 'react-bootstrap';
 import { endpoints, get, put } from '@morwalpizvideo/services';
 import { authService } from '../../services/authService';
+import PushSettings from './PushSettings';
 
 interface UserProfile {
   id: string;
@@ -174,6 +175,7 @@ export default function ProfilePage() {
           </Card>
         </Col>
       </Row>
+      <PushSettings />
     </div>
   );
 }

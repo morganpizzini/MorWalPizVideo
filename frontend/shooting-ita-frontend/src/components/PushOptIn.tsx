@@ -18,7 +18,7 @@ export default function PushOptIn() {
   const [channelIds, setChannelIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!shouldShowPushPrompt()) return;
+    if ((import.meta.env.PROD && !import.meta.env.VITE_SHOOTING_ITA_PUSH_ORIGIN) || !shouldShowPushPrompt(PUSH_APPLICATION_KEY)) return;
     let cancelled = false;
     loadPushChannelOptions()
       .then(options => {
@@ -45,7 +45,7 @@ export default function PushOptIn() {
   };
 
   const dismiss = () => {
-    dismissPushPrompt();
+    dismissPushPrompt(PUSH_APPLICATION_KEY);
     setState('hidden');
   };
 

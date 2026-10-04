@@ -81,6 +81,7 @@
         public const string PushAudiences = "pushAudiences";
         public const string PushDispatches = "pushDispatches";
         public const string PushDispatchRecipients = "pushDispatchRecipients";
+        public const string PushNotificationTemplates = "pushNotificationTemplates";
 
         public const string Newsletters = "newsletters";
         public const string NewsletterTemplates = "newsletterTemplates";

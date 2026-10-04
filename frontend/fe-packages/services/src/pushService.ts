@@ -8,6 +8,8 @@ import type {
   PushSubscribeRequest,
   PushSubscriptionState,
   PushTargets,
+  PushNotificationTemplate,
+  PushNotificationTemplateRequest,
 } from "@morwalpizvideo/models";
 import { adminApiService, publicApiService } from "./apiTransport";
 import endpoints, { ComposeUrl } from "./endpoints";
@@ -117,4 +119,29 @@ export function sendPushChannel(
     endpoints.PUSH_CAMPAIGNS_CHANNEL,
     request,
   ) as Promise<PushDispatch>;
+}
+
+export function fetchPushNotificationTemplates(): Promise<PushNotificationTemplate[]> {
+  return adminApiService.get(endpoints.PUSH_TEMPLATES) as Promise<PushNotificationTemplate[]>;
+}
+export function createPushNotificationTemplate(request: PushNotificationTemplateRequest): Promise<PushNotificationTemplate> {
+  return adminApiService.post(endpoints.PUSH_TEMPLATES, request) as Promise<PushNotificationTemplate>;
+}
+export function updatePushNotificationTemplate(id: string, request: PushNotificationTemplateRequest): Promise<PushNotificationTemplate> {
+  return adminApiService.put(ComposeUrl(endpoints.PUSH_TEMPLATE_DETAIL, { id }), request) as Promise<PushNotificationTemplate>;
+}
+export function deletePushNotificationTemplate(id: string): Promise<void> {
+  return adminApiService.Delete(ComposeUrl(endpoints.PUSH_TEMPLATE_DETAIL, { id })) as Promise<void>;
+}
+
+export function saveBackOfficePushSubscription(request: PushSubscribeRequest): Promise<PushSubscriptionState> {
+  return adminApiService.post(endpoints.PUSH_BACKOFFICE_SUBSCRIBE, request) as Promise<PushSubscriptionState>;
+}
+
+export function getBackOfficePushSubscriptionSettings(endpoint: string, credential: string): Promise<PushSubscriptionState> {
+  return adminApiService.post(endpoints.PUSH_BACKOFFICE_STATUS, { endpoint, credential }) as Promise<PushSubscriptionState>;
+}
+
+export function revokeBackOfficePushSubscription(endpoint: string, credential: string): Promise<void> {
+  return adminApiService.post(endpoints.PUSH_BACKOFFICE_REVOKE, { endpoint, credential }) as Promise<void>;
 }

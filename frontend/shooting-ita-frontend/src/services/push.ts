@@ -7,6 +7,10 @@ import {
 } from '@morwalpizvideo/services';
 
 export const PUSH_APPLICATION_KEY = 'shooting-ita';
+export function isPushEnabled(): boolean {
+  if (import.meta.env.PROD && !import.meta.env.VITE_SHOOTING_ITA_PUSH_ORIGIN) return false;
+  return true;
+}
 
 export interface PushChannelOption {
   channelId: string;

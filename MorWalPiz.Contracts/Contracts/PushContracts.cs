@@ -20,7 +20,7 @@ public sealed class PushSubscribeRequest
 {
     [DataMember][Required][Url] public string Endpoint { get; set; } = string.Empty;
     [DataMember][Required] public PushSubscriptionKeysRequest Keys { get; set; } = new();
-    [DataMember][Required][MinLength(1)] public IReadOnlyList<string> ChannelIds { get; set; } = [];
+    [DataMember][Required] public IReadOnlyList<string> ChannelIds { get; set; } = [];
     [DataMember][Required][StringLength(64)] public string ApplicationKey { get; set; } = string.Empty;
     [DataMember][StringLength(8)] public string? Language { get; set; }
 
@@ -104,6 +104,30 @@ public sealed class PushNotificationActionRequest
     [DataMember][StringLength(300)] public string? Destination { get; set; }
 }
 
+[DataContract]
+public sealed class PushNotificationTemplateContract
+{
+    [DataMember] public string Id { get; set; } = string.Empty;
+    [DataMember] public string Name { get; set; } = string.Empty;
+    [DataMember] public string Title { get; set; } = string.Empty;
+    [DataMember] public string Body { get; set; } = string.Empty;
+    [DataMember] public string Destination { get; set; } = "/";
+    [DataMember] public IReadOnlyList<PushNotificationActionRequest> Actions { get; set; } = [];
+    [DataMember] public int Version { get; set; }
+    [DataMember] public bool IsActive { get; set; }
+    [DataMember] public DateTime UpdatedAt { get; set; }
+}
+
+[DataContract]
+public sealed class PushNotificationTemplateRequest
+{
+    [DataMember][Required][StringLength(100, MinimumLength = 1)] public string Name { get; set; } = string.Empty;
+    [DataMember][Required][StringLength(80, MinimumLength = 1)] public string Title { get; set; } = string.Empty;
+    [DataMember][Required][StringLength(300, MinimumLength = 1)] public string Body { get; set; } = string.Empty;
+    [DataMember][StringLength(300)] public string? Destination { get; set; }
+    [DataMember] public IReadOnlyList<PushNotificationActionRequest> Actions { get; set; } = [];
+}
+
 /// <summary>Platform-wide send. Targets are named channel collections and/or explicit channels.</summary>
 [DataContract]
 public sealed class PushPlatformSendRequest
@@ -117,6 +141,7 @@ public sealed class PushPlatformSendRequest
 
     /// <summary>Select-all shortcut: every channel that currently has at least one active subscriber.</summary>
     [DataMember] public bool AllChannels { get; set; }
+    [DataMember] public string? TemplateId { get; set; }
 }
 
 /// <summary>Channel-owner broadcast. The audience is every subscriber of the scoped channel; no per-user selection.</summary>
@@ -127,6 +152,7 @@ public sealed class PushChannelSendRequest
     [DataMember][Required][StringLength(300, MinimumLength = 1)] public string Body { get; set; } = string.Empty;
     [DataMember][StringLength(300)] public string? Destination { get; set; }
     [DataMember] public IReadOnlyList<PushNotificationActionRequest> Actions { get; set; } = [];
+    [DataMember] public string? TemplateId { get; set; }
 }
 
 [DataContract]

@@ -34,6 +34,8 @@ export type {
   PushPlatformSendRequest,
   PushChannelSendRequest,
   PushDispatch,
+  PushNotificationTemplate,
+  PushNotificationTemplateRequest,
 } from "./pushNotifications";
 
 // Categories exports
