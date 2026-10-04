@@ -17,6 +17,7 @@ on:
 permissions:
   id-token: write
   contents: read 
+  checks: write
 
 jobs:
   build-and-deploy:
@@ -40,8 +41,15 @@ jobs:
 
       - name: Run focused ShortLinks tests
         run: |
-          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:ShortLinks" --logger "trx;LogFileName=shortlinks-related.trx" --results-directory ./TestResults/shortlinks --verbosity normal
+          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:ShortLinks" --logger "trx;LogFileName=shortlinks-related.trx" --results-directory ./TestResults/shortlinks --verbosity minimal
           pwsh -Command '$result = [xml](Get-Content ./TestResults/shortlinks/shortlinks-related.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; if ($total -le 0) { throw "ShortLinks test filter selected no tests." }'
+
+      - name: Publish ShortLinks test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: ShortLinks test results
 
       - name: Build
         run: dotnet build MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj --configuration Release --no-restore

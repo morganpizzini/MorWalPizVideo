@@ -15,6 +15,7 @@ on:
 permissions:
   id-token: write
   contents: read 
+  checks: write
 
 env:
   IMAGE_NAME: back-office-spa
@@ -45,11 +46,19 @@ jobs:
 
       - name: Run tests
         working-directory: frontend/back-office-spa
-        run: yarn test --passWithNoTests=false
+        run: yarn test --passWithNoTests=false --reporter=junit --outputFile=test-results/back-office-spa-junit.xml
 
       - name: Test shared transport
         working-directory: frontend
-        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false
+        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false --reporter=junit --outputFile=test-results/services-junit.xml
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Frontend test results
+          path: frontend/**/test-results/*-junit.xml
+          reporter: java-junit
 
       - name: Checked application build
         working-directory: frontend

@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  checks: write
+  contents: read
+
 jobs:
   secret-artifact-guard:
     name: Secret and Credential Artifact Guard
@@ -34,7 +38,14 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Run credential artifact tests
-        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --filter FullyQualifiedName~CredentialArtifactExclusionTests --configuration Release
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --filter FullyQualifiedName~CredentialArtifactExclusionTests --configuration Release --verbosity minimal --logger "trx;LogFileName=CredentialArtifact.trx" --results-directory ./TestResults
+
+      - name: Publish credential artifact test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: Credential artifact test results
 
   test-frontend:
     name: Test Frontend - ${{ matrix.workspace }}
@@ -99,6 +110,13 @@ jobs:
               throw "No desktop tests executed in $($report.Name)."
             }
           }
+
+      - name: Publish Windows client test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: Windows client test results
 
   build-api-containers:
     name: Clean API Container - ${{ matrix.project }}
@@ -253,19 +271,26 @@ jobs:
         run: |
           dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --list-tests > backoffice-tests.txt
           grep -Eq '^    .+' backoffice-tests.txt
-          dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity normal
+          dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity minimal --logger "trx;LogFileName=BackOffice.trx" --results-directory ./TestResults
 
       - name: Test ShortLinks host
         run: |
           dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --list-tests > shortlinks-tests.txt
           grep -Eq '^    .+' shortlinks-tests.txt
-          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --verbosity normal
+          dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj --configuration Release --no-restore --verbosity minimal --logger "trx;LogFileName=ShortLinks.trx" --results-directory ./TestResults
 
       - name: Test ShootingRange host
         run: |
           dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --list-tests > shooting-range-tests.txt
           grep -Eq '^    .+' shooting-range-tests.txt
-          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --verbosity normal
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --verbosity minimal --logger "trx;LogFileName=ShootingRange.trx" --results-directory ./TestResults
+
+      - name: Publish backend test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: Backend test results
 
   test-youtube-utilities:
     name: Test YouTube Utilities
@@ -285,4 +310,11 @@ jobs:
         run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj
 
       - name: Test
-        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity normal
+        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity minimal --logger "trx;LogFileName=YouTubeUtilities.trx" --results-directory ./TestResults
+
+      - name: Publish YouTube Utilities test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: YouTube Utilities test results

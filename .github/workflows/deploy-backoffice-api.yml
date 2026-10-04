@@ -18,6 +18,7 @@ on:
 permissions:
   id-token: write
   contents: read 
+  checks: write
 
 jobs:
   test-related-backend:
@@ -37,7 +38,7 @@ jobs:
         run: dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
 
       - name: Test BackOffice
-        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:BackOffice|Category=TestGroup:Shared|Category=TestGroup:CrossApi" --logger "trx;LogFileName=backoffice-related.trx" --results-directory ./TestResults/backoffice --verbosity normal
+        run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "Category=TestGroup:BackOffice|Category=TestGroup:Shared|Category=TestGroup:CrossApi" --logger "trx;LogFileName=backoffice-related.trx" --results-directory ./TestResults/backoffice --verbosity minimal
 
       - name: Assert BackOffice test selection is non-empty
         shell: pwsh
@@ -52,7 +53,14 @@ jobs:
         run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj
 
       - name: Test YouTubeUtilities
-        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity normal
+        run: dotnet test MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj --configuration Release --no-restore --verbosity minimal
+
+      - name: Publish BackOffice test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: BackOffice test results
 
   build-and-deploy:
     name: Build and Deploy to Azure

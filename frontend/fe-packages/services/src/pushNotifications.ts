@@ -83,15 +83,35 @@ export function getPushSupport(): PushSupport {
   return { supported: true, permission: window.Notification.permission };
 }
 
-export function readPushPromptRecord(applicationKey?: string): PushPromptRecord | null {
-  return readJson<PushPromptRecord>(promptStorageKey(applicationKey));
+export function readPushPromptRecord(
+  applicationKey?: string,
+): PushPromptRecord | null {
+  const applicationPromptRecord = readJson<PushPromptRecord>(
+    promptStorageKey(applicationKey),
+  );
+  if (applicationPromptRecord !== null || applicationKey === undefined) {
+    return applicationPromptRecord;
+  }
+  return readJson<PushPromptRecord>(promptStorageKey());
 }
 
-export function recordPushPromptDecision(decision: PushPromptDecision, applicationKey?: string): void {
-  writeJson(promptStorageKey(applicationKey), {
+export function recordPushPromptDecision(
+  decision: PushPromptDecision,
+  applicationKey?: string,
+): void {
+  const record = {
     decision,
     decidedAt: new Date().toISOString(),
-  } satisfies PushPromptRecord);
+  } satisfies PushPromptRecord;
+  const applicationPromptStorageKey = promptStorageKey(applicationKey);
+
+  writeJson(applicationPromptStorageKey, record);
+  if (
+    applicationKey !== undefined &&
+    applicationPromptStorageKey !== promptStorageKey()
+  ) {
+    writeJson(promptStorageKey(), record);
+  }
 }
 
 export function readStoredPushCredential(): StoredPushCredential | null {
@@ -179,7 +199,9 @@ export async function requestPushOptIn(
     existing ??
     (await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
+      applicationServerKey: urlBase64ToUint8Array(
+        publicKey,
+      ) as unknown as BufferSource,
     }));
 
   const payload = subscription.toJSON();
@@ -195,8 +217,7 @@ export async function requestPushOptIn(
     channelIds: options.channelIds,
     applicationKey: options.applicationKey,
     language: options.language,
-    credential:
-      stored?.endpoint === endpoint ? stored.credential : undefined,
+    credential: stored?.endpoint === endpoint ? stored.credential : undefined,
   });
 
   if (state.credential) {
@@ -214,7 +235,10 @@ export async function loadPushSettings(): Promise<PushSubscriptionState | null> 
   const stored = readStoredPushCredential();
   if (!stored) return null;
   try {
-    return await getPushSubscriptionSettings(stored.endpoint, stored.credential);
+    return await getPushSubscriptionSettings(
+      stored.endpoint,
+      stored.credential,
+    );
   } catch {
     return null;
   }

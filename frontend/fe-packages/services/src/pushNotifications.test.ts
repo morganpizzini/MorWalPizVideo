@@ -10,7 +10,8 @@ vi.mock("./pushService", () => ({
   savePushSubscription: (...args: unknown[]) => savePushSubscription(...args),
   getPushSubscriptionSettings: (...args: unknown[]) =>
     getPushSubscriptionSettings(...args),
-  revokePushSubscription: (...args: unknown[]) => revokePushSubscription(...args),
+  revokePushSubscription: (...args: unknown[]) =>
+    revokePushSubscription(...args),
 }));
 
 import {
@@ -18,6 +19,8 @@ import {
   dismissPushPrompt,
   getPushSupport,
   readStoredPushCredential,
+  readPushPromptRecord,
+  recordPushPromptDecision,
   requestPushOptIn,
   revokePushOptIn,
   shouldShowPushPrompt,
@@ -96,7 +99,10 @@ describe("getPushSupport", () => {
   });
 
   it("reports the current browser permission when supported", () => {
-    expect(getPushSupport()).toEqual({ supported: true, permission: "default" });
+    expect(getPushSupport()).toEqual({
+      supported: true,
+      permission: "default",
+    });
   });
 });
 
@@ -105,6 +111,40 @@ describe("shouldShowPushPrompt", () => {
     expect(shouldShowPushPrompt()).toBe(true);
     dismissPushPrompt();
     expect(shouldShowPushPrompt()).toBe(false);
+  });
+
+  it("reflects an application decision in the default browser scope", () => {
+    recordPushPromptDecision("dismissed", "morwalpizvideo");
+
+    expect(
+      window.localStorage.getItem("mwp.push.prompt.morwalpizvideo"),
+    ).not.toBeNull();
+    expect(
+      window.localStorage.getItem("mwp.push.prompt.default"),
+    ).not.toBeNull();
+    expect(readPushPromptRecord("morwalpizvideo")).toMatchObject({
+      decision: "dismissed",
+    });
+    expect(readPushPromptRecord()).toMatchObject({
+      decision: "dismissed",
+    });
+    expect(shouldShowPushPrompt("morwalpizvideo")).toBe(false);
+    expect(shouldShowPushPrompt()).toBe(false);
+  });
+
+  it("keeps no-argument decisions in the default scope", () => {
+    recordPushPromptDecision("dismissed");
+
+    expect(
+      window.localStorage.getItem("mwp.push.prompt.default"),
+    ).not.toBeNull();
+    expect(
+      window.localStorage.getItem("mwp.push.prompt.morwalpizvideo"),
+    ).toBeNull();
+    expect(readPushPromptRecord()).toMatchObject({ decision: "dismissed" });
+    expect(readPushPromptRecord("morwalpizvideo")).toMatchObject({
+      decision: "dismissed",
+    });
   });
 
   it("stays hidden when permission was already decided in the browser", () => {

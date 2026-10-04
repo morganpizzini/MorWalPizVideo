@@ -19,6 +19,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  checks: write
 
 jobs:
   build-test-and-deploy:
@@ -47,7 +48,7 @@ jobs:
         env:
           FeatureManagement__EnableMock: 'true'
         run: |
-          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange --logger "trx;LogFileName=shooting-range-related.trx" --results-directory ./TestResults/shooting-range --verbosity normal
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange --logger "trx;LogFileName=shooting-range-related.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
           pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-related.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; if ($total -le 0) { throw "Shooting Range test filter selected no tests." }'
 
       - name: Require real Mongo transaction and concurrency release gate
@@ -58,8 +59,15 @@ jobs:
             echo "Release blocked: configure a disposable transaction-capable Mongo test server in the production environment." >&2
             exit 1
           fi
-          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeMongoTests --logger "trx;LogFileName=shooting-range-mongo.trx" --results-directory ./TestResults/shooting-range --verbosity normal
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeMongoTests --logger "trx;LogFileName=shooting-range-mongo.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
           pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-mongo.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; $executed = [int]$result.TestRun.ResultSummary.Counters.executed; if ($total -le 0 -or $executed -le 0) { throw "Shooting Range Mongo test filter selected or executed no tests." }'
+
+      - name: Publish Shooting Range test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: Shooting Range test results
 
       - name: Publish API
         run: dotnet publish MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-build --output ./publish

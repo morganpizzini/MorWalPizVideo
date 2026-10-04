@@ -369,7 +369,7 @@ const VideoList: React.FC<VideoListProps> = ({ matches, channels }) => {
                                       rel="noopener noreferrer"
                                       className="text-break"
                                     >
-                                      {shortLinkUrl}
+                                      {videoShortLink.code}
                                     </a>
                                     <Button
                                       size="sm"
