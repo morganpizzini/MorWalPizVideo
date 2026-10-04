@@ -1,5 +1,15 @@
-import { ActionFunctionArgs, redirect } from 'react-router';
+import { ActionFunctionArgs, data } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
+
+function getApiErrors(value: unknown): string[] | undefined {
+  if (!value || typeof value !== 'object' || !Array.isArray((value as { errors?: unknown }).errors)) {
+    return undefined;
+  }
+
+  return (value as { errors: unknown[] }).errors.map(error =>
+    typeof error === 'string' ? error : JSON.stringify(error)
+  );
+}
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const { id } = params;
@@ -65,16 +75,24 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   };
 
   try {
+    let response: unknown;
     if (id) {
       // Update existing form
-      await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), payload);
+      response = await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), payload);
     } else {
       // Create new form
-      await post(endpoints.CUSTOMFORMS, payload);
+      response = await post(endpoints.CUSTOMFORMS, payload);
     }
 
-    // Redirect to the list page on success
-    return redirect('/customforms');
+    const apiErrors = getApiErrors(response);
+    if (apiErrors) {
+      return data(
+        { success: false, errors: { generics: apiErrors } },
+        { status: (response as { status?: number }).status ?? 400 }
+      );
+    }
+
+    return data({ success: true }, { status: id ? 200 : 201 });
   } catch (error) {
     return {
       success: false,

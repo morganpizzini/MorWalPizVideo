@@ -1,5 +1,5 @@
 ﻿import { getSponsors } from '@services/sponsors';
-import { getCustomFormByUrl } from '@services/customForms';
+import { getActiveForms, getCustomFormByUrl } from '@services/customForms';
 import { data } from 'react-router';
 
 function isApiError(value: unknown): value is { errors: unknown[]; status?: number } {
@@ -14,8 +14,21 @@ export default async function loader() {
   const formUrl = 'sponsor';
   const [sponsors, formResponse] = await Promise.all([
     getSponsors(),
-    getCustomFormByUrl(formUrl).catch(() => undefined),
+    (async () => {
+      try {
+        const response = await getCustomFormByUrl(formUrl);
+        if (!isApiError(response)) return response;
+      } catch {
+        // Fall through to the active-form collection.
+      }
+
+      const activeForms = await getActiveForms().catch(() => []);
+      return Array.isArray(activeForms)
+        ? activeForms.find(form => form.url.toLowerCase() === formUrl)
+        : undefined;
+    })(),
   ]);
+
   if (!sponsors) {
     // throw to ErrorBoundary
     throw data(null, { status: 404 });

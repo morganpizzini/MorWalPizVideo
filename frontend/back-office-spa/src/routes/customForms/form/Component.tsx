@@ -1,5 +1,5 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Button, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import {
@@ -43,6 +43,7 @@ const CustomFormForm: React.FC = () => {
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
+  const lastSuccessData = useRef<unknown>(undefined);
 
   const busy = fetcher.state !== 'idle';
   const errors = fetcher.data?.errors;
@@ -74,6 +75,18 @@ const CustomFormForm: React.FC = () => {
       [...genericErrors, ...fieldErrors].join(' ') || 'Unable to save the custom form';
     toast.show('Save failed', message, { variant: 'danger' });
   }, [busy, fetcher.data, toast]);
+
+  useEffect(() => {
+    if (busy || !fetcher.data?.success || lastSuccessData.current === fetcher.data) return;
+
+    lastSuccessData.current = fetcher.data;
+    toast.show(
+      'Success',
+      isEditMode ? 'Custom form updated successfully' : 'Custom form created successfully',
+      { variant: 'success' }
+    );
+    navigate('/customforms');
+  }, [busy, fetcher.data, isEditMode, navigate, toast]);
 
   const addQuestion = () => {
     const newQuestion: QuestionFormData = {

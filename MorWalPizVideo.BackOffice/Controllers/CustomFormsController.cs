@@ -170,6 +170,7 @@ namespace MorWalPizVideo.BackOffice.Controllers
                     request.Body.Url,
                     request.Body.Questions,
                     request.Body.Active,
+                    channelId: channelId,
                     lifecycle: request.Body.Lifecycle,
                     accessMode: request.Body.AccessMode
                 );
