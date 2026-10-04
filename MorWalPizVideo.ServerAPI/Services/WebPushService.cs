@@ -1,4 +1,5 @@
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using WebPush;
@@ -50,12 +51,12 @@ public sealed class WebPushService : IWebPushService
     catch (WebPushException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Gone)
     {
       // Subscription has expired / been revoked — caller should clean it up
-      _logger.LogWarning("Push subscription gone (410): {Endpoint}", sub.Endpoint);
+      _logger.LogWarning("Push subscription gone (410): {Endpoint}", PushEndpointProtection.Redact(sub.Endpoint));
       throw;
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Failed to send push to {Endpoint}", sub.Endpoint);
+      _logger.LogError(ex, "Failed to send push to {Endpoint}", PushEndpointProtection.Redact(sub.Endpoint));
     }
   }
 

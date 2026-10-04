@@ -8,6 +8,8 @@ const manifestForPlugIn = {
   registerType: 'autoUpdate' as const,
   workbox: {
     navigateFallbackDenylist: [/^\/sl/, /^\/api\/cache/],
+    // Web Push handlers live in a static script so Workbox keeps owning precaching and offline behaviour.
+    importScripts: ['/push-sw.js'],
   },
   includeAssests: ['favicon.ico', 'apple-touch-icon.png', 'maskable_icon.png'],
   manifest: {

@@ -44,6 +44,7 @@ export const permissions = {
     moderate: 'ask.moderate',
   },
   faq: { view: 'faq.view', manage: 'faq.manage', candidates: 'faq.candidates' },
+  push: { platformSend: 'push.platform.send' },
   diagnostics: { view: 'diagnostics.view' },
   scripts: {
     studio: 'scripts.studio',
@@ -108,6 +109,9 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   if (module === 'profile') return [permissions.backoffice.access];
   if (module === 'my-channel') return [permissions.backoffice.access];
   if (module === 'newsletters') return [permissions.backoffice.access];
+  // Channel owners reach the channel broadcast section with plain backoffice access; the platform section inside
+  // the page is gated separately by push.platform.send, mirroring the server.
+  if (module === 'push') return [permissions.backoffice.access];
   if (module === 'diagnostics') return [permissions.diagnostics.view];
   if (module === 'script-studio') return [permissions.scripts.studio];
   if (module === 'rbac') {

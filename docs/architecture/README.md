@@ -45,6 +45,7 @@ Excluded:
 18. [Refactoring Roadmap](refactoring-roadmap.md)
 19. [BackOffice Admin Dashboard](admin-dashboard.md)
 20. [Shooting Range POC](../shooting-range-architecture.md)
+21. [Anonymous Web Push](adr/ADR-017-anonymous-web-push.md)
 
 ## Architectural Baseline
 
@@ -56,6 +57,7 @@ Excluded:
 - `https://morwalpiz-admin-spa.azurewebsites.net` is the administrative SPA origin. `https://shorts.morwalpiz.com` is the branded redirect host.
 - Shop and digital-artifact functionality is pre-production and on hold. Its accepted ADRs remain target design records, but no shop implementation, migration, UI, contract, or deployment work belongs in the active roadmap until the hold is explicitly lifted.
 - Shooting Range is an independently owned POC preparing for public exposure. Its target is deny-by-default authorization with anonymous access limited to login, CSRF token acquisition, and health probes; scope remains intentionally minimal and extensible.
+- Anonymous Web Push subscriptions are owned by ServerAPI (`api/push/subscriptions/*`) and sent from BackOffice. Audiences are named channel collections, independent from RBAC; `push.platform.send` gates the platform section while channel owners broadcast only to their scoped channel. The legacy user-bound `api/push/*` surface remains unchanged.
 - JSON APIs will adopt URL-segment versioning beginning with `/api/v1`; branded redirect URLs remain unversioned.
 - Development flags do not authorize fake authentication outside Development. BackOffice/ServerAPI local CORS is environment-gated; Range retains its exact configured origin even locally. Deployed CORS is explicit and least-privilege.
 

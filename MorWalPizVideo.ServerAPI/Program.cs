@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -72,6 +73,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = builder.Configuration.GetValue("Newsletter:PublicRateLimit:PermitLimit", 10),
             Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("Newsletter:PublicRateLimit:WindowMinutes", 1)),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("push-public", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"push:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("WebPush:PublicRateLimit:PermitLimit", 20),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("WebPush:PublicRateLimit:WindowMinutes", 1)),
             QueueLimit = 0,
             AutoReplenishment = true
         }));
@@ -142,6 +152,7 @@ builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
+builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
     builder.Services.AddSingleton<SmtpMockService>();
     builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
 
@@ -187,6 +198,7 @@ if (enableMock)
     builder.Services.AddScoped<IUserChannelRepository, UserChannelMockRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
+    builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
@@ -238,6 +250,7 @@ else
     builder.Services.AddScoped<IUserChannelRepository, UserChannelRepository>();
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
+    builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();

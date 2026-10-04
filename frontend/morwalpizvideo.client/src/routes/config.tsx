@@ -30,6 +30,7 @@ import ChannelNews from './channelNews/Component';
 import channelNewsLoader from './channelNews/loader';
 import type { RouteObject } from 'react-router';
 import Newsletter from './newsletter/Component';
+import PushSettings from './pushSettings/Component';
 import Survey from './survey/Component';
 import surveyLoader from './survey/loader';
 import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
@@ -125,6 +126,10 @@ export const routes: RouteObject[] = [
           {
             path: 'newsletter',
             element: <Newsletter />,
+          },
+          {
+            path: 'notifiche',
+            element: <PushSettings />,
           },
           {
             path: 'stream',

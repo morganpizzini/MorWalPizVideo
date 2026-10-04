@@ -142,6 +142,9 @@ public static class AuthorizationPermissionKeys
   public const string CompilationsUpdate = "compilations.update";
   public const string CompilationsDelete = "compilations.delete";
 
+  /// <summary>Canonical permission gating the platform-wide Web Push section in BackOffice.</summary>
+  public const string PushPlatformSend = "push.platform.send";
+
   public const string DiagnosticsView = "diagnostics.view";
 }
 

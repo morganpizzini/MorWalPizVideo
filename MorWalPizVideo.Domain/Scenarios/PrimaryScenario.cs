@@ -88,6 +88,10 @@ public class PrimaryScenario : BaseScenario
         Set("quickLinks", Array.Empty<QuickLinks>());
         Set("channelNews", Array.Empty<ChannelNews>());
         Set("newsletterEvents", Array.Empty<NewsletterEvent>());
+        Set("pushSubscriptions", Array.Empty<PushChannelSubscription>());
+        Set("pushAudiences", Array.Empty<PushAudience>());
+        Set("pushDispatches", Array.Empty<PushDispatch>());
+        Set("pushDispatchRecipients", Array.Empty<PushDispatchRecipient>());
 
         var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);
         Set("users",

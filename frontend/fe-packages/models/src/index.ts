@@ -17,6 +17,25 @@ export type {
   ScriptStudioGlobalPrompt,
 } from "./scriptStudio";
 
+// Web Push exports
+export type {
+  PushSubscriptionKeysRequest,
+  PushSubscribeRequest,
+  PushSubscriptionCredentialRequest,
+  PushSubscriptionState,
+  PushPublicKey,
+  PushDispatchScope,
+  PushDispatchState,
+  PushAudience,
+  PushAudienceRequest,
+  PushTargetChannel,
+  PushTargets,
+  PushNotificationActionRequest,
+  PushPlatformSendRequest,
+  PushChannelSendRequest,
+  PushDispatch,
+} from "./pushNotifications";
+
 // Categories exports
 export type {
   Category,

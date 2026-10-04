@@ -247,6 +247,11 @@ if (!enableMock)
     {
         httpClient.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
     });
+    // Push services are third-party endpoints (FCM, Mozilla, WNS); the factory owns the handler lifetime.
+    builder.Services.AddHttpClient(HttpClientNames.WebPush, httpClient =>
+    {
+        httpClient.Timeout = TimeSpan.FromSeconds(30);
+    }).RemoveAllLoggers();
 }
 
 
@@ -427,6 +432,11 @@ if (enableMock)
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
     builder.Services.AddSingleton<SmtpMockService>();
     builder.Services.AddSingleton<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
+    builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
+    builder.Services.AddScoped<IPushAudienceRepository, PushAudienceMockRepository>();
+    builder.Services.AddScoped<IPushDispatchRepository, PushDispatchMockRepository>();
+    builder.Services.AddScoped<IPushDispatchRecipientRepository, PushDispatchRecipientMockRepository>();
+    builder.Services.AddSingleton<IWebPushSender, WebPushSenderMock>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
@@ -533,6 +543,11 @@ else
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
     builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
+    builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
+    builder.Services.AddScoped<IPushAudienceRepository, PushAudienceRepository>();
+    builder.Services.AddScoped<IPushDispatchRepository, PushDispatchRepository>();
+    builder.Services.AddScoped<IPushDispatchRecipientRepository, PushDispatchRecipientRepository>();
+    builder.Services.AddScoped<IWebPushSender, WebPushSender>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
@@ -570,6 +585,8 @@ else
 builder.Services.AddScoped<IInsightIngestionService, InsightIngestionService>();
 builder.Services.AddScoped<IInsightCommentAnalysisService, InsightCommentAnalysisService>();
 builder.Services.AddScoped<INewsletterDispatchService, NewsletterDispatchService>();
+builder.Services.AddScoped<IPushDispatchService, PushDispatchService>();
+builder.Services.AddScoped<PushDispatchService>();
 builder.Services.AddScoped<CustomFormResponseEmailJob>();
 builder.Services.AddScoped<IInsightCommentAnalysisScheduler>(provider =>
     new InsightCommentAnalysisScheduler(provider.GetService<IBackgroundJobClient>()));
@@ -704,6 +721,11 @@ if (enableHangFire)
         "newsletter-scheduled-reconciliation",
         service => service.ReconcileScheduledAsync(CancellationToken.None),
         builder.Configuration["Newsletter:ReconciliationCron"] ?? "*/5 * * * *");
+
+    RecurringJob.AddOrUpdate<PushDispatchService>(
+        "push-dispatch-reconciliation",
+        service => service.ReconcileAsync(CancellationToken.None),
+        builder.Configuration["WebPush:ReconciliationCron"] ?? "*/10 * * * *");
 
     RecurringJob.AddOrUpdate<CustomFormResponseEmailJob>(
         CustomFormResponseEmailJob.JobId,
