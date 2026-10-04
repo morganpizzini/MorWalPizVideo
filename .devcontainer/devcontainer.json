@@ -1,0 +1,74 @@
+{
+  "name": "MorWalPizVideo development",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22",
+      "nodeGypDependencies": true
+    }
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "DOTNET_ENVIRONMENT": "Development"
+  },
+  "forwardPorts": [
+    17034,
+    15252,
+    21259,
+    22242,
+    5173,
+    5174,
+    5175,
+    5176,
+    5177
+  ],
+  "portsAttributes": {
+    "17034": {
+      "label": "Aspire dashboard (HTTPS)",
+      "protocol": "https"
+    },
+    "15252": {
+      "label": "Aspire dashboard (HTTP)",
+      "protocol": "http"
+    },
+    "21259": {
+      "label": "Aspire OTLP (HTTPS)",
+      "protocol": "https"
+    },
+    "22242": {
+      "label": "Aspire resource service (HTTPS)",
+      "protocol": "https"
+    },
+    "5173": {
+      "label": "BackOffice SPA",
+      "protocol": "http"
+    },
+    "5174": {
+      "label": "Public client",
+      "protocol": "http"
+    },
+    "5175": {
+      "label": "Shop client",
+      "protocol": "http"
+    },
+    "5176": {
+      "label": "Ask client",
+      "protocol": "http"
+    },
+    "5177": {
+      "label": "Shooting Range client",
+      "protocol": "http"
+    }
+  },
+  "postCreateCommand": "corepack enable && corepack prepare yarn@1.22.22 --activate && yarn --cwd frontend install --frozen-lockfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
