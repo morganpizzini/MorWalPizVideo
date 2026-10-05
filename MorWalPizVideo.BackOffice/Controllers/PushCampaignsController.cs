@@ -121,6 +121,14 @@ public sealed class PushCampaignsController(
             : request.ChannelIds.Where(knownChannelIds.Contains).ToHashSet(StringComparer.Ordinal);
 
         var audienceIds = await ResolveAudienceIdsAsync(request.AudienceIds, cancellationToken);
+        if (!request.AllChannels &&
+            channelIds.Count == 0 &&
+            audienceIds.Count == 0 &&
+            (await subscriptionRepository.GetActivePlatformByApplicationAsync("backoffice", cancellationToken)).Count == 0)
+        {
+            return BadRequest("At least one push target is required.");
+        }
+
         return await CreateAndQueueAsync(new PushDispatch(
             PushDispatchScope.Platform,
             title.Trim(),

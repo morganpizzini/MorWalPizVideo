@@ -130,11 +130,6 @@ public sealed class PushDispatchService(
                 continue;
             }
 
-            if (!await PushEndpointValidator.IsSafeAsync(subscription.Endpoint, cancellationToken))
-            {
-                await recipientRepository.MarkSuppressedAsync(recipient.Id, "Endpoint rejected by outbound safety policy.", DateTime.UtcNow, cancellationToken);
-                continue;
-            }
             var result = await webPushSender.SendAsync(subscription, payload, cancellationToken);
             switch (result.Outcome)
             {
