@@ -14,7 +14,7 @@
     "lint-format": "npm run lint && npm run format",
     "package:azure": "npm run build-uncheck && bestzip azure-package.zip dist/*",
     "preview": "vite preview",
-    "test": "vitest --reporter=silent --printConsoleTrace=false",
+    "test": "vitest run --passWithNoTests=false --reporter=junit --outputFile=test-results/back-office-spa-junit.xml",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

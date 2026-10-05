@@ -46,7 +46,7 @@ jobs:
 
       - name: Run tests
         working-directory: frontend/back-office-spa
-        run: yarn test --passWithNoTests=false --reporter=junit --outputFile=test-results/back-office-spa-junit.xml
+        run: yarn test
 
       - name: Test shared transport
         working-directory: frontend
