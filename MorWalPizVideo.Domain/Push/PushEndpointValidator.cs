@@ -78,7 +78,8 @@ public static class PushEndpointValidator
                    !IsInIpv4Range(value, 0xC6120000, 15) && // benchmarking
                    !IsInIpv4Range(value, 0xC6336400, 24) && // documentation
                    !IsInIpv4Range(value, 0xCB007100, 24) && // documentation
-                   !IsInIpv4Range(value, 0xE0000000, 4); // multicast and reserved
+                   !IsInIpv4Range(value, 0xE0000000, 4) && // multicast
+                   !IsInIpv4Range(value, 0xF0000000, 4); // reserved
         }
 
         if (address.AddressFamily != AddressFamily.InterNetworkV6)

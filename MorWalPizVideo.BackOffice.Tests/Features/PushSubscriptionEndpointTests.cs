@@ -122,7 +122,8 @@ public sealed class PushSubscriptionEndpointTests : IClassFixture<ServerApiWebAp
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
-    private static string NewEndpoint() => $"https://push.example.com/send/{Guid.NewGuid():N}";
+    // Use a globally routable literal so the endpoint-validation test does not depend on external DNS.
+    private static string NewEndpoint() => $"https://1.1.1.1/send/{Guid.NewGuid():N}";
 
     private static object NewSubscribeRequest(string endpoint, string[] channelIds, string? credential = null) => new
     {

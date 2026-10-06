@@ -48,6 +48,8 @@ A user who clears local storage loses control of that subscription until the bro
 
 The feature cannot deliver until VAPID material is provisioned out of band: `WebPush:PublicKey`, `WebPush:PrivateKey` and `WebPush:Subject` in BackOffice, and `WebPush:PublicKey` in ServerAPI. All committed values are empty strings; the public-key endpoint returns `503` when unconfigured. `docs/SHOOTING_ITA_PHASE4_ADVANCED_FEATURES.md` describes a `VapidKeys:*` shape that was never implemented; that document is already listed as superseded, and `WebPush:*` in source is authoritative.
 
+The public opt-in requests browser permission before awaiting the public-key endpoint. This ordering preserves the click's transient user activation in browsers that require permission requests to begin directly from the user gesture. A `503` from `/api/push/public-key` remains a separate deployment/configuration failure and must be diagnosed by checking the ServerAPI `WebPush:PublicKey` setting (normally supplied through the production configuration provider), not by generating a new key in the client.
+
 `frontend/shooting-ita-frontend` previously built a service worker that was never registered. Registration is now explicit in `main.tsx`, so that application gains its configured PWA behaviour along with push.
 
 ## Migration And Rollback
