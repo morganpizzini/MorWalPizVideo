@@ -1,14 +1,15 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
 import React, { useState, useEffect } from 'react';
 import { useFetcher, useNavigate, useLocation } from 'react-router';
-import { Button, Modal } from 'react-bootstrap';
+import { Button, ButtonGroup, Modal } from 'react-bootstrap';
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import DetailPanel from '@components/DetailPanel';
 import PageHeader from '@components/PageHeader';
 import { LinkType } from '@morwalpizvideo/models';
 import { ComposeUrl, endpoints, get } from '@morwalpizvideo/services';
 import type { AuditLog } from '@/models/auditLog';
-import type { ShortLink } from '@/models/shortLink';
+import type { ShortLink, ShortLinkClickBucket } from '@/models/shortLink';
 import AuditLogList from '@components/AuditLogList';
 import ShareShortLink from './ShareShortLink';
 import { PageSkeleton } from '@components/LoadingSkeleton';
@@ -20,6 +21,9 @@ const ShortLinkDetail: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
   const [logsError, setLogsError] = useState('');
+  const [clickRange, setClickRange] = useState('24h');
+  const [clicks, setClicks] = useState<ShortLinkClickBucket[]>([]);
+  const [clicksError, setClicksError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
   const location = useLocation();
@@ -50,6 +54,18 @@ const ShortLinkDetail: React.FC = () => {
       .catch(error => setLogsError(error instanceof Error ? error.message : 'Unable to load logs.'))
       .finally(() => setLogsLoading(false));
   }, [entity]);
+
+  useEffect(() => {
+    if (!entity?.code) return;
+    setClicksError('');
+    void get(
+      `${ComposeUrl(endpoints.SHORTLINKS_CLICKS, { querylinkId: entity.code })}?range=${clickRange}`
+    )
+      .then(value => setClicks(value as ShortLinkClickBucket[]))
+      .catch(error =>
+        setClicksError(error instanceof Error ? error.message : 'Unable to load click history.')
+      );
+  }, [entity, clickRange]);
 
   const handleDelete = () => {
     setShowModal(true);
@@ -107,6 +123,53 @@ const ShortLinkDetail: React.FC = () => {
         {showShare ? 'Close Share' : 'Share'}
       </Button>
       {showShare && <ShareShortLink shortLinkId={entity.shortLinkId} />}
+      <section className="dashboard-panel mt-4">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h2 className="h5 mb-1">Click activity</h2>
+            <p className="text-muted small mb-0">Clicks recorded for this short link.</p>
+          </div>
+          <ButtonGroup size="sm" aria-label="Click activity range">
+            {[
+              ['1h', '1 hour'],
+              ['24h', '24 hours'],
+              ['7d', '7 days'],
+              ['all', 'All'],
+            ].map(([value, label]) => (
+              <Button
+                key={value}
+                variant={clickRange === value ? 'primary' : 'outline-primary'}
+                onClick={() => setClickRange(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </div>
+        {clicksError ? (
+          <p className="text-danger">{clicksError}</p>
+        ) : (
+          <div style={{ width: '100%', height: 220 }}>
+            <ResponsiveContainer>
+              <LineChart data={clicks}>
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={value => new Date(value).toLocaleDateString()}
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip labelFormatter={value => new Date(String(value)).toLocaleString()} />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#2f6f8f"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
       <section className="mt-4">
         <h2 className="h5">History</h2>
         <AuditLogList logs={logs} loading={logsLoading} error={logsError} />

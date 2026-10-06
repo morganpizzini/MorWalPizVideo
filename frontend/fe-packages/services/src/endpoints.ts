@@ -113,6 +113,7 @@ const RBAC_GROUPS = `${RBAC}/groups`;
 const RBAC_GROUPS_DETAIL = `${RBAC_GROUPS}/{id}`;
 const RBAC_GROUP_PERMISSIONS = `${RBAC_GROUPS}/{id}/permissions`;
 const SHORTLINKS_LOGS = `${SHORTLINKS_DETAIL}/logs`;
+const SHORTLINKS_CLICKS = `${SHORTLINKS_DETAIL}/clicks`;
 const DASHBOARD_SUMMARY = `${baseEndpoint}/dashboard/summary`;
 const DASHBOARD_VIDEO_PUBLICATIONS = `${baseEndpoint}/dashboard/video-publications`;
 const ASK_CAMPAIGN = `${baseEndpoint}/ask/{channelName}/{campaignSlug}`;
@@ -272,6 +273,7 @@ export default {
   RBAC_GROUPS_DETAIL,
   RBAC_GROUP_PERMISSIONS,
   SHORTLINKS_LOGS,
+  SHORTLINKS_CLICKS,
   DASHBOARD_SUMMARY,
   DASHBOARD_VIDEO_PUBLICATIONS,
   ASK_CAMPAIGN,

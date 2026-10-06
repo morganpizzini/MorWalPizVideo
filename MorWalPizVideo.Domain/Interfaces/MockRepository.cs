@@ -427,7 +427,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 if (item == null)
                     return 0;
 
-                var updated = item with { ClicksCount = item.ClicksCount + 1 };
+                var updated = item with
+                {
+                    ClicksCount = item.ClicksCount + 1,
+                    ClickTimestamps = item.ClickTimestamps.Append(DateTime.UtcNow).ToArray()
+                };
                 scenario.Replace(_fileName, updated);
                 return updated.ClicksCount;
             }

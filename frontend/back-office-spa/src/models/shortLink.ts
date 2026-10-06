@@ -7,7 +7,7 @@ export enum LinkType {
   YouTubePlaylist = 2,
   Instagram = 3,
   Facebook = 4,
-  CustomUrl = 5
+  CustomUrl = 5,
 }
 
 /**
@@ -25,7 +25,7 @@ export interface ShortLink {
 
   /** Target of the link (video ID, channel ID, Instagram post ID, etc.) */
   target: string;
-  
+
   /** Type of the link */
   linkType: LinkType;
 
@@ -34,12 +34,17 @@ export interface ShortLink {
 
   /** Number of times the link has been clicked */
   clicksCount: number;
-  
+
   /** Legacy property for backward compatibility */
   videoId: string;
 
   videoTitle?: string;
   creationDateTime: string;
+}
+
+export interface ShortLinkClickBucket {
+  timestamp: string;
+  count: number;
 }
 
 /**

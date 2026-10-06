@@ -593,7 +593,9 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             var filter = ObjectId.TryParse(id, out var objectId)
                 ? Builders<ShortLink>.Filter.Eq("_id", objectId)
                 : Builders<ShortLink>.Filter.Eq("_id", id);
-            var update = Builders<ShortLink>.Update.Inc(x => x.ClicksCount, 1);
+            var update = Builders<ShortLink>.Update
+                .Inc(x => x.ClicksCount, 1)
+                .Push(x => x.ClickTimestamps, DateTime.UtcNow);
             var options = new FindOneAndUpdateOptions<ShortLink> { ReturnDocument = ReturnDocument.After };
             var updated = await _collection.FindOneAndUpdateAsync(filter, update, options);
             return updated?.ClicksCount ?? 0;

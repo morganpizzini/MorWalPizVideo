@@ -36,6 +36,9 @@ public class UpdateShortLinkRequest
     public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
     public string[] QueryLinkIds { get; set; } = [];
 }
+
+public sealed record ShortLinkClickBucket(DateTime Timestamp, int Count);
+
 [RequireChannelScope]
 public class ShortLinksController : ApplicationControllerBase
 {
@@ -116,6 +119,41 @@ public class ShortLinksController : ApplicationControllerBase
 
         var logs = await auditService.GetEntityLogsAsync("shortlink", shortLink.Id);
         return Ok(logs.Select(ContractUtils.Convert));
+    }
+
+    [HttpGet("{code}/clicks")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
+    public async Task<IActionResult> GetShortLinkClicks(string code, [FromQuery] string range = "24h")
+    {
+        var shortLink = await FindShortLinkAsync(code);
+        if (shortLink is null || !await CanAccessShortLinkAsync(shortLink))
+            return NotFound("Short link not found");
+
+        var now = DateTime.UtcNow;
+        var rangeKey = range.ToLowerInvariant();
+        if (rangeKey is not ("1h" or "24h" or "7d" or "all"))
+            return BadRequest("range must be one of: 1h, 24h, 7d, all");
+
+        var (from, bucketSize, bucketCount) = rangeKey switch
+        {
+            "1h" => (now.AddHours(-1), TimeSpan.FromMinutes(5), 12),
+            "24h" => (now.AddHours(-24), TimeSpan.FromHours(1), 24),
+            "7d" => (now.Date.AddDays(-6), TimeSpan.FromDays(1), 7),
+            "all" => GetAllTimeRange(shortLink.ClickTimestamps, now),
+            _ => throw new InvalidOperationException("Unsupported click range")
+        };
+
+        var buckets = Enumerable.Range(0, bucketCount)
+            .Select(index => new ShortLinkClickBucket(from + bucketSize * index, 0))
+            .ToArray();
+        foreach (var timestamp in shortLink.ClickTimestamps.Where(timestamp => timestamp >= from && timestamp <= now))
+        {
+            var index = (int)((timestamp - from).Ticks / bucketSize.Ticks);
+            if (index >= 0 && index < buckets.Length)
+                buckets[index] = buckets[index] with { Count = buckets[index].Count + 1 };
+        }
+
+        return Ok(buckets);
     }
     [HttpPost]
     [AllowUser(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]
@@ -454,6 +492,15 @@ public class ShortLinksController : ApplicationControllerBase
     }
 
     #region Helper Methods
+
+    private static (DateTime From, TimeSpan BucketSize, int BucketCount) GetAllTimeRange(
+        IEnumerable<DateTime> timestamps,
+        DateTime now)
+    {
+        var first = timestamps.DefaultIfEmpty(now.Date).Min().Date;
+        var bucketCount = Math.Max(1, (now.Date - first).Days + 1);
+        return (first, TimeSpan.FromDays(1), bucketCount);
+    }
 
     private async Task<ShortLink?> FindShortLinkAsync(string code)
     {

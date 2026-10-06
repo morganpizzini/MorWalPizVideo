@@ -1,5 +1,5 @@
 ﻿import { getSponsors } from '@services/sponsors';
-import { getActiveForms, getCustomFormByUrl } from '@services/customForms';
+import { getCustomFormByUrl } from '@services/customForms';
 import { data } from 'react-router';
 
 function isApiError(value: unknown): value is { errors: unknown[]; status?: number } {
@@ -16,16 +16,10 @@ export default async function loader() {
     getSponsors(),
     (async () => {
       try {
-        const response = await getCustomFormByUrl(formUrl);
-        if (!isApiError(response)) return response;
+        return await getCustomFormByUrl(formUrl);
       } catch {
-        // Fall through to the active-form collection.
+        return undefined;
       }
-
-      const activeForms = await getActiveForms().catch(() => []);
-      return Array.isArray(activeForms)
-        ? activeForms.find(form => form.url.toLowerCase() === formUrl)
-        : undefined;
     })(),
   ]);
 

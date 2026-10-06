@@ -45,6 +45,10 @@ namespace MorWalPizVideo.Server.Models
         public int ClicksCount { get; set; }
 
         [DataMember]
+        [BsonElement("clickTimestamps")]
+        public IList<DateTime> ClickTimestamps { get; set; } = [];
+
+        [DataMember]
         [BsonElement("linkType")]
         public LinkType LinkType { get; set; } = LinkType.YouTubeVideo;
 

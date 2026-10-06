@@ -53,12 +53,16 @@ public sealed class DashboardService(
                  permissions.Contains(AuthorizationPermissionKeys.BackofficeManageAll))));
 
         var standaloneLinks = await shortLinkRepository.GetItemsAsync(shortLink =>
-            shortLink.LinkType != LinkType.YouTubeVideo &&
-            (shortLink.ManagementChannelId == channelId || shortLink.ChannelId == channelId));
+            shortLink.LinkType == LinkType.YouTubeVideo ||
+            shortLink.ManagementChannelId == channelId ||
+            shortLink.ChannelId == channelId);
         var scopedMatches = await youTubeContentRepository.GetItemsAsync(match =>
             match.OwnerChannelId == channelId ||
             match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
         var shortLinks = standaloneLinks
+            .Where(link => link.LinkType != LinkType.YouTubeVideo
+                || scopedMatches.Any(match => match.Id == link.ContentId &&
+                    match.VideoRefs.Any(video => video.YoutubeId == link.Target)))
             .GroupBy(link => link.NormalizedCode, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToList();

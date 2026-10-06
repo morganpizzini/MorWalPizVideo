@@ -77,32 +77,6 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         }
 
         /// <summary>
-        /// Get all active custom forms (questions only, no responses for privacy)
-        /// </summary>
-        [HttpGet("active")]
-        [OutputCache(Tags = [CacheKeys.CustomForms])]
-        public async Task<IActionResult> GetActiveForms()
-        {
-            try
-            {
-                var channelId = GetYouTubeChannelId();
-                if (string.IsNullOrWhiteSpace(channelId))
-                    return Ok(Array.Empty<CustomForm>());
-
-                var forms = await _formsService.GetActiveFormsAsync(channelId);
-                
-                // Return forms without responses for privacy
-                var publicForms = forms.Select(f => f with { Responses = Array.Empty<CustomFormResponse>() }).ToList();
-                return Ok(publicForms);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching active custom forms");
-                return StatusCode(500, "An error occurred while fetching active custom forms");
-            }
-        }
-
-        /// <summary>
         /// Get custom form by URL (questions only, no responses for privacy)
         /// </summary>
         [HttpGet("url/{url}")]
