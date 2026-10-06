@@ -30,6 +30,7 @@ public class PushController : ApplicationControllerBase
   /// POST /api/push/subscribe
   /// </summary>
   [HttpPost("subscribe")]
+  [AllowAnonymous]
   public async Task<IActionResult> Subscribe([FromBody] PushSubscribeDto dto)
   {
     if (string.IsNullOrWhiteSpace(dto.Endpoint) ||
@@ -78,6 +79,7 @@ public class PushController : ApplicationControllerBase
   /// DELETE /api/push/unsubscribe
   /// </summary>
   [HttpDelete("unsubscribe")]
+  [AllowAnonymous]
   public async Task<IActionResult> Unsubscribe([FromBody] PushUnsubscribeDto dto)
   {
     if (string.IsNullOrWhiteSpace(dto.Endpoint))
