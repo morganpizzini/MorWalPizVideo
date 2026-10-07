@@ -11,6 +11,8 @@ namespace MorWalPizVideo.Server.Models
     [DataContract]
     public record CustomFormResponse
     {
+        private CustomFormAnswer[] _answers = Array.Empty<CustomFormAnswer>();
+
         [JsonConstructor]
         public CustomFormResponse(string responseId, DateTime submittedAt, CustomFormAnswer[] answers)
         {
@@ -38,7 +40,11 @@ namespace MorWalPizVideo.Server.Models
         /// </summary>
         [DataMember]
         [BsonElement("answers")]
-        public CustomFormAnswer[] Answers { get; init; } = Array.Empty<CustomFormAnswer>();
+        public CustomFormAnswer[] Answers
+        {
+            get => _answers ?? Array.Empty<CustomFormAnswer>();
+            init => _answers = value ?? Array.Empty<CustomFormAnswer>();
+        }
     }
 
     /// <summary>
@@ -102,6 +108,8 @@ namespace MorWalPizVideo.Server.Models
     [BsonDiscriminator("MultipleChoiceAnswer")]
     public record MultipleChoiceAnswer : CustomFormAnswer
     {
+        private string[] _selectedOptionIds = Array.Empty<string>();
+
         [JsonConstructor]
         public MultipleChoiceAnswer(string questionId, string[] selectedOptionIds)
             : base(questionId, AnswerType.MultipleChoice)
@@ -114,7 +122,11 @@ namespace MorWalPizVideo.Server.Models
         /// </summary>
         [DataMember]
         [BsonElement("selectedOptionIds")]
-        public string[] SelectedOptionIds { get; init; } = Array.Empty<string>();
+        public string[] SelectedOptionIds
+        {
+            get => _selectedOptionIds ?? Array.Empty<string>();
+            init => _selectedOptionIds = value ?? Array.Empty<string>();
+        }
     }
 
     /// <summary>

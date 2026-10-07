@@ -94,6 +94,8 @@ namespace MorWalPizVideo.Server.Models
     [BsonDiscriminator("MultipleChoiceQuestion")]
     public record MultipleChoiceQuestion : CustomFormQuestion
     {
+        private QuestionOption[] _options = Array.Empty<QuestionOption>();
+
         [JsonConstructor]
         public MultipleChoiceQuestion(string questionId, string questionText, bool isRequired, int order, QuestionOption[] options)
             : base(questionId, questionText, QuestionType.MultipleChoice, isRequired, order)
@@ -106,7 +108,11 @@ namespace MorWalPizVideo.Server.Models
         /// </summary>
         [DataMember]
         [BsonElement("options")]
-        public QuestionOption[] Options { get; init; } = Array.Empty<QuestionOption>();
+        public QuestionOption[] Options
+        {
+            get => _options ?? Array.Empty<QuestionOption>();
+            init => _options = value ?? Array.Empty<QuestionOption>();
+        }
     }
 
     /// <summary>
@@ -117,6 +123,8 @@ namespace MorWalPizVideo.Server.Models
     [BsonDiscriminator("SingleChoiceQuestion")]
     public record SingleChoiceQuestion : CustomFormQuestion
     {
+        private QuestionOption[] _options = Array.Empty<QuestionOption>();
+
         [JsonConstructor]
         public SingleChoiceQuestion(string questionId, string questionText, bool isRequired, int order, QuestionOption[] options)
             : base(questionId, questionText, QuestionType.SingleChoice, isRequired, order)
@@ -129,7 +137,11 @@ namespace MorWalPizVideo.Server.Models
         /// </summary>
         [DataMember]
         [BsonElement("options")]
-        public QuestionOption[] Options { get; init; } = Array.Empty<QuestionOption>();
+        public QuestionOption[] Options
+        {
+            get => _options ?? Array.Empty<QuestionOption>();
+            init => _options = value ?? Array.Empty<QuestionOption>();
+        }
     }
 
     [BsonIgnoreExtraElements]

@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import { deletePageImage, uploadPageImages } from '@morwalpizvideo/services';
-import type { PageAdmin, PageImage } from '@morwalpizvideo/models';
+import type { CustomForm, PageAdmin, PageImage } from '@morwalpizvideo/models';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -11,7 +11,13 @@ import PageHeader from '@components/PageHeader';
 import RichTextEditor from './RichTextEditor';
 
 export default function PageForm(): React.ReactElement {
-  const entity = useResolvedLoaderData() as PageAdmin | null;
+  const loaderData = useResolvedLoaderData() as
+    | { page: PageAdmin | null; customForms: CustomForm[] }
+    | PageAdmin
+    | null
+    | undefined;
+  const entity = loaderData && 'page' in loaderData ? loaderData.page : (loaderData ?? null);
+  const customForms = loaderData && 'page' in loaderData ? loaderData.customForms : [];
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -21,6 +27,7 @@ export default function PageForm(): React.ReactElement {
   const [content, setContent] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [videoId, setVideoId] = useState('');
+  const [customFormUrl, setCustomFormUrl] = useState('');
   const [status, setStatus] = useState('0');
   const [images, setImages] = useState<PageImage[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -35,6 +42,7 @@ export default function PageForm(): React.ReactElement {
     setContent(entity?.content ?? '');
     setThumbnailUrl(entity?.thumbnailUrl ?? '');
     setVideoId(entity?.videoId ?? '');
+    setCustomFormUrl(entity?.customFormUrl ?? '');
     setStatus(String(entity?.status ?? 0));
     setImages(entity?.inlineImages ?? []);
     setSelectedFiles([]);
@@ -137,6 +145,22 @@ export default function PageForm(): React.ReactElement {
               value={videoId}
               onChange={event => setVideoId(event.target.value)}
             />
+          </Form.Group>
+          <Form.Group className="col-md-6 mb-3">
+            <Form.Label htmlFor="page-custom-form">Custom form</Form.Label>
+            <Form.Select
+              id="page-custom-form"
+              name="customFormUrl"
+              value={customFormUrl}
+              onChange={event => setCustomFormUrl(event.target.value)}
+            >
+              <option value="">No custom form</option>
+              {customForms.map(form => (
+                <option key={form.id} value={form.url}>
+                  {form.title}
+                </option>
+              ))}
+            </Form.Select>
           </Form.Group>
         </div>
         <Form.Group className="mb-3">

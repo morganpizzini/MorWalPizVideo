@@ -20,6 +20,7 @@ public sealed class PageRequest
     public string Content { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public string VideoId { get; set; } = string.Empty;
+    public string? CustomFormUrl { get; set; }
     public PageStatus Status { get; set; } = PageStatus.Draft;
 }
 
@@ -190,6 +191,7 @@ public sealed class PagesController(IPageService pageService, IBlobService blobS
         VideoId: request.VideoId)
     {
         ChannelId = channelId,
+        CustomFormUrl = request.CustomFormUrl,
         Status = request.Status
     };
 

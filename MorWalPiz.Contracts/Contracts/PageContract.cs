@@ -23,6 +23,7 @@ public sealed class PageContract
     [DataMember] public string Content { get; set; } = string.Empty;
     [DataMember] public string Url { get; set; } = string.Empty;
     [DataMember] public string VideoId { get; set; } = string.Empty;
+    [DataMember] public string? CustomFormUrl { get; set; }
     [DataMember] public PageStatus Status { get; set; }
     [DataMember] public IReadOnlyList<PageImageContract> InlineImages { get; set; } = [];
     [DataMember] public DateTime CreationDateTime { get; set; }
@@ -37,6 +38,7 @@ public sealed class PagePublicContract
     [DataMember] public string Content { get; set; } = string.Empty;
     [DataMember] public string Url { get; set; } = string.Empty;
     [DataMember] public string VideoId { get; set; } = string.Empty;
+    [DataMember] public string? CustomFormUrl { get; set; }
     [DataMember] public IReadOnlyList<PageImageContract> InlineImages { get; set; } = [];
 }
 

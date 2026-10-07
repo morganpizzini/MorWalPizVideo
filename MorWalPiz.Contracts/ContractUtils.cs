@@ -196,6 +196,7 @@ namespace MorWalPiz.Contracts
             Content = entity.Content,
             Url = entity.Url,
             VideoId = entity.VideoId,
+            CustomFormUrl = entity.CustomFormUrl,
             Status = entity.Status,
             InlineImages = entity.InlineImages.Select(Convert).ToArray(),
             CreationDateTime = entity.CreationDateTime,
@@ -209,6 +210,7 @@ namespace MorWalPiz.Contracts
             Content = entity.Content,
             Url = entity.Url,
             VideoId = entity.VideoId,
+            CustomFormUrl = entity.CustomFormUrl,
             InlineImages = entity.InlineImages.Select(Convert).ToArray()
         };
 
@@ -381,7 +383,8 @@ namespace MorWalPiz.Contracts
                 Lifecycle = entity.Lifecycle,
                 AccessMode = entity.AccessMode,
                 Questions = entity.Questions,
-                ResponseCount = responseCount ?? entity.ResponseCount
+                ResponseCount = responseCount ?? entity.ResponseCount,
+                CreationDateTime = entity.CreationDateTime
             };
         }
         public static SurveyContract Convert(Survey entity) => new()

@@ -32,4 +32,6 @@ public class CustomFormContract
 
     [DataMember]
     public int ResponseCount { get; set; }
+    [DataMember]
+    public DateTime CreationDateTime { get; set; }
 }

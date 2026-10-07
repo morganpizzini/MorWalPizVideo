@@ -3,7 +3,7 @@ export const PageStatus = {
   Published: 1,
 } as const;
 
-export type PageStatus = typeof PageStatus[keyof typeof PageStatus];
+export type PageStatus = (typeof PageStatus)[keyof typeof PageStatus];
 
 export interface PageImage {
   publicUrl: string;
@@ -21,6 +21,7 @@ export interface PageAdmin {
   content: string;
   url: string;
   videoId: string;
+  customFormUrl?: string | null;
   status: PageStatus;
   inlineImages: PageImage[];
   creationDateTime: string;
@@ -33,6 +34,7 @@ export interface PagePublic {
   content: string;
   url: string;
   videoId: string;
+  customFormUrl?: string | null;
   inlineImages: PageImage[];
 }
 
@@ -42,6 +44,7 @@ export interface CreatePageDTO {
   content: string;
   url: string;
   videoId: string;
+  customFormUrl?: string | null;
   status: PageStatus;
 }
 

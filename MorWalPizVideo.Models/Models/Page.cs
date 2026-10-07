@@ -59,6 +59,10 @@ namespace MorWalPizVideo.Server.Models
         public IList<string> VideoReelIds { get; init; } = [];
 
         [DataMember]
+        [BsonElement("customFormUrl")]
+        public string? CustomFormUrl { get; init; }
+
+        [DataMember]
         [BsonElement("shortReelIds")]
         public IList<string> ShortReelIds { get; init; } = [];
 

@@ -11,6 +11,9 @@ namespace MorWalPizVideo.Server.Models
     [DataContract]
     public record CustomForm : BaseEntity
     {
+        private CustomFormQuestion[] _questions = Array.Empty<CustomFormQuestion>();
+        private CustomFormResponse[] _responses = Array.Empty<CustomFormResponse>();
+
         [JsonConstructor]
         public CustomForm(string title, string description, string url, CustomFormQuestion[] questions, bool active = true, string? channelId = null, CustomFormLifecycle? lifecycle = null, CustomFormAccessMode? accessMode = null)
         {
@@ -76,20 +79,28 @@ namespace MorWalPizVideo.Server.Models
         /// </summary>
         [DataMember]
         [BsonElement("questions")]
-        public CustomFormQuestion[] Questions { get; init; } = Array.Empty<CustomFormQuestion>();
+        public CustomFormQuestion[] Questions
+        {
+            get => _questions ?? Array.Empty<CustomFormQuestion>();
+            init => _questions = value ?? Array.Empty<CustomFormQuestion>();
+        }
 
         /// <summary>
         /// Anonymous responses to this form
         /// </summary>
         [DataMember]
         [BsonElement("responses")]
-        public CustomFormResponse[] Responses { get; init; } = Array.Empty<CustomFormResponse>();
+        public CustomFormResponse[] Responses
+        {
+            get => _responses ?? Array.Empty<CustomFormResponse>();
+            init => _responses = value ?? Array.Empty<CustomFormResponse>();
+        }
 
         /// <summary>
         /// Total number of responses received
         /// </summary>
         [BsonIgnore]
-        public int ResponseCount => Responses.Length;
+        public int ResponseCount => Responses?.Length ?? 0;
 
         /// <summary>
         /// Add a response to the form
