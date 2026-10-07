@@ -40,7 +40,7 @@ The SPA filters navigation using server-expanded `effectivePermissions` returned
 
 ### `GET /api/dashboard/summary`
 
-Returns the current administrative snapshot: total short links and cumulative clicks, global latest BackOffice login (`max(User.LastLogin)` among active BackOffice users), active users, videos published in the dashboard window, active forms and responses, pending insights, and the UTC generation timestamp.
+Returns the current administrative snapshot: total short links and short-link clicks recorded in the rolling seven-day UTC window, global latest BackOffice login (`max(User.LastLogin)` among active BackOffice users), active users, videos published in the dashboard window, active forms and responses, pending insights, and the UTC generation timestamp.
 
 ### `GET /api/dashboard/video-publications?days=21`
 

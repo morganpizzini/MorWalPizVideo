@@ -37,11 +37,12 @@ public sealed class DashboardControllerTests : IClassFixture<BackOfficeWebApplic
     }
 
     [Fact]
-    public async Task Summary_counts_canonical_video_short_link_clicks_in_the_selected_channel()
+    public async Task Summary_counts_video_short_link_clicks_from_the_rolling_last_seven_days()
     {
         await using var localFactory = new BackOfficeWebApplicationFactory();
         using var client = localFactory.CreateClientWithPermissions(AuthorizationPermissionKeys.BackofficeAccess);
         var before = await GetSummaryAsync(client);
+        var now = DateTime.UtcNow;
 
         await localFactory.ShortLinkRepository!.AddItemAsync(new ShortLink(
             "dashboard-click-regression",
@@ -50,12 +51,18 @@ public sealed class DashboardControllerTests : IClassFixture<BackOfficeWebApplic
         {
             LinkType = LinkType.YouTubeVideo,
             ContentId = PrimaryScenario.MatchId,
-            ClicksCount = 7
+            ClicksCount = 7,
+            ClickTimestamps =
+            [
+                now.AddDays(-2),
+                now.AddHours(-3),
+                now.AddDays(-8)
+            ]
         });
 
         var after = await GetSummaryAsync(client);
 
-        Assert.Equal(before.GetProperty("totalShortLinkClicks").GetInt64() + 7,
+        Assert.Equal(before.GetProperty("totalShortLinkClicks").GetInt64() + 2,
             after.GetProperty("totalShortLinkClicks").GetInt64());
     }
 

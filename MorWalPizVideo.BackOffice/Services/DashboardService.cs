@@ -35,9 +35,12 @@ public sealed class DashboardService(
     IInsightNewsItemRepository insightNewsItemRepository) : IDashboardService
 {
     private const int DefaultPublicationDays = 21;
+    private const int ShortLinkClickWindowDays = 7;
 
     public async Task<DashboardSummaryResponse> GetSummaryAsync(string channelId)
     {
+        var now = DateTime.UtcNow;
+        var shortLinkClickWindowStart = now.AddDays(-ShortLinkClickWindowDays);
         var users = await userRepository.GetItemsAsync(user => user.IsActive);
         var groups = await userGroupRepository.GetItemsAsync(group => group.IsActive);
         var groupPermissions = groups.ToDictionary(
@@ -74,14 +77,16 @@ public sealed class DashboardService(
 
         return new DashboardSummaryResponse(
             shortLinks.Count,
-            shortLinks.Sum(shortLink => (long)shortLink.ClicksCount),
+            shortLinks.Sum(shortLink => shortLink.ClickTimestamps.LongCount(timestamp =>
+                timestamp >= shortLinkClickWindowStart &&
+                timestamp <= now)),
             backOfficeUsers.Select(user => user.LastLogin).Where(value => value.HasValue).Max(),
             backOfficeUsers.LongCount(),
             publications.Sum(day => day.Count),
             forms.Count,
             responseCounts.Sum(),
             insights.Count(item => item.Status == InsightNewsStatus.Pending || item.Status == InsightNewsStatus.AutoDetected),
-            DateTime.UtcNow);
+            now);
     }
 
     public async Task<IReadOnlyList<VideoPublicationDayResponse>> GetVideoPublicationsAsync(int days, string channelId)
