@@ -215,6 +215,20 @@ describe("requestPushOptIn", () => {
     expect(shouldShowPushPrompt()).toBe(false);
   });
 
+  it("requests permission before awaiting the public-key request", async () => {
+    getPushPublicKey.mockImplementation(async () => {
+      expect(requestPermission).toHaveBeenCalledTimes(1);
+      return { publicKey: "BPublicKey" };
+    });
+
+    await expect(
+      requestPushOptIn({
+        applicationKey: "morwalpizvideo",
+        channelIds: ["channel-1"],
+      }),
+    ).resolves.toMatchObject({ status: "subscribed" });
+  });
+
   it("reports unavailable when the server has no VAPID public key", async () => {
     getPushPublicKey.mockRejectedValue(new Error("503"));
 
@@ -224,6 +238,31 @@ describe("requestPushOptIn", () => {
     });
 
     expect(result.status).toBe("unavailable");
+    expect(result.reason).toBe("configuration");
+  });
+
+  it("distinguishes subscription failures from permission denial", async () => {
+    subscribe.mockRejectedValue(new Error("NotAllowedError"));
+
+    const result = await requestPushOptIn({
+      applicationKey: "morwalpizvideo",
+      channelIds: ["channel-1"],
+    });
+
+    expect(result).toEqual({ status: "unavailable", reason: "subscription" });
+    expect(shouldShowPushPrompt()).toBe(true);
+  });
+
+  it("distinguishes persistence failures after a browser subscription", async () => {
+    savePushSubscription.mockRejectedValue(new Error("network"));
+
+    const result = await requestPushOptIn({
+      applicationKey: "morwalpizvideo",
+      channelIds: ["channel-1"],
+    });
+
+    expect(result).toEqual({ status: "unavailable", reason: "persistence" });
+    expect(shouldShowPushPrompt()).toBe(true);
   });
 });
 

@@ -156,8 +156,19 @@ export type PushOptInOptions = Readonly<{
 
 export type PushOptInResult = Readonly<{
   status: "subscribed" | "denied" | "unsupported" | "unavailable";
+  reason?:
+    | "configuration"
+    | "permission"
+    | "service-worker"
+    | "subscription"
+    | "persistence";
   state?: PushSubscriptionState;
 }>;
+
+function logPushFailure(stage: PushOptInResult["reason"]): void {
+  // Keep diagnostics useful without logging the VAPID key, endpoint, or subscription keys.
+  console.error("[push] activation failed", { stage });
+}
 
 async function resolveRegistration(): Promise<ServiceWorkerRegistration | null> {
   try {
@@ -177,48 +188,76 @@ export async function requestPushOptIn(
   const support = getPushSupport();
   if (!support.supported) return { status: "unsupported" };
 
-  let publicKey: string;
+  let permission: NotificationPermission;
   try {
-    publicKey = (await getPushPublicKey()).publicKey;
+    // Keep this as the first awaited operation: browsers can reject permission
+    // requests after the click's transient user activation has been consumed by
+    // an earlier network await.
+    permission = await window.Notification.requestPermission();
   } catch {
-    return { status: "unavailable" };
+    logPushFailure("permission");
+    return { status: "unavailable", reason: "permission" };
   }
-  if (!publicKey) return { status: "unavailable" };
-
-  const permission = await window.Notification.requestPermission();
   if (permission !== "granted") {
     recordPushPromptDecision("dismissed", options.applicationKey);
     return { status: "denied" };
   }
 
-  const registration = await resolveRegistration();
-  if (!registration) return { status: "unavailable" };
+  let publicKey: string;
+  try {
+    publicKey = (await getPushPublicKey()).publicKey;
+  } catch {
+    logPushFailure("configuration");
+    return { status: "unavailable", reason: "configuration" };
+  }
+  if (!publicKey) {
+    logPushFailure("configuration");
+    return { status: "unavailable", reason: "configuration" };
+  }
 
-  const existing = await registration.pushManager.getSubscription();
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        publicKey,
-      ) as unknown as BufferSource,
-    }));
+  const registration = await resolveRegistration();
+  if (!registration) {
+    logPushFailure("service-worker");
+    return { status: "unavailable", reason: "service-worker" };
+  }
+
+  let subscription: PushSubscription;
+  try {
+    const existing = await registration.pushManager.getSubscription();
+    subscription =
+      existing ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          publicKey,
+        ) as unknown as BufferSource,
+      }));
+  } catch {
+    logPushFailure("subscription");
+    return { status: "unavailable", reason: "subscription" };
+  }
 
   const payload = subscription.toJSON();
   const endpoint = payload.endpoint ?? subscription.endpoint;
   const stored = readStoredPushCredential();
 
-  const state = await savePushSubscription({
-    endpoint,
-    keys: {
-      p256dh: payload.keys?.p256dh ?? "",
-      auth: payload.keys?.auth ?? "",
-    },
-    channelIds: options.channelIds,
-    applicationKey: options.applicationKey,
-    language: options.language,
-    credential: stored?.endpoint === endpoint ? stored.credential : undefined,
-  });
+  let state: PushSubscriptionState;
+  try {
+    state = await savePushSubscription({
+      endpoint,
+      keys: {
+        p256dh: payload.keys?.p256dh ?? "",
+        auth: payload.keys?.auth ?? "",
+      },
+      channelIds: options.channelIds,
+      applicationKey: options.applicationKey,
+      language: options.language,
+      credential: stored?.endpoint === endpoint ? stored.credential : undefined,
+    });
+  } catch {
+    logPushFailure("persistence");
+    return { status: "unavailable", reason: "persistence" };
+  }
 
   if (state.credential) {
     writeJson(CREDENTIAL_STORAGE_KEY, {

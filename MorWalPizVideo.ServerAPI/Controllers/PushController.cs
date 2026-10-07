@@ -1,34 +1,36 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Controllers;
-using MorWalPizVideo.Domain.Interfaces;
-using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Server.Controllers;
-using MorWalPizVideo.Server.Services;
-using System.Security.Claims;
+using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 
 /// <summary>
-/// Manages Web Push subscriptions for the authenticated user.
+/// Legacy Web Push subscription routes. These registrations are anonymous and are
+/// stored in the push subscription collection so the BackOffice dispatch pipeline
+/// can address them.
 /// </summary>
 [ApiController]
 [Route("api/push")]
-[Authorize]
 public class PushController : ApplicationControllerBase
 {
-  private readonly IUserRepository _userRepository;
+  private const string ApplicationKey = "backoffice";
+  private readonly IPushSubscriptionRepository _subscriptionRepository;
 
-  public PushController(IUserRepository userRepository)
+  public PushController(IPushSubscriptionRepository subscriptionRepository)
   {
-    _userRepository = userRepository;
+    _subscriptionRepository = subscriptionRepository;
   }
 
   /// <summary>
-  /// Save a browser push subscription for the authenticated user.
+  /// Save a browser push subscription without requiring an application user.
   /// POST /api/push/subscribe
   /// </summary>
   [HttpPost("subscribe")]
+  [AllowAnonymous]
   public async Task<IActionResult> Subscribe([FromBody] PushSubscribeDto dto)
   {
     if (string.IsNullOrWhiteSpace(dto.Endpoint) ||
@@ -36,57 +38,56 @@ public class PushController : ApplicationControllerBase
         string.IsNullOrWhiteSpace(dto.Auth))
       return BadRequest(new { message = "Endpoint, p256dh and auth are required" });
 
-    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (string.IsNullOrEmpty(userId)) return Unauthorized();
+    if (!await PushEndpointValidator.IsSafeAsync(dto.Endpoint))
+      return BadRequest(new { message = "Endpoint is not valid" });
 
-    var user = await _userRepository.GetItemAsync(userId);
-    if (user == null) return NotFound(new { message = "User not found" });
+    var endpointHash = PushEndpointProtection.HashEndpoint(dto.Endpoint);
+    var existing = await _subscriptionRepository.GetByEndpointHashAsync(endpointHash);
+    var now = DateTime.UtcNow;
+    var subscription = existing is null
+      ? new PushChannelSubscription(
+          endpointHash,
+          dto.Endpoint,
+          new PushSubscriptionKeys(dto.P256dh, dto.Auth),
+          string.Empty,
+          [])
+        {
+          ApplicationKey = ApplicationKey,
+          Scope = PushSubscriptionScope.Platform,
+          ConsentedAt = now,
+          CreationDateTime = now
+        }
+      : existing with
+        {
+          Endpoint = dto.Endpoint,
+          Keys = new PushSubscriptionKeys(dto.P256dh, dto.Auth),
+          ApplicationKey = ApplicationKey,
+          Scope = PushSubscriptionScope.Platform,
+          IsActive = true,
+          RevokedAt = null
+        };
 
-    // Upsert: replace if endpoint already exists
-    var newSub = new PushSubscriptionInfo
+    await _subscriptionRepository.UpsertAsync(subscription with
     {
-      Endpoint = dto.Endpoint,
-      P256dh = dto.P256dh,
-      Auth = dto.Auth,
-      CreatedAt = DateTime.UtcNow
-    };
-
-    var updated = user with
-    {
-      PushSubscriptions = user.PushSubscriptions
-            .Where(s => s.Endpoint != dto.Endpoint)
-            .Append(newSub)
-            .ToList()
-    };
-
-    await _userRepository.UpdateItemAsync(updated);
+      UpdatedAt = now
+    });
     return NoContent();
   }
 
   /// <summary>
-  /// Remove a browser push subscription for the authenticated user.
+  /// Remove a browser push subscription without requiring an application user.
   /// DELETE /api/push/unsubscribe
   /// </summary>
   [HttpDelete("unsubscribe")]
+  [AllowAnonymous]
   public async Task<IActionResult> Unsubscribe([FromBody] PushUnsubscribeDto dto)
   {
     if (string.IsNullOrWhiteSpace(dto.Endpoint))
       return BadRequest(new { message = "Endpoint is required" });
 
-    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
-    var user = await _userRepository.GetItemAsync(userId);
-    if (user == null) return NotFound(new { message = "User not found" });
-
-    var updated = user with
-    {
-      PushSubscriptions = user.PushSubscriptions
-            .Where(s => s.Endpoint != dto.Endpoint)
-            .ToList()
-    };
-
-    await _userRepository.UpdateItemAsync(updated);
+    await _subscriptionRepository.DeactivateAsync(
+      PushEndpointProtection.HashEndpoint(dto.Endpoint),
+      DateTime.UtcNow);
     return NoContent();
   }
 

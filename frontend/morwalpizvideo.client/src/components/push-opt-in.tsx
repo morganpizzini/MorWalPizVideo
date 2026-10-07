@@ -4,11 +4,21 @@ import {
   dismissPushPrompt,
   requestPushOptIn,
   shouldShowPushPrompt,
+  type PushOptInResult,
 } from '@morwalpizvideo/services';
 import { PUSH_APPLICATION_KEY, getPushChannelIds } from '@services/push';
 import './push-opt-in.scss';
 
 type PromptState = 'hidden' | 'visible' | 'working' | 'done' | 'failed';
+type FailureReason = NonNullable<PushOptInResult['reason']>;
+
+const failureMessages: Record<FailureReason, string> = {
+  configuration: 'Il servizio notifiche non è configurato. Riprova più tardi.',
+  permission: 'Il browser non ha potuto chiedere il permesso per le notifiche. Riprova.',
+  'service-worker': 'Il servizio notifiche non è pronto. Ricarica la pagina e riprova.',
+  subscription: 'Il browser non ha creato la sottoscrizione. Controlla i permessi e riprova.',
+  persistence: 'La sottoscrizione non è stata salvata. Controlla la connessione e riprova.',
+};
 
 /**
  * One-time opt-in prompt for Web Push.
@@ -18,6 +28,7 @@ type PromptState = 'hidden' | 'visible' | 'working' | 'done' | 'failed';
  */
 export default function PushOptIn(): ReactElement | null {
   const [state, setState] = useState<PromptState>('hidden');
+  const [failureReason, setFailureReason] = useState<FailureReason | null>(null);
 
   useEffect(() => {
     if (shouldShowPushPrompt(PUSH_APPLICATION_KEY) && getPushChannelIds().length > 0) {
@@ -29,12 +40,20 @@ export default function PushOptIn(): ReactElement | null {
 
   const accept = async () => {
     setState('working');
-    const result = await requestPushOptIn({
-      applicationKey: PUSH_APPLICATION_KEY,
-      channelIds: getPushChannelIds(),
-      language: 'IT',
-    });
-    setState(result.status === 'subscribed' ? 'done' : 'failed');
+    setFailureReason(null);
+    try {
+      const result = await requestPushOptIn({
+        applicationKey: PUSH_APPLICATION_KEY,
+        channelIds: getPushChannelIds(),
+        language: 'IT',
+      });
+      setFailureReason(result.reason ?? null);
+      setState(result.status === 'subscribed' ? 'done' : 'failed');
+    } catch {
+      // The shared helper classifies expected failures; keep the UI safe if an unexpected browser API error escapes.
+      setFailureReason('subscription');
+      setState('failed');
+    }
   };
 
   const dismiss = () => {
@@ -55,12 +74,14 @@ export default function PushOptIn(): ReactElement | null {
             <>
               <p className="fw-semibold mb-1">Vuoi ricevere i nuovi video?</p>
               <p className="mb-0 fs-08 text-body-secondary">
-                Ti avvisiamo con una notifica quando esce un video. Nessun account, nessuna email: puoi
-                disattivarle in qualsiasi momento.
+                Ti avvisiamo con una notifica quando esce un video. Nessun account, nessuna email:
+                puoi disattivarle in qualsiasi momento.
               </p>
               {state === 'failed' && (
                 <p className="mb-0 mt-2 text-danger" role="alert">
-                  Non è stato possibile attivare le notifiche. Controlla i permessi del browser e riprova.
+                  {failureReason === undefined || failureReason === null
+                    ? 'Non è stato possibile attivare le notifiche. Riprova.'
+                    : failureMessages[failureReason]}
                 </p>
               )}
             </>
