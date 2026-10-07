@@ -414,7 +414,7 @@ else
 
 app.MapDefaultEndpoints();
 // Map health check endpoint
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 //app.UseDefaultFiles();
 //app.MapStaticAssets();
@@ -422,7 +422,7 @@ app.MapHealthChecks("/health");
 // Configure the HTTP request pipeline.
 if (enableSwagger)
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "MorWalPiz API"));
 }
 if (!app.Environment.IsDevelopment())
