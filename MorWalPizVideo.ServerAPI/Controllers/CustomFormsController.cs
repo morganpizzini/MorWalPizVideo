@@ -91,38 +91,22 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         [OutputCache(Tags = [CacheKeys.CustomForms], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> GetByUrl(string url)
         {
-            try
+            if (string.IsNullOrWhiteSpace(url))
             {
-                if (string.IsNullOrWhiteSpace(url))
-                {
-                    return BadRequest("URL cannot be empty");
-                }
-
-                var channelId = GetYouTubeChannelId();
-                if (string.IsNullOrWhiteSpace(channelId))
-                    return NotFound($"Custom form with URL '{url}' not found");
-
-                var form = await _formsService.GetFormByUrlAsync(url, channelId);
-                if (form == null)
-                {
-                    return NotFound($"Custom form with URL '{url}' not found");
-                }
-
-                // Check if form is active
-                if (form.EffectiveLifecycle != CustomFormLifecycle.Online || form.EffectiveAccessMode != CustomFormAccessMode.Direct)
-                {
-                    return NotFound($"Custom form with URL '{url}' not found");
-                }
-
-                // Return form without responses for privacy
-                var publicForm = form with { Responses = Array.Empty<CustomFormResponse>() };
-                return Ok(publicForm);
+                return BadRequest("URL cannot be empty");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching custom form by URL: {Url}", url);
-                return StatusCode(500, $"An error occurred while fetching the custom form, {ex.Message}");
-            }
+
+            var channelId = GetYouTubeChannelId();
+            if (string.IsNullOrWhiteSpace(channelId))
+                return NotFound($"Custom form with URL '{url}' not found");
+
+            var form = await _formsService.GetFormByUrlAsync(url, channelId);
+            if (form == null)
+                return NotFound($"Custom form with URL '{url}' not found");
+            
+            // Return form without responses for privacy
+            var publicForm = form with { Responses = Array.Empty<CustomFormResponse>() };
+            return Ok(publicForm);
         }
 
         /// <summary>
