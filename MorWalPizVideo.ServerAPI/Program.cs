@@ -259,7 +259,7 @@ else
     builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
-    builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
+    builder.Services.AddScoped<ISurveyRepository, SurveyRepository>();
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
