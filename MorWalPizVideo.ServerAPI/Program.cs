@@ -205,6 +205,7 @@ if (enableMock)
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
     builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientMockRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
+    builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
 
     // Shop repositories (Mock)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductMockRepository>();
@@ -258,7 +259,7 @@ else
     builder.Services.AddScoped<INewsletterRecipientRepository, NewsletterRecipientRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
-
+    builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();
