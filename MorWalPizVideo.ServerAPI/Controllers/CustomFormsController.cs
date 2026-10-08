@@ -17,7 +17,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
 
         public string? SurveyId { get; set; }
     }
-    
+
     [AllowAnonymous] // ADR-002: explicit public read/submit access
     public class CustomFormsController : ApplicationController
     {
@@ -51,8 +51,12 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             var surveys = await _surveyService.GetEligibleAsync(channelId, DateTime.UtcNow);
             return Ok(surveys.Select(x => new
             {
-                x.Survey.Id, x.Survey.Title, x.Survey.Description, x.Survey.Url,
-                fromUtc = x.Survey.FromUtc, toUtc = x.Survey.ToUtc,
+                x.Survey.Id,
+                x.Survey.Title,
+                x.Survey.Description,
+                x.Survey.Url,
+                fromUtc = x.Survey.FromUtc,
+                toUtc = x.Survey.ToUtc,
                 forms = x.Forms.Select(form => form with { Responses = Array.Empty<CustomFormResponse>() })
             }));
         }
@@ -70,8 +74,12 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 ? NotFound($"Survey with URL '{url}' not found")
                 : Ok(new
                 {
-                    survey.Survey.Id, survey.Survey.Title, survey.Survey.Description, survey.Survey.Url,
-                    fromUtc = survey.Survey.FromUtc, toUtc = survey.Survey.ToUtc,
+                    survey.Survey.Id,
+                    survey.Survey.Title,
+                    survey.Survey.Description,
+                    survey.Survey.Url,
+                    fromUtc = survey.Survey.FromUtc,
+                    toUtc = survey.Survey.ToUtc,
                     forms = survey.Forms.Select(form => form with { Responses = Array.Empty<CustomFormResponse>() })
                 });
         }
@@ -113,7 +121,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching custom form by URL: {Url}", url);
-                return StatusCode(500, "An error occurred while fetching the custom form");
+                return StatusCode(500, $"An error occurred while fetching the custom form, {ex.Message}");
             }
         }
 
