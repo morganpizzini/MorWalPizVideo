@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.MvcHelpers.Authentication;
 using AuthController = MorWalPizVideo.BackOffice.Controllers.AuthController;
 using ApplicationControllerBase = MorWalPizVideo.BackOffice.Controllers.ApplicationControllerBase;
@@ -57,6 +58,17 @@ public class AuthorizationPolicyTests
     public void ServerApi_public_content_controllers_allow_anonymous(Type controllerType)
     {
         Assert.NotEmpty(controllerType.GetCustomAttributes<AllowAnonymousAttribute>(inherit: false));
+    }
+
+    [Theory]
+    [InlineData(nameof(CustomFormsController.GetEligibleSurveys), "~/api/surveys/active")]
+    [InlineData(nameof(CustomFormsController.GetSurveyByUrl), "~/api/surveys/url/{url}")]
+    public void ServerApi_survey_routes_use_public_api_paths(string actionName, string expectedTemplate)
+    {
+        var action = typeof(CustomFormsController).GetMethod(actionName);
+
+        Assert.NotNull(action);
+        Assert.Equal(expectedTemplate, action!.GetCustomAttribute<HttpGetAttribute>()?.Template);
     }
 
     [Fact]

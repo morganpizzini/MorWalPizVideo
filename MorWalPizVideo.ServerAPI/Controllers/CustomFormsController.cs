@@ -40,7 +40,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             _surveyService = surveyService;
         }
 
-        [HttpGet("../surveys/active")]
+        [HttpGet("~/api/surveys/active")]
         [OutputCache(Tags = [CacheKeys.Surveys])]
         public async Task<IActionResult> GetEligibleSurveys()
         {
@@ -61,7 +61,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers
             }));
         }
 
-        [HttpGet("../surveys/url/{url}")]
+        [HttpGet("~/api/surveys/url/{url}")]
         [OutputCache(Tags = [CacheKeys.Surveys], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> GetSurveyByUrl(string url)
         {
