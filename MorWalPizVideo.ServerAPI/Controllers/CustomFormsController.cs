@@ -87,7 +87,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
         /// <summary>
         /// Get custom form by URL (questions only, no responses for privacy)
         /// </summary>
-        [HttpGet("url/{url}")]
+        // A form URL may itself contain path separators. Keep the complete route
+        // value intact when the client sends an encoded URL.
+        [HttpGet("url/{*url}")]
         [OutputCache(Tags = [CacheKeys.CustomForms], VaryByRouteValueNames = ["url"])]
         public async Task<IActionResult> GetByUrl(string url)
         {

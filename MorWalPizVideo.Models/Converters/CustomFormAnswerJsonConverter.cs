@@ -38,7 +38,7 @@ namespace MorWalPizVideo.Models.Converters
 
                     if (propertyName == DiscriminatorPropertyName)
                     {
-                        discriminator = readerCopy.GetString();
+                        discriminator = ReadDiscriminator(ref readerCopy);
                         break;
                     }
                 }
@@ -59,6 +59,33 @@ namespace MorWalPizVideo.Models.Converters
                 "EmailAnswer" => JsonSerializer.Deserialize<EmailAnswer>(ref reader, options),
                 _ => throw new JsonException($"Unknown discriminator value '{discriminator}' for CustomFormAnswer")
             };
+        }
+
+        private static string? ReadDiscriminator(ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                return reader.GetString();
+            }
+
+            if (reader.TokenType == JsonTokenType.StartArray)
+            {
+                string? discriminator = null;
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    if (reader.TokenType != JsonTokenType.String)
+                    {
+                        throw new JsonException($"Discriminator array '{DiscriminatorPropertyName}' must contain only strings");
+                    }
+
+                    // MongoDB writes the inheritance hierarchy from base to concrete type.
+                    discriminator = reader.GetString();
+                }
+
+                return discriminator;
+            }
+
+            throw new JsonException($"Discriminator field '{DiscriminatorPropertyName}' must be a string or an array of strings");
         }
 
         public override void Write(Utf8JsonWriter writer, CustomFormAnswer value, JsonSerializerOptions options)

@@ -28,7 +28,7 @@ builder.Services.Configure<NewsletterSmtpOptions>(builder.Configuration.GetSecti
 builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler(new DisabledFeaturesHandler());
 
-var enableDev = builder.Environment.IsDevelopment() && builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
 var enableSwagger = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableSwagger);
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
@@ -153,8 +153,8 @@ builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
-    builder.Services.AddSingleton<SmtpMockService>();
-    builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
+builder.Services.AddSingleton<SmtpMockService>();
+builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
 
 if (enableMock)
 {
@@ -315,48 +315,48 @@ builder.Services.AddSingleton<IIndexedCacheStore>(provider =>
 builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexedCache>();
 
 // Authentication: JWT in production, fake scheme in dev
-if (enableDev)
+// if (enableDev)
+// {
+//     builder.Services.AddAuthentication("FakeScheme")
+//         .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+// }
+// else
+// {
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secret = jwtSettings["Secret"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
+if (string.IsNullOrWhiteSpace(secret) ||
+    string.IsNullOrWhiteSpace(issuer) ||
+    string.IsNullOrWhiteSpace(audience))
 {
-    builder.Services.AddAuthentication("FakeScheme")
-        .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
+    throw new InvalidOperationException(
+        "Production JWT configuration is incomplete. Configure JwtSettings:Secret, " +
+        "JwtSettings:Issuer, and JwtSettings:Audience through App Service settings or Azure Key Vault.");
 }
-else
+
+var key = System.Text.Encoding.ASCII.GetBytes(secret);
+
+builder.Services.AddAuthentication(options =>
 {
-    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var secret = jwtSettings["Secret"];
-    var issuer = jwtSettings["Issuer"];
-    var audience = jwtSettings["Audience"];
-
-    if (string.IsNullOrWhiteSpace(secret) ||
-        string.IsNullOrWhiteSpace(issuer) ||
-        string.IsNullOrWhiteSpace(audience))
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
     {
-        throw new InvalidOperationException(
-            "Production JWT configuration is incomplete. Configure JwtSettings:Secret, " +
-            "JwtSettings:Issuer, and JwtSettings:Audience through App Service settings or Azure Key Vault.");
-    }
-
-    var key = System.Text.Encoding.ASCII.GetBytes(secret);
-
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
-            ValidateIssuer = true,
-            ValidIssuer = issuer,
-            ValidateAudience = true,
-            ValidAudience = audience,
-            ClockSkew = System.TimeSpan.Zero
-        };
-    });
-}
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
+        ClockSkew = System.TimeSpan.Zero
+    };
+});
+//}
 
 builder.Services.AddAuthorization(options => options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 

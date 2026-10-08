@@ -636,7 +636,11 @@ public sealed class FormsService(
 
     public async Task<CustomForm?> GetFormByUrlAsync(string url, string channelId, bool allowSurveyOnly = false)
     {
-        var form = await customFormRepository.GetByUrlAsync(url, channelId);
+        // Form URLs are entered as paths and may contain surrounding whitespace.
+        // Normalize at the service boundary so Mongo and mock repositories use the
+        // same lookup value.
+        var normalizedUrl = url.Trim();
+        var form = await customFormRepository.GetByUrlAsync(normalizedUrl, channelId);
         return form is not null && form.EffectiveLifecycle == CustomFormLifecycle.Online && (allowSurveyOnly || form.EffectiveAccessMode == CustomFormAccessMode.Direct) ? form : null;
     }
 

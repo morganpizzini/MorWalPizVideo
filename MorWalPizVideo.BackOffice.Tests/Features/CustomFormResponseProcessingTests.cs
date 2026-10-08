@@ -67,6 +67,49 @@ public sealed class CustomFormResponseProcessingTests
     }
 
     [Fact]
+    public void MongoDbDocumentShape_DeserializesPolymorphicQuestionsAndAnswers()
+    {
+        const string documentJson = """
+            {
+              "questions": [
+                {
+                  "_t": ["CustomFormQuestion", "EmailQuestion"],
+                  "questionId": "email",
+                  "questionText": "Email address",
+                  "questionType": 4,
+                  "isRequired": true,
+                  "order": 1
+                }
+              ],
+              "answers": [
+                {
+                  "_t": ["CustomFormAnswer", "EmailAnswer"],
+                  "questionId": "email",
+                  "answerType": 4,
+                  "email": "person@example.com"
+                }
+              ]
+            }
+            """;
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new CustomFormQuestionJsonConverter());
+        options.Converters.Add(new CustomFormAnswerJsonConverter());
+
+        using var document = JsonDocument.Parse(documentJson);
+        var questions = JsonSerializer.Deserialize<CustomFormQuestion[]>(
+            document.RootElement.GetProperty("questions").GetRawText(), options);
+        var answers = JsonSerializer.Deserialize<CustomFormAnswer[]>(
+            document.RootElement.GetProperty("answers").GetRawText(), options);
+
+        var question = Assert.Single(questions!);
+        var answer = Assert.Single(answers!);
+        Assert.IsType<EmailQuestion>(question);
+        Assert.IsType<EmailAnswer>(answer);
+        Assert.Equal("email", question.QuestionId);
+        Assert.Equal("person@example.com", ((EmailAnswer)answer).Email);
+    }
+
+    [Fact]
     public async Task Job_BackfillsHistoricalResponses_SendsAcknowledgement_AndSkipsInvalidEmailPermanently()
     {
         var scenario = new PrimaryScenario();
