@@ -316,49 +316,48 @@ builder.Services.AddSingleton<IIndexedCacheStore>(provider =>
     new MorWalPizIndexedCacheStore(provider.GetRequiredService<IMorWalPizCache>(), enableCache));
 builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexedCache>();
 
-// Authentication: JWT in production, fake scheme in dev
-// if (enableDev)
-// {
-//     builder.Services.AddAuthentication("FakeScheme")
-//         .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
-// }
-// else
-// {
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secret = jwtSettings["Secret"];
-var issuer = jwtSettings["Issuer"];
-var audience = jwtSettings["Audience"];
-
-if (string.IsNullOrWhiteSpace(secret) ||
-    string.IsNullOrWhiteSpace(issuer) ||
-    string.IsNullOrWhiteSpace(audience))
+if (enableDev && builder.Environment.IsDevelopment())
 {
-    throw new InvalidOperationException(
-        "Production JWT configuration is incomplete. Configure JwtSettings:Secret, " +
-        "JwtSettings:Issuer, and JwtSettings:Audience through App Service settings or Azure Key Vault.");
+    builder.Services.AddAuthentication("FakeScheme")
+        .AddScheme<AuthenticationSchemeOptions, FakeAuthenticationHandler>("FakeScheme", options => { });
 }
-
-var key = System.Text.Encoding.ASCII.GetBytes(secret);
-
-builder.Services.AddAuthentication(options =>
+else
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secret = jwtSettings["Secret"];
+    var issuer = jwtSettings["Issuer"];
+    var audience = jwtSettings["Audience"];
+
+    if (string.IsNullOrWhiteSpace(secret) ||
+        string.IsNullOrWhiteSpace(issuer) ||
+        string.IsNullOrWhiteSpace(audience))
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidIssuer = issuer,
-        ValidateAudience = true,
-        ValidAudience = audience,
-        ClockSkew = System.TimeSpan.Zero
-    };
-});
-//}
+        throw new InvalidOperationException(
+            "Production JWT configuration is incomplete. Configure JwtSettings:Secret, " +
+            "JwtSettings:Issuer, and JwtSettings:Audience through App Service settings or Azure Key Vault.");
+    }
+
+    var key = System.Text.Encoding.ASCII.GetBytes(secret);
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ClockSkew = System.TimeSpan.Zero
+        };
+    });
+}
 
 builder.Services.AddAuthorization(options => options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
@@ -381,6 +380,7 @@ else if (!string.IsNullOrEmpty(builder.Configuration["WebPush:PublicKey"]))
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.EnumStringCompatJsonConverterFactory());
         // Add custom converters for polymorphic types
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
@@ -395,7 +395,7 @@ static string GetSafeHost(string value)
 
 var app = builder.Build();
 
-if (enableDev)
+if (enableDev && app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }

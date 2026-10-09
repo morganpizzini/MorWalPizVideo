@@ -76,18 +76,19 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
     [HttpPost("{id}/images")]
     [RequestSizeLimit(12_000_000)]
     [AllowUser(AuthorizationPermissionKeys.PagesUpdate, AuthorizationPermissionKeys.PagesManage)]
-    public async Task<IActionResult> Upload(string id, [FromForm] IFormFile file, [FromForm] long revision, [FromForm] string altText)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload(string id, [FromForm] BlogPostImageUploadRequest request)
     {
-        if (file.Length is <= 0 or > 10_000_000 || string.IsNullOrWhiteSpace(altText) || altText.Length > 300 || revision < 1)
+        if (request.File.Length is <= 0 or > 10_000_000 || string.IsNullOrWhiteSpace(request.AltText) || request.AltText.Length > 300 || request.Revision < 1)
             return BadRequest("Image and alt text (1-300 characters) are required.");
         var existing = await service.GetAsync(ChannelId, id);
         if (existing is null) return NotFound();
-        if (existing.Revision != revision) return Conflict("Post changed. Reload before uploading.");
+        if (existing.Revision != request.Revision) return Conflict("Post changed. Reload before uploading.");
         var storageKey = $"blog/{ChannelId}/{id}/{Guid.NewGuid():N}.jpg";
         var uploaded = false;
         try
         {
-            await using var input = file.OpenReadStream();
+            await using var input = request.File.OpenReadStream();
             var info = await Image.IdentifyAsync(input);
             if ((long)info.Width * info.Height > 25_000_000 || info.FrameMetadataCollection.Count > 1)
                 return BadRequest("Use a single-frame image of at most 25 megapixels.");
@@ -97,10 +98,10 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
             storageKey = $"blog/{ChannelId}/{id}/{Guid.NewGuid():N}{prepared.Extension}";
             await blobs.UploadImageAsync(storageKey, prepared.Content, options.Value.PageContainerName);
             uploaded = true;
-            var post = await service.AddImageAsync(ChannelId, id, revision, new PageImage
+            var post = await service.AddImageAsync(ChannelId, id, request.Revision, new PageImage
             {
                 StorageKey = storageKey, PublicUrl = blobs.GetImageUrl(storageKey, options.Value.PageContainerName),
-                ContentType = prepared.ContentType, Width = prepared.Width, Height = prepared.Height, AltText = altText.Trim()
+                ContentType = prepared.ContentType, Width = prepared.Width, Height = prepared.Height, AltText = request.AltText.Trim()
             });
             if (post is null)
             {
@@ -126,6 +127,13 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
             if (uploaded) await blobs.DeleteImageAsync(storageKey, options.Value.PageContainerName);
             throw;
         }
+    }
+
+    public sealed class BlogPostImageUploadRequest
+    {
+        public IFormFile File { get; set; } = null!;
+        public long Revision { get; set; }
+        public string AltText { get; set; } = string.Empty;
     }
 
     private async Task<IActionResult> MutateAsync(Func<Task<BlogPost?>> operation, bool invalidate)
