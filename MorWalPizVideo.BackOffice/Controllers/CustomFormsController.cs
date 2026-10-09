@@ -16,15 +16,15 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         [Required]
         public string Title { get; set; } = string.Empty;
-        
+
         [Required]
         public string Description { get; set; } = string.Empty;
-        
+
         [Required]
         public string Url { get; set; } = string.Empty;
-        
+
         public CustomFormQuestion[] Questions { get; set; } = [];
-        
+
         public bool Active { get; set; } = true;
         public CustomFormLifecycle? Lifecycle { get; set; }
         public CustomFormAccessMode? AccessMode { get; set; }
@@ -34,15 +34,15 @@ namespace MorWalPizVideo.BackOffice.Controllers
     {
         [Required]
         public string Title { get; set; } = string.Empty;
-        
+
         [Required]
         public string Description { get; set; } = string.Empty;
-        
+
         [Required]
         public string Url { get; set; } = string.Empty;
-        
+
         public CustomFormQuestion[] Questions { get; set; } = [];
-        
+
         public bool Active { get; set; } = true;
         public CustomFormLifecycle? Lifecycle { get; set; }
         public CustomFormAccessMode? AccessMode { get; set; }
@@ -102,23 +102,22 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// </summary>
         [HttpGet("{id}")]
         [AllowUser(AuthorizationPermissionKeys.FormsView, AuthorizationPermissionKeys.FormsManage)]
-        public async Task<ActionResult<CustomFormContract>> GetById(BaseRequestId request)
+        public async Task<ActionResult<CustomFormContract>> GetById([FromRoute] string id)
         {
             try
             {
-
                 var channelId = HttpContext.GetChannelContext().ChannelId;
-                var form = await _formsService.GetFormByIdAsync(request.Id, channelId);
+                var form = await _formsService.GetFormByIdAsync(id, channelId);
                 if (form == null)
                 {
-                    return NotFound($"Custom form with ID '{request.Id}' not found");
+                    return NotFound($"Custom form with ID '{id}' not found");
                 }
 
                 return Ok(ContractUtils.Convert(form, await _formsService.GetResponseCountAsync(form.Id, channelId)));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching custom form by ID: {Id}", request.Id);
+                _logger.LogError(ex, "Error fetching custom form by ID: {Id}", id);
                 return StatusCode(500, "An error occurred while fetching the custom form");
             }
         }
@@ -177,10 +176,10 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
                 if (!await _formsService.SaveFormAsync(form, channelId))
                     return Conflict("A custom form with this URL already exists for the selected channel.");
-                
+
                 _logger.LogInformation("Custom form created: {Id} - {Title}", form.Id, form.Title);
                 await InvalidatePublicFormCachesAsync();
-                
+
                 return CreatedAtAction(nameof(GetById), new { id = form.Id }, ContractUtils.Convert(form, 0));
             }
             catch (Exception ex)
@@ -251,10 +250,10 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
                 if (!await _formsService.UpdateFormAsync(updatedForm, channelId))
                     return Conflict("A custom form with this URL already exists for the selected channel.");
-                
+
                 _logger.LogInformation("Custom form updated: {Id} - {Title}", request.Id, updatedForm.Title);
                 await InvalidatePublicFormCachesAsync();
-                
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -285,10 +284,10 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 {
                     return Conflict("The custom form is referenced by a survey or has already been deleted.");
                 }
-                
+
                 _logger.LogInformation("Custom form deleted: {Id}", request.Id);
                 await InvalidatePublicFormCachesAsync();
-                
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -394,9 +393,9 @@ namespace MorWalPizVideo.BackOffice.Controllers
                 );
 
                 await _formsService.AddResponseAsync(id, response, channelId);
-                
+
                 _logger.LogInformation("Form response submitted for form: {FormId}", id);
-                
+
                 return Ok(new { message = "Response submitted successfully", responseId = response.ResponseId });
             }
             catch (Exception ex)

@@ -141,7 +141,7 @@ export function CustomFormRenderer({
           return (
             <fieldset key={question.questionId} className="mb-4">
               <legend className="h5">
-                {index + 1}. {question.questionText}
+                {question.questionText}
                 {question.isRequired && <span className="text-danger"> *</span>}
               </legend>
               {(question.questionType === QuestionType.Open ||
