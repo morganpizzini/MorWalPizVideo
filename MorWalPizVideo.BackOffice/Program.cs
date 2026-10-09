@@ -33,6 +33,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var diagnosticsProblemStore = new DiagnosticsProblemStore();
@@ -206,6 +207,9 @@ builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        // Accept the named enum values sent by the BackOffice SPA while retaining
+        // support for existing numeric enum payloads.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: true));
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormQuestionJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new MorWalPizVideo.Models.Converters.CustomFormAnswerJsonConverter());
     });
