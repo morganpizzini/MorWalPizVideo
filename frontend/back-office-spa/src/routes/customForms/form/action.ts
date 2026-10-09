@@ -82,9 +82,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     let response: unknown;
     if (id) {
       // Update existing form
-      response = await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), {
-        body: payload,
-      });
+      response = await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), payload);
     } else {
       // Create new form
       response = await post(endpoints.CUSTOMFORMS, payload);
