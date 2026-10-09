@@ -128,18 +128,18 @@ namespace MorWalPizVideo.BackOffice.Controllers
         /// </summary>
         [HttpPost]
         [AllowUser(AuthorizationPermissionKeys.FormsCreate, AuthorizationPermissionKeys.FormsManage)]
-        public async Task<ActionResult<CustomFormContract>> Create(BaseRequest<CreateCustomFormRequest> request)
+        public async Task<ActionResult<CustomFormContract>> Create([FromBody] CreateCustomFormRequest request)
         {
             try
             {
                 // Validate questions
-                if (request.Body.Questions.Length == 0)
+                if (request.Questions.Length == 0)
                 {
                     return BadRequest("At least one question is required");
                 }
 
                 // Validate each question
-                foreach (var question in request.Body.Questions)
+                foreach (var question in request.Questions)
                 {
                     if (string.IsNullOrWhiteSpace(question.QuestionText))
                     {
@@ -165,14 +165,14 @@ namespace MorWalPizVideo.BackOffice.Controllers
 
                 var channelId = HttpContext.GetChannelContext().ChannelId;
                 var form = new CustomForm(
-                    request.Body.Title,
-                    request.Body.Description,
-                    request.Body.Url,
-                    request.Body.Questions,
-                    request.Body.Active,
+                    request.Title,
+                    request.Description,
+                    request.Url,
+                    request.Questions,
+                    request.Active,
                     channelId: channelId,
-                    lifecycle: request.Body.Lifecycle,
-                    accessMode: request.Body.AccessMode
+                    lifecycle: request.Lifecycle,
+                    accessMode: request.AccessMode
                 );
 
                 if (!await _formsService.SaveFormAsync(form, channelId))

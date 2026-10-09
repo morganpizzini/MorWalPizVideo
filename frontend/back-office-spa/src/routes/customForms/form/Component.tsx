@@ -416,24 +416,13 @@ const CustomFormForm: React.FC = () => {
                       <Col md={8}>
                         <Form.Group controlId={`question-${qIndex}-text`}>
                           <Form.Label>Question Text*</Form.Label>
-                          {question.questionType === QuestionType.Open ? (
-                            <textarea
-                              className="form-control"
-                              rows={3}
-                              value={question.questionText}
-                              onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
-                              placeholder="Enter question text"
-                              required
-                            />
-                          ) : (
-                            <Form.Control
-                              type="text"
-                              value={question.questionText}
-                              onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
-                              placeholder="Enter question text"
-                              required
-                            />
-                          )}
+                          <Form.Control
+                            type="text"
+                            value={question.questionText}
+                            onChange={e => updateQuestion(qIndex, 'questionText', e.target.value)}
+                            placeholder="Enter question text"
+                            required
+                          />
                         </Form.Group>
                       </Col>
                       <Col md={4}>

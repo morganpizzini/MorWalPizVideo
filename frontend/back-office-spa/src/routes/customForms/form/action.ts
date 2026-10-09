@@ -2,7 +2,11 @@ import { ActionFunctionArgs, data } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
 
 function getApiErrors(value: unknown): string[] | undefined {
-  if (!value || typeof value !== 'object' || !Array.isArray((value as { errors?: unknown }).errors)) {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !Array.isArray((value as { errors?: unknown }).errors)
+  ) {
     return undefined;
   }
 
@@ -78,7 +82,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
     let response: unknown;
     if (id) {
       // Update existing form
-      response = await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), payload);
+      response = await put(ComposeUrl(endpoints.CUSTOMFORMS_DETAIL, { customFormId: id }), {
+        body: payload,
+      });
     } else {
       // Create new form
       response = await post(endpoints.CUSTOMFORMS, payload);
