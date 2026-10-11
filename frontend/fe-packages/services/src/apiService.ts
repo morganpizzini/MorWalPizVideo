@@ -29,7 +29,7 @@ import type {
   CreateQuickLinksDTO,
   UpdateQuickLinksDTO,
 } from "@morwalpizvideo/models";
-import type { ChannelNewsAdmin } from "@morwalpizvideo/models";
+import type { ChannelNewsAdmin, Match } from "@morwalpizvideo/models";
 import type {
   ChannelNavigation,
   CreatePageDTO,
@@ -970,6 +970,23 @@ export const deleteChannelNewsImage = (id: string, imageIndex: number) =>
       imageIndex: String(imageIndex),
     }),
   ) as Promise<ChannelNewsAdmin>;
+
+export const uploadVideoImages = (id: string, files: readonly File[]) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return postFormData(
+    ComposeUrl(endpoints.VIDEOS_IMAGES, { videoId: id }),
+    formData,
+  ) as Promise<Match>;
+};
+
+export const deleteVideoImage = (id: string, imageIndex: number) =>
+  Delete(
+    ComposeUrl(endpoints.VIDEOS_IMAGE_DETAIL, {
+      videoId: id,
+      imageIndex: String(imageIndex),
+    }),
+  ) as Promise<Match>;
 
 // ==================== Pages and Navigation API Services ====================
 

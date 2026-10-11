@@ -67,6 +67,32 @@ public sealed class DashboardControllerTests : IClassFixture<BackOfficeWebApplic
     }
 
     [Fact]
+    public async Task Summary_treats_null_short_link_click_timestamps_as_zero_clicks()
+    {
+        await using var localFactory = new BackOfficeWebApplicationFactory();
+        using var client = localFactory.CreateClientWithPermissions(AuthorizationPermissionKeys.BackofficeAccess);
+        var before = await GetSummaryAsync(client);
+
+        await localFactory.ShortLinkRepository!.AddItemAsync(new ShortLink(
+            "dashboard-null-click-timestamps",
+            PrimaryScenario.VideoId,
+            [])
+        {
+            LinkType = LinkType.YouTubeVideo,
+            ContentId = PrimaryScenario.MatchId,
+            ClicksCount = 7,
+            ClickTimestamps = null!
+        });
+
+        using var response = await client.GetAsync("/api/dashboard/summary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(before.GetProperty("totalShortLinkClicks").GetInt64(),
+            document.RootElement.GetProperty("totalShortLinkClicks").GetInt64());
+    }
+
+    [Fact]
     public async Task Short_link_clicks_returns_the_selected_range_as_buckets()
     {
         await using var localFactory = new BackOfficeWebApplicationFactory();

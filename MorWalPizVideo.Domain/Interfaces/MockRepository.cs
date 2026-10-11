@@ -34,7 +34,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                     Url = entity.Url,
                     ThumbnailVideoId = entity.ThumbnailVideoId,
                     Categories = entity.Categories,
-                    Tags = entity.Tags
+                    Tags = entity.Tags,
+                    Images = entity.Images
                 });
                 return Task.FromResult(true);
             }

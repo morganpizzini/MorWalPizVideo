@@ -149,7 +149,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 Builders<YouTubeContent>.Update.Set(x => x.Url, entity.Url),
                 Builders<YouTubeContent>.Update.Set(x => x.ThumbnailVideoId, entity.ThumbnailVideoId),
                 Builders<YouTubeContent>.Update.Set(x => x.Categories, entity.Categories),
-                Builders<YouTubeContent>.Update.Set(x => x.Tags, entity.Tags));
+                Builders<YouTubeContent>.Update.Set(x => x.Tags, entity.Tags),
+                Builders<YouTubeContent>.Update.Set(x => x.Images, entity.Images));
 
             var result = await _collection.UpdateOneAsync(idFilter, update);
             return result.MatchedCount == 1;

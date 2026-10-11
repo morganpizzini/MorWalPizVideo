@@ -506,7 +506,8 @@ namespace MorWalPiz.Contracts
                 Tags = entity.Tags ?? [],
                 IsPrivate = entity.IsPrivate,
                 CreatorUserId = entity.CreatorUserId,
-                OwnerChannelId = entity.OwnerChannelId
+                OwnerChannelId = entity.OwnerChannelId,
+                Images = entity.Images?.Select(Convert).ToArray() ?? []
             };
         }
         public static PublicYouTubeContentContract ConvertPublic(YouTubeContent entity)
@@ -525,6 +526,7 @@ namespace MorWalPiz.Contracts
                 YouTubeVideoLinks = entity.YouTubeVideoLinks?.Select(Convert).ToArray() ?? [],
                 ShortLinks = entity.ShortLinks.Select(link => Convert(link, string.Empty)).ToArray(),
                 Tags = entity.Tags ?? [],
+                Images = entity.Images?.Select(Convert).ToArray() ?? [],
                 IsLink = entity.IsLink,
                 CreationDateTime = entity.CreationDateTime
             };
@@ -534,6 +536,15 @@ namespace MorWalPiz.Contracts
         {
             Id = entity.Id,
             Title = entity.Title
+        };
+
+        public static YouTubeContentImageContract Convert(YouTubeContentImage entity) => new()
+        {
+            PublicUrl = entity.PublicUrl,
+            ContentType = entity.ContentType,
+            Width = entity.Width,
+            Height = entity.Height,
+            AltText = entity.AltText
         };
 
         public static VideoRefContract Convert(VideoRef entity) => new()

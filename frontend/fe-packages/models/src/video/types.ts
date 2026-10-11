@@ -1,13 +1,13 @@
 // Types for Video operations, based on backend controller
 
-import { ShortLink } from '../shortLink';
+import { ShortLink } from "../shortLink";
 
 /**
  * Enum representing the type of match in the system
  */
 export enum ContentType {
   SingleVideo = 0,
-  Collection = 1
+  Collection = 1,
 }
 
 /**
@@ -31,9 +31,17 @@ export interface VideoRef {
   creationDateTime: string;
   /** Present on immediate add responses; canonical links are stored separately. */
   shortLinkCode?: string;
-  shortLinkStatus?: 'created' | 'failed' | 'pending';
+  shortLinkStatus?: "created" | "failed" | "pending";
   shortLinkError?: string;
-  cacheStatus?: 'refreshed' | 'degraded' | 'disabled';
+  cacheStatus?: "refreshed" | "degraded" | "disabled";
+}
+
+export interface MatchImage {
+  publicUrl: string;
+  contentType: string;
+  width: number;
+  height: number;
+  altText?: string;
 }
 
 /**
@@ -70,6 +78,7 @@ export interface Match {
   isLink: boolean;
   creationDateTime: string;
   shortLinks: ShortLink[];
+  images?: MatchImage[];
   /** Free-form aggregate tags. Always serialized by the API; optional for legacy client-side literals. */
   tags?: string[];
   ownerChannelId?: string;

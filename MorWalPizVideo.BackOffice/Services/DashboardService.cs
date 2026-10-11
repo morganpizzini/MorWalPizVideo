@@ -77,7 +77,7 @@ public sealed class DashboardService(
 
         return new DashboardSummaryResponse(
             shortLinks.Count,
-            shortLinks.Sum(shortLink => shortLink.ClickTimestamps.LongCount(timestamp =>
+            shortLinks.Sum(shortLink => (shortLink.ClickTimestamps ?? []).LongCount(timestamp =>
                 timestamp >= shortLinkClickWindowStart &&
                 timestamp <= now)),
             backOfficeUsers.Select(user => user.LastLogin).Where(value => value.HasValue).Max(),

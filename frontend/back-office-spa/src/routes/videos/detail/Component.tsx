@@ -1,10 +1,13 @@
 import { useResolvedLoaderData } from '@/router/asyncData';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {} from 'react-router';
-import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
+import { Card, Row, Col, Badge, Button, Form } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
 import { Match, ContentType, Channel, LinkType } from '@morwalpizvideo/models';
+import type { MatchImage } from '@morwalpizvideo/models';
+import { deleteVideoImage, uploadVideoImages } from '@morwalpizvideo/services';
 import { composeShortLinkUrl } from '@components/VideoList';
+import { useToast } from '@components/ToastNotification/ToastContext';
 
 interface Category {
   categoryId: string;
@@ -20,6 +23,54 @@ interface LoaderData {
 const Component: React.FC = () => {
   const { match, channels } = useResolvedLoaderData() as LoaderData;
   const channel = channels.find(candidate => candidate.channelId === match.ownerChannelId);
+  const toast = useToast();
+  const [images, setImages] = useState<MatchImage[]>(match.images ?? []);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [imageError, setImageError] = useState('');
+  const [imageBusy, setImageBusy] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setImages(match.images ?? []);
+    setSelectedFiles([]);
+    setImageError('');
+  }, [match.id, match.images]);
+
+  const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedFiles(Array.from(event.target.files ?? []));
+    setImageError('');
+  };
+
+  const uploadSelectedFiles = async () => {
+    if (!selectedFiles.length) return;
+    setImageBusy(true);
+    setImageError('');
+    try {
+      const response = await uploadVideoImages(match.id, selectedFiles);
+      setImages(response.images ?? []);
+      setSelectedFiles([]);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+      toast.show('Success', 'Video images uploaded successfully', { variant: 'success' });
+    } catch {
+      setImageError('Unable to upload video images.');
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const deleteImage = async (imageIndex: number) => {
+    setImageBusy(true);
+    setImageError('');
+    try {
+      const response = await deleteVideoImage(match.id, imageIndex);
+      setImages(response.images ?? []);
+      toast.show('Success', 'Video image deleted successfully', { variant: 'success' });
+    } catch {
+      setImageError('Unable to delete the video image.');
+    } finally {
+      setImageBusy(false);
+    }
+  };
 
   return (
     <>
@@ -156,6 +207,66 @@ const Component: React.FC = () => {
         </Col>
 
         <Col md={4}>
+          <Card className="mb-3">
+            <Card.Header>
+              <h5>Associated Images ({images.length})</h5>
+            </Card.Header>
+            <Card.Body>
+              <Form.Control
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileSelection}
+                disabled={imageBusy}
+                aria-label="Select video images"
+              />
+              {selectedFiles.length > 0 && (
+                <div className="small mt-2">
+                  Selected: {selectedFiles.map(file => file.name).join(', ')}
+                </div>
+              )}
+              <Button
+                type="button"
+                className="mt-2"
+                variant="outline-primary"
+                onClick={uploadSelectedFiles}
+                disabled={selectedFiles.length === 0 || imageBusy}
+              >
+                {imageBusy ? 'Uploading...' : 'Upload selected images'}
+              </Button>
+              {imageError && (
+                <div className="text-danger mt-2" role="alert">
+                  {imageError}
+                </div>
+              )}
+              {images.length > 0 && (
+                <div className="row g-2 mt-2" aria-label="Video image previews">
+                  {images.map((image, index) => (
+                    <div className="col-6" key={`${image.publicUrl}-${index}`}>
+                      <div className="border rounded p-1 h-100">
+                        <img
+                          src={image.publicUrl}
+                          alt={image.altText || `Video image ${index + 1}`}
+                          className="img-fluid"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline-danger"
+                          size="sm"
+                          className="mt-1 w-100"
+                          onClick={() => deleteImage(index)}
+                          disabled={imageBusy}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
           <Card>
             <Card.Header>
               <h5>Associated Videos ({match.videoRefs?.length || 0})</h5>

@@ -192,6 +192,7 @@ export { ContentType } from "./video/types";
 export type {
   CategoryRef,
   VideoRef,
+  MatchImage,
   Video,
   Match,
   Compilation,

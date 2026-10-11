@@ -4,6 +4,16 @@ using System.Runtime.Serialization;
 namespace MorWalPiz.Contracts.Contracts;
 
 [DataContract]
+public sealed class YouTubeContentImageContract
+{
+    [DataMember] public string PublicUrl { get; set; } = string.Empty;
+    [DataMember] public string ContentType { get; set; } = string.Empty;
+    [DataMember] public int Width { get; set; }
+    [DataMember] public int Height { get; set; }
+    [DataMember] public string AltText { get; set; } = string.Empty;
+}
+
+[DataContract]
 public class YouTubeContentContract
 {
     [DataMember]
@@ -50,4 +60,7 @@ public class YouTubeContentContract
 
     [DataMember]
     public string OwnerChannelId { get; set; } = string.Empty;
+
+    [DataMember]
+    public IReadOnlyList<YouTubeContentImageContract> Images { get; set; } = [];
 }

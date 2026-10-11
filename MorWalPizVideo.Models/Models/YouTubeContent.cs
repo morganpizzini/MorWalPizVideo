@@ -6,6 +6,34 @@ namespace MorWalPizVideo.Server.Models
 {
     [BsonIgnoreExtraElements]
     [DataContract]
+    public record YouTubeContentImage
+    {
+        [BsonElement("storageKey")]
+        public string StorageKey { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("publicUrl")]
+        public string PublicUrl { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("contentType")]
+        public string ContentType { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("width")]
+        public int Width { get; init; }
+
+        [DataMember]
+        [BsonElement("height")]
+        public int Height { get; init; }
+
+        [DataMember]
+        [BsonElement("altText")]
+        public string AltText { get; init; } = string.Empty;
+    }
+
+    [BsonIgnoreExtraElements]
+    [DataContract]
     public record YouTubeContent : BaseEntity
     {
         [JsonConstructor]
@@ -90,6 +118,10 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("ownerChannelId")]
         public string OwnerChannelId { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("images")]
+        public IReadOnlyList<YouTubeContentImage> Images { get; init; } = [];
 
         [BsonElement("latestPublishedAt")]
         [JsonIgnore]

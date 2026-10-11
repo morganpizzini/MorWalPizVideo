@@ -75,6 +75,8 @@ export {
   updateChannelNewsStatus,
   uploadChannelNewsImages,
   deleteChannelNewsImage,
+  uploadVideoImages,
+  deleteVideoImage,
   fetchPages,
   getPage,
   createPage,

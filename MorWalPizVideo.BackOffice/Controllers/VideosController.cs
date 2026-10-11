@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPiz.Contracts.Contracts.Videos;
 using MorWalPizVideo.BackOffice.DTOs;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
+using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
@@ -15,6 +18,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 namespace MorWalPizVideo.BackOffice.Controllers;
 
@@ -31,12 +35,15 @@ public class VideosController : ApplicationControllerBase
     private readonly IFacebookService facebookService;
     private readonly IVideoAuthorizationService authorization;
     private readonly ILogger<VideosController> logger;
+    private readonly IBlobService blobService;
+    private readonly BlobStorageOptions blobOptions;
 
     public VideosController(IContentService contentService, ILinksService linksService, ICrossApiService _clientFactory,
         IYTService _yTService, IExternalDataService _externalDataService,
         ITelegramService _telegramService, IDiscordService _discordService,
         IFacebookService _facebookService,
-        IVideoAuthorizationService _authorization, ILogger<VideosController> _logger)
+        IVideoAuthorizationService _authorization, ILogger<VideosController> _logger,
+        IBlobService _blobService, IOptions<BlobStorageOptions> _blobOptions)
     {
         _contentService = contentService;
         _linksService = linksService;
@@ -48,6 +55,8 @@ public class VideosController : ApplicationControllerBase
         facebookService = _facebookService;
         authorization = _authorization;
         logger = _logger;
+        blobService = _blobService;
+        blobOptions = _blobOptions.Value;
     }
 
     [HttpGet("import-status")]
@@ -75,6 +84,85 @@ public class VideosController : ApplicationControllerBase
             return NotFound();
         }
         return Ok(ContractUtils.Convert(match));
+    }
+
+    [HttpPost("{id}/images")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<ActionResult<YouTubeContentContract>> UploadImages(string id, IFormFileCollection files)
+    {
+        var existingMatch = await FindManageableMatchAsync(id);
+        if (existingMatch is null)
+            return NotFound();
+        if (files.Count == 0)
+            return BadRequest("At least one image is required.");
+        if (existingMatch.Images.Count + files.Count > 10)
+            return BadRequest("A match can contain at most 10 images.");
+
+        var images = existingMatch.Images.ToList();
+        var uploadedKeys = new List<string>();
+        try
+        {
+            foreach (var file in files)
+            {
+                if (file.Length == 0)
+                    throw new InvalidDataException("Empty images are not allowed.");
+
+                await using var input = file.OpenReadStream();
+                var prepared = await ChannelNewsMediaProcessor.PrepareImageAsync(input);
+                var folder = string.IsNullOrWhiteSpace(existingMatch.Url) ? existingMatch.Id : existingMatch.Url.Trim('/');
+                var storageKey = $"{folder}/{Guid.NewGuid():N}{prepared.Extension}";
+                await blobService.UploadImagesAsync(storageKey, prepared.Content, true, HttpContext.RequestAborted);
+                uploadedKeys.Add(storageKey);
+                images.Add(new YouTubeContentImage
+                {
+                    StorageKey = storageKey,
+                    PublicUrl = blobService.GetImageUrl(storageKey, blobOptions.ContainerName),
+                    ContentType = prepared.ContentType,
+                    Width = prepared.Width,
+                    Height = prepared.Height,
+                    AltText = Path.GetFileNameWithoutExtension(file.FileName)
+                });
+            }
+
+            var updated = await _contentService.UpdateMatchFieldsAsync(existingMatch with { Images = images });
+            if (!updated)
+            {
+                await DeleteUploadedImagesAsync(uploadedKeys);
+                return NotFound();
+            }
+        }
+        catch (Exception exception)
+        {
+            await DeleteUploadedImagesAsync(uploadedKeys);
+            return BadRequest($"One or more images could not be processed: {exception.Message}");
+        }
+
+        await InvalidateVideoCachesAsync(existingMatch.Id);
+        return Ok(ContractUtils.Convert(existingMatch with { Images = images }));
+    }
+
+    [HttpDelete("{id}/images/{imageIndex:int}")]
+    [AllowUser(AuthorizationPermissionKeys.VideosUpdate, AuthorizationPermissionKeys.VideosManage)]
+    public async Task<ActionResult<YouTubeContentContract>> DeleteImage(string id, int imageIndex)
+    {
+        var existingMatch = await FindManageableMatchAsync(id);
+        if (existingMatch is null || imageIndex < 0 || imageIndex >= existingMatch.Images.Count)
+            return NotFound();
+
+        var image = existingMatch.Images[imageIndex];
+        var remainingImages = existingMatch.Images.Where((_, index) => index != imageIndex).ToArray();
+        if (!await _contentService.UpdateMatchFieldsAsync(existingMatch with { Images = remainingImages }))
+            return NotFound();
+
+        await blobService.DeleteImageAsync(image.StorageKey, blobOptions.ContainerName, HttpContext.RequestAborted);
+        await InvalidateVideoCachesAsync(existingMatch.Id);
+        return Ok(ContractUtils.Convert(existingMatch with { Images = remainingImages }));
+    }
+
+    private async Task DeleteUploadedImagesAsync(IEnumerable<string> storageKeys)
+    {
+        foreach (var storageKey in storageKeys)
+            await blobService.DeleteImageAsync(storageKey, blobOptions.ContainerName, HttpContext.RequestAborted);
     }
 
     /// <summary>

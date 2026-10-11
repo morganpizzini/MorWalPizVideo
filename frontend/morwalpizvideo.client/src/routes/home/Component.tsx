@@ -19,6 +19,10 @@ interface IndexShortLink {
 interface IndexVideoRef {
   youtubeId: string;
 }
+interface IndexImage {
+  publicUrl: string;
+  altText?: string;
+}
 interface IndexMatch {
   contentId: string;
   title?: string;
@@ -27,6 +31,7 @@ interface IndexMatch {
   categories: IndexCategory[];
   tags?: string[];
   videoRefs?: IndexVideoRef[];
+  images?: IndexImage[];
   videos?: { youtubeId: string }[];
   shortLinks: IndexShortLink[];
   creationDateTime?: string;
@@ -645,12 +650,7 @@ function RenderMatchCard(match: IndexMatch, i: number) {
   return (
     <div className={className}>
       <div className="home-card__thumb">
-        <img
-          src={`https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`}
-          alt="Video Thumbnail"
-          loading="lazy"
-          decoding="async"
-        />
+        <MatchCardThumbnail match={match} />
       </div>
       <div className="card-body">
         <p className="home-card__category">
@@ -704,4 +704,33 @@ function RenderMatchCard(match: IndexMatch, i: number) {
       )}
     </div>
   );
+}
+
+function MatchCardThumbnail({ match }: { match: IndexMatch }) {
+  const sources = [
+    {
+      url: `https://img.youtube.com/vi/${match.contentId}/hqdefault.jpg`,
+      alt: 'Video Thumbnail',
+    },
+    ...(match.images ?? []).map((image) => ({
+      url: image.publicUrl,
+      alt: image.altText || 'Match image',
+    })),
+  ];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [match.contentId, match.images]);
+
+  useEffect(() => {
+    if (sources.length < 2) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % sources.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [sources.length]);
+
+  const image = sources[activeIndex];
+  return <img src={image.url} alt={image.alt} loading="lazy" decoding="async" />;
 }

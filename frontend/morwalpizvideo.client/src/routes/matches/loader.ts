@@ -1,16 +1,16 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { getMatch, getMatchImages } from "@services/matches";
+import type { LoaderFunctionArgs } from 'react-router';
+import { getMatch, getMatchImages } from '@services/matches';
+import type { Match, MatchImage } from '@morwalpizvideo/models';
 
 export default async function loader({ params }: LoaderFunctionArgs) {
-    const matchPromise = getMatch(params.matchId as string);
-    const imagePromise = getMatchImages(params.matchId as string);
-    const [match, images] = await Promise.all([matchPromise, imagePromise])
-    return {
-        match,
-        images: (images as string[]).map((s: string) => ({
-                                source: s,
-                                title: 'Titolo',
-                                description: 'Descrizione',
-                            }))
-    }
+  const match = (await getMatch(params.matchId as string)) as Match;
+  const images = match.images ?? ((await getMatchImages(params.matchId as string)) as string[]);
+  return {
+    match,
+    images: (images as (MatchImage | string)[]).map((image, index) =>
+      typeof image === 'string'
+        ? { source: image, title: `Match image ${index + 1}` }
+        : { source: image.publicUrl, title: image.altText || `Match image ${index + 1}` }
+    ),
+  };
 }
