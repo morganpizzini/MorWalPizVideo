@@ -1,3 +1,8 @@
+---
+name: newreactcomponent
+description: newReactComponent
+disable-model-invocation: true
+---
 The application is a react application written in typescript and use vite as build server.
 The routing library is react-router "^7.4.0" which uses 'loaders' and 'actions'
 

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "matcher": "edit|create|apply_patch",
+        "bash": "dotnet test MorWalPizVideo.ServerAPI.Tests/MorWalPizVideo.ServerAPI.Tests.csproj --configuration Release --no-restore --filter \"Category=TestGroup:ServerAPI|Category=TestGroup:Shared|Category=TestGroup:CrossApi\" --verbosity minimal",
+        "timeoutSec": 600
+      }
+    ]
+  }
+}
