@@ -12,3 +12,9 @@
 - [Test execution runbook](../docs/architecture/testing.md)
 
 Consult the relevant backend, frontend, Windows application, security, and feature documents linked from the architecture guide for implementation-specific rules. In particular, follow its cache-tag and HTTP-client guidance rather than duplicating those rules here.
+
+## Repository work routing:
+- Per ogni richiesta utente sul repository (analisi, modifiche, verifiche o review), usa `MorWalPiz Delivery Handoff` come punto d’ingresso e rispetta il suo gate.
+- Gli agenti già delegati dal Delivery Handoff eseguono il task assegnato senza riavviare il routing o richiamare il gatekeeper.
+- Le skills definiscono metodo o stile; non autorizzano modifiche né aggirano scope, approvazioni o validazione del Delivery Handoff.
+- Le operazioni Caveman Cloud restano fuori dal routing repository.
