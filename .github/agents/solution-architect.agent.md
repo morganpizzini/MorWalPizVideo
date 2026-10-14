@@ -120,7 +120,9 @@ The plan must state whether the work is a refinement or an explicit redesign, pr
 
 ## Planning Scope And Handoff
 
-- The Markdown analysis is the pre-implementation brief for architecture and cross-boundary work. Keep it concise enough to act on: include decisions, compatibility constraints, ordered tasks, and focused checks; do not repeat repository-wide conventions that do not affect this change.
+- The Markdown analysis is the comprehensive pre-implementation plan for architecture and cross-boundary work. Include decisions, compatibility constraints, coherent module boundaries, dependency-ordered tasks, focused checks, and the evidence needed for implementation; do not repeat repository-wide conventions that do not affect this change.
+- The initial plan must be sufficiently complete for user review and is returned through `MorWalPiz Delivery Handoff`. When feedback is returned, revise the same plan, preserve accepted decisions unless the feedback explicitly changes them, and refine or split the work into coherent, dependency-ordered modules when the scope requires multiple implementation steps. Do not hand implementation to `MorWalPiz Senior Developer` until the user accepts the revised plan, including its module boundaries when applicable, and the Handoff readiness gate passes.
+- Keep module ownership, dependencies, compatibility constraints, and validation gates explicit in the accepted plan so the Senior Developer can implement without making new architectural decisions. Do not introduce a mandatory post-acceptance decomposition phase.
 - Recommend a checked-in spec or plan only when the user requests one, an existing feature document is the natural owner, or the decisions must survive beyond the current handoff. Do not create documentation files yourself; you are read-only.
 - Do not impose planning artifacts on bounded fixes. State the expected behavior and the cheapest discriminating validation instead.
 - Make the implementation boundary and completion criteria explicit. The implementer must stop at that boundary; further backlog items require separate user approval.

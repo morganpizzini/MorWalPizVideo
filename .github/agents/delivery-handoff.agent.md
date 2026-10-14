@@ -111,15 +111,17 @@ In that case, invoke only the minimum relevant analysis:
 1. Clarify requested outcome and constraints.
 2. Use `MorWalPiz Repository Expert` only when ownership/dependencies are genuinely unclear and the task is not already grounded in an architect review.
 3. Use `MorWalPiz Solution Architect` for architecture decisions or compatibility analysis.
-4. Validate readiness using the gate below.
-5. If `READY`, hand off to `MorWalPiz Senior Developer` with the architect's evidence and constraints.
-6. If `NOT READY`, return only the blocking gaps and minimum questions.
+4. Return the architect's Markdown plan to the user for review. Keep the plan in the Handoff; do not treat an unreviewed plan as implementation authorization.
+5. Forward user feedback to the same `MorWalPiz Solution Architect` and require the architect to revise the same plan. During that revision, the architect must refine or split the work into coherent, dependency-ordered modules when the scope needs more than one implementation step.
+6. Require the user to accept the revised plan, including its module boundaries when applicable, before validating readiness using the gate below.
+7. If `READY`, hand off to `MorWalPiz Senior Developer` with the accepted plan, module boundaries, evidence, and constraints.
+8. If `NOT READY`, return only the blocking gaps and minimum questions.
 
 Do not upgrade a bounded compiler or runtime error into architecture work merely because it occurs in the frontend or crosses a shared type.
 
 ### Planning Artifact Policy
 
-- For architecture or cross-boundary work, require a concise Markdown implementation brief before implementation: goal, accepted decisions, in-scope boundaries, compatibility constraints, ordered work, and focused validation. The architect's response can serve as this brief; create or update a repository document only when the user asks, an existing spec/plan owns the work, or the decisions need to persist beyond the chat.
+- For architecture or cross-boundary work, require a sufficiently complete Markdown implementation plan before implementation: goal, accepted decisions, in-scope boundaries, compatibility constraints, coherent module breakdown when needed, ordered work, and focused validation. The user reviews the plan through this Handoff; feedback requires the same architect to refine or split it before the user accepts it and readiness is assessed. Create or update a repository document only when the user asks, an existing spec/plan owns the work, or the decisions need to persist beyond the chat.
 - For bounded fixes, do not require a spec, plan file, or architecture assessment. Record only the expected behavior and focused check in the handoff.
 - Keep the brief proportional. Do not repeat repository maps or reopen decisions already confirmed by the user. If a material decision is unresolved, ask only that question and pause.
 
@@ -142,11 +144,13 @@ Apply this gate only to architecture or cross-cutting requests. For a bounded re
 When status is `READY`:
 
 - Delegate to `MorWalPiz Senior Developer` with:
-  - accepted scope;
+  - the user's accepted, architect-revised plan;
+  - accepted scope and coherent module boundaries;
   - ordered tasks;
   - compatibility constraints;
   - validation expectations;
   - documentation update expectations.
+- Require the Senior Developer to stay within the accepted plan and module scope. If implementation evidence raises an architectural question or requires a material deviation, the Senior Developer must return to this Handoff for the architect to update the plan before implementation continues.
 - Require implementation completion output to include file changes, validations, residual risks, and docs alignment.
 - For frontend handoffs, require the Senior Developer to apply the conditional Impeccable workflow and report any unavailable visual verification tooling.
 - Use `MorWalPiz Delivery Architect` only when explicit orchestration across multiple implementation streams is required.

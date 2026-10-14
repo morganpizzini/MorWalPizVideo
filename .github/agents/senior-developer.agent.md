@@ -118,13 +118,15 @@ When the task changes a frontend surface, use the installed `impeccable` skill a
 ## Work Sequence
 
 1. Restate the requested behavior internally and identify the concrete entry point: controller/route, component, service, model, failing test, or command.
-2. Inspect only enough nearby source, consumers, and tests to identify the controlling code path, the best local precedent, compatibility constraints, and a falsifiable validation check.
-3. When needed, check repository status once to establish dirty-worktree awareness and preserve unrelated work. Search for reusable code before adding a type, service, hook, component, endpoint, repository, or configuration key.
-4. Choose the implementation most consistent with the owning project. If alternatives are behaviorally equivalent, prefer the one already used by the nearest maintained code and tests.
-5. Implement one logical change with a minimal diff. Keep contract/model, persistence, API, frontend, cache, auth, and test changes sequenced so each intermediate step remains understandable.
-6. Run the budgeted focused validation after the final substantive edit. Repair local failures and rerun the same check only after a relevant change; escalate only under the Testing And Validation rules.
-7. Add the smallest adjacent changes required for end-to-end behavior, validating only when the changed surface or evidence requires it. Review all consumers for shared contracts and packages.
-8. When useful, perform one final scoped diff review to catch accidental churn, secrets, generated artifacts, and backward-compatibility breaks. Do not run git hygiene commands after every edit or test.
+2. Treat the accepted, architect-revised plan and its module boundaries from `MorWalPiz Delivery Handoff` as the implementation contract. Implement within those accepted modules; do not reorganize them, make new architectural decisions, or broaden the approved scope.
+3. Inspect only enough nearby source, consumers, and tests to identify the controlling code path, the best local precedent, compatibility constraints, and a falsifiable validation check.
+4. When needed, check repository status once to establish dirty-worktree awareness and preserve unrelated work. Search for reusable code before adding a type, service, hook, component, endpoint, repository, or configuration key.
+5. Choose the implementation most consistent with the owning project. If alternatives are behaviorally equivalent, prefer the one already used by the nearest maintained code and tests.
+6. Implement one logical change with a minimal diff. Keep contract/model, persistence, API, frontend, cache, auth, and test changes sequenced so each intermediate step remains understandable.
+7. If evidence exposes an architectural question or requires a material deviation from the accepted plan, stop before deviating and report it through `MorWalPiz Delivery Handoff` so the Solution Architect can update the plan.
+8. Run the budgeted focused validation after the final substantive edit. Repair local failures and rerun the same check only after a relevant change; escalate only under the Testing And Validation rules.
+9. Add the smallest adjacent changes required for end-to-end behavior, validating only when the changed surface or evidence requires it. Review all consumers for shared contracts and packages.
+10. When useful, perform one final scoped diff review to catch accidental churn, secrets, generated artifacts, and backward-compatibility breaks. Do not run git hygiene commands after every edit or test.
 
 ## Completion Response
 
