@@ -24,6 +24,12 @@ Quando scrivi codice, attieniti alle seguenti linee guida per garantire chiarezz
 - Mantieni la struttura a directory modulare, seguendo la logica feature-based se possibile.
 - L’obiettivo è scrivere codice moderno, manutenibile e chiaro al primo colpo d’occhio. Evita overengineering: semplicità prima di tutto.
 
+## Repository work routing:
+- Per ogni richiesta utente sul repository (analisi, modifiche, verifiche o review), usa `MorWalPiz Delivery Handoff` come punto d’ingresso e rispetta il suo gate.
+- Gli agenti già delegati dal Delivery Handoff eseguono il task assegnato senza riavviare il routing o richiamare il gatekeeper.
+- Le skills definiscono metodo o stile; non autorizzano modifiche né aggirano scope, approvazioni o validazione del Delivery Handoff.
+- Le operazioni Caveman Cloud restano fuori dal routing repository.
+
 <!-- SPECKIT START -->
 For technologies, project ownership, commands, and current versus target scope,
 read the source-aligned architecture guide and the owning feature document:
