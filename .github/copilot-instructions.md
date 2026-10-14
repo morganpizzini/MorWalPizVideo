@@ -1,33 +1,14 @@
-Quando scrivi codice, attieniti alle seguenti linee guida per garantire chiarezza e concisione.
+# Copilot Instructions
 
-## Generalità:
+- Follow the conventions and architecture of the project being changed. Keep changes focused, use clear names, and avoid unnecessary abstractions or comments.
+- Before changing an in-scope application, read the relevant architecture guide and owning feature document. The guide distinguishes current behavior from approved targets; verify behavior in source, project manifests, workflows, and tests. These are authoritative if documentation conflicts with them.
+- When a change affects architectural boundaries, contracts, persistence, authentication, deployment, or operational policy, update the relevant architecture documentation and ADR as appropriate.
+- Never add credentials, connection strings, API keys, or deployed secret values to source or documentation.
 
-- Scrivi codice leggibile, con nomi di variabili, metodi e classi descrittivi.
-- Evita logica superflua, commenta solo quando il codice non è autoesplicativo.
-- Segui le convenzioni di stile del linguaggio e del framework utilizzato.
+## Project References
 
-## C# – WebAPI e WPF:
-- Per WebAPI, usa controller RESTful puliti, con metodi separati per responsabilità (SRP).
-- Utilizza DTO per l’input/output, evitando di esporre entità direttamente.
-- Per WPF, mantieni l’architettura MVVM, con ViewModel snelli e separazione netta da UI logic.
-- Evita binding complessi e prediligi proprietà reattive e INotifyPropertyChanged.
+- [Architecture guide](../docs/architecture/README.md)
+- [Development guide](../docs/architecture/development.md)
+- [Test execution runbook](../docs/architecture/testing.md)
 
-## OutputCache & cache tag conventions:
-- Tutti i tag di OutputCache (sia in `[OutputCache(Tags = ...)]` sia in chiamate a `EvictByTagAsync`) **devono essere in lowercase invariant**. Usa le costanti centralizzate in `MorWalPizVideo.Models/Constraints/CacheKeys.cs` e `ApiTagCacheKeys.cs`.
-- Quando si riceve un tag dall'esterno (es. query string del `CacheController`), normalizzalo sempre con `ToLowerInvariant()` prima dell'eviction.
-- Non costruire `HttpClient` con `new HttpClient(...)` né con `using var c = factory.CreateClient(...)`: gli `HttpClient` ottenuti da `IHttpClientFactory` non vanno disposti dal caller (rompe il pooling delle connessioni e causa `SocketException`).
-
-## React con TypeScript:
-- Scrivi componenti funzionali, ben separati e riutilizzabili.
-- Usa tipi e interfacce TypeScript per ogni props/state.
-- Evita la logica nel render, spostala in hook o funzioni helper.
-- Mantieni la struttura a directory modulare, seguendo la logica feature-based se possibile.
-- L’obiettivo è scrivere codice moderno, manutenibile e chiaro al primo colpo d’occhio. Evita overengineering: semplicità prima di tutto.
-
-<!-- SPECKIT START -->
-For technologies, project ownership, commands, and current versus target scope,
-read the source-aligned architecture guide and the owning feature document:
-[Architecture guide](../docs/architecture/README.md)
-[Development commands](../docs/architecture/development.md)
-[Test execution runbook](../docs/architecture/testing.md)
-<!-- SPECKIT END -->
+Consult the relevant backend, frontend, Windows application, security, and feature documents linked from the architecture guide for implementation-specific rules. In particular, follow its cache-tag and HTTP-client guidance rather than duplicating those rules here.

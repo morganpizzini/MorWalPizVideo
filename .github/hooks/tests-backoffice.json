@@ -5,7 +5,8 @@
       {
         "type": "command",
         "matcher": "edit|create|apply_patch",
-        "bash": "dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter \"Category=TestGroup:BackOffice|Category=TestGroup:Shared|Category=TestGroup:CrossApi\" --verbosity minimal",
+        "bash": "node .github/hooks/scripts/run-related-tests.cjs backoffice",
+        "powershell": "node .github/hooks/scripts/run-related-tests.cjs backoffice",
         "timeoutSec": 600
       }
     ]

@@ -5,7 +5,8 @@
       {
         "type": "command",
         "matcher": "edit|create|apply_patch",
-        "bash": "yarn --cwd frontend workspace morwalpizvideo.client test --passWithNoTests=false",
+        "bash": "node .github/hooks/scripts/run-related-tests.cjs morwalpizvideo-client",
+        "powershell": "node .github/hooks/scripts/run-related-tests.cjs morwalpizvideo-client",
         "timeoutSec": 600
       }
     ]

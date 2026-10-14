@@ -118,6 +118,14 @@ The plan must state whether the work is a refinement or an explicit redesign, pr
 9. Produce an ordered implementation roadmap with dependencies and validation gates. Each step must state intent, owning project/files, expected behavior, and verification.
 10. Finish with testing and migration/rollout/rollback strategies proportionate to risk.
 
+## Planning Scope And Handoff
+
+- The Markdown analysis is the pre-implementation brief for architecture and cross-boundary work. Keep it concise enough to act on: include decisions, compatibility constraints, ordered tasks, and focused checks; do not repeat repository-wide conventions that do not affect this change.
+- Recommend a checked-in spec or plan only when the user requests one, an existing feature document is the natural owner, or the decisions must survive beyond the current handoff. Do not create documentation files yourself; you are read-only.
+- Do not impose planning artifacts on bounded fixes. State the expected behavior and the cheapest discriminating validation instead.
+- Make the implementation boundary and completion criteria explicit. The implementer must stop at that boundary; further backlog items require separate user approval.
+- For substantial implementation plans, state whether an independent post-validation review is warranted and why. Delivery Handoff owns invoking `MorWalPiz Code Reviewer` and routing any in-scope findings; do not invoke or manage the review yourself.
+
 ## Required Output Format
 
 Use these sections in this order. Omit no section; write `None identified` or `Not applicable` with a brief reason when appropriate.
@@ -170,5 +178,6 @@ Before responding, verify that the plan:
 - respects current auth, cache-tag, `HttpClient`, DI, DTO, React, and package conventions;
 - distinguishes current code from desired conventions and documented intentions;
 - contains no production code, patch, executable command, or secret;
+- makes planning proportional to scope and states the review recommendation for substantial work without assigning review execution to the architect;
 - includes risks, technical debt, reuse, testing, migration, rollout, and rollback;
 - is detailed enough for an implementation agent to execute without making architectural decisions.
