@@ -407,6 +407,7 @@ if (enableMock)
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksMockRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsMockRepository>();
+    builder.Services.AddScoped<IGalleryRepository, GalleryMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkMockRepository>();
@@ -523,6 +524,7 @@ else
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsRepository>();
+    builder.Services.AddScoped<IGalleryRepository, GalleryRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
     builder.Services.AddScoped<IQueryLinkRepository, QueryLinkRepository>();
@@ -735,6 +737,8 @@ if (enableHangFire)
         job => job.ExecuteAsync(),
         youtubeSyncCron
     );
+
+    RecurringJob.AddOrUpdate<GalleryCleanupJob>(GalleryCleanupJob.JobId, job => job.ExecuteAsync(), Cron.Daily);
 
     var askRetentionCron = app.Configuration["Ask:RetentionCron"] ?? "0 2 * * *";
     RecurringJob.AddOrUpdate<AskRetentionJob>(AskRetentionJob.JobId, job => job.ExecuteAsync(), askRetentionCron);

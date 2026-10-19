@@ -121,8 +121,11 @@ Do not upgrade a bounded compiler or runtime error into architecture work merely
 
 ### Planning Artifact Policy
 
-- For architecture or cross-boundary work, require a sufficiently complete Markdown implementation plan before implementation: goal, accepted decisions, in-scope boundaries, compatibility constraints, coherent module breakdown when needed, ordered work, and focused validation. The user reviews the plan through this Handoff; feedback requires the same architect to refine or split it before the user accepts it and readiness is assessed. Create or update a repository document only when the user asks, an existing spec/plan owns the work, or the decisions need to persist beyond the chat.
-- For bounded fixes, do not require a spec, plan file, or architecture assessment. Record only the expected behavior and focused check in the handoff.
+- For architecture or cross-boundary work, require a sufficiently complete Markdown implementation plan before implementation: goal, accepted decisions, in-scope boundaries, compatibility constraints, coherent module breakdown when needed, ordered work, and focused validation. The user reviews the plan through this Handoff; feedback requires the same architect to refine or split it before the user accepts it and readiness is assessed.
+- Save that plan as a physical Markdown file in the repository before presenting it for approval or routing to the developer agent. Default path: `docs/feature-handoffs/<feature-name>-handoff.md`. Keep the file user-editable and versioned so the user can revise it in-place and continue the chat without losing the context.
+- The repo file is the source of truth for the handoff. The chat response should summarize the key points and point to the file path, not replace the artifact with ephemeral text alone.
+- For bounded fixes, do not require a spec, plan file, or architecture assessment. Record only the expected behavior and focused check in the handoff, but still persist a task-local Markdown artifact if the workflow is being handed off for implementation.
+- After implementation, update the same Markdown artifact with the real delivery details: modified files, validations, residual risks, and the fact pattern that actually shipped. This keeps the document useful as durable feature documentation.
 - Keep the brief proportional. Do not repeat repository maps or reopen decisions already confirmed by the user. If a material decision is unresolved, ask only that question and pause.
 
 ## Mandatory Readiness Gate

@@ -31,6 +31,11 @@ import type {
 } from "@morwalpizvideo/models";
 import type { ChannelNewsAdmin, Match } from "@morwalpizvideo/models";
 import type {
+  Gallery,
+  GalleryPublic,
+  SaveGalleryRequest,
+} from "@morwalpizvideo/models";
+import type {
   ChannelNavigation,
   CreatePageDTO,
   PageAdmin,
@@ -67,6 +72,64 @@ export const getChannelTerminology = (): Promise<ChannelTerminology> =>
 export const saveChannelTerminology = (
   payload: ChannelTerminology,
 ): Promise<ChannelTerminology> => put(endpoints.CHANNEL_TERMINOLOGY, payload);
+
+export const getGalleries = (): Promise<Gallery[]> => get(endpoints.GALLERIES);
+export const getGallery = (id: string): Promise<Gallery> =>
+  get(ComposeUrl(endpoints.GALLERIES_DETAIL, { id }));
+export const createGallery = (payload: SaveGalleryRequest): Promise<Gallery> =>
+  post(endpoints.GALLERIES, payload);
+export const updateGallery = (
+  id: string,
+  payload: SaveGalleryRequest,
+): Promise<Gallery> =>
+  put(ComposeUrl(endpoints.GALLERIES_DETAIL, { id }), payload);
+export const deleteGallery = (id: string): Promise<void> =>
+  Delete(ComposeUrl(endpoints.GALLERIES_DETAIL, { id }));
+export const uploadGalleryImages = (
+  id: string,
+  files: File[],
+): Promise<Gallery> => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return postFormData(ComposeUrl(endpoints.GALLERY_IMAGES, { id }), formData);
+};
+
+export const getPublicGallery = (
+  slug: string,
+  channelId: string,
+): Promise<GalleryPublic> =>
+  publicApiService.call(
+    ComposeUrl(frontendEndpoints.GALLERY_DETAIL, {
+      slug: encodeURIComponent(slug),
+    }),
+    "GET",
+    {},
+    "",
+    undefined,
+    false,
+    false,
+    undefined,
+    { "X-Channel-Id": channelId },
+  );
+
+export const downloadPublicGallery = (
+  slug: string,
+  channelId: string,
+  indexes?: number[],
+): Promise<Blob> =>
+  publicApiService.call(
+    ComposeUrl(frontendEndpoints.GALLERY_DOWNLOAD, {
+      slug: encodeURIComponent(slug),
+    }),
+    "GET",
+    {},
+    "",
+    indexes?.length ? { indexes: indexes.join(",") } : undefined,
+    true,
+    false,
+    undefined,
+    { "X-Channel-Id": channelId },
+  );
 
 function serializeFormAnswers(answers: AnyAnswer[]): AnyAnswer[] {
   return answers.map((answer): AnyAnswer => {

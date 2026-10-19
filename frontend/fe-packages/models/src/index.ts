@@ -61,6 +61,12 @@ export type {
   ChannelNewsImage,
   ChannelNewsStatus,
 } from "./channelNews";
+export type {
+  Gallery,
+  GalleryImage,
+  GalleryPublic,
+  SaveGalleryRequest,
+} from "./gallery";
 
 // Pages and public navigation exports
 export { PageStatus } from "./page";

@@ -135,6 +135,7 @@ Keep the final response concise and evidence-based:
 - State the behavior implemented.
 - Explain each modified file and why it owns that change.
 - Explain architectural decisions only where a choice was material, including the existing pattern reused and how compatibility was preserved.
+- Update the repository handoff Markdown file that started the task (for example `docs/feature-handoffs/<feature-name>-handoff.md`) with the real implementation details, modified files, validation performed, and any residual risks. This file remains user-editable and becomes the durable feature documentation after delivery.
 - List the exact validation performed and its result. Explicitly note checks deferred to the downstream automatic final procedure; do not imply that redundant checks deferred under the validation budget are risks.
 - Report unresolved blockers, pre-existing failures, migration/deployment requirements, or residual risks without implying they were fixed.
 

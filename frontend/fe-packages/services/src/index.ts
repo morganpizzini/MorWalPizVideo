@@ -232,6 +232,7 @@ export {
   getPublicChannelNews,
   getPublicChannelNewsByIdOrSlug,
 } from "./channelNewsService";
+export { getPublicGallery, downloadPublicGallery } from "./apiService";
 
 // Web Push services
 export {

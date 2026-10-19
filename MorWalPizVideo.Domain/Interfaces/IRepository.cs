@@ -92,6 +92,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<QuickLinks?> GetByUrlAsync(string url);
     }
     public interface IChannelNewsRepository : IRepository<ChannelNews> { }
+    public interface IGalleryRepository : IRepository<Gallery>
+    {
+        Task<Gallery?> GetBySlugAsync(string channelId, string slug);
+        Task<int> IncrementDownloadCountAsync(string id);
+    }
     public interface IConfigurationRepository : IRepository<MorWalPizConfiguration> { }
     public interface IScriptStudioRepository : IRepository<ScriptStudioChannelData>
     {

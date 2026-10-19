@@ -618,6 +618,25 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class GalleryRepository(IMongoDatabase database)
+        : BaseRepository<Gallery>(database, DbCollections.Galleries), IGalleryRepository
+    {
+        public Task<Gallery?> GetBySlugAsync(string channelId, string slug)
+            => _collection.Find(item => item.ChannelId == channelId && item.Slug == Gallery.NormalizeSlug(slug)).FirstOrDefaultAsync();
+
+        public async Task<int> IncrementDownloadCountAsync(string id)
+        {
+            var filter = ObjectId.TryParse(id, out var objectId)
+                ? Builders<Gallery>.Filter.Eq("_id", objectId)
+                : Builders<Gallery>.Filter.Eq("_id", id);
+            var updated = await _collection.FindOneAndUpdateAsync(
+                filter,
+                Builders<Gallery>.Update.Inc(item => item.DownloadCount, 1),
+                new FindOneAndUpdateOptions<Gallery> { ReturnDocument = ReturnDocument.After });
+            return updated?.DownloadCount ?? 0;
+        }
+    }
+
     public sealed class AskCampaignRepository(IMongoDatabase database)
         : BaseRepository<AskCampaign>(database, DbCollections.AskCampaigns), IAskCampaignRepository
     {

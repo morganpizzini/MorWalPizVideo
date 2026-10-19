@@ -18,3 +18,5 @@ Consult the relevant backend, frontend, Windows application, security, and featu
 - Gli agenti già delegati dal Delivery Handoff eseguono il task assegnato senza riavviare il routing o richiamare il gatekeeper.
 - Le skills definiscono metodo o stile; non autorizzano modifiche né aggirano scope, approvazioni o validazione del Delivery Handoff.
 - Le operazioni Caveman Cloud restano fuori dal routing repository.
+- Quando un task richiede una revisione o una handoff tra architettura e sviluppo, il contenuto di sintesi deve essere salvato come file Markdown fisico nel repository in `docs/feature-handoffs/` (o in una cartella equivalente per la feature) e lasciato modificabile dall’utente prima di inviare il task al developer agent.
+- Dopo l’implementazione, lo stesso file Markdown deve essere aggiornato con i cambiamenti reali, la validazione eseguita e i rischi residui, così diventa documentazione utile della feature.

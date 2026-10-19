@@ -555,6 +555,22 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class GalleryMockRepository(IMockScenario scenario)
+        : BaseMockRepository<Gallery>(scenario, "galleries"), IGalleryRepository
+    {
+        public async Task<Gallery?> GetBySlugAsync(string channelId, string slug)
+            => (await GetItemsAsync(item => item.ChannelId == channelId && item.Slug == Gallery.NormalizeSlug(slug))).FirstOrDefault();
+
+        public async Task<int> IncrementDownloadCountAsync(string id)
+        {
+            var item = (await GetItemsAsync(entity => entity.Id == id)).FirstOrDefault();
+            if (item is null) return 0;
+            var updated = item with { DownloadCount = item.DownloadCount + 1 };
+            await UpdateItemAsync(updated);
+            return updated.DownloadCount;
+        }
+    }
+
     public sealed class AskCampaignMockRepository(IMockScenario scenario)
         : BaseMockRepository<AskCampaign>(scenario, "askCampaigns"), IAskCampaignRepository
     {

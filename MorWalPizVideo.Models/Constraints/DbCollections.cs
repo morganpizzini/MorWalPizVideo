@@ -40,6 +40,7 @@
         public const string ShortLinks = "shortLinks";
         public const string QuickLinks = "quickLinks";
         public const string ChannelNews = "channelNews";
+        public const string Galleries = "galleries";
         public const string SponsorApplies = "sponsorApplies";
         public const string Categories = "categories";
         public const string Configurations = "configurations";

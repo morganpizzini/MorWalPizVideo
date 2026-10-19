@@ -34,8 +34,16 @@ import PushSettings from './pushSettings/Component';
 import Survey from './survey/Component';
 import surveyLoader from './survey/loader';
 import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
+import Gallery from './gallery/Component';
+import galleryLoader from './gallery/loader';
 
 export const routes: RouteObject[] = [
+  {
+    path: '/gallery/:slug',
+    loader: galleryLoader,
+    element: <Gallery />,
+    errorElement: <ErrorPageRoot />,
+  },
   {
     path: '/quick-links/:url',
     loader: quickLinksLoader,

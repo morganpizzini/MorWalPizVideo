@@ -269,6 +269,34 @@ namespace MorWalPiz.Contracts
             AltText = entity.AltText,
             DisplayOrder = entity.DisplayOrder
         };
+        public static GalleryContract Convert(Gallery entity) => new()
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description,
+            DownloadCount = entity.DownloadCount,
+            Slug = entity.Slug,
+            Expiration = entity.Expiration,
+            ChannelId = entity.ChannelId,
+            Images = entity.BlobReference.Select(image => new GalleryImageContract
+            {
+                StorageKey = image.StorageKey,
+                PublicUrl = image.PublicUrl,
+                ContentType = image.ContentType,
+                Width = image.Width,
+                Height = image.Height,
+                DisplayOrder = image.DisplayOrder
+            }).ToArray()
+        };
+        public static GalleryPublicContract ConvertPublic(Gallery entity) => new()
+        {
+            Name = entity.Name,
+            Description = entity.Description,
+            Slug = entity.Slug,
+            Expiration = entity.Expiration,
+            DownloadCount = entity.DownloadCount,
+            Images = entity.BlobReference.Select(image => image.PublicUrl).ToArray()
+        };
         public static ChannelNewsPublicContract ConvertPublic(ChannelNews entity, YTChannel channel, string fallbackLogoUrl)
         {
             return new ChannelNewsPublicContract
