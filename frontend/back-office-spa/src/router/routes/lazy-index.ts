@@ -208,6 +208,7 @@ const routeDefinitions: RouteConfig[] = [
       feature('upload-multiple', () => import('../../routes/images/upload-multiple')),
     ],
   },
+  feature('galleries', () => import('../../routes/galleries')),
   group('morwalpizconfigurations', () => import('../../routes/morwalpizconfigurations/index'), [
     indexFeature('', () => import('../../routes/morwalpizconfigurations/index')),
     feature('create', () => import('../../routes/morwalpizconfigurations/create')),

@@ -40,3 +40,16 @@ Release builds passed for `MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.c
 ## Residual Risks
 
 The gallery API requires `VITE_MORWALPIZ_CHANNEL_ID` at runtime; the loader returns a service-unavailable response when it is absent.
+
+## Back-office gallery management access
+
+Added the missing BackOffice navigation and route access for gallery management:
+
+- `frontend/back-office-spa/src/layouts/adminMenu.ts`: added `Galleries` directly after `Images` in the Content menu, using the existing image view/manage permissions.
+- `frontend/back-office-spa/src/router/routes/lazy-index.ts`: registered the existing `src/routes/galleries` module at `/galleries`.
+- `frontend/back-office-spa/src/authorization/permissions.ts`: mapped `galleries` route authorization to `permissions.images` so gallery reads and actions follow the existing image permission contract.
+- `frontend/back-office-spa/src/layouts/adminMenu.test.ts`: added focused coverage for menu ordering, route registration, and read/action permission mapping.
+
+Focused validation command: `yarn --cwd frontend/back-office-spa vitest run src/layouts/adminMenu.test.ts --reporter=verbose --pool=threads --maxWorkers=1 --minWorkers=1` completed without reported failures. The initial pre-fix invocation stalled before producing assertions, so the test was retained as the regression proof but its pre-fix failure output could not be captured in this environment.
+
+Residual risk: gallery management remains dependent on the existing gallery route module and backend authorization; this change only restores its BackOffice menu and route reachability.

@@ -88,6 +88,7 @@ const routeResources: Record<string, StandardResource> = {
   channelnews: permissions.channelnews,
   categories: permissions.categories,
   images: permissions.images,
+  galleries: permissions.images,
   morwalpizconfigurations: permissions.configurations,
   productcategories: permissions.productcategories,
   sponsors: permissions.sponsors,

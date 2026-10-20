@@ -64,6 +64,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: FileImage,
       },
       {
+        label: 'Galleries',
+        path: '/galleries',
+        permissions: [permissions.images.view, permissions.images.manage],
+        icon: FileImage,
+      },
+      {
         label: 'Calendar',
         path: '/calendarevents',
         permissions: [permissions.calendar.view, permissions.calendar.manage],
