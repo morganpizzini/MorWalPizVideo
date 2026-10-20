@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { JSX } from 'react';
 import { useLoaderData, useRevalidator } from 'react-router';
 import type { Gallery, SaveGalleryRequest } from '@morwalpizvideo/models';
 import {
