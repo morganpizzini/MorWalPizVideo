@@ -75,6 +75,50 @@ WebApplicationFactory with test authentication and isolated mock scenarios. Exer
 
 Vitest/Testing Library with route-aware helpers and mocked shared services. Test pending, success, empty, validation, and error states.
 
+### BackOffice SPA Entity Template
+
+New administrative entities should follow the route and component structure already used by `categories` and `galleries`. Register the feature in the BackOffice route manifest with an index route and a nested `:id` route:
+
+- `/<entities>`: index page for the list and collection-level actions.
+- `/<entities>/create`: create form.
+- `/<entities>/:id`: detail page.
+- `/<entities>/:id/edit`: edit form.
+
+The `:id` route should use an outlet with its index child as the detail page and its `edit` child as the edit form. Keep the route modules colocated by responsibility (`index`, `detail`, and `form`), and export the component, loader, and action from each module's `index.ts` as appropriate. Use the existing lazy route registration in `frontend/back-office-spa/src/router/routes/lazy-index.ts` as the integration pattern.
+
+#### List page
+
+- Read the collection through the route loader and `useResolvedLoaderData`.
+- Render the collection with the shared `GenericTable`, stable entity IDs, explicit `ColumnDef` columns, a useful search placeholder, and an empty-state message.
+- Provide row actions for detail, edit, and delete. Destructive actions should use the existing fetcher plus confirmation modal pattern and show success or validation errors through the shared toast and error components.
+- The page header is required: use `PageHeader` with the entity collection title and `createLink="./create"`.
+
+#### Detail page
+
+- Load one entity by route `id`; return a loading skeleton when the loader data is not available and render the entity details in `DetailPanel` or the nearest existing shared detail component.
+- The page header is required: use `PageHeader` with the entity's display name, a link back to the collection, and an edit link. Include the existing delete callback/modal flow when the entity supports deletion.
+- Keep detail-only operations, such as image management, on this page when they require an existing entity ID.
+
+#### Create and edit form
+
+- Reuse one form component for both modes where the fields and validation are shared. Detect the mode from the route parameter and populate edit values from the loader result.
+- Submit through the established React Router `useFetcher`/`fetcher.Form` or `fetcher.submit` pattern and keep server validation authoritative. Render collection-level errors with `GenericErrorList` and field errors with `FieldError`.
+- Disable controls while the mutation is pending, show a toast on success, and navigate to the detail page after create/update or back to the collection when that is the established entity flow. Preserve the existing confirmation-modal pattern for mutations that use it.
+- The form page header is required: use `PageHeader` with a create title or an edit title that identifies the entity, plus the established back/cancel navigation.
+
+#### Loader and data contract
+
+- A collection loader returns the service/API collection result consumed by the list. An entity loader uses the route `id` and returns the service/API entity result, or `null` for create mode.
+- Match the response shape already used by the owning service. Where an endpoint can return either a value or a `{ data: value }` envelope, normalize that shape at the route boundary before rendering rather than spreading response-shape checks through the component.
+- The form loader must provide every reference collection needed to render controls, not just the entity (for example, the product form loads both the product and its categories).
+- Keep mutation actions in the route module that owns the form or list operation. Use the shared service methods and preserve their request, response, validation, authentication, and cache behavior; do not introduce an ad hoc client in the component.
+
+#### Images and file inputs
+
+When an entity includes images, use a real file input with `accept="image/*"`; add `multiple` only when the entity supports multiple images. Keep selected files and upload state separate from the entity form state, disable the input and buttons while uploading, display server errors accessibly, and clear the input after a successful upload.
+
+For create flows that accept images, include the files in the create form's `FormData` under the service's established field name. For edit/detail flows, prefer the existing entity-specific upload service after an ID exists, then refresh or update the loader-backed entity. Render previews from the returned public image data, enforce the server's image-count/validation limits in the UI, and provide the existing delete-image operation where supported. The `galleries/detail` and `channelNews/form` implementations are the repository examples for these two upload shapes.
+
 ### End To End
 
 - BackOffice mutation to public cache refresh.

@@ -1,187 +1,88 @@
-import { useState } from 'react';
-import type { JSX } from 'react';
-import { useLoaderData, useRevalidator } from 'react-router';
-import type { Gallery, SaveGalleryRequest } from '@morwalpizvideo/models';
-import {
-  createGallery,
-  deleteGallery,
-  updateGallery,
-  uploadGalleryImages,
-} from '@morwalpizvideo/services';
+import { useResolvedLoaderData } from '@/router/asyncData';
+import React, { useEffect, useState } from 'react';
+import { Button, Modal } from 'react-bootstrap';
+import { Link, useFetcher } from 'react-router';
+import type { Gallery } from '@morwalpizvideo/models';
+import { useToast } from '@components/ToastNotification/ToastContext';
+import GenericErrorList from '@components/GenericErrorList';
+import PageHeader from '@components/PageHeader';
+import GenericTable from '@components/Table';
+import type { ColumnDef } from '@tanstack/react-table';
 
-const emptyForm: SaveGalleryRequest = { name: '', description: '', slug: '', expirationDays: 7 };
+export default function GalleriesIndex(): React.ReactElement {
+  const rawGalleries = useResolvedLoaderData<Gallery[] | { data?: Gallery[] }>();
+  const galleries = Array.isArray(rawGalleries) ? rawGalleries : (rawGalleries.data ?? []);
+  const fetcher = useFetcher();
+  const toast = useToast();
+  const [selected, setSelected] = useState<Gallery | null>(null);
+  const busy = fetcher.state !== 'idle';
 
-export default function Galleries(): JSX.Element {
-  const rawGalleries = useLoaderData() as Gallery[] | { data?: Gallery[] } | undefined;
-  const galleries = Array.isArray(rawGalleries)
-    ? rawGalleries
-    : Array.isArray(rawGalleries?.data)
-      ? rawGalleries.data
-      : [];
-  const revalidator = useRevalidator();
-  const [form, setForm] = useState<SaveGalleryRequest>(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = galleries.find(item => item.id === selectedId);
-
-  async function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (editingId) await updateGallery(editingId, form);
-    else await createGallery(form);
-    setForm(emptyForm);
-    setEditingId(null);
-    revalidator.revalidate();
-  }
-
-  function edit(item: Gallery) {
-    setEditingId(item.id);
-    setForm({
-      name: item.name,
-      description: item.description ?? '',
-      slug: item.slug,
-      expirationDays: 7,
-    });
-    setSelectedId(item.id);
-  }
-
-  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
-    if (selectedId && event.target.files?.length) {
-      await uploadGalleryImages(selectedId, Array.from(event.target.files));
-      revalidator.revalidate();
+  useEffect(() => {
+    if (!busy && fetcher.data?.success) {
+      setSelected(null);
+      toast.show('Success', 'Gallery deleted successfully', { variant: 'success' });
     }
-  }
+  }, [busy, fetcher.data, toast]);
 
-  async function remove(item: Gallery) {
-    if (window.confirm(`Delete ${item.name}?`)) {
-      await deleteGallery(item.id);
-      if (selectedId === item.id) setSelectedId(null);
-      revalidator.revalidate();
-    }
-  }
+  const columns: ColumnDef<Gallery>[] = [
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'slug', header: 'Public slug' },
+    { id: 'images', header: 'Images', cell: info => info.row.original.images.length },
+    { accessorKey: 'downloadCount', header: 'Downloads' },
+    {
+      id: 'actions',
+      header: () => <div className="text-end">Actions</div>,
+      cell: info => (
+        <div className="text-end">
+          <Link className="btn btn-link px-1" to={`/galleries/${info.row.original.id}`}>
+            View
+          </Link>
+          <Link className="btn btn-link px-1" to={`/galleries/${info.row.original.id}/edit`}>
+            Edit
+          </Link>
+          <Button variant="link" className="px-1" onClick={() => setSelected(info.row.original)}>
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <main className="container py-4">
-      <h1>Galleries</h1>
-      <form onSubmit={save} className="row g-3 mb-4">
-        <div className="col-md-4">
-          <label className="form-label">
-            Name
-            <input
-              className="form-control"
-              required
-              value={form.name}
-              onChange={event => setForm({ ...form, name: event.target.value })}
-            />
-          </label>
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">
-            Slug
-            <input
-              className="form-control"
-              required
-              value={form.slug}
-              onChange={event => setForm({ ...form, slug: event.target.value })}
-            />
-          </label>
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">
-            Expiration
-            <select
-              className="form-select"
-              value={form.expirationDays}
-              onChange={event =>
-                setForm({ ...form, expirationDays: Number(event.target.value) as 3 | 7 | 21 })
-              }
-            >
-              <option value={3}>3 days</option>
-              <option value={7}>7 days</option>
-              <option value={21}>21 days</option>
-            </select>
-          </label>
-        </div>
-        <div className="col-12">
-          <label className="form-label">
-            Description
-            <textarea
-              className="form-control"
-              value={form.description}
-              onChange={event => setForm({ ...form, description: event.target.value })}
-            />
-          </label>
-        </div>
-        <div className="col-12">
-          <button className="btn btn-primary" type="submit">
-            {editingId ? 'Save changes' : 'Create gallery'}
-          </button>
-          {editingId && (
-            <button
-              className="btn btn-link"
-              type="button"
-              onClick={() => {
-                setEditingId(null);
-                setForm(emptyForm);
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
-      <div className="list-group">
-        {galleries.map(item => (
-          <div
-            className="list-group-item d-flex justify-content-between align-items-center"
-            key={item.id}
+    <>
+      <PageHeader title="Galleries" createLink="./create" />
+      <GenericErrorList errors={fetcher.data?.errors} />
+      <GenericTable
+        data={galleries}
+        columns={columns}
+        getRowId={gallery => gallery.id}
+        pageSize={10}
+        searchPlaceholder="Search galleries..."
+        emptyMessage="No galleries found"
+      />
+      <Modal show={selected !== null} onHide={() => setSelected(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete gallery</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Delete <strong>{selected?.name}</strong>?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setSelected(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            disabled={busy}
+            onClick={() =>
+              selected?.id &&
+              fetcher.submit({ id: selected.id }, { method: 'post', action: location.pathname })
+            }
           >
-            <button
-              className="btn btn-link text-start"
-              type="button"
-              onClick={() => setSelectedId(item.id)}
-            >
-              <strong>{item.name}</strong>
-              <span className="d-block text-muted">
-                /{item.slug} | {item.downloadCount} downloads | {item.images.length} images
-              </span>
-            </button>
-            <span>
-              <button
-                className="btn btn-sm btn-outline-secondary me-2"
-                type="button"
-                onClick={() => edit(item)}
-              >
-                Edit
-              </button>
-              <button
-                className="btn btn-sm btn-outline-danger"
-                type="button"
-                onClick={() => remove(item)}
-              >
-                Delete
-              </button>
-            </span>
-          </div>
-        ))}
-      </div>
-      {selected && (
-        <section className="mt-4">
-          <h2>{selected.name}</h2>
-          <p>{selected.description}</p>
-          <p>Downloads: {selected.downloadCount}</p>
-          <label className="btn btn-outline-primary">
-            Upload images
-            <input className="d-none" type="file" accept="image/*" multiple onChange={upload} />
-          </label>
-          <div className="row mt-3">
-            {selected.images.map(image => (
-              <div className="col-6 col-md-3" key={image.storageKey}>
-                <img className="img-fluid" src={image.publicUrl} alt="" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-    </main>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }

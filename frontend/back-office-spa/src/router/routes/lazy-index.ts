@@ -208,7 +208,18 @@ const routeDefinitions: RouteConfig[] = [
       feature('upload-multiple', () => import('../../routes/images/upload-multiple')),
     ],
   },
-  feature('galleries', () => import('../../routes/galleries')),
+  group('galleries', () => import('../../routes/galleries/index'), [
+    indexFeature('', () => import('../../routes/galleries/index')),
+    feature('create', () => import('../../routes/galleries/form')),
+    {
+      path: ':id',
+      Component: Outlet,
+      children: [
+        indexFeature('', () => import('../../routes/galleries/detail')),
+        feature('edit', () => import('../../routes/galleries/form')),
+      ],
+    },
+  ]),
   group('morwalpizconfigurations', () => import('../../routes/morwalpizconfigurations/index'), [
     indexFeature('', () => import('../../routes/morwalpizconfigurations/index')),
     feature('create', () => import('../../routes/morwalpizconfigurations/create')),
