@@ -136,7 +136,7 @@ export function CustomFormRenderer({
         .sort(
           (left: AnyQuestion, right: AnyQuestion) => left.order - right.order,
         )
-        .map((question: AnyQuestion, index: number) => {
+        .map((question: AnyQuestion, _: number) => {
           const answer = answers[question.questionId] ?? emptyAnswer(question);
           return (
             <fieldset key={question.questionId} className="mb-4">
