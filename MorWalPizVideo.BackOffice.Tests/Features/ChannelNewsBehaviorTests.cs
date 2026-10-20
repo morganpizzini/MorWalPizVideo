@@ -44,6 +44,18 @@ public sealed class ChannelNewsBehaviorTests
     }
 
     [Fact]
+    public async Task Gallery_images_keep_original_dimensions_and_format_without_resize()
+    {
+        await using var landscape = await CreateImageAsync(4000, 2000, png: true);
+        var prepared = await ChannelNewsMediaProcessor.PrepareImageAsIsAsync(landscape);
+
+        prepared.Width.Should().Be(4000);
+        prepared.Height.Should().Be(2000);
+        prepared.ContentType.Should().Be("image/png");
+        prepared.Extension.Should().Be(".png");
+    }
+
+    [Fact]
     public async Task Logo_requires_png_and_resizes_width_to_500_without_upscaling()
     {
         await using var jpg = await CreateImageAsync(600, 300, png: false);

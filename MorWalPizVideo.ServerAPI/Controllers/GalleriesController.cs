@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 

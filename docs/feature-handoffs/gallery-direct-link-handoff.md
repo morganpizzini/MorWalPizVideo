@@ -30,10 +30,12 @@ The public client build also passed with `npm run build` from `frontend/morwalpi
 
 The build reports the existing Vite warning for `/env-config.js` lacking a `type="module"` attribute and the existing stale Browserslist database notice; neither blocks the build.
 
+During the gallery upload fix, the back-office upload path was changed to preserve the original image bytes and dimensions instead of running the shared news resize pipeline. The new `PrepareImageAsIsAsync` method keeps the source format and size, and `GalleriesController` now calls it when adding images to a gallery. This keeps the direct public gallery route and the upload pipeline consistent with the requirement that gallery images are stored as uploaded.
+
 The BackOffice gallery compile blocker was fixed by importing `IGalleryRepository` from `MorWalPizVideo.Server.Services.Interfaces` in `MorWalPizVideo.BackOffice/Controllers/GalleriesController.cs` and `MorWalPizVideo.BackOffice/Jobs/GalleryCleanupJob.cs`. The existing `IBlobService` dependencies were preserved.
 
-Focused backend validation passed with `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~GalleryBehaviorTests" --verbosity minimal` (7 passed).
-Release builds passed for `MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj` and `MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj`. The BackOffice build continues to report the existing SixLabors.ImageSharp vulnerability warnings.
+Focused backend validation passed with `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ChannelNewsBehaviorTests|FullyQualifiedName~GalleryBehaviorTests" --verbosity minimal` (13 passed, 0 failed).
+Release builds passed for `MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj` and `MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj`. The BackOffice and ServerAPI builds still report existing `SixLabors.ImageSharp` vulnerability warnings, but the gallery upload fix itself is validated and green.
 
 ## Residual Risks
 

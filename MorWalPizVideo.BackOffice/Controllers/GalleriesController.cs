@@ -81,7 +81,7 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
             try
             {
                 await using var input = file.OpenReadStream();
-                var prepared = await ChannelNewsMediaProcessor.PrepareImageAsync(input);
+                var prepared = await ChannelNewsMediaProcessor.PrepareImageAsIsAsync(input);
                 var storageKey = $"galleries/{channelId}/{existing.Id}/{Guid.NewGuid():N}{prepared.Extension}";
                 await blobService.UploadImagesAsync(storageKey, prepared.Content, false, HttpContext.RequestAborted);
                 images.Add(new GalleryImage { StorageKey = storageKey, PublicUrl = blobService.GetImageUrl(storageKey), ContentType = prepared.ContentType, Width = prepared.Width, Height = prepared.Height, DisplayOrder = images.Count });

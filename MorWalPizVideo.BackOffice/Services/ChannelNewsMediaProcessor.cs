@@ -28,6 +28,29 @@ public static class ChannelNewsMediaProcessor
         return new PreparedChannelNewsImage(output, image.Width, image.Height, "image/jpeg", ".jpg");
     }
 
+    public static async Task<PreparedChannelNewsImage> PrepareImageAsIsAsync(Stream input)
+    {
+        if (!input.CanSeek)
+            throw new InvalidOperationException("The image stream must be seekable to preserve the original upload.");
+
+        var original = new MemoryStream();
+        await input.CopyToAsync(original);
+        original.Position = 0;
+
+        var format = await Image.DetectFormatAsync(original);
+        if (format is null)
+            throw new InvalidDataException("The uploaded image format is not supported.");
+
+        var imageInfo = await Image.IdentifyAsync(original);
+        original.Position = 0;
+
+        var output = new MemoryStream();
+        await original.CopyToAsync(output);
+        output.Position = 0;
+
+        return new PreparedChannelNewsImage(output, imageInfo.Width, imageInfo.Height, format.DefaultMimeType, GetFormatExtension(format.DefaultMimeType));
+    }
+
     public static async Task<PreparedChannelNewsImage> PrepareLogoAsync(Stream input)
     {
         var signature = new byte[8];
@@ -66,4 +89,15 @@ public static class ChannelNewsMediaProcessor
             Size = new Size(maxLongSide, maxShortSide)
         }));
     }
+
+    private static string GetFormatExtension(string mimeType)
+        => mimeType.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/jpeg" => ".jpg",
+            "image/webp" => ".webp",
+            "image/gif" => ".gif",
+            "image/bmp" => ".bmp",
+            _ => ".bin"
+        };
 }
