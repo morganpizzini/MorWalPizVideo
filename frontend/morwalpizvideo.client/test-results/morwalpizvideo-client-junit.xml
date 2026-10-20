@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.088522">
+    <testsuite name="src/routes/gallery-route.test.tsx" timestamp="2026-10-20T08:51:49.763Z" hostname="MorganPizzini" tests="1" failures="0" errors="0" skipped="0" time="0.0094641">
+        <testcase classname="src/routes/gallery-route.test.tsx" name="public gallery route &gt; resolves a direct gallery link outside the application shell" time="0.0073846">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/routes/blog/index.test.tsx" timestamp="2026-10-20T08:51:49.771Z" hostname="MorganPizzini" tests="4" failures="0" errors="0" skipped="0" time="0.068857">
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; validates pagination and uses only the public published API" time="0.0150564">
+        </testcase>
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; maps missing/unpublished articles to a route 404" time="0.0019125">
+        </testcase>
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; renders the list empty state and stable public links on the server" time="0.0387677">
+        </testcase>
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; server-renders published body with canonical and absolute image SEO" time="0.0106298">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/routes/matches/loader.test.ts" timestamp="2026-10-20T08:51:49.777Z" hostname="MorganPizzini" tests="2" failures="0" errors="0" skipped="0" time="0.0102009">
+        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; keeps contract image order and does not mix in the legacy image endpoint" time="0.0054107">
+        </testcase>
+        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; uses legacy image URLs when the contract has no images field" time="0.0022023">
+        </testcase>
+    </testsuite>
+</testsuites>

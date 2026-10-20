@@ -867,8 +867,6 @@ export function createApiClient({
       headers.delete("Cookie2");
       headers.delete("X-Channel-Id");
       headers.delete("X-CSRF-TOKEN");
-      if (extraHeaders?.["X-Channel-Id"])
-        headers.set("X-Channel-Id", extraHeaders["X-Channel-Id"]);
     }
 
     // Add authorization header if user is authenticated

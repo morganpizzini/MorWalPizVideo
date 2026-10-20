@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="0.7743613">
-    <testsuite name="src/routes/videos/detail/Component.test.tsx" timestamp="2026-10-11T08:32:05.796Z" hostname="MorganPizzini" tests="1" failures="0" errors="0" skipped="0" time="0.7743613">
-        <testcase classname="src/routes/videos/detail/Component.test.tsx" name="video detail images &gt; uploads selected files and deletes an image using the updated contract" time="0.7660722">
-        </testcase>
-    </testsuite>
-</testsuites>

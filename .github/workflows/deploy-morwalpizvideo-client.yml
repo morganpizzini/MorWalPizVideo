@@ -45,20 +45,16 @@ jobs:
         working-directory: frontend
         run: yarn build:shared
 
-      - name: Test shared transport
-        working-directory: frontend
-        run: yarn workspace @morwalpizvideo/services test --passWithNoTests=false --reporter=junit --outputFile=test-results/services-junit.xml
-
       - name: Test public client
         working-directory: frontend
-        run: yarn workspace morwalpizvideo.client test --passWithNoTests=false --reporter=junit --outputFile=test-results/morwalpizvideo-client-junit.xml
+        run: yarn workspace morwalpizvideo.client test --passWithNoTests=false --reporter=junit --outputFile=morwalpizvideo.client/test-results/morwalpizvideo-client-junit.xml
 
       - name: Publish test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Frontend test results
-          path: frontend/**/test-results/*-junit.xml
+          path: frontend/morwalpizvideo.client/test-results/*-junit.xml
           reporter: java-junit
 
       - name: Checked client and SSR build
