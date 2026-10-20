@@ -53,3 +53,14 @@ Added the missing BackOffice navigation and route access for gallery management:
 Focused validation command: `yarn --cwd frontend/back-office-spa vitest run src/layouts/adminMenu.test.ts --reporter=verbose --pool=threads --maxWorkers=1 --minWorkers=1` completed without reported failures. The initial pre-fix invocation stalled before producing assertions, so the test was retained as the regression proof but its pre-fix failure output could not be captured in this environment.
 
 Residual risk: gallery management remains dependent on the existing gallery route module and backend authorization; this change only restores its BackOffice menu and route reachability.
+
+## Scoped gallery transport regression
+
+The shared frontend transport now treats `/api/galleries` as a channel-scoped BackOffice request, so admin gallery reads receive the selected `X-Channel-Id` header like the other scoped resources.
+
+Modified files:
+
+- `frontend/fe-packages/services/src/apiTransport.ts`: added `/api/galleries` to the scoped request prefixes.
+- `frontend/fe-packages/services/src/apiTransport.readiness.test.ts`: added regression coverage for selected-channel injection on gallery requests.
+
+Validation: editor diagnostics report no errors for either touched source file. The focused Vitest command could not run in the current shell because `yarn`, `npm`, `node`, and local Vitest executables were unavailable; no test result is claimed here.

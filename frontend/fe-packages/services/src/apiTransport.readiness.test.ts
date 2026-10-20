@@ -33,6 +33,23 @@ describe("channel bootstrap readiness", () => {
     }
   });
 
+  it("injects the selected channel for scoped gallery requests", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const bootstrap = startChannelBootstrap();
+    const request = adminApiService.get("/api/galleries");
+
+    resolveChannelBootstrap(bootstrap, "gallery-channel");
+    await request;
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"),
+    ).toBe("gallery-channel");
+  });
+
   it("fails scoped requests locally when no channel is assigned", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
