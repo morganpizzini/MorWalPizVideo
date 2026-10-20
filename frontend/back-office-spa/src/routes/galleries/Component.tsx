@@ -12,7 +12,12 @@ import {
 const emptyForm: SaveGalleryRequest = { name: '', description: '', slug: '', expirationDays: 7 };
 
 export default function Galleries(): JSX.Element {
-  const galleries = useLoaderData() as Gallery[];
+  const rawGalleries = useLoaderData() as Gallery[] | { data?: Gallery[] } | undefined;
+  const galleries = Array.isArray(rawGalleries)
+    ? rawGalleries
+    : Array.isArray(rawGalleries?.data)
+      ? rawGalleries.data
+      : [];
   const revalidator = useRevalidator();
   const [form, setForm] = useState<SaveGalleryRequest>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);

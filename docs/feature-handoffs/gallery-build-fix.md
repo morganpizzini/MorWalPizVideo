@@ -42,3 +42,18 @@ Validation passed with `npx --no-install tsc -p frontend/back-office-spa/tsconfi
 
 No known residual risk beyond the existing generated test-result changes in the
 working tree, which are unrelated to this fix.
+
+## Loader Shape Regression Test
+
+Added `frontend/back-office-spa/src/routes/galleries/Component.test.tsx`.
+The test mocks `useLoaderData()` with the API response envelope `{ data: [] }`
+and asserts that the component can render it. Before the production fix, the
+component calls `.find()` on the envelope and the assertion fails; the test is
+intended to pass once the loader data is unwrapped.
+
+Validation performed:
+
+- Type diagnostics for the new test: passed with no errors.
+- Focused Vitest attempts reached the local Vitest runner, but stalled after
+	startup in this workspace and did not emit a completed test result.
+- The generic test tool did not discover the standalone TSX test file.
