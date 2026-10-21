@@ -150,7 +150,7 @@ export default function Gallery(): JSX.Element {
         <div className="gallery-grid row g-3">
           {gallery.images.map((image, index) => (
             <article
-              className="gallery-card col-12 col-sm-6 col-lg-4 position-relative"
+              className="gallery-card col-12 col-sm-6 col-lg-4 position-relative no-background"
               key={`${image}-${index}`}
             >
               <label className="gallery-checkbox form-check position-absolute m-2 rounded">

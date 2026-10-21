@@ -46,7 +46,9 @@ body::before {
 .grecaptcha-badge {
     visibility: hidden;
 }
-
+.no-background {
+    background: none !important;
+}
 .btn,
 .pop-up {
     transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
