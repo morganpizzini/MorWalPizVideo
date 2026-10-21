@@ -2,21 +2,32 @@ using System.IO.Compression;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts;
+using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.Domain;
+using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 
 [AllowAnonymous]
-[ApiController]
-[Route("api/galleries")]
-public sealed class GalleriesController(IGalleryRepository repository, IBlobService blobService) : ControllerBase
+public sealed class GalleriesController(IGalleryRepository repository, IBlobService blobService,IConfiguration _configuration, ILogger<GalleriesController> _logger) : ApplicationControllerBase
 {
+    private string? GetYouTubeChannelId()
+        {
+            var channelId = _configuration["YouTubeChannelId"]?.Trim();
+            if (string.IsNullOrWhiteSpace(channelId))
+            {
+                _logger.LogError("Public matches endpoint is missing the YouTubeChannelId configuration");
+            }
+
+            return channelId;
+        }
     [HttpGet("{slug}")]
     public async Task<IActionResult> Get(string slug)
     {
-        var channelId = Request.Headers["X-Channel-Id"].ToString().Trim();
+        var channelId = GetYouTubeChannelId();
         if (string.IsNullOrWhiteSpace(channelId)) return BadRequest("X-Channel-Id is required.");
         var item = await repository.GetBySlugAsync(channelId, slug);
         if (item is null || item.Expiration <= DateTime.UtcNow) return NotFound();
@@ -27,7 +38,7 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
     [HttpGet("{slug}/download")]
     public async Task<IActionResult> Download(string slug, [FromQuery] string? indexes = null)
     {
-        var channelId = Request.Headers["X-Channel-Id"].ToString().Trim();
+        var channelId = GetYouTubeChannelId();
         if (string.IsNullOrWhiteSpace(channelId)) return BadRequest("X-Channel-Id is required.");
         var item = await repository.GetBySlugAsync(channelId, slug);
         if (item is null || item.Expiration <= DateTime.UtcNow) return NotFound();
