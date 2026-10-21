@@ -450,6 +450,14 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public sealed class PartnerRepository(IMongoDatabase database)
+        : BaseRepository<Partner>(database, DbCollections.Partners), IPartnerRepository
+    {
+    }
+    public sealed class CampaignRepository(IMongoDatabase database)
+        : BaseRepository<Campaign>(database, DbCollections.Campaigns), ICampaignRepository
+    {
+    }
     public class ProductRepository : BaseRepository<Product>, IProductRepository
     {
         public ProductRepository(IMongoDatabase database) : base(database, DbCollections.Products)

@@ -328,6 +328,30 @@ const routeDefinitions: RouteConfig[] = [
       ],
     },
   ]),
+  group('partners', () => import('../../routes/partners/index'), [
+    indexFeature('', () => import('../../routes/partners/index')),
+    feature('create', () => import('../../routes/partners/form')),
+    {
+      path: ':id',
+      Component: Outlet,
+      children: [
+        indexFeature('', () => import('../../routes/partners/detail')),
+        feature('edit', () => import('../../routes/partners/form')),
+      ],
+    },
+  ]),
+  group('campaigns', () => import('../../routes/campaigns/index'), [
+    indexFeature('', () => import('../../routes/campaigns/index')),
+    feature('create', () => import('../../routes/campaigns/form')),
+    {
+      path: ':id',
+      Component: Outlet,
+      children: [
+        indexFeature('', () => import('../../routes/campaigns/detail')),
+        feature('edit', () => import('../../routes/campaigns/form')),
+      ],
+    },
+  ]),
   group('faq', () => import('../../routes/faq'), [
     indexFeature('', () => import('../../routes/faq')),
     feature('create', () => import('../../routes/faq/form')),

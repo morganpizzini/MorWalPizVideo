@@ -141,6 +141,16 @@ client may use only anonymous aggregate analytics, never sponsor IDs, titles,
 URLs, short codes, campaign/query data, or other sponsor-specific identifiers;
 navigation must not wait for analytics.
 
+### Creator Partnership Workspace
+
+BackOffice exposes channel-scoped partner and campaign administration at
+`/api/Partners` and `/api/Campaigns`. Campaign timeline entries are managed
+under `/api/Campaigns/{id}/timeline` and remain embedded in the campaign
+document. All routes require the selected channel scope and dedicated
+`partners.*` or `campaigns.*` permissions. Collection reads exclude archived
+partners and completed/archived campaigns unless `includeArchived=true` is
+requested. There is no public API or dashboard contract in the first release.
+
 ## Shop Contract
 
 The shop is an active commercial perimeter with manual payment handling.

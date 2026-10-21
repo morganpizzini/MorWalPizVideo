@@ -398,6 +398,8 @@ if (enableMock)
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IProductRepository, ProductMockRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorMockRepository>();
+    builder.Services.AddScoped<IPartnerRepository, PartnerMockRepository>();
+    builder.Services.AddScoped<ICampaignRepository, CampaignMockRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyMockRepository>();
     builder.Services.AddScoped<IPageRepository, PageMockRepository>();
     builder.Services.AddSingleton<IBlogRepository, BlogMockRepository>();
@@ -515,6 +517,8 @@ else
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
+    builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
+    builder.Services.AddScoped<ICampaignRepository, CampaignRepository>();
     builder.Services.AddScoped<ISponsorApplyRepository, SponsorApplyRepository>();
     builder.Services.AddScoped<IPageRepository, PageRepository>();
     builder.Services.AddScoped<IBlogRepository, BlogRepository>();

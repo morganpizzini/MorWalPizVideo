@@ -130,6 +130,18 @@ public static class AuthorizationPermissionKeys
   public const string SponsorsUpdate = "sponsors.update";
   public const string SponsorsDelete = "sponsors.delete";
 
+  public const string PartnersView = "partners.view";
+  public const string PartnersManage = "partners.manage";
+  public const string PartnersCreate = "partners.create";
+  public const string PartnersUpdate = "partners.update";
+  public const string PartnersDelete = "partners.delete";
+
+  public const string CampaignsView = "campaigns.view";
+  public const string CampaignsManage = "campaigns.manage";
+  public const string CampaignsCreate = "campaigns.create";
+  public const string CampaignsUpdate = "campaigns.update";
+  public const string CampaignsDelete = "campaigns.delete";
+
   public const string ProductsView = "products.view";
   public const string ProductsManage = "products.manage";
   public const string ProductsCreate = "products.create";

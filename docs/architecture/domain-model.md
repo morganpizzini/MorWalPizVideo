@@ -27,6 +27,10 @@ Owns channel identity and legacy embedded video/idea information. Short links ar
 
 Currently owns questions and all responses. Unbounded embedded responses risk MongoDB document growth and write contention. Keep form definition/questions together; migrate responses into a separate collection keyed by form ID.
 
+### Creator Partnership Workspace
+
+BackOffice owns the channel-scoped `Partner` and `Campaign` aggregates. Partner stores contact details and lifecycle status; Campaign references one partner and embeds administrative `TimelineEntry` records with a kind discriminator. Content references and timeline URLs remain strings rather than duplicated content or link aggregates. A dashboard and public API are deferred.
+
 ### DigitalProduct
 
 Represents a permanently free digital artifact. Target semantics:

@@ -22,6 +22,8 @@ public sealed class AuthorizationPermissionExpanderTests
     { AuthorizationPermissionKeys.ConfigurationsManage, [AuthorizationPermissionKeys.ConfigurationsView, AuthorizationPermissionKeys.ConfigurationsCreate, AuthorizationPermissionKeys.ConfigurationsUpdate, AuthorizationPermissionKeys.ConfigurationsDelete] },
     { AuthorizationPermissionKeys.ProductCategoriesManage, [AuthorizationPermissionKeys.ProductCategoriesView, AuthorizationPermissionKeys.ProductCategoriesCreate, AuthorizationPermissionKeys.ProductCategoriesUpdate, AuthorizationPermissionKeys.ProductCategoriesDelete] },
     { AuthorizationPermissionKeys.SponsorsManage, [AuthorizationPermissionKeys.SponsorsView, AuthorizationPermissionKeys.SponsorsCreate, AuthorizationPermissionKeys.SponsorsUpdate, AuthorizationPermissionKeys.SponsorsDelete] },
+    { AuthorizationPermissionKeys.PartnersManage, [AuthorizationPermissionKeys.PartnersView, AuthorizationPermissionKeys.PartnersCreate, AuthorizationPermissionKeys.PartnersUpdate, AuthorizationPermissionKeys.PartnersDelete] },
+    { AuthorizationPermissionKeys.CampaignsManage, [AuthorizationPermissionKeys.CampaignsView, AuthorizationPermissionKeys.CampaignsCreate, AuthorizationPermissionKeys.CampaignsUpdate, AuthorizationPermissionKeys.CampaignsDelete] },
     { AuthorizationPermissionKeys.ProductsManage, [AuthorizationPermissionKeys.ProductsView, AuthorizationPermissionKeys.ProductsCreate, AuthorizationPermissionKeys.ProductsUpdate, AuthorizationPermissionKeys.ProductsDelete] },
     { AuthorizationPermissionKeys.CompilationsManage, [AuthorizationPermissionKeys.CompilationsView, AuthorizationPermissionKeys.CompilationsCreate, AuthorizationPermissionKeys.CompilationsUpdate, AuthorizationPermissionKeys.CompilationsDelete] }
   };

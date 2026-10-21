@@ -125,6 +125,20 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.SponsorsUpdate,
           AuthorizationPermissionKeys.SponsorsDelete
         ],
+        [AuthorizationPermissionKeys.PartnersManage] =
+        [
+          AuthorizationPermissionKeys.PartnersView,
+          AuthorizationPermissionKeys.PartnersCreate,
+          AuthorizationPermissionKeys.PartnersUpdate,
+          AuthorizationPermissionKeys.PartnersDelete
+        ],
+        [AuthorizationPermissionKeys.CampaignsManage] =
+        [
+          AuthorizationPermissionKeys.CampaignsView,
+          AuthorizationPermissionKeys.CampaignsCreate,
+          AuthorizationPermissionKeys.CampaignsUpdate,
+          AuthorizationPermissionKeys.CampaignsDelete
+        ],
         [AuthorizationPermissionKeys.ProductsManage] =
         [
           AuthorizationPermissionKeys.ProductsView,

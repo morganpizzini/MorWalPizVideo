@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.1052973">
-    <testsuite name="src/routes/gallery-route.test.tsx" timestamp="2026-10-21T01:02:27.225Z" hostname="MorganPizzini" tests="1" failures="0" errors="0" skipped="0" time="0.0113754">
-        <testcase classname="src/routes/gallery-route.test.tsx" name="public gallery route &gt; resolves a direct gallery link outside the application shell" time="0.0088568">
+<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.119234">
+    <testsuite name="src/routes/gallery-route.test.tsx" timestamp="2026-10-21T13:13:36.247Z" hostname="MorganPizzini" tests="1" failures="0" errors="0" skipped="0" time="0.0105094">
+        <testcase classname="src/routes/gallery-route.test.tsx" name="public gallery route &gt; resolves a direct gallery link outside the application shell" time="0.0084911">
         </testcase>
     </testsuite>
-    <testsuite name="src/routes/blog/index.test.tsx" timestamp="2026-10-21T01:02:27.230Z" hostname="MorganPizzini" tests="4" failures="0" errors="0" skipped="0" time="0.0796373">
-        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; validates pagination and uses only the public published API" time="0.0173941">
+    <testsuite name="src/routes/blog/index.test.tsx" timestamp="2026-10-21T13:13:36.274Z" hostname="MorganPizzini" tests="4" failures="0" errors="0" skipped="0" time="0.0967947">
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; validates pagination and uses only the public published API" time="0.0185227">
         </testcase>
-        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; maps missing/unpublished articles to a route 404" time="0.0021643">
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; maps missing/unpublished articles to a route 404" time="0.0023671">
         </testcase>
-        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; renders the list empty state and stable public links on the server" time="0.044376">
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; renders the list empty state and stable public links on the server" time="0.0614217">
         </testcase>
-        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; server-renders published body with canonical and absolute image SEO" time="0.0129459">
+        <testcase classname="src/routes/blog/index.test.tsx" name="public blog routes &gt; server-renders published body with canonical and absolute image SEO" time="0.011533">
         </testcase>
     </testsuite>
-    <testsuite name="src/routes/matches/loader.test.ts" timestamp="2026-10-21T01:02:27.233Z" hostname="MorganPizzini" tests="2" failures="0" errors="0" skipped="0" time="0.0142846">
-        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; keeps contract image order and does not mix in the legacy image endpoint" time="0.0077688">
+    <testsuite name="src/routes/matches/loader.test.ts" timestamp="2026-10-21T13:13:36.359Z" hostname="MorganPizzini" tests="2" failures="0" errors="0" skipped="0" time="0.0119299">
+        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; keeps contract image order and does not mix in the legacy image endpoint" time="0.0062221">
         </testcase>
-        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; uses legacy image URLs when the contract has no images field" time="0.0027068">
+        <testcase classname="src/routes/matches/loader.test.ts" name="match detail loader &gt; uses legacy image URLs when the contract has no images field" time="0.0024121">
         </testcase>
     </testsuite>
 </testsuites>
-
+>

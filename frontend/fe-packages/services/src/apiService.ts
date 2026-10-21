@@ -56,6 +56,16 @@ import type {
   FaqCategoryAdmin,
 } from "@morwalpizvideo/models";
 import type { ChannelTerminology } from "@morwalpizvideo/models";
+import type {
+  Campaign,
+  CreateCampaignDTO,
+  CreatePartnerDTO,
+  CreateTimelineEntryDTO,
+  Partner,
+  UpdateCampaignDTO,
+  UpdatePartnerDTO,
+  UpdateTimelineEntryDTO,
+} from "@morwalpizvideo/models";
 import {
   awaitChannelReadiness,
   ChannelContextError,
@@ -409,6 +419,60 @@ export const publishAskToTelegram = (
   post(ComposeUrl(endpoints.ASK_ADMIN_PUBLISH_TELEGRAM, { id }), {});
 export const exportAskSubmissions = (id: string, includeName = false) =>
   getFile(ComposeUrl(endpoints.ASK_ADMIN_EXPORT, { id }), { includeName });
+
+export const fetchPartners = (): Promise<Partner[]> => get(endpoints.PARTNERS);
+export const getPartner = (id: string): Promise<Partner> =>
+  get(ComposeUrl(endpoints.PARTNERS_DETAIL, { id }));
+export const createPartner = (payload: CreatePartnerDTO): Promise<Partner> =>
+  post(endpoints.PARTNERS, payload);
+export const updatePartner = (
+  id: string,
+  payload: UpdatePartnerDTO,
+): Promise<Partner> =>
+  put(ComposeUrl(endpoints.PARTNERS_DETAIL, { id }), payload);
+export const deletePartner = (id: string): Promise<void> =>
+  Delete(ComposeUrl(endpoints.PARTNERS_DETAIL, { id }));
+
+export const fetchCampaigns = (): Promise<Campaign[]> =>
+  get(endpoints.CAMPAIGNS);
+export const getCampaign = (id: string): Promise<Campaign> =>
+  get(ComposeUrl(endpoints.CAMPAIGNS_DETAIL, { id }));
+export const createCampaign = (payload: CreateCampaignDTO): Promise<Campaign> =>
+  post(endpoints.CAMPAIGNS, payload);
+export const updateCampaign = (
+  id: string,
+  payload: UpdateCampaignDTO,
+): Promise<Campaign> =>
+  put(ComposeUrl(endpoints.CAMPAIGNS_DETAIL, { id }), payload);
+export const deleteCampaign = (id: string): Promise<void> =>
+  Delete(ComposeUrl(endpoints.CAMPAIGNS_DETAIL, { id }));
+export const createTimelineEntry = (
+  campaignId: string,
+  payload: CreateTimelineEntryDTO,
+): Promise<Campaign> =>
+  post(ComposeUrl(endpoints.CAMPAIGNS_TIMELINE, { id: campaignId }), payload);
+export const updateTimelineEntry = (
+  campaignId: string,
+  entryId: string,
+  payload: UpdateTimelineEntryDTO,
+): Promise<Campaign> =>
+  put(
+    ComposeUrl(endpoints.CAMPAIGNS_TIMELINE_DETAIL, {
+      id: campaignId,
+      entryId,
+    }),
+    payload,
+  );
+export const deleteTimelineEntry = (
+  campaignId: string,
+  entryId: string,
+): Promise<void> =>
+  Delete(
+    ComposeUrl(endpoints.CAMPAIGNS_TIMELINE_DETAIL, {
+      id: campaignId,
+      entryId,
+    }),
+  );
 
 /**
  * Auth token provider function type

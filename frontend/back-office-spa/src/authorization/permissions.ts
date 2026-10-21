@@ -44,6 +44,8 @@ export const permissions = {
     moderate: 'ask.moderate',
   },
   faq: { view: 'faq.view', manage: 'faq.manage', candidates: 'faq.candidates' },
+  partners: resourcePermissions('partners'),
+  campaigns: resourcePermissions('campaigns'),
   push: { platformSend: 'push.platform.send' },
   diagnostics: { view: 'diagnostics.view' },
   scripts: {
@@ -100,6 +102,8 @@ const routeResources: Record<string, StandardResource> = {
   keys: permissions.apikeys,
   ask: { ...permissions.ask, delete: 'ask.delete' },
   faq: resourcePermissions('faq'),
+  partners: permissions.partners,
+  campaigns: permissions.campaigns,
 };
 
 export function getRoutePermissions(path: string, action: boolean): readonly string[] {

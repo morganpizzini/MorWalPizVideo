@@ -170,6 +170,18 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: Activity,
       },
       {
+        label: 'Partners',
+        path: '/partners',
+        permissions: [permissions.partners.view, permissions.partners.manage],
+        icon: Users,
+      },
+      {
+        label: 'Campaigns',
+        path: '/campaigns',
+        permissions: [permissions.campaigns.view, permissions.campaigns.manage],
+        icon: FileText,
+      },
+      {
         label: 'Script Studio',
         path: '/script-studio',
         permissions: [permissions.scripts.studio],

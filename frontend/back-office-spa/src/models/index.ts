@@ -3,8 +3,26 @@ import { ShortLink, CreateShortLinkDTO, UpdateShortLinkDTO, LinkType } from './s
 import { Channel, CreateChannelDTO, UpdateChannelDTO } from './channel';
 import { Category, CreateCategoryDTO, UpdateCategoryDTO } from './categories';
 import { Product, CreateProductDTO, UpdateProductDTO } from './product';
-import { ProductCategory, CreateProductCategoryDTO, UpdateProductCategoryDTO } from './productCategory';
+import {
+  ProductCategory,
+  CreateProductCategoryDTO,
+  UpdateProductCategoryDTO,
+} from './productCategory';
 import { Sponsor, CreateSponsorDTO, UpdateSponsorDTO } from './sponsor';
+import {
+  PartnerStatus,
+  CampaignStatus,
+  TimelineEntryKind,
+  Partner,
+  Campaign,
+  TimelineEntry,
+  CreatePartnerDTO,
+  UpdatePartnerDTO,
+  CreateCampaignDTO,
+  UpdateCampaignDTO,
+  CreateTimelineEntryDTO,
+  UpdateTimelineEntryDTO,
+} from './creatorPartnership';
 import {
   ApiKeyDto,
   CreateApiKeyRequest,
@@ -36,6 +54,15 @@ export type {
   Sponsor,
   CreateSponsorDTO,
   UpdateSponsorDTO,
+  Partner,
+  Campaign,
+  TimelineEntry,
+  CreatePartnerDTO,
+  UpdatePartnerDTO,
+  CreateCampaignDTO,
+  UpdateCampaignDTO,
+  CreateTimelineEntryDTO,
+  UpdateTimelineEntryDTO,
   ApiKeyDto,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
@@ -44,4 +71,4 @@ export type {
   RegenerateApiKeyResponse,
 };
 
-export { LinkType };
+export { LinkType, PartnerStatus, CampaignStatus, TimelineEntryKind };

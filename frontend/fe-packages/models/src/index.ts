@@ -159,6 +159,23 @@ export type {
   UpdateProductCategoryDTO,
 } from "./productCategory";
 
+export {
+  PartnerStatus,
+  CampaignStatus,
+  TimelineEntryKind,
+} from "./creatorPartnership";
+export type {
+  Partner,
+  Campaign,
+  TimelineEntry,
+  CreatePartnerDTO,
+  UpdatePartnerDTO,
+  CreateCampaignDTO,
+  UpdateCampaignDTO,
+  CreateTimelineEntryDTO,
+  UpdateTimelineEntryDTO,
+} from "./creatorPartnership";
+
 // Query Link exports
 export type {
   QueryLink,

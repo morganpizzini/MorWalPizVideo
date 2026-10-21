@@ -162,6 +162,27 @@ namespace MorWalPiz.Contracts
             Slug = entity.Slug, Status = entity.Status, Policy = entity.Policy, SubmissionCount = submissionCount
         };
 
+        public static PartnerContract Convert(Partner entity) => new()
+        {
+            Id = entity.Id, ChannelId = entity.ChannelId, Name = entity.Name, ContactName = entity.ContactName,
+            ContactEmail = entity.ContactEmail, ContactPhone = entity.ContactPhone, WebsiteUrl = entity.WebsiteUrl,
+            Notes = entity.Notes, Status = entity.Status, UpdatedAt = entity.UpdatedAt
+        };
+
+        public static CampaignContract Convert(Campaign entity) => new()
+        {
+            Id = entity.Id, ChannelId = entity.ChannelId, PartnerId = entity.PartnerId, Title = entity.Title,
+            Description = entity.Description, Status = entity.Status, StartAt = entity.StartAt, EndAt = entity.EndAt,
+            ContentReferences = entity.ContentReferences, TimelineEntries = entity.TimelineEntries.Select(Convert).ToArray(),
+            UpdatedAt = entity.UpdatedAt
+        };
+
+        public static TimelineEntryContract Convert(TimelineEntry entity) => new()
+        {
+            Id = entity.Id, Kind = entity.Kind, Title = entity.Title, Description = entity.Description,
+            OccurredAt = entity.OccurredAt, DueAt = entity.DueAt, Url = entity.Url, IsComplete = entity.IsComplete
+        };
+
         public static AskSubmissionContract Convert(AskSubmission entity) => new()
         {
             Id = entity.Id, CampaignId = entity.CampaignId, Text = entity.Text, Name = entity.Name,

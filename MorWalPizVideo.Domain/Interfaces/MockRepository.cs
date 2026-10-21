@@ -300,6 +300,14 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         {
         }
     }
+    public sealed class PartnerMockRepository(IMockScenario scenario)
+        : BaseMockRepository<Partner>(scenario, "partners"), IPartnerRepository
+    {
+    }
+    public sealed class CampaignMockRepository(IMockScenario scenario)
+        : BaseMockRepository<Campaign>(scenario, "creatorCampaigns"), ICampaignRepository
+    {
+    }
     public class YTChannelMockRepository : BaseMockRepository<YTChannel>, IYTChannelRepository
     {
         public YTChannelMockRepository(IMockScenario scenario) : base(scenario, "ytchannels")

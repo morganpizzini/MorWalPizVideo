@@ -154,6 +154,8 @@ namespace MorWalPizVideo.Server.Services
         private readonly IInsightNewsItemRepository _insightNewsItemRepository;
         private readonly IInsightContentPlanRepository _insightContentPlanRepository;
         private readonly IInsightSourceCursorRepository _insightSourceCursorRepository;
+        private readonly IPartnerRepository _partnerRepository;
+        private readonly ICampaignRepository _campaignRepository;
         public DataService(
             IYouTubeContentRepository youTubeContent,
             ISponsorApplyRepository sponsorApplyRepository,
@@ -180,6 +182,8 @@ namespace MorWalPizVideo.Server.Services
             IInsightContentPlanRepository insightContentPlanRepository,
             IInsightSourceCursorRepository insightSourceCursorRepository,
             ICompetitionRepository competitionRepository,
+            IPartnerRepository partnerRepository,
+            ICampaignRepository campaignRepository,
             IYouTubeContentIndexedCache? indexedCache = null) : base(youTubeContent, compilationRepository, customFormRepository, calendarEventRepository, configurationRepository, pageRepository, productRepository, sponsorRepository, sponsorApplyRepository, competitionRepository, shortLinkRepository, indexedCache)
         {
             _productCategoryRepository = productCategoryRepository;
@@ -197,6 +201,100 @@ namespace MorWalPizVideo.Server.Services
             _insightNewsItemRepository = insightNewsItemRepository;
             _insightContentPlanRepository = insightContentPlanRepository;
             _insightSourceCursorRepository = insightSourceCursorRepository;
+            _partnerRepository = partnerRepository;
+            _campaignRepository = campaignRepository;
+        }
+
+        public Task<IList<Partner>> GetPartnersAsync(string channelId, bool includeArchived = false) =>
+            _partnerRepository.GetItemsAsync(item => item.ChannelId == channelId && (includeArchived || item.Status != PartnerStatus.Archived));
+
+        public async Task<Partner?> GetPartnerAsync(string id, string channelId) =>
+            (await _partnerRepository.GetItemsAsync(item => item.Id == id && item.ChannelId == channelId)).FirstOrDefault();
+
+        public async Task<Partner?> SavePartnerAsync(Partner entity, string channelId)
+        {
+            var normalized = entity with { ChannelId = channelId, Name = entity.Name.Trim(), UpdatedAt = DateTime.UtcNow };
+            if (string.IsNullOrWhiteSpace(normalized.Name)) return null;
+            if ((await _partnerRepository.GetItemsAsync(item => item.ChannelId == channelId && item.Name.ToLower() == normalized.Name.ToLower())).Count > 0)
+                return null;
+            return await _partnerRepository.AddItemAsync(normalized);
+        }
+
+        public async Task<Partner?> UpdatePartnerAsync(Partner entity, string channelId)
+        {
+            var existing = await GetPartnerAsync(entity.Id, channelId);
+            if (existing is null) return null;
+            var updated = entity with { Id = existing.Id, ChannelId = channelId, Name = entity.Name.Trim(), UpdatedAt = DateTime.UtcNow };
+            if (string.IsNullOrWhiteSpace(updated.Name)) return null;
+            if ((await _partnerRepository.GetItemsAsync(item => item.ChannelId == channelId && item.Id != entity.Id && item.Name.ToLower() == updated.Name.ToLower())).Count > 0)
+                return null;
+            await _partnerRepository.UpdateItemAsync(updated);
+            return updated;
+        }
+
+        public async Task<bool> DeletePartnerAsync(string id, string channelId)
+        {
+            var partner = await GetPartnerAsync(id, channelId);
+            if (partner is null) return false;
+            if ((await _campaignRepository.GetItemsAsync(item => item.ChannelId == channelId && item.PartnerId == id)).Count > 0)
+                return false;
+            await _partnerRepository.DeleteItemAsync(id);
+            return true;
+        }
+
+        public Task<IList<Campaign>> GetCampaignsAsync(string channelId, bool includeArchived = false) =>
+            _campaignRepository.GetItemsAsync(item => item.ChannelId == channelId && (includeArchived || (item.Status != CampaignStatus.Archived && item.Status != CampaignStatus.Completed)));
+
+        public async Task<Campaign?> GetCampaignAsync(string id, string channelId) =>
+            (await _campaignRepository.GetItemsAsync(item => item.Id == id && item.ChannelId == channelId)).FirstOrDefault();
+
+        public async Task<Campaign?> SaveCampaignAsync(Campaign entity, string channelId)
+        {
+            if (await GetPartnerAsync(entity.PartnerId, channelId) is null) return null;
+            var normalized = entity with { ChannelId = channelId, Title = entity.Title.Trim(), UpdatedAt = DateTime.UtcNow };
+            if (string.IsNullOrWhiteSpace(normalized.Title)) return null;
+            return await _campaignRepository.AddItemAsync(normalized);
+        }
+
+        public async Task<Campaign?> UpdateCampaignAsync(Campaign entity, string channelId)
+        {
+            var existing = await GetCampaignAsync(entity.Id, channelId);
+            if (existing is null || await GetPartnerAsync(entity.PartnerId, channelId) is null) return null;
+            var updated = entity with { Id = existing.Id, ChannelId = channelId, Title = entity.Title.Trim(), UpdatedAt = DateTime.UtcNow };
+            if (string.IsNullOrWhiteSpace(updated.Title)) return null;
+            await _campaignRepository.UpdateItemAsync(updated);
+            return updated;
+        }
+
+        public async Task<bool> DeleteCampaignAsync(string id, string channelId)
+        {
+            if (await GetCampaignAsync(id, channelId) is null) return false;
+            await _campaignRepository.DeleteItemAsync(id);
+            return true;
+        }
+
+        public async Task<Campaign?> UpdateTimelineAsync(string campaignId, string channelId, string? entryId, TimelineEntry entry)
+        {
+            var campaign = await GetCampaignAsync(campaignId, channelId);
+            if (campaign is null) return null;
+            var entries = campaign.TimelineEntries.ToList();
+            var index = string.IsNullOrWhiteSpace(entryId) ? -1 : entries.FindIndex(item => item.Id == entryId);
+            if (index < 0)
+                entries.Add(entry with { Id = string.IsNullOrWhiteSpace(entryId) ? (string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString("N") : entry.Id) : entryId });
+            else
+                entries[index] = entry with { Id = entries[index].Id };
+            var updated = campaign with { TimelineEntries = entries.OrderBy(item => item.DueAt ?? item.OccurredAt ?? DateTime.MaxValue).ToArray(), UpdatedAt = DateTime.UtcNow };
+            await _campaignRepository.UpdateItemAsync(updated);
+            return updated;
+        }
+
+        public async Task<Campaign?> DeleteTimelineAsync(string campaignId, string channelId, string entryId)
+        {
+            var campaign = await GetCampaignAsync(campaignId, channelId);
+            if (campaign is null || campaign.TimelineEntries.All(item => item.Id != entryId)) return null;
+            var updated = campaign with { TimelineEntries = campaign.TimelineEntries.Where(item => item.Id != entryId).ToArray(), UpdatedAt = DateTime.UtcNow };
+            await _campaignRepository.UpdateItemAsync(updated);
+            return updated;
         }
 
         // Shop - DigitalProduct methods

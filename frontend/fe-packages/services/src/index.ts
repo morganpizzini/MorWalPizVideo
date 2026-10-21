@@ -146,6 +146,19 @@ export {
   getAskShare,
   publishAskToTelegram,
   exportAskSubmissions,
+  fetchPartners,
+  getPartner,
+  createPartner,
+  updatePartner,
+  deletePartner,
+  fetchCampaigns,
+  getCampaign,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  createTimelineEntry,
+  updateTimelineEntry,
+  deleteTimelineEntry,
 } from "./apiService";
 export type { AskPublicCampaign } from "./apiService";
 export {
