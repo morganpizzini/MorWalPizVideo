@@ -13,10 +13,8 @@
 
 Consult the relevant backend, frontend, Windows application, security, and feature documents linked from the architecture guide for implementation-specific rules. In particular, follow its cache-tag and HTTP-client guidance rather than duplicating those rules here.
 
-## Repository work routing:
-- Per ogni richiesta utente sul repository (analisi, modifiche, verifiche o review), usa `MorWalPiz Delivery Handoff` come punto d’ingresso e rispetta il suo gate.
-- Gli agenti già delegati dal Delivery Handoff eseguono il task assegnato senza riavviare il routing o richiamare il gatekeeper.
-- Le skills definiscono metodo o stile; non autorizzano modifiche né aggirano scope, approvazioni o validazione del Delivery Handoff.
-- Le operazioni Caveman Cloud restano fuori dal routing repository.
-- Quando un task richiede una revisione o una handoff tra architettura e sviluppo, il contenuto di sintesi deve essere salvato come file Markdown fisico nel repository in `docs/feature-handoffs/` (o in una cartella equivalente per la feature) e lasciato modificabile dall’utente prima di inviare il task al developer agent.
-- Dopo l’implementazione, lo stesso file Markdown deve essere aggiornato con i cambiamenti reali, la validazione eseguita e i rischi residui, così diventa documentazione utile della feature.
+## Repository work:
+- The user may select a custom agent directly from the agent picker; that agent should work on the request without requiring a separate routing agent.
+- Skills define methods or style and do not override the user's requested scope, approval, or validation requirements.
+- Caveman Cloud operations are separate from repository work.
+- When architecture planning is needed before implementation, save the user-editable summary as a Markdown file in `docs/feature-handoffs/` (or a feature-equivalent folder). After implementation, update it with actual changes, validation, and residual risks.

@@ -1,122 +1,121 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="42" failures="0" errors="0" time="0.2846018">
-    <testsuite name="src/apiService.test.ts" timestamp="2026-10-21T13:13:10.102Z" hostname="MorganPizzini" tests="18" failures="0" errors="0" skipped="0" time="0.1751922">
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; sends the selected channel for admin sponsor reads and mutations" time="0.0235042">
+<testsuites name="vitest tests" tests="42" failures="0" errors="0" time="0.621">
+    <testsuite name="src/apiService.test.ts" timestamp="2026-10-21T18:27:19.904Z" hostname="DESKTOP-6H90CST" tests="18" failures="0" errors="0" skipped="0" time="0.0208331">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; sends the selected channel for admin sponsor reads and mutations" time="0.0044713">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; keeps public sponsor requests anonymous and free of channel headers" time="0.0027776">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; keeps public sponsor requests anonymous and free of channel headers" time="0.0005591">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; routes every active public helper through omit without bearer, CSRF or admin channel" time="0.0199208">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; routes every active public helper through omit without bearer, CSRF or admin channel" time="0.0032839">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves frozen shop legacy bearer and credentials configuration independently" time="0.0093723">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves frozen shop legacy bearer and credentials configuration independently" time="0.0004576">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; isolates interleaved public/admin requests and rejects injected auth context" time="0.0057757">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; isolates interleaved public/admin requests and rejects injected auth context" time="0.0009702">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; owns SSR request base URLs, CSRF, channel and unauthorized callbacks independently" time="0.0058219">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; owns SSR request base URLs, CSRF, channel and unauthorized callbacks independently" time="0.0008247">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves runtime/build URL priority and explicit request-local URL overrides" time="0.0038595">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves runtime/build URL priority and explicit request-local URL overrides" time="0.000596">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; retries failed CSRF acquisition and never runs unauthorized recovery for login" time="0.016392">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; retries failed CSRF acquisition and never runs unauthorized recovery for login" time="0.0015225">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; unwraps data and preserves full-response and empty responses" time="0.0027733">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; unwraps data and preserves full-response and empty responses" time="0.0005067">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 400" time="0.0035047">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 400" time="0.0006003">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 404" time="0.0099849">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 404" time="0.0001965">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 409" time="0.0028387">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 409" time="0.0002076">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 429" time="0.0086236">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 429" time="0.0001431">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 503" time="0.0036248">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves error-return contracts for 503" time="0.0001392">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves blobs and network rejection" time="0.0465315">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; preserves blobs and network rejection" time="0.0042732">
             <system-out>
 api error TypeError: offline
-    at [90mC:\Users\morga\OneDrive\Desktop\MorWalPizVideo\frontend\fe-packages\services\[39msrc\apiService.test.ts:381:21
-    at [90mfile:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:155:11
-    at [90mfile:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:26
-    at [90mfile:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1897:20
-    at new Promise (&lt;anonymous&gt;)
-    at runWithTimeout [90m(file:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1863:10[90m)[39m
-    at runTest [90m(file:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1574:12[90m)[39m
+    at [90mC:\Users\Morgan\source\repos\MorWalPizVideo\frontend\fe-packages\services\[39msrc\apiService.test.ts:381:21
+    at file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:39:7)
+    at runTest (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:1056:17)
 [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-    at runSuite [90m(file:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8[90m)[39m
-    at runSuite [90m(file:///C:/Users/morga/OneDrive/Desktop/MorWalPizVideo/frontend/fe-packages/services/[39mnode_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/Morgan/source/repos/MorWalPizVideo/frontend/node_modules/[4m@vitest/runner[24m/dist/index.js:1271:3)
 
             </system-out>
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; shares CSRF within a session and reacquires after reset" time="0.002709">
+        <testcase classname="src/apiService.test.ts" name="transport response contracts &gt; shares CSRF within a session and reacquires after reset" time="0.0006252">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="requireSuccessfulResponse &gt; accepts a successful response" time="0.0003812">
+        <testcase classname="src/apiService.test.ts" name="requireSuccessfulResponse &gt; accepts a successful response" time="0.0000814">
         </testcase>
-        <testcase classname="src/apiService.test.ts" name="requireSuccessfulResponse &gt; rejects failed responses and preserves field errors" time="0.0019554">
-        </testcase>
-    </testsuite>
-    <testsuite name="src/apiTransport.readiness.test.ts" timestamp="2026-10-21T13:13:10.281Z" hostname="MorganPizzini" tests="6" failures="0" errors="0" skipped="0" time="0.0463818">
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; waits for readiness and injects the selected channel in both transports" time="0.0195868">
-        </testcase>
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; injects the selected channel for scoped gallery requests" time="0.0020311">
-        </testcase>
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; fails scoped requests locally when no channel is assigned" time="0.004852">
-        </testcase>
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; fails scoped requests locally when discovery fails" time="0.0069612">
-        </testcase>
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; does not allow a stale generation to settle the current generation" time="0.0049659">
-        </testcase>
-        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; coalesces concurrent accessible-channel requests for one generation" time="0.004679">
+        <testcase classname="src/apiService.test.ts" name="requireSuccessfulResponse &gt; rejects failed responses and preserves field errors" time="0.0003261">
         </testcase>
     </testsuite>
-    <testsuite name="src/insightsService.test.ts" timestamp="2026-10-21T13:13:10.319Z" hostname="MorganPizzini" tests="2" failures="0" errors="0" skipped="0" time="0.0084434">
-        <testcase classname="src/insightsService.test.ts" name="requireSuccessfulResponse &gt; accepts a completed response with an empty errors array" time="0.0032631">
+    <testsuite name="src/apiTransport.readiness.test.ts" timestamp="2026-10-21T18:27:19.911Z" hostname="DESKTOP-6H90CST" tests="6" failures="0" errors="0" skipped="0" time="0.009381">
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; waits for readiness and injects the selected channel in both transports" time="0.0044462">
         </testcase>
-        <testcase classname="src/insightsService.test.ts" name="requireSuccessfulResponse &gt; rejects a response containing errors" time="0.0023708">
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; injects the selected channel for scoped gallery requests" time="0.0005548">
+        </testcase>
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; fails scoped requests locally when no channel is assigned" time="0.0017599">
+        </testcase>
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; fails scoped requests locally when discovery fails" time="0.0004077">
+        </testcase>
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; does not allow a stale generation to settle the current generation" time="0.0004452">
+        </testcase>
+        <testcase classname="src/apiTransport.readiness.test.ts" name="channel bootstrap readiness &gt; coalesces concurrent accessible-channel requests for one generation" time="0.0009769">
         </testcase>
     </testsuite>
-    <testsuite name="src/pushNotifications.test.ts" timestamp="2026-10-21T13:13:10.328Z" hostname="MorganPizzini" tests="16" failures="0" errors="0" skipped="0" time="0.0545844">
-        <testcase classname="src/pushNotifications.test.ts" name="getPushSupport &gt; reports unsupported when the browser APIs are missing" time="0.0054441">
+    <testsuite name="src/insightsService.test.ts" timestamp="2026-10-21T18:27:19.912Z" hostname="DESKTOP-6H90CST" tests="2" failures="0" errors="0" skipped="0" time="0.0020102">
+        <testcase classname="src/insightsService.test.ts" name="requireSuccessfulResponse &gt; accepts a completed response with an empty errors array" time="0.0008793">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="getPushSupport &gt; reports the current browser permission when supported" time="0.0012227">
+        <testcase classname="src/insightsService.test.ts" name="requireSuccessfulResponse &gt; rejects a response containing errors" time="0.0005679">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; shows the prompt once and never again after a dismissal" time="0.005065">
+    </testsuite>
+    <testsuite name="src/pushNotifications.test.ts" timestamp="2026-10-21T18:27:19.912Z" hostname="DESKTOP-6H90CST" tests="16" failures="0" errors="0" skipped="0" time="0.0102271">
+        <testcase classname="src/pushNotifications.test.ts" name="getPushSupport &gt; reports unsupported when the browser APIs are missing" time="0.0012708">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; reflects an application decision in the default browser scope" time="0.0026488">
+        <testcase classname="src/pushNotifications.test.ts" name="getPushSupport &gt; reports the current browser permission when supported" time="0.0002104">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; keeps no-argument decisions in the default scope" time="0.0012009">
+        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; shows the prompt once and never again after a dismissal" time="0.001212">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; stays hidden when permission was already decided in the browser" time="0.0006214">
+        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; reflects an application decision in the default browser scope" time="0.0006782">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; subscribes and stores the minted credential for later anonymous management" time="0.0090287">
+        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; keeps no-argument decisions in the default scope" time="0.0002802">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; replays the stored credential when the same endpoint is re-subscribed" time="0.0019413">
+        <testcase classname="src/pushNotifications.test.ts" name="shouldShowPushPrompt &gt; stays hidden when permission was already decided in the browser" time="0.0001302">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; records a dismissal when the browser permission is refused" time="0.0016851">
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; subscribes and stores the minted credential for later anonymous management" time="0.0017126">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; requests permission before awaiting the public-key request" time="0.0035283">
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; replays the stored credential when the same endpoint is re-subscribed" time="0.0003733">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; reports unavailable when the server has no VAPID public key" time="0.0058662">
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; records a dismissal when the browser permission is refused" time="0.0002554">
+        </testcase>
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; requests permission before awaiting the public-key request" time="0.0007455">
+        </testcase>
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; reports unavailable when the server has no VAPID public key" time="0.0007055">
             <system-err>
 [push] activation failed { stage: [32m&apos;configuration&apos;[39m }
 
             </system-err>
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; distinguishes subscription failures from permission denial" time="0.0034576">
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; distinguishes subscription failures from permission denial" time="0.0002663">
             <system-err>
 [push] activation failed { stage: [32m&apos;subscription&apos;[39m }
 
             </system-err>
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; distinguishes persistence failures after a browser subscription" time="0.0026484">
+        <testcase classname="src/pushNotifications.test.ts" name="requestPushOptIn &gt; distinguishes persistence failures after a browser subscription" time="0.0002093">
             <system-err>
 [push] activation failed { stage: [32m&apos;persistence&apos;[39m }
 
             </system-err>
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="revokePushOptIn &gt; clears the stored credential and unsubscribes the browser" time="0.0023974">
+        <testcase classname="src/pushNotifications.test.ts" name="revokePushOptIn &gt; clears the stored credential and unsubscribes the browser" time="0.0003295">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="revokePushOptIn &gt; is a no-op without a stored credential" time="0.0014977">
+        <testcase classname="src/pushNotifications.test.ts" name="revokePushOptIn &gt; is a no-op without a stored credential" time="0.0001328">
         </testcase>
-        <testcase classname="src/pushNotifications.test.ts" name="urlBase64ToUint8Array &gt; decodes url-safe base64 VAPID keys" time="0.001371">
+        <testcase classname="src/pushNotifications.test.ts" name="urlBase64ToUint8Array &gt; decodes url-safe base64 VAPID keys" time="0.0000971">
         </testcase>
     </testsuite>
 </testsuites>
->

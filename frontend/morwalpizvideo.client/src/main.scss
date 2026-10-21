@@ -91,3 +91,179 @@ body::before {
 .c-pointer {
     cursor: pointer;
 }
+
+.gallery-page {
+    max-width: 1320px;
+}
+
+.gallery-header h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.gallery-kicker {
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.gallery-toolbar {
+    border: 1px solid rgba(33, 37, 41, 0.12);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.06);
+}
+
+.gallery-selection {
+    color: #495057;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.gallery-card {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-card:hover {
+    transform: translateY(-0.2rem);
+    box-shadow: 0 0.6rem 1.4rem rgba(33, 37, 41, 0.16);
+}
+
+.gallery-image-button {
+    display: block;
+    cursor: zoom-in;
+}
+
+.gallery-image {
+    display: block;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.gallery-card:hover .gallery-image {
+    transform: scale(1.03);
+}
+
+.gallery-checkbox {
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0.15rem 0.4rem rgba(33, 37, 41, 0.15);
+    cursor: pointer;
+}
+
+.gallery-checkbox .form-check-input {
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0;
+}
+
+.gallery-checkbox--table {
+    margin: 0 0 0 auto;
+}
+
+.gallery-table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
+}
+
+.gallery-table th,
+.gallery-table td {
+    padding: 0.75rem 1rem;
+}
+
+.gallery-table th:last-child,
+.gallery-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.gallery-table-image {
+    width: 7rem;
+    flex: 0 0 7rem;
+}
+
+.gallery-list-image {
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    object-fit: cover;
+}
+
+.gallery-modal {
+    inset: 0;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 0.5rem;
+}
+
+.gallery-modal .modal-dialog {
+    width: min(100%, 1140px);
+    max-width: 1140px;
+    height: calc(100vh - 1rem);
+    max-height: calc(100vh - 1rem);
+    height: calc(100dvh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    margin: 0 auto;
+}
+
+.gallery-modal .modal-content {
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.gallery-modal .modal-body {
+    min-height: 0;
+    overflow: auto;
+}
+
+.gallery-modal-image {
+    max-height: calc(100vh - 11rem);
+    max-height: calc(100dvh - 11rem);
+    object-fit: contain;
+}
+
+@media (max-width: 575.98px) {
+    .gallery-table th,
+    .gallery-table td {
+        padding: 0.75rem;
+    }
+
+    .gallery-table-image {
+        width: 5rem;
+        flex-basis: 5rem;
+    }
+
+    .gallery-table th,
+    .gallery-table td {
+        vertical-align: middle;
+    }
+
+    .gallery-table td:last-child .btn {
+        padding-inline: 0.55rem;
+    }
+
+    .gallery-checkbox {
+        min-width: 3rem;
+        min-height: 3rem;
+    }
+
+    .gallery-checkbox .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+}
