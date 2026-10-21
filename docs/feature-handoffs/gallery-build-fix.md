@@ -12,14 +12,14 @@ repository's React 19 and TypeScript 5.7 setup.
 
 - `frontend/fe-packages/services/src/index.ts`: re-export the gallery service functions.
 - `frontend/fe-packages/services/src/apiService.ts`: existing gallery implementations; no behavior change.
-- `frontend/back-office-spa/src/routes/galleries/Component.tsx`: use the React-provided JSX type.
-- `frontend/back-office-spa/src/routes/galleries/loader.ts`: existing `getGalleries` consumer, covered by the barrel export.
+- `frontend/back-office-spa/src/routes/galleries/detail/Component.tsx`: normalize optional loader data before use.
+- `frontend/back-office-spa/src/routes/galleries/form/action.ts`: narrow error responses before reading status and errors.
 
 ## Scope
 
-Keep the fix limited to public service exports and the component type
-reference. Preserve gallery routes, request payloads, response types, and UI
-behavior. No backend, API contract, or persistence changes are required.
+Keep the fix limited to the gallery service barrel and affected route files.
+Preserve gallery routes, request payloads, response types, and UI behavior. No
+backend, API contract, or persistence changes are required.
 
 ## Validation plan
 
@@ -31,17 +31,41 @@ npx tsc -p frontend/back-office-spa/tsconfig.app.json --noEmit
 
 ## Implementation and validation
 
-Implemented the missing barrel exports for `getGalleries`, `createGallery`,
-`updateGallery`, `deleteGallery`, and `uploadGalleryImages`. Updated the gallery
-component to import `JSX` as a type from React and use it for the component
-return type.
+Implemented the missing `getGallery` barrel export. The detail component now
+normalizes an optional gallery response envelope before use, and the form
+action now safely narrows unknown error responses before reading `status` and
+`errors`. Existing gallery API implementations and loader behavior are
+unchanged.
 
 Validation passed with `npx --no-install tsc -p frontend/back-office-spa/tsconfig.app.json --noEmit --pretty false` from the repository root (exit code 0, no compiler diagnostics).
 
 ## Residual risks
 
-No known residual risk beyond the existing generated test-result changes in the
-working tree, which are unrelated to this fix.
+No known residual risk. The focused TypeScript check does not execute runtime
+loader or action tests.
+
+## Gallery Route TypeScript Correction (2026-10-21)
+
+The detail route now normalizes `Gallery | { data?: Gallery } | undefined`
+loader data before rendering and captures the defined gallery id for the upload
+callback. The form component supplies the required initial value to `useRef`.
+The form action narrows an unknown response before reading optional `status` and
+`errors` fields. The services barrel now exports the existing `getGallery`
+implementation. No API service, loader, request, or UI behavior changed.
+
+Focused validation passed with the locally installed compiler:
+
+```text
+frontend/back-office-spa/node_modules/.bin/tsc.cmd -p frontend/back-office-spa/tsconfig.app.json --noEmit --pretty false
+```
+
+Result: exit code 0, no compiler diagnostics. The requested `npx --no-install`
+form was also attempted, but this environment intercepted it with the `ctx7`
+setup command before TypeScript ran; the direct local compiler invocation is
+the authoritative result.
+
+Residual risk: this validation is compile-only and does not execute gallery
+loader or action runtime tests.
 
 ## Loader Shape Regression Test
 

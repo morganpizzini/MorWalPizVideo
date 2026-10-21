@@ -9,12 +9,16 @@ import DetailPanel from '@components/DetailPanel';
 import { PageSkeleton } from '@components/LoadingSkeleton';
 
 export default function GalleryDetail(): React.ReactElement {
-  const rawGallery = useResolvedLoaderData<Gallery | { data?: Gallery }>();
-  const gallery = 'data' in rawGallery ? rawGallery.data : rawGallery;
+  const rawGallery = useResolvedLoaderData<Gallery | { data?: Gallery } | undefined>();
+  const gallery: Gallery | undefined =
+    rawGallery && 'id' in rawGallery ? rawGallery : rawGallery?.data;
   const revalidator = useRevalidator();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+
+  if (!gallery) return <PageSkeleton />;
+  const galleryId = gallery.id;
 
   async function upload(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -22,7 +26,7 @@ export default function GalleryDetail(): React.ReactElement {
     setUploading(true);
     setError('');
     try {
-      await uploadGalleryImages(gallery.id, files);
+      await uploadGalleryImages(galleryId, files);
       revalidator.revalidate();
       if (inputRef.current) inputRef.current.value = '';
     } catch {
@@ -31,8 +35,6 @@ export default function GalleryDetail(): React.ReactElement {
       setUploading(false);
     }
   }
-
-  if (!gallery) return <PageSkeleton />;
 
   return (
     <>

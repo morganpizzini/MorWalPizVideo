@@ -2,6 +2,14 @@ import { data } from 'react-router';
 import { createGallery, updateGallery } from '@morwalpizvideo/services';
 import type { SaveGalleryRequest } from '@morwalpizvideo/models';
 
+function isErrorResponse(response: unknown): response is { errors?: unknown[]; status?: number } {
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    ('errors' in response || 'status' in response)
+  );
+}
+
 export default async function action({
   request,
   params,
@@ -23,12 +31,12 @@ export default async function action({
   if (Object.keys(errors).length) return data({ success: false, errors }, { status: 400 });
   const payload: SaveGalleryRequest = { name, slug, description, expirationDays };
   try {
-    const response = params.id
+    const response: unknown = params.id
       ? await updateGallery(params.id, payload)
       : await createGallery(payload);
-    if (response && 'errors' in response && response.errors) {
+    if (isErrorResponse(response) && response.errors?.length) {
       return data(
-        { success: false, errors: { generics: response.errors } },
+        { success: false, errors: { generics: response.errors.map(String) } },
         { status: response.status ?? 500 }
       );
     }

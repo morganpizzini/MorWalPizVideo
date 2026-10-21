@@ -76,6 +76,7 @@ export {
   uploadChannelNewsImages,
   deleteChannelNewsImage,
   getGalleries,
+  getGallery,
   createGallery,
   updateGallery,
   deleteGallery,

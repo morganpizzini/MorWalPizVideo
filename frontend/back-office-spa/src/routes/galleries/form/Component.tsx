@@ -19,7 +19,7 @@ export default function GalleryForm(): React.ReactElement {
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const toast = useToast();
-  const lastResult = useRef<unknown>();
+  const lastResult = useRef<unknown>(undefined);
   const busy = fetcher.state !== 'idle';
 
   useEffect(() => {
