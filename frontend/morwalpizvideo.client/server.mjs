@@ -2,7 +2,10 @@
 // since some packages (react-ga4, etc.) reference window at module level.
 globalThis.window = globalThis.window ?? {
     location: { href: '', pathname: '/', hostname: 'localhost', protocol: 'https:', host: 'localhost' },
-    ENV: {},
+    ENV: {
+        VITE_API_BASE_URL: process.env.VITE_API_BASE_URL ?? '',
+        API_BASE_URL: process.env.API_BASE_URL ?? '',
+    },
     localStorage: {
         getItem: () => null,
         setItem: () => {},
