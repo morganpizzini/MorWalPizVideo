@@ -7,17 +7,10 @@ const channelId =
   )?.trim() ?? '';
 
 export function fetchPublicGallery(slug: string) {
-  if (!channelId) {
-    throw new Response('Gallery channel is not configured', { status: 503 });
-  }
-
-  return getPublicGallery(slug, channelId);
+ 
+  return getPublicGallery(slug, '');
 }
 
 export function downloadGallery(slug: string, indexes?: number[]) {
-  if (!channelId) {
-    throw new Response('Gallery channel is not configured', { status: 503 });
-  }
-
-  return downloadPublicGallery(slug, channelId, indexes);
+  return downloadPublicGallery(slug, '', indexes);
 }
