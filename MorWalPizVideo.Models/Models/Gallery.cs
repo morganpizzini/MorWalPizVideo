@@ -9,6 +9,8 @@ public sealed record GalleryImage
 {
     [DataMember][BsonElement("storageKey")] public string StorageKey { get; init; } = string.Empty;
     [DataMember][BsonElement("publicUrl")] public string PublicUrl { get; init; } = string.Empty;
+    [DataMember][BsonElement("previewStorageKey")] public string? PreviewStorageKey { get; init; }
+    [DataMember][BsonElement("previewPublicUrl")] public string? PreviewPublicUrl { get; init; }
     [DataMember][BsonElement("contentType")] public string ContentType { get; init; } = string.Empty;
     [DataMember][BsonElement("width")] public int Width { get; init; }
     [DataMember][BsonElement("height")] public int Height { get; init; }

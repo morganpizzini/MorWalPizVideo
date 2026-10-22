@@ -38,7 +38,11 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
     {
         var validation = Validate(request);
         if (validation is not null) return BadRequest(validation);
-        var item = await repository.AddItemAsync(ToEntity(request, HttpContext.GetChannelContext().ChannelId));
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var normalizedSlug = Gallery.NormalizeSlug(request.Slug);
+        if (await repository.GetBySlugAsync(channelId, normalizedSlug) is not null)
+            return Conflict("A gallery with this slug already exists for the selected channel.");
+        var item = await repository.AddItemAsync(ToEntity(request, channelId));
         return CreatedAtAction(nameof(Get), new { id = item.Id }, ContractUtils.Convert(item));
     }
 
@@ -50,7 +54,11 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
         if (validation is not null) return BadRequest(validation);
         var current = (await repository.GetItemsAsync(item => item.Id == id && item.ChannelId == HttpContext.GetChannelContext().ChannelId)).FirstOrDefault();
         if (current is null) return NotFound();
-        var item = current with { Name = request.Name.Trim(), Description = request.Description?.Trim(), Slug = Gallery.NormalizeSlug(request.Slug), Expiration = DateTime.UtcNow.AddDays(request.ExpirationDays) };
+        var channelId = HttpContext.GetChannelContext().ChannelId;
+        var normalizedSlug = Gallery.NormalizeSlug(request.Slug);
+        if (await repository.GetBySlugAsync(channelId, normalizedSlug) is { } duplicate && duplicate.Id != current.Id)
+            return Conflict("A gallery with this slug already exists for the selected channel.");
+        var item = current with { Name = request.Name.Trim(), Description = request.Description?.Trim(), Slug = normalizedSlug, Expiration = DateTime.UtcNow.AddDays(request.ExpirationDays) };
         await repository.UpdateItemAsync(item);
         return Ok(ContractUtils.Convert(item));
     }
@@ -61,7 +69,12 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
     {
         var item = (await repository.GetItemsAsync(entity => entity.Id == id && entity.ChannelId == HttpContext.GetChannelContext().ChannelId)).FirstOrDefault();
         if (item is null) return NotFound();
-        foreach (var image in item.BlobReference) await blobService.DeleteImageAsync(image.StorageKey);
+        foreach (var image in item.BlobReference)
+        {
+            await blobService.DeleteImageAsync(image.StorageKey);
+            if (!string.IsNullOrWhiteSpace(image.PreviewStorageKey))
+                await blobService.DeleteImageAsync(image.PreviewStorageKey);
+        }
         await repository.DeleteItemAsync(id);
         return NoContent();
     }
@@ -75,25 +88,48 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
         if (existing is null) return NotFound();
         if (files.Count == 0) return BadRequest("At least one image is required.");
         var images = existing.BlobReference.ToList();
+        var uploadedKeys = new List<string>();
         foreach (var file in files)
         {
-            if (file.Length == 0) return BadRequest("Empty images are not allowed.");
+            if (file.Length == 0)
+            {
+                foreach (var uploadedKey in uploadedKeys)
+                    await blobService.DeleteImageAsync(uploadedKey);
+                return BadRequest("Empty images are not allowed.");
+            }
             try
             {
                 await using var input = file.OpenReadStream();
                 var prepared = await ChannelNewsMediaProcessor.PrepareImageAsIsAsync(input);
                 var storageKey = $"galleries/{channelId}/{existing.Id}/{Guid.NewGuid():N}{prepared.Extension}";
                 await blobService.UploadImagesAsync(storageKey, prepared.Content, false, HttpContext.RequestAborted);
-                images.Add(new GalleryImage { StorageKey = storageKey, PublicUrl = blobService.GetImageUrl(storageKey), ContentType = prepared.ContentType, Width = prepared.Width, Height = prepared.Height, DisplayOrder = images.Count });
+                uploadedKeys.Add(storageKey);
+                prepared.Content.Position = 0;
+                var preview = await ChannelNewsMediaProcessor.PrepareImageAsync(prepared.Content);
+                var previewKey = $"galleries/{channelId}/{existing.Id}/{Guid.NewGuid():N}-preview{preview.Extension}";
+                await blobService.UploadImagesAsync(previewKey, preview.Content, false, HttpContext.RequestAborted);
+                uploadedKeys.Add(previewKey);
+                images.Add(new GalleryImage { StorageKey = storageKey, PublicUrl = blobService.GetImageUrl(storageKey), PreviewStorageKey = previewKey, PreviewPublicUrl = blobService.GetImageUrl(previewKey), ContentType = prepared.ContentType, Width = prepared.Width, Height = prepared.Height, DisplayOrder = images.Count });
             }
             catch (Exception exception)
             {
+                foreach (var uploadedKey in uploadedKeys)
+                    await blobService.DeleteImageAsync(uploadedKey);
                 return BadRequest($"Image '{file.FileName}' is not a valid decodable image: {exception.Message}");
             }
         }
-        var updated = existing with { BlobReference = images };
-        await repository.UpdateItemAsync(updated);
-        return Ok(ContractUtils.Convert(updated));
+        try
+        {
+            var updated = existing with { BlobReference = images };
+            await repository.UpdateItemAsync(updated);
+            return Ok(ContractUtils.Convert(updated));
+        }
+        catch
+        {
+            foreach (var uploadedKey in uploadedKeys)
+                await blobService.DeleteImageAsync(uploadedKey);
+            throw;
+        }
     }
 
     [HttpDelete("{id}/images/{imageIndex:int}")]
@@ -107,6 +143,8 @@ public sealed class GalleriesController(IGalleryRepository repository, IBlobServ
         var updated = existing with { BlobReference = existing.BlobReference.Where((_, index) => index != imageIndex).Select((item, index) => item with { DisplayOrder = index }).ToArray() };
         await repository.UpdateItemAsync(updated);
         await blobService.DeleteImageAsync(image.StorageKey);
+        if (!string.IsNullOrWhiteSpace(image.PreviewStorageKey))
+            await blobService.DeleteImageAsync(image.PreviewStorageKey);
         return Ok(ContractUtils.Convert(updated));
     }
 

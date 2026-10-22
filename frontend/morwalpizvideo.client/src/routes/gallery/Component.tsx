@@ -26,6 +26,11 @@ function saveBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+function getRemainingDays(expiration: string): number {
+  const remainingMilliseconds = new Date(expiration).getTime() - Date.now();
+  return Math.max(0, Math.ceil(remainingMilliseconds / (24 * 60 * 60 * 1000)));
+}
+
 export default function Gallery(): JSX.Element {
   const gallery = useLoaderData() as GalleryPublic;
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -33,6 +38,7 @@ export default function Gallery(): JSX.Element {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -62,6 +68,7 @@ export default function Gallery(): JSX.Element {
 
   const handleDownload = async () => {
     setIsDownloading(true);
+    setDownloadError('');
     try {
       const indexes = selected.size ? [...selected].sort((a, b) => a - b) : undefined;
       const blob = await downloadGallery(gallery.slug, indexes);
@@ -70,6 +77,8 @@ export default function Gallery(): JSX.Element {
           ? getFilename(gallery.images[indexes[0]], indexes[0])
           : `${gallery.slug}.zip`;
       saveBlob(blob, filename);
+    } catch {
+      setDownloadError('The download could not be completed. Please try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -77,9 +86,12 @@ export default function Gallery(): JSX.Element {
 
   const handleImageDownload = async (index: number) => {
     setDownloadingIndex(index);
+    setDownloadError('');
     try {
       const blob = await downloadGallery(gallery.slug, [index]);
       saveBlob(blob, getFilename(gallery.images[index], index));
+    } catch {
+      setDownloadError('The download could not be completed. Please try again.');
     } finally {
       setDownloadingIndex(null);
     }
@@ -90,7 +102,10 @@ export default function Gallery(): JSX.Element {
       <SEO title={gallery.name} description={gallery.description ?? ''} type="article" />
       <div className="gallery-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
-          <p className="gallery-kicker mb-1">Gallery</p>
+          <p className="gallery-kicker d-flex align-items-center gap-2 mb-1">
+            <span>Gallery</span>
+            <span className="text-muted">expires in {getRemainingDays(gallery.expiration)} days</span>
+          </p>
           <h1 className="mb-0">{gallery.name}</h1>
         </div>
         <div className="btn-group" role="group" aria-label="Gallery view">
@@ -113,6 +128,7 @@ export default function Gallery(): JSX.Element {
         </div>
       </div>
       {gallery.description && <p className="mb-4">{gallery.description}</p>}
+      {downloadError && <div className="alert alert-danger" role="alert">{downloadError}</div>}
       <div className="gallery-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 py-3 px-3 mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
           <span className="gallery-selection" aria-live="polite">
@@ -183,14 +199,14 @@ export default function Gallery(): JSX.Element {
           <table className="gallery-table table align-middle mb-0">
             <thead>
               <tr>
-                <th scope="col">Filename</th>
+                <th scope="col" className="text-start">Filename</th>
                 <th scope="col" className="text-end">Download</th>
               </tr>
             </thead>
             <tbody>
               {gallery.images.map((image, index) => (
                 <tr key={`${image}-${index}`}>
-                  <td>
+                  <td className="text-start">
                     <div className="d-flex align-items-center gap-3">
                       <label className="gallery-checkbox gallery-checkbox--table form-check rounded">
                         <input
@@ -266,26 +282,40 @@ export default function Gallery(): JSX.Element {
                 />
               </div>
               {gallery.images.length > 1 && (
-                <div className="modal-footer justify-content-between">
+                <>
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
+                    className="gallery-modal-control gallery-modal-control--previous btn btn-light"
+                    aria-label="Previous image"
                     onClick={() =>
                       setActiveIndex(
                         (activeIndex - 1 + gallery.images.length) % gallery.images.length
                       )
                     }
                   >
-                    Previous
+                    &#8249;
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
+                    className="gallery-modal-control gallery-modal-control--next btn btn-light"
+                    aria-label="Next image"
                     onClick={() => setActiveIndex((activeIndex + 1) % gallery.images.length)}
                   >
-                    Next
+                    &#8250;
                   </button>
-                </div>
+                  <div className="gallery-modal-dots" aria-label="Image position">
+                    {gallery.images.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className={`gallery-modal-dot ${index === activeIndex ? 'active' : ''}`}
+                        aria-label={`Show image ${index + 1}`}
+                        aria-current={index === activeIndex ? 'true' : undefined}
+                        onClick={() => setActiveIndex(index)}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 using MorWalPizVideo.Server.Models;
+using MorWalPiz.Contracts;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -26,5 +27,22 @@ public sealed class GalleryBehaviorTests
     public void IsAllowedExpirationDays_rejects_other_values(int days)
     {
         Assert.False(Gallery.IsAllowedExpirationDays(days));
+    }
+
+    [Fact]
+    public void Public_gallery_conversion_uses_preview_and_falls_back_for_legacy_images()
+    {
+        var gallery = new Gallery
+        {
+            BlobReference =
+            [
+                new GalleryImage { PublicUrl = "original", PreviewPublicUrl = "preview" },
+                new GalleryImage { PublicUrl = "legacy" }
+            ]
+        };
+
+        var contract = ContractUtils.ConvertPublic(gallery);
+
+        Assert.Equal(["preview", "legacy"], contract.Images);
     }
 }

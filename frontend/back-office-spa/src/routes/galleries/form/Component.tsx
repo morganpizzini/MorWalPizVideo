@@ -8,6 +8,10 @@ import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
 import PageHeader from '@components/PageHeader';
 
+function newSlug(): string {
+  return `gallery-${crypto.randomUUID()}`;
+}
+
 export default function GalleryForm(): React.ReactElement {
   const gallery = useResolvedLoaderData<Gallery | null>();
   const { id } = useParams();
@@ -24,7 +28,7 @@ export default function GalleryForm(): React.ReactElement {
 
   useEffect(() => {
     setName(gallery?.name ?? '');
-    setSlug(gallery?.slug ?? '');
+    setSlug(gallery?.slug ?? newSlug());
     setDescription(gallery?.description ?? '');
     setExpirationDays('7');
   }, [gallery]);

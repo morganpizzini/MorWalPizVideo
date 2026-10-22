@@ -195,6 +195,11 @@ body::before {
     white-space: nowrap;
 }
 
+.gallery-table th:first-child,
+.gallery-table td:first-child {
+    text-align: left;
+}
+
 .gallery-table-image {
     width: 7rem;
     flex: 0 0 7rem;
@@ -239,6 +244,51 @@ body::before {
     object-fit: contain;
 }
 
+.gallery-modal-control {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 2rem;
+    line-height: 1;
+    transform: translateY(-50%);
+}
+
+.gallery-modal-control--previous {
+    left: 1rem;
+}
+
+.gallery-modal-control--next {
+    right: 1rem;
+}
+
+.gallery-modal-dots {
+    position: absolute;
+    right: 0;
+    bottom: 1rem;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.gallery-modal-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    padding: 0;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.gallery-modal-dot.active {
+    background: #fff;
+}
+
 @media (max-width: 575.98px) {
     .gallery-table th,
     .gallery-table td {
@@ -267,5 +317,25 @@ body::before {
     .gallery-checkbox .form-check-input {
         width: 1.5rem;
         height: 1.5rem;
+    }
+
+    .gallery-toolbar {
+        align-items: stretch !important;
+    }
+
+    .gallery-toolbar > * {
+        width: 100%;
+    }
+
+    .gallery-toolbar > button {
+        min-height: 2.75rem;
+    }
+
+    .gallery-modal-control--previous {
+        left: 0.5rem;
+    }
+
+    .gallery-modal-control--next {
+        right: 0.5rem;
     }
 }

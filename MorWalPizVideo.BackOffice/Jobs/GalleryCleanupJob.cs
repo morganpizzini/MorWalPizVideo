@@ -12,7 +12,12 @@ public sealed class GalleryCleanupJob(IGalleryRepository repository, IBlobServic
         var expired = (await repository.GetItemsAsync(item => item.Expiration <= DateTime.UtcNow)).ToArray();
         foreach (var gallery in expired)
         {
-            foreach (var image in gallery.BlobReference) await blobService.DeleteImageAsync(image.StorageKey);
+            foreach (var image in gallery.BlobReference)
+            {
+                await blobService.DeleteImageAsync(image.StorageKey);
+                if (!string.IsNullOrWhiteSpace(image.PreviewStorageKey))
+                    await blobService.DeleteImageAsync(image.PreviewStorageKey);
+            }
             await repository.DeleteItemAsync(gallery.Id);
         }
         logger.LogInformation("Gallery cleanup deleted {Count} expired galleries", expired.Length);

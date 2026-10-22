@@ -1,6 +1,8 @@
 export interface GalleryImage {
   storageKey: string;
   publicUrl: string;
+  previewStorageKey?: string | null;
+  previewPublicUrl?: string | null;
   contentType: string;
   width: number;
   height: number;

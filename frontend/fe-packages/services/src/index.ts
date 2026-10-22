@@ -81,6 +81,7 @@ export {
   updateGallery,
   deleteGallery,
   uploadGalleryImages,
+  deleteGalleryImage,
   uploadVideoImages,
   deleteVideoImage,
   fetchPages,

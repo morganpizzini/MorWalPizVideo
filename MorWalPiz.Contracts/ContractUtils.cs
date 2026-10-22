@@ -303,6 +303,8 @@ namespace MorWalPiz.Contracts
             {
                 StorageKey = image.StorageKey,
                 PublicUrl = image.PublicUrl,
+                PreviewStorageKey = image.PreviewStorageKey,
+                PreviewPublicUrl = image.PreviewPublicUrl,
                 ContentType = image.ContentType,
                 Width = image.Width,
                 Height = image.Height,
@@ -316,7 +318,7 @@ namespace MorWalPiz.Contracts
             Slug = entity.Slug,
             Expiration = entity.Expiration,
             DownloadCount = entity.DownloadCount,
-            Images = entity.BlobReference.Select(image => image.PublicUrl).ToArray()
+            Images = entity.BlobReference.Select(image => image.PreviewPublicUrl ?? image.PublicUrl).ToArray()
         };
         public static ChannelNewsPublicContract ConvertPublic(ChannelNews entity, YTChannel channel, string fallbackLogoUrl)
         {

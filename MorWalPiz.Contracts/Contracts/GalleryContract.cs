@@ -8,6 +8,8 @@ public sealed class GalleryImageContract
 {
     [DataMember] public string StorageKey { get; set; } = string.Empty;
     [DataMember] public string PublicUrl { get; set; } = string.Empty;
+    [DataMember] public string? PreviewStorageKey { get; set; }
+    [DataMember] public string? PreviewPublicUrl { get; set; }
     [DataMember] public string ContentType { get; set; } = string.Empty;
     [DataMember] public int Width { get; set; }
     [DataMember] public int Height { get; set; }
