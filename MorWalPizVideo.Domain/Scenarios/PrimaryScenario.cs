@@ -87,6 +87,8 @@ public class PrimaryScenario : BaseScenario
         ]);
         Set("quickLinks", Array.Empty<QuickLinks>());
         Set("channelNews", Array.Empty<ChannelNews>());
+        Set("partners", Array.Empty<Partner>());
+        Set("creatorCampaigns", Array.Empty<Campaign>());
         Set("newsletterEvents", Array.Empty<NewsletterEvent>());
         Set("pushSubscriptions", Array.Empty<PushChannelSubscription>());
         Set("pushAudiences", Array.Empty<PushAudience>());
