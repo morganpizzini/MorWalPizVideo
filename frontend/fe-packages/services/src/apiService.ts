@@ -103,8 +103,16 @@ export const uploadGalleryImages = (
   files.forEach((file) => formData.append("files", file));
   return postFormData(ComposeUrl(endpoints.GALLERY_IMAGES, { id }), formData);
 };
-export const deleteGalleryImage = (id: string, imageIndex: number): Promise<Gallery> =>
-  Delete(ComposeUrl(endpoints.GALLERY_IMAGE_DETAIL, { id, imageIndex }));
+export const deleteGalleryImage = (
+  id: string,
+  imageIndex: number,
+): Promise<Gallery> =>
+  Delete(
+    ComposeUrl(endpoints.GALLERY_IMAGE_DETAIL, {
+      id,
+      imageIndex: String(imageIndex),
+    }),
+  );
 
 export const getPublicGallery = (
   slug: string,
