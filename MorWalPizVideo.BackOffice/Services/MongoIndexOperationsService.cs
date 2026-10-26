@@ -11,7 +11,8 @@ public sealed record MongoIndexManifestEntry(
     BsonDocument Keys,
     bool Unique = false,
     BsonDocument? PartialFilter = null,
-    Collation? Collation = null);
+    Collation? Collation = null,
+    TimeSpan? ExpireAfter = null);
 
 public sealed record MongoIndexAuditItem(
     string Key,
@@ -215,7 +216,25 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.SocialAssets,
             Name: "ux_socialassets_channelid_idempotencykey",
             Keys: new BsonDocument { { "channelId", 1 }, { "idempotencyKey", 1 } },
-            Unique: true)
+            Unique: true),
+        new(
+            Key: "publicaccounts.normalizedusername.unique",
+            Collection: DbCollections.PublicAccounts,
+            Name: "ux_publicaccounts_normalizedusername",
+            Keys: new BsonDocument("normalizedUsername", 1),
+            Unique: true),
+        new(
+            Key: "publicaccounts.normalizedemail.unique",
+            Collection: DbCollections.PublicAccounts,
+            Name: "ux_publicaccounts_normalizedemail",
+            Keys: new BsonDocument("normalizedEmail", 1),
+            Unique: true),
+        new(
+            Key: "publicaccountsessions.expiresat.ttl",
+            Collection: DbCollections.PublicAccountSessions,
+            Name: "ix_publicaccountsessions_expiresat_ttl",
+            Keys: new BsonDocument("expiresAt", 1),
+            ExpireAfter: TimeSpan.Zero)
     ];
 
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =
@@ -273,6 +292,7 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                 Name = entry.Name,
                 Unique = entry.Unique,
                 Collation = entry.Collation,
+                ExpireAfter = entry.ExpireAfter,
                 PartialFilterExpression = entry.PartialFilter == null
                     ? null
                     : new BsonDocumentFilterDefinition<BsonDocument>(entry.PartialFilter)
@@ -381,11 +401,13 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                             collationValue.AsBsonDocument.GetValue("locale", string.Empty).AsString == expected.Collation.Locale &&
                             collationValue.AsBsonDocument.GetValue("strength", 0).ToInt32() == (int)expectedStrength;
 
-        return indexDocument.GetValue("unique", false).ToBoolean() &&
+        return indexDocument.GetValue("unique", false).ToBoolean() == expected.Unique &&
             indexDocument.TryGetValue("key", out var actualKeys) &&
             actualKeys.IsBsonDocument &&
             actualKeys.AsBsonDocument.Equals(expected.Keys) &&
-            collationMatches;
+            collationMatches &&
+            (expected.ExpireAfter is null ||
+             indexDocument.GetValue("expireAfterSeconds", -1).ToInt64() == (long)expected.ExpireAfter.Value.TotalSeconds);
     }
 
     internal static string GetRemovalAction(

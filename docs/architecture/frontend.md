@@ -11,6 +11,8 @@ The frontend is a Yarn Classic workspace. Shared packages are built before appli
 
 Shared packages are appropriate only when multiple applications genuinely consume the same contract, transport behavior, or presentation component.
 
+The public client has an isolated account transport mode. It includes HttpOnly-cookie credentials and account CSRF headers, but never emits BackOffice bearer or channel context. Account session restoration and navigation are additive; current public routes remain unguarded.
+
 ## Shared Packages
 
 ### Models

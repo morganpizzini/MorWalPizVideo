@@ -1044,6 +1044,53 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class PublicAccountRepository(IMongoDatabase database)
+        : BaseRepository<PublicAccount>(database, DbCollections.PublicAccounts), IPublicAccountRepository
+    {
+        public Task<PublicAccount?> FindByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken = default) =>
+            _collection.Find(item => item.NormalizedUsername == normalizedUsername).FirstOrDefaultAsync(cancellationToken);
+
+        public Task<PublicAccount?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
+            _collection.Find(item => item.NormalizedEmail == normalizedEmail).FirstOrDefaultAsync(cancellationToken);
+
+        public Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default) =>
+            _collection.Find(item => item.Id == accountId).FirstOrDefaultAsync(cancellationToken);
+
+        public Task<PublicAccount> AddAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
+            AddAccountCoreAsync(account, cancellationToken);
+
+        private async Task<PublicAccount> AddAccountCoreAsync(PublicAccount account, CancellationToken cancellationToken)
+        {
+            await _collection.InsertOneAsync(account, cancellationToken: cancellationToken);
+            return account;
+        }
+
+        public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
+            _collection.ReplaceOneAsync(item => item.Id == account.Id, account, cancellationToken: cancellationToken);
+
+        public Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default) =>
+            AddSessionCoreAsync(session, cancellationToken);
+
+        private async Task<PublicAccountSession> AddSessionCoreAsync(PublicAccountSession session, CancellationToken cancellationToken)
+        {
+            await _sessionCollection.InsertOneAsync(session, cancellationToken: cancellationToken);
+            return session;
+        }
+
+        public Task<PublicAccountSession?> FindActiveSessionAsync(string tokenHash, DateTime now, CancellationToken cancellationToken = default) =>
+            _sessionCollection.Find(item => item.TokenHash == tokenHash && item.RevokedAt == null && item.ExpiresAt > now)
+                .FirstOrDefaultAsync(cancellationToken);
+
+        public Task RevokeSessionAsync(string tokenHash, DateTime revokedAt, CancellationToken cancellationToken = default) =>
+            _sessionCollection.UpdateOneAsync(
+                item => item.TokenHash == tokenHash && item.RevokedAt == null,
+                Builders<PublicAccountSession>.Update.Set(item => item.RevokedAt, revokedAt),
+                cancellationToken: cancellationToken);
+
+        private IMongoCollection<PublicAccountSession> _sessionCollection =>
+            database.GetCollection<PublicAccountSession>(DbCollections.PublicAccountSessions);
+    }
+
     public class UserRepository : BaseRepository<User>, IUserRepository
     {
         public UserRepository(IMongoDatabase database) : base(database, DbCollections.Users)

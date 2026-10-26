@@ -94,6 +94,8 @@ public class PrimaryScenario : BaseScenario
         Set("pushAudiences", Array.Empty<PushAudience>());
         Set("pushDispatches", Array.Empty<PushDispatch>());
         Set("pushDispatchRecipients", Array.Empty<PushDispatchRecipient>());
+        Set("publicAccounts", Array.Empty<PublicAccount>());
+        Set("publicAccountSessions", Array.Empty<PublicAccountSession>());
 
         var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);
         Set("users",

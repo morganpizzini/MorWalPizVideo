@@ -1,5 +1,18 @@
 # Refactoring Roadmap
 
+## API Consistency Follow-Up (2026-10-24)
+
+The [BackOffice and ServerAPI consistency audit](api-consistency-audit.md) is the source-evidenced follow-up to the bounded historical slices below, not a claim they closed all debt. Its common-standard matrix applies incrementally; application code was not changed during the audit.
+
+1. Resolve legacy Push record protection and compatibility policy (TD-027 / API-01).
+2. Remove duplicate ServerAPI health mapping with probe regression evidence (TD-029 / API-02).
+3. Align ServerAPI deployment selection with its security and contract suites (TD-009 / API-05).
+4. Converge form submission ownership and invariants without disrupting additive response migration (TD-030 / API-03).
+5. Establish deliberate Chat behavior in mock mode (TD-031 / API-04).
+6. Propagate cancellation through the next touched feature, with explicit post-commit semantics (TD-032 / API-06).
+
+Each slice needs the focused exit checks listed in the audit before closure. Broader DTO/DataService migrations remain partial. Cache reliability (API-07/08) stays deferred, shop stays on hold, and operational verification is not inferred from static source inspection. Do not combine these items into a repository-wide controller, repository or host rewrite.
+
 ## Original Ten-Slice Backlog (2026-10-01)
 
 Numbering follows the supplied Architect/Repository Expert handoff, not the separate TD identifiers. Current source wins over historical completion labels. This table records bounded authoring completion, not blanket backlog or release closure.

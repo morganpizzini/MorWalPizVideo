@@ -31,7 +31,10 @@ public sealed class MongoIndexStartupInitializer(
                     "newsletterusers.channelid_unsubscribetokenhash",
                     "newsletterrecipients.channelid_newsletterid_userid.unique",
                     "newsletterevents.channelid_newsletterid_type_occurredat",
-                    "socialassets.channelid_idempotencykey.unique"
+                    "socialassets.channelid_idempotencykey.unique",
+                    "publicaccounts.normalizedusername.unique",
+                    "publicaccounts.normalizedemail.unique",
+                    "publicaccountsessions.expiresat.ttl"
                 ], cancellationToken);
                 return;
             }

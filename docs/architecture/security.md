@@ -23,6 +23,10 @@ Required response:
 2. Revoke and rotate service-account credentials, API keys, JWT secrets, storage credentials, and related tokens.
 3. Remove secret-bearing files and seed values from current source.
 4. Rewrite repository history where organizational policy permits.
+
+## Public Account Sessions
+
+Public accounts use a dedicated HttpOnly session cookie, server-side hashed session records with fixed expiry, account security-version revalidation, explicit logout revocation, and a double-submit CSRF cookie/header pair. Production cookies use `Secure` and `SameSite=None` for the exact credentialed CORS origins; local development uses `SameSite=Lax` because the local cookie is not Secure. Public content and anonymous Web Push remain credentialless and do not inherit account or administrator context.
 5. Invalidate published build artifacts and caches containing old material.
 6. Add automated secret scanning and protected configuration checks.
 7. Record completion and owners outside this public architecture guide.
@@ -40,7 +44,7 @@ Fake authentication and the developer exception page require both actual `Develo
 The ServerAPI-only fallback requires an authenticated principal. The inventory supporting this change preserves existing access metadata without changing routes or the host-neutral controller base:
 
 - Explicit anonymous reads/interactions: Ask, Blog, CalendarEvents, Competitions, Compilations, Configuration, CustomForms/surveys, Matches, Navigation, Newsletter, newsletter webhooks (their existing verification remains), Pages, Products, QuickLinks, ShootingIta, Sponsors and V1Videos.
-- FAQ reads and Push public-key are explicit anonymous exceptions; FAQ vote and Push subscription/unsubscription retain their authentication requirements.
+- FAQ reads and Push public-key are explicit anonymous exceptions; FAQ vote retains its authentication requirement. **Current-source exception (2026-10-24):** legacy `/api/push/subscribe` and `/api/push/unsubscribe` are also anonymous and directly mutate the same endpoint-hash subscription collection used by the credential-protected `/api/push/subscriptions/*` service. They do not enforce that credential. This contradicts the original user-bound legacy boundary, remains open under TD-027, and is not an approved equivalent protection; see [API-01](api-consistency-audit.md#api-01-legacy-push-bypasses-subscription-credentials).
 - ShopAuth, ShopCart, ShopCatalog and ShopOrders retain their explicit anonymous compatibility metadata. This slice does not approve their security posture or reopen the shop hold.
 - Cache operations retain their dedicated internal-service authentication scheme. Health endpoints retain explicit anonymous probe metadata. Feature-controlled OpenAPI/Swagger behavior is unchanged.
 - ConfigTest is an explicit anonymous technical exception only to allow the environment/flag gate to return `404` outside Development; the gate remains authoritative.

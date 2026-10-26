@@ -527,7 +527,7 @@ export const exportAskSubmissions = (id: string, includeName = false) =>
 type AuthTokenProvider = () => string | null;
 
 export interface ApiClientOptions {
-  mode: "public" | "admin" | "legacy";
+  mode: "public" | "admin" | "legacy" | "account";
   baseUrl?: string;
   bootstrapAware?: boolean;
 }
@@ -561,7 +561,7 @@ export function createApiClient({
   let csrfTokenBaseUrl: string | null = null;
   let cookieOnlyMode = mode !== "legacy";
   let selectedChannelId: string | null =
-    mode !== "public" && typeof window !== "undefined"
+    (mode === "admin" || mode === "legacy") && typeof window !== "undefined"
       ? window.localStorage.getItem(selectedChannelStorageKey)
       : null;
 
@@ -708,7 +708,11 @@ export function createApiClient({
     if (csrfTokenBaseUrl !== requestBaseUrl) resetCsrfToken();
     if (csrfTokenPromise) return csrfTokenPromise;
     csrfTokenBaseUrl = requestBaseUrl;
-    const pendingToken = fetch(buildFullUrl("/api/auth/csrf", requestBaseUrl), {
+    const csrfEndpoint =
+      mode === "account"
+        ? frontendEndpoints.PUBLIC_ACCOUNT_CSRF
+        : "/api/auth/csrf";
+    const pendingToken = fetch(buildFullUrl(csrfEndpoint, requestBaseUrl), {
       method: "GET",
       credentials: "include",
     })
@@ -854,7 +858,7 @@ export function createApiClient({
     const credentials =
       mode === "public"
         ? "omit"
-        : mode === "admin"
+        : mode === "admin" || mode === "account"
           ? "include"
           : requestCredentialsMode;
     const onUnauthorized = unauthorizedHandler;
@@ -868,11 +872,16 @@ export function createApiClient({
       headers.delete("Cookie2");
       headers.delete("X-Channel-Id");
       headers.delete("X-CSRF-TOKEN");
+    } else if (mode === "account") {
+      headers.delete("Cookie");
+      headers.delete("Cookie2");
+      headers.delete("Authorization");
+      headers.delete("X-Channel-Id");
     }
 
     // Add authorization header if user is authenticated
     const token = getAuthToken();
-    if (token) {
+    if (token && (mode === "admin" || mode === "legacy")) {
       headers.append("Authorization", `Bearer ${token}`);
     }
 
@@ -884,7 +893,7 @@ export function createApiClient({
       }
       headers.set("X-Channel-Id", channelId);
     } else if (
-      mode !== "public" &&
+      (mode === "admin" || mode === "legacy") &&
       isScopedBackOfficeRequest(url) &&
       selectedChannelId
     ) {
@@ -895,7 +904,11 @@ export function createApiClient({
       method.toUpperCase(),
     );
     const isAnonymousAuthRequest =
-      url.includes("/api/auth/login") || url.includes("/api/auth/csrf");
+      url.includes("/api/auth/login") ||
+      url.includes("/api/auth/csrf") ||
+      url.includes("/api/v1/accounts") ||
+      url.includes("/api/v1/account/sessions") ||
+      url.includes("/api/v1/account/csrf");
     if (
       credentials === "include" &&
       isUnsafeMethod &&
@@ -1122,6 +1135,7 @@ export const adminApiService = createApiClient({
   mode: "admin",
   bootstrapAware: true,
 });
+export const accountApiService = createApiClient({ mode: "account" });
 export const {
   get,
   post,

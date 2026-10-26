@@ -55,6 +55,35 @@ public sealed class PushSubscriptionEndpointTests : IClassFixture<ServerApiWebAp
     }
 
     [Fact]
+    public async Task Legacy_mutation_routes_are_retired_without_changing_a_protected_subscription()
+    {
+        using var client = factory.CreateClient();
+        var endpoint = NewEndpoint();
+        var credential = (await (await client.PostAsJsonAsync(
+            "/api/push/subscriptions", NewSubscribeRequest(endpoint, [PrimaryScenario.ChannelId])))
+            .Content.ReadFromJsonAsync<PushSubscriptionStateContract>())!.Credential;
+
+        var legacySubscribe = await client.PostAsJsonAsync("/api/push/subscribe", new
+        {
+            endpoint,
+            p256dh = "attacker-key",
+            auth = "attacker-auth"
+        });
+        using var legacyUnsubscribeRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/push/unsubscribe")
+        {
+            Content = JsonContent.Create(new { endpoint })
+        };
+        var legacyUnsubscribe = await client.SendAsync(legacyUnsubscribeRequest);
+        var settings = await client.PostAsJsonAsync("/api/push/subscriptions/settings", new { endpoint, credential });
+        var settingsPayload = await settings.Content.ReadFromJsonAsync<PushSubscriptionStateContract>();
+
+        Assert.Equal(HttpStatusCode.Gone, legacySubscribe.StatusCode);
+        Assert.Equal(HttpStatusCode.Gone, legacyUnsubscribe.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, settings.StatusCode);
+        Assert.Equal([PrimaryScenario.ChannelId], settingsPayload!.ChannelIds);
+    }
+
+    [Fact]
     public async Task Settings_and_revoke_require_a_matching_credential()
     {
         using var client = factory.CreateClient();

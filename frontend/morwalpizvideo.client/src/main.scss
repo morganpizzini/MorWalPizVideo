@@ -1,341 +1,341 @@
-@import "bootstrap/scss/functions";
-@import "bootstrap/scss/variables";
-@import "bootstrap/scss/variables-dark";
-@import "bootstrap/scss/maps";
-@import "bootstrap/scss/mixins";
-@import "bootstrap/scss/bootstrap";
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/bootstrap';
 
 html,
 body {
-    min-height: 100vh;
-    margin: 0;
-    padding: 0;
-    position: relative;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 
 body {
-    font-family: 'Roboto', Arial, sans-serif;
-    background-image: url('/images/logo-800.jpg');
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    z-index: 2;
+  font-family: 'Roboto', Arial, sans-serif;
+  background-image: url('/images/logo-800.jpg');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  z-index: 2;
 }
 
 body::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    min-height: 100%;
-    /* Minimum height to fill the viewport */
-    height: auto;
-    /* Allows it to expand with content */
-    background-color: rgba(255, 255, 255, 0.7);
-    z-index: 1;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;
+  /* Minimum height to fill the viewport */
+  height: auto;
+  /* Allows it to expand with content */
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 1;
 }
 
 #root {
-    height: 100%;
-    position: relative;
-    z-index: 2;
-    /* Metti il contenuto sopra l'overlay */
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  /* Metti il contenuto sopra l'overlay */
 }
 
 .grecaptcha-badge {
-    visibility: hidden;
+  visibility: hidden;
 }
 .no-background {
-    background: none !important;
+  background: none !important;
 }
 .btn,
 .pop-up {
-    transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.3s ease-in-out;
 
-    &:hover {
-        transform: scale(1.03);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
-    }
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+  }
 }
 
 #root {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100vh;
 }
 
 .lh-1 {
-    line-height: 1
+  line-height: 1;
 }
 
 .fs-08 {
-    font-size: 0.8em;
+  font-size: 0.8em;
 }
 
 .fs-125 {
-    font-size: 1.25rem;
+  font-size: 1.25rem;
 }
 
 .fa-1_5x {
-    font-size: 1.5em
+  font-size: 1.5em;
 }
 
 .fa-1_8x {
-    font-size: 1.8em
+  font-size: 1.8em;
 }
 
 .fab.fa-youtube:hover {
-    color: #ef4f5f !important
+  color: #ef4f5f !important;
 }
 
 .c-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .gallery-page {
-    max-width: 1320px;
+  max-width: 1320px;
 }
 
 .gallery-header h1 {
-    font-weight: 700;
-    letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .gallery-kicker {
-    color: #6c757d;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+  color: #6c757d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .gallery-toolbar {
-    border: 1px solid rgba(33, 37, 41, 0.12);
-    border-radius: 0.75rem;
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.06);
+  border: 1px solid rgba(33, 37, 41, 0.12);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.06);
 }
 
 .gallery-selection {
-    color: #495057;
-    font-size: 0.95rem;
-    font-weight: 600;
+  color: #495057;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .gallery-card {
-    overflow: hidden;
-    border-radius: 0.75rem;
-    background: #fff;
-    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .gallery-card:hover {
-    transform: translateY(-0.2rem);
-    box-shadow: 0 0.6rem 1.4rem rgba(33, 37, 41, 0.16);
+  transform: translateY(-0.2rem);
+  box-shadow: 0 0.6rem 1.4rem rgba(33, 37, 41, 0.16);
 }
 
 .gallery-image-button {
-    display: block;
-    cursor: zoom-in;
+  display: block;
+  cursor: zoom-in;
 }
 
 .gallery-image {
-    display: block;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    transition: transform 0.3s ease;
+  display: block;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
 .gallery-card:hover .gallery-image {
-    transform: scale(1.03);
+  transform: scale(1.03);
 }
 
 .gallery-checkbox {
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0.15rem 0.4rem rgba(33, 37, 41, 0.15);
-    cursor: pointer;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0.15rem 0.4rem rgba(33, 37, 41, 0.15);
+  cursor: pointer;
 }
 
 .gallery-checkbox .form-check-input {
-    width: 1.35rem;
-    height: 1.35rem;
-    margin: 0;
-}
-
-.gallery-checkbox--table {
-    margin: 0 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
 }
 
 .gallery-table-wrap {
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-radius: 0.75rem;
-    background: #fff;
-    box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.1);
 }
 
 .gallery-table th,
 .gallery-table td {
-    padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem;
 }
 
 .gallery-table th:last-child,
 .gallery-table td:last-child {
-    width: 1%;
-    white-space: nowrap;
+  width: 1%;
+  white-space: nowrap;
 }
 
 .gallery-table th:first-child,
 .gallery-table td:first-child {
-    text-align: left;
+  text-align: left;
 }
 
 .gallery-table-image {
-    width: 7rem;
-    flex: 0 0 7rem;
+  width: 7rem;
+  flex: 0 0 7rem;
 }
 
 .gallery-list-image {
-    aspect-ratio: 4 / 3;
-    width: 100%;
-    object-fit: cover;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  object-fit: cover;
 }
 
 .gallery-modal {
-    inset: 0;
-    overflow: auto;
-    background: rgba(0, 0, 0, 0.72);
-    padding: 0.5rem;
+  inset: 0;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 0.5rem;
 }
 
 .gallery-modal .modal-dialog {
-    width: min(100%, 1140px);
-    max-width: 1140px;
-    height: calc(100vh - 1rem);
-    max-height: calc(100vh - 1rem);
-    height: calc(100dvh - 1rem);
-    max-height: calc(100dvh - 1rem);
-    margin: 0 auto;
+  width: min(100%, 1140px);
+  max-width: 1140px;
+  height: calc(100vh - 1rem);
+  max-height: calc(100vh - 1rem);
+  height: calc(100dvh - 1rem);
+  max-height: calc(100dvh - 1rem);
+  margin: 0 auto;
 }
 
 .gallery-modal .modal-content {
-    max-height: 100%;
-    overflow: hidden;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .gallery-modal .modal-body {
-    min-height: 0;
-    overflow: auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .gallery-modal-image {
-    max-height: calc(100vh - 11rem);
-    max-height: calc(100dvh - 11rem);
-    object-fit: contain;
+  max-height: calc(100vh - 11rem);
+  max-height: calc(100dvh - 11rem);
+  object-fit: contain;
 }
 
 .gallery-modal-control {
-    position: absolute;
-    top: 50%;
-    z-index: 2;
-    width: 2.75rem;
-    height: 2.75rem;
-    padding: 0;
-    border-radius: 50%;
-    font-size: 2rem;
-    line-height: 1;
-    transform: translateY(-50%);
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 2rem;
+  line-height: 1;
+  transform: translateY(-50%);
 }
 
 .gallery-modal-control--previous {
-    left: 1rem;
+  left: 1rem;
 }
 
 .gallery-modal-control--next {
-    right: 1rem;
+  right: 1rem;
 }
 
 .gallery-modal-dots {
-    position: absolute;
-    right: 0;
-    bottom: 1rem;
-    left: 0;
-    z-index: 2;
-    display: flex;
-    justify-content: center;
-    gap: 0.45rem;
+  position: absolute;
+  right: 0;
+  bottom: 1rem;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
 }
 
 .gallery-modal-dot {
-    width: 0.65rem;
-    height: 0.65rem;
-    padding: 0;
-    border: 1px solid #fff;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.45);
+  width: 0.65rem;
+  height: 0.65rem;
+  padding: 0;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .gallery-modal-dot.active {
-    background: #fff;
+  background: #fff;
 }
 
 @media (max-width: 575.98px) {
-    .gallery-table th,
-    .gallery-table td {
-        padding: 0.75rem;
-    }
+  .gallery-table th,
+  .gallery-table td {
+    padding: 0.75rem;
+  }
 
-    .gallery-table-image {
-        width: 5rem;
-        flex-basis: 5rem;
-    }
+  .gallery-table-image {
+    width: 5rem;
+    flex-basis: 5rem;
+  }
 
-    .gallery-table th,
-    .gallery-table td {
-        vertical-align: middle;
-    }
+  .gallery-table th,
+  .gallery-table td {
+    vertical-align: middle;
+  }
 
-    .gallery-table td:last-child .btn {
-        padding-inline: 0.55rem;
-    }
+  .gallery-table td:last-child .btn {
+    padding-inline: 0.55rem;
+  }
 
-    .gallery-checkbox {
-        min-width: 3rem;
-        min-height: 3rem;
-    }
+  .gallery-checkbox {
+    min-width: 3rem;
+    min-height: 3rem;
+  }
 
-    .gallery-checkbox .form-check-input {
-        width: 1.5rem;
-        height: 1.5rem;
-    }
+  .gallery-checkbox .form-check-input {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
 
-    .gallery-toolbar {
-        align-items: stretch !important;
-    }
+  .gallery-toolbar {
+    align-items: stretch !important;
+  }
 
-    .gallery-toolbar > * {
-        width: 100%;
-    }
+  .gallery-toolbar > * {
+    width: 100%;
+  }
 
-    .gallery-toolbar > button {
-        min-height: 2.75rem;
-    }
+  .gallery-toolbar > button {
+    min-height: 2.75rem;
+  }
 
-    .gallery-modal-control--previous {
-        left: 0.5rem;
-    }
+  .gallery-modal-control--previous {
+    left: 0.5rem;
+  }
 
-    .gallery-modal-control--next {
-        right: 0.5rem;
-    }
+  .gallery-modal-control--next {
+    right: 0.5rem;
+  }
 }

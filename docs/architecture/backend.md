@@ -28,6 +28,12 @@ sequenceDiagram
 
 Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally. `DataService` and `IGenericDataService` remain compatibility surfaces for controllers not yet migrated.
 
+## Public Accounts
+
+ServerAPI public accounts are a separate Domain-owned boundary backed by `PublicAccount` and `PublicAccountSession` collections. The dedicated cookie scheme revalidates the hashed session token and account security version on each authenticated request. Controllers expose only Contracts DTOs; registration, login, profile mutation, and logout require CSRF validation, while existing anonymous content and push routes remain unchanged.
+
+The [2026-10-24 API consistency audit](api-consistency-audit.md) consolidates the common standard, source-verified exceptions and bounded correction order. In particular, focused service registration does not prove that duplicated form submission invariants or all mock-mode controller dependencies are aligned.
+
 ## Persistence
 
 ### MongoDB
@@ -103,7 +109,7 @@ is a deployment prerequisite.
 
 Redirect resolution is anonymous. Administrative authentication does not belong in this host.
 
-The current shared controller base applies `[Authorize]` across host boundaries. Replace it with host-neutral base behavior and explicit host policies.
+**Current:** `ApplicationControllerBase` is host-neutral and does not apply `[Authorize]`. Each host owns its fallback authorization policy and explicit endpoint exceptions. TD-003 is closed; preserve that boundary when migrating legacy controllers.
 
 ## Caching
 

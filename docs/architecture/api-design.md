@@ -8,6 +8,10 @@ public-safe DTOs and returns RFC 9457 Problem Details for missing competition ID
 The existing unversioned `/api/competitions` routes remain unchanged for compatibility.
 This is a feature slice, not a repository-wide versioning or error-response migration.
 
+The [API consistency audit](api-consistency-audit.md) records remaining contract, validation, composition and test-selection gaps. New work follows the rules below; legacy endpoints are not implicitly compliant and must migrate in compatibility-preserving feature slices.
+
+Public account endpoints are versioned under `/api/v1`: registration, session creation/restoration/logout, CSRF acquisition, and safe profile read/update. They use a dedicated cookie scheme and exact credentialed CORS policy; they do not alter the anonymous public API contract or protect existing public pages.
+
 ## API Surfaces
 
 ### BackOffice API
@@ -92,7 +96,7 @@ Use RFC Problem Details consistently:
 
 ### Channel scope contract
 
-BackOffice `GET /api/channels` establishes the accessible-channel list. Requests to scoped resources carry the selected channel in `X-Channel-Id`; the header is required even when the caller is an administrator. Missing header returns `400` with `channel_context_required`. Unknown, inaccessible, and API-key binding mismatches return `404` with `channel_context_unavailable`.
+BackOffice `GET /api/channels/accessible` establishes the caller's accessible-channel list and requires `backoffice.access`. `GET /api/channels` is the global administration list and requires `channels.admin` (or the global override). Requests to scoped resources carry the selected channel in `X-Channel-Id`; the header is required even when the caller is an administrator. Missing header returns `400` with `channel_context_required`. Unknown, inaccessible, and API-key binding mismatches return `404` with `channel_context_unavailable`.
 
 Channel administration itself (`GET`/`PUT`/`DELETE /api/channels/{id}`) is not a channel-scoped resource: it is authorized by role or ownership of the channel identified in the route, and does not require or consult `X-Channel-Id`. A non-owner/non-admin request returns `404` regardless of the header.
 
@@ -153,7 +157,7 @@ requested. There is no public API or dashboard contract in the first release.
 
 ## Shop Contract
 
-The shop is an active commercial perimeter with manual payment handling.
+**On hold; contract reconciliation required.** The commercial contract description below is retained design context, not verified current behavior or authorization for active work. The architecture guide and debt backlog retain the portfolio hold, while other historical targets describe permanent-free acquisition rather than this commercial flow. Reconcile those targets explicitly before resuming implementation; this audit does not choose either policy or lift the hold.
 
 - Catalog returns active commercial-artifact DTOs with a mandatory non-negative price.
 - Preview image is public.

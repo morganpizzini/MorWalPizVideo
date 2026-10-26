@@ -19,18 +19,19 @@ public sealed class CreatorPartnershipEndpointTests : IClassFixture<BackOfficeWe
     {
         using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PartnersManage, AuthorizationPermissionKeys.CampaignsManage);
         var partnerResponse = await client.PostAsJsonAsync("/api/Partners", new { name = $"Partner {Guid.NewGuid():N}", contactEmail = "creator@example.com", status = PartnerStatus.Active });
+        Assert.True(partnerResponse.IsSuccessStatusCode, await partnerResponse.Content.ReadAsStringAsync());
         var partner = await partnerResponse.Content.ReadFromJsonAsync<JsonElement>();
         var partnerId = partner.GetProperty("id").GetString();
 
         var campaignResponse = await client.PostAsJsonAsync("/api/Campaigns", new { partnerId, title = "Launch", status = CampaignStatus.Active, contentReferences = new[] { "video-1" } });
+        Assert.Equal(HttpStatusCode.Created, campaignResponse.StatusCode);
         var campaign = await campaignResponse.Content.ReadFromJsonAsync<JsonElement>();
         var campaignId = campaign.GetProperty("id").GetString();
         var timelineResponse = await client.PostAsJsonAsync($"/api/Campaigns/{campaignId}/timeline", new { kind = TimelineEntryKind.Deliverable, title = "Draft video", url = "https://example.com/draft" });
+        Assert.Equal(HttpStatusCode.OK, timelineResponse.StatusCode);
         var timeline = await timelineResponse.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(HttpStatusCode.Created, partnerResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, campaignResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, timelineResponse.StatusCode);
         Assert.NotEqual(string.Empty, timeline.GetProperty("timelineEntries")[0].GetProperty("id").GetString());
 
         client.DefaultRequestHeaders.Remove("X-Channel-Id");
@@ -43,14 +44,21 @@ public sealed class CreatorPartnershipEndpointTests : IClassFixture<BackOfficeWe
     {
         using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PartnersManage, AuthorizationPermissionKeys.CampaignsManage);
         var partnerResponse = await client.PostAsJsonAsync("/api/Partners", new { name = $"Archived partner {Guid.NewGuid():N}" });
+        Assert.True(partnerResponse.IsSuccessStatusCode, await partnerResponse.Content.ReadAsStringAsync());
         var partner = await partnerResponse.Content.ReadFromJsonAsync<JsonElement>();
         var partnerId = partner.GetProperty("id").GetString();
-        await client.PostAsJsonAsync("/api/Campaigns", new { partnerId, title = "Completed", status = CampaignStatus.Completed });
+        var campaignResponse = await client.PostAsJsonAsync("/api/Campaigns", new { partnerId, title = "Completed", status = CampaignStatus.Completed });
+        Assert.Equal(HttpStatusCode.Created, campaignResponse.StatusCode);
+        var campaign = await campaignResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var campaignId = campaign.GetProperty("id").GetString();
 
         var active = await client.GetFromJsonAsync<JsonElement[]>("/api/Campaigns");
         var all = await client.GetFromJsonAsync<JsonElement[]>("/api/Campaigns?includeArchived=true");
 
-        Assert.Empty(active!);
-        Assert.Contains(all!, item => item.GetProperty("status").GetInt32() == (int)CampaignStatus.Completed);
+        Assert.DoesNotContain(active!, item => item.GetProperty("id").GetString() == campaignId);
+        Assert.DoesNotContain(active!, item => item.GetProperty("status").GetInt32() == (int)CampaignStatus.Completed);
+        Assert.DoesNotContain(active!, item => item.GetProperty("status").GetInt32() == (int)CampaignStatus.Archived);
+        Assert.Contains(all!, item => item.GetProperty("id").GetString() == campaignId &&
+            item.GetProperty("status").GetInt32() == (int)CampaignStatus.Completed);
     }
 }

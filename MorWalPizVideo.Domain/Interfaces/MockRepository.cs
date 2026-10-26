@@ -681,6 +681,41 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
     }
 
+    public sealed class PublicAccountMockRepository(IMockScenario scenario)
+        : BaseMockRepository<PublicAccount>(scenario, DbCollections.PublicAccounts), IPublicAccountRepository
+    {
+        public async Task<PublicAccount?> FindByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.NormalizedUsername == normalizedUsername)).FirstOrDefault();
+
+        public async Task<PublicAccount?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.NormalizedEmail == normalizedEmail)).FirstOrDefault();
+
+        public async Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.Id == accountId)).FirstOrDefault();
+
+        public Task<PublicAccount> AddAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
+            AddItemAsync(account);
+
+        public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
+            UpdateItemAsync(account);
+
+        public Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default) =>
+            Task.FromResult(scenario.Add(DbCollections.PublicAccountSessions, session));
+
+        public async Task<PublicAccountSession?> FindActiveSessionAsync(string tokenHash, DateTime now, CancellationToken cancellationToken = default) =>
+            scenario.Read<PublicAccountSession>(DbCollections.PublicAccountSessions)
+                .FirstOrDefault(item => item.TokenHash == tokenHash && item.RevokedAt == null && item.ExpiresAt > now);
+
+        public Task RevokeSessionAsync(string tokenHash, DateTime revokedAt, CancellationToken cancellationToken = default)
+        {
+            var session = scenario.Read<PublicAccountSession>(DbCollections.PublicAccountSessions)
+                .FirstOrDefault(item => item.TokenHash == tokenHash && item.RevokedAt == null);
+            if (session is not null)
+                scenario.Replace(DbCollections.PublicAccountSessions, session with { RevokedAt = revokedAt });
+            return Task.CompletedTask;
+        }
+    }
+
     public class UserMockRepository : BaseMockRepository<User>, IUserRepository
     {
         private static readonly object QuotaSync = new();

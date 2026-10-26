@@ -38,6 +38,15 @@ export type {
   PushNotificationTemplateRequest,
 } from "./pushNotifications";
 
+export type {
+  PublicAccountRegistrationRequest,
+  PublicAccountLoginRequest,
+  PublicAccountProfileUpdateRequest,
+  PublicAccountSummary,
+  PublicAccountSession,
+  PublicAccountCsrf,
+} from "./publicAccount";
+
 // Categories exports
 export type {
   Category,

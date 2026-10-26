@@ -3,6 +3,12 @@
 - **Status:** Accepted
 - **Date:** 2026-10-15
 
+## Current Implementation Reconciliation (2026-10-26)
+
+The legacy `PushController` subscribe and unsubscribe routes now return `410 Gone` without accessing the shared subscription repository. The supported `api/push/subscriptions/*` surface remains anonymous and credential-protected. The public-key alias remains read-only. Source behavior is covered by `PushSubscriptionEndpointTests`; deployed legacy-consumer traffic and rollout compatibility remain unverified.
+
+This is the selected compatibility policy: retire legacy mutations rather than preserve an endpoint-only mutation contract. Public-account identity remains a separate, unimplemented feature and is not required for anonymous push ownership.
+
 ## Context
 
 `MorWalPizVideo.ServerAPI` already contained a Web Push surface (`PushController`, `WebPushService`, the `WebPush` 1.0.13 package) whose subscriptions are embedded in `User.PushSubscriptions`. That surface requires an authenticated BackOffice user, so it cannot serve the public applications: `frontend/morwalpizvideo.client` and `frontend/shooting-ita-frontend` have no end-user accounts at all and public API calls run with `credentials: 'omit'`.
@@ -15,7 +21,7 @@ Fanout must survive restarts and repeated execution: a single platform send can 
 
 Model anonymous subscriptions as a first-class `PushChannelSubscription` document keyed by a SHA-256 `EndpointHash`, with a 256-bit credential minted once at subscription time and persisted only as a hash. The browser keeps the credential in local storage; the server never returns the endpoint or the credential again. Settings reads, channel updates and revocation require a fixed-time credential-hash match. This gives anonymous users durable self-service without accounts, cookies, or server-held identifiers.
 
-Expose the anonymous surface on ServerAPI at `api/push/subscriptions/*` under a dedicated `push-public` rate-limit policy, leaving the legacy user-bound `api/push/*` routes untouched.
+Expose the anonymous surface on ServerAPI at `api/push/subscriptions/*` under a dedicated `push-public` rate-limit policy. Retain the legacy `api/push/public-key` read alias, but retire legacy subscribe/unsubscribe mutations with `410 Gone` so every mutation uses the credential boundary.
 
 Keep sending in BackOffice. `push.platform.send` is the canonical permission for the platform section; the channel section requires only `backoffice.access` and derives its sole target from the existing channel scope, so no recipient picker exists and a channel owner can never address another channel's subscribers.
 

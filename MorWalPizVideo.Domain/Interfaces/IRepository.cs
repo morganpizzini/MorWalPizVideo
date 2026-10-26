@@ -13,6 +13,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task UpdateItemAsync(T item);
         Task DeleteItemAsync(string id);
     }
+
+    public interface IPublicAccountRepository
+    {
+        Task<PublicAccount?> FindByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken = default);
+        Task<PublicAccount?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
+        Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default);
+        Task<PublicAccount> AddAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
+        Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
+        Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default);
+        Task<PublicAccountSession?> FindActiveSessionAsync(string tokenHash, DateTime now, CancellationToken cancellationToken = default);
+        Task RevokeSessionAsync(string tokenHash, DateTime revokedAt, CancellationToken cancellationToken = default);
+    }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
         Task<bool> UpdateMutableFieldsAsync(YouTubeContent entity);

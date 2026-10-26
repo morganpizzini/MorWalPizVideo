@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MorWalPizVideo.BackOffice.Controllers;
-using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.Server.Models;
-using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 
@@ -17,78 +15,26 @@ namespace MorWalPizVideo.ServerAPI.Controllers;
 [Route("api/push")]
 public class PushController : ApplicationControllerBase
 {
-  private const string ApplicationKey = "backoffice";
-  private readonly IPushSubscriptionRepository _subscriptionRepository;
-
-  public PushController(IPushSubscriptionRepository subscriptionRepository)
-  {
-    _subscriptionRepository = subscriptionRepository;
-  }
-
   /// <summary>
-  /// Save a browser push subscription without requiring an application user.
-  /// POST /api/push/subscribe
+  /// Legacy mutation route retained as an explicit retirement response. New clients must use
+  /// /api/push/subscriptions, which requires the per-subscription credential for existing records.
   /// </summary>
   [HttpPost("subscribe")]
   [AllowAnonymous]
-  public async Task<IActionResult> Subscribe([FromBody] PushSubscribeDto dto)
+  public IActionResult Subscribe()
   {
-    if (string.IsNullOrWhiteSpace(dto.Endpoint) ||
-        string.IsNullOrWhiteSpace(dto.P256dh) ||
-        string.IsNullOrWhiteSpace(dto.Auth))
-      return BadRequest(new { message = "Endpoint, p256dh and auth are required" });
-
-    if (!await PushEndpointValidator.IsSafeAsync(dto.Endpoint))
-      return BadRequest(new { message = "Endpoint is not valid" });
-
-    var endpointHash = PushEndpointProtection.HashEndpoint(dto.Endpoint);
-    var existing = await _subscriptionRepository.GetByEndpointHashAsync(endpointHash);
-    var now = DateTime.UtcNow;
-    var subscription = existing is null
-      ? new PushChannelSubscription(
-          endpointHash,
-          dto.Endpoint,
-          new PushSubscriptionKeys(dto.P256dh, dto.Auth),
-          string.Empty,
-          [])
-        {
-          ApplicationKey = ApplicationKey,
-          Scope = PushSubscriptionScope.Platform,
-          ConsentedAt = now,
-          CreationDateTime = now
-        }
-      : existing with
-        {
-          Endpoint = dto.Endpoint,
-          Keys = new PushSubscriptionKeys(dto.P256dh, dto.Auth),
-          ApplicationKey = ApplicationKey,
-          Scope = PushSubscriptionScope.Platform,
-          IsActive = true,
-          RevokedAt = null
-        };
-
-    await _subscriptionRepository.UpsertAsync(subscription with
-    {
-      UpdatedAt = now
-    });
-    return NoContent();
+    return LegacyMutationRetired();
   }
 
   /// <summary>
-  /// Remove a browser push subscription without requiring an application user.
-  /// DELETE /api/push/unsubscribe
+  /// Legacy mutation route retained as an explicit retirement response. New clients must use
+  /// /api/push/subscriptions/revoke with the per-subscription credential.
   /// </summary>
   [HttpDelete("unsubscribe")]
   [AllowAnonymous]
-  public async Task<IActionResult> Unsubscribe([FromBody] PushUnsubscribeDto dto)
+  public IActionResult Unsubscribe()
   {
-    if (string.IsNullOrWhiteSpace(dto.Endpoint))
-      return BadRequest(new { message = "Endpoint is required" });
-
-    await _subscriptionRepository.DeactivateAsync(
-      PushEndpointProtection.HashEndpoint(dto.Endpoint),
-      DateTime.UtcNow);
-    return NoContent();
+    return LegacyMutationRetired();
   }
 
   /// <summary>
@@ -105,6 +51,9 @@ public class PushController : ApplicationControllerBase
 
     return Ok(new { publicKey });
   }
+
+  private static IActionResult LegacyMutationRetired() =>
+    new StatusCodeResult(StatusCodes.Status410Gone);
 }
 
 public record PushSubscribeDto

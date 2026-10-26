@@ -11,6 +11,7 @@ using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Push;
+using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -18,6 +19,7 @@ using MorWalPizVideo.MvcHelpers.Authentication;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
+using MorWalPizVideo.ServerAPI.Security;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;
@@ -62,6 +64,11 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+    options.AddPolicy("public-account",
+        policy => policy.WithOrigins("https://morwalpiz.com", "https://www.morwalpiz.com")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -91,6 +98,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = builder.Configuration.GetValue("Faq:VoteRateLimit:PermitLimit", 30),
             Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("Faq:VoteRateLimit:WindowMinutes", 1)),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("public-account-auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"public-account:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("PublicAccount:RateLimit:PermitLimit", 10),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("PublicAccount:RateLimit:WindowMinutes", 5)),
             QueueLimit = 0,
             AutoReplenishment = true
         }));
@@ -153,6 +169,7 @@ builder.Services.AddScoped<IFaqService, FaqService>();
 builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
+builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
 builder.Services.AddScoped<ISurveyService, SurveyService>();
 builder.Services.AddSingleton<SmtpMockService>();
 builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
@@ -201,6 +218,7 @@ if (enableMock)
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerMockRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
+    builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
@@ -255,6 +273,7 @@ else
     builder.Services.AddScoped<IUserChannelOwnerRepository, UserChannelOwnerRepository>();
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
+    builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
@@ -368,6 +387,9 @@ builder.Services.Configure<InternalServiceSettings>(builder.Configuration.GetSec
 builder.Services.AddAuthentication()
     .AddScheme<InternalServiceAuthenticationOptions, InternalServiceAuthenticationHandler>(
         InternalServiceAuthenticationHandler.SchemeName, options => { });
+builder.Services.AddAuthentication()
+    .AddScheme<AuthenticationSchemeOptions, PublicAccountAuthenticationHandler>(
+        PublicAccountSecurity.Scheme, options => { });
 
 // Web Push notifications
 if (enableMock)

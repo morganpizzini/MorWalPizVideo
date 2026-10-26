@@ -42,6 +42,14 @@ const PUSH_SUBSCRIPTIONS = `${baseEndpoint}/push/subscriptions`;
 const PUSH_SUBSCRIPTION_SETTINGS = `${PUSH_SUBSCRIPTIONS}/settings`;
 const PUSH_SUBSCRIPTION_REVOKE = `${PUSH_SUBSCRIPTIONS}/revoke`;
 
+// Public account (cookie + CSRF isolated from public/admin transports)
+const PUBLIC_ACCOUNT_REGISTER = "api/v1/accounts";
+const PUBLIC_ACCOUNT_LOGIN = "api/v1/account/sessions";
+const PUBLIC_ACCOUNT_SESSION = "api/v1/account/session";
+const PUBLIC_ACCOUNT_LOGOUT = "api/v1/account/sessions/current";
+const PUBLIC_ACCOUNT_CSRF = "api/v1/account/csrf";
+const PUBLIC_ACCOUNT_PROFILE = "api/v1/profile";
+
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
 
@@ -82,6 +90,12 @@ export default {
   PUSH_SUBSCRIPTIONS,
   PUSH_SUBSCRIPTION_SETTINGS,
   PUSH_SUBSCRIPTION_REVOKE,
+  PUBLIC_ACCOUNT_REGISTER,
+  PUBLIC_ACCOUNT_LOGIN,
+  PUBLIC_ACCOUNT_SESSION,
+  PUBLIC_ACCOUNT_LOGOUT,
+  PUBLIC_ACCOUNT_CSRF,
+  PUBLIC_ACCOUNT_PROFILE,
   CONFIGURATION_STREAM,
   QUICK_LINKS,
   QUICK_LINKS_DETAIL,

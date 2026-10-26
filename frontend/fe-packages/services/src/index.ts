@@ -14,6 +14,7 @@ export {
 } from "./apiService";
 export {
   adminApiService,
+  accountApiService,
   legacyApiService,
   publicApiService,
   awaitChannelReadiness,
@@ -33,6 +34,15 @@ export type {
   ChannelBootstrapState,
   ChannelContextErrorCode,
 } from "./apiTransport";
+
+export {
+  getPublicAccountSession,
+  registerPublicAccount,
+  loginPublicAccount,
+  getPublicProfile,
+  updatePublicProfile,
+  logoutPublicAccount,
+} from "./publicAccountService";
 
 // Export individual HTTP methods
 export {

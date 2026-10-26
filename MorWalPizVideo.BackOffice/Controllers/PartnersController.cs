@@ -18,10 +18,10 @@ public sealed class PartnerRequest
     public string Name { get; set; } = string.Empty;
     public string ContactName { get; set; } = string.Empty;
     [EmailAddress]
-    public string ContactEmail { get; set; } = string.Empty;
+    public string? ContactEmail { get; set; }
     public string ContactPhone { get; set; } = string.Empty;
     [Url]
-    public string WebsiteUrl { get; set; } = string.Empty;
+    public string? WebsiteUrl { get; set; }
     public string Notes { get; set; } = string.Empty;
     public PartnerStatus Status { get; set; } = PartnerStatus.Prospect;
 }
@@ -68,7 +68,7 @@ public sealed class PartnersController(DataService dataService) : ControllerBase
     private string ChannelId => HttpContext.GetChannelContext().ChannelId;
     private static Partner ToEntity(PartnerRequest request) => new()
     {
-        Name = request.Name, ContactName = request.ContactName, ContactEmail = request.ContactEmail,
-        ContactPhone = request.ContactPhone, WebsiteUrl = request.WebsiteUrl, Notes = request.Notes, Status = request.Status
+        Name = request.Name, ContactName = request.ContactName, ContactEmail = request.ContactEmail ?? string.Empty,
+        ContactPhone = request.ContactPhone, WebsiteUrl = request.WebsiteUrl ?? string.Empty, Notes = request.Notes, Status = request.Status
     };
 }

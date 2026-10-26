@@ -91,5 +91,7 @@
         public const string NewsletterUsers = "newsletterUsers";
         public const string NewsletterRecipients = "newsletterRecipients";
         public const string NewsletterEvents = "newsletterEvents";
+        public const string PublicAccounts = "publicAccounts";
+        public const string PublicAccountSessions = "publicAccountSessions";
     }
 }

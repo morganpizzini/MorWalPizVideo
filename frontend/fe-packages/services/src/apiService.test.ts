@@ -414,6 +414,57 @@ describe("transport response contracts", () => {
       new Headers(fetchMock.mock.calls[1][1].headers).get("X-CSRF-TOKEN"),
     ).toBe("csrf");
   });
+
+  it("isolates account cookies and CSRF from public/admin context", async () => {
+    const account = createApiClient({
+      mode: "account",
+      baseUrl: "https://account.test",
+    });
+    const publicClient = createApiClient({
+      mode: "public",
+      baseUrl: "https://public.test",
+    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          url.endsWith("/csrf")
+            ? Response.json({ token: "account-csrf" })
+            : Response.json({ saved: true }),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await account.post("/api/v1/account/sessions", {}, "", {
+      Authorization: "Bearer injected",
+      Cookie: "admin=injected",
+      "X-Channel-Id": "admin-channel",
+      "X-CSRF-TOKEN": "account-csrf",
+    });
+    await publicClient.post("/api/items", {}, "", {
+      Cookie: "injected",
+      "X-CSRF-TOKEN": "injected",
+    });
+
+    const accountRequest = fetchMock.mock.calls.find(([url]) =>
+      String(url).startsWith("https://account"),
+    )![1];
+    expect(accountRequest.credentials).toBe("include");
+    expect(new Headers(accountRequest.headers).has("Authorization")).toBe(
+      false,
+    );
+    expect(new Headers(accountRequest.headers).has("Cookie")).toBe(false);
+    expect(new Headers(accountRequest.headers).has("X-Channel-Id")).toBe(false);
+    expect(new Headers(accountRequest.headers).get("X-CSRF-TOKEN")).toBe(
+      "account-csrf",
+    );
+
+    const publicRequest = fetchMock.mock.calls.find(([url]) =>
+      String(url).startsWith("https://public"),
+    )![1];
+    expect(publicRequest.credentials).toBe("omit");
+    expect(new Headers(publicRequest.headers).has("X-CSRF-TOKEN")).toBe(false);
+  });
 });
 
 describe("requireSuccessfulResponse", () => {
