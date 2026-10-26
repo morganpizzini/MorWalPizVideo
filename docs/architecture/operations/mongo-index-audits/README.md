@@ -59,7 +59,10 @@ curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/apply" \
       "quicklinks_url.unique",
       "customforms_active_url",
       "calendarevents_creation_desc",
-      "socialassets.channelid_idempotencykey.unique"
+      "socialassets.channelid_idempotencykey.unique",
+      "publicaccounts.normalizedusername.unique",
+      "publicaccounts.normalizedemail.unique",
+      "publicaccountsessions.expiresat.ttl"
     ]
   }'
 ```

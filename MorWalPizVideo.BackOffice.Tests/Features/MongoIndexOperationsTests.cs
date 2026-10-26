@@ -60,8 +60,26 @@ public sealed class MongoIndexOperationsTests
             "newsletterusers.channelid_unsubscribetokenhash",
             "newsletterrecipients.channelid_newsletterid_userid.unique",
             "newsletterevents.channelid_newsletterid_type_occurredat",
-            "socialassets.channelid_idempotencykey.unique"
+            "socialassets.channelid_idempotencykey.unique",
+            "publicaccounts.normalizedusername.unique",
+            "publicaccounts.normalizedemail.unique",
+            "publicaccountsessions.expiresat.ttl"
         ], operations.AppliedKeys);
+    }
+
+    [Fact]
+    public void Public_account_manifest_contains_required_unique_and_ttl_indexes()
+    {
+        var username = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccounts.normalizedusername.unique");
+        var email = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccounts.normalizedemail.unique");
+        var sessions = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccountsessions.expiresat.ttl");
+
+        Assert.True(username.Unique);
+        Assert.Equal("normalizedUsername", username.Keys.GetElement(0).Name);
+        Assert.True(email.Unique);
+        Assert.Equal("normalizedEmail", email.Keys.GetElement(0).Name);
+        Assert.Equal("expiresAt", sessions.Keys.GetElement(0).Name);
+        Assert.Equal(TimeSpan.Zero, sessions.ExpireAfter);
     }
 
     [Fact]
