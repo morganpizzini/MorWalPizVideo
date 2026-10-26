@@ -65,6 +65,14 @@ BackOffice uses JWT bearer and can read a secure cookie. Implemented browser pos
 
 The SPA stores display-only user information in local storage; the browser JWT remains in the HttpOnly cookie.
 
+## Public Account Authentication
+
+ServerAPI public accounts are separate from BackOffice `User`/RBAC and the on-hold shop identity model. Registration, login, anonymous session restoration, and CSRF acquisition are explicit anonymous endpoints under `/api/v1`; profile access and logout require the dedicated `PublicAccount` scheme.
+
+The browser session uses an HttpOnly, Secure, `SameSite=None` cookie. ServerAPI stores only the session-token hash and revalidates current session/account state. Unsafe account requests require the matching CSRF header/cookie pair. Credentialed CORS is restricted to the two canonical MorWalPiz origins and applies only to account endpoints; ordinary public APIs and anonymous Web Push retain `credentials: omit`.
+
+Production activation is blocked: `GET https://morwalpiz-serverapi.azurewebsites.net/api/v1/account/csrf` currently returns `401`, while current controller metadata and in-process endpoint tests allow it anonymously. Verify the deployed ServerAPI revision and App Service/gateway authentication before changing application authorization. Do not weaken the host fallback policy to compensate for release skew or pre-application authentication.
+
 ### Shared Transport Isolation
 
 Slice 7 makes the shared named admin HTTP methods intrinsically cookie-only with client-owned CSRF/channel/401 recovery. Public video, Ask and Shooting ITA use explicit public helpers/aliases with `credentials: omit`, without reading token providers/local-storage tokens or carrying admin channel/CSRF context; even manually supplied Authorization/Cookie/context headers are stripped. The frozen shop retains its independent configurable legacy instance. Existing routes, API authentication policies and payload/error contracts are preserved; legacy transport setters cannot reconfigure the new admin/public instances.

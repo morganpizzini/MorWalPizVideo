@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { useState } from 'react';
 import './title-header.scss';
 import PublicNavigationLink from '../components/PublicNavigationLink';
 import { usePublicNavigation } from '../routes/layout/navigation';
@@ -11,10 +12,58 @@ interface TitleComponentProps {
 
 export default function TitleComponent(props: TitleComponentProps) {
   const { navigation, loading, error } = usePublicNavigation();
-  const { session } = usePublicAccount();
+  const { session, loading: accountLoading, logout } = usePublicAccount();
+  const [logoutError, setLogoutError] = useState('');
+
+  const handleLogout = async () => {
+    setLogoutError('');
+    try {
+      await logout();
+    } catch {
+      setLogoutError('Non è stato possibile uscire. Riprova.');
+    }
+  };
 
   return (
-    <div className={`container text-center ${props.dimensions}`}>
+    <div className={`container text-center title-header ${props.dimensions}`}>
+      {!props.hideLink && (
+        <div className="account-actions" aria-label="Account">
+          {accountLoading ? (
+            <span className="account-actions-placeholder" aria-hidden="true" />
+          ) : session.authenticated ? (
+            <>
+              <Link to="/account/profile" className="account-action account-action-profile">
+                <i className="fas fa-user" aria-hidden="true" />
+                <span>Profilo</span>
+              </Link>
+              <button
+                type="button"
+                className="account-action account-action-logout"
+                onClick={handleLogout}
+              >
+                <i className="fas fa-sign-out-alt" aria-hidden="true" />
+                <span>Esci</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/account/login" className="account-action account-action-login">
+                <i className="fas fa-sign-in-alt" aria-hidden="true" />
+                <span>Accedi</span>
+              </Link>
+              <Link to="/account/register" className="account-action account-action-register">
+                <i className="fas fa-user-plus" aria-hidden="true" />
+                <span>Registrati</span>
+              </Link>
+            </>
+          )}
+          {logoutError && (
+            <span className="account-action-error" role="alert">
+              {logoutError}
+            </span>
+          )}
+        </div>
+      )}
       <div className="title-container">
         <Link to={``}>
           <h1 className="title">
@@ -83,22 +132,12 @@ export default function TitleComponent(props: TitleComponentProps) {
                   className="nav-link"
                 />
               ))}
-              <Link
-                to={session.authenticated ? '/account/profile' : '/account/login'}
-                className="nav-link"
-              >
-                {session.authenticated ? 'Profilo' : 'Accedi'}
-              </Link>
             </nav>
           ) : (
-            <nav aria-label="Account navigation" className="d-flex justify-content-center mt-3">
-              <Link
-                to={session.authenticated ? '/account/profile' : '/account/login'}
-                className="nav-link"
-              >
-                {session.authenticated ? 'Profilo' : 'Accedi'}
-              </Link>
-            </nav>
+            <nav
+              aria-label="Main navigation"
+              className="d-flex justify-content-center gap-3 mt-3"
+            />
           )}
         </>
       )}

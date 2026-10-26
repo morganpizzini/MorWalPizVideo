@@ -26,7 +26,8 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
 
         var withoutCsrf = await client.PostAsJsonAsync("/api/v1/accounts", request);
-        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        var csrfResponse = await client.GetAsync("/api/v1/account/csrf");
+        var csrf = await csrfResponse.Content.ReadFromJsonAsync<PublicAccountCsrfContract>();
         using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
         {
             Content = JsonContent.Create(request)
@@ -37,6 +38,9 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         var publicPage = await client.GetAsync("/api/navigation");
 
         Assert.Equal(HttpStatusCode.Forbidden, withoutCsrf.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, csrfResponse.StatusCode);
+        Assert.NotNull(csrf);
+        Assert.False(string.IsNullOrWhiteSpace(csrf.Token));
         Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
         Assert.True(session!.Authenticated);
         Assert.Equal(request.Email, session.Account!.Email);

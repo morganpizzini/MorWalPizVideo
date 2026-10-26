@@ -56,7 +56,9 @@ RBAC and admin user management are owned by this SPA and the BackOffice API. The
 - React 19 with SSR, PWA behavior, SEO, analytics, and public routes.
 - Hosted on Aruba at `https://morwalpiz.com`.
 - Calls `https://morwalpiz-serverapi.azurewebsites.net` directly.
-- Uses `credentials: omit` for public calls.
+- Uses `credentials: omit` for ordinary public calls. Public account registration, sessions, and profile operations use a separate account client with `credentials: include` and CSRF; it strips BackOffice bearer and channel context.
+
+Public account UI is additive and does not guard existing content or anonymous Web Push routes. Session restoration is server-authoritative through the HttpOnly account cookie. Production activation is currently blocked because the deployed anonymous account CSRF endpoint returns `401` despite current source/test metadata allowing anonymous access; see the public-account handoff for the required deployed-artifact and host-policy proof.
 
 Remove API-key administration routes from this application. Replace legacy `morwalpiz.it` canonical metadata with the authoritative domain.
 

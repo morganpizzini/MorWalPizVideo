@@ -1,96 +1,176 @@
 @font-face {
-    font-family: 'High Speed';
-    src: url('/fonts/High Speed.otf') format('opentype'), url('/fonts/High Speed.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
+  font-family: 'High Speed';
+  src:
+    url('/fonts/High Speed.otf') format('opentype'),
+    url('/fonts/High Speed.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
 .title-container {
-    text-align: center;
-    padding-top: 50px;
+  text-align: center;
+  padding-top: 50px;
+}
+
+.title-header {
+  position: relative;
+}
+
+.account-actions {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.account-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgba(51, 51, 51, 0.35);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-action:hover,
+.account-action:focus-visible {
+  background: #333;
+  color: #fff;
+}
+
+.account-action-logout {
+  font: inherit;
+}
+
+.account-action-error {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: max-content;
+  max-width: min(280px, 80vw);
+  padding: 6px 9px;
+  border-radius: 4px;
+  background: #842029;
+  color: #fff;
+  font-size: 13px;
+}
+
+.account-actions-placeholder {
+  display: block;
+  width: 96px;
+  height: 40px;
 }
 
 .title-container a {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .title {
-    font-size: 64px;
-    font-weight: bold;
-    font-family: 'High Speed', sans-serif;
-    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5); /* Effetto ombreggiatura per 3D */
-    letter-spacing: 2px;
+  font-size: 64px;
+  font-weight: bold;
+  font-family: 'High Speed', sans-serif;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5); /* Effetto ombreggiatura per 3D */
+  letter-spacing: 2px;
 }
 
 .title .big-letter {
-    color: #333; /* Colore nero per le lettere grandi */
-    font-size: 84px; /* Dimensione maggiore per W, M, P */
+  color: #333; /* Colore nero per le lettere grandi */
+  font-size: 84px; /* Dimensione maggiore per W, M, P */
 }
 
 .title .small-letter {
-    color: #ececec; /* Colore bianco per le altre lettere */
+  color: #ececec; /* Colore bianco per le altre lettere */
 }
 
 @media (max-width: 768px) {
-    .title .big-letter {
-        font-size: 50px;
-    }
+  .account-actions {
+    position: static;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
 
-    .title .small-letter {
-        font-size: 37px;
-    }
+  .account-action-error {
+    position: static;
+    width: auto;
+    margin-left: 100%;
+    transform: translateX(-100%);
+  }
+
+  .title .big-letter {
+    font-size: 50px;
+  }
+
+  .title .small-letter {
+    font-size: 37px;
+  }
 }
 
 .subtitle {
-    text-transform: uppercase;
-    font-size: 28px;
-    color: #000;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); /* Ombreggiatura leggera per il sottotitolo */
+  text-transform: uppercase;
+  font-size: 28px;
+  color: #000;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); /* Ombreggiatura leggera per il sottotitolo */
 }
-.container.small{
-    .social-buttons a {
-        padding: 4px 6px;
-    }
+.container.small {
+  .social-buttons a {
+    padding: 4px 6px;
+  }
 }
 /* Centro i pulsanti */
 .social-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
 
-    a {
-        padding: 10px 20px;
-        font-size: 18px;
-        color: #fff;
-        border-radius: 5px;
-        text-decoration: none;
-    }
+  a {
+    padding: 10px 20px;
+    font-size: 18px;
+    color: #fff;
+    border-radius: 5px;
+    text-decoration: none;
+  }
 }
 
 .btn-telegram {
-    background-color: #2481cc;
+  background-color: #2481cc;
 }
 
-.btn-telegram:hover, .btn-telegram:active {
-    background-color: #1a8ad5 !important;
-    color: #fff !important;
+.btn-telegram:hover,
+.btn-telegram:active {
+  background-color: #1a8ad5 !important;
+  color: #fff !important;
 }
 
 /* Instagram button */
 .btn-instagram {
-    background-color: #E4405F;
+  background-color: #e4405f;
 }
 
-.btn-instagram:hover, .btn-instagram:active {
-    background-color: #C13584 !important;
-    color: #fff !important;
+.btn-instagram:hover,
+.btn-instagram:active {
+  background-color: #c13584 !important;
+  color: #fff !important;
 }
 /* YouTube button */
 .btn-youtube {
-    background-color: #FF0000;
+  background-color: #ff0000;
 }
 
-.btn-youtube:hover, .btn-youtube:active {
-    background-color: #CC0000 !important;
-    color: #fff !important;
+.btn-youtube:hover,
+.btn-youtube:active {
+  background-color: #cc0000 !important;
+  color: #fff !important;
 }

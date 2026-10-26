@@ -99,6 +99,29 @@ jobs:
           app-name: ${{ vars.SERVERAPI_APP_NAME }}
           package: ./publish
 
+      - name: Smoke test anonymous account bootstrap
+        env:
+          SERVERAPI_BASE_URL: ${{ vars.SERVERAPI_BASE_URL }}
+          SERVERAPI_APP_NAME: ${{ vars.SERVERAPI_APP_NAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_url="${SERVERAPI_BASE_URL:-https://${SERVERAPI_APP_NAME}.azurewebsites.net}"
+          base_url="${base_url%/}"
+          headers_file="$(mktemp)"
+          body_file="$(mktemp)"
+          status="$(curl --silent --show-error --output "$body_file" --dump-header "$headers_file" --write-out '%{http_code}' --header 'Origin: https://morwalpiz.com' "$base_url/api/v1/account/csrf")"
+          if [[ "$status" != "200" ]]; then
+            echo "Anonymous CSRF smoke test returned HTTP $status"
+            cat "$headers_file"
+            cat "$body_file"
+            exit 1
+          fi
+          grep -Eiq '"token"[[:space:]]*:' "$body_file" || { echo "CSRF response did not contain a token"; cat "$body_file"; exit 1; }
+          grep -Eiq '^set-cookie:.*csrf' "$headers_file" || { echo "CSRF response did not set a cookie"; cat "$headers_file"; exit 1; }
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://morwalpiz.com' "$headers_file" || { echo "CSRF response did not allow the public origin"; cat "$headers_file"; exit 1; }
+          grep -Eiq '^access-control-allow-credentials:[[:space:]]*true' "$headers_file" || { echo "CSRF response did not allow credentials"; cat "$headers_file"; exit 1; }
+
       - name: Azure logout
         if: always()
         run: az logout

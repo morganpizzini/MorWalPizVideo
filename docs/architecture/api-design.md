@@ -119,6 +119,8 @@ are not part of this channel-scoping change.
 | BackOffice SPA management | JWT bearer or secure cookie |
 | VideoImporter/InsightScanner | API key |
 | Public content/catalog | Anonymous |
+| Public account registration/login/session bootstrap/CSRF | Anonymous, account-only credentialed CORS |
+| Public profile/logout | Dedicated public-account cookie scheme plus CSRF on unsafe operations |
 | Anonymous cart/acquisition | Target contract, on hold |
 | Future customer endpoints | Dedicated customer policy |
 | Internal cache invalidation | Authenticated service identity |

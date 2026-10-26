@@ -103,7 +103,9 @@ is a deployment prerequisite.
 - Public endpoints must explicitly allow anonymous access.
 - Development fake authentication must require both Development environment and `EnableDev`.
 - The free-artifact phase uses an opaque, signed or server-stored anonymous-cart cookie, not a customer identity.
-- Future customer authentication receives a distinct scheme/policy and may claim anonymous acquisitions.
+- Public site accounts use separate `PublicAccount`/`PublicAccountSession` collections, a dedicated ServerAPI cookie scheme, explicit account authorization, CSRF validation, and account-only credentialed CORS. They do not reuse BackOffice `User`/RBAC or the on-hold shop customer model.
+- Registration, login, anonymous session restoration, and account CSRF acquisition are explicit anonymous exceptions. Profile and logout require the public-account scheme; ordinary public calls remain credential-omitting.
+- Deployed public-account activation remains blocked until the anonymous CSRF endpoint returns `200` from the production ServerAPI with the expected exact-origin credentialed CORS and secure cookie headers.
 
 ### ShortLinks
 

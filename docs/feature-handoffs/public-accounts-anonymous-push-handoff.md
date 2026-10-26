@@ -11,15 +11,25 @@ Assumptions:
 - Public accounts are distinct from BackOffice administrators and from the on-hold shop customer model.
 - The first release uses a secure HttpOnly cookie, server-revalidated session, CSRF protection, exact credentialed CORS origins, and no browser-readable bearer token.
 - Push subscriptions remain browser-scoped. Optional account linking is deferred until its cross-device and account-deletion behavior is approved.
-- API-01 and TD-027 remain open until application changes and focused regression tests pass. This plan does not mark them complete.
+- API-01 source remediation and focused regression coverage are complete. Final API-01/TD-027 closure remains pending production consumer and rollout evidence; this handoff does not claim that operational closure yet.
 
 ## Implementation Status (2026-10-26)
 
 The public-account slice is implemented additively. ServerAPI now owns separate `PublicAccount` and `PublicAccountSession` persistence, Domain registration/login/session/profile commands, a dedicated cookie authentication scheme, CSRF validation, account-only credentialed CORS, rate limiting, and source-managed normalized identity/expiry indexes. The public client now has an isolated cookie account transport, session restoration, login, registration, profile update, logout, and account navigation. Existing public routes remain anonymous and unguarded; `/notifiche` and anonymous Web Push remain independent.
 
+The account navigation refinement is now implemented in `frontend/morwalpizvideo.client/src/layouts/title-header.tsx` and its stylesheet. Anonymous visitors see `Accedi` and `Registrati`; authenticated visitors see `Profilo` and the action-based `Esci`; session restoration reserves the control space while loading, and logout failures remain visible without changing the displayed session state. The controls are top-right within the header on desktop and return to normal flow on narrow screens. The centered duplicate account link was removed.
+
 The first implementation slice addresses API-01 independently of public-account work. The legacy `POST /api/push/subscribe` and `DELETE /api/push/unsubscribe` routes now return `410 Gone` without resolving or mutating the shared subscription repository. The anonymous credential-protected `/api/push/subscriptions/*` routes remain unchanged and continue to support creation, settings, update, and revocation.
 
-Validation: `PushSubscriptionEndpointTests` passes with 6 tests, including a regression that invokes both retired legacy mutation routes and confirms the protected subscription remains unchanged. The shared services suite passes 43 tests, the shared models/services TypeScript builds pass, `morwalpizvideo.client` production/PWA build passes, the ServerAPI build passes, and `PublicAccountEndpointTests` passes 2/2. Production legacy-consumer traffic, live Mongo index deployment, and real-browser CORS/cookie evidence remain unverified.
+Validation: `PushSubscriptionEndpointTests` passes with 6 tests, including a regression that invokes both retired legacy mutation routes and confirms the protected subscription remains unchanged. The shared services suite passes 43 tests, the shared models/services TypeScript builds pass, `morwalpizvideo.client` production/PWA build passes, the ServerAPI build passes, and `PublicAccountEndpointTests` passes 2/2, including anonymous CSRF response/token coverage. The ServerAPI deployment workflow now gates release on an anonymous production CSRF probe from `https://morwalpiz.com` that checks status, token, cookie, and credentialed CORS headers. Production legacy-consumer traffic, live Mongo index deployment, and real-browser CORS/cookie evidence remain unverified until the workflow runs against the deployed app.
+
+### Production Follow-up (2026-10-26)
+
+Registration is blocked in the deployed browser flow because `GET https://morwalpiz-serverapi.azurewebsites.net/api/v1/account/csrf` returns `401`. Current source marks that exact action `[AllowAnonymous]`, `PublicAccountEndpointTests` obtains it anonymously before registering successfully, and the account transport resolves the expected URL with `credentials: include`. The checked-in controller path therefore does not explain the production response.
+
+Treat this as a release mismatch or host/platform-policy incident until production evidence identifies the responder. The ServerAPI and public-client workflows deploy independently, and the ServerAPI workflow has no post-deployment account smoke test. Before changing controller authorization, verify the deployed revision/package and capture the unauthenticated response status, body, `Server`, `WWW-Authenticate`, CORS, and cookie headers. Then verify App Service Authentication/Easy Auth and gateway rules do not require authentication before ASP.NET Core receives the request. A current artifact reaching this controller action must return `200`, `PublicAccountCsrfContract`, and the CSRF cookie.
+
+Release status: public-account registration is **BLOCKED** until the production CSRF probe passes from `https://morwalpiz.com`. Local/in-process endpoint tests are necessary but not sufficient release evidence.
 
 ## Current Evidence
 
@@ -34,13 +44,14 @@ Validation: `PushSubscriptionEndpointTests` passes with 6 tests, including a reg
 - `MorWalPizVideo.BackOffice/Controllers/PushSubscriptionsController.cs` already owns authenticated BackOffice browser registration through the same credential protocol.
 - No maintained frontend source caller of the legacy `api/push/subscribe`, `api/push/unsubscribe`, or `api/push/public-key` routes was found. Deployed or external callers remain unknown and require telemetry/consumer confirmation before route removal.
 - `MorWalPizVideo.Models/Models/User.cs`, BackOffice `AuthController`, and BackOffice `UserController` are administrative: they carry RBAC groups, direct permissions, BackOffice access, impersonation restrictions, quotas, and admin lifecycle operations. They are not an appropriate public self-registration aggregate.
-- ServerAPI currently has an authenticated fallback using its JWT scheme, but no public-account controller, dedicated public-account scheme, cookie fallback, account session store, or account policy.
-- ServerAPI production CORS allows the two MorWalPiz origins but does not allow credentials. The shared public frontend client deliberately strips cookies/auth headers and uses `credentials: omit`.
+- ServerAPI now has a dedicated public-account controller, account authentication scheme, server-side session store, account-only credentialed CORS policy, CSRF validation, and explicit anonymous metadata on registration, login, session restoration, and CSRF acquisition. Its general fallback policy remains authenticated.
+- The shared public frontend client still strips credentials for ordinary public calls. The isolated account client uses `credentials: include`, strips BackOffice bearer/channel context, and obtains CSRF from `api/v1/account/csrf`.
 - `MorWalPizVideo.ShootingRange` contains a repository-local precedent for an HttpOnly cross-origin cookie, CSRF, exact credentialed CORS, server-side session revalidation, fixed expiry, logout revocation, and non-redirecting API 401/403 responses. It is evidence for the security shape, not a library to reference from ServerAPI.
 - `docs/architecture/adr/ADR-017-anonymous-web-push.md`, `docs/architecture/api-consistency-audit.md`, and TD-027 already state that anonymous push is intentional and that legacy credential bypass is the open deviation.
 - No `PRODUCT.md` or `DESIGN.md` was found under `frontend/morwalpizvideo.client`; current routes, Bootstrap styling, shared layout components, and existing public pages are the incumbent design context.
 - `frontend/morwalpizvideo.client/src/routes/layout/account.tsx` owns additive session restoration and logout state. It is composed by the public root and does not guard existing content routes.
 - `frontend/morwalpizvideo.client/src/routes/account/Components.tsx` provides login, registration, and profile presentation using the existing Bootstrap language.
+- `frontend/morwalpizvideo.client/src/layouts/title-header.tsx` currently appends one account link to the centered content navigation. This makes `Accedi` read as a primary content-navigation item and provides no persistent registration or logout action.
 
 ## Proposed Design
 
@@ -99,6 +110,21 @@ Do not make account linking part of API-01 or the initial account release. If la
 - the existing endpoint plus subscription credential.
 
 The server may then set an optional public-account reference on the subscription. It must never claim by endpoint, cookie, email, or login alone. Anonymous management remains valid so a signed-out browser can still revoke its own consent. Cross-device listing/revocation, unlink-on-logout, account deletion, retention, and privacy export behavior require a separate decision before this field is added.
+
+### 5. Header Account Controls
+
+Move account actions out of the centered content-navigation row into one account utility cluster owned by `TitleComponent`:
+
+- Desktop: anchor the cluster to the top-right of the header container, inside normal header bounds. Do not make it viewport-fixed; it must scroll with the header and never cover content.
+- Narrow screens: return the cluster to document flow as a compact, end-aligned row below or beside the brand according to available width. It must not overlap the logo, social buttons, or main navigation.
+- Anonymous state: show `Accedi` and `Registrati`, using the existing icon/style system and Bootstrap language.
+- Authenticated state: show `Profilo` (or the bounded display name when it fits) and an explicit `Esci` button. Logout is an action, not a navigation link.
+- Loading state: reserve stable control dimensions and do not briefly render `Accedi` before session restoration completes.
+- Remove the duplicate account link from the centered main-navigation list and its fallback account-only navigation branch.
+- Keep account controls out of `hideLink` compact embeds unless product intent explicitly changes that reduced surface.
+- Keyboard focus, accessible names, 44px minimum mobile targets, and visible logout failure are required. Logout failure must not falsely render the anonymous state.
+
+This is an Impeccable `layout` refinement in `Operate` mode, not a redesign. Preserve the large brand, current Bootstrap behavior, social controls, dynamic content navigation, fonts, and palette.
 
 ### Alternatives
 
@@ -208,6 +234,7 @@ The server may then set an optional public-account reference on the subscription
 - **High — Privilege boundary collision:** Reusing administrative `User` could let public lifecycle rules affect BackOffice authorization. Mitigation: separate aggregates, collections, scheme, policy, contracts, and controllers. Signal: a public account cannot authenticate to BackOffice or acquire admin claims.
 - **High — API-01 remains reachable:** A forgotten legacy route could still mutate by endpoint hash. Mitigation: no controller-level repository mutation and cross-route state-invariance tests. Signal: overwrite/reactivate/revoke attempts leave keys, application, scope, active state, and timestamps unchanged.
 - **High — Cross-origin cookie/CSRF failure:** `SameSite=None` without exact credentialed CORS and antiforgery can be nonfunctional or unsafe. Mitigation: endpoint-specific exact origins, CSRF on all unsafe cookie requests, and real-browser allowed/denied-origin evidence. Signal: legitimate session works; forged/missing-CSRF and unapproved origins fail.
+- **High — Frontend/backend release skew:** The public client can expose account UI while the deployed ServerAPI lacks or blocks its anonymous bootstrap contract. Mitigation: backend-first release dependency and a post-deploy account smoke probe before frontend activation. Signal: production CSRF, anonymous session, registration, authenticated profile, and logout probes pass against the exact deployed origin.
 - **High — Duplicate identities/racing registration:** In-memory existence checks are race-prone. Mitigation: normalized fields plus unique MongoDB indexes and stable 409 handling. Signal: concurrent same-email/username registration creates one account.
 - **High — Credentialless push takeover during migration:** Endpoint-only adoption would repeat the vulnerability. Mitigation: atomic endpoint plus exact-current-key match and empty-hash precondition. Signal: endpoint-only/wrong-key claims fail; exactly one correct claim succeeds and returns a credential once.
 - **Medium — Session invalidation gaps:** A valid cookie could outlive deactivation/password change. Mitigation: session record and account security version/state checked on every authenticated request. Signal: deactivation, password change, logout, and expiry invalidate existing cookies.
@@ -235,9 +262,10 @@ The server may then set an optional public-account reference on the subscription
 5. **Compose ServerAPI security.** Add the dedicated scheme/policy, exact account CORS, antiforgery, rate limits, safe cookie options, session validation, and public-account controllers. Gate: real and mock hosts resolve; anonymous/account/admin/internal principals remain isolated; API returns Problem Details and no redirects.
 6. **Add shared frontend account transport.** Add account models, endpoints, and a cookie/CSRF account client while preserving public/admin isolation. Build order is models, services, then application. Gate: transport tests prove credentials/header separation under interleaved use and SSR-safe client construction.
 7. **Add the public account UI.** Add registration, login, profile, logout, session restore, protected profile routing, accessible validation, and account navigation. Keep push prompt/settings available signed out. Apply the Impeccable `shape` refinement before implementation and `harden` review after. Gate: component/route tests and responsive/accessibility visual evidence cover all required states.
-8. **Deploy compatibly.** Deploy ServerAPI/Domain/contracts and required configuration/indexes before the frontend. Observe account failures, CORS/CSRF, duplicate-key conflicts, session validation, legacy push traffic, and claim outcomes. Gate: rollback is rehearsed and no legacy consumer remains before final route retirement.
-9. **Close documentation.** Update the architecture guide, new public-account ADR, ADR-017, this handoff, API consistency audit, and TD-027 with actual implementation and executable evidence. Only then mark API-01 complete.
-10. **Stop.** Do not add account-to-push linking, cross-device subscription management, shop identity convergence, social login, or broader `User` cleanup without separate approval.
+8. **Refine global account controls.** Move account state/actions to the responsive top-right header utility cluster, remove the centered duplicate, preserve stable loading dimensions, and expose logout failure without lying about session state. Gate: desktop/mobile captures and keyboard checks cover anonymous, loading, authenticated, long-name, and logout-failure states without overlap.
+9. **Deploy compatibly.** Deploy ServerAPI/Domain/contracts and required configuration/indexes before the frontend. Require an unauthenticated production `account/csrf` smoke probe and authenticated lifecycle probe before activating the client UI. Observe account failures, CORS/CSRF, duplicate-key conflicts, session validation, legacy push traffic, and claim outcomes. Gate: rollback is rehearsed and no legacy consumer remains before final route retirement.
+10. **Close documentation.** Update the architecture guide, new public-account ADR, ADR-017, this handoff, API consistency audit, and TD-027 with actual implementation and executable evidence. Only then mark API-01 complete.
+11. **Stop.** Do not add account-to-push linking, cross-device subscription management, shop identity convergence, social login, or broader `User` cleanup without separate approval.
 
 Independent post-validation review is warranted because the change introduces a new internet-facing authentication boundary and closes a security finding across legacy/current routes. The user should select `MorWalPiz Code Reviewer` after implementation and focused validation.
 
@@ -249,8 +277,9 @@ Independent post-validation review is warranted because the change introduces a 
 - **Mongo/index:** normalized username/email uniqueness, session expiry index behavior, endpoint-hash uniqueness, real/mock parity, and duplicate preflight reporting. No production data mutation is inferred from mock tests.
 - **Shared frontend services:** account calls include credentials and CSRF; public calls omit cookies/auth/channel/CSRF; admin behavior is unchanged; 401 handling is client-local; concurrent SSR clients do not share account context.
 - **Public client components/routes:** registration validation/server errors, login failure/rate limit, session restoration, profile read/update, logout, expired-session redirect, keyboard focus on errors, and anonymous `/notifiche` before/during/after account sessions.
+- **Header component:** anonymous actions, loading placeholder, authenticated profile/logout, long display name, logout failure, `hideLink`, desktop alignment, narrow-screen flow, keyboard order, accessible names, and no duplicate center navigation item.
 - **Security:** no password/hash/salt/session token/push endpoint/keys/raw credential in response or logs; account enumeration resistance; CSRF and CORS negative tests; cookie tampering; session fixation prevention; password-change invalidation if password management is in scope.
-- **End to end/browser:** actual `morwalpiz.com` to ServerAPI cross-origin cookie and CSRF flow, denied lookalike origin, restart/scale session behavior, service-worker push opt-in while signed out, and push settings after login/logout.
+- **End to end/browser:** actual `morwalpiz.com` to ServerAPI cross-origin cookie and CSRF flow, denied lookalike origin, restart/scale session behavior, service-worker push opt-in while signed out, and push settings after login/logout. The release probe must prove unauthenticated `GET /api/v1/account/csrf` returns `200` with exact credentialed CORS and secure cookie headers before registration is considered available.
 - **CI ownership:** new backend tests carry `TestGroup:ServerAPI` (and Shared/CrossApi only where behavior truly spans ownership) so the ServerAPI deployment filter discovers them exactly. Public client and shared services use their existing Vitest workspaces.
 
 ## Migration And Rollback
@@ -280,8 +309,8 @@ Add only non-secret defaults to source. Session/cookie/rate-limit and optional e
 1. Audit data and indexes; provision Data Protection/configuration.
 2. Deploy API-01 correction and observe legacy usage/claim outcomes.
 3. Deploy public account backend with UI feature disabled.
-4. Validate cross-origin browser/session behavior.
-5. Deploy shared packages/public client and enable account UI gradually.
+4. Validate the anonymous CSRF/session bootstrap and full cross-origin browser/session behavior against the deployed ServerAPI.
+5. Deploy shared packages/public client and enable account UI only after the production account smoke gate passes.
 6. Retire legacy push mutation routes after the approved zero-use window.
 7. Update documentation and close API-01/TD-027.
 
@@ -299,3 +328,13 @@ Add only non-secret defaults to source. Session/cookie/rate-limit and optional e
 3. What telemetry window and response (`404`, `410`, or another stable Problem Details contract) should govern final retirement of legacy push mutation routes?
 4. Are there known external or old deployed consumers of legacy `api/push/*` routes that are absent from current source?
 5. Should account-to-push linking remain deferred as recommended, or is cross-device notification management an explicit first-release requirement? If required, account deletion/unlink/retention semantics must be decided before implementation.
+
+## Production Incident Decision
+
+No new architecture decision is required for the observed CSRF `401`: source already declares the endpoint anonymous and the account client already targets it correctly. The implementation owner should first prove which layer produced the deployed response.
+
+1. Confirm the ServerAPI deployment containing `PublicAccountController` completed after the account commit; a green public-client deployment is not evidence of a green ServerAPI deployment.
+2. Capture the exact production response headers/body without an account cookie and with `Origin: https://morwalpiz.com`. A JWT `WWW-Authenticate` response indicates ASP.NET authorization or revision mismatch; an App Service/platform signature indicates pre-application authentication.
+3. Verify App Service Authentication/Easy Auth and any gateway rule allow this anonymous path. Do not weaken the ServerAPI fallback policy globally.
+4. Add a post-deploy smoke gate for anonymous CSRF/session bootstrap and credentialed CORS headers. The gate must fail deployment or UI activation on any `401`, missing exact origin, missing `Access-Control-Allow-Credentials`, or missing CSRF cookie.
+5. Only if the deployed current artifact reproduces the `401` inside ASP.NET should implementation change. At that point, inspect endpoint metadata discovery and authentication scheme selection with a production-equivalent host test before editing controller attributes.
