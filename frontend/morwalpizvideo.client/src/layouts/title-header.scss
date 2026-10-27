@@ -31,22 +31,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid rgba(51, 51, 51, 0.35);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.9);
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
   color: #333;
-  font-size: 15px;
+  font-size: 18px;
   text-decoration: none;
   cursor: pointer;
 }
 
 .account-action:hover,
 .account-action:focus-visible {
-  background: #333;
-  color: #fff;
+  color: #842029;
 }
 
 .account-action-logout {

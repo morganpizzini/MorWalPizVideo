@@ -17,6 +17,7 @@ export {
   accountApiService,
   legacyApiService,
   publicApiService,
+  getApiFieldErrors,
   awaitChannelReadiness,
   coalesceAccessibleChannelsRequest,
   isScopedBackOfficeRequest,

@@ -32,6 +32,10 @@ import {
 } from "./channelNewsService";
 import { loadChannelMap } from "./videoChannelMap";
 import { fetchShopProducts, shopLogin } from "./shopService";
+import {
+  ApiResponseError as TransportApiResponseError,
+  getApiFieldErrors,
+} from "./apiTransport";
 
 const {
   call,
@@ -501,5 +505,24 @@ describe("requireSuccessfulResponse", () => {
         Email: ["invalid"],
       });
     }
+  });
+});
+
+describe("getApiFieldErrors", () => {
+  it("normalizes ASP.NET validation problem details", () => {
+    const error = new TransportApiResponseError({
+      status: 400,
+      fieldErrors: {
+        Password: [
+          "The field Password must be a string with a minimum length of 12 and a maximum length of 128.",
+        ],
+      },
+    });
+
+    expect(getApiFieldErrors(error)).toEqual({
+      Password: [
+        "The field Password must be a string with a minimum length of 12 and a maximum length of 128.",
+      ],
+    });
   });
 });

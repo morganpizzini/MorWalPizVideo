@@ -61,6 +61,11 @@ body::before {
   }
 }
 
+.card-no-float:hover,
+.card-no-float:focus-within {
+  transform: none !important;
+}
+
 #root {
   display: flex;
   flex-direction: column;

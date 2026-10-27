@@ -7,7 +7,7 @@ import type {
   PublicAccountSummary,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
-import { accountApiService } from "./apiTransport";
+import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
 
 async function getCsrfToken(): Promise<string> {
   const response = (await accountApiService.get(
@@ -18,6 +18,7 @@ async function getCsrfToken(): Promise<string> {
 }
 
 function requireAuthenticatedSession(response: unknown): PublicAccountSession {
+  requireSuccessfulResponse(response);
   if (
     !response ||
     typeof response !== "object" ||

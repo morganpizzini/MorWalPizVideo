@@ -34,26 +34,35 @@ export default function TitleComponent(props: TitleComponentProps) {
             <>
               <Link to="/account/profile" className="account-action account-action-profile">
                 <i className="fas fa-user" aria-hidden="true" />
-                <span>Profilo</span>
+                <span className="visually-hidden">Profilo</span>
               </Link>
               <button
                 type="button"
                 className="account-action account-action-logout"
                 onClick={handleLogout}
+                aria-label="Esci"
               >
                 <i className="fas fa-sign-out-alt" aria-hidden="true" />
-                <span>Esci</span>
+                <span className="visually-hidden">Esci</span>
               </button>
             </>
           ) : (
             <>
-              <Link to="/account/login" className="account-action account-action-login">
+              <Link
+                to="/account/login"
+                className="account-action account-action-login"
+                aria-label="Accedi"
+              >
                 <i className="fas fa-sign-in-alt" aria-hidden="true" />
-                <span>Accedi</span>
+                <span className="visually-hidden">Accedi</span>
               </Link>
-              <Link to="/account/register" className="account-action account-action-register">
+              <Link
+                to="/account/register"
+                className="account-action account-action-register"
+                aria-label="Registrati"
+              >
                 <i className="fas fa-user-plus" aria-hidden="true" />
-                <span>Registrati</span>
+                <span className="visually-hidden">Registrati</span>
               </Link>
             </>
           )}

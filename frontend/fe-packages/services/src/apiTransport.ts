@@ -323,6 +323,17 @@ export class ApiResponseError extends Error {
   }
 }
 
+export function getApiFieldErrors(error: unknown): Record<string, string[]> {
+  if (!(error instanceof ApiResponseError) || !error.fieldErrors) return {};
+
+  return Object.fromEntries(
+    Object.entries(error.fieldErrors).map(([field, messages]) => [
+      field,
+      (Array.isArray(messages) ? messages : [messages]).map(String),
+    ]),
+  );
+}
+
 export function requireSuccessfulResponse<T>(response: T): T {
   const payload = response as T & ApiErrorResponse;
   if (
