@@ -42,7 +42,13 @@ public sealed class PublicAccountController(
         try
         {
             var result = await accountService.RegisterAsync(
-                new PublicAccountRegistrationCommand(request.Username, request.Email, request.Password, request.DisplayName),
+                new PublicAccountRegistrationCommand(
+                    request.Username,
+                    request.Email,
+                    request.Password,
+                    request.DisplayName,
+                    request.TermsAccepted,
+                    request.PrivacyNoticeAcknowledged),
                 cancellationToken);
             if (result is null)
                 return ValidationProblem("The account details are not valid.");

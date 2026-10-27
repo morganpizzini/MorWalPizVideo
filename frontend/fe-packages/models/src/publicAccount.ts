@@ -3,6 +3,8 @@ export interface PublicAccountRegistrationRequest {
   email: string;
   password: string;
   displayName: string;
+  termsAccepted: boolean;
+  privacyNoticeAcknowledged: boolean;
 }
 
 export interface PublicAccountLoginRequest {

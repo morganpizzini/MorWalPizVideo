@@ -15,6 +15,12 @@ public sealed record PublicAccountRegistrationRequest
 
     [StringLength(120)]
     public string DisplayName { get; init; } = string.Empty;
+
+    [Range(typeof(bool), "true", "true", ErrorMessage = "Terms acceptance is required.")]
+    public bool TermsAccepted { get; init; }
+
+    [Range(typeof(bool), "true", "true", ErrorMessage = "Privacy Notice acknowledgement is required.")]
+    public bool PrivacyNoticeAcknowledged { get; init; }
 }
 
 public sealed record PublicAccountLoginRequest

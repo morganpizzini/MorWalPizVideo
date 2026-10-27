@@ -22,6 +22,8 @@ import streamLoader from './stream/loader';
 import compilationsLoader from './compilations/loader';
 import customFormLoader from './customForms/loader';
 import CookiePolicy from './system/cookie-policy';
+import Privacy from './system/privacy';
+import Terms from './system/terms';
 import Bluetooth from './system/bluetooth';
 import Stream from './stream/Component';
 import QuickLinks from './quickLinks/Component';
@@ -36,7 +38,6 @@ import surveyLoader from './survey/loader';
 import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
 import Gallery from './gallery/Component';
 import galleryLoader from './gallery/loader';
-import { Login, Profile, Register } from './account/Components';
 
 export const routes: RouteObject[] = [
   {
@@ -133,6 +134,14 @@ export const routes: RouteObject[] = [
             element: <CookiePolicy />,
           },
           {
+            path: 'privacy',
+            element: <Privacy />,
+          },
+          {
+            path: 'terms',
+            element: <Terms />,
+          },
+          {
             path: 'newsletter',
             element: <Newsletter />,
           },
@@ -145,9 +154,6 @@ export const routes: RouteObject[] = [
             loader: streamLoader,
             element: <Stream />,
           },
-          { path: 'account/login', element: <Login /> },
-          { path: 'account/register', element: <Register /> },
-          { path: 'account/profile', element: <Profile /> },
         ],
       },
     ],

@@ -22,7 +22,9 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
-            DisplayName = "Public User"
+            DisplayName = "Public User",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
         };
 
         var withoutCsrf = await client.PostAsJsonAsync("/api/v1/accounts", request);
@@ -60,7 +62,9 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
-            DisplayName = "Before Update"
+            DisplayName = "Before Update",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
         };
         using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
         {
@@ -90,5 +94,30 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, loggedOut.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
+    }
+
+    [Fact]
+    public async Task Registration_rejects_missing_legal_acknowledgements()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        var request = new PublicAccountRegistrationRequest
+        {
+            Username = $"user{Guid.NewGuid():N}"[..12],
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Password = "A-strong-password-123",
+            DisplayName = "Public User",
+            TermsAccepted = false,
+            PrivacyNoticeAcknowledged = false
+        };
+        using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
+        {
+            Content = JsonContent.Create(request)
+        };
+        registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+
+        var response = await client.SendAsync(registration);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

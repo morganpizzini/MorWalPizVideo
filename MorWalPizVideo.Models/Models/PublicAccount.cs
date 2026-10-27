@@ -31,6 +31,18 @@ public sealed record PublicAccount : BaseEntity
 
     [BsonElement("securityVersion")]
     public int SecurityVersion { get; init; }
+
+    [BsonElement("termsVersionAccepted")]
+    public string TermsVersionAccepted { get; init; } = string.Empty;
+
+    [BsonElement("termsAcceptedAtUtc")]
+    public DateTime? TermsAcceptedAtUtc { get; init; }
+
+    [BsonElement("privacyNoticeVersionAcknowledged")]
+    public string PrivacyNoticeVersionAcknowledged { get; init; } = string.Empty;
+
+    [BsonElement("privacyNoticeAcknowledgedAtUtc")]
+    public DateTime? PrivacyNoticeAcknowledgedAtUtc { get; init; }
 }
 
 public sealed record PublicAccountSession : BaseEntity

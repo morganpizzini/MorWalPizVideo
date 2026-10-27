@@ -96,7 +96,14 @@ export function Login() {
 export function Register() {
   const navigate = useNavigate();
   const { refresh } = usePublicAccount();
-  const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '' });
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    displayName: '',
+    termsAccepted: false,
+    privacyNoticeAcknowledged: false,
+  });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
@@ -176,12 +183,39 @@ export function Register() {
         aria-describedby="register-password-errors"
       />
       <FieldErrors id="register-password-errors" errors={fieldError(fieldErrors, 'Password')} />
+      <div className="form-check mt-3">
+        <input
+          id="termsAccepted"
+          type="checkbox"
+          className="form-check-input"
+          checked={form.termsAccepted}
+          onChange={(event) =>
+            setForm({
+              ...form,
+              termsAccepted: event.target.checked,
+              privacyNoticeAcknowledged: event.target.checked,
+            })
+          }
+          required
+          aria-invalid={fieldError(fieldErrors, 'TermsAccepted').length > 0}
+          aria-describedby="legal-errors"
+        />
+        <label className="form-check-label" htmlFor="termsAccepted">
+          Ho letto l'<Link to="/privacy">Informativa Privacy</Link> e accetto i{' '}
+          <Link to="/terms">Termini di utilizzo</Link>.
+        </label>
+      </div>
+      <FieldErrors id="legal-errors" errors={fieldError(fieldErrors, 'TermsAccepted')} />
+      <FieldErrors
+        id="legal-privacy-errors"
+        errors={fieldError(fieldErrors, 'PrivacyNoticeAcknowledged')}
+      />
     </AccountForm>
   );
 }
 
 export function Profile() {
-  const { session, loading, logout } = usePublicAccount();
+  const { session, loading, logout, refresh } = usePublicAccount();
   const [profile, setProfile] = useState<PublicAccountSummary | null>(session.account ?? null);
   const [displayName, setDisplayName] = useState(session.account?.displayName ?? '');
   const [email, setEmail] = useState(session.account?.email ?? '');
@@ -216,6 +250,7 @@ export function Profile() {
     try {
       const updated = await updatePublicProfile({ displayName, email });
       setProfile(updated);
+      await refresh();
       setMessage('Profilo aggiornato.');
     } catch (requestError) {
       const nextFieldErrors = getApiFieldErrors(requestError);

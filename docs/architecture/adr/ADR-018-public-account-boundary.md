@@ -8,6 +8,8 @@ Implemented locally; production rollout evidence remains open.
 
 Public self-service accounts use separate `PublicAccount` and `PublicAccountSession` MongoDB collections and a dedicated `PublicAccount` cookie authentication scheme in ServerAPI. Domain owns password hashing, normalized identity lookup, fixed session expiry, revocation, and security-version revalidation. Contracts expose only safe account summaries.
 
+Registration requires both Terms acceptance and Privacy Notice acknowledgement. The accepted legal versions and server-generated UTC timestamps are persisted on the account; clients cannot provide or override this evidence. Account and session identifiers are generated as MongoDB-compatible `ObjectId` strings so the existing BSON representation remains unchanged.
+
 The account transport is isolated from the anonymous public transport and BackOffice transport. Account requests use credentialed HttpOnly cookies and CSRF headers, while public content and anonymous Web Push continue using `credentials: omit`. Existing public routes remain anonymous and are not guarded until a future restricted feature requires it.
 
 ## Consequences

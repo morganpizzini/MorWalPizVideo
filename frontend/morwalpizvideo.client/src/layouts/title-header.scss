@@ -1,3 +1,16 @@
+.account-action-profile {
+  display: inline-block;
+  max-width: min(220px, 42vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.account-action-profile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @font-face {
   font-family: 'High Speed';
   src:
@@ -9,65 +22,6 @@
 .title-container {
   text-align: center;
   padding-top: 50px;
-}
-
-.title-header {
-  position: relative;
-}
-
-.account-actions {
-  position: absolute;
-  top: 16px;
-  right: 12px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-height: 40px;
-}
-
-.account-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 8px;
-  border: 0;
-  background: transparent;
-  color: #333;
-  font-size: 18px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.account-action:hover,
-.account-action:focus-visible {
-  color: #842029;
-}
-
-.account-action-logout {
-  font: inherit;
-}
-
-.account-action-error {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  width: max-content;
-  max-width: min(280px, 80vw);
-  padding: 6px 9px;
-  border-radius: 4px;
-  background: #842029;
-  color: #fff;
-  font-size: 13px;
-}
-
-.account-actions-placeholder {
-  display: block;
-  width: 96px;
-  height: 40px;
 }
 
 .title-container a {
@@ -92,20 +46,6 @@
 }
 
 @media (max-width: 768px) {
-  .account-actions {
-    position: static;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    margin-top: 12px;
-  }
-
-  .account-action-error {
-    position: static;
-    width: auto;
-    margin-left: 100%;
-    transform: translateX(-100%);
-  }
-
   .title .big-letter {
     font-size: 50px;
   }

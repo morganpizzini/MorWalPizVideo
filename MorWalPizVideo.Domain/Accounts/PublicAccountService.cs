@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using MongoDB.Bson;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Models.Models;
@@ -9,7 +10,13 @@ namespace MorWalPizVideo.Domain.Accounts;
 
 public sealed record PublicAccountAuthenticationResult(PublicAccount Account, string SessionToken);
 
-public sealed record PublicAccountRegistrationCommand(string Username, string Email, string Password, string DisplayName);
+public sealed record PublicAccountRegistrationCommand(
+    string Username,
+    string Email,
+    string Password,
+    string DisplayName,
+    bool TermsAccepted,
+    bool PrivacyNoticeAcknowledged);
 public sealed record PublicAccountLoginCommand(string Identifier, string Password);
 public sealed record PublicAccountProfileUpdateCommand(string DisplayName, string Email);
 
@@ -28,6 +35,8 @@ public interface IPublicAccountService
 public sealed class PublicAccountService(IPublicAccountRepository repository) : IPublicAccountService
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(8);
+    public const string TermsVersion = "2026-10-27";
+    public const string PrivacyNoticeVersion = "2026-10-27";
 
     public async Task<PublicAccountAuthenticationResult?> RegisterAsync(
         PublicAccountRegistrationCommand request,
@@ -35,7 +44,8 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
     {
         var username = NormalizeUsername(request.Username);
         var email = NormalizeEmail(request.Email);
-        if (username is null || email is null || string.IsNullOrWhiteSpace(request.Password))
+        if (username is null || email is null || string.IsNullOrWhiteSpace(request.Password) ||
+            !request.TermsAccepted || !request.PrivacyNoticeAcknowledged)
             return null;
 
         if (await repository.FindByUsernameAsync(username, cancellationToken) is not null ||
@@ -45,7 +55,7 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
         var passwordHash = PasswordHashing.HashPassword(request.Password, out var salt);
         var account = new PublicAccount
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = ObjectId.GenerateNewId().ToString(),
             Username = request.Username.Trim(),
             NormalizedUsername = username,
             Email = request.Email.Trim(),
@@ -53,7 +63,11 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? request.Username.Trim() : request.DisplayName.Trim(),
             PasswordHash = passwordHash,
             Salt = salt,
-            CreationDateTime = DateTime.UtcNow
+            CreationDateTime = DateTime.UtcNow,
+            TermsVersionAccepted = TermsVersion,
+            TermsAcceptedAtUtc = DateTime.UtcNow,
+            PrivacyNoticeVersionAcknowledged = PrivacyNoticeVersion,
+            PrivacyNoticeAcknowledgedAtUtc = DateTime.UtcNow
         };
         await repository.AddAccountAsync(account, cancellationToken);
         return await CreateSessionAsync(account, cancellationToken);
@@ -140,7 +154,7 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         await repository.AddSessionAsync(new PublicAccountSession
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = ObjectId.GenerateNewId().ToString(),
             AccountId = account.Id,
             TokenHash = HashToken(token),
             SecurityVersion = account.SecurityVersion,
