@@ -10,7 +10,7 @@ public sealed record PublicAccountRegistrationRequest
     [Required, EmailAddress, StringLength(256)]
     public string Email { get; init; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 12)]
+    [Required, StringLength(128, MinimumLength = 8)]
     public string Password { get; init; } = string.Empty;
 
     [StringLength(120)]

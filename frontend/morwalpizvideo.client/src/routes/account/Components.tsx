@@ -166,7 +166,7 @@ export function Register() {
       <input
         id="password"
         type="password"
-        minLength={12}
+        minLength={8}
         maxLength={128}
         className="form-control"
         value={form.password}
