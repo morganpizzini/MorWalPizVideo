@@ -51,7 +51,7 @@ Fakes support configurable latency, transient failure, permanent failure, malfor
 | ServerAPI + public/shop clients | Same scenario data, fake Blob, anonymous public behavior |
 | ShortLinks | Canonical link scenario and in-memory visit tracking |
 | Shooting ITA | Shared service mock or local ServerAPI |
-| FreezerAnalysis API + SPA | Development-only account identity, in-memory feature repository, local IndexedDB for previously frozen field cards |
+| FreezerAnalysis API + SPA | `FeatureManagement:EnableDev` + `EnableMock` in Development, development-only account identity, scoped in-memory repository adapters over host-lifetime state, local IndexedDB for previously frozen field cards |
 | VideoImporter | Temporary SQLite, fake BackOffice, fake YouTube |
 | InsightScanner | Fake scan sources and fake BackOffice client |
 

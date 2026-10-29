@@ -13,19 +13,24 @@ using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.FreezerAnalysis;
 using MorWalPizVideo.MvcHelpers.Authentication;
+using MorWalPizVideo.Server.Utils;
+using Microsoft.FeatureManagement;
 using FreezerAnalysis.Api.Security;
 using FreezerAnalysis.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+builder.Services.AddFeatureManagement();
 
-var useMockRepository = builder.Configuration.GetValue("FreezerAnalysis:UseMockRepository", false);
-var enableDevelopmentAuthentication = builder.Configuration.GetValue("FreezerAnalysis:EnableDevAuthentication", false);
-if ((useMockRepository || enableDevelopmentAuthentication) &&
+var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
+var enableDevelopmentAuthentication = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
+if ((enableMock || enableDevelopmentAuthentication) &&
     !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
 {
     throw new InvalidOperationException("FreezerAnalysis mocks and development authentication are allowed only in Development or Test.");
 }
+if (enableMock && !enableDevelopmentAuthentication)
+    throw new InvalidOperationException("FreezerAnalysis mock mode requires the EnableDev feature in Development or Test.");
 
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
@@ -63,9 +68,11 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-if (enableDevelopmentAuthentication &&
-    (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Test")))
+if (enableMock)
 {
+    builder.Services.AddScoped<IFreezerAnalysisRepository, InMemoryFreezerAnalysisRepository>();
+    builder.Services.AddSingleton<InMemoryFreezerAnalysisState>();
+    builder.Services.AddScoped<IPublicAccountService, UnavailablePublicAccountService>();
     builder.Services.AddAuthentication(FreezerDevelopmentAuthenticationHandler.AuthenticationScheme)
         .AddScheme<AuthenticationSchemeOptions, FreezerDevelopmentAuthenticationHandler>(
             FreezerDevelopmentAuthenticationHandler.AuthenticationScheme, _ => { });
@@ -73,24 +80,27 @@ if (enableDevelopmentAuthentication &&
 else
 {
     FreezerAnalysisMongoRegistration.AddRepositories(builder.Services, builder.Configuration);
-    builder.Services.AddAuthentication(PublicAccountSecurity.Scheme)
-        .AddPublicAccountAuthentication(PublicAccountSecurity.Scheme, "freezer_account_session");
-}
-
-if (useMockRepository)
-{
-    builder.Services.AddSingleton<IFreezerAnalysisRepository, InMemoryFreezerAnalysisRepository>();
-    builder.Services.AddSingleton<IPublicAccountService, UnavailablePublicAccountService>();
+    if (enableDevelopmentAuthentication)
+    {
+        builder.Services.AddAuthentication(FreezerDevelopmentAuthenticationHandler.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, FreezerDevelopmentAuthenticationHandler>(
+                FreezerDevelopmentAuthenticationHandler.AuthenticationScheme, _ => { });
+    }
+    else
+    {
+        builder.Services.AddAuthentication(PublicAccountSecurity.Scheme)
+            .AddPublicAccountAuthentication(PublicAccountSecurity.Scheme, "freezer_account_session");
+    }
 }
 
 builder.Services.AddFreezerPrivateObjectStorage(builder.Configuration, builder.Environment);
 
 builder.Services.Configure<FreezerAnalysisHostOptions>(builder.Configuration.GetSection("FreezerAnalysis"));
-builder.Services.AddSingleton<FreezerCsvParser>();
-builder.Services.AddSingleton<PdfTextExtractor>();
-builder.Services.AddSingleton<FreezerPdfReportDetector>();
-builder.Services.AddSingleton<FreezerPdfPairParser>();
-builder.Services.AddSingleton<FreezerDocumentRenderer>();
+builder.Services.AddScoped<FreezerCsvParser>();
+builder.Services.AddScoped<PdfTextExtractor>();
+builder.Services.AddScoped<FreezerPdfReportDetector>();
+builder.Services.AddScoped<FreezerPdfPairParser>();
+builder.Services.AddScoped<FreezerDocumentRenderer>();
 builder.Services.AddScoped<FreezerAnalysisCoordinator>();
 
 var app = builder.Build();

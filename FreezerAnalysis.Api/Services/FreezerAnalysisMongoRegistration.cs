@@ -32,7 +32,7 @@ public static class FreezerAnalysisMongoRegistration
         var platformDatabase = mongoClient.GetDatabase(platformSettings.DatabaseName);
         var analysisDatabase = mongoClient.GetDatabase(applicationDatabaseName.Trim());
         services.AddSingleton<IMongoClient>(mongoClient);
-        services.AddSingleton<IPublicAccountRepository>(_ => new PublicAccountRepository(platformDatabase));
+        services.AddScoped<IPublicAccountRepository>(_ => new PublicAccountRepository(platformDatabase));
         services.AddScoped<IPublicAccountService, PublicAccountService>();
         services.AddSingleton(new FreezerAnalysisDatabase(analysisDatabase));
         services.AddScoped<IFreezerAnalysisRepository, FreezerAnalysisMongoRepository>();

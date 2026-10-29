@@ -5,21 +5,40 @@ namespace MorWalPizVideo.Domain.FreezerAnalysis;
 
 public sealed class InMemoryFreezerAnalysisRepository : IFreezerAnalysisRepository
 {
-    private readonly object gate = new();
-    private readonly ConcurrentDictionary<string, FreezerProfile> profiles = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerMatch> matches = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerMatchRevision> revisions = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerCompetitorResult> resultsByHash = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerShooterIdentity> identities = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerIdentityResolution> identityResolutions = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerImportManifest> importsById = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerAnalysisDraft> drafts = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerFrozenSnapshot> snapshots = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerFieldEvent> eventsByOperation = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerVerificationReport> verifications = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerParameterBacktest> parameterBacktests = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerParameterAdoption> parameterAdoptions = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, FreezerArtifactManifest> artifacts = new(StringComparer.Ordinal);
+    private readonly object gate;
+    private readonly ConcurrentDictionary<string, FreezerProfile> profiles;
+    private readonly ConcurrentDictionary<string, FreezerMatch> matches;
+    private readonly ConcurrentDictionary<string, FreezerMatchRevision> revisions;
+    private readonly ConcurrentDictionary<string, FreezerCompetitorResult> resultsByHash;
+    private readonly ConcurrentDictionary<string, FreezerShooterIdentity> identities;
+    private readonly ConcurrentDictionary<string, FreezerIdentityResolution> identityResolutions;
+    private readonly ConcurrentDictionary<string, FreezerImportManifest> importsById;
+    private readonly ConcurrentDictionary<string, FreezerAnalysisDraft> drafts;
+    private readonly ConcurrentDictionary<string, FreezerFrozenSnapshot> snapshots;
+    private readonly ConcurrentDictionary<string, FreezerFieldEvent> eventsByOperation;
+    private readonly ConcurrentDictionary<string, FreezerVerificationReport> verifications;
+    private readonly ConcurrentDictionary<string, FreezerParameterBacktest> parameterBacktests;
+    private readonly ConcurrentDictionary<string, FreezerParameterAdoption> parameterAdoptions;
+    private readonly ConcurrentDictionary<string, FreezerArtifactManifest> artifacts;
+
+    public InMemoryFreezerAnalysisRepository(InMemoryFreezerAnalysisState state)
+    {
+        gate = state.Gate;
+        profiles = state.Profiles;
+        matches = state.Matches;
+        revisions = state.Revisions;
+        resultsByHash = state.ResultsByHash;
+        identities = state.Identities;
+        identityResolutions = state.IdentityResolutions;
+        importsById = state.ImportsById;
+        drafts = state.Drafts;
+        snapshots = state.Snapshots;
+        eventsByOperation = state.EventsByOperation;
+        verifications = state.Verifications;
+        parameterBacktests = state.ParameterBacktests;
+        parameterAdoptions = state.ParameterAdoptions;
+        artifacts = state.Artifacts;
+    }
 
     public Task<FreezerProfile?> GetProfileAsync(string accountId, CancellationToken cancellationToken) =>
         Task.FromResult(profiles.GetValueOrDefault(accountId));
@@ -405,4 +424,23 @@ public sealed class InMemoryFreezerAnalysisRepository : IFreezerAnalysisReposito
 
     private static string IdentityResolutionKey(string accountId, string matchId, string resultId) =>
         string.Join('\0', accountId, matchId, resultId);
+}
+
+public sealed class InMemoryFreezerAnalysisState
+{
+    public object Gate { get; } = new();
+    public ConcurrentDictionary<string, FreezerProfile> Profiles { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerMatch> Matches { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerMatchRevision> Revisions { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerCompetitorResult> ResultsByHash { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerShooterIdentity> Identities { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerIdentityResolution> IdentityResolutions { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerImportManifest> ImportsById { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerAnalysisDraft> Drafts { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerFrozenSnapshot> Snapshots { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerFieldEvent> EventsByOperation { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerVerificationReport> Verifications { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerParameterBacktest> ParameterBacktests { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerParameterAdoption> ParameterAdoptions { get; } = new(StringComparer.Ordinal);
+    public ConcurrentDictionary<string, FreezerArtifactManifest> Artifacts { get; } = new(StringComparer.Ordinal);
 }

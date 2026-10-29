@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using FreezerAnalysis.Api.Services;
 using MorWalPiz.Contracts.Contracts.FreezerAnalysis;
 using MorWalPizVideo.Domain.FreezerAnalysis;
@@ -120,6 +121,29 @@ public sealed class FreezerAnalysisApiTests
         Assert.True(pdf.GetProperty("structuralCounts").GetBoolean());
         Assert.True(pdf.GetProperty("numericScorePreview").GetBoolean());
         Assert.False(pdf.GetProperty("scorePublication").GetBoolean());
+    }
+
+    [Fact]
+    public void Development_mock_composition_uses_scoped_repository_with_shared_state()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+        });
+
+        var root = factory.Services;
+        var state = root.GetRequiredService<InMemoryFreezerAnalysisState>();
+        using var firstScope = root.CreateScope();
+        using var secondScope = root.CreateScope();
+        var firstRepository = firstScope.ServiceProvider.GetRequiredService<IFreezerAnalysisRepository>();
+        var secondRepository = secondScope.ServiceProvider.GetRequiredService<IFreezerAnalysisRepository>();
+
+        Assert.IsType<InMemoryFreezerAnalysisRepository>(firstRepository);
+        Assert.IsType<InMemoryFreezerAnalysisRepository>(secondRepository);
+        Assert.NotSame(firstRepository, secondRepository);
+        Assert.Same(state, firstScope.ServiceProvider.GetRequiredService<InMemoryFreezerAnalysisState>());
+        Assert.Same(state, secondScope.ServiceProvider.GetRequiredService<InMemoryFreezerAnalysisState>());
+        Assert.Null(root.GetService<IMongoClient>());
     }
 
     [Fact]
@@ -235,7 +259,7 @@ public sealed class FreezerAnalysisApiTests
     [Fact]
     public async Task Identity_records_are_not_visible_across_account_boundaries()
     {
-        var repository = new InMemoryFreezerAnalysisRepository();
+        var repository = new InMemoryFreezerAnalysisRepository(new InMemoryFreezerAnalysisState());
         await repository.CreateIdentityAsync(new FreezerShooterIdentity
         {
             Id = "identity-owner",
@@ -389,7 +413,8 @@ public sealed class FreezerAnalysisApiTests
             fieldEventRequest with { ClientOperationId = "unknown-snapshot-operation" });
         Assert.Equal(HttpStatusCode.Conflict, unknownSnapshotEvent.StatusCode);
 
-        var repository = factory.Services.GetRequiredService<IFreezerAnalysisRepository>();
+        using var repositoryScope = factory.Services.CreateScope();
+        var repository = repositoryScope.ServiceProvider.GetRequiredService<IFreezerAnalysisRepository>();
         var frozenRecord = await repository.GetSnapshotAsync(
             "development-account",
             snapshot.Id,
@@ -797,7 +822,8 @@ public sealed class FreezerAnalysisApiTests
         var identity = await CreateIdentityAsync(client, "Runner One");
         var targetDate = new DateOnly(2026, 10, 29);
         var match = await CreateTargetMatchAsync(client, "Missing availability target", targetDate, identity.Id);
-        var repository = factory.Services.GetRequiredService<IFreezerAnalysisRepository>();
+        using var repositoryScope = factory.Services.CreateScope();
+        var repository = repositoryScope.ServiceProvider.GetRequiredService<IFreezerAnalysisRepository>();
 
         await SeedPublishedMatchAsync(repository, "other-account", targetDate.AddDays(-1), "prior-without-account-snapshot");
         await SeedPublishedMatchAsync(repository, "other-account", targetDate, "same-day-without-account-snapshot");
@@ -814,7 +840,7 @@ public sealed class FreezerAnalysisApiTests
     [Fact]
     public async Task Published_match_query_excludes_matches_on_the_target_date()
     {
-        var repository = new InMemoryFreezerAnalysisRepository();
+        var repository = new InMemoryFreezerAnalysisRepository(new InMemoryFreezerAnalysisState());
         var targetDate = new DateOnly(2026, 10, 29);
         var earlier = await SeedPublishedMatchAsync(repository, "owner", targetDate.AddDays(-1), "earlier");
         await SeedPublishedMatchAsync(repository, "owner", targetDate, "same-day");

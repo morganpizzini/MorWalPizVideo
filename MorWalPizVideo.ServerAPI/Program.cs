@@ -5,6 +5,8 @@ using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain;
@@ -165,7 +167,28 @@ builder.Services.AddScoped<BlogService>();
 builder.Services.AddScoped<IChannelNavigationService, ChannelNavigationService>();
 builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IFaqService, FaqService>();
-builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
+if (enableMock)
+{
+    builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
+}
+else
+{
+    builder.Services.AddSingleton<IChatCompletionService>(_ =>
+    {
+        var deploymentName = builder.Configuration["AzureConfig:OpenAi:DeploymentName"];
+        var endpoint = builder.Configuration["AzureConfig:OpenAi:OpenAiEndpoint"];
+        var apiKey = builder.Configuration["AzureConfig:OpenAi:OpenAiKey"];
+        if (string.IsNullOrWhiteSpace(deploymentName) || string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException(
+                "Azure OpenAI configuration is incomplete. Configure AzureConfig:OpenAi:DeploymentName, " +
+                "AzureConfig:OpenAi:OpenAiEndpoint, and AzureConfig:OpenAi:OpenAiKey through App Service settings or Azure Key Vault.");
+        }
+
+        return new AzureOpenAIChatCompletionService(deploymentName, endpoint, apiKey);
+    });
+    builder.Services.AddScoped<IAskModerationProvider, AskModerationProvider>();
+}
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();

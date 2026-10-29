@@ -1,0 +1,89 @@
+name: Deploy FreezerAnalysis API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'FreezerAnalysis.Api/**'
+      - 'FreezerAnalysis.Api.Tests/**'
+      - 'MorWalPiz.Contracts/**'
+      - 'MorWalPizVideo.Domain/**'
+      - 'MorWalPizVideo.Models/**'
+      - 'MorWalPizVideo.MvcHelpers/**'
+      - 'MorWalPizVideo.ServiceDefaults/**'
+      - '.github/workflows/deploy-freezer-analysis-api.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  checks: write
+
+jobs:
+  test:
+    name: Run FreezerAnalysis API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore API tests
+        run: dotnet restore FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj
+
+      - name: Test API
+        run: dotnet test FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=freezer-analysis-api.trx" --results-directory ./TestResults/freezer-analysis-api --verbosity minimal
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: ./TestResults/**/*.trx
+          check_name: FreezerAnalysis API test results
+
+  build-and-deploy:
+    name: Build and Deploy to Azure
+    runs-on: ubuntu-latest
+    environment: production
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FreezerAnalysis.Api/FreezerAnalysis.Api.csproj
+
+      - name: Build
+        run: dotnet build FreezerAnalysis.Api/FreezerAnalysis.Api.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish FreezerAnalysis.Api/FreezerAnalysis.Api.csproj --configuration Release --no-build --output ./publish
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.FREEZER_ANALYSIS_API_APP_NAME }}
+          package: ./publish
+
+      - name: Azure logout
+        if: always()
+        run: az logout

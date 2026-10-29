@@ -9,6 +9,8 @@ flowchart LR
     Browser -->|CORS HTTPS| API[Azure App Service: morwalpiz-serverapi.azurewebsites.net]
     Admin[Admin browser] -->|HTTPS| AdminSpa[Azure: morwalpiz-admin-spa.azurewebsites.net]
     AdminSpa -->|Credentialed CORS + CSRF| BO[Azure: morwalpiz-admin.azurewebsites.net]
+    FreezerUser[FreezerAnalysis user] -->|HTTPS| FreezerSpa[Azure: FreezerAnalysis SPA]
+    FreezerSpa -->|Credentialed CORS + CSRF| FreezerAPI[Azure: FreezerAnalysis API]
     Shooter[Range user] -->|HTTPS| ShootingClient[Azure App Service: Shooting Range SSR client]
     ShootingClient -->|Credentialed CORS + CSRF| ShootingAPI[Shooting Range API]
     Follower[Follower] -->|HTTPS| Shorts[shorts.morwalpiz.com / ShortLinks]
@@ -29,6 +31,7 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - `https://morwalpiz-serverapi.azurewebsites.net`: public API.
 - `https://morwalpiz-admin-spa.azurewebsites.net`: BackOffice SPA.
 - `https://morwalpiz-admin.azurewebsites.net`: BackOffice API; credentialed CORS accepts only the BackOffice SPA origin.
+- FreezerAnalysis API and SPA hosts are environment-managed Azure Web Apps; the SPA receives the API origin through `VITE_FREEZER_API_BASE_URL` at image build time.
 - `https://shorts.morwalpiz.com`: branded redirects.
 - Shooting Range client and API hosts are environment-managed Azure App Services; the client receives the API origin through runtime `API_BASE_URL`.
 

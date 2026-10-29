@@ -15,6 +15,7 @@ The project uses GitHub Actions for CI/CD with the following deployment strategy
   - `MorWalPizVideo.BackOffice`
   - `MorWalPizVideo.ServerAPI`
   - `MorWalPizVideo.ShootingRange`
+- **FreezerAnalysis**: API and SPA are deployed independently to Azure Web Apps
 
 ## Prerequisites
 
@@ -59,6 +60,9 @@ Add the following variables to the `production` environment:
 | `SERVERAPI_APP_NAME` | Azure Web App name for ServerAPI | `morwalpiz-serverapi` |
 | `SHOOTING_RANGE_API_APP_NAME` | Azure Web App name for Shooting Range API | `morwalpiz-shooting-range-api` |
 | `SHOOTING_RANGE_CLIENT_APP_NAME` | Azure Web App name for Shooting Range SSR client | `morwalpiz-shooting-range-client` |
+| `FREEZER_ANALYSIS_API_APP_NAME` | Azure Web App name for the FreezerAnalysis API | `morwalpiz-freezer-analysis-api` |
+| `FREEZER_ANALYSIS_SPA_APP_NAME` | Azure Web App name for the FreezerAnalysis SPA | `morwalpiz-freezer-analysis-spa` |
+| `FREEZER_ANALYSIS_API_BASE_URL` | Public API URL passed to the FreezerAnalysis SPA build | `https://morwalpiz-freezer-analysis-api.azurewebsites.net` |
 
 The shop deployment workflow uses the same `production` environment contract as the other container workflows. It authenticates with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`, logs in to ACR with `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`, and uses `AZURE_CONTAINER_REGISTRY_LOGIN_SERVER` for image tags and deployment. It does not use the legacy `AZURE_CREDENTIALS` or `ACR_NAME` values.
 
@@ -276,6 +280,31 @@ az webapp config appsettings set \
 
 Configure `KeyVaultUrl` and `FeatureManagement:EnableKeyVault` as externally managed App Service settings. When Key Vault is enabled, the API fails startup if the URL, provider access, or required Mongo settings are invalid; it does not fall back to direct Mongo settings. Grant the App Service managed identity permission to read secrets in the vault, using `MorWalPizDatabase--ConnectionString` and `MorWalPizDatabase--DatabaseName` secret names. The workflow never injects these values or provisions MongoDB, indexes, secrets, or data.
 
+#### FreezerAnalysis API
+```bash
+az webapp create \
+  --resource-group rg-morwalpiz-prod \
+  --plan asp-morwalpiz-prod \
+  --name morwalpiz-freezer-analysis-api \
+  --runtime "DOTNET:10.0"
+```
+
+#### FreezerAnalysis SPA
+```bash
+az webapp create \
+  --resource-group rg-morwalpiz-prod \
+  --plan asp-morwalpiz-prod \
+  --name morwalpiz-freezer-analysis-spa \
+  --deployment-container-image-name morwalpizregistry.azurecr.io/freezer-analysis-spa:latest
+
+az webapp config appsettings set \
+  --resource-group rg-morwalpiz-prod \
+  --name morwalpiz-freezer-analysis-spa \
+  --settings WEBSITES_PORT=80
+```
+
+Configure the FreezerAnalysis API MongoDB, private blob storage, account authentication, and allowed origins as externally managed App Service settings. Set `FREEZER_ANALYSIS_API_BASE_URL` to the deployed API origin before the SPA workflow runs. The workflows do not inject application secrets or provision data.
+
 The API exposes `/health`, `/health/live`, and `/health/ready`. Production must also provide the existing authentication/CORS prerequisites separately.
 
 ### 7. Configure App Service Plans
@@ -385,6 +414,9 @@ The API fails during startup when Key Vault is enabled but cannot be loaded, or 
 - [ ] Add `SERVERAPI_APP_NAME` variable
 - [ ] Add `SHOOTING_RANGE_API_APP_NAME` variable
 - [ ] Add `SHOOTING_RANGE_CLIENT_APP_NAME` variable
+- [ ] Add `FREEZER_ANALYSIS_API_APP_NAME` variable
+- [ ] Add `FREEZER_ANALYSIS_SPA_APP_NAME` variable
+- [ ] Add `FREEZER_ANALYSIS_API_BASE_URL` variable
 
 ### Application Configuration
 - [ ] Configure frontend environment variables (API URLs)

@@ -3,6 +3,161 @@
 Status: implementation is in progress and is **not technically ready for user acceptance**. Work may proceed without the original Python project or historical artifacts, per user direction on 2026-10-29. Production deployment remains separately authorized.
 Planning baseline: 2026-10-29. This handoff is maintained as the user-editable implementation record; the initial planning statement below has been superseded by the implementation evidence in this update.
 
+## Composition Alignment Fix Plan (2026-10-29)
+
+### Outcome
+
+Align `FreezerAnalysis.Api` with the repository's BackOffice/ServerAPI composition conventions: use Microsoft Feature Management instead of feature-specific booleans, select a complete mock/development composition locally without reading MongoDB configuration, and register request-facing services and repositories as scoped. Preserve production PublicAccount authentication, the separate platform/application MongoDB boundary, and singleton lifetimes only for thread-safe infrastructure handles such as `IMongoClient`, database accessors and Blob clients.
+
+Assumptions: `FeatureManagement:EnableMock` selects the complete in-memory persistence branch and `FeatureManagement:EnableDev` selects development authentication only when the host environment is Development. Development defaults both flags to `true`; production defaults both to `false`. This follows current ServerAPI behavior and avoids the invalid mixed states allowed by `FreezerAnalysis:UseMockRepository` plus `FreezerAnalysis:EnableDevAuthentication`.
+
+### Current Evidence
+
+- `FreezerAnalysis.Api/Program.cs` currently reads `FreezerAnalysis:UseMockRepository` and `FreezerAnalysis:EnableDevAuthentication` directly. Mongo registration is controlled by the authentication flag, while the in-memory repository is controlled by a different flag. A mismatched or missing value can therefore invoke `FreezerAnalysisMongoRegistration.AddRepositories` during local startup.
+- `FreezerAnalysis.Api/appsettings.Development.json` currently enables both custom booleans. These settings differ from the shared `FeatureManagement` shape used by BackOffice, ServerAPI and ShortLinks.
+- `MorWalPizVideo.BackOffice/Program.cs` and `MorWalPizVideo.ServerAPI/Program.cs` register Feature Management, read `MyFeatureFlags.EnableMock`/`EnableDev`, reject mock mode outside Development/Test, and choose one mock or production repository branch.
+- `docs/architecture/development.md` explicitly assigns FreezerAnalysis local development to a development identity and in-memory feature repository, with no MongoDB dependency.
+- `FreezerAnalysis.Api/Program.cs` registers `InMemoryFreezerAnalysisRepository`, `UnavailablePublicAccountService`, CSV/PDF parser services and the document renderer as singletons. The coordinator is scoped.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs` correctly scopes `IFreezerAnalysisRepository` and `IPublicAccountService`, but registers `IPublicAccountRepository` as singleton. It also validates the two database names before constructing production Mongo access, which must remain production-only.
+- `FreezerAnalysis.Api/Services/PrivateObjectStorage.cs` registers local file or Azure Blob storage and Blob clients as singletons. These are infrastructure adapters without request-owned state and are not part of the scoped-lifetime correction unless implementation finds mutable request state.
+- `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs` proves Development-host workflows, but it relies on the custom development settings and resolves repositories from the root provider in some tests. It does not assert Feature Management selection or DI lifetimes.
+
+### Proposed Design
+
+Register Microsoft Feature Management in the FreezerAnalysis composition root and use the existing shared `MyFeatureFlags.EnableMock` and `MyFeatureFlags.EnableDev` names. Remove `UseMockRepository` and `EnableDevAuthentication` from the FreezerAnalysis options/configuration contract rather than supporting two parallel switches.
+
+Use one repository branch:
+
+1. When `EnableMock` is true, require Development or Test, register development/in-memory dependencies only, and do not call the Mongo registration helper or read Mongo database settings.
+2. When `EnableMock` is false, register both platform-account and FreezerAnalysis Mongo repositories and retain the distinct-database validation.
+3. When `EnableDev` is true, allow development authentication only in Development (and an explicit test authentication path in Test). Otherwise use PublicAccount cookie authentication. `EnableMock` and `EnableDev` remain conceptually separate, but Development configuration enables both so the normal local path is fully offline.
+
+Register `IFreezerAnalysisRepository`, `IPublicAccountRepository`, `IPublicAccountService`, `UnavailablePublicAccountService`, `FreezerAnalysisCoordinator`, `FreezerCsvParser`, `PdfTextExtractor`, `FreezerPdfReportDetector`, `FreezerPdfPairParser`, and `FreezerDocumentRenderer` as scoped request services. Keep `IMongoClient`, `FreezerAnalysisDatabase`, `BlobContainerClient`, immutable options infrastructure, and private object storage adapters singleton where they are thread-safe and hold no request/account state. Do not make the in-memory data disappear between HTTP requests: if its current repository instance owns the data store, separate that store into a singleton feature-state holder and keep the repository adapter scoped, matching the repository convention without losing local workflow continuity.
+
+Material alternative rejected: mapping the old custom booleans into Feature Management for backward compatibility. The application is not production-released, and retaining both configuration surfaces would preserve contradictory states and make startup behavior harder to reason about.
+
+### Impacted Projects
+
+- `FreezerAnalysis.Api`: composition root, package dependency, configuration schema, mock/production branch and service lifetimes.
+- `FreezerAnalysis.Api.Tests`: feature-selection, startup, scope/lifetime and no-Mongo local regressions.
+- `MorWalPizVideo.Domain`: only if the in-memory repository needs a separate singleton state holder so a scoped adapter preserves data across requests.
+- `MorWalPizVideo.MvcHelpers`: verify-only reuse of `MyFeatureFlags` and any existing disabled-feature handler; no new FreezerAnalysis-specific flag constants.
+- `MorWalPizVideo.BackOffice` and `MorWalPizVideo.ServerAPI`: verify-only reference implementations; no behavior changes.
+- `frontend/FreezerAnalysis.spa`, contracts, models, Mongo schema, AppHost and deployment topology: no contract or product behavior change; verify local startup integration only.
+
+### Impacted Files
+
+#### Modify
+
+- `FreezerAnalysis.Api/Program.cs`: add Feature Management, derive `EnableMock`/`EnableDev`, select one coherent composition branch, and change request-facing registrations to scoped.
+- `FreezerAnalysis.Api/FreezerAnalysis.Api.csproj`: add a direct `Microsoft.FeatureManagement.AspNetCore` dependency at the repository-standard version instead of relying on a transitive reference.
+- `FreezerAnalysis.Api/appsettings.json`: add production-safe `FeatureManagement` defaults and remove the two custom mode booleans from `FreezerAnalysis`.
+- `FreezerAnalysis.Api/appsettings.Development.json`: enable `EnableMock` and `EnableDev` under `FeatureManagement` so ordinary local startup requires no database connection.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs`: scope `IPublicAccountRepository`; retain singleton Mongo client/database infrastructure and distinct-name validation.
+- `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs`: assert branch selection and service lifetimes, resolve scoped dependencies through scopes, and prove Development startup/workflows do not require Mongo configuration.
+- `docs/architecture/backend.md` and `docs/architecture/development.md`: replace the current description of explicit custom FreezerAnalysis branches with the implemented shared feature-flag convention.
+
+#### Add
+
+- A focused test fixture or test-only factory under `FreezerAnalysis.Api.Tests` only if needed to construct Development, Test and Production-like configurations without repeating configuration setup.
+- A feature-owned in-memory state holder under `MorWalPizVideo.Domain/FreezerAnalysis` only if repository inspection confirms that scoping the current repository would otherwise reset data on every request.
+
+#### Generated/Migration
+
+None. No MongoDB, API-contract or data migration is required. Restore metadata may change because of the direct package reference; generated build output remains untracked.
+
+#### Documentation
+
+- This handoff records the accepted correction and implementation evidence.
+- The backend/development guides should state that FreezerAnalysis uses shared Feature Management and that Development defaults to the offline mock composition.
+
+#### Verify Only
+
+- `MorWalPizVideo.MvcHelpers/Utils/MyFeatureFlags.cs`: reuse `EnableMock` and `EnableDev` unchanged.
+- `MorWalPizVideo.BackOffice/Program.cs`, `MorWalPizVideo.ServerAPI/Program.cs`, and their settings: verify the intended composition pattern and package version.
+- `FreezerAnalysis.Api/Services/PrivateObjectStorage.cs`: confirm singleton adapters are stateless/thread-safe; do not change lifetime merely for uniformity.
+- AppHost local launch: confirm it supplies Development environment and does not override the new flags with stale custom keys.
+
+### Impact Matrix
+
+| Area | Impact |
+|---|---|
+| Backend/API | Startup composition only; endpoint routes and responses remain unchanged. |
+| Frontend/UI | No UI change. Local SPA/API startup becomes database-independent. |
+| Database/Data | Production two-database validation remains. Development must not parse or connect to Mongo settings. In-memory data must persist across request scopes for the host lifetime. |
+| Contracts/Models | No HTTP or persisted-model changes. |
+| Authentication/Authorization | Development identity is gated by Development plus `EnableDev`; production PublicAccount cookies remain unchanged. Mock mode remains forbidden outside Development/Test. |
+| Validation | Add startup validation for unsafe flag/environment combinations and tests for coherent branch selection. |
+| Cache | Not applicable; no cache registration changes. |
+| Configuration/Secrets | Replace custom mode keys with shared Feature Management keys. No credentials or fallback connection strings are introduced. |
+| Logging/Telemetry | Preserve ServiceDefaults. Log the selected provider mode without database names, connection strings or secrets if startup diagnostics already support this convention. |
+| Background Jobs | Not applicable. |
+| Deployment/Operations | Production defaults stay real and fail closed when required Mongo configuration is absent. Development defaults become offline. Environment overrides using old keys must be removed before deployment. |
+| Backward Compatibility | Endpoint/data compatibility is unchanged. Configuration-key compatibility is intentionally broken before release to eliminate contradictory switches. |
+
+### Reuse Opportunities
+
+- Reuse `MyFeatureFlags.EnableMock` and `EnableDev`, `AddFeatureManagement`, and the environment guards already established in BackOffice/ServerAPI.
+- Reuse WebApplicationFactory and existing authenticated FreezerAnalysis HTTP workflows to prove the local branch end to end.
+- Preserve `FreezerAnalysisMongoRegistration` as the single production database boundary instead of moving Mongo construction back into `Program.cs`.
+- Reuse the existing in-memory repository behavior; extract only its durable host-level state if scoped registration requires it.
+
+### Risks
+
+| Priority | Cause and affected surface | Mitigation | Verification signal |
+|---|---|---|---|
+| High | A scoped in-memory repository may reset all local data if the repository instance currently owns its collections. | Separate singleton state from scoped repository behavior before changing the lifetime. | Data created in one HTTP request is available in a later request, while repository instances differ across scopes. |
+| High | Incorrect flag combinations could re-enable development auth or mocks in production. | Require environment checks independently for `EnableMock` and `EnableDev`; production defaults false. | Production-like host rejects unsafe flags and never resolves development auth/mock repositories. |
+| Medium | The local host may still touch Mongo through account services, health checks or eager construction. | Keep every Mongo/account registration and Mongo health check inside the non-mock branch. | Development host starts with Mongo keys removed and completes profile/import/freeze smoke workflows. |
+| Medium | Scoped services may be resolved from singleton consumers or the root provider. | Enable scope validation in tests and inspect constructor chains. | Provider builds with scope validation and each HTTP integration test resolves successfully. |
+| Low | Old environment overrides continue setting removed custom keys and silently select production mode. | Search deployment/AppHost settings, remove stale keys, and document the new names. | Repository/configuration search finds no active `UseMockRepository` or `EnableDevAuthentication` references. |
+
+### Technical Debt
+
+- The current custom booleans duplicate shared feature flags and permit incoherent combinations. This blocks predictable local startup and should be removed now.
+- The in-memory repository may combine adapter and host-lifetime state ownership. Address only the minimum state extraction needed for scoped DI; do not introduce the full cross-application `IMockScenarioLifecycle` unless multiple scenarios are required by accepted FreezerAnalysis scope.
+- Private object storage remains environment-selected rather than feature-selected. This does not cause the Mongo startup defect and does not block this correction; defer unless offline storage behavior fails a focused test.
+
+### Implementation Roadmap
+
+1. Add the direct Feature Management dependency and configure `AddFeatureManagement` in the API host. Reuse shared flag constants; do not add feature-specific aliases. Gate: configuration can resolve `EnableMock` and `EnableDev` from the standard section.
+2. Replace the two custom mode booleans with one mock branch and one authentication branch. Put Mongo repositories, platform account services and Mongo health checks exclusively in the non-mock branch. Gate: a Development host with all Mongo keys absent starts and serves an authenticated API request.
+3. Convert request-facing repositories and feature services to scoped. If the in-memory implementation owns collections, extract only those collections/locks into singleton host state and inject that state into the scoped repository. Gate: separate scopes produce separate service/repository adapters while data survives sequential requests.
+4. Update base and Development settings. Production-safe defaults are false; Development enables both flags. Remove all active references to the old keys, including launch/AppHost/environment mappings if present. Gate: repository search and configuration tests show one source of truth.
+5. Add focused tests for service descriptors, environment guards, Development no-Mongo startup, production-like missing-configuration failure, Mongo branch lifetime, and an HTTP create-then-read workflow across requests. Gate: narrow API tests pass with scope validation.
+6. Run the full FreezerAnalysis API suite and local API/SPA smoke path, then update backend/development documentation and this handoff with actual files/results. Stop after composition parity is proven; do not expand into mock scenarios, feature-gated endpoints, storage redesign or deployment.
+
+Independent post-validation review is not required for this bounded composition correction if the focused lifetime and startup tests pass. It becomes warranted if implementation must extract shared mutable mock state or changes production authentication/database construction beyond the registration branch described here.
+
+### Testing Strategy
+
+- Unit/configuration: standard feature keys resolve expected booleans; obsolete keys have no effect; unsafe mock/dev-auth flags are rejected outside permitted environments.
+- DI: inspect service descriptors for scoped request-facing services/repositories and singleton infrastructure; build with scope validation; resolve two scopes and compare adapter identities.
+- Integration: Development WebApplicationFactory with Mongo settings removed starts successfully, exposes the development identity, and completes create/read operations across separate requests.
+- Production-like integration: with flags false, missing platform/application Mongo configuration fails with the existing actionable validation; equal database names remain rejected case-insensitively.
+- Regression: existing import, profile, estimate, freeze, replay, verification, renderer and PDF tests remain green. No frontend contract test changes are expected.
+- Security: Development auth requires Development plus `EnableDev`; mock mode cannot activate in Production; production cookie authentication remains selected when `EnableDev` is false.
+
+### Migration And Rollback
+
+No data migration is needed. Apply the configuration rename atomically with the host change. Deployment settings must define the standard flags or rely on production defaults; remove old custom keys to avoid operator confusion.
+
+Rollback is the previous application image plus its matching configuration keys. Do not partially roll back only the settings because the old and new binaries read different keys. Mongo documents, account sessions and frozen plans are unaffected. The scoped lifetime change has no persisted-data rollback requirement; if local in-memory continuity fails, restore the prior lifetime only in Development/Test while correcting state ownership, never as the production design.
+
+### Open Questions
+
+None identified. The requested alignment, standard flag names, environment policy, lifetime boundary and no-database local behavior are all established by current repository conventions.
+
+### Implementation Evidence
+
+- `FreezerAnalysis.Api/Program.cs` now uses `FeatureManagement:EnableMock` and `FeatureManagement:EnableDev` through the shared `MyFeatureFlags` constants. Mock mode is a single coherent branch that registers development authentication, the scoped in-memory repository and unavailable platform-account service without invoking Mongo registration. Production mode retains the existing PublicAccount/Mongo branch and separate database validation.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs` now registers `IPublicAccountRepository` as scoped. `IMongoClient`, `FreezerAnalysisDatabase` and private object-storage infrastructure remain singleton infrastructure handles.
+- `MorWalPizVideo.Domain/FreezerAnalysis/InMemoryFreezerAnalysisRepository.cs` now uses a singleton `InMemoryFreezerAnalysisState` with scoped repository adapters, preserving local data across HTTP requests while matching request lifetime conventions.
+- `FreezerAnalysis.Api/appsettings.Development.json` enables `EnableDev` and `EnableMock` under `FeatureManagement`; the old custom mode keys were removed from both base and Development settings. The API project now declares the repository-standard Feature Management package directly.
+- `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs` covers Mongo-free Development composition, scoped adapter identity, shared mock state, and explicit scopes for direct repository test setup.
+- Validation: `dotnet test FreezerAnalysis.Api.Tests\\FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=detailed"` passed with 73 tests passed, 0 failed and 2 skipped. Restore was required after adding the direct package reference. The VS Code test controller did not discover this xUnit file, so the project test command is the authoritative check.
+- No frontend, HTTP contract, persisted schema or deployment changes were required. The AppHost terminal had a pre-existing failed `dotnet run` attempt; this correction was validated through the focused API project suite rather than claiming an AppHost smoke run.
+
 ## Implementation Status
 
 The current branch contains an end-to-end application foundation, but it does not yet satisfy the M0-M8 completion boundary. Do not treat the presence of a route, DTO, pure calculation helper or repository method as proof that the corresponding workflow is complete.
