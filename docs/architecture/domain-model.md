@@ -75,6 +75,10 @@ are idempotent at the application boundary; a later update repairs a missing
 owned link. Existing sponsor documents are manually assigned a channel and do
 not require an automatic backfill.
 
+### FreezerAnalysis
+
+The FreezerAnalysis database owns published match revisions, immutable competitor score facts, private account profiles and drafts, and frozen analysis artifacts. Shooter identity records and match-result resolutions are currently account-owned; resolution documents reference the match and immutable result ID and use optimistic revisions. A resolution never rewrites an official score fact. Candidate matching uses normalized names and explicitly supplied aliases, but only a user-confirmed mapping affects an account's analysis. Estimate composition uses only strictly earlier published matches with the requesting account's published availability manifest and explicit result mappings. Frozen input packages retain the bounded score projections, source/revision provenance, identity mapping, availability/exclusion sets and target stage definition used by that estimate; the private object reference includes its compressed byte length and SHA-256. Legacy references without a stored length remain readable only after SHA-256 verification. Verification reports are immutable and idempotently keyed by account, frozen snapshot and final revision hash; they retain per-stage actual/forecast errors, interval coverage and missing/DQ/zeroed diagnostics. Cross-account alias sharing, federation-license handling, independent replay and related retention/notice policy remain unimplemented.
+
 ## Other Independent Roots
 
 Categories, compilations, pages, sponsors, sponsor applications, configurations, publish schedules, query links, users, API keys, competitions, user requests, and insight records are primarily independent Mongo roots.

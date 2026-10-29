@@ -39,6 +39,17 @@ var backoffice = builder.AddProject<Projects.MorWalPizVideo_BackOffice>("backoff
 var shootingRange = builder.AddProject<Projects.MorWalPizVideo_ShootingRange>("shooting-range")
     .InGroup(backendGroup);
 
+var freezerAnalysis = builder.AddProject<Projects.FreezerAnalysis_Api>("freezer-analysis-api")
+    .InGroup(backendGroup);
+
+builder.AddJavaScriptApp("freezer-analysis", "../frontend", "dev:freezer-analysis")
+    .WithReference(freezerAnalysis)
+    .WaitFor(freezerAnalysis)
+    .WithEnvironment("VITE_FREEZER_API_BASE_URL", freezerAnalysis.GetEndpoint("https"))
+    .WithEnvironment("BROWSER", "none")
+    .WithHttpEndpoint(port: 5178, env: "PORT")
+    .InGroup(frontendGroup);
+
 builder.AddJavaScriptApp("shooting-range-client", "../frontend", "dev:shooting-range-client")
     .WithReference(shootingRange)
     .WaitFor(shootingRange)

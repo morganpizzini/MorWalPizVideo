@@ -15,6 +15,7 @@ export {
 export {
   adminApiService,
   accountApiService,
+  createApiClient,
   legacyApiService,
   publicApiService,
   getApiFieldErrors,

@@ -54,6 +54,7 @@ first narrowing boundary.
 | BackOffice and mixed API coverage | `MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj` | `net10.0`; BackOffice, ServerAPI, shared, cross-API, and BackOffice management/Reqnroll tests |
 | ShortLinks host coverage | `MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj` | `net10.0`; redirect, resolution, and click behavior |
 | Shooting Range API coverage | `MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj` | `net10.0`; API and startup configuration tests |
+| FreezerAnalysis API coverage | `FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj` | `net10.0`; FreezerAnalysis host, import diagnostics, and deterministic engine behavior |
 | YouTube utilities | `MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj` | `net10.0`; parsing and transformation reliability |
 | InsightScanner Windows tests | `MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj` | `net10.0-windows`, WPF; fake scan-service coverage |
 | VideoImporter Windows tests | `MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj` | `net10.0-windows`, WPF; image and database compatibility coverage |

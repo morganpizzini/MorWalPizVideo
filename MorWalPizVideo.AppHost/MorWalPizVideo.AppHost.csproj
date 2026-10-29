@@ -17,6 +17,7 @@
     <ProjectReference Include="..\MorWalPizVideo.ServerAPI\MorWalPizVideo.ServerAPI.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.ShortLinks\MorWalPizVideo.ShortLinks.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.ShootingRange\MorWalPizVideo.ShootingRange.csproj" />
+    <ProjectReference Include="..\FreezerAnalysis.Api\FreezerAnalysis.Api.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,7 +13,7 @@ Current source, project manifests, deployment workflows, and executable tests re
 Included:
 
 - ASP.NET services, shared .NET libraries, tests, and Aspire orchestration.
-- BackOffice SPA, public application, pre-production shop client, Shooting ITA, Shooting Range POC, and shared frontend packages.
+- BackOffice SPA, public application, pre-production shop client, Shooting ITA, Shooting Range POC, FreezerAnalysis, and shared frontend packages.
 - VideoImporter and InsightScanner Windows applications.
 - MongoDB, SQLite, Blob Storage, caching, jobs, authentication, configuration, CI/CD, and external integrations.
 
@@ -53,6 +53,7 @@ Excluded:
 - BackOffice is the management plane and owns administrative business operations and writes.
 - ServerAPI is the public interface and owns public reads and explicitly approved public interactions. It must not expose administrative writes for core content entities.
 - ShortLinks is a focused, anonymous branded redirect and visit-tracking service.
+- FreezerAnalysis is a separate authenticated application host and SPA for match analysis. It reuses the Domain-owned PublicAccount service but issues its own host-only session cookie and requires a distinct application MongoDB database; it is not ServerAPI SSO and does not share the ServerAPI data database.
 - Shared behavior belongs in existing Models, Domain, Contracts, MvcHelpers, ServiceDefaults, or frontend packages according to their established responsibilities. API projects must not reference each other.
 - `morwalpiz.com` is the canonical public domain. The public frontend is hosted by Aruba and calls `https://morwalpiz-serverapi.azurewebsites.net` directly.
 - `https://morwalpiz-admin-spa.azurewebsites.net` is the administrative SPA origin. `https://shorts.morwalpiz.com` is the branded redirect host.

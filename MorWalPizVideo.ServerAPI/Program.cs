@@ -19,7 +19,6 @@ using MorWalPizVideo.MvcHelpers.Authentication;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
-using MorWalPizVideo.ServerAPI.Security;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;
@@ -388,8 +387,9 @@ builder.Services.AddAuthentication()
     .AddScheme<InternalServiceAuthenticationOptions, InternalServiceAuthenticationHandler>(
         InternalServiceAuthenticationHandler.SchemeName, options => { });
 builder.Services.AddAuthentication()
-    .AddScheme<AuthenticationSchemeOptions, PublicAccountAuthenticationHandler>(
-        PublicAccountSecurity.Scheme, options => { });
+    .AddPublicAccountAuthentication(
+        PublicAccountSecurity.Scheme,
+        PublicAccountSecurity.SessionCookie);
 
 // Web Push notifications
 if (enableMock)

@@ -12,7 +12,8 @@
     "morwalpiz-shop.client",
     "shooting-ita-frontend",
     "shooting-range.client",
-    "shoot-recorder"
+    "shoot-recorder",
+    "FreezerAnalysis.spa"
   ],
   "scripts": {
     "build:models": "yarn workspace @morwalpizvideo/models build",
@@ -28,6 +29,8 @@
     "dev:ask-client": "yarn build:shared && yarn workspace ask.client dev",
     "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev",
     "dev:shoot-recorder": "yarn workspace shoot-recorder dev",
+    "dev:freezer-analysis": "yarn workspace freezer-analysis.spa dev",
+    "build:freezer-analysis": "yarn workspace freezer-analysis.spa build",
     "dev:shooting-range-client": "yarn build:shared && yarn workspace shooting-range.client dev"
   },
   "engines": {

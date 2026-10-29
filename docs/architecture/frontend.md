@@ -82,6 +82,12 @@ This workflow remains target design context rather than active roadmap scope.
 
 Shooting ITA is in scope and reuses shared layout and service behavior. Current maintained routes include home and focused video/category views. Its unused hard-coded Axios placeholder and dependency have been removed; maintained API calls use `@morwalpizvideo/services`. Preserve its local category derivation where the behavior is application-specific.
 
+## FreezerAnalysis SPA
+
+`frontend/FreezerAnalysis.spa` is a React 19/Vite PWA in the Yarn workspace. It uses React Router routes, typed feature DTOs, and an app-specific `createApiClient({ mode: "account", baseUrl: VITE_FREEZER_API_BASE_URL })` instance from `@morwalpizvideo/services`. This keeps cookies, CSRF, error parsing, and credential isolation in the shared transport while targeting the separate FreezerAnalysis host.
+
+The service worker precaches only the app shell and static assets; it does not cache API responses. The field snapshot and queued field events use account-partitioned IndexedDB records. Queued operations retain client-generated IDs and are reconciled through the API's idempotent field-event endpoint. Offline access is limited to previously cached snapshots; authentication and server mutations still require the API.
+
 ## State Management
 
 The BackOffice SPA uses its local Zustand app store for information needed across the protected shell lifetime: logged-user display identity, server-effective permissions, session status, feature flags, accessible channels, and the selected channel id. The protected root loader hydrates this store once after session validation; feature state comes from the unscoped `GET /api/features` endpoint. The store is a UI snapshot, not an authentication authority: the HttpOnly cookie, CSRF handling, `authService` validation, and server authorization remain authoritative.

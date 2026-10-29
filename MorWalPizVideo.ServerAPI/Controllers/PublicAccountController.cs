@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain.Accounts;
-using MorWalPizVideo.ServerAPI.Security;
+using MorWalPizVideo.MvcHelpers.Authentication;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 

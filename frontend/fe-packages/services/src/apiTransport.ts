@@ -73,6 +73,14 @@ const scopedBackOfficePrefixes = [
   "/api/galleries",
 ];
 
+function problemDetailsMessage(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const record = payload as Record<string, unknown>;
+  return [record.detail, record.title].find(
+    (value): value is string => typeof value === "string" && value.trim().length > 0,
+  ) ?? null;
+}
+
 export function isScopedBackOfficeRequest(url: string): boolean {
   const normalizedUrl = `/${url.split("?")[0].toLowerCase().replace(/^\/+/, "")}`;
   if (
@@ -988,7 +996,10 @@ export function createApiClient({
           switch (response.status) {
             case 400: {
               const parsedResponse = await response.json();
-              if (typeof parsedResponse === "object") {
+              const problemMessage = problemDetailsMessage(parsedResponse);
+              if (problemMessage) {
+                errorMessages.push(problemMessage);
+              } else if (typeof parsedResponse === "object") {
                 for (const key in parsedResponse) {
                   if (Array.isArray(parsedResponse[key])) {
                     errorMessages.push(...parsedResponse[key]);
@@ -1066,7 +1077,10 @@ export function createApiClient({
               const rawResponse = await response.text();
               try {
                 const parsedResponse = JSON.parse(rawResponse);
-                if (
+                const problemMessage = problemDetailsMessage(parsedResponse);
+                if (problemMessage) {
+                  errorMessages.push(problemMessage);
+                } else if (
                   typeof parsedResponse === "object" &&
                   parsedResponse !== null
                 ) {

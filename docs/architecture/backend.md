@@ -32,6 +32,14 @@ Focused services for content, catalog, shop, forms, insights, links, and publish
 
 ServerAPI public accounts are a separate Domain-owned boundary backed by `PublicAccount` and `PublicAccountSession` collections. The dedicated cookie scheme revalidates the hashed session token and account security version on each authenticated request. Controllers expose only Contracts DTOs; registration, login, profile mutation, and logout require CSRF validation, while existing anonymous content and push routes remain unchanged.
 
+## FreezerAnalysis API
+
+`FreezerAnalysis.Api` is an independent .NET 10 host for the FreezerAnalysis application. It composes the existing `IPublicAccountService` against the platform account database and uses the separate `FreezerAnalysis:ApplicationDatabaseName` for feature collections. Startup rejects missing or colliding database configuration. Its `freezer_account_session` cookie is host-only and distinct from ServerAPI's account cookie; users authenticate independently at this host rather than relying on cross-host cookie sharing. Unsafe account/session requests require the feature's CSRF cookie/header pair.
+
+Production authentication and repositories are the defaults. Development/test-only authentication and the in-memory feature repository are explicit configuration branches. The host owns the feature's import, draft, freeze, field-event, and artifact endpoints; it does not reference ServerAPI or BackOffice.
+
+Shooter identities are account-owned records in the FreezerAnalysis database. A revision-checked account/match/result mapping links a published participant result to one identity without modifying the shared immutable score fact. Exact normalized names and explicitly supplied aliases only suggest candidates; the user must confirm every mapping. Profile and draft identity references are validated against the current account. This is intentionally not a cross-account identity-sharing or licensing workflow.
+
 The [2026-10-24 API consistency audit](api-consistency-audit.md) consolidates the common standard, source-verified exceptions and bounded correction order. In particular, focused service registration does not prove that duplicated form submission invariants or all mock-mode controller dependencies are aligned.
 
 ## Persistence

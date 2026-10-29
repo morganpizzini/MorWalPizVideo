@@ -1,0 +1,1 @@
+{"root":["./src/freezerapi.test.ts","./src/freezerapi.ts","./src/main.tsx","./src/offlinestore.test.ts","./src/offlinestore.ts","./src/routes.test.tsx","./src/routes.tsx","./src/setuptests.ts","./src/vite-env.d.ts","./vite.config.ts","./vitest.config.ts"],"version":"5.7.3"}

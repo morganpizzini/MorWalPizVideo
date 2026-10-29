@@ -3,10 +3,18 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MorWalPizVideo.Domain.Accounts;
 
-namespace MorWalPizVideo.ServerAPI.Security;
+namespace MorWalPizVideo.MvcHelpers.Authentication;
+
+public sealed class PublicAccountAuthenticationOptions : AuthenticationSchemeOptions
+{
+    public string SessionCookieName { get; set; } = PublicAccountSecurity.SessionCookie;
+}
 
 public static class PublicAccountSecurity
 {
@@ -15,10 +23,13 @@ public static class PublicAccountSecurity
     public const string CsrfCookie = "public_account_csrf";
     public const string CsrfHeader = "X-CSRF-TOKEN";
 
-    public static bool HasValidCsrf(HttpRequest request)
+    public static bool HasValidCsrf(
+        HttpRequest request,
+        string csrfCookieName = CsrfCookie,
+        string csrfHeaderName = CsrfHeader)
     {
-        if (!request.Headers.TryGetValue(CsrfHeader, out var header) ||
-            !request.Cookies.TryGetValue(CsrfCookie, out var cookie))
+        if (!request.Headers.TryGetValue(csrfHeaderName, out var header) ||
+            !request.Cookies.TryGetValue(csrfCookieName, out var cookie))
             return false;
 
         var headerBytes = Encoding.UTF8.GetBytes(header.ToString());
@@ -27,26 +38,46 @@ public static class PublicAccountSecurity
                CryptographicOperations.FixedTimeEquals(headerBytes, cookieBytes);
     }
 
-    public static CookieOptions CreateCookieOptions(bool secure) => new()
+    public static CookieOptions CreateCookieOptions(
+        bool secure,
+        SameSiteMode? sameSite = null) => new()
     {
         HttpOnly = true,
         Secure = secure,
-        SameSite = secure ? SameSiteMode.None : SameSiteMode.Lax,
+        SameSite = sameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax),
         IsEssential = true,
         Path = "/"
     };
 }
 
+public static class PublicAccountAuthenticationExtensions
+{
+    public static AuthenticationBuilder AddPublicAccountAuthentication(
+        this AuthenticationBuilder builder,
+        string scheme,
+        string sessionCookieName)
+    {
+        if (string.IsNullOrWhiteSpace(scheme))
+            throw new ArgumentException("An authentication scheme is required.", nameof(scheme));
+        if (string.IsNullOrWhiteSpace(sessionCookieName))
+            throw new ArgumentException("A session cookie name is required.", nameof(sessionCookieName));
+
+        return builder.AddScheme<PublicAccountAuthenticationOptions, PublicAccountAuthenticationHandler>(
+            scheme,
+            options => options.SessionCookieName = sessionCookieName);
+    }
+}
+
 public sealed class PublicAccountAuthenticationHandler(
-    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    IOptionsMonitor<PublicAccountAuthenticationOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
     IPublicAccountService accountService)
-    : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    : AuthenticationHandler<PublicAccountAuthenticationOptions>(options, logger, encoder)
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Cookies.TryGetValue(PublicAccountSecurity.SessionCookie, out var token))
+        if (!Request.Cookies.TryGetValue(Options.SessionCookieName, out var token))
             return AuthenticateResult.NoResult();
 
         var session = await accountService.ValidateSessionAsync(token, Context.RequestAborted);
@@ -59,8 +90,8 @@ public sealed class PublicAccountAuthenticationHandler(
             new Claim(ClaimTypes.Name, session.Account.Username),
             new Claim(ClaimTypes.Email, session.Account.Email)
         };
-        var identity = new ClaimsIdentity(claims, PublicAccountSecurity.Scheme);
-        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), PublicAccountSecurity.Scheme));
+        var identity = new ClaimsIdentity(claims, Scheme.Name);
+        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name));
     }
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)

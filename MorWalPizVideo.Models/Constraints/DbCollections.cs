@@ -93,5 +93,20 @@
         public const string NewsletterEvents = "newsletterEvents";
         public const string PublicAccounts = "publicAccounts";
         public const string PublicAccountSessions = "publicAccountSessions";
+
+        public const string FreezerMatches = "freezerMatches";
+        public const string FreezerMatchRevisions = "freezerMatchRevisions";
+        public const string FreezerResults = "freezerResults";
+        public const string FreezerIdentities = "freezerIdentities";
+        public const string FreezerIdentityResolutions = "freezerIdentityResolutions";
+        public const string FreezerProfiles = "freezerProfiles";
+        public const string FreezerImports = "freezerImports";
+        public const string FreezerDrafts = "freezerDrafts";
+        public const string FreezerSnapshots = "freezerSnapshots";
+        public const string FreezerFieldEvents = "freezerFieldEvents";
+        public const string FreezerVerifications = "freezerVerifications";
+        public const string FreezerArtifacts = "freezerArtifacts";
+        public const string FreezerParameterCandidates = "freezerParameterCandidates";
+        public const string FreezerParameterAdoptions = "freezerParameterAdoptions";
     }
 }
