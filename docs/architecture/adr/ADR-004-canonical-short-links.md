@@ -13,6 +13,15 @@ The standalone record is canonical for every short-link type, including YouTube 
 
 ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. Detailed visits use a separate collection with an approved retention policy.
 
+Classified request analytics are additive to the canonical raw click count.
+The redirect classifies the request locally from User-Agent, atomically
+increments the raw count, category counter, and timestamp, then writes a
+retention-limited event to `shortLinkRequestEvents`. Event persistence failure
+is logged and does not block the redirect; the raw counter remains authoritative.
+The initial event retention is 90 days and the category classifier version and
+rule code are stored with each event. No identity, IP address, complete
+User-Agent, referrer, or query string is persisted.
+
 ## Alternatives
 
 - Keep embedded YouTube links: rejected because split ownership prevents one authoritative lookup and leaves click counts and uniqueness ambiguous. Legacy records require an explicit inventory/backfill decision; they are not a runtime compatibility path.

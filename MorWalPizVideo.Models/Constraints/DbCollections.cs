@@ -40,6 +40,7 @@
         public const string Products = "products";
         public const string ProductCategories = "productCategories";
         public const string ShortLinks = "shortLinks";
+        public const string ShortLinkRequestEvents = "shortLinkRequestEvents";
         public const string QuickLinks = "quickLinks";
         public const string ChannelNews = "channelNews";
         public const string Galleries = "galleries";

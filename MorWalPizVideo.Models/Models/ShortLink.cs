@@ -4,6 +4,57 @@ using System.Runtime.Serialization;
 namespace MorWalPizVideo.Server.Models
 {
     [DataContract]
+    public enum ShortLinkRequestCategory
+    {
+        [EnumMember]
+        SocialPreview = 0,
+
+        [EnumMember]
+        OtherAutomation = 1,
+
+        [EnumMember]
+        HumanCandidate = 2,
+
+        [EnumMember]
+        Unclassified = 3
+    }
+
+    [DataContract]
+    public sealed record ShortLinkRequestClassification(
+        [property: DataMember] ShortLinkRequestCategory Category,
+        [property: DataMember] string RuleCode,
+        [property: DataMember] string Version);
+
+    [BsonIgnoreExtraElements]
+    [DataContract]
+    public sealed record ShortLinkRequestEvent : BaseEntity
+    {
+        [DataMember]
+        [BsonElement("shortLinkId")]
+        public string ShortLinkId { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("timestamp")]
+        public DateTime Timestamp { get; init; }
+
+        [DataMember]
+        [BsonElement("category")]
+        public ShortLinkRequestCategory Category { get; init; }
+
+        [DataMember]
+        [BsonElement("ruleCode")]
+        public string RuleCode { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("classifierVersion")]
+        public string ClassifierVersion { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("expiresAt")]
+        public DateTime ExpiresAt { get; init; }
+    }
+
+    [DataContract]
     public enum LinkType
     {
         [EnumMember]
@@ -47,6 +98,22 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("clickTimestamps")]
         public IList<DateTime> ClickTimestamps { get; set; } = [];
+
+        [DataMember]
+        [BsonElement("socialPreviewRequests")]
+        public int SocialPreviewRequests { get; set; }
+
+        [DataMember]
+        [BsonElement("otherAutomationRequests")]
+        public int OtherAutomationRequests { get; set; }
+
+        [DataMember]
+        [BsonElement("humanCandidateRequests")]
+        public int HumanCandidateRequests { get; set; }
+
+        [DataMember]
+        [BsonElement("unclassifiedRequests")]
+        public int UnclassifiedRequests { get; set; }
 
         [DataMember]
         [BsonElement("linkType")]

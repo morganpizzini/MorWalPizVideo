@@ -30,6 +30,7 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - `https://morwalpiz.com`: canonical public frontend on Aruba.
 - `https://morwalpiz-serverapi.azurewebsites.net`: public API.
 - `https://morwalpiz-admin-spa.azurewebsites.net`: BackOffice SPA.
+- The BackOffice SPA image must publish `manifest.webmanifest`, `icon-192.svg`, `icon-512.svg`, and `push-sw.js` as real static files. Nginx serves the manifest and push worker with their own MIME types, 404 behavior, and revalidation policy; the worker is intentionally excluded from immutable asset caching.
 - `https://morwalpiz-admin.azurewebsites.net`: BackOffice API; credentialed CORS accepts only the BackOffice SPA origin.
 - FreezerAnalysis API and SPA hosts are environment-managed Azure Web Apps; the SPA receives the API origin through `VITE_FREEZER_API_BASE_URL` at image build time.
 - `https://shorts.morwalpiz.com`: branded redirects.

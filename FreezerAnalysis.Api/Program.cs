@@ -12,7 +12,13 @@ using Microsoft.AspNetCore.Mvc;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.FreezerAnalysis;
+using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.MvcHelpers.Authentication;
+using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Models.Constraints;
+using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.Server.Utils;
 using Microsoft.FeatureManagement;
 using FreezerAnalysis.Api.Security;
@@ -70,12 +76,29 @@ builder.Services.AddAuthorization(options =>
 
 if (enableMock)
 {
+    builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
+    builder.Services.AddSingleton<IMockScenario>(provider =>
+    {
+        var scenario = provider.GetRequiredService<IMockScenarioLifecycle>();
+        SeedMockAccount(scenario);
+        return scenario;
+    });
     builder.Services.AddScoped<IFreezerAnalysisRepository, InMemoryFreezerAnalysisRepository>();
-    builder.Services.AddSingleton<InMemoryFreezerAnalysisState>();
-    builder.Services.AddScoped<IPublicAccountService, UnavailablePublicAccountService>();
-    builder.Services.AddAuthentication(FreezerDevelopmentAuthenticationHandler.AuthenticationScheme)
-        .AddScheme<AuthenticationSchemeOptions, FreezerDevelopmentAuthenticationHandler>(
-            FreezerDevelopmentAuthenticationHandler.AuthenticationScheme, _ => { });
+    builder.Services.AddSingleton<InMemoryFreezerAnalysisState>(_ =>
+    {
+        var state = new InMemoryFreezerAnalysisState();
+        if (builder.Configuration.GetValue("FreezerAnalysis:SeedMockData", true))
+        {
+            FreezerAnalysisMockData.Seed(
+                state,
+                builder.Configuration["FreezerAnalysis:DevelopmentAccountId"] ?? "development-account");
+        }
+        return state;
+    });
+    builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
+    builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+    builder.Services.AddAuthentication(PublicAccountSecurity.Scheme)
+        .AddPublicAccountAuthentication(PublicAccountSecurity.Scheme, "freezer_account_session");
 }
 else
 {
@@ -144,6 +167,30 @@ app.MapFallback(async context =>
 
 app.Run();
 
+static void SeedMockAccount(IMockScenario scenario)
+{
+    if (scenario.Read<PublicAccount>(DbCollections.PublicAccounts).Count > 0)
+        return;
+
+    var passwordHash = PasswordHashing.HashPassword("FreezerDemo123!", out var salt);
+    scenario.Add(DbCollections.PublicAccounts, new PublicAccount
+    {
+        Id = "development-account",
+        Username = "freezerdemo",
+        NormalizedUsername = "FREEZERDEMO",
+        Email = "freezer-demo@example.test",
+        NormalizedEmail = "FREEZER-DEMO@EXAMPLE.TEST",
+        DisplayName = "Freezer Demo",
+        PasswordHash = passwordHash,
+        Salt = salt,
+        CreationDateTime = new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+        TermsVersionAccepted = PublicAccountService.TermsVersion,
+        TermsAcceptedAtUtc = new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+        PrivacyNoticeVersionAcknowledged = PublicAccountService.PrivacyNoticeVersion,
+        PrivacyNoticeAcknowledgedAtUtc = new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc)
+    });
+}
+
 public partial class Program { }
 
 public sealed class FreezerAnalysisHostOptions
@@ -151,21 +198,6 @@ public sealed class FreezerAnalysisHostOptions
     public int MaximumUploadBytes { get; set; } = 20 * 1024 * 1024;
     public string PdfTextExtractorPath { get; set; } = "pdftotext";
     public bool ApplyIndexesOnStartup { get; set; }
-}
-
-public sealed class UnavailablePublicAccountService : IPublicAccountService
-{
-    public Task<PublicAccountAuthenticationResult?> RegisterAsync(PublicAccountRegistrationCommand request, CancellationToken cancellationToken = default) =>
-        throw new InvalidOperationException("Platform account services are not configured in mock mode.");
-    public Task<PublicAccountAuthenticationResult?> LoginAsync(PublicAccountLoginCommand request, CancellationToken cancellationToken = default) =>
-        Task.FromResult<PublicAccountAuthenticationResult?>(null);
-    public Task<PublicAccountSessionResult?> ValidateSessionAsync(string sessionToken, CancellationToken cancellationToken = default) =>
-        Task.FromResult<PublicAccountSessionResult?>(null);
-    public Task RevokeSessionAsync(string sessionToken, CancellationToken cancellationToken = default) => Task.CompletedTask;
-    public Task<MorWalPizVideo.Models.Models.PublicAccount?> UpdateProfileAsync(string accountId, PublicAccountProfileUpdateCommand request, CancellationToken cancellationToken = default) =>
-        Task.FromResult<MorWalPizVideo.Models.Models.PublicAccount?>(null);
-    public Task<MorWalPizVideo.Models.Models.PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default) =>
-        Task.FromResult<MorWalPizVideo.Models.Models.PublicAccount?>(null);
 }
 
 public sealed class FreezerCsrfMiddleware(RequestDelegate next, IWebHostEnvironment environment, IConfiguration configuration)

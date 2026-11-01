@@ -1,4 +1,4 @@
-import { createApiClient } from '@morwalpizvideo/services';
+import { createApiClient } from "@morwalpizvideo/services";
 
 export interface AccountSummary {
   id: string;
@@ -19,6 +19,51 @@ export interface Profile {
   powerFactor: string | null;
   performance: number;
   updatedAtUtc: string;
+}
+
+export interface DivisionOption {
+  code: string;
+  label: string;
+}
+
+export interface ReferenceData {
+  divisions: DivisionOption[];
+}
+
+export interface ResultSummary {
+  resultId: string;
+  competitorId: string;
+  displayName: string;
+  division: string;
+  class: string | null;
+  powerFactor: string | null;
+  squad: string | null;
+  officialTotal: number | null;
+  status: string;
+  stageResultCount: number;
+}
+
+export interface ResultStage {
+  stageId: string;
+  stageNumber: number;
+  stageName: string;
+  minimumRounds: number;
+  status: string;
+  hitFactor: number | null;
+  timeSeconds: number | null;
+  netPoints: number | null;
+  classificationPoints: number | null;
+  alpha: number | null;
+  charlie: number | null;
+  delta: number | null;
+  misses: number | null;
+  noShoots: number | null;
+  procedurals: number | null;
+}
+
+export interface ResultDetail {
+  summary: ResultSummary;
+  stages: ResultStage[];
 }
 
 export interface ShooterIdentity {
@@ -368,7 +413,7 @@ export interface SnapshotReplay {
 
 export interface FieldEventInput {
   clientOperationId: string;
-  kind: 'turn' | 'reconnaissance' | 'midday' | 'correction';
+  kind: "turn" | "reconnaissance" | "midday" | "correction";
   content: string;
   observedAtLocal: string;
   observedOffsetMinutes: number;
@@ -396,28 +441,42 @@ export interface FieldEvent {
 export class FreezerApiError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
   ) {
     super(message);
-    this.name = 'FreezerApiError';
+    this.name = "FreezerApiError";
   }
 }
 
-const apiBaseUrl = import.meta.env.VITE_FREEZER_API_BASE_URL ?? '';
-const accountApi = createApiClient({ mode: 'account', baseUrl: apiBaseUrl });
+const apiBaseUrl = import.meta.env.VITE_FREEZER_API_BASE_URL ?? "";
+const accountApi = createApiClient({ mode: "account", baseUrl: apiBaseUrl });
 
 async function checked<T>(response: Promise<unknown>): Promise<T> {
   const result = await response;
-  if (typeof result === 'object' && result !== null) {
+  if (typeof result === "object" && result !== null) {
     const record = result as Record<string, unknown>;
     const hasErrors = Array.isArray(record.errors) && record.errors.length > 0;
-    const hasProblemDetails = typeof record.title === 'string' || typeof record.detail === 'string';
-    const status = typeof record.status === 'number' ? record.status : hasErrors || hasProblemDetails ? 500 : 200;
+    const hasProblemDetails =
+      typeof record.title === "string" || typeof record.detail === "string";
+    const status =
+      typeof record.status === "number"
+        ? record.status
+        : hasErrors || hasProblemDetails
+          ? 500
+          : 200;
     if (status >= 400 || hasErrors || hasProblemDetails) {
-      const message = [record.detail, record.title]
-        .find((value): value is string => typeof value === 'string' && value.length > 0)
-        ?? (Array.isArray(record.errors) ? record.errors.map(String).join('; ') : '');
-      throw new FreezerApiError(message || `Richiesta non riuscita (${status}).`, status);
+      const message =
+        [record.detail, record.title].find(
+          (value): value is string =>
+            typeof value === "string" && value.length > 0,
+        ) ??
+        (Array.isArray(record.errors)
+          ? record.errors.map(String).join("; ")
+          : "");
+      throw new FreezerApiError(
+        message || `Richiesta non riuscita (${status}).`,
+        status,
+      );
     }
   }
   return result as T;
@@ -425,24 +484,28 @@ async function checked<T>(response: Promise<unknown>): Promise<T> {
 
 async function csrfToken(): Promise<string> {
   const response = await checked<{ token?: string }>(
-    accountApi.get('/api/v1/account/csrf', undefined, '', true)
+    accountApi.get("/api/v1/account/csrf", undefined, "", true),
   );
-  if (!response.token) throw new Error('Il server non ha restituito un token CSRF valido.');
+  if (!response.token)
+    throw new Error("Il server non ha restituito un token CSRF valido.");
   return response.token;
 }
 
 export const freezerApi = {
-  getSession: () => checked<AccountSession>(
-    accountApi.get('/api/v1/account/session', undefined, '', true)
-  ),
+  getSession: () =>
+    checked<AccountSession>(
+      accountApi.get("/api/v1/account/session", undefined, "", true),
+    ),
   login: async (identifier: string, password: string) => {
     const token = await csrfToken();
-    const session = await checked<AccountSession>(accountApi.post(
-      '/api/v1/account/sessions',
-      { identifier, password },
-      '',
-      { 'X-CSRF-TOKEN': token }
-    ));
+    const session = await checked<AccountSession>(
+      accountApi.post(
+        "/api/v1/account/sessions",
+        { identifier, password },
+        "",
+        { "X-CSRF-TOKEN": token },
+      ),
+    );
     if (session.account) rememberAccountId(session.account.id);
     return session;
   },
@@ -455,123 +518,251 @@ export const freezerApi = {
     privacyNoticeAcknowledged: boolean;
   }) => {
     const token = await csrfToken();
-    const session = await checked<AccountSession>(accountApi.post(
-      '/api/v1/accounts',
-      input,
-      '',
-      { 'X-CSRF-TOKEN': token }
-    ));
+    const session = await checked<AccountSession>(
+      accountApi.post("/api/v1/accounts", input, "", { "X-CSRF-TOKEN": token }),
+    );
     if (session.account) rememberAccountId(session.account.id);
     return session;
   },
   logout: async () => {
     const token = await csrfToken();
-    await checked<unknown>(accountApi.call(
-      '/api/v1/account/sessions/current',
-      'DELETE',
-      {},
-      '',
-      undefined,
-      false,
-      false,
-      undefined,
-      { 'X-CSRF-TOKEN': token }
-    ));
-    sessionStorage.removeItem('freezer-analysis.account-id');
+    await checked<unknown>(
+      accountApi.call(
+        "/api/v1/account/sessions/current",
+        "DELETE",
+        {},
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { "X-CSRF-TOKEN": token },
+      ),
+    );
+    sessionStorage.removeItem("freezer-analysis.account-id");
   },
-  getMatches: () => checked<MatchSummary[]>(
-    accountApi.get('/api/v1/matches', { limit: '100' }, '', true)
-  ),
-  getMatch: (matchId: string) => checked<MatchSummary>(
-    accountApi.get(`/api/v1/matches/${encodeURIComponent(matchId)}`, undefined, '', true)
-  ),
-  getProfile: () => checked<Profile>(accountApi.get('/api/v1/profile', undefined, '', true)),
-  saveProfile: (profile: Pick<Profile, 'identityId' | 'division' | 'powerFactor' | 'performance'>) =>
-    checked<Profile>(accountApi.put('/api/v1/profile', profile)),
-  getIdentities: () => checked<ShooterIdentity[]>(accountApi.get('/api/v1/identities', undefined, '', true)),
+  getMatches: () =>
+    checked<MatchSummary[]>(
+      accountApi.get("/api/v1/matches", { limit: "100" }, "", true),
+    ),
+  getReferenceData: () =>
+    checked<ReferenceData>(
+      accountApi.get("/api/v1/reference-data", undefined, "", true),
+    ),
+  getResults: (matchId: string) =>
+    checked<ResultSummary[]>(
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/results`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
+  getResult: (matchId: string, resultId: string) =>
+    checked<ResultDetail>(
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/results/${encodeURIComponent(resultId)}`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
+  getMatch: (matchId: string) =>
+    checked<MatchSummary>(
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
+  getProfile: () =>
+    checked<Profile>(accountApi.get("/api/v1/profile", undefined, "", true)),
+  saveProfile: (
+    profile: Pick<
+      Profile,
+      "identityId" | "division" | "powerFactor" | "performance"
+    >,
+  ) => checked<Profile>(accountApi.put("/api/v1/profile", profile)),
+  getIdentities: () =>
+    checked<ShooterIdentity[]>(
+      accountApi.get("/api/v1/identities", undefined, "", true),
+    ),
   createIdentity: (displayName: string, aliases: string[] = []) =>
-    checked<ShooterIdentity>(accountApi.post('/api/v1/identities', { displayName, aliases })),
+    checked<ShooterIdentity>(
+      accountApi.post("/api/v1/identities", { displayName, aliases }),
+    ),
   getIdentityReview: (matchId: string) =>
     checked<IdentityReviewEntry[]>(
-      accountApi.get(`/api/v1/matches/${encodeURIComponent(matchId)}/identities/review`, undefined, '', true)
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/identities/review`,
+        undefined,
+        "",
+        true,
+      ),
     ),
-  resolveIdentity: (matchId: string, resultId: string, identityId: string, expectedRevision: number) =>
-    checked<IdentityResolution>(accountApi.put(
-      `/api/v1/matches/${encodeURIComponent(matchId)}/identities/${encodeURIComponent(resultId)}`,
-      { identityId, expectedRevision }
-    )),
-  removeIdentityResolution: (matchId: string, resultId: string, expectedRevision: number) =>
-    checked<unknown>(accountApi.call(
-      `/api/v1/matches/${encodeURIComponent(matchId)}/identities/${encodeURIComponent(resultId)}?expectedRevision=${expectedRevision}`,
-      'DELETE',
-      {}
-    )),
+  resolveIdentity: (
+    matchId: string,
+    resultId: string,
+    identityId: string,
+    expectedRevision: number,
+  ) =>
+    checked<IdentityResolution>(
+      accountApi.put(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/identities/${encodeURIComponent(resultId)}`,
+        { identityId, expectedRevision },
+      ),
+    ),
+  removeIdentityResolution: (
+    matchId: string,
+    resultId: string,
+    expectedRevision: number,
+  ) =>
+    checked<unknown>(
+      accountApi.call(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/identities/${encodeURIComponent(resultId)}?expectedRevision=${expectedRevision}`,
+        "DELETE",
+        {},
+      ),
+    ),
   previewScores: (form: FormData) =>
-    checked<ImportPreview>(accountApi.postFormData('/api/v1/imports/scores/preview', form)),
+    checked<ImportPreview>(
+      accountApi.postFormData("/api/v1/imports/scores/preview", form),
+    ),
   previewPdfPair: (form: FormData) =>
-    checked<PdfPairPreview>(accountApi.postFormData('/api/v1/imports/pdfs/preview', form)),
+    checked<PdfPairPreview>(
+      accountApi.postFormData("/api/v1/imports/pdfs/preview", form),
+    ),
   publishScores: (form: FormData, expectedRevision: number) => {
-    form.set('expectedRevision', String(expectedRevision));
-    return checked<ImportPreview>(accountApi.postFormData('/api/v1/imports/scores/publish', form));
+    form.set("expectedRevision", String(expectedRevision));
+    return checked<ImportPreview>(
+      accountApi.postFormData("/api/v1/imports/scores/publish", form),
+    );
   },
   getDraft: (matchId: string) =>
-    checked<Draft>(accountApi.get(`/api/v1/matches/${encodeURIComponent(matchId)}/draft`, undefined, '', true)),
+    checked<Draft>(
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/draft`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
   saveDraft: (matchId: string, draft: DraftUpdate) =>
-    checked<Draft>(accountApi.put(`/api/v1/matches/${encodeURIComponent(matchId)}/draft`, draft)),
+    checked<Draft>(
+      accountApi.put(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/draft`,
+        draft,
+      ),
+    ),
   getEstimate: (matchId: string) =>
-    checked<Estimate>(accountApi.get(`/api/v1/matches/${encodeURIComponent(matchId)}/estimate`, undefined, '', true)),
+    checked<Estimate>(
+      accountApi.get(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/estimate`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
   freeze: (matchId: string, expectedRevision: number) =>
-    checked<Snapshot>(accountApi.post(`/api/v1/matches/${encodeURIComponent(matchId)}/freeze`, { expectedRevision })),
+    checked<Snapshot>(
+      accountApi.post(`/api/v1/matches/${encodeURIComponent(matchId)}/freeze`, {
+        expectedRevision,
+      }),
+    ),
   getSnapshot: (snapshotId: string) =>
-    checked<Snapshot>(accountApi.get(`/api/v1/snapshots/${encodeURIComponent(snapshotId)}`, undefined, '', true)),
+    checked<Snapshot>(
+      accountApi.get(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
   getSnapshots: () =>
-    checked<SnapshotSelection[]>(accountApi.get('/api/v1/snapshots', { limit: '100' }, '', true)),
+    checked<SnapshotSelection[]>(
+      accountApi.get("/api/v1/snapshots", { limit: "100" }, "", true),
+    ),
   replaySnapshot: (snapshotId: string) =>
-    checked<SnapshotReplay>(accountApi.get(
-      `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/replay`,
-      undefined,
-      '',
-      true
-    )),
+    checked<SnapshotReplay>(
+      accountApi.get(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/replay`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
   verifySnapshot: (snapshotId: string, finalRevisionId: string) =>
-    checked<VerificationReport>(accountApi.post(
-      `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/verification`,
-      { finalRevisionId }
-    )),
+    checked<VerificationReport>(
+      accountApi.post(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/verification`,
+        { finalRevisionId },
+      ),
+    ),
   getLatestParameterAdoption: () =>
-    checked<ParameterAdoption>(accountApi.get('/api/v1/parameters/adoption', undefined, '', true)),
-  backtestParameters: (parameters: ParameterValues, evaluations: ParameterBacktestEvaluation[]) =>
-    checked<ParameterBacktestReport>(accountApi.post('/api/v1/parameter-backtests', { parameters, evaluations })),
-  adoptParameters: (backtestId: string, expectedRevision: number, confirm: boolean) =>
-    checked<ParameterAdoption>(accountApi.post('/api/v1/parameters/adoption', {
-      backtestId,
-      expectedRevision,
-      confirm
-    })),
+    checked<ParameterAdoption>(
+      accountApi.get("/api/v1/parameters/adoption", undefined, "", true),
+    ),
+  backtestParameters: (
+    parameters: ParameterValues,
+    evaluations: ParameterBacktestEvaluation[],
+  ) =>
+    checked<ParameterBacktestReport>(
+      accountApi.post("/api/v1/parameter-backtests", {
+        parameters,
+        evaluations,
+      }),
+    ),
+  adoptParameters: (
+    backtestId: string,
+    expectedRevision: number,
+    confirm: boolean,
+  ) =>
+    checked<ParameterAdoption>(
+      accountApi.post("/api/v1/parameters/adoption", {
+        backtestId,
+        expectedRevision,
+        confirm,
+      }),
+    ),
   getFieldEvents: (snapshotId: string) =>
-    checked<FieldEvent[]>(accountApi.get(`/api/v1/snapshots/${encodeURIComponent(snapshotId)}/field-events`, undefined, '', true)),
+    checked<FieldEvent[]>(
+      accountApi.get(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/field-events`,
+        undefined,
+        "",
+        true,
+      ),
+    ),
   appendFieldEvent: (snapshotId: string, event: FieldEventInput) =>
-    checked<FieldEvent>(accountApi.post(`/api/v1/snapshots/${encodeURIComponent(snapshotId)}/field-events`, event)),
+    checked<FieldEvent>(
+      accountApi.post(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/field-events`,
+        event,
+      ),
+    ),
   createArtifactPackage: async (snapshotId: string) => {
-    return checked<Blob>(accountApi.call(
-      `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/artifacts`,
-      'POST',
-      {},
-      '',
-      undefined,
-      true
-    ));
-  }
+    return checked<Blob>(
+      accountApi.call(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/artifacts`,
+        "POST",
+        {},
+        "",
+        undefined,
+        true,
+      ),
+    );
+  },
 };
 
 export function rememberAccountId(accountId: string): void {
-  sessionStorage.setItem('freezer-analysis.account-id', accountId);
+  sessionStorage.setItem("freezer-analysis.account-id", accountId);
 }
 
 export function rememberedAccountId(): string | null {
-  return sessionStorage.getItem('freezer-analysis.account-id');
+  return sessionStorage.getItem("freezer-analysis.account-id");
 }
 
 export function clearRememberedAccountId(): void {
-  sessionStorage.removeItem('freezer-analysis.account-id');
+  sessionStorage.removeItem("freezer-analysis.account-id");
 }

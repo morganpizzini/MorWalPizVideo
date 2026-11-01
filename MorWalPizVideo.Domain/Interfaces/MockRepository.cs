@@ -429,6 +429,18 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
 
         public async Task<int> IncrementClicksAsync(string id)
+            => await IncrementClicksAsyncCore(id, null, DateTime.UtcNow);
+
+        public async Task<int> IncrementClicksAsync(
+            string id,
+            ShortLinkRequestCategory category,
+            DateTime timestamp)
+            => await IncrementClicksAsyncCore(id, category, timestamp);
+
+        private async Task<int> IncrementClicksAsyncCore(
+            string id,
+            ShortLinkRequestCategory? category,
+            DateTime timestamp)
         {
             lock (IncrementLock)
             {
@@ -439,7 +451,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 var updated = item with
                 {
                     ClicksCount = item.ClicksCount + 1,
-                    ClickTimestamps = item.ClickTimestamps.Append(DateTime.UtcNow).ToArray()
+                    ClickTimestamps = item.ClickTimestamps.Append(timestamp).ToArray(),
+                    SocialPreviewRequests = item.SocialPreviewRequests + (category == ShortLinkRequestCategory.SocialPreview ? 1 : 0),
+                    OtherAutomationRequests = item.OtherAutomationRequests + (category == ShortLinkRequestCategory.OtherAutomation ? 1 : 0),
+                    HumanCandidateRequests = item.HumanCandidateRequests + (category == ShortLinkRequestCategory.HumanCandidate ? 1 : 0),
+                    UnclassifiedRequests = item.UnclassifiedRequests + (category == ShortLinkRequestCategory.Unclassified ? 1 : 0)
                 };
                 scenario.Replace(_fileName, updated);
                 return updated.ClicksCount;
@@ -448,6 +464,21 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
             => (await GetItemsAsync(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId)).FirstOrDefault();
+    }
+
+    public sealed class ShortLinkRequestEventMockRepository(IMockScenario scenario)
+        : BaseMockRepository<ShortLinkRequestEvent>(scenario, DbCollections.ShortLinkRequestEvents), IShortLinkRequestEventRepository
+    {
+        public async Task<IList<ShortLinkRequestEvent>> GetByShortLinkIdAsync(
+            string shortLinkId,
+            DateTime fromInclusive,
+            DateTime toExclusive,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await GetItemsAsync(eventItem => eventItem.ShortLinkId == shortLinkId &&
+                eventItem.Timestamp >= fromInclusive && eventItem.Timestamp < toExclusive);
+        }
     }
 
     public sealed class NewsletterMockRepository(IMockScenario scenario) : BaseMockRepository<Newsletter>(scenario, "newsletters"), INewsletterRepository
@@ -1024,20 +1055,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 if (claimed.Count >= Math.Clamp(batchSize, 1, 500))
                     break;
 
-                var eligible = item.ProcessingStatus is ResponseProcessingStatus.Pending or ResponseProcessingStatus.Failed
-                    || (item.ProcessingStatus == ResponseProcessingStatus.Claimed && item.ProcessingLeaseUntil <= now);
-                if (!eligible)
-                    continue;
-
-                var updated = item with
-                {
-                    ProcessingStatus = ResponseProcessingStatus.Claimed,
-                    ProcessingWorkerId = workerId,
-                    ProcessingLeaseUntil = leaseUntil,
-                    ProcessingAttemptCount = item.ProcessingAttemptCount + 1
-                };
-                await UpdateItemAsync(updated);
-                claimed.Add(updated);
             }
 
             return claimed;

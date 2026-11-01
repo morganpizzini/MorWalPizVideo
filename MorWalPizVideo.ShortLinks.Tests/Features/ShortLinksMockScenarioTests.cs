@@ -185,5 +185,10 @@ public class ShortLinksMockScenarioTests
         var updatedLink = (await repository.GetItemsAsync())
             .Single(link => link.Code == PrimaryScenario.StandaloneShortLinkCode);
         Assert.Equal(1, updatedLink.ClicksCount);
+        Assert.Equal(1, updatedLink.UnclassifiedRequests);
+        var requestEvents = factory.Services.GetRequiredService<IShortLinkRequestEventRepository>();
+        var recordedEvents = await requestEvents.GetByShortLinkIdAsync(updatedLink.Id, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(1));
+        Assert.Single(recordedEvents);
+        Assert.Equal(ShortLinkRequestCategory.Unclassified, recordedEvents[0].Category);
     }
 }

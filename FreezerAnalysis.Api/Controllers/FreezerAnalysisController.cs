@@ -41,6 +41,10 @@ public sealed class FreezerAnalysisController(
         }
     });
 
+    [HttpGet("reference-data")]
+    public ActionResult<FreezerReferenceDataResponse> GetReferenceData() =>
+        Ok(coordinator.GetReferenceData());
+
     [HttpGet("matches")]
     public async Task<ActionResult<IReadOnlyList<FreezerMatchResponse>>> GetMatches(
         [FromQuery] int limit = 50,
@@ -54,6 +58,38 @@ public sealed class FreezerAnalysisController(
     {
         var match = await coordinator.GetMatchSummaryAsync(AccountId(), matchId, cancellationToken);
         return match is null ? NotFound() : Ok(match);
+    }
+
+    [HttpGet("matches/{matchId}/results")]
+    public async Task<ActionResult<IReadOnlyList<FreezerResultSummaryResponse>>> GetResults(
+        string matchId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await coordinator.GetResultSummariesAsync(matchId, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("matches/{matchId}/results/{resultId}")]
+    public async Task<ActionResult<FreezerResultDetailResponse>> GetResult(
+        string matchId,
+        string resultId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await coordinator.GetResultDetailAsync(matchId, resultId, cancellationToken);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet("profile")]

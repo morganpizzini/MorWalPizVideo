@@ -1,7 +1,495 @@
 # FreezerAnalysis Implementation Handoff
 
-Status: implementation is in progress and is **not technically ready for user acceptance**. Work may proceed without the original Python project or historical artifacts, per user direction on 2026-10-29. Production deployment remains separately authorized.
+Status: implementation is complete for the approved local mock-authentication and match-analysis refinement boundary. Production deployment remains separately authorized.
 Planning baseline: 2026-10-29. This handoff is maintained as the user-editable implementation record; the initial planning statement below has been superseded by the implementation evidence in this update.
+
+## Implementation Record (2026-10-29)
+
+### Delivered
+
+- Mock mode now uses the existing cookie-backed `PublicAccountService`, `PublicAccountMockRepository` and host-lifetime `IMockScenario`; no cookie means an unauthenticated session. The seeded Development account is `development-account` / `freezerdemo`.
+- The FreezerAnalysis SPA redirects protected online routes to login, preserves a sanitized return path, and uses the Vite same-origin `/api` and `/health` proxy in the AppHost topology. CSRF middleware remains enabled.
+- The API owns the eight-value canonical division catalog and validates profile/draft writes against it. New drafts inherit profile identity, division and performance without overwriting existing drafts. The SPA uses division selects and explains performance as the expected share of stage maximum points, displayed as a percentage.
+- Authenticated active-revision result summary/detail endpoints expose bounded athlete and Verify-stage read models. The SPA provides result filtering, lazy detail inspection and a pairwise stage-ordered HF comparison chart/table with explicit incomplete-result handling.
+
+### Files Changed
+
+The implementation touched `FreezerAnalysis.Api/Program.cs`, `FreezerAnalysis.Api/Controllers/FreezerAccountController.cs`, `FreezerAnalysis.Api/Controllers/FreezerAnalysisController.cs`, `FreezerAnalysis.Api/Services/FreezerAnalysisCoordinator.cs`, `MorWalPiz.Contracts/Contracts/FreezerAnalysis/FreezerAnalysisContracts.cs`, `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs`, `frontend/FreezerAnalysis.spa/src/main.tsx`, `frontend/FreezerAnalysis.spa/src/routes.tsx`, `frontend/FreezerAnalysis.spa/src/freezerApi.ts`, `frontend/FreezerAnalysis.spa/vite.config.ts`, `frontend/FreezerAnalysis.spa/package.json`, and `MorWalPizVideo.AppHost/Program.cs`.
+
+### Validation
+
+- `yarn --cwd frontend workspace freezer-analysis.spa build`: passed. Vite reported only the existing large-chunk and stale Browserslist warnings.
+- `yarn --cwd frontend/FreezerAnalysis.spa test --run`: passed, 20 tests.
+- `dotnet test FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore -p:BuildInParallel=false -m:1 --verbosity:minimal`: passed, 77 tests total, 74 passed and 2 intentionally skipped.
+- The focused cookie-login regression and profile/CSRF regression both pass.
+
+### Residual Risks And Deferred Scope
+
+- A real AppHost browser smoke test, two-account isolation test, pure comparison-helper test, explicit route-tab test and unknown-division import diagnostic test were not added in this delivery.
+- The comparison UI is implemented within the existing route module rather than extracted into a dedicated component file.
+- The two PDF extraction integration checks remain skipped unless `FREEZER_ANALYSIS_PDFTEXTEXTRACTOR_PATH` is configured.
+
+## Technical Debt Reduction Plan (2026-10-30)
+
+### Outcome
+
+Reduce FreezerAnalysis to zero **feature-local release-blocking debt** before production activation. Zero does not mean deleting every compatibility path or implementing every deferred capability. It means that all High risks below are closed with executable evidence, Medium maintainability debt is either removed or bounded by an explicit invariant and owner, the artifact tested in CI is the artifact deployed, interrupted writes converge safely on retry, required Mongo indexes are source-owned and verified, and the complete authenticated workflow is proven with real Mongo and a real browser.
+
+This analysis covers the current FreezerAnalysis API, Domain persistence/engine, contracts, SPA/PWA, tests, AppHost, workflows and owning architecture documentation. It does not reopen unrelated repository debt. Production deployment remains unauthorized. Original-application parity, PDF score publication, AI activation and public-result governance are external acceptance or product capabilities; they become technical debt only if the product is released while their stated gates are bypassed.
+
+Assumptions: preserve PublicAccount identity, the separate application database, immutable published facts and frozen plans, account-private mappings/analysis, current `/api/v1` compatibility, and the deterministic engine. On 2026-10-31 the user confirmed that production uses separate SPA and API origins, following the existing pattern where a SPA on `morwalpiz.com` calls an API on an Azure Web App origin. FreezerAnalysis therefore retains independently deployed SPA and API hosts. The local same-origin Vite proxy remains a development convenience, not the production topology.
+
+### Current Evidence
+
+- `FreezerAnalysis.Api/Services/FreezerAnalysisCoordinator.cs` owns identity review, import publication, draft/estimate composition, freeze/replay, verification, parameter backtesting/adoption, field events and artifacts in one approximately 2,500-line class. `frontend/FreezerAnalysis.spa/src/routes.tsx` similarly owns nearly every route surface and interaction in one approximately 1,600-line module. These are maintainability and test-isolation debts, not by themselves correctness defects.
+- `MorWalPizVideo.Domain/FreezerAnalysis/FreezerAnalysisMongoRepository.cs` defines the required unique and query indexes in `EnsureIndexesAsync`, but no composition or deployment path calls it. `FreezerAnalysisHostOptions.ApplyIndexesOnStartup` is configured and unused. Correctness currently depends on indexes that are neither applied nor audited by the feature.
+- Import publication writes result payloads and a revision, moves the match active pointer, and only then inserts the published import manifest. An interruption after the pointer move can expose a complete shared revision while leaving the owner without the published availability manifest needed for estimation/verification. Retry then sees a revision conflict instead of completing the original operation.
+- Freeze uploads a content-addressed input package, inserts a snapshot, and then conditionally binds the draft. If the process stops after snapshot insertion, the unique `(account, draft, draftRevision)` index can reject a retry while no draft points to that snapshot. The current duplicate-key path only recovers a snapshot already referenced by the draft.
+- Field-event append increments the draft sequence before inserting the event. A crash or duplicate race can leave gaps and can apply rendering context without the corresponding event. The API currently promises idempotency by operation ID but does not define gap/recovery semantics.
+- Estimate composition loads up to 1,000 earlier matches and performs revision, account-manifest, result and identity-resolution queries inside the loop. Result detail first loads every result in the active revision. The pure 500-competitor engine benchmark does not measure this persistence path, payload size or concurrent rendering.
+- Result summaries are unpaged, repository result loads permit up to 20,000 documents, and publication has no explicit BSON preflight for revision/result-ID or backtest document size. The frozen input package alone has the planned 8 MiB guard.
+- `FreezerAnalysis.Api/Dockerfile` builds the SPA and installs Poppler plus pinned Playwright Chromium. Central CI builds that container. In contrast, `.github/workflows/deploy-freezer-analysis-api.yml` deploys a plain `dotnet publish` ZIP, while `.github/workflows/deploy-freezer-analysis-spa.yml` deploys a separate nginx image. The tested native-runtime artifact is not the deployed artifact.
+- Current tests provide strong deterministic-engine, parser, renderer, in-memory HTTP, CSRF and account-owned identity coverage. They do not use a disposable Mongo server, run the AppHost/browser flow, prove interruption recovery, exercise two complete accounts, execute the deployment image, or measure the full estimate/import/render path. The handoff records local passes, but GitHub execution and deployed smoke evidence remain absent.
+- The SPA correctly precaches only static shell assets, keeps snapshots/events in account-partitioned IndexedDB, clears prior-account data and rechecks live snapshot ownership before sync. Remaining offline debt is browser/storage/restart evidence rather than a known ownership bypass.
+- The API has ServiceDefaults telemetry but the feature code has no structured operational logs or feature metrics for imports, publication conflicts/recovery, estimate history size, renderer admission/failure, offline replay, index readiness or object integrity. Production diagnostics would depend mainly on generic request traces.
+- No FreezerAnalysis ADR currently records the accepted account boundary, separate databases, publication visibility rule, freeze immutability/recovery protocol or deployment topology. Older same-origin production proposals in this handoff are superseded by the confirmed separate-origin decision and must be reconciled during implementation.
+- Shared-result retention/correction/erasure ownership, lawful processing approval and approved LLM terms remain unresolved. PDF preview intentionally cannot publish because authoritative stage maxima and DQ mapping are unavailable. These block public/AI/PDF activation, but they should not trigger guessed implementation.
+
+### Proposed Design
+
+#### 1. Make multi-step writes retry-convergent
+
+Keep the no-cross-database-transaction design, but turn import and freeze into explicit idempotent state machines.
+
+- Import: create or upsert a deterministic account/source operation manifest in `Staged` state before writing result/revision records. Use deterministic or persisted operation-owned revision/result identities, verify content hashes on every retry, conditionally move the match pointer only after all referenced records exist, then transition that same manifest to `Published`. A retry must detect each completed phase and continue; it must never create a second conflict manifest for the same account/source hash. Readers continue to use only the match active pointer as shared-fact visibility, while account history requires the matching published manifest.
+- Freeze: derive or persist one snapshot identity for `(accountId, draftId, expectedRevision)`, upsert/verify the immutable snapshot, then conditionally bind the draft. If the snapshot exists but is unbound, retry the bind; if another snapshot won, return that winner. A mismatched hash is corruption, not a normal conflict.
+- Field events: make the client operation ID the durable reservation key and document that sequence numbers are monotonic, not necessarily contiguous. Persist the event and rendering-context transition through a recoverable protocol; a retry must either finish the same operation or return the prior event without allocating another effective transition.
+- Add fault-injection tests after every persistence phase. Add an idempotent audit/repair operation for historical staged imports, unbound snapshots, missing private objects and orphan artifact manifests. It must default to report-only and must never infer content or ownership.
+
+#### 2. Establish feature-owned Mongo readiness
+
+Replace the unused startup option with one source-owned index manifest/service. Production startup should audit required index names, keys and uniqueness and mark readiness unhealthy when they differ. Index mutation should occur in an explicit deployment maintenance phase after duplicate/precondition audit, not silently during ordinary production startup. Development/Test may apply indexes to disposable databases.
+
+The manifest must include every correctness index used by publication, freeze, events, identity mappings, verifications, adoptions and artifacts. Add query-plan evidence for match listing, prior-history selection, active-result lookup and account snapshot/event reads. Keep platform account/session indexes under their existing owner; FreezerAnalysis may audit but not redefine them.
+
+#### 3. Deploy two qualified cross-origin artifacts
+
+Keep the confirmed separate production hosts: the SPA image serves static assets and calls the explicit API origin through `VITE_FREEZER_API_BASE_URL`; the API image serves `/api`, health endpoints, Poppler extraction and Chromium rendering. Build each artifact once, identify each by immutable digest, qualify the pair together, and promote those same digests. Remove the SPA build/static copy from the API image once the separate topology is fully represented so the API artifact has one owner and purpose.
+
+Replace the API ZIP deployment with the tested API container. The container must include pinned Poppler and Playwright Chromium exactly as exercised by CI. Keep the SPA nginx container and its independent deployment, but record the compatible SPA/API digest pair as one release. Do not keep the current mismatch where CI validates native dependencies in a container while production receives a plain .NET ZIP.
+
+Configure the API with an exact environment-managed SPA origin, credentialed CORS, and no wildcard fallback. The host-only session and CSRF cookies must be `Secure` and `SameSite=None`; unsafe calls must include the CSRF header and pass exact origin validation. Qualify anonymous CSRF acquisition, registration, login, session restoration, mutation and logout in Chromium and WebKit against the real cross-origin shape. Because origins on different registrable domains can be treated as third-party contexts, browser cookie restrictions are a release risk; do not work around failure by weakening CSRF, broadening CORS or exposing browser bearer tokens. A custom same-site API domain or gateway would require a separate architecture decision if browser evidence proves the confirmed topology unreliable.
+
+API readiness must cover both Mongo boundaries, index audit, private Blob access, Poppler executable availability and a lightweight Chromium launch. Renderer/extractor failure must not make already persisted snapshots or artifacts unreadable. SPA readiness must prove that the configured API base URL is HTTPS and belongs to the approved environment.
+
+#### 4. Bound persistence cost and document growth
+
+Add repository read models that project only the data required by each use case:
+
+- paged active-revision result summaries and direct active-result detail lookup;
+- one bulk historical-estimate input query or a small bounded set of aggregation/projection queries instead of per-match round trips;
+- bounded account identity/resolution lookups keyed by the selected match set;
+- explicit size/count validation before revision, result, snapshot, verification and backtest persistence.
+
+Retain the 1,000-match compatibility ceiling only as a visible safety limit until measured query/storage evidence supports cursor-based expansion. Add cursor pagination without changing the existing list response in place: introduce the additive paged contract, migrate the SPA, retain the old endpoint for one compatibility window, then remove it only in a separately approved version change.
+
+#### 5. Prove the production boundaries
+
+Add a disposable real-Mongo suite for indexes, duplicate races, interruption/retry, publication visibility, freeze recovery, sequence idempotency, BSON guards and two-database isolation. Add Playwright browser coverage against the built runtime for registration/login, CSRF, protected redirects, two-account private-data isolation, import/profile/draft/freeze, result comparison, explicit offline download, restart/airplane mode, queued sync, artifact generation and logout/account switch.
+
+Measure the complete 1,000-match estimate read plus engine, 500-competitor/34-stage result browsing, 20 MiB supported import, two concurrent artifact requests and private-object reads on the declared production tier. Preserve the current pure engine benchmark as a unit-level regression, not release-capacity evidence.
+
+For the frontend, this is a refinement of the existing `Operate` surface, not a redesign. Apply Impeccable `harden` to offline/conflict/error states and `adapt` to the match result/comparison and field views. Minimum evidence is Chromium and WebKit captures at 320, 390, 768 and desktop widths, keyboard and screen-reader status checks, 200% zoom, 44-pixel touch targets, non-color status cues and no private API response in the service-worker cache.
+
+#### 6. Decompose only after characterization gates
+
+Preserve public contracts and behavior while splitting the coordinator by owned use case inside the existing API/Domain projects: imports/publication, identities, planning/freeze/replay, verification/backtesting, and cards/artifacts. Split the repository interface along the same cohesive read/write capabilities only where it reduces constructor and test scope; do not create a project per service.
+
+Split persisted entities and contracts into feature files by aggregate/HTTP surface without changing BSON element names or JSON shapes. Split the SPA into route modules and local feature components/helpers; extract result filtering/stage alignment into a pure tested helper and keep route loaders as data owners. Split the large API and route test files by behavior. This work follows the crash-consistency and real-Mongo characterization tests so structural change cannot conceal a behavior regression.
+
+#### 7. Add observability, governance and a closed debt ledger
+
+Emit structured, non-identifying events and metrics for operation IDs, phase/status, counts, durations, bytes, conflict/recovery outcomes, history truncation, render queue wait, native dependency failure and integrity failure. Never log names, licenses, credentials, cookies, CSRF tokens, source content, private notes or object URLs.
+
+Add a FreezerAnalysis ADR and reconcile backend, frontend, domain, deployment, development, testing and technical-debt docs with the selected topology and implemented recovery invariants. Record every remaining item as one of: closed with executable evidence; accepted bounded compatibility debt with owner/removal trigger; externally blocked product/governance decision; or out of scope. Do not report “zero debt” while any High item below is open.
+
+### Impacted Projects
+
+- `FreezerAnalysis.Api`: orchestration decomposition, recoverable operations, readiness, observability, bounded HTTP surfaces and runtime packaging.
+- `MorWalPizVideo.Domain`: repository contracts, Mongo/in-memory behavior, index manifest/audit, projected reads and idempotent state transitions.
+- `MorWalPizVideo.Models`: additive operation/recovery metadata only if required; aggregate file separation without BSON renames.
+- `MorWalPiz.Contracts`: additive paged result/readiness or operation-status contracts while preserving current v1 responses during migration.
+- `MorWalPizVideo.MvcHelpers`: verify-only reuse of PublicAccount cookie/CSRF behavior; change only if cross-origin browser evidence finds a missing options-level capability.
+- `MorWalPizVideo.ServiceDefaults`: verify-only health/telemetry integration; no feature logic.
+- `frontend/FreezerAnalysis.spa`: route/module extraction, paged result consumption, offline/error hardening and browser qualification.
+- `frontend/fe-packages/services`: verify-only credential/CSRF transport unless browser evidence finds a shared defect.
+- `FreezerAnalysis.Api.Tests`: real-Mongo, fault-injection, contract, security, performance and container-native coverage.
+- `MorWalPizVideo.AppHost`: local topology/browser fixture alignment with the selected production model where practical.
+- `.github/workflows`: one build/promote path for the qualified runtime, index maintenance/audit, nonempty browser/real-Mongo gates and post-deploy smoke evidence.
+- Architecture/operations documentation: ADR, debt ledger, topology, index/recovery, retention and release evidence.
+- Other APIs, SPAs, Windows tools, ShortLinks, Shooting Range, YouTube utilities and shop: not applicable beyond shared-library regression verification; no feature behavior change.
+
+### Impacted Files
+
+#### Modify
+
+- `FreezerAnalysis.Api/Program.cs`: remove dead index configuration, register readiness/observability and align authentication/CORS/static hosting with the selected topology.
+- `FreezerAnalysis.Api/Controllers/FreezerAnalysisController.cs`: retain current routes, add bounded/paged reads and consistent operation outcomes without embedding recovery logic.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisCoordinator.cs`: shrink to compatibility/facade responsibility while moving cohesive use cases to feature-owned services.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs`: register feature index audit/readiness and preserve separate database ownership.
+- `FreezerAnalysis.Api/Services/FreezerDocumentRenderer.cs` and `PdfTextExtractor.cs`: expose bounded native-dependency readiness/metrics while preserving sandbox, timeout and concurrency behavior.
+- `MorWalPizVideo.Domain/FreezerAnalysis/IFreezerAnalysisRepository.cs`, `FreezerAnalysisMongoRepository.cs` and `InMemoryFreezerAnalysisRepository.cs`: retry-convergent transitions, projections, pagination, size guards and audit/repair support.
+- `MorWalPizVideo.Models/FreezerAnalysis/FreezerAnalysisEntities.cs`: additive state/recovery fields if the chosen protocol requires them; later split by aggregate with BSON compatibility preserved.
+- `MorWalPiz.Contracts/Contracts/FreezerAnalysis/FreezerAnalysisContracts.cs`: additive paged and operation-status contracts; later split by surface without JSON changes.
+- `frontend/FreezerAnalysis.spa/src/main.tsx`, `routes.tsx`, `freezerApi.ts`, `offlineStore.ts` and adjacent tests: route extraction, paged reads, hardened offline/conflict states and browser-test hooks without weakening account partitioning.
+- `FreezerAnalysis.Api/Dockerfile`, `frontend/FreezerAnalysis.spa/Dockerfile`, `.github/workflows/ci.yml`, `deploy-freezer-analysis-api.yml` and `deploy-freezer-analysis-spa.yml`: build, test and promote the two compatible cross-origin artifacts; stop deploying the API as a ZIP.
+- `MorWalPizVideo.AppHost/Program.cs`: preserve the current same-origin local proxy and expose the browser-test topology.
+
+#### Add
+
+- Cohesive FreezerAnalysis use-case services and matching focused tests under the existing API/Domain feature directories; exact file names follow the final extraction boundaries above.
+- A feature-owned index manifest/audit/maintenance service and report-only recovery audit under `MorWalPizVideo.Domain/FreezerAnalysis` with API composition in `FreezerAnalysis.Api`.
+- Disposable Mongo integration fixtures and interruption fault points under `FreezerAnalysis.Api.Tests`.
+- Browser tests under a FreezerAnalysis-owned Playwright convention covering the built runtime, desktop/mobile/offline and two accounts.
+- A FreezerAnalysis ADR under `docs/architecture/adr/` and an operations note for indexes, recovery, retention and rollback.
+- Route-local result/comparison and field modules plus a pure stage-alignment helper under `frontend/FreezerAnalysis.spa/src/`.
+
+#### Generated/Migration
+
+- No destructive Mongo migration. Additive operation fields/indexes and reconciliation of existing staged/orphan records require a dry-run report, duplicate audit and idempotent apply record.
+- Container digests, browser output, TRX/JUnit reports, screenshots and performance reports are generated CI/release evidence and are not source fixtures.
+- Frontend lock metadata changes only if browser tooling or package extraction requires a dependency change.
+
+#### Documentation
+
+- This handoff: update each debt item with actual files, validation and residual status after implementation.
+- `docs/architecture/technical-debt.md`: add and track the FreezerAnalysis production-readiness debt until every High item closes.
+- `docs/architecture/backend.md`, `frontend.md`, `domain-model.md`, `development.md`, `deployment.md`, `testing.md` and `architecture-decisions.md`: reconcile current behavior with the accepted topology/recovery contract.
+- New FreezerAnalysis ADR and operations runbook: persistent ownership, publication/freeze visibility, index application, recovery, retention and release evidence.
+
+#### Verify Only
+
+- `MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs`: existing options already support Secure/HttpOnly and SameSite selection.
+- `frontend/fe-packages/services/src/apiTransport.ts`: preserve account-mode credentials and CSRF isolation.
+- Platform PublicAccount models/repositories/indexes: authenticate and validate only; do not migrate them into the feature database.
+- Other application builds/tests that consume shared Contracts, Domain, MvcHelpers or ServiceDefaults.
+
+### Impact Matrix
+
+| Area | Impact |
+|---|---|
+| Backend/API | Recoverable import/freeze/event transitions; paged/projected reads; cohesive use-case services; stable v1 compatibility window. |
+| Frontend/UI | Existing Operate design retained; route extraction, cursor consumption and hardened browser/offline/conflict evidence. |
+| Database/Data | Source-owned indexes, additive recovery metadata, orphan/staged audit, BSON size guards and real-Mongo qualification. No destructive rewrite. |
+| Contracts/Models | Additive operation/paging contracts and serializer-tolerant metadata; persisted names and immutable historical values remain stable. |
+| Authentication/Authorization | PublicAccount boundary retained. Separate origins require exact credentialed CORS, Secure `SameSite=None` cookies, CSRF/origin enforcement and Chromium/WebKit proof. Two-account isolation becomes a release gate. |
+| Validation | Add document/count/operation-state validation and reject integrity mismatches. Existing numerical, division, upload and ownership validation remains. |
+| Cache | No authenticated API output cache. Service worker remains shell-only; browser tests prove no private API caching. Content-addressed private objects remain immutable. |
+| Configuration/Secrets | Remove dead index flag. Add no secrets. Keep exact environment-managed SPA and API origins; reject missing, non-HTTPS or wildcard production values. |
+| Logging/Telemetry | Add privacy-safe operation metrics/traces, recovery outcomes, queue wait and dependency readiness; no personal/source data. |
+| Background Jobs | Not required for correctness. Recovery/index work is explicit deployment/operator maintenance, not in-memory fire-and-forget work. |
+| Deployment/Operations | Build once and promote the exact qualified image; audit indexes and dependencies before traffic; record smoke and rollback evidence. |
+| Backward Compatibility | Existing snapshots/packages/engine versions remain replayable. Current result list remains during additive paging migration. Existing host-only API sessions remain compatible because the separate-origin production model is retained. |
+
+### Reuse Opportunities
+
+- Reuse content-addressed `IFreezerPrivateObjectStorage` writes and integrity checks for resumable freeze/artifact phases.
+- Reuse current optimistic revision fields and unique operation indexes; extend their recovery semantics instead of introducing a queue or event-sourcing platform.
+- Reuse the existing `FreezerAnalysisDatabase` boundary and repository pair for production/mock parity.
+- Reuse ServiceDefaults health, OpenTelemetry and request tracing; add feature tags/metrics rather than another telemetry stack.
+- Reuse the API container's pinned native dependencies, the SPA nginx image, AppHost local proxy, account-mode transport, PublicAccount security primitives and current renderer admission semaphore. Remove duplicated SPA content from the API image after separate deployment parity is proven.
+- Reuse current engine/parser/renderer tests as characterization gates before decomposition.
+- Reuse the SPA's account-partitioned IndexedDB and React Router loaders; no global store is needed.
+
+### Risks
+
+| Priority | Cause and affected surface | Mitigation | Verification signal |
+|---|---|---|---|
+| High | Missing/unverified Mongo indexes allow duplicates or slow unbounded reads. | Explicit manifest, preflight audit, deployment apply and readiness failure. | Disposable and target-like audits show exact indexes; duplicate races have one winner. |
+| High | Import/freeze interruption leaves active facts without a usable manifest or an unbound immutable snapshot. | Retry-convergent deterministic operations plus fault injection and report-only repair. | Every injected interruption converges on retry with one visible revision/snapshot and matching private object. |
+| High | CI validates a container that production does not deploy. | Promote the tested image digest and run native/browser smoke checks against it. | Deployed digest equals qualified digest; Poppler, Chromium, API, SPA and artifact smoke pass. |
+| High | In-memory tests mask Mongo atomicity, index and serializer differences. | Disposable real-Mongo gate with concurrency and recovery scenarios. | Required suite passes against a replica-set-capable target and ordinary standalone compatibility where claimed. |
+| High | Cross-origin cookies can be misconfigured or blocked by browser third-party-cookie policy. | Exact credentialed CORS, Secure `SameSite=None` cookies, strict CSRF/origin checks and real-domain browser qualification; escalate to a custom same-site API domain only through a separate decision. | Anonymous, login, session restoration, mutation, logout and disallowed-origin scenarios pass in Chromium/WebKit with third-party-cookie policy represented. |
+| High | Personal sporting results lack approved retention/correction ownership. | Keep public/AI activation gated; approve policy and implement audited correction/erasure handling. | Named owner approves policy; retention/export/correction tests and runbook exist. |
+| Medium | N+1 history/result reads and large unpaged payloads miss latency/document limits. | Projection/bulk queries, cursor paging, BSON guards and full-path budgets. | Explain plans use indexes; declared corpus/concurrency budgets pass without truncation hidden from users. |
+| Medium | Large coordinator/routes/tests make changes couple unrelated workflows. | Characterize first, then extract cohesive use cases and route modules without contract changes. | Focused suites can construct/test each use case; shared regression remains green. |
+| Medium | Sparse feature telemetry makes recovery and native dependency failures hard to diagnose. | Privacy-safe operation metrics, traces and readiness. | Dashboards/tests expose phase, duration, conflict/recovery and dependency state without personal data. |
+| Medium | Offline behavior passes jsdom but fails on browser eviction/restart/account switching. | Real PWA/browser airplane-mode and storage-failure drills. | Cached field card survives declared restart case; queues reconcile once; switch/logout clears prior account data. |
+| Low | Supported legacy engine/package paths become permanent accidental complexity. | Keep version registry and removal criteria; test only intentionally supported versions. | Unsupported versions fail explicitly; supported replay remains deterministic. |
+
+### Technical Debt
+
+| ID | Debt | Priority | Decision and zero-debt exit |
+|---|---|---|---|
+| FA-001 | Required Mongo indexes are defined but neither applied nor audited; `ApplyIndexesOnStartup` is dead configuration. | High | Address now. Exit when deployment applies/audits the source manifest and readiness proves exact target state. |
+| FA-002 | Import and freeze have interruption windows that retry does not always repair. | High | Address now. Exit when phase fault tests converge and existing orphans/staged records have an audited repair path. |
+| FA-003 | The intended separate-host topology deploys the API as a ZIP even though CI qualifies its Poppler/Chromium container. | High | Address now. Exit when immutable SPA and API images are qualified together and those exact digests are promoted. |
+| FA-004 | No real-Mongo, complete two-account, real-browser or deployment-image gate. | High | Address now. Exit when those gates are required and have fresh passing evidence. |
+| FA-005 | Estimate/result persistence access is N+1/unpaged and only the pure engine has scale evidence. | Medium | Address before production load. Exit when projected queries and full-path budgets pass on the declared corpus/tier. |
+| FA-006 | Coordinator, entity/contract files, route module and broad tests concentrate unrelated behavior. | Medium | Address after FA-001/002 characterization. Exit when cohesive modules own each workflow and public shapes remain stable. |
+| FA-007 | Feature-level operational telemetry and recovery diagnostics are sparse. | Medium | Address with readiness work. Exit when privacy-safe metrics/traces cover all durable/native phases. |
+| FA-008 | Architecture/handoff contain stale auth and conflicting deployment statements; no ADR owns the boundary. | Medium | Address now in the same delivery. Exit when current source, ADR, deployment and runbook agree. |
+| FA-009 | Real PDF publication semantics and original numerical/visual parity are unverified. | Externally blocked | Do not guess. Keep preview-only and parity pending until authoritative stage maxima/mappings and user acceptance exist. |
+| FA-010 | Retention/correction/erasure and LLM processing approval have no named decision owner. | High for public/AI release | Keep those releases disabled. Exit only with approved policy, owner and executable handling evidence. |
+
+Literal zero debt is neither credible nor desirable if it means deleting tested legacy replay or implementing unsupported PDF/AI behavior. The accepted target is zero High release debt, no stale/dead feature configuration, and only explicitly bounded Medium/Low debt with owner and removal trigger.
+
+### Implementation Roadmap
+
+1. **Freeze the baseline and debt ledger.** Add FA-001 through FA-010 to the architecture debt register, add characterization tests for current import/freeze/event behavior, inventory any staged imports/unbound snapshots, and record the production topology decision. Gate: no structural extraction begins until existing behavior and orphan counts are known.
+2. **Own indexes and readiness.** Implement the feature index manifest/audit, duplicate preflight and explicit deployment apply phase; remove `ApplyIndexesOnStartup`. Gate: disposable Mongo starts empty, receives exact indexes, rejects duplicate invariants, and readiness fails on a missing or altered index.
+3. **Repair import publication.** Introduce the staged-to-published retry-convergent protocol and report-only reconciliation. Gate: failure after each result, revision, pointer and manifest phase retries to one published operation; shared readers never observe incomplete referenced facts.
+4. **Repair freeze and field-event idempotency.** Recover unbound deterministic snapshots, define monotonic sequence semantics and make operation retries converge without duplicate effective context changes. Gate: concurrent freeze/event requests and phase failures yield one immutable outcome and valid replay.
+5. **Align the confirmed separate-origin runtime.** Deploy the API as its native-dependency container, retain the SPA nginx image, remove the API's duplicate SPA build after parity, and record/promote an immutable compatible digest pair. Gate: native dependency/readiness plus exact-origin cookie/CSRF/CORS browser tests pass against the release pair.
+6. **Replace broad reads.** Add projected active-result paging/detail and bulk historical inputs; apply document/count guards and measured limits. Migrate the SPA to additive paging while retaining compatibility. Gate: query plans use expected indexes and complete-path performance budgets pass without hidden data loss.
+7. **Add production-boundary qualification.** Require real-Mongo, two-account, Chromium/WebKit, PWA offline/restart, container and recovery tests. Gate: a full match lifecycle and second-account shared-fact/private-state scenario pass against the built image.
+8. **Decompose behavior-preservingly.** Extract cohesive API/Domain use cases, aggregate/contract files, SPA route modules and pure comparison helpers. Run the focused gate after each extraction. Stop when ownership is coherent; do not redesign the interface or create new projects/stores.
+9. **Close operations and documentation.** Add privacy-safe telemetry, ADR, index/recovery/retention runbook and actual release evidence. Execute Impeccable `harden` and `adapt` evidence for the existing Operate UI. Mark each FA item closed, bounded or externally blocked and stop at this boundary.
+
+An independent post-validation review is warranted because the work changes durable publication/freeze recovery, Mongo index correctness, authentication topology and multi-account data exposure. The reviewer should focus on interruption convergence, owner scoping, cookie/CSRF behavior, deployed-artifact identity, query bounds and whether any High debt was relabelled rather than closed.
+
+### Testing Strategy
+
+- Unit: deterministic operation IDs/hashes, phase transitions, retry decisions, BSON/count guards, cursor validation, DTO mapping, stage comparison, legacy package support and privacy-safe telemetry tags.
+- In-memory behavior: retain existing account, CSRF, engine, parser, renderer, replay, verification, backtest, offline-store and route tests as fast characterization.
+- Real Mongo integration in `FreezerAnalysis.Api.Tests`: exact index manifest, duplicate races, staged publication, pointer/finalization interruption, unbound snapshot recovery, event idempotency, serializer compatibility, two-database isolation, query projections and document guards.
+- API/security: unauthenticated/expired/revoked sessions, wrong origin/CSRF, two accounts attempting every private lookup/mutation/download, shared-result read policy, stale revisions and rate limits.
+- Browser/PWA: registration/login/return path, profile, import, identity mapping, draft/freeze, result detail/comparison, artifact download, offline field use, browser restart, queued sync, logout/account switch and forbidden cross-account IDs in Chromium and WebKit.
+- Runtime/container: Poppler extraction, Chromium render, no external renderer fetch, private Blob/Mongo readiness, non-root operation, health routes and exact release-image digest.
+- Performance: complete 1,000-match estimate path, paged 500-competitor/34-stage browsing, supported maximum upload, renderer queue under two users, artifact/private-object integrity and BSON/index storage report.
+- Recovery/operations: dry-run staged/orphan audit, idempotent repair, index drift, Blob unavailable/checksum mismatch, process termination at each durable phase, rollback image reading all prior records and backup/restore replay.
+- Frontend visual/accessibility: existing `PRODUCT.md`/`DESIGN.md` direction, responsive captures, keyboard/focus, screen-reader status, 200% zoom, touch size, no color-only status and no API caching.
+
+### Migration And Rollback
+
+Mongo changes are additive and compatibility-first. Audit duplicates and staged/orphan state before creating or changing unique indexes. Existing published revisions, snapshots, packages, artifacts, verification reports and parameter adoptions are not rewritten. New operation metadata must default safely when absent; legacy records remain readable, and report-only reconciliation must identify rather than guess incomplete ownership/content.
+
+Deploy in this order: compatible readers and audit tooling; dry-run data/index report; idempotent indexes; retry-convergent writers; additive paged endpoints; qualified API container; compatible SPA image; cross-origin browser/production-like smoke; traffic activation. Keep old result-list behavior for one compatibility window. The API hostname and host-only cookie boundary remain stable; do not widen cookie domains.
+
+Rollback restores the previous compatible image while retaining additive fields/indexes and private objects. Do not roll back by deleting snapshots/revisions, disabling CSRF, restoring automatic authentication or changing active pointers manually. If a new writer has entered a phase an old image cannot complete, disable mutations and run the matching new-version reconciliation before image rollback. Content-addressed orphan objects may be retained during the compatibility window; deletion requires proof that no manifest/snapshot/artifact references them.
+
+No SQLite, cache, EF or cross-service data migration applies. AI remains disabled and PDF score publication remains preview-only, so their rollback is not applicable. Recovery limits and any legally required deletion that breaks replay must be reported explicitly rather than replaced with fabricated data.
+
+### Open Questions
+
+None identified for topology. The user confirmed separate SPA and API production origins on 2026-10-31. Exact deployed FreezerAnalysis hostnames remain environment-managed and must be captured in release evidence without placing secrets in source.
+
+## Mock Authentication And Match Analysis Refinement Plan (2026-10-29)
+
+### Outcome
+
+Make the local mock composition behave like the product boundary rather than an automatically authenticated bypass: the SPA must open on login/registration when no valid FreezerAnalysis session exists, online routes and mutations must remain unavailable until authentication succeeds, and CSRF-protected profile operations must work through the AppHost development topology. Replace free-text division fields with a forced selection, explain the numerical meaning of personal performance, initialize match planning from the saved profile identity/division, and add an authenticated match-results workspace for individual Verify inspection and pairwise athlete/Pareto comparison.
+
+Assumptions: this is a refinement of the existing FreezerAnalysis `Operate` interface, not a redesign. Production PublicAccount behavior, account-scoped identity mappings, immutable published results, frozen-plan semantics, offline field access and existing verification/backtest behavior remain unchanged. The user confirmed the authoritative division catalog and defined the requested Pareto as a pairwise HF chart: the X axis retains `Stage 1`, `Stage 2`, through `Stage X` in match order, while the Y axis shows hit factor and each stage contains one adjacent bar per compared athlete. It has no impact sorting, gap transformation or cumulative-percentage line.
+
+Implementation boundary: stop when cookie-backed mock registration/login, guarded routes, division selection, profile-seeded planning, result detail and the confirmed comparison/Pareto view pass focused API, component and browser checks. Do not add PDF publication, automatic identity resolution, new scoring semantics, cross-account aliases, arbitrary chart builders or changes to the deterministic forecast engine.
+
+### Current Evidence
+
+- `FreezerAnalysis.Api/Program.cs` composes `UnavailablePublicAccountService` and `FreezerDevelopmentAuthenticationHandler` when `EnableMock` is true. The handler authenticates every request as the configured development account; consequently `FreezerAccountController.Session` reports an authenticated development session before login, while registration and credential login cannot succeed because the account service is unavailable.
+- `FreezerAnalysis.Api/Controllers/FreezerAccountController.cs` contains an explicit Development shortcut in `Session`. Normal production session behavior already uses the host-local `freezer_account_session` cookie and `IPublicAccountService.ValidateSessionAsync`.
+- `MorWalPizVideo.Domain/Interfaces/MockRepository.cs` already provides `PublicAccountMockRepository`, including account lookup, session creation, active-session validation and revocation over `IMockScenario`. `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs` owns password hashing, registration validation and eight-hour session creation. These are the appropriate mock account boundaries to reuse.
+- `FreezerAnalysis.Api/Program.cs` applies `FreezerCsrfMiddleware` to every unsafe `/api` request. `frontend/fe-packages/services/src/apiTransport.ts` in `account` mode includes credentials and acquires `/api/v1/account/csrf` for ordinary unsafe requests, so the SPA should not manually duplicate token handling.
+- `MorWalPizVideo.AppHost/Program.cs` serves the Vite SPA over HTTP and injects the API HTTPS endpoint through `VITE_FREEZER_API_BASE_URL`. Development cookies are emitted non-secure with `SameSite=Lax` by `FreezerAccountController`/`PublicAccountSecurity.CreateCookieOptions`. The current cross-scheme browser topology is not represented by the API's HttpClient tests and can withhold the CSRF cookie, producing the reported 403.
+- `frontend/FreezerAnalysis.spa/vite.config.ts` has no API proxy. `freezerApi.ts` already supports a relative API base URL when `VITE_FREEZER_API_BASE_URL` is absent, so a local proxy can make browser requests same-origin without changing production configuration.
+- `frontend/FreezerAnalysis.spa/src/main.tsx` returns empty/null loader data when unauthenticated instead of redirecting protected online routes. `RootLayout` renders a prompt in place of the outlet, but a development auto-session bypasses it. Offline field access intentionally uses the remembered account ID and IndexedDB and must remain a separate exception.
+- `frontend/FreezerAnalysis.spa/src/routes.tsx` renders profile division and match-plan division as text inputs. `FreezerProfileRequest` and `FreezerDraftRequest` accept any string up to 32 characters; the coordinator only trims and uppercases it. There is no authoritative division catalog or server validation today.
+- `FreezerAnalysis.Api/Services/FreezerPdfPairParser.cs` recognizes `OPEN`, `OPTICS`, `PRODUCTION`, `PCC IRON`, `PCC OPTICS`, `PRODUCTION OPTICS`, `REVOLVER` and `STANDARD`. The user confirmed these eight values as the complete product catalog. The CSV parser currently accepts source division text, so publication must diagnose values outside this catalog rather than create unselectable profile data.
+- `FreezerAnalysisEngine.CurrentParameters.Performance` defaults to `0.935`. `ErrorCostSeconds` uses performance as the expected fraction of stage maximum points when converting lost points into equivalent seconds. It is not an athlete percentile, confidence score or forecast probability.
+- The match route loader currently fetches only draft and estimate. `MatchPage` renders `draft.identityId` as a text input and therefore cannot present or enforce the account-owned identity selected in the profile. `GetDraftAsync` initializes a new draft from adopted model parameters but does not apply the profile identity, division or performance.
+- Published `FreezerCompetitorResult` documents already contain athlete metadata and per-stage Verify facts: status, HF, time, points, A/C/D, misses, no-shoots and procedurals. The repository can read the active revision results, but no authenticated response contract exposes them for normal match inspection.
+- The existing verification endpoint is snapshot-centric and calculates a persisted report only for the frozen profile athlete. It must remain separate from a general match result browser; expanding it to all athletes would mix immutable plan verification with shared result exploration.
+- `frontend/back-office-spa` already uses repository-pinned `recharts` for responsive bar/line charts. FreezerAnalysis currently has no chart dependency. Reusing the same package/version is preferable to introducing another chart stack, while the accessible table remains the authoritative representation.
+- `frontend/FreezerAnalysis.spa/PRODUCT.md` and `DESIGN.md` define an Italian, mobile-first match-day ledger with explicit uncertainty, semantic lists/tables and 44-pixel controls. The requested work fits an Impeccable `shape` followed by `harden` workflow in `Operate` mode; it must preserve this visual direction.
+
+### Proposed Design
+
+#### 1. Cookie-backed mock accounts
+
+Use the same `PublicAccountSecurity` authentication scheme in mock and production. In mock mode, register a host-lifetime `IMockScenario`, scoped `PublicAccountMockRepository`, and scoped `PublicAccountService`; remove `UnavailablePublicAccountService` and the automatic development authentication handler from the normal local composition. Remove the Development shortcut from the account session endpoint so no cookie means `Authenticated = false` in every environment.
+
+Seed one documented fictional account into the account mock scenario for fast login and keep registration enabled so developers can exercise first-run behavior. Do not auto-issue a session cookie. Split Freezer mock data into shared match facts and account-private sample state: the seeded account receives the existing profile/identity/draft sample, while a newly registered account starts with shared matches but no private profile or mappings. This preserves the privacy boundary and makes profile onboarding testable.
+
+Every online loader except login must redirect unauthenticated users to `/login` with a sanitized `returnTo` path. After login or registration, revalidate the root session and return to that path. Keep the existing offline exception only for a previously cached field snapshot partitioned by the remembered account ID; offline mode must not expose profile, imports, result browsing or plan mutations.
+
+#### 2. Same-origin local CSRF path
+
+Configure the FreezerAnalysis Vite server to proxy `/api`, `/health` and only other required host endpoints to an internal API target supplied by AppHost. In local AppHost composition, leave `VITE_FREEZER_API_BASE_URL` empty so the browser uses relative URLs; inject a server-only proxy target instead. Preserve the explicit production API base URL and secure `SameSite=None` cookie behavior for the confirmed separately hosted Azure topology.
+
+Do not disable `FreezerCsrfMiddleware`, relax origin checks or make the CSRF cookie readable. Add a real browser check that obtains the CSRF cookie through the Vite origin and completes profile `PUT`, identity `POST` and logout. API HttpClient coverage remains necessary but is not sufficient for this topology defect.
+
+#### 3. Server-owned reference data and profile defaults
+
+Add a small authenticated reference-data response owned by FreezerAnalysis contracts that returns stable division codes and Italian labels. The API validates profile and draft division against the same catalog; the SPA renders one reusable required `DivisionSelect` for profile and plan. An empty placeholder is allowed only before profile completion and cannot be submitted. Existing stored values outside the catalog remain displayable as an explicit legacy/unsupported option until corrected, avoiding silent data loss.
+
+The authoritative catalog is `OPEN`, `OPTICS`, `PRODUCTION`, `PCC IRON`, `PCC OPTICS`, `PRODUCTION OPTICS`, `REVOLVER` and `STANDARD`, as confirmed by the user on 2026-10-29. Keep parser aliases separate from these canonical division codes and reject or stage imports containing an unknown division with an explicit diagnostic; do not silently coerce it.
+
+Profile identity, division and performance become required planning defaults. When a draft does not yet exist, `GetDraftAsync` initializes them from the account profile. Existing drafts remain stable and are not overwritten by later profile changes. The match loader fetches match summary, profile and account identities alongside draft/estimate; the plan shows the selected identity by human-readable alias in a select, defaults to the profile identity, and permits an explicit per-draft override only among account-owned identities. If profile identity or division is absent, the match page presents a blocking link to complete the profile rather than accepting raw IDs.
+
+Explain `Performance personale` next to both profile and plan controls: it is the expected share of the stage's maximum points used to estimate the time-equivalent cost of lost points; `0.935` means `93.5%`. Display and edit it as a percentage while preserving the existing API decimal contract. Include the accepted range and state that it does not directly represent ranking or forecast confidence.
+
+#### 4. Match result read model
+
+Add a read-only, authenticated match-results use case over the active published revision, separate from snapshot verification. Use two bounded endpoints/contracts:
+
+1. A result index for the active revision with stage metadata and athlete summaries needed for filtering/selection: result ID, local competitor ID, display name, division, class, power factor, squad, official total, DQ/zeroed state and stage-result count.
+2. A detail endpoint for one result in that active revision with the Verify stage facts already persisted on `FreezerCompetitorResult`: stage number/name/minimum rounds, status, HF, time, net/classification points, A/C/D, misses, no-shoots and procedurals.
+
+Do not expose normalized names, account identity IDs, resolution documents, federation licenses, source object keys or private availability/exclusion decisions. Return not found when the result is not part of the active revision. Results are immutable read models; no edit endpoint is in scope.
+
+On `matches/:matchId`, use route-level tabs or an equivalent ledger switch for `Piano`, `Risultati` and `Confronto`. `Risultati` supports division/status filtering, a scan-friendly athlete table and lazy detail expansion. `Confronto` requires exactly two distinct athletes from the same active revision and displays a stage-aligned comparison table before any chart. Missing, DQ and zeroed stages remain explicit and do not become zero-HF bars.
+
+#### 5. Pareto comparison
+
+Reuse `recharts` at the repository-pinned version. Keep chart derivation in a pure feature helper with unit tests; the server returns facts, not presentation-specific chart points. The chart aligns the two selected athletes by canonical stage ID, orders categories by `StageNumber` ascending, labels the X axis `Stage 1`, `Stage 2`, through `Stage X`, and plots each athlete's finite scored hit factor as an adjacent bar on the Y axis. It does not sort by HF, calculate a gap, aggregate stages or add a cumulative series.
+
+Provide two athlete selectors and no metric selector: HF is fixed by the accepted requirement. The legend and accessible labels use the athlete display names; the tooltip and adjacent table show stage, athlete and exact HF. When either athlete has a missing, DQ, zeroed or non-finite stage result, omit that athlete's bar for the stage and expose the status in the table and accessible description. Color is supplementary; bar patterns/legend markers and text preserve identity without color. On mobile, keep stage order and readable labels through bounded horizontal scrolling rather than sorting or shrinking text below the existing design floor.
+
+Material alternative rejected: returning all stage details for every athlete in the initial match loader. A supplied sample has 142 athletes and 1,704 stage rows; summary-first and lazy details reduce initial payload and route latency while supporting the complete workflow.
+
+### Impacted Projects
+
+- `FreezerAnalysis.Api`: mock account composition, session behavior, reference-data and match-result endpoints, coordinator validation/defaulting and local cookie/CSRF integration behavior.
+- `MorWalPizVideo.Domain`: reuse `PublicAccountService`, `PublicAccountMockRepository` and `IMockScenario`; extend only FreezerAnalysis orchestration/repository reads if a bounded active-revision result method is required.
+- `MorWalPizVideo.Models`: no new persisted aggregate is expected; verify-only use of existing result/stage entities. Add a canonical division type here only if persistence-level validation is chosen, otherwise keep it in the feature contract/application boundary.
+- `MorWalPiz.Contracts`: reference-data, result summary/detail and stage DTOs; division validation contract.
+- `MorWalPizVideo.MvcHelpers`: verify-only reuse of cookie authentication and CSRF helpers; no weakened security behavior.
+- `frontend/FreezerAnalysis.spa`: guarded loaders, login return flow, reusable division select, profile legend/defaults, match tabs, result explorer, comparison/Pareto UI, responsive/accessibility styling and tests.
+- `frontend/fe-packages/services`: verify-only account transport; change only if browser evidence proves a shared transport defect after same-origin local routing.
+- `frontend/back-office-spa`: verify-only source for the established Recharts version/pattern; no behavior change.
+- `MorWalPizVideo.AppHost`: same-origin local proxy wiring for the FreezerAnalysis SPA.
+- `FreezerAnalysis.Api.Tests`: mock account/session, authorization, CSRF, reference-data, draft default and result-read behavior.
+- Deployment workflows: verify-only. Production base URL and secure cross-origin cookies remain unchanged for this scope.
+
+### Impacted Files
+
+#### Modify
+
+- `FreezerAnalysis.Api/Program.cs`: compose mock account repository/service with standard cookie authentication; remove automatic mock identity from the normal branch.
+- `FreezerAnalysis.Api/Controllers/FreezerAccountController.cs`: remove Development auto-session behavior while preserving registration/login/session/logout and cookie names.
+- `FreezerAnalysis.Api/Controllers/FreezerAnalysisController.cs`: add reference-data and bounded result read actions.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisCoordinator.cs`: validate canonical divisions, initialize new drafts from profile, and project active-revision result summaries/details.
+- `FreezerAnalysis.Api/Services/FreezerAnalysisMockData.cs`: separate shared facts from the seeded account's private data and align that data with the mock account fixture.
+- `MorWalPiz.Contracts/Contracts/FreezerAnalysis/FreezerAnalysisContracts.cs`: add reference-data and result read DTOs; apply canonical division validation without changing stored score facts.
+- `frontend/FreezerAnalysis.spa/src/main.tsx`: protected online route redirects and expanded match loader dependencies.
+- `frontend/FreezerAnalysis.spa/src/freezerApi.ts`: typed reference-data and result methods.
+- `frontend/FreezerAnalysis.spa/src/routes.tsx`: login return flow, profile legend/select, profile-driven plan controls, match result tabs and comparison/Pareto surface.
+- `frontend/FreezerAnalysis.spa/src/styles.css`: responsive ledger/table/chart states, focus and non-color status treatment.
+- `frontend/FreezerAnalysis.spa/package.json` and the authoritative Yarn lockfile: add the repository-pinned Recharts dependency.
+- `frontend/FreezerAnalysis.spa/vite.config.ts`: development API proxy.
+- `MorWalPizVideo.AppHost/Program.cs`: inject the Vite proxy target and stop exposing the API HTTPS origin directly to the local browser.
+- `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs`: account gate, cookie/CSRF, profile-to-draft and result endpoint regressions.
+- `frontend/FreezerAnalysis.spa/src/routes.test.tsx` and `freezerApi.test.ts`: guarded route, select, legend, profile default, result and comparison tests.
+- `frontend/fe-packages/services/src/apiService.test.ts` or the owning transport test file: verify account-mode CSRF remains isolated and correct through relative/proxied URLs.
+
+#### Add
+
+- A small reusable division-select component and pure comparison/Pareto derivation helper beside the FreezerAnalysis route modules, following the app's existing local feature ownership.
+- Focused component/helper tests for division options, result filtering, stage alignment, ascending stage order and paired HF chart points.
+- A Playwright browser test under the existing FreezerAnalysis browser-test convention for first-load login, registration/login, profile mutation through the Vite origin and responsive result comparison.
+
+#### Generated/Migration
+
+- Yarn lock metadata changes for Recharts in the FreezerAnalysis workspace.
+- No MongoDB migration or backfill is expected. No generated chart assets are persisted.
+
+#### Documentation
+
+- This handoff is the planning source of truth and must be updated after implementation with actual decisions, files, validation and residual risks.
+- Update `docs/architecture/backend.md`, `frontend.md`, `development.md` and `deployment.md` if implementation changes the documented development identity, local proxy or result-read contract.
+- Update `frontend/FreezerAnalysis.spa/PRODUCT.md` or `DESIGN.md` only if implementation changes durable product/interface direction; the current `Operate` ledger direction already supports this refinement.
+
+#### Verify Only
+
+- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`, `MorWalPizVideo.Domain/Interfaces/MockRepository.cs` and `MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs`: reuse existing behavior; avoid feature-specific copies.
+- `MorWalPizVideo.Domain/FreezerAnalysis/IFreezerAnalysisRepository.cs` and both repository implementations: existing active revision/result reads may be sufficient; add no query unless bounded result lookup cannot be expressed safely.
+- `.github/workflows/deploy-freezer-analysis-spa.yml`: production API URL remains explicit in this scope.
+
+### Impact Matrix
+
+| Area | Impact |
+|---|---|
+| Backend/API | New read-only reference/result endpoints; draft creation uses saved profile defaults. Existing mutation routes and snapshot verification stay intact. |
+| Frontend/UI | Login becomes the first unauthenticated online surface. Profile/plan use constrained selects. Match detail gains result and comparison views with an accessible Pareto chart. |
+| Database/Data | No schema change. Mock account sessions and private sample data become host-lifetime in-memory state. Existing Mongo values outside the division catalog require tolerant display/correction. |
+| Contracts/Models | Add reference-data and result summary/detail DTOs. Persisted score entities remain unchanged. |
+| Authentication/Authorization | Mock uses real cookie sessions. No online API or SPA workflow is available before registration/login. Offline cached field snapshots remain account-partitioned. |
+| Validation | Division is required and catalog-backed for profile/draft/import writes. Result IDs must belong to the active revision. The comparison requires two distinct athletes and plots only finite scored HF values. |
+| Cache | Not applicable; these authenticated account/result reads are not output-cached. |
+| Configuration/Secrets | Add only a local Vite proxy target. No credentials or deployed secrets are committed. Seed credentials, if supplied, are fictional Development-only values. |
+| Logging/Telemetry | Log auth/result endpoint failures structurally without passwords, cookies, CSRF values, athlete names, licenses or full result payloads. Existing OpenTelemetry remains. |
+| Background Jobs | Not applicable. |
+| Deployment/Operations | Local topology changes to proxy/same-origin. Production separate-host topology and secure cookie policy remain; verify no environment accidentally uses Development mock auth. |
+| Backward Compatibility | Existing sessions/contracts remain in production. Existing drafts are not overwritten. Unsupported stored divisions stay visible until corrected. New result contracts are additive. |
+
+### Reuse Opportunities
+
+- Reuse `PublicAccountService`, `PublicAccountMockRepository`, `IMockScenario`, `PublicAccountSecurity` and the account transport instead of creating Freezer-specific credential/session logic.
+- Reuse the current `FreezerAnalysisState` host-lifetime pattern for feature sample continuity, while keeping account and feature state ownership explicit.
+- Reuse active revision/result repository methods and existing `FreezerCompetitorResult` stage facts; do not parse PDFs again for the match result UI.
+- Reuse one `DivisionSelect` across profile and plan and one match-result DTO set across individual/comparison views.
+- Reuse Recharts and responsive chart conventions already present in BackOffice, without moving feature UI into the shared layout package because there is only one consumer.
+- Reuse React Router loaders and local component state; no new global store is warranted.
+- Impeccable implementation workflow: run `shape` against `matches/:matchId`, then `harden` after behavior is complete. Minimum evidence is desktop and mobile captures of login, profile, individual results and two-athlete comparison, plus keyboard, 200% zoom, touch target and non-color-state checks.
+
+### Risks
+
+| Priority | Cause and affected surface | Mitigation | Verification signal |
+|---|---|---|---|
+| High | Mock mode can remain implicitly authenticated or expose seeded private data to newly registered accounts. | Use cookie auth in every mode; separate shared seed facts from account-private fixtures; test two accounts. | No-cookie API requests return 401/unauthenticated session; account B cannot read account A profile/draft/mappings. |
+| High | CSRF continues failing in the real AppHost browser topology despite passing HttpClient tests. | Use relative browser URLs through Vite proxy and retain double-submit/origin checks. | Browser profile PUT, identity POST and logout succeed through `http://localhost:5178`; missing/mismatched CSRF still returns 403. |
+| High | Result DTOs leak private identity mappings or personal identifiers not needed for analysis. | Explicit projection allow-list; omit normalized names, identity IDs, licenses and provenance keys. | Contract serialization tests and payload review show only approved fields. |
+| Medium | Parser aliases or legacy free-text values drift from the confirmed eight-value division catalog. | Server-owned canonical catalog, explicit alias mapping, tolerant legacy display and diagnostic rejection of unknown new values. | Every accepted source division maps to one approved option; unknown stored/source values produce a diagnostic, not silent coercion. |
+| Medium | Profile changes unexpectedly mutate an existing draft or frozen plan. | Apply profile defaults only at draft creation; preserve optimistic revisions and immutable snapshots. | Existing draft/snapshot remains byte-for-byte semantically unchanged after profile update. |
+| Medium | Stage alignment or sorting compares the wrong HF values or changes the match sequence. | Join by canonical stage ID, sort only by stage number ascending, label both athletes and keep the table authoritative. | Fixtures with out-of-order inputs, missing/DQ/zeroed stages and unequal arrays produce the expected paired `Stage 1..X` sequence. |
+| Medium | Loading all Verify rows harms mobile latency for large matches. | Summary-first endpoint, lazy details and exactly two selected athletes in comparison. | Initial match result payload contains no stage arrays; sample 142-athlete route remains responsive. |
+| Low | Recharts produces inaccessible or unreadable output at narrow widths. | Pair chart with ordered table/text summary and test keyboard/zoom/mobile layouts. | Information remains complete with chart hidden and at 200% zoom. |
+
+### Technical Debt
+
+- Automatic Development authentication conflicts with the product session boundary and blocks meaningful first-run testing. It blocks this change and should be removed from the normal FreezerAnalysis mock path now.
+- The current handoff and architecture text describe a Development identity. Update them after implementation; do not preserve stale behavior for documentation compatibility.
+- Division values are currently parser-normalized strings without a domain catalog. This blocks reliable select validation and should be centralized now, while broader federation/ruleset versioning remains deferred.
+- `routes.tsx` contains multiple large surfaces. Extract only the new result/comparison components and reusable select/helper needed for testability; a full route-file refactor is unrelated and deferred.
+- The PDF preview already renders temporary Verify details, but those types are parser-specific and include page/pairing diagnostics. Reusing them for published match results would couple canonical reads to import preview debt; keep the new contracts separate.
+
+### Implementation Roadmap
+
+1. Establish mock account composition. Register host-lifetime account scenario state, `PublicAccountMockRepository`, `PublicAccountService` and standard cookie authentication in the mock branch; seed a fictional account without creating a session; remove automatic Development session behavior. Gate: session is false without cookie, registration/login issues a Freezer cookie, logout invalidates it, and protected API requests return 401 before login.
+2. Correct local browser topology. Add the Vite proxy and AppHost proxy target, keep browser API URLs relative locally, and preserve deployed API base URL behavior. Gate: real browser login/profile/logout succeeds through the SPA origin while invalid CSRF and disallowed origins still fail.
+3. Guard the SPA online route tree. Redirect unauthenticated loaders to login with return path, revalidate after auth, and preserve only the account-partitioned offline field exception. Gate: direct profile/match/result URLs cannot render or issue API calls before auth; successful login returns to the requested route.
+4. Introduce canonical reference data. Add the confirmed eight-value division catalog to the server-owned response and validation, then create the reusable required select. Gate: profile/draft/import writes reject or stage unknown new values with diagnostics, all eight accepted options round-trip, and legacy unknown values are visible for correction.
+5. Apply profile defaults to planning. Load profile/identities in the match route, initialize only new drafts from profile identity/division/performance, and render readable selects plus the performance legend. Gate: a completed profile produces a new draft with the same values; changing profile later does not alter existing drafts or snapshots.
+6. Add bounded result read contracts/use cases. Project active-revision summaries and individual details without private fields and enforce result membership. Gate: individual mock athletes expose all five seeded Verify stages; unknown/stale result IDs return 404; a second account sees shared facts but not private mappings.
+7. Build the match result workspace. Add `Piano`, `Risultati` and `Confronto` views, filters, lazy athlete detail, exactly two distinct athlete selectors and explicit incomplete-result states. Gate: desktop/mobile component tests cover individual, DQ, zeroed, missing and pairwise comparison states.
+8. Implement the confirmed Pareto as a pure stage-alignment derivation and Recharts grouped-bar view paired with an ordered table. Gate: out-of-order source fixtures render `Stage 1..X` in ascending stage order; each stage shows up to two correctly labelled HF bars; missing/DQ/zeroed/non-finite values are omitted and explained; the chart remains understandable without color.
+9. Run focused backend/frontend/shared transport suites, production builds and AppHost browser smoke checks. Execute the Impeccable `harden` pass and capture desktop/mobile evidence. Update architecture documents and this handoff with actual implementation and residual risks, then stop at the stated boundary.
+
+An independent post-validation review is warranted because this work changes authentication behavior, CSRF development topology and the exposure of shared athlete result data in one delivery. The reviewer should focus on pre-auth leakage, cross-account isolation, contract minimization, Pareto correctness and mobile accessibility.
+
+### Testing Strategy
+
+- Backend unit/configuration: mock account repository/service registration, canonical division normalization/validation, profile-to-new-draft defaulting and pure result projection.
+- API integration in `FreezerAnalysis.Api.Tests`: unauthenticated session and 401s; register/login/logout cookie lifecycle; missing/mismatched CSRF 403; two-account profile/draft isolation; division acceptance/rejection; active-revision summary/detail; stale/foreign result 404; no private fields in serialized payloads.
+- Shared transport: account mode with relative base URL fetches CSRF once per base/session, includes credentials/header for unsafe calls and never adds bearer/admin headers.
+- SPA component/router: first load and direct protected URL redirect; login return path; required division selects; performance percentage conversion/copy; profile identity default in plan; existing draft preservation; result filters/details; exactly two distinct comparison selections; loading/empty/error/offline states.
+- Pure comparison tests: canonical stage alignment, ascending stage-number ordering, two HF series, equal HF values, missing/DQ/zeroed/non-finite values and mismatched athlete stage arrays.
+- Browser/end-to-end: AppHost SPA-origin registration/login, profile save, plan load with profile defaults, individual Verify view, comparison/Pareto, logout and blocked revisit. Repeat representative captures at mobile and desktop widths, keyboard-only, 200% zoom and disconnected cached-field mode.
+- Regression: existing import preview, identity review, estimate, freeze, offline queue, replay, verification, backtest, artifact rendering and production cookie tests remain green.
+
+### Migration And Rollback
+
+No MongoDB or SQLite migration is required. Existing production accounts/sessions use the same service, repository and cookie contract. Existing profile/draft division strings remain readable; only new writes become catalog-constrained, with an explicit legacy correction path.
+
+Deploy backend additive result/reference contracts before the SPA that consumes them. Production authentication behavior should be unchanged because the composition correction is limited to `EnableMock`; verify this with a production-like host test. Deploy the SPA after API health and contract smoke checks. The local AppHost proxy change can roll back independently to the prior explicit base URL, but doing so reintroduces the known browser-CSRF risk and is not an acceptable steady state.
+
+Rollback the match-result UI by removing its navigation while retaining additive read endpoints if needed. Existing published results and frozen snapshots are unaffected. Do not roll back by restoring automatic mock authentication or disabling CSRF. If canonical division validation rejects a legitimate source, temporarily retain tolerant writes behind an explicit Development-only compatibility decision while extending the catalog; never coerce the value silently.
+
+Monitor 401/403 rates, CSRF acquisition failures, result endpoint latency/payload size and client chart errors after rollout. No backfill, dual write or destructive recovery step is needed.
+
+### Open Questions
+
+None identified. The user confirmed the eight-value division catalog and the pairwise stage/HF chart definition on 2026-10-29.
 
 ## Composition Alignment Fix Plan (2026-10-29)
 
@@ -171,7 +659,7 @@ The current branch contains an end-to-end application foundation, but it does no
 | M4 - Planning, freeze and verification | Profile/draft/freeze, immutable snapshot/package, field-event and artifact workflows are present; the SPA includes private identity review, profile binding, replay and final-verification views. The verification route uses the match's current final revision only when the account owns its published import. Stage forecasts are available when required inputs are sufficient. Frozen package schema v2 contains historical scoring projections, applied parameters, source/revision provenance, explicit identity mappings, availability/exclusion sets, target stage definitions and the estimate; its private object reference records compressed length and hash. Authenticated replay recalculates from those frozen inputs, reports unsupported legacy packages explicitly, compares against both the package estimate and persisted snapshot, and does not consult later match revisions. The verification API persists idempotent per-stage, aggregate and short/medium/long group error/interval metrics with explicit denominators, plus observed beta. Informant drift is computed as `(final informant HF / exp(frozen informant log-level + frozen beta × frozen stage log-difficulty)) - 1` for account-mapped, same-division candidates selected by the frozen registry. The report records scored comparison count, sample SD and missing/DQ/zeroed/unverifiable exclusions without exposing identity details. This is a documented provisional calculation assumption pending original-reference parity. Parameter backtests recalculate selected account-owned schema-v2 snapshots using each snapshot's own frozen history and an explicitly selected distinct final revision; reports are persisted account-scoped with per-stage and aggregate error/coverage measures. Revision-checked account adoption accepts only supported backtests with verifiable results and only after explicit confirmation; adoption is applied to newly created drafts and never changes frozen snapshots or existing drafts. | Partial. Replay, package provenance, final-revision verification, idempotent report retrieval, group and informant-drift metrics, backtest stability after later publication, account adoption, expected-revision conflict, and adopted-parameter carry-forward are covered by API/SPA tests. Real-Mongo concurrency qualification remains open. Backtests require supported frozen-package schema and numerically compatible engine versions; unsupported races are marked unavailable and prevent adoption. |
 | M5 - Documents and AI proposals | Server renderer and authorized artifact path exist. Focused Playwright tests now render A5/A4 PDFs and exact 1290x2796 phone PNGs locally, and verify that over-capacity content fails instead of being silently shrunk or truncated. | Partial. Clean pinned production Chromium/Poppler packaging, PDF page-size/content/overflow evidence and container renderer failure/idempotency qualification remain. AI proposals/provider boundary and explicit acceptance are not implemented. |
 | M6 - Mobile/offline | SPA account, CSV import, paired PDF preview, profile, identity review, draft/freeze, field, frozen-input replay, final-verification, multi-race parameter-backtest and explicit account-adoption workflows, offline snapshot and event queue foundations exist. PDF preview displays its no-publication boundary, keeps extracted rows expandable for review, and presents DQ appendix rows with explicit matched/ambiguous/unmatched status and page provenance; unresolved DQ does not become a non-DQ status in competitor tables. Verification now displays group counts/coverage denominators, the minimum-round grouping convention, and informant-drift comparison/exclusion counts separately from the frozen plan. Replay, verification and candidate reports remain separate from frozen plans. Backtest controls are disabled offline; changing a race selection or parameter invalidates the previous report and approval, and adoption requires a separate confirmation. IndexedDB operations now resolve writes only after transaction commit; account-indexed snapshots and queued events are deleted on logout or successful account switch, and a shared-device warning explains that local data is not encrypted. Reconnect synchronization requires a live session for the queued account, verifies snapshot ownership on the server, and relies on server idempotency before removing the queued operation. | Partial. Focused tests cover account-scoped deletion, logout, login account-switch cleanup, reauthentication/ownership checks and queued-event replay; real airplane-mode browser evidence, accessibility and artifact visual evidence remain. |
-| M7 - Historical transition and operations | Solution/AppHost/workspace integration and architecture documentation are present. A multi-stage FreezerAnalysis container now builds the SPA, publishes the API, includes Poppler and the Playwright-pinned Chromium runtime, and copies the SPA into the same-origin host. CI includes the feature SPA tests/build, API renderer browser setup/tests, and container build. Dockerfile-specific context exclusions prevent the supplied sample PDFs and unrelated workspace data from entering the image build context. | Incomplete. Local Docker image construction could not run because the Docker daemon is unavailable; GitHub Actions has not run. Retention/erasure and recovery procedures, historical migration/import proof, indexed 1,000-match report, least-privilege checks and recovery drill remain. No deployment has been performed. |
+| M7 - Historical transition and operations | Solution/AppHost/workspace integration and architecture documentation are present. A multi-stage FreezerAnalysis container currently builds the SPA, publishes the API, includes Poppler and the Playwright-pinned Chromium runtime, and copies the SPA into the API image. CI includes the feature SPA tests/build, API renderer browser setup/tests, and container build. Dockerfile-specific context exclusions prevent the supplied sample PDFs and unrelated workspace data from entering the image build context. The user has since confirmed separate production SPA/API origins, so the duplicate SPA layer in the API image is transitional rather than the target deployment shape. | Incomplete. Local Docker image construction could not run because the Docker daemon is unavailable; GitHub Actions has not run. The API deployment still publishes a ZIP rather than the native-dependency image. Cross-origin browser qualification, retention/erasure and recovery procedures, historical migration/import proof, indexed 1,000-match report, least-privilege checks and recovery drill remain. No deployment has been performed. |
 | M8 - Qualification | Focused component/host tests and a synthetic 500-competitor/34-stage fit benchmark have run locally. Twenty isolated warm engine-fit samples measured p95 119.47 ms (min 102.03 ms, max 135.26 ms) on this workstation. The benchmark runs in a non-parallel xUnit collection to avoid other suite work contaminating the measurement. | Not started as a release gate. The measurement covers engine fitting only, not the complete estimate/persistence/artifact path or the declared deployment resource tier. Performance budgets, two-concurrent-user lifecycle, complete two-account isolation, real Mongo proof, full container/browser checks, execution of the manual acceptance checklist below, and independent review remain. No deployment has been performed. |
 
 ### Validation recorded
@@ -305,7 +793,7 @@ Apply host-owned per-IP login throttling, bounded credential input and generic a
 
 Extract the existing host-local public-account authentication handler and CSRF/cookie logic into an options-driven shared MVC authentication component. Preserve ServerAPI's current route, scheme, cookie names and behavior. Configure FreezerAnalysis with distinct host-only session/CSRF cookie names and the same account endpoint paths expected by account-mode transport. No cookie-domain widening, browser bearer token, BackOffice permission grant, or shared localStorage session.
 
-Serve the SPA and `/api` on the same HTTPS origin for FreezerAnalysis: build the SPA as a workspace artifact and include it in the API container's static assets; isolate SPA fallback from API errors. Local Vite proxy remains available. This is a proposed FreezerAnalysis topology, not a claim about the existing public site's hosting. Same-origin production avoids depending on third-party cookie acceptance; use secure same-site cookies and origin/CSRF checks for unsafe requests. Preserve ServerAPI's existing cross-origin cookie options unchanged.
+Serve the FreezerAnalysis SPA and API from separate production HTTPS origins, matching the confirmed repository deployment pattern. The SPA receives the explicit API origin through `VITE_FREEZER_API_BASE_URL`; the API allows only the exact configured SPA origin with credentials. Use host-only Secure/HttpOnly `SameSite=None` session and CSRF cookies plus origin/CSRF checks for unsafe requests. Keep the local Vite proxy as a development convenience. Qualify the actual cross-origin flow in Chromium and WebKit because browsers may restrict cookies between different registrable domains; do not fall back to broad CORS or browser bearer storage.
 
 Keep the existing platform database resolution for `IPublicAccountRepository` only in the new host. Introduce a feature-specific application database accessor/settings type and inject it explicitly into every FreezerAnalysis repository. Validate at startup that platform and application database names differ and resolve to the intended same Mongo deployment. Use least-privilege database roles: platform account/session access only as required by login and validation; application collections in the separate database. A single server does not imply shared collection ownership. No cross-database transactions or joins are required.
 
@@ -430,7 +918,7 @@ Impeccable implementation lens: a **new Operate surface**, not a redesign of exi
 
 | Project/surface | Planned impact |
 |---|---|
-| `FreezerAnalysis.Api` | Add .NET 10 host, versioned controllers, authentication wiring, PDF extraction/rendering and app-specific AI adapters; serve the SPA artifact on the same origin. |
+| `FreezerAnalysis.Api` | Add .NET 10 host, versioned controllers, authentication wiring, PDF extraction/rendering and app-specific AI adapters; expose an exact credentialed CORS boundary for the separately deployed SPA. |
 | `frontend/FreezerAnalysis.spa` | Add React/TypeScript PWA workspace, feature-local DTOs/services/routes, tests and account-aware offline storage. |
 | `FreezerAnalysis.Api.Tests` | Add host-owned xUnit/WebApplicationFactory, pure-engine, synthetic/specification-fixture and disposable real-Mongo tests; historical golden comparisons are optional later additions. |
 | [MorWalPizVideo.Models](../../MorWalPizVideo.Models) | Add feature entities, enums/options and collection names without changing existing community competition or account schemas. |
@@ -466,14 +954,14 @@ New paths below are proposed ownership locations, not claims that those files al
 
 ### Add
 
-- `FreezerAnalysis.Api/`: project/composition root, versioned feature controllers and local session controller, importer/PDF extractor, AI adapter, document renderer/templates/fonts, static-asset integration, Dockerfile and non-secret settings schema.
+- `FreezerAnalysis.Api/`: project/composition root, versioned feature controllers and local session controller, importer/PDF extractor, AI adapter, document renderer/templates/fonts, native-dependency Dockerfile and non-secret settings schema.
 - `FreezerAnalysis.Api.Tests/`: project, WebApplicationFactory/test auth, engine/golden/parser/HTTP/security/render tests, and synthetic fixture builders.
 - `MorWalPizVideo.Models/FreezerAnalysis/`: typed feature records, version/state enums and options. Preserve BSON ObjectId conventions.
 - `MorWalPizVideo.Domain/FreezerAnalysis/`: calculation engine, application services, feature-specific database accessor, targeted Mongo/mock repositories, source/artifact storage boundary, and AI/clock/render abstractions for tests.
 - `MorWalPiz.Contracts/Contracts/FreezerAnalysis/`: request/response contracts and explicit mapping ownership.
 - `MorWalPizVideo.MvcHelpers/Authentication/`: shared options-driven public-account cookie/handler/CSRF components extracted from the existing ServerAPI file.
 - `frontend/FreezerAnalysis.spa/`: app manifest/config, entry/router, feature routes/components, local DTO/service modules, PWA registration and account-partitioned offline store/tests.
-- `.github/workflows/deploy-freezer-analysis.yml`: combined same-origin SPA/API container release, environment-managed values, nonempty tests and build gates before publishing/deployment.
+- `.github/workflows/deploy-freezer-analysis-api.yml` and `.github/workflows/deploy-freezer-analysis-spa.yml`: independently build and deploy immutable compatible API/SPA images, with environment-managed exact origins and nonempty native/browser gates.
 - Fixture directory under `FreezerAnalysis.Api.Tests/`: synthetic CSV/PDF/roster inputs, hand-worked specification examples and generated-layout baselines clearly identified as new-application fixtures. Add sanitized historical data only if it later becomes available with permission; never label generated fixtures as original golden artifacts.
 
 ### Generated/Migration
@@ -511,7 +999,7 @@ New paths below are proposed ownership locations, not claims that those files al
 | Configuration/Secrets | Typed two-database settings, private Blob settings, approved provider configuration and exact origins. Secrets via existing environment/Key Vault practices; fail startup on unsafe or ambiguous database selection. |
 | Logging/Telemetry | ServiceDefaults plus import/engine/freeze/render identifiers, duration/size counters, validation counts and explicit failure codes. No names, licenses, passwords, tokens, raw prompts or signed URLs in logs. |
 | Background Jobs | Not needed for the bounded initial path; no fake durable queue. Time-budget failure blocks release and requires a separately approved Hangfire/storage design. |
-| Deployment/Operations | Same-origin SPA/API container, pinned extraction/render dependencies, resource limits, two-database and private-storage readiness. CI must include new host/workspace/tests. |
+| Deployment/Operations | Separate SPA/API images, exact credentialed origins, pinned API extraction/render dependencies, resource limits, two-database and private-storage readiness. CI must qualify the compatible image pair. |
 | Backward Compatibility | Preserve platform account IDs, old ServerAPI cookie/routes, existing transport exports and all other apps. Additive feature collections; frozen inputs never resolve through mutable latest pointers. |
 
 ## Reuse Opportunities

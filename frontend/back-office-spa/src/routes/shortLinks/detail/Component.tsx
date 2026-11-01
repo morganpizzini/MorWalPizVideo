@@ -9,7 +9,7 @@ import PageHeader from '@components/PageHeader';
 import { LinkType } from '@morwalpizvideo/models';
 import { ComposeUrl, endpoints, get } from '@morwalpizvideo/services';
 import type { AuditLog } from '@/models/auditLog';
-import type { ShortLink, ShortLinkClickBucket } from '@/models/shortLink';
+import type { ShortLink, ShortLinkAnalytics, ShortLinkClickBucket } from '@/models/shortLink';
 import AuditLogList from '@components/AuditLogList';
 import ShareShortLink from './ShareShortLink';
 import { PageSkeleton } from '@components/LoadingSkeleton';
@@ -24,6 +24,8 @@ const ShortLinkDetail: React.FC = () => {
   const [clickRange, setClickRange] = useState('24h');
   const [clicks, setClicks] = useState<ShortLinkClickBucket[]>([]);
   const [clicksError, setClicksError] = useState('');
+  const [analytics, setAnalytics] = useState<ShortLinkAnalytics | null>(null);
+  const [analyticsError, setAnalyticsError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
   const location = useLocation();
@@ -64,6 +66,20 @@ const ShortLinkDetail: React.FC = () => {
       .then(value => setClicks(value as ShortLinkClickBucket[]))
       .catch(error =>
         setClicksError(error instanceof Error ? error.message : 'Unable to load click history.')
+      );
+  }, [entity, clickRange]);
+
+  useEffect(() => {
+    if (!entity?.code) return;
+    setAnalyticsError('');
+    void get(
+      `${ComposeUrl(endpoints.SHORTLINKS_ANALYTICS, { querylinkId: entity.code })}?range=${clickRange}`
+    )
+      .then(value => setAnalytics(value as ShortLinkAnalytics))
+      .catch(error =>
+        setAnalyticsError(
+          error instanceof Error ? error.message : 'Unable to load classified analytics.'
+        )
       );
   }, [entity, clickRange]);
 
@@ -168,6 +184,93 @@ const ShortLinkDetail: React.FC = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        )}
+      </section>
+      <section className="dashboard-panel mt-4">
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <h2 className="h5 mb-1">Request classification</h2>
+            <p className="text-muted small mb-0">
+              Client categories are estimates. Earlier requests may be unsegmented.
+            </p>
+          </div>
+          {analytics && (
+            <span
+              className={analytics.coverageComplete ? 'text-success small' : 'text-warning small'}
+            >
+              {analytics.coverageComplete ? 'Complete event coverage' : 'Partial event coverage'}
+            </span>
+          )}
+        </div>
+        {analyticsError ? (
+          <p className="text-danger">{analyticsError}</p>
+        ) : analytics ? (
+          <>
+            <div className="row g-3 mb-3">
+              {[
+                ['Likely human', analytics.humanCandidateRequests],
+                ['Social previews', analytics.socialPreviewRequests],
+                ['Other automation', analytics.otherAutomationRequests],
+                ['Unclassified', analytics.unclassifiedRequests],
+                ['Unsegmented history', analytics.unsegmentedRequests],
+              ].map(([label, value]) => (
+                <div className="col-6 col-lg" key={label}>
+                  <div className="small text-muted">{label}</div>
+                  <strong>{Number(value).toLocaleString()}</strong>
+                </div>
+              ))}
+            </div>
+            <div style={{ width: '100%', height: 240 }}>
+              <ResponsiveContainer>
+                <LineChart data={analytics.buckets}>
+                  <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={value => new Date(value).toLocaleDateString()}
+                  />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip labelFormatter={value => new Date(String(value)).toLocaleString()} />
+                  <Line
+                    type="monotone"
+                    dataKey="humanCandidateRequests"
+                    name="Likely human"
+                    stroke="#2f6f8f"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="socialPreviewRequests"
+                    name="Social previews"
+                    stroke="#c45b3c"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="otherAutomationRequests"
+                    name="Other automation"
+                    stroke="#8a6d3b"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="unclassifiedRequests"
+                    name="Unclassified"
+                    stroke="#6c757d"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-muted small mb-0">
+              Detailed events are retained for {analytics.retentionDays} days; cumulative totals do
+              not expire.
+            </p>
+          </>
+        ) : (
+          <p className="text-muted">Loading classified analytics...</p>
         )}
       </section>
       <section className="mt-4">

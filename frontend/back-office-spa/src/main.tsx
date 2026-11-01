@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 import { createRoot } from 'react-dom/client';
 import { ToastProvider } from './components/ToastNotification';
+import './services/installPrompt';
 
 // Load runtime environment configuration (injected by Docker entrypoint)
 // This dynamically loads /env-config.js to avoid Vite trying to bundle it
@@ -24,7 +25,9 @@ const loadEnvConfig = () => {
 async function bootstrap() {
   await loadEnvConfig();
   if ('serviceWorker' in navigator) {
-    void navigator.serviceWorker.register('/push-sw.js', { scope: '/' });
+    void navigator.serviceWorker.register('/push-sw.js', { scope: '/' }).catch(error => {
+      console.error('Unable to register the push service worker', error);
+    });
   }
   const [{ RouterProvider }, { default: router }] = await Promise.all([
     import('react-router'),

@@ -17,6 +17,96 @@ public sealed class FreezerAnalysisCoordinator(
     FreezerCsvParser csvParser,
     FreezerDocumentRenderer documentRenderer)
 {
+    private static readonly IReadOnlyList<FreezerDivisionOptionResponse> DivisionOptions =
+    [
+        new("OPEN", "Open"),
+        new("OPTICS", "Optics"),
+        new("PRODUCTION", "Production"),
+        new("PCC IRON", "PCC Iron"),
+        new("PCC OPTICS", "PCC Optics"),
+        new("PRODUCTION OPTICS", "Production Optics"),
+        new("REVOLVER", "Revolver"),
+        new("STANDARD", "Standard")
+    ];
+
+    public FreezerReferenceDataResponse GetReferenceData() => new(DivisionOptions);
+
+    public async Task<IReadOnlyList<FreezerResultSummaryResponse>> GetResultSummariesAsync(
+        string matchId,
+        CancellationToken cancellationToken)
+    {
+        var (revision, results) = await GetActiveResultsAsync(matchId, cancellationToken);
+        return results
+            .OrderBy(result => result.DisplayName, StringComparer.Ordinal)
+            .ThenBy(result => result.CompetitorId, StringComparer.Ordinal)
+            .Select(ToSummary)
+            .ToArray();
+    }
+
+    public async Task<FreezerResultDetailResponse?> GetResultDetailAsync(
+        string matchId,
+        string resultId,
+        CancellationToken cancellationToken)
+    {
+        var (revision, results) = await GetActiveResultsAsync(matchId, cancellationToken);
+        var result = results.SingleOrDefault(item => item.Id == resultId);
+        if (result is null)
+            return null;
+
+        var stagesById = revision.Stages.ToDictionary(stage => stage.StageId, StringComparer.Ordinal);
+        var stages = result.Stages
+            .Select(stage => new FreezerResultStageResponse(
+                stage.StageId,
+                stagesById.GetValueOrDefault(stage.StageId)?.StageNumber ?? 0,
+                stagesById.GetValueOrDefault(stage.StageId)?.Name ?? stage.StageId,
+                stage.MinimumRounds,
+                stage.Status.ToString(),
+                stage.HitFactor,
+                stage.TimeSeconds,
+                stage.NetPoints,
+                stage.ClassificationPoints,
+                stage.Alpha,
+                stage.Charlie,
+                stage.Delta,
+                stage.Miss,
+                stage.NoShoot,
+                stage.Procedural))
+            .OrderBy(stage => stage.StageNumber)
+            .ToArray();
+        return new FreezerResultDetailResponse(ToSummary(result), stages);
+    }
+
+    private async Task<(FreezerMatchRevision Revision, IReadOnlyList<FreezerCompetitorResult> Results)> GetActiveResultsAsync(
+        string matchId,
+        CancellationToken cancellationToken)
+    {
+        var match = await repository.GetMatchAsync(matchId, cancellationToken);
+        if (match?.ActiveRevisionId is null)
+            throw new KeyNotFoundException("The published match was not found.");
+        var revision = await repository.GetRevisionAsync(matchId, match.ActiveRevisionId, cancellationToken);
+        if (revision is null)
+            throw new KeyNotFoundException("The active match revision is missing.");
+        var results = await repository.GetResultsAsync(revision.ResultIds, cancellationToken);
+        return (revision, results);
+    }
+
+    private static FreezerResultSummaryResponse ToSummary(FreezerCompetitorResult result) =>
+        new(
+            result.Id,
+            result.CompetitorId,
+            result.DisplayName,
+            result.Division,
+            result.Class,
+            result.PowerFactor,
+            result.Squad,
+            result.OfficialTotal,
+            result.IsDisqualified ? FreezerResultStatus.Disqualified.ToString() :
+                result.IsZeroed ? FreezerResultStatus.Zeroed.ToString() :
+                result.Stages.Any(stage => stage.Status == FreezerResultStatus.Missing)
+                    ? FreezerResultStatus.Missing.ToString()
+                    : FreezerResultStatus.Scored.ToString(),
+            result.Stages.Count);
+
     public async Task<FreezerProfileResponse> GetProfileAsync(string accountId, CancellationToken cancellationToken)
     {
         var profile = await repository.GetProfileAsync(accountId, cancellationToken);
@@ -37,12 +127,13 @@ public sealed class FreezerAnalysisCoordinator(
 
         var now = DateTime.UtcNow;
         var current = await repository.GetProfileAsync(accountId, cancellationToken);
+        var division = NormalizeDivision(request.Division);
         var profile = new FreezerProfile
         {
             Id = current?.Id ?? ObjectId.GenerateNewId().ToString(),
             AccountId = accountId,
             IdentityId = identityId,
-            Division = NormalizeOptional(request.Division)?.ToUpperInvariant(),
+            Division = division,
             PowerFactor = NormalizeOptional(request.PowerFactor),
             Performance = request.Performance,
             CreatedAtUtc = current?.CreatedAtUtc ?? now,
@@ -392,6 +483,7 @@ public sealed class FreezerAnalysisCoordinator(
         {
             var now = DateTime.UtcNow;
             var adoption = await repository.GetLatestParameterAdoptionAsync(accountId, cancellationToken);
+            var profile = await repository.GetProfileAsync(accountId, cancellationToken);
             var parameters = adoption?.Parameters;
             draft = await repository.CreateDraftAsync(new FreezerAnalysisDraft
             {
@@ -404,7 +496,9 @@ public sealed class FreezerAnalysisCoordinator(
                 DriftPercent = parameters?.DriftPercent ?? FreezerAnalysisEngine.CurrentParameters.DriftPercent,
                 OwnVariability = parameters?.OwnVariability ?? FreezerAnalysisEngine.CurrentParameters.OwnVariability,
                 DistancePenalty = parameters?.DistancePenalty ?? FreezerAnalysisEngine.CurrentParameters.DistancePenalty,
-                Performance = FreezerAnalysisEngine.CurrentParameters.Performance,
+                IdentityId = profile?.IdentityId,
+                Division = profile?.Division,
+                Performance = profile?.Performance ?? FreezerAnalysisEngine.CurrentParameters.Performance,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             }, cancellationToken);
@@ -444,12 +538,13 @@ public sealed class FreezerAnalysisCoordinator(
             OwnVariability = current.OwnVariability,
             DistancePenalty = current.DistancePenalty
         };
+        var division = NormalizeDivision(request.Division);
         var updated = current with
         {
             Revision = current.Revision + 1,
             ImportManifestId = NormalizeOptional(request.ImportManifestId),
             IdentityId = identityId,
-            Division = NormalizeOptional(request.Division)?.ToUpperInvariant(),
+            Division = division,
             ParameterVersion = savedParameters == currentParameters
                 ? current.ParameterVersion
                 : ParameterVersion(savedParameters),
@@ -2383,6 +2478,14 @@ public sealed class FreezerAnalysisCoordinator(
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? NormalizeDivision(string? value)
+    {
+        var normalized = NormalizeOptional(value)?.ToUpperInvariant();
+        if (normalized is not null && DivisionOptions.All(option => option.Code != normalized))
+            throw new ArgumentException("Select a supported division.");
+        return normalized;
+    }
 
     private static IReadOnlyDictionary<string, string> ValidateStrategies(IReadOnlyDictionary<string, string> strategies)
     {

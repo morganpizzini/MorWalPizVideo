@@ -37,6 +37,7 @@ WORKDIR /app/back-office-spa
 COPY back-office-spa/tsconfig*.json ./
 COPY back-office-spa/vite.config.ts ./
 COPY back-office-spa/src ./src
+COPY back-office-spa/public ./public
 COPY back-office-spa/index.html ./
 
 # Build the application

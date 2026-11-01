@@ -598,13 +598,35 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         }
 
         public async Task<int> IncrementClicksAsync(string id)
+            => await IncrementClicksAsyncCore(id, null, DateTime.UtcNow);
+
+        public async Task<int> IncrementClicksAsync(
+            string id,
+            ShortLinkRequestCategory category,
+            DateTime timestamp)
+            => await IncrementClicksAsyncCore(id, category, timestamp);
+
+        private async Task<int> IncrementClicksAsyncCore(
+            string id,
+            ShortLinkRequestCategory? category,
+            DateTime timestamp)
         {
             var filter = ObjectId.TryParse(id, out var objectId)
                 ? Builders<ShortLink>.Filter.Eq("_id", objectId)
                 : Builders<ShortLink>.Filter.Eq("_id", id);
             var update = Builders<ShortLink>.Update
                 .Inc(x => x.ClicksCount, 1)
-                .Push(x => x.ClickTimestamps, DateTime.UtcNow);
+                .Push(x => x.ClickTimestamps, timestamp);
+            if (category is not null)
+            {
+                update = update.Inc(category.Value switch
+                {
+                    ShortLinkRequestCategory.SocialPreview => nameof(ShortLink.SocialPreviewRequests),
+                    ShortLinkRequestCategory.OtherAutomation => nameof(ShortLink.OtherAutomationRequests),
+                    ShortLinkRequestCategory.HumanCandidate => nameof(ShortLink.HumanCandidateRequests),
+                    _ => nameof(ShortLink.UnclassifiedRequests)
+                }, 1);
+            }
             var options = new FindOneAndUpdateOptions<ShortLink> { ReturnDocument = ReturnDocument.After };
             var updated = await _collection.FindOneAndUpdateAsync(filter, update, options);
             return updated?.ClicksCount ?? 0;
@@ -612,6 +634,20 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
             => _collection.Find(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId).FirstOrDefaultAsync();
+    }
+
+    public sealed class ShortLinkRequestEventRepository(IMongoDatabase database)
+        : BaseRepository<ShortLinkRequestEvent>(database, DbCollections.ShortLinkRequestEvents), IShortLinkRequestEventRepository
+    {
+        public async Task<IList<ShortLinkRequestEvent>> GetByShortLinkIdAsync(
+            string shortLinkId,
+            DateTime fromInclusive,
+            DateTime toExclusive,
+            CancellationToken cancellationToken = default)
+            => await _collection.Find(eventItem => eventItem.ShortLinkId == shortLinkId &&
+                    eventItem.Timestamp >= fromInclusive && eventItem.Timestamp < toExclusive)
+                .SortBy(eventItem => eventItem.Timestamp)
+                .ToListAsync(cancellationToken);
     }
 
     public sealed class QuickLinksRepository(IMongoDatabase database)

@@ -25,6 +25,44 @@ public sealed record FreezerProfileResponse(
     double Performance,
     DateTime UpdatedAtUtc);
 
+public sealed record FreezerDivisionOptionResponse(string Code, string Label);
+
+public sealed record FreezerReferenceDataResponse(
+    IReadOnlyList<FreezerDivisionOptionResponse> Divisions);
+
+public sealed record FreezerResultSummaryResponse(
+    string ResultId,
+    string CompetitorId,
+    string DisplayName,
+    string Division,
+    string? Class,
+    string? PowerFactor,
+    string? Squad,
+    double? OfficialTotal,
+    string Status,
+    int StageResultCount);
+
+public sealed record FreezerResultStageResponse(
+    string StageId,
+    int StageNumber,
+    string StageName,
+    int MinimumRounds,
+    string Status,
+    double? HitFactor,
+    double? TimeSeconds,
+    int? NetPoints,
+    double? ClassificationPoints,
+    int? Alpha,
+    int? Charlie,
+    int? Delta,
+    int? Misses,
+    int? NoShoots,
+    int? Procedurals);
+
+public sealed record FreezerResultDetailResponse(
+    FreezerResultSummaryResponse Summary,
+    IReadOnlyList<FreezerResultStageResponse> Stages);
+
 public sealed record FreezerIdentityCreateRequest
 {
     [Required, StringLength(100, MinimumLength = 1)]

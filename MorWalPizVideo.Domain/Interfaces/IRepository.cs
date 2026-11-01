@@ -99,7 +99,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<ShortLink> ReplaceByNormalizedCodeAsync(ShortLink link, CancellationToken cancellationToken = default);
         // Atomic counter increment, avoiding the read-modify-replace race on click tracking.
         Task<int> IncrementClicksAsync(string id);
+        Task<int> IncrementClicksAsync(string id, ShortLinkRequestCategory category, DateTime timestamp);
         Task<ShortLink?> GetByCampaignIdAsync(string campaignId);
+    }
+    public interface IShortLinkRequestEventRepository : IRepository<ShortLinkRequestEvent>
+    {
+        Task<IList<ShortLinkRequestEvent>> GetByShortLinkIdAsync(string shortLinkId, DateTime fromInclusive, DateTime toExclusive, CancellationToken cancellationToken = default);
     }
     public interface IQuickLinksRepository : IRepository<QuickLinks>
     {

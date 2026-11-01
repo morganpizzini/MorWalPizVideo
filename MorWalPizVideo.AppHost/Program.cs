@@ -45,7 +45,8 @@ var freezerAnalysis = builder.AddProject<Projects.FreezerAnalysis_Api>("freezer-
 builder.AddJavaScriptApp("freezer-analysis", "../frontend", "dev:freezer-analysis")
     .WithReference(freezerAnalysis)
     .WaitFor(freezerAnalysis)
-    .WithEnvironment("VITE_FREEZER_API_BASE_URL", freezerAnalysis.GetEndpoint("https"))
+    .WithEnvironment("VITE_FREEZER_API_BASE_URL", "")
+    .WithEnvironment("VITE_FREEZER_API_PROXY_TARGET", freezerAnalysis.GetEndpoint("https"))
     .WithEnvironment("BROWSER", "none")
     .WithHttpEndpoint(port: 5178, env: "PORT")
     .InGroup(frontendGroup);

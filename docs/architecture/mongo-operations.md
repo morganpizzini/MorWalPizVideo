@@ -68,6 +68,8 @@ samples do not prove live production state.
 | `freeAcquisitions` | Unique owner identity plus artifact ID | Idempotent permanent-free acquisition |
 | `freeAcquisitions` | Artifact ID, acquired timestamp descending | Administrative/reporting lookup |
 | `shortLinks` | Unique normalized lowercase code | Global short-code resolution after embedded-link migration |
+| `shortLinkRequestEvents` | Short-link ID, timestamp descending | Bounded classified analytics reads |
+| `shortLinkRequestEvents` | TTL on expires-at timestamp | Removes classified request details after the approved 90-day retention |
 | `quickLinks` | Unique normalized lowercase slug | Global QuickLinks page resolution across channel owners after duplicate audit |
 | `shortLinkVisits` | Short-link ID, occurred timestamp descending | Recent visit analysis |
 | `shortLinkVisits` | TTL on occurred timestamp, optional | Only after retention policy approval |

@@ -62,6 +62,17 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("code", 1),
             Unique: true),
         new(
+            Key: "shortlinkrequestevents.shortlinkid_timestamp_desc",
+            Collection: DbCollections.ShortLinkRequestEvents,
+            Name: "ix_shortlinkrequestevents_shortlinkid_timestamp_desc",
+            Keys: new BsonDocument { { "shortLinkId", 1 }, { "timestamp", -1 } }),
+        new(
+            Key: "shortlinkrequestevents.expiresat.ttl",
+            Collection: DbCollections.ShortLinkRequestEvents,
+            Name: "ix_shortlinkrequestevents_expiresat_ttl",
+            Keys: new BsonDocument("expiresAt", 1),
+            ExpireAfter: TimeSpan.Zero),
+        new(
             Key: "customformresponses.formid_submittedat_desc",
             Collection: DbCollections.CustomFormResponses,
             Name: "ix_customformresponses_formid_submittedat_desc",

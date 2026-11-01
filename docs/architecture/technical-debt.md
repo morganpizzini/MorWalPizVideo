@@ -6,7 +6,9 @@ Keep `MorWalPizVideo.BackOffice`, `MorWalPizVideo.ServerAPI`, `frontend/back-off
 `frontend/morwalpizvideo.client` operationally reliable while preparing the independently owned
 Shooting Range POC for public exposure. Shop-related debt is unscheduled and on hold; see
 "On Hold: Shop" below. Pre-release Shooting Range contracts may still change where required
-to establish the approved authorization and data-integrity boundary.
+to establish the approved authorization and data-integrity boundary. FreezerAnalysis production
+activation is separately blocked by TD-033 until its persistence, index, runtime-artifact and
+production-boundary gates are closed.
 
 ## Current Iteration Order (Historical Order; Status Reconciled 2026-10-01)
 
@@ -57,6 +59,7 @@ Priority combines security, correctness, production impact, architectural levera
 | TD-030 | High | BackOffice and ServerAPI form submission rules diverge | Weaker BackOffice route bypasses lifecycle/survey and option-validation rules for callers with resolvable scope | Establish public submission ownership and shared Domain invariants or explicitly retire/restrict the compatibility path | Medium | Open — [API-03](api-consistency-audit.md#api-03-form-submission-invariants-differ-between-hosts); preserve TD-015 migration compatibility |
 | TD-031 | Medium | BackOffice Chat requires an AI dependency not registered in mock mode | Authorized offline Chat workflows fail controller activation | Supply a deterministic fake at the existing feature boundary or an explicit unsupported-workflow outcome | Medium | Open — [API-04](api-consistency-audit.md#api-04-chat-dependency-is-absent-in-mock-mode); host execution not run |
 | TD-032 | Low | Forms, generic repositories and cross-API operations cannot propagate request cancellation | Disconnected requests may continue database/network work | Add compatible cancellation in individual touched slices, explicitly separating pre-commit from post-commit work | Medium | Open — [API-06](api-consistency-audit.md#api-06-cancellation-cannot-cross-several-shared-boundaries); no measured exhaustion claim |
+| TD-033 | High | FreezerAnalysis durable operations, Mongo index ownership, deployed runtime and production-boundary proof are incomplete | Interrupted import/freeze can require repair, required indexes are not applied/audited, the API ZIP deployment differs from its native-dependency container, and in-memory/HTTP tests do not prove real-Mongo/cross-origin-browser/two-account behavior | Implement retry-convergent operations, index/readiness ownership, qualified compatible SPA/API image promotion and production-like gates in the [FreezerAnalysis debt reduction plan](../feature-handoffs/freezer-analysis-handoff.md#technical-debt-reduction-plan-2026-10-30) | High | Open — blocks production activation; separate SPA and API production origins were confirmed on 2026-10-31, execution evidence remains pending |
 
 ## API Consistency Reconciliation (2026-10-24)
 

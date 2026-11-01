@@ -13,6 +13,28 @@
       "notes": "Collation-free unique index; requires duplicate/code-normalization audit before apply. Remove legacy ux_shortlinks_code_ci only after this replacement is verified."
     },
     {
+      "key": "shortlinkrequestevents.shortlinkid_timestamp_desc",
+      "collection": "shortLinkRequestEvents",
+      "name": "ix_shortlinkrequestevents_shortlinkid_timestamp_desc",
+      "keys": {
+        "shortLinkId": 1,
+        "timestamp": -1
+      },
+      "unique": false,
+      "notes": "Bounds classified analytics reads by canonical short-link and event time."
+    },
+    {
+      "key": "shortlinkrequestevents.expiresat.ttl",
+      "collection": "shortLinkRequestEvents",
+      "name": "ix_shortlinkrequestevents_expiresat_ttl",
+      "keys": {
+        "expiresAt": 1
+      },
+      "expireAfterSeconds": 0,
+      "unique": false,
+      "notes": "Removes classified events at their per-event 90-day expiry."
+    },
+    {
       "key": "customformresponses.formid_submittedat_desc",
       "collection": "customFormResponses",
       "name": "ix_customformresponses_formid_submittedat_desc",

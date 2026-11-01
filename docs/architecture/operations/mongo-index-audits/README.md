@@ -49,6 +49,8 @@ curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/apply" \
     "approvalToken": "apply-approved-indexes",
     "approvedKeys": [
       "shortlinks.code.unique",
+      "shortlinkrequestevents.shortlinkid_timestamp_desc",
+      "shortlinkrequestevents.expiresat.ttl",
       "customformresponses.formid_submittedat_desc",
       "customformresponses.formid_responseid.unique",
       "youtubecontent_isprivate_creation_desc",
@@ -76,6 +78,9 @@ is the only index list duplicated here for copy-paste operation.
 Unique indexes require conflict resolution first:
 
 - `shortLinks.code` must have no duplicate or malformed normalized codes.
+- `shortLinkRequestEvents` must contain only the approved event shape; verify
+  `shortLinkId`, `timestamp`, and `expiresAt` are present before applying the
+  query and TTL indexes.
 - `customFormResponses` must have no duplicate `(formId, responseId)` pairs.
 - `pages.url` must have no duplicate normalized URLs across channel owners; the
   current authority is the global unique `pages_url.unique` index named

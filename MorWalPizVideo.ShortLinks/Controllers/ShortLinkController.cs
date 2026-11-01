@@ -20,8 +20,11 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         private readonly INewsletterEventRepository newsletterEventRepository;
         private readonly IAskCampaignRepository askCampaignRepository;
         private readonly IYTChannelRepository channelRepository;
+        private readonly IShortLinkRequestClassifier requestClassifier;
+        private readonly IShortLinkRequestEventRepository requestEventRepository;
+        private readonly ILogger<ShortLinkController> logger;
 
-        public ShortLinkController(IShortLinkRedirectService redirectService, IYouTubeContentRepository contentRepository, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository)
+        public ShortLinkController(IShortLinkRedirectService redirectService, IYouTubeContentRepository contentRepository, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository, IShortLinkRequestClassifier requestClassifier, IShortLinkRequestEventRepository requestEventRepository, ILogger<ShortLinkController> logger)
         {
             cache = memoryCache;
             this.redirectService = redirectService;
@@ -30,6 +33,9 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             this.newsletterEventRepository = newsletterEventRepository;
             this.askCampaignRepository = askCampaignRepository;
             this.channelRepository = channelRepository;
+            this.requestClassifier = requestClassifier;
+            this.requestEventRepository = requestEventRepository;
+            this.logger = logger;
         }
 
         private async Task<ShortLink?> FindShortLinkInContent(string code)
@@ -58,8 +64,8 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             return match is null ? null : canonical;
         }
 
-        private Task UpdateShortLinkClickCount(ShortLink shortLink)
-            => redirectService.IncrementClicksAsync(shortLink.Id);
+        private Task UpdateShortLinkClickCount(ShortLink shortLink, ShortLinkRequestClassification classification, DateTime timestamp)
+            => redirectService.IncrementClicksAsync(shortLink.Id, classification.Category, timestamp);
 
         [HttpGet("{videoShortLink}")]
         public async Task<IActionResult> Index(string videoShortLink)
@@ -120,8 +126,26 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                     return NotFound();
             }
 
-            // Increment click count
-            await UpdateShortLinkClickCount(shortLink);
+            var requestTimestamp = DateTime.UtcNow;
+            var classification = requestClassifier.Classify(userAgent);
+            await UpdateShortLinkClickCount(shortLink, classification, requestTimestamp);
+            try
+            {
+                await requestEventRepository.AddItemAsync(new ShortLinkRequestEvent
+                {
+                    Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                    ShortLinkId = shortLink.Id,
+                    Timestamp = requestTimestamp,
+                    Category = classification.Category,
+                    RuleCode = classification.RuleCode,
+                    ClassifierVersion = classification.Version,
+                    ExpiresAt = requestTimestamp.AddDays(90)
+                });
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Short-link request detail could not be recorded for {ShortLinkId}", shortLink.Id);
+            }
             var newsletterId = Request.Query["newsletterId"].ToString();
             var newsletterChannelId = Request.Query["channelId"].ToString();
             if (!string.IsNullOrWhiteSpace(newsletterId) && !string.IsNullOrWhiteSpace(newsletterChannelId))

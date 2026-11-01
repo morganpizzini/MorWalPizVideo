@@ -44,6 +44,7 @@ Owns reusable visual components used by more than one application. App-specific 
 - Protected root loader validates authentication.
 - Feature routes use loaders, actions, and fetchers.
 - React Bootstrap, Lucide icons, shared services, and local reusable management components.
+- The installable shell uses the same-origin `manifest.webmanifest` and the existing `/push-sw.js` registration. `beforeinstallprompt` is captured before router bootstrap and exposed only inside the authenticated shell; no offline cache or authenticated response caching is introduced.
 
 Current authentication is secure HttpOnly cookie based with CSRF protection; the SPA neither stores a raw JWT nor sends browser Bearer headers. Real-browser cross-origin verification remains a release gate, not proof supplied by unit tests. Public video, Ask and Shooting ITA use isolated public transport; frozen shop retains its independent legacy instance. See [transport isolation](transport-isolation.md).
 

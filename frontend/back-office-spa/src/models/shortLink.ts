@@ -47,6 +47,31 @@ export interface ShortLinkClickBucket {
   count: number;
 }
 
+export interface ShortLinkAnalyticsBucket {
+  timestamp: string;
+  totalRequests: number;
+  socialPreviewRequests: number;
+  otherAutomationRequests: number;
+  humanCandidateRequests: number;
+  unclassifiedRequests: number;
+}
+
+export interface ShortLinkAnalytics {
+  clicksCount: number;
+  socialPreviewRequests: number;
+  otherAutomationRequests: number;
+  humanCandidateRequests: number;
+  unclassifiedRequests: number;
+  unsegmentedRequests: number;
+  classifiedRequestsInRange: number;
+  recordedEventsInRange: number;
+  from: string;
+  to: string;
+  retentionDays: number;
+  coverageComplete: boolean;
+  buckets: ShortLinkAnalyticsBucket[];
+}
+
 /**
  * Type for creating a new short link (all fields required except id and clicksCount which may be generated)
  */

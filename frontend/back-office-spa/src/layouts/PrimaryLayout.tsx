@@ -11,6 +11,7 @@ import {
   DeferredRouteProgressProvider,
   useDeferredRoutePending,
 } from '../contexts/DeferredRouteProgressContext';
+import InstallPrompt from '../components/InstallPrompt';
 
 interface AuthLoaderData {
   channels: readonly Channel[];
@@ -73,6 +74,7 @@ const PrimaryLayoutContent: React.FC<PrimaryLayoutContentProps> = ({
           <Header onToggleSidebar={() => setSidebarOpen(open => !open)} />
           <main className="admin-content">
             <Breadcrumbs />
+            <InstallPrompt />
             <Outlet />
           </main>
           <Footer />

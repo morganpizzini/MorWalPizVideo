@@ -57,11 +57,13 @@ if (enableSwagger)
 
 builder.Services.AddScoped<IShortLinkDataService, ShortlinkDataService>();
 builder.Services.AddScoped<IShortLinkRedirectService, ShortLinkRedirectService>();
+builder.Services.AddSingleton<IShortLinkRequestClassifier, ShortLinkRequestClassifier>();
 if (enableMock)
 {
     builder.Services.AddSingleton<IMockScenarioLifecycle, MockScenarioLifecycle>();
     builder.Services.AddSingleton<IMockScenario>(provider => provider.GetRequiredService<IMockScenarioLifecycle>());
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkMockRepository>();
+    builder.Services.AddScoped<IShortLinkRequestEventRepository, ShortLinkRequestEventMockRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
@@ -70,6 +72,7 @@ if (enableMock)
 else
 {
     builder.Services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+    builder.Services.AddScoped<IShortLinkRequestEventRepository, ShortLinkRequestEventRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignRepository>();
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();

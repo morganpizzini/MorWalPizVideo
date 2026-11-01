@@ -124,6 +124,43 @@ public sealed class FreezerAnalysisApiTests
     }
 
     [Fact]
+    public async Task Development_mock_requires_login_and_issues_a_cookie_session()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+        });
+        using (var scope = factory.Services.CreateScope())
+        {
+            var seeded = await scope.ServiceProvider
+                .GetRequiredService<IPublicAccountRepository>()
+                .FindByUsernameAsync("FREEZERDEMO");
+            Assert.NotNull(seeded);
+        }
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+
+        var beforeLogin = await client.GetFromJsonAsync<MorWalPiz.Contracts.Contracts.PublicAccountSessionContract>("/api/v1/account/session");
+        Assert.NotNull(beforeLogin);
+        Assert.False(beforeLogin.Authenticated);
+
+        var csrfResponse = await client.GetAsync("/api/v1/account/csrf");
+        var csrf = await csrfResponse.Content.ReadFromJsonAsync<MorWalPiz.Contracts.Contracts.PublicAccountCsrfContract>();
+        Assert.NotNull(csrf);
+        client.DefaultRequestHeaders.Add("Cookie", $"freezer_account_csrf={csrf.Token}");
+        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", csrf.Token);
+        var login = await client.PostAsJsonAsync("/api/v1/account/sessions", new
+        {
+            identifier = "freezerdemo",
+            password = "FreezerDemo123!"
+        });
+
+        Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
+        var afterLogin = await client.GetFromJsonAsync<MorWalPiz.Contracts.Contracts.PublicAccountSessionContract>("/api/v1/account/session");
+        Assert.True(afterLogin?.Authenticated);
+        Assert.Equal("development-account", afterLogin?.Account?.Id);
+    }
+
+    [Fact]
     public void Development_mock_composition_uses_scoped_repository_with_shared_state()
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -147,6 +184,39 @@ public sealed class FreezerAnalysisApiTests
     }
 
     [Fact]
+    public async Task Development_mock_contains_a_ready_analysis_scenario()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+        });
+        using var client = await CreateAuthenticatedClientAsync(factory);
+
+        var matches = await client.GetFromJsonAsync<FreezerMatchResponse[]>("/api/v1/matches");
+        Assert.NotNull(matches);
+        Assert.Equal(3, matches.Length);
+        var target = Assert.Single(matches, match => match.Id == "mock-match-target");
+
+        var profile = await client.GetFromJsonAsync<FreezerProfileResponse>("/api/v1/profile");
+        Assert.Equal("mock-identity-alessia", profile!.IdentityId);
+        Assert.Equal("PRODUCTION", profile.Division);
+
+        var review = await client.GetFromJsonAsync<FreezerIdentityReviewEntryResponse[]>(
+            $"/api/v1/matches/{target.Id}/identities/review");
+        Assert.Equal(3, review!.Length);
+        Assert.Contains(review, entry => entry.DisplayName == "Alessia Bianchi" && entry.Candidates.Count == 1);
+
+        var draft = await client.GetFromJsonAsync<FreezerDraftResponse>(
+            $"/api/v1/matches/{target.Id}/draft");
+        Assert.Equal("mock-identity-alessia", draft!.IdentityId);
+
+        var estimate = await client.GetFromJsonAsync<FreezerEstimateResponse>(
+            $"/api/v1/matches/{target.Id}/estimate");
+        Assert.True(estimate!.IsAvailable, string.Join("; ", estimate.Diagnostics));
+        Assert.Equal(5, estimate.Stages.Count);
+    }
+
+    [Fact]
     public async Task Development_session_can_read_and_update_its_private_profile_with_csrf_protection()
     {
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -164,7 +234,7 @@ public sealed class FreezerAnalysisApiTests
         var update = await client.PutAsJsonAsync("/api/v1/profile", new FreezerProfileRequest
         {
             IdentityId = identity.Id,
-            Division = "prod",
+            Division = "PRODUCTION",
             PowerFactor = "Minor",
             Performance = 0.94
         });
@@ -173,7 +243,7 @@ public sealed class FreezerAnalysisApiTests
         var profile = await update.Content.ReadFromJsonAsync<FreezerProfileResponse>();
         Assert.NotNull(profile);
         Assert.Equal("development-account", profile.AccountId);
-        Assert.Equal("PROD", profile.Division);
+        Assert.Equal("PRODUCTION", profile.Division);
         Assert.Equal(0.94, profile.Performance);
     }
 
@@ -183,6 +253,7 @@ public sealed class FreezerAnalysisApiTests
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
+            builder.UseSetting("FreezerAnalysis:SeedMockData", "false");
         });
         using var client = await CreateAuthenticatedClientAsync(factory);
 
@@ -300,6 +371,7 @@ public sealed class FreezerAnalysisApiTests
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
+            builder.UseSetting("FreezerAnalysis:SeedMockData", "false");
         });
         using var client = await CreateAuthenticatedClientAsync(factory);
         var historicalDate = new DateOnly(2026, 10, 28);
@@ -870,13 +942,19 @@ public sealed class FreezerAnalysisApiTests
 
     private static async Task<HttpClient> CreateAuthenticatedClientAsync(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var csrfResponse = await client.GetAsync("/api/v1/account/csrf");
         Assert.Equal(HttpStatusCode.OK, csrfResponse.StatusCode);
         var csrf = await csrfResponse.Content.ReadFromJsonAsync<MorWalPiz.Contracts.Contracts.PublicAccountCsrfContract>();
         Assert.NotNull(csrf);
         client.DefaultRequestHeaders.Add("Cookie", $"freezer_account_csrf={csrf.Token}");
         client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", csrf.Token);
+        var login = await client.PostAsJsonAsync("/api/v1/account/sessions", new
+        {
+            identifier = "freezerdemo",
+            password = "FreezerDemo123!"
+        });
+        Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
         return client;
     }
 

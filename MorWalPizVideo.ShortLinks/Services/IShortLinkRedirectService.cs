@@ -7,6 +7,7 @@ public interface IShortLinkRedirectService
 {
     Task<ShortLink?> GetByCodeAsync(string code);
     Task<int> IncrementClicksAsync(string id);
+    Task<int> IncrementClicksAsync(string id, ShortLinkRequestCategory category, DateTime timestamp);
 }
 
 public sealed class ShortLinkRedirectService(IShortLinkRepository repository) : IShortLinkRedirectService
@@ -14,4 +15,7 @@ public sealed class ShortLinkRedirectService(IShortLinkRepository repository) : 
     public Task<ShortLink?> GetByCodeAsync(string code) => repository.GetByCodeAsync(code);
 
     public Task<int> IncrementClicksAsync(string id) => repository.IncrementClicksAsync(id);
+
+    public Task<int> IncrementClicksAsync(string id, ShortLinkRequestCategory category, DateTime timestamp)
+        => repository.IncrementClicksAsync(id, category, timestamp);
 }

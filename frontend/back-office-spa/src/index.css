@@ -232,6 +232,15 @@ body {
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem);
 }
 
+.install-prompt {
+  border-color: #9fc7d8;
+  box-shadow: 0 0.25rem 0.75rem rgb(23 33 43 / 8%);
+}
+
+.install-prompt p {
+  overflow-wrap: anywhere;
+}
+
 .admin-footer {
   flex-shrink: 0;
 }

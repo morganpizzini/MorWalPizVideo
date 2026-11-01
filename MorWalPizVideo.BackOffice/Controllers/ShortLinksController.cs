@@ -7,6 +7,7 @@ using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.Server.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
@@ -38,6 +39,27 @@ public class UpdateShortLinkRequest
 }
 
 public sealed record ShortLinkClickBucket(DateTime Timestamp, int Count);
+public sealed record ShortLinkAnalyticsBucket(
+    DateTime Timestamp,
+    int TotalRequests,
+    int SocialPreviewRequests,
+    int OtherAutomationRequests,
+    int HumanCandidateRequests,
+    int UnclassifiedRequests);
+public sealed record ShortLinkAnalyticsResponse(
+    int ClicksCount,
+    int SocialPreviewRequests,
+    int OtherAutomationRequests,
+    int HumanCandidateRequests,
+    int UnclassifiedRequests,
+    int UnsegmentedRequests,
+    int ClassifiedRequestsInRange,
+    int RecordedEventsInRange,
+    DateTime From,
+    DateTime To,
+    int RetentionDays,
+    bool CoverageComplete,
+    IReadOnlyList<ShortLinkAnalyticsBucket> Buckets);
 
 [RequireChannelScope]
 public class ShortLinksController : ApplicationControllerBase
@@ -51,8 +73,9 @@ public class ShortLinksController : ApplicationControllerBase
     private readonly IFacebookService facebookService;
     private readonly IAuditService auditService;
     private readonly IVideoAuthorizationService _authorization;
+    private readonly IShortLinkRequestEventRepository requestEventRepository;
     public ShortLinksController(ILinksService linksService, IContentService contentService, ITelegramService telegramService, ICrossApiService clientFactory, IConfiguration configuration,
-        IDiscordService discordService, IFacebookService facebookService, IVideoAuthorizationService authorization, IAuditService auditService)
+        IDiscordService discordService, IFacebookService facebookService, IVideoAuthorizationService authorization, IAuditService auditService, IShortLinkRequestEventRepository requestEventRepository)
     {
         _linksService = linksService;
         _contentService = contentService;
@@ -63,6 +86,7 @@ public class ShortLinksController : ApplicationControllerBase
         this.facebookService = facebookService;
         _authorization = authorization;
         this.auditService = auditService;
+        this.requestEventRepository = requestEventRepository;
     }
 
     [HttpGet]
@@ -154,6 +178,70 @@ public class ShortLinksController : ApplicationControllerBase
         }
 
         return Ok(buckets);
+    }
+
+    [HttpGet("{code}/analytics")]
+    [AllowUser(AuthorizationPermissionKeys.ShortLinksView, AuthorizationPermissionKeys.ShortLinksManage)]
+    public async Task<IActionResult> GetShortLinkAnalytics(string code, [FromQuery] string range = "24h")
+    {
+        var shortLink = await FindShortLinkAsync(code);
+        if (shortLink is null || !await CanAccessShortLinkAsync(shortLink))
+            return NotFound("Short link not found");
+
+        var now = DateTime.UtcNow;
+        var rangeKey = range.ToLowerInvariant();
+        if (rangeKey is not ("1h" or "24h" or "7d" or "all"))
+            return BadRequest("range must be one of: 1h, 24h, 7d, all");
+
+        var (from, bucketSize, bucketCount) = rangeKey switch
+        {
+            "1h" => (now.AddHours(-1), TimeSpan.FromMinutes(5), 12),
+            "24h" => (now.AddHours(-24), TimeSpan.FromHours(1), 24),
+            "7d" => (now.Date.AddDays(-6), TimeSpan.FromDays(1), 7),
+            "all" => (now.AddDays(-90), TimeSpan.FromDays(30), 3),
+            _ => throw new InvalidOperationException("Unsupported analytics range")
+        };
+
+        var events = await requestEventRepository.GetByShortLinkIdAsync(shortLink.Id, from, now.AddTicks(1));
+        var buckets = Enumerable.Range(0, bucketCount)
+            .Select(index => new ShortLinkAnalyticsBucket(from + bucketSize * index, 0, 0, 0, 0, 0))
+            .ToArray();
+        foreach (var eventItem in events)
+        {
+            var index = (int)((eventItem.Timestamp - from).Ticks / bucketSize.Ticks);
+            if (index < 0 || index >= buckets.Length)
+                continue;
+            var bucket = buckets[index];
+            buckets[index] = bucket with
+            {
+                TotalRequests = bucket.TotalRequests + 1,
+                SocialPreviewRequests = bucket.SocialPreviewRequests + (eventItem.Category == ShortLinkRequestCategory.SocialPreview ? 1 : 0),
+                OtherAutomationRequests = bucket.OtherAutomationRequests + (eventItem.Category == ShortLinkRequestCategory.OtherAutomation ? 1 : 0),
+                HumanCandidateRequests = bucket.HumanCandidateRequests + (eventItem.Category == ShortLinkRequestCategory.HumanCandidate ? 1 : 0),
+                UnclassifiedRequests = bucket.UnclassifiedRequests + (eventItem.Category == ShortLinkRequestCategory.Unclassified ? 1 : 0)
+            };
+        }
+
+        var classified = shortLink.SocialPreviewRequests + shortLink.OtherAutomationRequests +
+            shortLink.HumanCandidateRequests + shortLink.UnclassifiedRequests;
+        var unsegmented = shortLink.ClicksCount - classified;
+        if (unsegmented < 0)
+            return UnprocessableEntity("Short-link classification counters are inconsistent");
+
+        return Ok(new ShortLinkAnalyticsResponse(
+            shortLink.ClicksCount,
+            shortLink.SocialPreviewRequests,
+            shortLink.OtherAutomationRequests,
+            shortLink.HumanCandidateRequests,
+            shortLink.UnclassifiedRequests,
+            unsegmented,
+            events.Count,
+            events.Count,
+            from,
+            now,
+            90,
+            events.Count == buckets.Sum(bucket => bucket.TotalRequests),
+            buckets));
     }
     [HttpPost]
     [AllowUser(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]

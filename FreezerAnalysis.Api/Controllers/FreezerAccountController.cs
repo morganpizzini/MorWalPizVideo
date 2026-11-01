@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -82,8 +81,6 @@ public sealed class FreezerAccountController(
     [AllowAnonymous]
     public async Task<ActionResult<PublicAccountSessionContract>> Session(CancellationToken cancellationToken)
     {
-        if (environment.IsDevelopment() && User.Identity?.IsAuthenticated == true)
-            return Ok(ToDevelopmentSessionContract(User));
         if (!Request.Cookies.TryGetValue(SessionCookie, out var token))
             return Ok(new PublicAccountSessionContract { Authenticated = false });
 
@@ -125,15 +122,4 @@ public sealed class FreezerAccountController(
             }
         };
 
-    private static PublicAccountSessionContract ToDevelopmentSessionContract(ClaimsPrincipal principal) =>
-        new()
-        {
-            Authenticated = true,
-            Account = new PublicAccountSummaryContract
-            {
-                Id = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "development-account",
-                Username = principal.Identity?.Name ?? "development",
-                DisplayName = principal.Identity?.Name ?? "FreezerAnalysis Development"
-            }
-        };
 }
