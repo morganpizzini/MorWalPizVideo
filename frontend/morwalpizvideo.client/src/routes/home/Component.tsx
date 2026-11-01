@@ -4,7 +4,7 @@ import DateDisplay from '@utils/date-display';
 import SEO from '@utils/seo';
 import './style.scss';
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from 'react-share';
-import ReactGA from 'react-ga4';
+import { trackPageView } from '../../analytics/consent';
 import configKeys from '@utils/configKeys';
 import type { ChannelNews, Survey } from '@morwalpizvideo/models';
 import { usePublicNavigation } from '../layout/navigation';
@@ -63,7 +63,7 @@ export default function Index() {
 
   useEffect(() => {
     if (!hasSentPageView.current) {
-      ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: 'Home' });
+      trackPageView('home', '/');
       hasSentPageView.current = true;
     }
   }, []);

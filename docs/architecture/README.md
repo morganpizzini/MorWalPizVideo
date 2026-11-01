@@ -47,6 +47,7 @@ Excluded:
 20. [Shooting Range POC](../shooting-range-architecture.md)
 21. [Anonymous Web Push](adr/ADR-017-anonymous-web-push.md)
 22. [BackOffice and ServerAPI consistency audit](api-consistency-audit.md)
+23. [Editorial production cards](adr/ADR-019-editorial-production-cards.md)
 
 ## Architectural Baseline
 

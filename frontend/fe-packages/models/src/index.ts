@@ -71,6 +71,11 @@ export type {
   ChannelNewsStatus,
 } from "./channelNews";
 export type {
+  EditorialProductionCard,
+  EditorialProductionCardRequest,
+  EditorialProductionCardStatus,
+} from "./editorialProductionCard";
+export type {
   Gallery,
   GalleryImage,
   GalleryPublic,

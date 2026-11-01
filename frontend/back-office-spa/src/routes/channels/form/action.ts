@@ -9,6 +9,10 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
   const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
   const shortLinkUrl = typeof values.shortLinkUrl === 'string' ? values.shortLinkUrl.trim() : '';
+  const youTubeStudioUrl =
+    typeof values.youTubeStudioUrl === 'string' ? values.youTubeStudioUrl.trim() : '';
+  const googleAnalyticsUrl =
+    typeof values.googleAnalyticsUrl === 'string' ? values.googleAnalyticsUrl.trim() : '';
   const isSHIT = values.isSHIT === 'true';
   const socials = parseSocials(values.socials);
   const socialPublishing = parseSocialPublishing(values.socialPublishing);
@@ -40,6 +44,8 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelId: id,
         channelName,
         shortLinkUrl,
+        youTubeStudioUrl,
+        googleAnalyticsUrl,
         socials: socials ?? [],
         socialPublishing,
         ...(typeof values.isSHIT === 'string' ? { isSHIT } : {}),
@@ -76,7 +82,9 @@ type PublishingProviderPayload = {
   clearCredential: boolean;
 };
 
-function parseSocialPublishing(value: FormDataEntryValue | undefined): Record<string, PublishingProviderPayload> | null {
+function parseSocialPublishing(
+  value: FormDataEntryValue | undefined
+): Record<string, PublishingProviderPayload> | null {
   const emptyProvider = (): PublishingProviderPayload => ({ clearCredential: false });
   if (typeof value !== 'string' || !value.trim()) {
     return { telegram: emptyProvider(), discord: emptyProvider(), facebook: emptyProvider() };
@@ -91,15 +99,19 @@ function parseSocialPublishing(value: FormDataEntryValue | undefined): Record<st
       const candidate = (parsed as Record<string, unknown>)[provider];
       if (typeof candidate !== 'object' || candidate === null) return null;
       const values = candidate as Record<string, unknown>;
-      if (values.destinationId !== undefined && typeof values.destinationId !== 'string') return null;
+      if (values.destinationId !== undefined && typeof values.destinationId !== 'string')
+        return null;
       if (values.credential !== undefined && typeof values.credential !== 'string') return null;
-      if (values.clearCredential !== undefined && typeof values.clearCredential !== 'boolean') return null;
+      if (values.clearCredential !== undefined && typeof values.clearCredential !== 'boolean')
+        return null;
 
       result[provider] = {
-        destinationId: typeof values.destinationId === 'string' ? values.destinationId.trim() : undefined,
-        credential: typeof values.credential === 'string' && values.credential.trim()
-          ? values.credential.trim()
-          : undefined,
+        destinationId:
+          typeof values.destinationId === 'string' ? values.destinationId.trim() : undefined,
+        credential:
+          typeof values.credential === 'string' && values.credential.trim()
+            ? values.credential.trim()
+            : undefined,
         clearCredential: values.clearCredential === true,
       };
     }
@@ -109,7 +121,9 @@ function parseSocialPublishing(value: FormDataEntryValue | undefined): Record<st
   }
 }
 
-function parseSocials(value: FormDataEntryValue | undefined): { provider: string; handler: string }[] | null {
+function parseSocials(
+  value: FormDataEntryValue | undefined
+): { provider: string; handler: string }[] | null {
   if (typeof value !== 'string' || !value.trim()) {
     return [];
   }
@@ -119,11 +133,19 @@ function parseSocials(value: FormDataEntryValue | undefined): { provider: string
     if (!Array.isArray(parsed)) return null;
 
     return parsed
-      .filter((social): social is { provider: string; handler: string } =>
-        typeof social === 'object' && social !== null &&
-        'provider' in social && typeof social.provider === 'string' &&
-        'handler' in social && typeof social.handler === 'string')
-      .map(social => ({ provider: social.provider.toLowerCase().trim(), handler: social.handler.trim() }))
+      .filter(
+        (social): social is { provider: string; handler: string } =>
+          typeof social === 'object' &&
+          social !== null &&
+          'provider' in social &&
+          typeof social.provider === 'string' &&
+          'handler' in social &&
+          typeof social.handler === 'string'
+      )
+      .map(social => ({
+        provider: social.provider.toLowerCase().trim(),
+        handler: social.handler.trim(),
+      }))
       .filter(social => social.provider && social.handler);
   } catch {
     return null;

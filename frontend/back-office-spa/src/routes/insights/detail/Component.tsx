@@ -15,6 +15,7 @@ import {
   insightsArticleDraftsApi,
   insightsContentPlansApi,
   insightsTopicsApi,
+  createEditorialProductionCardFromPlan,
 } from '@morwalpizvideo/services';
 import type { InsightArticleDraftMode } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
@@ -86,11 +87,16 @@ const InsightTopicDetail: React.FC = () => {
     permissions.pages.create,
     permissions.pages.manage,
   ]);
+  const canCreateProductionCard = hasPermission(effectivePermissions, [
+    permissions.editorialproductioncards.create,
+    permissions.editorialproductioncards.manage,
+  ]);
   const [articlePlan, setArticlePlan] = useState<InsightContentPlan>();
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [articleMode, setArticleMode] = useState<InsightArticleDraftMode>('firstDraft');
   const [additionalInformation, setAdditionalInformation] = useState('');
   const [creatingArticle, setCreatingArticle] = useState(false);
+  const [creatingCardId, setCreatingCardId] = useState<string>();
 
   const orderedNewsItems = orderInsightNewsItems(newsItems);
   const acceptedNews = orderedNewsItems.filter(item => item.status === InsightNewsStatus.Accepted);
@@ -118,6 +124,23 @@ const InsightTopicDetail: React.FC = () => {
       );
     } finally {
       setCreatingArticle(false);
+    }
+  };
+
+  const createProductionCard = async (plan: InsightContentPlan) => {
+    if (!canCreateProductionCard) return;
+    setCreatingCardId(plan.id);
+    try {
+      const card = await createEditorialProductionCardFromPlan(plan.id);
+      navigate(`/editorialproductioncards/${card.id}`);
+    } catch (error) {
+      toast.show(
+        'Error',
+        error instanceof Error ? error.message : 'Unable to create production card',
+        { variant: 'danger' }
+      );
+    } finally {
+      setCreatingCardId(undefined);
     }
   };
 
@@ -477,6 +500,18 @@ const InsightTopicDetail: React.FC = () => {
                               }}
                             >
                               Create article
+                            </Button>
+                          )}
+                          {canCreateProductionCard && (
+                            <Button
+                              size="sm"
+                              variant="outline-primary"
+                              disabled={creatingCardId !== undefined}
+                              onClick={() => createProductionCard(plan)}
+                            >
+                              {creatingCardId === plan.id
+                                ? 'Creating...'
+                                : 'Create production card'}
                             </Button>
                           )}
                           <small className="text-muted">

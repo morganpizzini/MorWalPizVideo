@@ -95,6 +95,14 @@ validated against the same channel, and title uniqueness is enforced per
 channel. `DigitalProduct` and `DigitalProductCategory` remain shop-owned and
 are intentionally excluded.
 
+Editorial production cards are BackOffice-owned, private, channel-scoped
+documents in the dedicated `editorialProductionCards` Mongo collection. Their
+API uses the existing `RequireChannelScope` boundary and explicit Contracts
+DTOs; card state changes do not publish content or mutate the public ServerAPI
+surface. References to insight/content records remain additive and must be
+validated against the selected channel before the workflow is expanded beyond
+manual card editing.
+
 BackOffice also exposes `POST /api/products/bulk` for up to 100 product rows
 and `POST /api/products/categories/bulk` for one category merge operation over
 selected products. Both return per-row outcomes and preserve the existing CRUD

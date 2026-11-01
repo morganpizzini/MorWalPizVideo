@@ -38,6 +38,14 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("channelLogoUrl")]
         public string ChannelLogoUrl { get; init; } = string.Empty;
 
+        [DataMember]
+        [BsonElement("youtubeStudioUrl")]
+        public string YouTubeStudioUrl { get; init; } = string.Empty;
+
+        [DataMember]
+        [BsonElement("googleAnalyticsUrl")]
+        public string GoogleAnalyticsUrl { get; init; } = string.Empty;
+
         [BsonElement("socialPublishing")]
         public SocialPublishingConfiguration SocialPublishing { get; init; } = new();
 

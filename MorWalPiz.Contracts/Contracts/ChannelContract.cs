@@ -30,6 +30,12 @@ public class ChannelContract
     public string ChannelLogoUrl { get; set; } = string.Empty;
 
     [DataMember]
+    public string YouTubeStudioUrl { get; set; } = string.Empty;
+
+    [DataMember]
+    public string GoogleAnalyticsUrl { get; set; } = string.Empty;
+
+    [DataMember]
     public List<ChannelSocialContract> Socials { get; set; } = [];
 
     [DataMember]

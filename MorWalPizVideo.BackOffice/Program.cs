@@ -368,6 +368,9 @@ builder.Services.AddScoped<ILinksService, LinksService>();
 builder.Services.AddScoped<IShortLinkMigrationService, ShortLinkMigrationService>();
 builder.Services.AddScoped<IQuickLinksService, QuickLinksService>();
 builder.Services.AddScoped<IChannelNewsService, ChannelNewsService>();
+builder.Services.AddScoped<IEditorialProductionCardService, EditorialProductionCardService>();
+builder.Services.AddScoped<IEditorialProductionCardReferenceValidator, EditorialProductionCardReferenceValidator>();
+builder.Services.AddScoped<IEditorialProductionCardPlanSource, EditorialProductionCardPlanSource>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<BlogService>();
@@ -410,6 +413,7 @@ if (enableMock)
     builder.Services.AddScoped<IShortLinkRequestEventRepository, ShortLinkRequestEventMockRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksMockRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsMockRepository>();
+    builder.Services.AddScoped<IEditorialProductionCardRepository, EditorialProductionCardMockRepository>();
     builder.Services.AddScoped<IGalleryRepository, GalleryMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryMockRepository>();
@@ -530,6 +534,7 @@ else
     builder.Services.AddScoped<IShortLinkRequestEventRepository, ShortLinkRequestEventRepository>();
     builder.Services.AddScoped<IQuickLinksRepository, QuickLinksRepository>();
     builder.Services.AddScoped<IChannelNewsRepository, ChannelNewsRepository>();
+    builder.Services.AddScoped<IEditorialProductionCardRepository, EditorialProductionCardRepository>();
     builder.Services.AddScoped<IGalleryRepository, GalleryRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();

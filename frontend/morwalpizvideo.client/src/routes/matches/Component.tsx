@@ -3,7 +3,7 @@ import { useLoaderData } from 'react-router';
 import './style.scss';
 import SEO from '@utils/seo';
 import DateDisplay from '@utils/date-display';
-import ReactGA from 'react-ga4';
+import { trackPageView } from '../../analytics/consent';
 import { VideoPlayer } from '@morwalpiz/layout';
 interface MatchVideoRef {
   youtubeId: string;
@@ -27,7 +27,7 @@ interface MatchImage {
 export default function Matches() {
   const { match, images } = useLoaderData() as { match: MatchData; images: MatchImage[] };
   if (typeof window !== 'undefined') {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: match.title });
+    trackPageView('match', '/matches/:id');
   }
   return (
     <>

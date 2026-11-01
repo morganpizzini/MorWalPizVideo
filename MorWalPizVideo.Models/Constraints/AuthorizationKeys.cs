@@ -68,6 +68,12 @@ public static class AuthorizationPermissionKeys
   public const string ChannelNewsUpdate = "channelnews.update";
   public const string ChannelNewsDelete = "channelnews.delete";
 
+  public const string EditorialProductionCardsView = "editorialproductioncards.view";
+  public const string EditorialProductionCardsManage = "editorialproductioncards.manage";
+  public const string EditorialProductionCardsCreate = "editorialproductioncards.create";
+  public const string EditorialProductionCardsUpdate = "editorialproductioncards.update";
+  public const string EditorialProductionCardsDelete = "editorialproductioncards.delete";
+
   public const string AskView = "ask.view";
   public const string AskManage = "ask.manage";
   public const string AskCreate = "ask.create";

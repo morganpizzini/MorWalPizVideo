@@ -29,6 +29,8 @@ public class AddChannelRequest
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
     public SocialPublishingConfigurationRequest SocialPublishing { get; set; } = new();
+    public string? YouTubeStudioUrl { get; set; }
+    public string? GoogleAnalyticsUrl { get; set; }
 }
 
 public class UpdateChannelRequest
@@ -43,6 +45,8 @@ public class UpdateChannelRequest
 
     public List<ChannelSocialRequest> Socials { get; set; } = [];
     public SocialPublishingConfigurationRequest SocialPublishing { get; set; } = new();
+    public string? YouTubeStudioUrl { get; set; }
+    public string? GoogleAnalyticsUrl { get; set; }
 }
 
 public class ChannelSocialRequest
@@ -189,11 +193,15 @@ public class ChannelsController : ApplicationControllerBase
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
         var socialPublishing = BuildSocialPublishing(request.SocialPublishing, null, channelId, out var publishingError);
         if (publishingError is not null) return BadRequest(publishingError);
+        var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
+        if (externalLinks is null) return BadRequest("Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
         await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim())
         {
             ShortLinkUrl = shortLinkUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
+            YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
+            GoogleAnalyticsUrl = externalLinks.Value.GoogleAnalyticsUrl,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
@@ -224,16 +232,36 @@ public class ChannelsController : ApplicationControllerBase
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
         var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError);
         if (publishingError is not null) return BadRequest(publishingError);
+        var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
+        if (externalLinks is null) return BadRequest("Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
         await _dataService.UpdateChannel(existing with
         {
             ChannelName = request.ChannelName.Trim(),
             ShortLinkUrl = shortLinkUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
+            YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
+            GoogleAnalyticsUrl = externalLinks.Value.GoogleAnalyticsUrl,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
         return Ok(new { success = true, cacheInvalidation });
+    }
+
+    private static (string YouTubeStudioUrl, string GoogleAnalyticsUrl)? NormalizeExternalAnalyticsLinks(string? youtubeStudioUrl, string? googleAnalyticsUrl)
+    {
+        var youtube = NormalizeExternalAnalyticsLink(youtubeStudioUrl);
+        var analytics = NormalizeExternalAnalyticsLink(googleAnalyticsUrl);
+        return youtube is null || analytics is null ? null : (youtube, analytics);
+    }
+
+    private static string? NormalizeExternalAnalyticsLink(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+            !string.IsNullOrWhiteSpace(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            return null;
+        return uri.ToString();
     }
 
     [HttpDelete("{id}")]

@@ -48,6 +48,8 @@ const ChannelForm: React.FC = () => {
   const [yTChannelId, setYTChannelId] = useState('');
   const [isSHIT, setIsSHIT] = useState(false);
   const [shortLinkUrl, setShortLinkUrl] = useState('');
+  const [youTubeStudioUrl, setYouTubeStudioUrl] = useState('');
+  const [googleAnalyticsUrl, setGoogleAnalyticsUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [socials, setSocials] = useState<ChannelSocial[]>([]);
   const [socialPublishing, setSocialPublishing] = useState<
@@ -75,6 +77,8 @@ const ChannelForm: React.FC = () => {
       setChannelName(entity.channelName);
       setIsSHIT(entity.isSHIT ?? false);
       setShortLinkUrl(entity.shortLinkUrl ?? '');
+      setYouTubeStudioUrl(entity.youTubeStudioUrl ?? '');
+      setGoogleAnalyticsUrl(entity.googleAnalyticsUrl ?? '');
       setSocials(
         entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ??
           []
@@ -129,6 +133,8 @@ const ChannelForm: React.FC = () => {
       {
         ...payload,
         shortLinkUrl,
+        youTubeStudioUrl,
+        googleAnalyticsUrl,
         socials: JSON.stringify(socials),
         socialPublishing: JSON.stringify(socialPublishing),
       },
@@ -193,6 +199,28 @@ const ChannelForm: React.FC = () => {
             onChange={e => setShortLinkUrl(e.target.value)}
             placeholder="https://example.com/sl"
           />
+        </Form.Group>
+
+        <Form.Group controlId="formYouTubeStudioUrl" className="mb-3">
+          <Form.Label>YouTube Studio link</Form.Label>
+          <Form.Control
+            type="url"
+            value={youTubeStudioUrl}
+            onChange={e => setYouTubeStudioUrl(e.target.value)}
+            placeholder="https://studio.youtube.com/..."
+          />
+          <Form.Text>Optional HTTPS link opened from the BackOffice channel context.</Form.Text>
+        </Form.Group>
+
+        <Form.Group controlId="formGoogleAnalyticsUrl" className="mb-3">
+          <Form.Label>Google Analytics link</Form.Label>
+          <Form.Control
+            type="url"
+            value={googleAnalyticsUrl}
+            onChange={e => setGoogleAnalyticsUrl(e.target.value)}
+            placeholder="https://analytics.google.com/..."
+          />
+          <Form.Text>Optional HTTPS link opened from the BackOffice channel context.</Form.Text>
         </Form.Group>
 
         <Form.Check

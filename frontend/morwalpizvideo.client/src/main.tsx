@@ -6,7 +6,7 @@ import { routes } from './routes/config';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { HelmetProvider } from 'react-helmet-async';
-import ReactGA from 'react-ga4';
+import ConsentBanner from './analytics/ConsentBanner';
 import BuyMeWidget from '@utils/buy-me-widget';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { registerSW } from 'virtual:pwa-register';
@@ -28,11 +28,6 @@ const updateSW = registerSW({
   },
 });
 
-const gaTrackingId = 'G-ST9GQYL925';
-if (window.location.hostname != 'localhost') {
-  ReactGA.initialize(gaTrackingId);
-}
-
 const app = (
   <StrictMode>
     <HelmetProvider>
@@ -41,6 +36,7 @@ const app = (
       </GoogleReCaptchaProvider>
     </HelmetProvider>
     <BuyMeWidget />
+    <ConsentBanner />
   </StrictMode>
 );
 

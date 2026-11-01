@@ -14,6 +14,17 @@ uses the existing insight agent for AI modes, and returns a typed unsaved draft.
 passes that result into the existing Blog editor; it never creates or publishes a Blog
 post until the user explicitly saves it.
 
+### Editorial production cards
+
+The BackOffice SPA exposes the protected `/editorial-production-cards` route
+for channel-scoped production tracking. Cards are persisted by the BackOffice
+API with explicit revision checks and server-owned status transitions; saving
+a card never uploads or publishes a video. Optional YouTube Studio and Google
+Analytics URLs belong to the selected channel and are rendered as safe
+external links in the sidebar when configured. The public client continues to
+own consent-aware analytics, while the BackOffice does not proxy or store
+private provider reports.
+
 ### Blog article prettify
 
 The Blog create/edit editor exposes an authenticated **Prettify article** action. It

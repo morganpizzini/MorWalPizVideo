@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import './footer.scss';
 import PublicNavigationLink from '../components/PublicNavigationLink';
 import { usePublicNavigation } from '../routes/layout/navigation';
+import { ConsentPreferencesButton } from '../analytics/ConsentBanner';
 export default function TitleComponent() {
   const { navigation, loading, error } = usePublicNavigation();
 
@@ -62,6 +63,9 @@ export default function TitleComponent() {
                 <Link to="/terms" className="nav-link p-0 link-light">
                   Termini di utilizzo
                 </Link>
+              </li>
+              <li className="nav-item mb-2">
+                <ConsentPreferencesButton />
               </li>
             </ul>
           </div>

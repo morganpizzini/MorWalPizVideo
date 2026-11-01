@@ -74,6 +74,13 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.QuickLinksUpdate,
           AuthorizationPermissionKeys.QuickLinksDelete
         ],
+        [AuthorizationPermissionKeys.EditorialProductionCardsManage] =
+        [
+          AuthorizationPermissionKeys.EditorialProductionCardsView,
+          AuthorizationPermissionKeys.EditorialProductionCardsCreate,
+          AuthorizationPermissionKeys.EditorialProductionCardsUpdate,
+          AuthorizationPermissionKeys.EditorialProductionCardsDelete
+        ],
         [AuthorizationPermissionKeys.QueryLinksManage] =
         [
           AuthorizationPermissionKeys.QueryLinksView,

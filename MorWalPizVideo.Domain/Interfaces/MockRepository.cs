@@ -594,6 +594,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class EditorialProductionCardMockRepository(IMockScenario scenario)
+        : BaseMockRepository<EditorialProductionCard>(scenario, "editorialProductionCards"), IEditorialProductionCardRepository
+    {
+    }
+
     public sealed class GalleryMockRepository(IMockScenario scenario)
         : BaseMockRepository<Gallery>(scenario, "galleries"), IGalleryRepository
     {

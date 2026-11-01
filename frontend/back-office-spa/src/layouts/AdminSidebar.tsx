@@ -1,4 +1,5 @@
 import { Nav, Offcanvas } from 'react-bootstrap';
+import { BarChart3, Youtube } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { adminMenuGroups, canAccessMenuItem } from './adminMenu';
 import { useChannelContext } from '../contexts/ChannelContext';
@@ -15,7 +16,9 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
   const content = (
     <Nav as="nav" aria-label="Admin navigation" className="flex-column gap-1 px-3 pb-3">
       <div className="channel-selector mb-3">
-        <label className="sidebar-section-label d-block" htmlFor="channel-selector">Channel</label>
+        <label className="sidebar-section-label d-block" htmlFor="channel-selector">
+          Channel
+        </label>
         <select
           id="channel-selector"
           className="form-select form-select-sm"
@@ -26,7 +29,9 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
         >
           {channels.length === 0 ? <option value="">No accessible channels</option> : null}
           {channels.map(channel => (
-            <option key={channel.channelId} value={channel.channelId}>{channel.channelName}</option>
+            <option key={channel.channelId} value={channel.channelId}>
+              {channel.channelName}
+            </option>
           ))}
         </select>
       </div>
@@ -54,6 +59,36 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
           </div>
         );
       })}
+      {(() => {
+        const selected = channels.find(channel => channel.channelId === selectedChannelId);
+        const externalLinks = [
+          selected?.youTubeStudioUrl
+            ? { label: 'YouTube Studio', url: selected.youTubeStudioUrl, Icon: Youtube }
+            : null,
+          selected?.googleAnalyticsUrl
+            ? { label: 'Google Analytics', url: selected.googleAnalyticsUrl, Icon: BarChart3 }
+            : null,
+        ].filter(Boolean) as { label: string; url: string; Icon: typeof Youtube }[];
+        if (externalLinks.length === 0) return null;
+        return (
+          <div className="mt-auto border-top pt-3 px-3 pb-3">
+            <div className="sidebar-section-label">External reports</div>
+            {externalLinks.map(({ label, url, Icon }) => (
+              <a
+                className="nav-link d-flex align-items-center gap-2"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                key={label}
+                onClick={onHide}
+              >
+                <Icon size={17} aria-hidden="true" />
+                <span>{label}</span>
+              </a>
+            ))}
+          </div>
+        );
+      })()}
     </Nav>
   );
 

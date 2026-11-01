@@ -31,6 +31,10 @@ import type {
 } from "@morwalpizvideo/models";
 import type { ChannelNewsAdmin, Match } from "@morwalpizvideo/models";
 import type {
+  EditorialProductionCard,
+  EditorialProductionCardRequest,
+} from "@morwalpizvideo/models";
+import type {
   Gallery,
   GalleryPublic,
   SaveGalleryRequest,
@@ -1107,6 +1111,45 @@ export const deleteChannelNewsImage = (id: string, imageIndex: number) =>
       imageIndex: String(imageIndex),
     }),
   ) as Promise<ChannelNewsAdmin>;
+
+export const fetchEditorialProductionCards = (): Promise<
+  EditorialProductionCard[]
+> =>
+  get(endpoints.EDITORIAL_PRODUCTION_CARDS) as Promise<
+    EditorialProductionCard[]
+  >;
+
+export const getEditorialProductionCard = (
+  id: string,
+): Promise<EditorialProductionCard> =>
+  get(
+    ComposeUrl(endpoints.EDITORIAL_PRODUCTION_CARD_DETAIL, { id }),
+  ) as Promise<EditorialProductionCard>;
+
+export const createEditorialProductionCard = (
+  payload: EditorialProductionCardRequest,
+) =>
+  post(
+    endpoints.EDITORIAL_PRODUCTION_CARDS,
+    payload,
+  ) as Promise<EditorialProductionCard>;
+export const createEditorialProductionCardFromPlan = (planId: string) =>
+  post(
+    ComposeUrl(endpoints.EDITORIAL_PRODUCTION_CARD_FROM_PLAN, { planId }),
+    {},
+  ) as Promise<EditorialProductionCard>;
+
+export const updateEditorialProductionCard = (
+  id: string,
+  payload: EditorialProductionCardRequest,
+) =>
+  put(
+    ComposeUrl(endpoints.EDITORIAL_PRODUCTION_CARD_DETAIL, { id }),
+    payload,
+  ) as Promise<EditorialProductionCard>;
+
+export const deleteEditorialProductionCard = (id: string) =>
+  Delete(ComposeUrl(endpoints.EDITORIAL_PRODUCTION_CARD_DETAIL, { id }));
 
 export const uploadVideoImages = (id: string, files: readonly File[]) => {
   const formData = new FormData();

@@ -111,6 +111,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<QuickLinks?> GetByUrlAsync(string url);
     }
     public interface IChannelNewsRepository : IRepository<ChannelNews> { }
+    public interface IEditorialProductionCardRepository : IRepository<EditorialProductionCard> { }
     public interface IGalleryRepository : IRepository<Gallery>
     {
         Task<Gallery?> GetBySlugAsync(string channelId, string slug);

@@ -50,6 +50,15 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         permissions: [permissions.videos.view, permissions.videos.manage],
         icon: ListVideo,
       },
+      {
+        label: 'Editorial production',
+        path: '/editorialproductioncards',
+        permissions: [
+          permissions.editorialproductioncards.view,
+          permissions.editorialproductioncards.manage,
+        ],
+        icon: WandSparkles,
+      },
       { label: 'Channels', path: '/channels', permissions: [permissions.channels.admin], icon: Tv },
       {
         label: 'Categories',

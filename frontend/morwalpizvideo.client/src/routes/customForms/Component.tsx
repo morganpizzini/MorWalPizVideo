@@ -4,24 +4,45 @@ import { CustomFormRenderer } from '@morwalpiz/layout';
 import type { AnyAnswer, CustomForm as CustomFormModel } from '@morwalpizvideo/models';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { submitFormResponse } from '../../services/customForms';
-import ReactGA from 'react-ga4';
+import { trackEvent, trackPageView } from '../../analytics/consent';
 
 const QuestionType = {
   Open: 0,
   MultipleChoice: 1,
-  SingleChoice: 2
+  SingleChoice: 2,
 };
 
 const AnswerType = {
   Open: 0,
   MultipleChoice: 1,
-  SingleChoice: 2
+  SingleChoice: 2,
 };
 
-interface FormOption { optionId: string; optionText: string }
-interface FormQuestion { questionId: string; questionText: string; questionType: number; isRequired: boolean; options: FormOption[] }
-interface CustomFormData { id: string; url: string; title: string; description?: string; questions: FormQuestion[] }
-interface AnswerEntry { questionId: string; answerType: number; textResponse?: string; selectedOptionIds?: string[]; selectedOptionId?: string }
+interface FormOption {
+  optionId: string;
+  optionText: string;
+}
+interface FormQuestion {
+  questionId: string;
+  questionText: string;
+  questionType: number;
+  isRequired: boolean;
+  options: FormOption[];
+}
+interface CustomFormData {
+  id: string;
+  url: string;
+  title: string;
+  description?: string;
+  questions: FormQuestion[];
+}
+interface AnswerEntry {
+  questionId: string;
+  answerType: number;
+  textResponse?: string;
+  selectedOptionIds?: string[];
+  selectedOptionId?: string;
+}
 
 export function LegacyCustomForm() {
   const { form } = useLoaderData() as { form: CustomFormData };
@@ -32,17 +53,21 @@ export function LegacyCustomForm() {
 
   // Track page view
   useEffect(() => {
-    ReactGA.send({ hitType: 'pageview', page: `/forms/${form.url}`, title: form.title });
+    trackPageView('form', '/forms/:url');
   }, [form.url, form.title]);
 
-  const handleAnswerChange = (questionId: string, value: Partial<AnswerEntry>, questionType: number) => {
-    setAnswers(prev => ({
+  const handleAnswerChange = (
+    questionId: string,
+    value: Partial<AnswerEntry>,
+    questionType: number
+  ) => {
+    setAnswers((prev) => ({
       ...prev,
       [questionId]: {
         questionId,
         answerType: questionType,
-        ...value
-      }
+        ...value,
+      },
     }));
   };
 
@@ -56,7 +81,7 @@ export function LegacyCustomForm() {
       .find((q: FormQuestion) => {
         const answer = answers[q.questionId];
         if (!answer) return true;
-        
+
         if (q.questionType === QuestionType.Open) {
           return !answer.textResponse || answer.textResponse.trim() === '';
         } else if (q.questionType === QuestionType.MultipleChoice) {
@@ -81,19 +106,19 @@ export function LegacyCustomForm() {
           return {
             questionId: q.questionId,
             answerType: AnswerType.Open,
-            textResponse: ''
+            textResponse: '',
           };
         } else if (q.questionType === QuestionType.MultipleChoice) {
           return {
             questionId: q.questionId,
             answerType: AnswerType.MultipleChoice,
-            selectedOptionIds: []
+            selectedOptionIds: [],
           };
         } else {
           return {
             questionId: q.questionId,
             answerType: AnswerType.SingleChoice,
-            selectedOptionId: ''
+            selectedOptionId: '',
           };
         }
       }
@@ -105,13 +130,9 @@ export function LegacyCustomForm() {
     try {
       await submitFormResponse(form.id, answersArray as AnyAnswer[]);
       setIsSubmitted(true);
-      
+
       // Track form submission
-      ReactGA.event({
-        category: 'Form',
-        action: 'Submit',
-        label: form.title
-      });
+      trackEvent('form_submit', { form_type: 'custom' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit form. Please try again.');
       console.error('Error submitting form:', err);
@@ -128,8 +149,14 @@ export function LegacyCustomForm() {
             <div className="card shadow">
               <div className="card-body text-center py-5">
                 <div className="mb-4">
-                  <svg width="64" height="64" fill="currentColor" className="text-success" viewBox="0 0 16 16">
-                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                  <svg
+                    width="64"
+                    height="64"
+                    fill="currentColor"
+                    className="text-success"
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
                   </svg>
                 </div>
                 <h2 className="mb-3">Thank You!</h2>
@@ -151,9 +178,7 @@ export function LegacyCustomForm() {
               <h1 className="h3 mb-0">{form.title}</h1>
             </div>
             <div className="card-body">
-              {form.description && (
-                <p className="text-muted mb-4">{form.description}</p>
-              )}
+              {form.description && <p className="text-muted mb-4">{form.description}</p>}
 
               {error && (
                 <div className="alert alert-danger" role="alert">
@@ -175,17 +200,19 @@ export function LegacyCustomForm() {
                         rows={4}
                         placeholder="Enter your answer..."
                         required={question.isRequired}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleAnswerChange(
-                          question.questionId,
-                          { textResponse: e.target.value },
-                          AnswerType.Open
-                        )}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          handleAnswerChange(
+                            question.questionId,
+                            { textResponse: e.target.value },
+                            AnswerType.Open
+                          )
+                        }
                       />
                     )}
 
                     {question.questionType === QuestionType.SingleChoice && (
                       <div>
-                        {question.options.map(option => (
+                        {question.options.map((option) => (
                           <div key={option.optionId} className="form-check">
                             <input
                               className="form-check-input"
@@ -213,7 +240,7 @@ export function LegacyCustomForm() {
 
                     {question.questionType === QuestionType.MultipleChoice && (
                       <div>
-                        {question.options.map(option => (
+                        {question.options.map((option) => (
                           <div key={option.optionId} className="form-check">
                             <input
                               className="form-check-input"
@@ -224,8 +251,8 @@ export function LegacyCustomForm() {
                                 const currentSelected = currentAnswer?.selectedOptionIds || [];
                                 const newSelected = e.target.checked
                                   ? [...currentSelected, option.optionId]
-                                  : currentSelected.filter(id => id !== option.optionId);
-                                
+                                  : currentSelected.filter((id) => id !== option.optionId);
+
                                 handleAnswerChange(
                                   question.questionId,
                                   { selectedOptionIds: newSelected },
@@ -244,11 +271,7 @@ export function LegacyCustomForm() {
                 ))}
 
                 <div className="d-grid">
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-lg"
-                    disabled={isSubmitting}
-                  >
+                  <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit'}
                   </button>
                 </div>
@@ -271,8 +294,12 @@ export default function CustomFormPage() {
         <div className="col-md-8">
           <CustomFormRenderer
             form={form}
-            getRecaptchaToken={async () => executeRecaptcha ? executeRecaptcha('customForm') : null}
-            onSubmit={async (answers: AnyAnswer[]) => { await submitFormResponse(form.id, answers); }}
+            getRecaptchaToken={async () =>
+              executeRecaptcha ? executeRecaptcha('customForm') : null
+            }
+            onSubmit={async (answers: AnyAnswer[]) => {
+              await submitFormResponse(form.id, answers);
+            }}
           />
         </div>
       </div>

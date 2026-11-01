@@ -662,6 +662,11 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     {
     }
 
+    public sealed class EditorialProductionCardRepository(IMongoDatabase database)
+        : BaseRepository<EditorialProductionCard>(database, DbCollections.EditorialProductionCards), IEditorialProductionCardRepository
+    {
+    }
+
     public sealed class GalleryRepository(IMongoDatabase database)
         : BaseRepository<Gallery>(database, DbCollections.Galleries), IGalleryRepository
     {

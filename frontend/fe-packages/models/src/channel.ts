@@ -17,12 +17,18 @@ export type Channel = Readonly<{
   channelLogoUrl?: string;
   mine: boolean;
   shortLinkUrl?: string;
+  youTubeStudioUrl?: string;
+  googleAnalyticsUrl?: string;
   socials?: readonly ChannelSocial[];
   socialPublishing?: ChannelSocialPublishing;
   videos?: readonly ChannelVideo[];
 }>;
 
-export type ChannelVideo = Readonly<{ videoId: string; title: string; lastCommentDate?: string }>;
+export type ChannelVideo = Readonly<{
+  videoId: string;
+  title: string;
+  lastCommentDate?: string;
+}>;
 
 export type ChannelSocial = Readonly<{ provider: string; handler: string }>;
 
@@ -46,13 +52,15 @@ export type ChannelTerminology = {
 /**
  * Type for creating a new channel (all fields required except id which may be generated)
  */
-export type CreateChannelDTO = Omit<Channel, 'channelId'> & {
+export type CreateChannelDTO = Omit<Channel, "channelId"> & {
   channelId?: string;
 };
 
 /**
  * Type for updating an existing channel (all fields optional except id)
  */
-export type UpdateChannelDTO = Partial<Omit<Channel, 'channelId' | 'yTChannelId'>> & {
+export type UpdateChannelDTO = Partial<
+  Omit<Channel, "channelId" | "yTChannelId">
+> & {
   channelId: string;
 };

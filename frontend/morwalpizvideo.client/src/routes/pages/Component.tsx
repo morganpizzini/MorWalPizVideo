@@ -1,6 +1,6 @@
 import { useLoaderData } from 'react-router';
 import SEO from '@utils/seo';
-import ReactGA from 'react-ga4';
+import { trackPageView } from '../../analytics/consent';
 import { CustomFormRenderer } from '@morwalpiz/layout';
 import type { AnyAnswer, CustomForm, PagePublic } from '@morwalpizvideo/models';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
@@ -10,7 +10,7 @@ export default function Matches() {
   const { executeRecaptcha } = useGoogleReCaptcha();
   const description = page.content.replace(/<[^>]+>/g, '').slice(0, 120);
   if (typeof window !== 'undefined') {
-    ReactGA.send({ hitType: 'pageview', page: window.location.pathname, title: page.title });
+    trackPageView('page', '/pages/:slug');
   }
   return (
     <>

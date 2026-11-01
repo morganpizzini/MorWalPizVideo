@@ -130,6 +130,8 @@ namespace MorWalPiz.Contracts
                 ShortLinkUrl = entity.ShortLinkUrl,
                 IsSHIT = entity.IsSHIT,
                 ChannelLogoUrl = entity.ChannelLogoUrl,
+                YouTubeStudioUrl = entity.YouTubeStudioUrl,
+                GoogleAnalyticsUrl = entity.GoogleAnalyticsUrl,
                 Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {
                     Provider = s.Provider,
@@ -155,6 +157,28 @@ namespace MorWalPiz.Contracts
                 UpdatedDateTime = entity.UpdatedDateTime
             };
         }
+
+        public static EditorialProductionCardContract Convert(EditorialProductionCard entity) => new()
+        {
+            Id = entity.Id,
+            ChannelId = entity.ChannelId,
+            Title = entity.Title,
+            EditorialAngle = entity.EditorialAngle,
+            SourceUrls = entity.SourceUrls,
+            Brief = entity.Brief,
+            Script = entity.Script,
+            Status = entity.Status,
+            OwnerUserId = entity.OwnerUserId,
+            DueDateUtc = entity.DueDateUtc,
+            TopicId = entity.TopicId,
+            NewsItemId = entity.NewsItemId,
+            ContentPlanId = entity.ContentPlanId,
+            YoutubeVideoId = entity.YoutubeVideoId,
+            BackOfficeContentId = entity.BackOfficeContentId,
+            Revision = entity.Revision,
+            CreationDateTime = entity.CreationDateTime,
+            UpdatedDateTime = entity.UpdatedDateTime
+        };
 
         public static AskCampaignContract Convert(AskCampaign entity, int submissionCount = 0) => new()
         {

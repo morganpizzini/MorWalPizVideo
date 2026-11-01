@@ -162,6 +162,18 @@ const routeDefinitions: RouteConfig[] = [
       children: [feature('edit', () => import('../../routes/channelNews/form'))],
     },
   ]),
+  group('editorialproductioncards', () => import('../../routes/editorialProductionCards/index'), [
+    indexFeature('', () => import('../../routes/editorialProductionCards/index')),
+    feature('create', () => import('../../routes/editorialProductionCards/form')),
+    {
+      path: ':id',
+      Component: Outlet,
+      children: [
+        indexFeature('', () => import('../../routes/editorialProductionCards/detail')),
+        feature('edit', () => import('../../routes/editorialProductionCards/form')),
+      ],
+    },
+  ]),
   feature('push', () => import('../../routes/push'), {
     errorElement: createErrorElement(),
   }),
