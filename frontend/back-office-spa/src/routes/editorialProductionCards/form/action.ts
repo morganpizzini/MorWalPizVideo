@@ -3,7 +3,10 @@ import {
   createEditorialProductionCard,
   updateEditorialProductionCard,
 } from '@morwalpizvideo/services';
-import type { EditorialProductionCardStatus } from '@morwalpizvideo/models';
+import type {
+  EditorialProductionCardRequest,
+  EditorialProductionCardStatus,
+} from '@morwalpizvideo/models';
 
 export default async function action({
   request,
@@ -17,7 +20,7 @@ export default async function action({
   const errors: Record<string, string> = {};
   if (!title) errors.title = 'Title is required';
   if (Object.keys(errors).length) return data({ success: false, errors }, { status: 400 });
-  const payload = {
+  const payload: EditorialProductionCardRequest = {
     title,
     editorialAngle: String(values.editorialAngle ?? '').trim(),
     sourceUrls: String(values.sourceUrls ?? '')
@@ -28,12 +31,12 @@ export default async function action({
     script: String(values.script ?? '').trim(),
     status: Number(values.status ?? 0) as EditorialProductionCardStatus,
     ownerUserId: String(values.ownerUserId ?? '').trim() || undefined,
-    dueDateUtc: String(values.dueDateUtc ?? '').trim() || null,
-    topicId: String(values.topicId ?? '').trim() || null,
-    newsItemId: String(values.newsItemId ?? '').trim() || null,
-    contentPlanId: String(values.contentPlanId ?? '').trim() || null,
-    youtubeVideoId: String(values.youtubeVideoId ?? '').trim() || null,
-    backOfficeContentId: String(values.backOfficeContentId ?? '').trim() || null,
+    dueDateUtc: String(values.dueDateUtc ?? '').trim() || undefined,
+    topicId: String(values.topicId ?? '').trim() || undefined,
+    newsItemId: String(values.newsItemId ?? '').trim() || undefined,
+    contentPlanId: String(values.contentPlanId ?? '').trim() || undefined,
+    youtubeVideoId: String(values.youtubeVideoId ?? '').trim() || undefined,
+    backOfficeContentId: String(values.backOfficeContentId ?? '').trim() || undefined,
     ...(params.id ? { revision: Number(values.revision ?? 0) } : {}),
   };
   try {

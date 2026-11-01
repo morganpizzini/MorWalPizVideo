@@ -85,6 +85,7 @@ public class PrimaryScenario : BaseScenario
                 LinkType.CustomUrl),
             channelShortLink
         ]);
+        Set(DbCollections.ShortLinkRequestEvents, Array.Empty<ShortLinkRequestEvent>());
         Set("quickLinks", Array.Empty<QuickLinks>());
         Set("channelNews", Array.Empty<ChannelNews>());
         Set("editorialProductionCards", Array.Empty<EditorialProductionCard>());
