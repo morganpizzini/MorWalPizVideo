@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
+using MorWalPizVideo.Server.Services;
 
 namespace MorWalPizVideo.Domain;
 
@@ -101,12 +102,12 @@ public sealed class EditorialProductionCardService(
     private static readonly IReadOnlyDictionary<EditorialProductionCardStatus, IReadOnlySet<EditorialProductionCardStatus>> AllowedTransitions =
         new Dictionary<EditorialProductionCardStatus, IReadOnlySet<EditorialProductionCardStatus>>
         {
-            [EditorialProductionCardStatus.Idea] = [EditorialProductionCardStatus.Idea, EditorialProductionCardStatus.Planned, EditorialProductionCardStatus.Archived],
-            [EditorialProductionCardStatus.Planned] = [EditorialProductionCardStatus.Planned, EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Archived],
-            [EditorialProductionCardStatus.InProgress] = [EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Ready, EditorialProductionCardStatus.Archived],
-            [EditorialProductionCardStatus.Ready] = [EditorialProductionCardStatus.Ready, EditorialProductionCardStatus.Published, EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Archived],
-            [EditorialProductionCardStatus.Published] = [EditorialProductionCardStatus.Published, EditorialProductionCardStatus.Archived],
-            [EditorialProductionCardStatus.Archived] = [EditorialProductionCardStatus.Archived, EditorialProductionCardStatus.Idea]
+            [EditorialProductionCardStatus.Idea] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.Idea, EditorialProductionCardStatus.Planned, EditorialProductionCardStatus.Archived },
+            [EditorialProductionCardStatus.Planned] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.Planned, EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Archived },
+            [EditorialProductionCardStatus.InProgress] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Ready, EditorialProductionCardStatus.Archived },
+            [EditorialProductionCardStatus.Ready] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.Ready, EditorialProductionCardStatus.Published, EditorialProductionCardStatus.InProgress, EditorialProductionCardStatus.Archived },
+            [EditorialProductionCardStatus.Published] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.Published, EditorialProductionCardStatus.Archived },
+            [EditorialProductionCardStatus.Archived] = new HashSet<EditorialProductionCardStatus> { EditorialProductionCardStatus.Archived, EditorialProductionCardStatus.Idea }
         };
 
     public Task<IList<EditorialProductionCard>> GetForChannelAsync(string channelId) =>

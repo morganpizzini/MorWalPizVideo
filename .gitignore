@@ -236,3 +236,4 @@ MorWalPizVideo.BackOffice/credentials.json
 MorWalPizVideo.Server/credentials.json
 MorWalPizVideo.ServerAPI/credentials.json
 MorWalPiz.VideoImporter/credentials-*.json
+**/test-results/
