@@ -37,6 +37,12 @@ jobs:
       - name: Restore API tests
         run: dotnet restore FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj
 
+      - name: Build renderer tests
+        run: dotnet build FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore
+
+      - name: Install pinned Playwright Chromium
+        run: pwsh FreezerAnalysis.Api.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
       - name: Test API
         run: dotnet test FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=freezer-analysis-api.trx" --results-directory ./TestResults/freezer-analysis-api --verbosity minimal
 

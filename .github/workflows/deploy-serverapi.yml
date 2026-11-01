@@ -107,6 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           base_url="${SERVERAPI_BASE_URL:-https://${SERVERAPI_APP_NAME}.azurewebsites.net}"
+          echo "Base URL: $base_url"
           base_url="${base_url%/}"
           headers_file="$(mktemp)"
           body_file="$(mktemp)"

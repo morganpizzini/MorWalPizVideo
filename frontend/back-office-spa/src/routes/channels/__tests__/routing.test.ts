@@ -62,10 +62,12 @@ describe('channel route error handling', () => {
   it('throws a router 404 instead of returning an API error as a Channel', async () => {
     vi.mocked(get).mockResolvedValue(scopedNotFound as never);
 
-    await expect(detailLoader({ params: { id: 'missing-channel' } } as never))
-      .rejects.toMatchObject({ status: 404 });
-    await expect(formLoader({ params: { id: 'missing-channel' } }))
-      .rejects.toMatchObject({ status: 404 });
+    await expect(
+      detailLoader({ params: { id: 'missing-channel' } } as never)
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(formLoader({ params: { id: 'missing-channel' } })).rejects.toMatchObject({
+      status: 404,
+    });
   });
 
   it('returns scoped 400/404 statuses and messages from CRUD actions', async () => {
@@ -110,23 +112,22 @@ describe('channel route error handling', () => {
       params: { id: 'channel-one' },
     } as never);
 
-    expect(put).toHaveBeenCalledWith(
-      '/api/channels/channel-one',
-      {
-        channelId: 'channel-one',
-        channelName: 'Updated',
-        shortLinkUrl: 'https://morwalpiz.com/sl',
-        socials: [
-          { provider: 'instagram', handler: '@morwalpiz' },
-          { provider: 'x', handler: 'morwalpiz' },
-        ],
-        socialPublishing: {
-          telegram: { clearCredential: false },
-          discord: { clearCredential: false },
-          facebook: { clearCredential: false },
-        },
-      }
-    );
+    expect(put).toHaveBeenCalledWith('/api/channels/channel-one', {
+      channelId: 'channel-one',
+      channelName: 'Updated',
+      youTubeStudioUrl: '',
+      googleAnalyticsUrl: '',
+      shortLinkUrl: 'https://morwalpiz.com/sl',
+      socials: [
+        { provider: 'instagram', handler: '@morwalpiz' },
+        { provider: 'x', handler: 'morwalpiz' },
+      ],
+      socialPublishing: {
+        telegram: { clearCredential: false },
+        discord: { clearCredential: false },
+        facebook: { clearCredential: false },
+      },
+    });
   });
 
   it('sends replace and clear intent without requiring existing credentials', async () => {

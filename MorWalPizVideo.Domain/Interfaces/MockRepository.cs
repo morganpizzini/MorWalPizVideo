@@ -1054,12 +1054,29 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<IList<CustomFormResponseDocument>> ClaimBatchAsync(DateTime now, DateTime leaseUntil, string workerId, int batchSize)
         {
+            var safeBatchSize = Math.Clamp(batchSize, 1, 500);
             var claimed = new List<CustomFormResponseDocument>();
             foreach (var item in (await GetItemsAsync()).OrderBy(x => x.SubmittedAt))
             {
-                if (claimed.Count >= Math.Clamp(batchSize, 1, 500))
+                if (claimed.Count >= safeBatchSize)
                     break;
 
+                var eligible = item.ProcessingStatus == ResponseProcessingStatus.Pending
+                    || item.ProcessingStatus == ResponseProcessingStatus.Failed
+                    || (item.ProcessingStatus == ResponseProcessingStatus.Claimed
+                        && item.ProcessingLeaseUntil < now);
+                if (!eligible)
+                    continue;
+
+                var updated = item with
+                {
+                    ProcessingStatus = ResponseProcessingStatus.Claimed,
+                    ProcessingWorkerId = workerId,
+                    ProcessingLeaseUntil = leaseUntil,
+                    ProcessingAttemptCount = item.ProcessingAttemptCount + 1
+                };
+                await UpdateItemAsync(updated);
+                claimed.Add(updated);
             }
 
             return claimed;
