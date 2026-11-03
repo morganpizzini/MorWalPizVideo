@@ -61,6 +61,8 @@ Local development keeps the relative `/api` Vite proxy and Development credentia
 
 Current central CI builds six active frontend applications (including their existing SSR builds), four backend hosts, both Windows clients, and Aspire AppHost. It executes the existing backend/YouTubeUtilities, seven frontend workspace suites and two Windows desktop suites, plus clean BackOffice/ServerAPI container builds. Shop is excluded while on hold. Jobs fail on errors; frontend/desktop test gates reject empty collections. Matrix `fail-fast: false` collects independent failures; it does not permit failure.
 
+FreezerAnalysis Chromium dependency installation is pinned to Ubuntu 24.04, which is supported by its Playwright version. Its Node image supplies Yarn directly. Linux test-result publishers do not create PR comments, while Windows test jobs upload TRX reports as artifacts because the publisher action requires a Linux runner.
+
 The BackOffice and ServerAPI deployment workflows use the mixed `MorWalPizVideo.BackOffice.Tests` project with stable group filters before their build, publish, and Azure deployment jobs. BackOffice runs `BackOffice`, `Shared`, and `CrossApi`; ServerAPI runs `ServerAPI`, `Shared`, and `CrossApi`. ShortLinks has a focused pre-publish gate in `MorWalPizVideo.ShortLinks.Tests`, containing only host-owned redirect/resolution/click coverage; BackOffice-owned management and Reqnroll coverage remains in the mixed project. ShootingRange uses `MorWalPizVideo.ShootingRange.Tests` for both mock and real-Mongo gates. Each active focused job rejects an empty test list. Neither workflow creates a separate ServerAPI test project. A failed test job prevents publish.
 
 Required improvements for active surfaces:
