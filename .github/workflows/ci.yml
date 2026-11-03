@@ -46,6 +46,7 @@ jobs:
         with:
           files: ./TestResults/**/*.trx
           check_name: Credential artifact test results
+          comment_mode: off
 
   test-frontend:
     name: Test Frontend - ${{ matrix.workspace }}
@@ -111,12 +112,14 @@ jobs:
             }
           }
 
-      - name: Publish Windows client test results
+      - name: Upload Windows client test results
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: actions/upload-artifact@v4
         with:
-          files: ./TestResults/**/*.trx
-          check_name: Windows client test results
+          name: ${{ matrix.project }}-test-results
+          path: ./TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 7
 
   build-api-containers:
     name: Clean API Container - ${{ matrix.project }}
@@ -293,10 +296,11 @@ jobs:
         with:
           files: ./TestResults/**/*.trx
           check_name: Backend test results
+          comment_mode: off
 
   test-freezer-analysis:
     name: Test FreezerAnalysis API
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-backend
     env:
       FREEZER_ANALYSIS_PDFTEXTEXTRACTOR_PATH: pdftotext
@@ -336,6 +340,7 @@ jobs:
         with:
           files: ./TestResults/**/*.trx
           check_name: FreezerAnalysis test results
+          comment_mode: off
 
   test-youtube-utilities:
     name: Test YouTube Utilities
@@ -363,3 +368,4 @@ jobs:
         with:
           files: ./TestResults/**/*.trx
           check_name: YouTube Utilities test results
+          comment_mode: off

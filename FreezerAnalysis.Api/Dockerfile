@@ -1,6 +1,5 @@
 FROM node:22-bookworm-slim AS frontend
 WORKDIR /workspace
-RUN npm install --global yarn@1.22.22
 COPY frontend ./frontend
 RUN yarn --cwd frontend install --frozen-lockfile \
     && yarn --cwd frontend build:shared \
