@@ -17,10 +17,15 @@ public sealed class VideoBulkImportRequest
 {
     [Required]
     [MinLength(1)]
-    public VideoBulkImportItemRequest[] Items { get; set; } = [];
+    public VideoBulkImportRootRequest[] Roots { get; set; } = [];
 }
 
-public sealed class VideoBulkImportItemRequest
+public static class VideoBulkImportLimits
+{
+    public const int MaxTotalVideos = 25;
+}
+
+public sealed class VideoBulkImportRootRequest
 {
     [Required]
     public string VideoId { get; set; } = string.Empty;
@@ -29,8 +34,17 @@ public sealed class VideoBulkImportItemRequest
     [MinLength(1, ErrorMessage = "At least one category is required")]
     public string[] Categories { get; set; } = [];
 
-    // Existing content ID, or the video ID of an earlier item in this batch.
-    public string? Target { get; set; }
+    public VideoBulkImportReferenceRequest[] References { get; set; } = [];
+}
+
+public sealed class VideoBulkImportReferenceRequest
+{
+    [Required]
+    public string VideoId { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(1, ErrorMessage = "At least one category is required")]
+    public string[] Categories { get; set; } = [];
 }
 
 public sealed record VideoImportCandidateResponse(
@@ -49,4 +63,11 @@ public sealed record VideoBulkImportItemResponse(
     string VideoId,
     string Status,
     string? ShortLinkStatus = null,
-    string? Error = null);
+    string? Error = null,
+    string Role = "root",
+    string? ErrorCode = null,
+    string? CacheStatus = null);
+
+public sealed record VideoBulkImportGroupResponse(
+    VideoBulkImportItemResponse Root,
+    IReadOnlyList<VideoBulkImportItemResponse> References);

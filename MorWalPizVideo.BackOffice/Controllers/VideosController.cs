@@ -718,171 +718,139 @@ public class VideosController : ApplicationControllerBase
             return Unauthorized();
         }
 
-        var allMatches = await _contentService.GetAllMatchesAsync();
-        var targetsById = allMatches.ToDictionary(match => match.ContentId, StringComparer.Ordinal);
-        var importedIds = allMatches
-            .SelectMany(match => new[] { match.ContentId }.Concat(match.VideoRefs.Select(video => video.YoutubeId)))
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
-        var results = new List<VideoBulkImportItemResponse>();
-
         var channelId = HttpContext.GetChannelContext().ChannelId;
-        var createdTargets = new Dictionary<string, YouTubeContent>(StringComparer.Ordinal);
-        var requestedVideoIds = request.Items
-            .Where(item => !string.IsNullOrWhiteSpace(item.VideoId))
-            .Select(item => item.VideoId.Trim())
-            .ToArray();
-        if (requestedVideoIds.Length != requestedVideoIds.Distinct(StringComparer.Ordinal).Count())
+        var roots = request.Roots ?? [];
+        var nodes = roots.SelectMany(root => new[] { root.VideoId }.Concat(root.References.Select(reference => reference.VideoId)))
+            .Select(videoId => videoId.Trim()).ToArray();
+        if (roots.Length == 0 || nodes.Length > VideoBulkImportLimits.MaxTotalVideos ||
+            nodes.Any(string.IsNullOrWhiteSpace) || nodes.Distinct(StringComparer.Ordinal).Count() != nodes.Length ||
+            roots.Any(root => root.References.Any(reference => string.Equals(root.VideoId.Trim(), reference.VideoId.Trim(), StringComparison.Ordinal))))
         {
-            return BadRequest(new { error = "A video cannot be selected more than once" });
+            return BadRequest(new { error = "invalid_video_graph" });
         }
 
-        foreach (var item in request.Items.Where(item => !string.IsNullOrWhiteSpace(item.VideoId)))
+        var categoryMap = new Dictionary<string, CategoryRef[]>(StringComparer.Ordinal);
+        foreach (var node in roots.SelectMany(root => new[] { (node: root.VideoId, categories: root.Categories) }
+                     .Concat(root.References.Select(reference => (node: reference.VideoId, categories: reference.Categories)))))
         {
-            var videoId = item.VideoId.Trim();
-            if (importedIds.Contains(videoId))
+            var categoryIds = (node.categories ?? []).Select(category => category?.Trim() ?? string.Empty)
+                .Where(category => category.Length > 0).Distinct(StringComparer.Ordinal).ToArray();
+            if (categoryIds.Length == 0)
+                return BadRequest(new { error = "categories_required" });
+            var categories = (await _contentService.GetCategoriesAsync(categoryIds, channelId))
+                .Select(category => new CategoryRef(category.Id, category.Title)).ToArray();
+            if (categories.Length != categoryIds.Length)
+                return BadRequest(new { error = "category_not_found" });
+            categoryMap[node.node.Trim()] = categories;
+        }
+
+        var allMatches = await _contentService.GetAllMatchesAsync();
+        var importedIds = allMatches.SelectMany(match => new[] { match.ContentId }.Concat(match.VideoRefs.Select(video => video.YoutubeId)))
+            .Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet(StringComparer.Ordinal);
+        var groups = new List<VideoBulkImportGroupResponse>();
+
+        foreach (var root in roots)
+        {
+            var rootId = root.VideoId.Trim();
+            VideoBulkImportItemResponse rootResult;
+            YouTubeContent? persistedRoot = null;
+            if (importedIds.Contains(rootId))
             {
-                results.Add(new(videoId, "skipped"));
-                continue;
+                rootResult = new(rootId, "skipped", Error: "Video is already imported", Role: "root", ErrorCode: "already_imported");
             }
-
-        YouTubeContent? target = null;
-        var targetKey = item.Target?.Trim();
-        if (!string.IsNullOrWhiteSpace(targetKey))
-        {
-            target = createdTargets.GetValueOrDefault(targetKey) ?? targetsById.GetValueOrDefault(targetKey);
-            if (target is null || !await authorization.CanMutateInChannelAsync(User, target, channelId))
+            else
             {
-                results.Add(new(videoId, "error", Error: "Target content was not found or is not accessible"));
-                continue;
-            }
-        }
-
-        var categories = (await _contentService.GetCategoriesAsync(item.Categories, channelId))
-            .Select(category => new CategoryRef(category.Id, category.Title))
-            .ToArray();
-        if (categories.Length != item.Categories.Distinct(StringComparer.Ordinal).Count())
-        {
-            results.Add(new(videoId, "error", Error: "One or more categories were not found"));
-            continue;
-        }
-
-        IList<Video> videos;
-        try
-        {
-            videos = await yTService.FetchFromYoutube([videoId]);
-        }
-        catch (HttpRequestException exception)
-        {
-            logger.LogWarning(exception, "YouTube metadata provider was unavailable for bulk video {VideoId}", videoId);
-            results.Add(new(videoId, "error", Error: "YouTube metadata provider is unavailable"));
-            continue;
-        }
-        catch (TaskCanceledException exception)
-        {
-            logger.LogWarning(exception, "YouTube metadata request timed out for bulk video {VideoId}", videoId);
-            results.Add(new(videoId, "error", Error: "YouTube metadata provider is unavailable"));
-            continue;
-        }
-
-        var video = videos.FirstOrDefault(candidate =>
-            string.Equals(candidate.YoutubeId, videoId, StringComparison.Ordinal));
-        if (video is null || !IsImportableVideoTitle(video.Title))
-        {
-            results.Add(new(videoId, "error", Error: "YouTube video metadata was not found"));
-            continue;
-        }
-
-        var videoRef = new VideoRef(
-            video.YoutubeId,
-            categories,
-            video.Title,
-            video.Description,
-            video.PublishedAt,
-            [channelId]);
-
-        if (target is not null && !string.IsNullOrWhiteSpace(targetKey))
-        {
-            var updatedTarget = target with { VideoRefs = target.VideoRefs.Append(videoRef).ToArray() };
-            await _contentService.UpdateMatchAsync(updatedTarget);
-            if (createdTargets.ContainsKey(targetKey))
-            {
-                createdTargets[targetKey] = updatedTarget;
-            }
-            targetsById[targetKey] = updatedTarget;
-        }
-        else
-        {
-            var importedMatch = YouTubeContent.CreateSingleVideo(videoId, categories) with
-            {
-                CreatorUserId = creatorUserId,
-                OwnerChannelId = channelId,
-                VideoRefs = [videoRef],
-                Title = video.Title,
-                Description = video.Description,
-                CreationDateTime = video.PublishedAt
-            };
-            if (!await _contentService.SaveMatchAsync(importedMatch))
-            {
-                results.Add(new(videoId, "error", Error: "Video could not be persisted"));
-                continue;
-            }
-            var persistedMatch = await _contentService.FindMatchAsync(videoId);
-            if (persistedMatch is null)
-            {
-                results.Add(new(videoId, "error", Error: "Video could not be located after persistence"));
-                continue;
-            }
-
-            ShortLinkCreationResult shortLink;
-            try
-            {
-                shortLink = await CreateVideoShortLinkAsync(persistedMatch.Id, videoId);
-                if (shortLink.Link is null)
+                try
                 {
-                    await _contentService.DeleteMatchAsync(persistedMatch.Id);
-                    results.Add(new(videoId, "error", Error: shortLink.Error));
-                    continue;
+                    var video = (await yTService.FetchFromYoutube([rootId])).FirstOrDefault(candidate => candidate.YoutubeId == rootId);
+                    if (video is null || !IsImportableVideoTitle(video.Title))
+                        throw new InvalidDataException("YouTube video metadata was not found");
+                    var videoRef = new VideoRef(rootId, categoryMap[rootId], video.Title, video.Description, video.PublishedAt, [channelId]);
+                    var imported = YouTubeContent.CreateSingleVideo(rootId, categoryMap[rootId]) with
+                    {
+                        CreatorUserId = creatorUserId, OwnerChannelId = channelId, Title = video.Title,
+                        Description = video.Description, CreationDateTime = video.PublishedAt, VideoRefs = [videoRef]
+                    };
+                    if (!await _contentService.SaveMatchAsync(imported))
+                        throw new InvalidOperationException("Video could not be persisted");
+                    persistedRoot = await _contentService.FindMatchAsync(rootId);
+                    if (persistedRoot is null)
+                        throw new InvalidOperationException("Video could not be located after persistence");
+                    var link = await CreateVideoShortLinkAsync(persistedRoot.Id, rootId);
+                    if (link.Link is null)
+                    {
+                        await _contentService.DeleteMatchAsync(persistedRoot.Id);
+                        throw new InvalidOperationException(link.Error ?? "Automatic short-link creation failed");
+                    }
+                    importedIds.Add(rootId);
+                    rootResult = new(rootId, "imported", link.Status, link.Error, "root");
+                }
+                catch (ShortLinkCleanupPendingException exception)
+                {
+                    logger.LogWarning(exception, "Bulk root short-link cleanup is pending for video {VideoId}", rootId);
+                    importedIds.Add(rootId);
+                    rootResult = new(rootId, "imported", "pending", exception.Message, "root", "short_link_cleanup_pending");
+                }
+                catch (Exception exception)
+                {
+                    logger.LogWarning(exception, "Bulk root import failed for video {VideoId}", rootId);
+                    rootResult = new(rootId, "error", Error: exception is HttpRequestException or TaskCanceledException
+                        ? "YouTube metadata provider is unavailable" : exception.Message, Role: "root", ErrorCode: "root_failed");
                 }
             }
-            catch (InvalidOperationException exception)
-            {
-                logger.LogError(exception,
-                    "Automatic short-link creation failed after bulk importing video {VideoId} into match {MatchId}",
-                    videoId, persistedMatch.Id);
-                await _contentService.DeleteMatchAsync(persistedMatch.Id);
-                results.Add(new(videoId, "error", Error: "Automatic short-link creation failed"));
-                continue;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception,
-                    "Unexpected short-link failure after bulk importing video {VideoId} into match {MatchId}; compensating import",
-                    videoId, persistedMatch.Id);
-                await _contentService.DeleteMatchAsync(persistedMatch.Id);
-                throw;
-            }
 
-            createdTargets[videoId] = persistedMatch;
-            importedIds.Add(videoId);
-            results.Add(new(
-                videoId,
-                "imported",
-                shortLink.Status,
-                shortLink.Error));
-            continue;
+            var references = new List<VideoBulkImportItemResponse>();
+            foreach (var reference in root.References)
+            {
+                var referenceId = reference.VideoId.Trim();
+                if (rootResult.Status != "imported" || persistedRoot is null)
+                {
+                    references.Add(new(referenceId, "notAttempted", Error: "Root import failed", Role: "reference", ErrorCode: "root_failed"));
+                    continue;
+                }
+                try
+                {
+                    var video = (await yTService.FetchFromYoutube([referenceId])).FirstOrDefault(candidate => candidate.YoutubeId == referenceId);
+                    if (video is null || !IsImportableVideoTitle(video.Title))
+                        throw new InvalidDataException("YouTube video metadata was not found");
+                    var videoRef = new VideoRef(referenceId, categoryMap[referenceId], video.Title, video.Description, video.PublishedAt, [channelId]);
+                    var append = await _contentService.AddVideoReferenceWithCacheAsync(persistedRoot.Id, videoRef);
+                    if (append.AppendResult == VideoReferenceAppendResult.Duplicate)
+                        throw new InvalidOperationException("Video reference already exists");
+                    if (append.AppendResult != VideoReferenceAppendResult.Added)
+                        throw new InvalidOperationException("Video not found");
+                    try
+                    {
+                        var link = await CreateVideoShortLinkAsync(persistedRoot.Id, referenceId);
+                        if (link.Link is null) throw new InvalidOperationException(link.Error ?? "Automatic short-link creation failed");
+                        references.Add(new(referenceId, "imported", link.Status, link.Error, "reference", null, append.CacheStatus));
+                    }
+                    catch (ShortLinkCleanupPendingException exception)
+                    {
+                        references.Add(new(referenceId, "imported", "pending", exception.Message, "reference", "short_link_cleanup_pending", append.CacheStatus));
+                    }
+                    catch
+                    {
+                        await TryCompensateVideoReferenceAppendAsync(persistedRoot.Id, videoRef);
+                        throw;
+                    }
+                    importedIds.Add(referenceId);
+                }
+                catch (Exception exception)
+                {
+                    logger.LogWarning(exception, "Bulk reference import failed for video {VideoId} on match {MatchId}", referenceId, persistedRoot.Id);
+                    references.Add(new(referenceId, "error", Error: exception.Message, Role: "reference", ErrorCode: "reference_failed"));
+                }
+            }
+            groups.Add(new(rootResult, references));
         }
 
-        importedIds.Add(videoId);
-        results.Add(new(videoId, "imported", "notAttempted"));
-        }
-
-        if (results.Any(result => result.Status == "imported"))
+        if (groups.Any(group => group.Root.Status == "imported" || group.References.Any(reference => reference.Status == "imported")))
         {
             await InvalidateVideoCachesAsync();
         }
 
-        return Ok(results);
+        return Ok(groups);
     }
 
     [HttpPost("{id}/refresh-youtube")]

@@ -44,13 +44,13 @@ beforeEach(() => {
 });
 
 describe('bulk video import', () => {
-  it('renders the authorized channel, date, candidates, and append target', async () => {
+  it('renders the authorized channel, date, candidates, and reference control', async () => {
     render(<Component />);
 
     expect(screen.getByLabelText('Published from (UTC) *')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText(/New video/)).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText(/New video/));
-    expect(screen.getByText('Append to Existing collection')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Add reference to New video' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Old video/)).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Single import' })).toBeInTheDocument();
   });
@@ -126,9 +126,9 @@ describe('bulk video import', () => {
 describe('bulk video import outcomes', () => {
   it('does not show an unconditional success toast for mixed results', async () => {
     vi.mocked((await import('../../../../services/videoService')).VideoService.bulkImport).mockResolvedValue([
-      { videoId: 'new-video', status: 'imported', shortLinkStatus: 'created' },
-      { videoId: 'old-video', status: 'skipped' },
-      { videoId: 'failed-video', status: 'error', error: 'Failed' },
+      { root: { videoId: 'new-video', role: 'root', status: 'imported', shortLinkStatus: 'created' }, references: [] },
+      { root: { videoId: 'old-video', role: 'root', status: 'skipped' }, references: [] },
+      { root: { videoId: 'failed-video', role: 'root', status: 'error', error: 'Failed' }, references: [] },
     ]);
     render(<Component />);
     await waitFor(() => expect(screen.getByLabelText(/New video/)).toBeInTheDocument());

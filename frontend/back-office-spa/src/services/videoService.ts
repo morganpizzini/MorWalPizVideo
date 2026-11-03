@@ -51,19 +51,32 @@ export interface ImportCandidate {
 }
 
 export interface BulkImportRequest {
-  items: BulkImportItem[];
+  roots: BulkImportRoot[];
 }
 
-export interface BulkImportItem {
+export interface BulkImportRoot {
   videoId: string;
   categories: string[];
-  target?: string;
+  references: BulkImportReference[];
+}
+
+export interface BulkImportReference {
+  videoId: string;
+  categories: string[];
 }
 
 export interface BulkImportResult {
+  root: BulkImportItemResult;
+  references: BulkImportItemResult[];
+}
+
+export interface BulkImportItemResult {
   videoId: string;
-  status: 'imported' | 'skipped' | 'error';
-  shortLinkStatus?: 'created' | 'failed' | 'notAttempted';
+  status: 'imported' | 'skipped' | 'error' | 'notAttempted';
+  role: 'root' | 'reference';
+  shortLinkStatus?: 'created' | 'failed' | 'pending' | 'notAttempted';
+  errorCode?: string;
+  cacheStatus?: string;
   error?: string;
 }
 
