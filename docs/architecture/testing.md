@@ -109,6 +109,10 @@ tooling.
 the .NET `MorWalPizVideo.BackOffice.Tests` project. The workspace is at
 `frontend/back-office-spa`; its test script is `vitest run`.
 
+
+CI callers pass `--passWithNoTests=false` so the nonempty-suite requirement is
+owned by the workflow command and is not duplicated in the package script.
+
 Run the complete Admin SPA suite, equivalent to the focused CI test command:
 
 ```powershell

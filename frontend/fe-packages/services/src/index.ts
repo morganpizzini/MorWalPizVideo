@@ -144,6 +144,21 @@ export {
   saveScriptStudioGlobalPrompt,
 } from "./scriptStudioService";
 export {
+  getAiPromptDefinitions,
+  getAiPromptRevisions,
+  getAiPromptExperiments,
+  getAiExecutionRecords,
+  bootstrapAiPrompts,
+  createAiPromptRevision,
+  createAiPromptCandidate,
+  createAiEvaluationCase,
+  evaluateAiPrompt,
+  startAiPromptCanary,
+  promoteAiPromptCanary,
+  cancelAiPromptCanary,
+  rollbackAiPrompt,
+} from "./aiOrchestrationService";
+export {
   getActiveCustomForms,
   getCustomFormByUrl,
   submitCustomFormResponse,

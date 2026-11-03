@@ -38,7 +38,7 @@ bootstrap fields or other tenant/operational records. Every touched settings
 dialog uses the same remote-first boundary and exposes pending/error/degraded
 text status. If BackOffice is unavailable after a successful synchronization,
 the existing cache remains readable; a retry is remote-first and never reports
-an unsaved local change as durable. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md)
+an unsaved local change as durable. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md)
 and the [rollout runbook](operations/video-importer-channel-settings-rollout.md).
 
 ## InsightScanner

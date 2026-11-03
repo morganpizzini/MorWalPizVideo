@@ -17,6 +17,7 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Configuration;
 using MorWalPizVideo.BackOffice.Jobs;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Ai;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Interfaces;
@@ -49,6 +50,7 @@ var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMoc
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
 var enableDev = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableDev);
 var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCache);
+var enableAiOrchestration = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableAiOrchestration);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
@@ -181,6 +183,9 @@ builder.Services.AddSingleton<IYouTubeContentIndexedCache, YouTubeContentIndexed
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
 builder.Services.Configure<AzureConfig>(builder.Configuration.GetSection("AzureConfig"));
+builder.Services.Configure<AiOrchestrationOptions>(builder.Configuration.GetSection("AiOrchestration"));
+builder.Services.PostConfigure<AiOrchestrationOptions>(options =>
+    options.ActivationEnabled &= enableAiOrchestration);
 builder.Services.Configure<ScriptStudioOptions>(builder.Configuration.GetSection("ScriptStudio"));
 builder.Services.Configure<SocialPublishingOptions>(builder.Configuration.GetSection("SocialPublishing"));
 builder.Services.Configure<BlobStorageOptions>(builder.Configuration.GetSection("BlobStorage"));
@@ -199,6 +204,13 @@ if (!enableMock)
             options.OpenAi.OpenAiKey);
     });
     builder.Services.AddTransient<Kernel>();
+    builder.Services.AddScoped<IAiModelGateway, SemanticKernelAiModelGateway>();
+    builder.Services.AddScoped<IAiOrchestrationRepository, AiOrchestrationRepository>();
+}
+else
+{
+    builder.Services.AddScoped<IAiModelGateway, DeterministicAiModelGateway>();
+    builder.Services.AddScoped<IAiOrchestrationRepository, AiOrchestrationMockRepository>();
 }
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<VideoImporterChannelSettingsService>();
@@ -382,6 +394,16 @@ builder.Services.AddScoped<IFaqVoteReconciliationService, FaqVoteReconciliationS
 builder.Services.AddScoped<IFaqCandidateGenerationService, FaqCandidateGenerationService>();
 builder.Services.AddScoped<IScriptStudioService, ScriptStudioService>();
 builder.Services.AddScoped<IAskModerationProvider, UnavailableAskModerationProvider>();
+builder.Services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
+builder.Services.AddScoped<IAiPromptCatalog, AiPromptCatalog>();
+builder.Services.AddScoped<IAiPromptOperationsService, AiPromptOperationsService>();
+builder.Services.AddScoped<IAiPromptOptimizationService, AiPromptOptimizationService>();
+builder.Services.AddScoped<IAiWorkflowService>(provider =>
+    enableMock || enableAiOrchestration
+        ? ActivatorUtilities.CreateInstance<AiWorkflowService>(provider)
+        : ActivatorUtilities.CreateInstance<LegacyAiWorkflowService>(provider));
+if (enableMock)
+    builder.Services.AddHostedService<AiMockPromptBootstrapper>();
 
 if (enableMock)
 {

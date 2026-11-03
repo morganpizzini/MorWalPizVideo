@@ -6,7 +6,7 @@ production changes by itself.
 
 ## Preconditions
 
-- Review [ADR-020](../adr/ADR-020-video-importer-channel-settings.md).
+- Review [ADR-021](../adr/ADR-021-video-importer-channel-settings.md).
 - Verify the target BackOffice build exposes `GET` and `PUT
   /api/v1/video-importer-settings`.
 - Identify the channel-bound importer API key through the approved secret

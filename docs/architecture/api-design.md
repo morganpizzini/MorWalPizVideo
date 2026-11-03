@@ -12,6 +12,20 @@ The [API consistency audit](api-consistency-audit.md) records remaining contract
 
 Public account endpoints are versioned under `/api/v1`: registration, session creation/restoration/logout, CSRF acquisition, and safe profile read/update. They use a dedicated cookie scheme and exact credentialed CORS policy; they do not alter the anonymous public API contract or protect existing public pages.
 
+BackOffice AI prompt operations use the additive versioned
+`/api/v1/ai/workflows` surface. It exposes explicit DTOs for prompt definitions,
+immutable revision history, consented evaluation cases, baseline/candidate
+experiments, metadata-only execution health, candidate generation, canary
+control, and rollback. View, edit, evaluation, and activation are protected by
+separate `ai.prompts.*` permissions. Prompt bootstrap is operator-invoked;
+canary start/promotion requires a passing experiment, the current expected
+active revision, the `EnableAiOrchestration` rollout flag, and the separate
+activation setting. Chat compatibility remains on
+the existing API-key routes; execution metadata is returned in the additive
+`X-AI-Execution-Id` header rather than changing the VideoImporter JSON shape.
+The legacy Chat fallback remains available until an operator initializes the
+production baselines and deliberately enables the orchestration flag.
+
 ## API Surfaces
 
 ### BackOffice API
@@ -55,7 +69,7 @@ derives channel ownership from middleware, rejects unsupported versions,
 non-object roots, and payloads over 64 KiB, and returns stable Problem Details
 codes. Route, authentication, authorization, channel, and server failures are
 never interpreted by clients as first-use absence. See
-[ADR-020](adr/ADR-020-video-importer-channel-settings.md).
+[ADR-021](adr/ADR-021-video-importer-channel-settings.md).
 
 Use maintained ASP.NET API versioning and API Explorer support. OpenAPI document labels alone do not constitute versioning. Existing unversioned routes remain compatibility aliases until consumers migrate and telemetry shows zero use.
 

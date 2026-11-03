@@ -67,7 +67,7 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 
 BackOffice owns the channel-authoritative `videoImporterChannelSettings` aggregate. Its versioned JSON payload is client-owned opaque data; the repository reads and atomically upserts by the channel resolved from `X-Channel-Id`. The unique `channelId` index is source-managed in `MongoIndexOperationsService` and is applied only through the reviewed manual index operation after duplicate audit.
 
-The v1 importer snapshot allowlists application name, default hashtags, languages/disclaimers by language code, and publish schedules by value. SQLite remains a tenant-filtered working cache; the importer writes remotely before projecting acknowledged values in one local transaction. Bootstrap credentials, channel selection, social tokens, history, machine paths, and local row IDs are excluded. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md).
+The v1 importer snapshot allowlists application name, default hashtags, languages/disclaimers by language code, and publish schedules by value. SQLite remains a tenant-filtered working cache; the importer writes remotely before projecting acknowledged values in one local transaction. Bootstrap credentials, channel selection, social tokens, history, machine paths, and local row IDs are excluded. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
 
 ## Authentication And Authorization
 
@@ -119,6 +119,45 @@ Existing affiliate documents may deserialize with a missing `ChannelId` for
 backward compatibility, but they are not visible to scoped or public queries.
 The manual migration in [affiliate catalog backfill](operations/affiliate-catalog-backfill.md)
 is a deployment prerequisite.
+
+### AI prompt orchestration
+
+BackOffice owns the Chat pilot's typed workflow, prompt catalog, model gateway,
+deterministic mock, evaluation, and controlled rollout. `ChatController` is a
+VideoImporter compatibility adapter for `api/chat`, `api/chat/translate`, and
+`api/chat/transcript-analysis`; it no longer constructs prompts or invokes
+Semantic Kernel directly. The shared `MorWalPiz.Contracts` Chat request and
+response shapes remain unchanged. The server returns an execution identity in
+the additive `X-AI-Execution-Id` response header.
+
+The `FeatureManagement:EnableAiOrchestration` flag controls the Chat cutover
+and defaults to false. With the flag off, the compatibility fallback keeps
+using the existing protected Azure provider through `IAiModelGateway` and
+reviewed baseline prompts. Enabling the flag switches to immutable stored
+revisions. Mock mode always uses
+`DeterministicAiModelGateway` and scenario-backed additive orchestration
+collections; it does not call an external provider. Mock startup seeds the
+reviewed deterministic baselines. Production prompt baselines are initialized
+explicitly through the permission-protected `/api/v1/ai/workflows/bootstrap`
+operation; startup never mutates Mongo indexes or creates production prompts.
+
+Immutable revisions are resolved per stage. Video review creates opaque item
+IDs before ten-item chunking, validates exact response identities and requested
+translation languages, and merges only by item ID; the legacy output `Name`
+remains stable for VideoImporter. Terminology is loaded server-side before
+translation and passed as data. `IAiToolRegistry` currently enables no
+model-invokable tools.
+
+Workflow executions retain metadata only and use configured explicit expiry.
+Evaluation cases require operator-provided consent/redaction confirmation and
+also have explicit retention. Candidate optimization can only create a draft.
+Prompt activation is disabled unless both the orchestration flag and
+`AiOrchestration:ActivationEnabled` are enabled. When enabled, an authorized administrator
+must pass an evaluated candidate through a bounded canary and manually promote
+or cancel it. Compare-and-set pointer updates protect activation and rollback.
+See [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md) and the
+[AI handoff](../feature-handoffs/ai-prompt-orchestration-handoff.md) for pilot
+boundaries and pending release gates.
 
 ### ServerAPI
 

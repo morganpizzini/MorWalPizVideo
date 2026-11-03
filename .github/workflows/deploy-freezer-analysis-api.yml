@@ -23,7 +23,7 @@ permissions:
 jobs:
   test:
     name: Run FreezerAnalysis API Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -52,6 +52,7 @@ jobs:
         with:
           files: ./TestResults/**/*.trx
           check_name: FreezerAnalysis API test results
+          comment_mode: off
 
   build-and-deploy:
     name: Build and Deploy to Azure

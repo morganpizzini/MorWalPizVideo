@@ -48,7 +48,18 @@ existing/missing settings plus `settings-auth`, `settings-transient`,
 `settings-permanent`, `route-missing`, and `settings-malformed` scenarios.
 Successful PUT responses are retained for subsequent GET requests. Desktop
 tests must use the fake and temporary SQLite; they must not contact BackOffice,
-Key Vault, or MongoDB. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md).
+Key Vault, or MongoDB. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
+
+BackOffice mock mode registers `DeterministicAiModelGateway` for the Chat
+workflow interface and seeds prompt baselines in its in-memory scenario. The
+authorized `api/chat`, `api/chat/translate`, and
+`api/chat/transcript-analysis` routes therefore execute without Azure OpenAI
+configuration or network access. The fake returns structured deterministic
+responses regardless of the `EnableAiOrchestration` rollout flag. In non-mock
+hosts the flag defaults off and retains the compatibility implementation;
+operators initialize the stored baselines before enabling the new path. This
+does not imply that other AI integrations (FAQ, Insights, Ask, or Script
+Studio) use this fake.
 
 ## Local Application Matrix
 

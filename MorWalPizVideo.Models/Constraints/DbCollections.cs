@@ -61,6 +61,12 @@
         public const string ScriptStudioGlobalPrompt = "scriptStudioGlobalPrompt";
         public const string ScriptStudioAudit = "scriptStudioAudit";
         public const string VideoImporterChannelSettings = "videoImporterChannelSettings";
+        public const string AiPromptDefinitions = "aiPromptDefinitions";
+        public const string AiPromptRevisions = "aiPromptRevisions";
+        public const string AiExecutionRecords = "aiExecutionRecords";
+        public const string AiEvaluationCases = "aiEvaluationCases";
+        public const string AiPromptExperiments = "aiPromptExperiments";
+        public const string AiPromptAudit = "aiPromptAudit";
 
         // Insights Collections
         public const string InsightTopics = "insightTopics";

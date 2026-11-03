@@ -24,6 +24,10 @@ namespace MorWalPizVideo.BackOffice.DTOs
     public class ReviewDetails
     {
         [Required]
+        [Description("Internal correlation ID for the video")]
+        public string ItemId { get; set; } = string.Empty;
+
+        [Required]
         [Description("Titolo originale")]
         public string Title { get; set; } = string.Empty;
 
@@ -34,6 +38,10 @@ namespace MorWalPizVideo.BackOffice.DTOs
 
     public class ReviewDetails1
     {
+        [Required]
+        [Description("Internal correlation ID for the video")]
+        public string ItemId { get; set; } = string.Empty;
+
         [Required]
         [Description("Parole chiavi o descrizione originale")]
         public string Name { get; set; } = string.Empty;

@@ -1,4 +1,4 @@
-# ADR-020: BackOffice-Authoritative VideoImporter Channel Settings
+# ADR-021: BackOffice-Authoritative VideoImporter Channel Settings
 
 - **Status:** Accepted
 - **Date:** 2026-11-02

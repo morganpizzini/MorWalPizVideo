@@ -89,7 +89,7 @@ opaque JSON payload separately from `YTChannel`; the scoped endpoint derives
 `channelId` from the request context. Schema version 1 is owned by VideoImporter
 and includes only application preferences, languages/disclaimers, and
 value-based publish schedules. The local SQLite rows are a recoverable cache,
-not the durable authority. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md).
+not the durable authority. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
 
 ## Value Object Opportunities
 
