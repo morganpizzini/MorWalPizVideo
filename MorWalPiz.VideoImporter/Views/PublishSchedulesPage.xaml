@@ -17,6 +17,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header with Add Button -->
@@ -106,7 +107,15 @@
         </GroupBox>
 
         <!-- Bottom Buttons -->
-        <Border Grid.Row="2" Style="{StaticResource Card}">
+        <TextBlock x:Name="StatusTextBlock"
+                   Grid.Row="2"
+                   Margin="0,0,0,10"
+                   TextWrapping="Wrap"
+                   AutomationProperties.Name="Stato salvataggio pianificazioni"
+                   AutomationProperties.LiveSetting="Assertive"
+                   Foreground="{StaticResource TextSecondaryBrush}"/>
+
+        <Border Grid.Row="3" Style="{StaticResource Card}">
             <StackPanel Style="{StaticResource DialogFooter}" Margin="0">
                 <Button x:Name="RefreshButton"
                         Content="🔄 Aggiorna"

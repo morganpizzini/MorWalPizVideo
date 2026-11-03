@@ -28,6 +28,8 @@ public class BackOfficeWebApplicationFactory : WebApplicationFactory<MorWalPizVi
     public CategoryMockRepository? CategoryRepository => Services.GetRequiredService<ICategoryRepository>() as CategoryMockRepository;
     public QuickLinksMockRepository? QuickLinksRepository => Services.GetRequiredService<IQuickLinksRepository>() as QuickLinksMockRepository;
     public ChannelNewsMockRepository? ChannelNewsRepository => Services.GetRequiredService<IChannelNewsRepository>() as ChannelNewsMockRepository;
+    public VideoImporterChannelSettingsMockRepository? VideoImporterChannelSettingsRepository =>
+        Services.GetRequiredService<IVideoImporterChannelSettingsRepository>() as VideoImporterChannelSettingsMockRepository;
     public RecordingCrossApiService CrossApiService => Services.GetRequiredService<RecordingCrossApiService>();
 
     public HttpClient CreateClientWithPermissions(params string[] permissions)

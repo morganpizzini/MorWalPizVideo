@@ -47,6 +47,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<SocialAsset?> GetByIdempotencyKeyAsync(string channelId, string idempotencyKey);
     }
 
+    public interface IVideoImporterChannelSettingsRepository : IRepository<VideoImporterChannelSettings>
+    {
+        Task<VideoImporterChannelSettings?> GetByChannelIdAsync(string channelId, CancellationToken cancellationToken = default);
+        Task<VideoImporterChannelSettings> UpsertByChannelIdAsync(VideoImporterChannelSettings settings, CancellationToken cancellationToken = default);
+    }
+
     public enum VideoReferenceAppendResult
     {
         Added,

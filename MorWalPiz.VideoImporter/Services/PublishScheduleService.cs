@@ -122,39 +122,6 @@ namespace MorWalPiz.VideoImporter.Services
         }
 
         /// <summary>
-        /// Saves a publish schedule
-        /// </summary>
-        public void SaveSchedule(PublishSchedule schedule)
-        {
-            using var context = _databaseService.CreateContext();
-            
-            if (schedule.Id == 0)
-            {
-                context.PublishSchedules.Add(schedule);
-            }
-            else
-            {
-                context.PublishSchedules.Update(schedule);
-            }
-
-            context.SaveChanges();
-        }
-
-        /// <summary>
-        /// Deletes a publish schedule
-        /// </summary>
-        public void DeleteSchedule(int scheduleId)
-        {
-            using var context = _databaseService.CreateContext();
-            var schedule = context.PublishSchedules.Find(scheduleId);
-            if (schedule != null)
-            {
-                context.PublishSchedules.Remove(schedule);
-                context.SaveChanges();
-            }
-        }
-
-        /// <summary>
         /// Validates if a schedule configuration is valid
         /// </summary>
         public (bool isValid, string errorMessage) ValidateSchedule(PublishSchedule schedule)

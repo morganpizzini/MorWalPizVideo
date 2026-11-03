@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Microsoft.EntityFrameworkCore;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
 using MessageBox = System.Windows.MessageBox;
@@ -14,15 +15,22 @@ namespace MorWalPiz.VideoImporter.Views
     public partial class PublishSchedulesPage : Window
     {
         private readonly PublishScheduleService _scheduleService;
+        private readonly DatabaseService _databaseService;
+        private readonly IChannelConfigurationSyncService _channelSettingsSyncService;
+        private bool _isSaving;
         public ObservableCollection<PublishScheduleViewModel> Schedules { get; set; }
 
         public PublishSchedulesPage()
         {
             InitializeComponent();
             _scheduleService = new PublishScheduleService(App.DatabaseService);
+            _databaseService = App.DatabaseService;
+            _channelSettingsSyncService = App.ChannelSettingsSyncService;
             Schedules = new ObservableCollection<PublishScheduleViewModel>();
             SchedulesListView.ItemsSource = Schedules;
             LoadSchedules();
+            SetMutationControlsEnabled(_channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId()));
+            StatusTextBlock.Text = _channelSettingsSyncService.CurrentStatus.Message;
         }
 
         private void LoadSchedules()
@@ -39,32 +47,36 @@ namespace MorWalPiz.VideoImporter.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Errore durante il caricamento delle pianificazioni: {ex.Message}",
+                System.Diagnostics.Trace.TraceError("Publish schedule cache load failed: {0}", ex);
+                MessageBox.Show("Impossibile caricare le pianificazioni locali.",
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void AddScheduleButton_Click(object sender, RoutedEventArgs e)
+        private async void AddScheduleButton_Click(object sender, RoutedEventArgs e)
         {
             var editDialog = new ScheduleEditDialog();
             editDialog.Owner = this;
             
             if (editDialog.ShowDialog() == true)
             {
-                try
+                var candidate = editDialog.Schedule;
+                while (true)
                 {
-                    _scheduleService.SaveSchedule(editDialog.Schedule);
-                    LoadSchedules();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Errore durante il salvataggio: {ex.Message}",
-                        "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                    if (await SaveScheduleCandidateAsync(candidate))
+                        break;
+                    if (!_channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId()))
+                        break;
+
+                    var retryDialog = new ScheduleEditDialog(candidate) { Owner = this };
+                    if (retryDialog.ShowDialog() != true)
+                        break;
+                    candidate = retryDialog.Schedule;
                 }
             }
         }
 
-        private void EditScheduleButton_Click(object sender, RoutedEventArgs e)
+        private async void EditScheduleButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is PublishScheduleViewModel viewModel)
             {
@@ -73,21 +85,24 @@ namespace MorWalPiz.VideoImporter.Views
                 
                 if (editDialog.ShowDialog() == true)
                 {
-                    try
+                    var candidate = editDialog.Schedule;
+                    while (true)
                     {
-                        _scheduleService.SaveSchedule(editDialog.Schedule);
-                        LoadSchedules();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Errore durante il salvataggio: {ex.Message}",
-                            "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                        if (await SaveScheduleCandidateAsync(candidate, viewModel.Schedule.Name))
+                            break;
+                        if (!_channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId()))
+                            break;
+
+                        var retryDialog = new ScheduleEditDialog(candidate) { Owner = this };
+                        if (retryDialog.ShowDialog() != true)
+                            break;
+                        candidate = retryDialog.Schedule;
                     }
                 }
             }
         }
 
-        private void DeleteScheduleButton_Click(object sender, RoutedEventArgs e)
+        private async void DeleteScheduleButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is PublishScheduleViewModel viewModel)
             {
@@ -101,33 +116,134 @@ namespace MorWalPiz.VideoImporter.Views
                 {
                     try
                     {
-                        _scheduleService.DeleteSchedule(viewModel.Schedule.Id);
-                        LoadSchedules();
+                        var snapshot = await _channelSettingsSyncService.GetLocalSnapshotAsync(App.ApplicationStoppingToken);
+                        var schedules = snapshot.PublishSchedules
+                            .Where(schedule => !string.Equals(
+                                schedule.Name,
+                                viewModel.Schedule.Name,
+                                StringComparison.OrdinalIgnoreCase))
+                            .ToArray();
+                        await SaveSnapshotAsync(snapshot with { PublishSchedules = schedules });
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Errore durante l'eliminazione: {ex.Message}",
-                            "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                        System.Diagnostics.Trace.TraceError("Publish schedule delete save failed: {0}", ex);
+                        MessageBox.Show("Il server non ha confermato l'eliminazione. La pianificazione locale è invariata.",
+                            "Eliminazione non riuscita", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
         }
 
-        private void ActiveCheckBox_Changed(object sender, RoutedEventArgs e)
+        private async void ActiveCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is PublishScheduleViewModel viewModel)
             {
                 try
                 {
-                    _scheduleService.SaveSchedule(viewModel.Schedule);
+                    await SaveScheduleCandidateAsync(viewModel.Schedule, viewModel.Schedule.Name);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Errore durante l'aggiornamento: {ex.Message}",
-                        "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Diagnostics.Trace.TraceError("Publish schedule active-state save failed: {0}", ex);
+                    MessageBox.Show("Il server non ha confermato la modifica. La pianificazione locale è invariata.",
+                        "Aggiornamento non riuscito", MessageBoxButton.OK, MessageBoxImage.Error);
                     LoadSchedules(); // Reload to reset the checkbox
                 }
             }
+        }
+
+        private async Task<bool> SaveScheduleCandidateAsync(PublishSchedule schedule, string? previousName = null)
+        {
+            if (!CanMutateSettings())
+                return false;
+
+            try
+            {
+                var snapshot = await _channelSettingsSyncService.GetLocalSnapshotAsync(App.ApplicationStoppingToken);
+                var schedules = snapshot.PublishSchedules
+                    .Where(existing => !string.Equals(
+                        existing.Name,
+                        previousName ?? schedule.Name,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Append(new ChannelPublishScheduleSnapshot(
+                        schedule.Name.Trim(),
+                        schedule.DaysOfWeek,
+                        schedule.PublishTime,
+                        schedule.IsActive))
+                    .ToArray();
+                return await SaveSnapshotAsync(snapshot with { PublishSchedules = schedules });
+            }
+            catch (OperationCanceledException) when (App.ApplicationStoppingToken.IsCancellationRequested)
+            {
+                return false;
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError("Could not build a publish schedule snapshot: {0}", exception);
+                StatusTextBlock.Text = "Impossibile preparare la pianificazione. Riprova.";
+                MessageBox.Show("Impossibile preparare la pianificazione. La cache locale non è stata modificata.",
+                    "Salvataggio non riuscito", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        private async Task<bool> SaveSnapshotAsync(ChannelConfigurationSnapshot snapshot)
+        {
+            if (_isSaving)
+                return false;
+
+            _isSaving = true;
+            SetMutationControlsEnabled(false);
+            RefreshButton.IsEnabled = false;
+            CloseButton.IsEnabled = false;
+            StatusTextBlock.Text = "Salvataggio delle pianificazioni...";
+            try
+            {
+                var result = await _channelSettingsSyncService.SaveAsync(
+                    App.GetCurrentChannelId(),
+                    snapshot,
+                    App.ApplicationStoppingToken);
+                StatusTextBlock.Text = result.Message;
+                if (!result.LocalCacheSynchronized)
+                {
+                    MessageBox.Show(result.Message, "Cache locale non sincronizzata", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+
+                LoadSchedules();
+                return true;
+            }
+            catch (OperationCanceledException) when (App.ApplicationStoppingToken.IsCancellationRequested)
+            {
+                StatusTextBlock.Text = "Salvataggio annullato durante la chiusura dell'applicazione.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                StatusTextBlock.Text = "Salvataggio non riuscito. Le modifiche restano disponibili per un nuovo tentativo.";
+                System.Diagnostics.Trace.TraceError("Publish schedule UI save failed: {0}", ex);
+                MessageBox.Show("Il server non ha confermato il salvataggio. La cache locale è invariata.",
+                    "Salvataggio non riuscito", MessageBoxButton.OK, MessageBoxImage.Error);
+                LoadSchedules();
+                return false;
+            }
+            finally
+            {
+                _isSaving = false;
+                SetMutationControlsEnabled(_channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId()));
+                RefreshButton.IsEnabled = true;
+                CloseButton.IsEnabled = true;
+            }
+        }
+
+        private bool CanMutateSettings() =>
+            !_isSaving && _channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId());
+
+        private void SetMutationControlsEnabled(bool enabled)
+        {
+            AddScheduleButton.IsEnabled = enabled;
+            SchedulesListView.IsEnabled = enabled;
         }
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)

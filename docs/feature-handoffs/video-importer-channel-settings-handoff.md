@@ -176,7 +176,7 @@ Independent post-validation review is warranted because this crosses a desktop p
 - `MorWalPiz.VideoImporter/Services/ChannelConfigurationSyncService.cs`: pull, seed, save, validation, serialization, and local projection orchestration.
 - `MorWalPizVideo.BackOffice.Tests/Features/VideoImporterSettingsEndpointTests.cs`: HTTP contract, authentication, scope, channel isolation, and idempotency tests.
 - `MorWalPiz.VideoImporter.Tests/ChannelConfigurationSyncTests.cs`: fake HTTP and temporary SQLite recovery/synchronization tests.
-- `docs/architecture/adr/ADR-020-video-importer-channel-settings.md`: decision record for remote authority, local cache, secret boundary, and rollout.
+- `docs/architecture/adr/ADR-021-video-importer-channel-settings.md`: decision record for remote authority, local cache, secret boundary, and rollout.
 
 Exact class/file splits may follow an existing colocated convention, but the ownership above must not move into controllers, `DataService`, or static WPF facades.
 
@@ -189,7 +189,7 @@ Exact class/file splits may follow an existing colocated convention, but the own
 #### Documentation
 
 - This handoff is the implementation source of truth until updated after delivery.
-- ADR-020 and the architecture documents listed under Modify must record actual final behavior and validation evidence.
+- ADR-021 and the architecture documents listed under Modify must record actual final behavior and validation evidence.
 - Operational release notes must describe API-key scope assignment and index apply/rollback without containing key values or payload contents.
 
 #### Verify Only
@@ -275,7 +275,7 @@ Exact class/file splits may follow an existing colocated convention, but the own
 
 9. **Prove database compatibility.** Run fresh existing-database migration compatibility and empty-database recovery checks without adding an EF migration. Verify a remote snapshot reconstructs channel settings after local database deletion while unrelated local operational data remains untouched when the database exists. Gate: both importer tests and fresh manual recovery evidence pass on Windows.
 
-10. **Update architecture and release artifacts.** Finalize ADR-020 and update Windows, backend, API, security, development, technical-debt, and index-operation documentation with actual files and evidence. Gate: docs distinguish current behavior, deployment prerequisites, and unresolved secret-storage debt.
+10. **Update architecture and release artifacts.** Finalize ADR-021 and update Windows, backend, API, security, development, technical-debt, and index-operation documentation with actual files and evidence. Gate: docs distinguish current behavior, deployment prerequisites, and unresolved secret-storage debt.
 
 11. **Deploy expand-first.** Deploy BackOffice/model/repository/API changes; audit/apply the unique index; update the importer API key with read/write scopes; verify endpoint behavior; then distribute the importer. Monitor before considering any removal of local fields or fallback. Gate: staging proves a first seed, second-PC restore, edit propagation, outage fallback, and rollback.
 

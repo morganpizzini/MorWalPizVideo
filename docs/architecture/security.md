@@ -141,6 +141,17 @@ API keys support VideoImporter, InsightScanner, and selected machine workflows. 
 
 Managed keys have a persisted `channelId`. Scoped BackOffice resources require `X-Channel-Id`; missing context is `400 channel_context_required`, while unknown, inaccessible, or key/channel mismatches are `404 channel_context_unavailable`. Creation binds a key to the selected channel, and only an administrator can reassign it to another existing channel. API-key principals are excluded from browser impersonation.
 
+VideoImporter channel settings use only the dedicated `videoimporter.settings.read`
+and `videoimporter.settings.write` API-key scopes on the scoped v1 endpoint.
+Channel ownership is resolved from the key's persisted binding and
+`X-Channel-Id`; request payloads cannot select a channel. The importer serializes
+an allowlisted typed snapshot, excluding API endpoint/key, YouTube and social
+credentials, Key Vault references, channel/tenant/local IDs, machine paths,
+history, and arbitrary local files. BackOffice logs channel, version, byte size,
+duration, and outcome, never the payload or credentials. The key's endpoint and
+secret remain local/protected bootstrap configuration, not remote channel data.
+See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
+
 The effective impersonated target identity is used for ordinary content/channel authorization, while the primary actor remains the audit and CSRF identity. Administrators can select any channel; normal users can select only owned channels. Video collaborators can read but not mutate shared videos. Compilation management and other BackOffice resources remain scoped, but public compilation URLs and short-link redirects are anonymous global lookups. Scoped responses and caches must include channel and effective-identity authorization inputs; public URL caches must remain global.
 
 ## Public And Cart Security (Target, On Hold)

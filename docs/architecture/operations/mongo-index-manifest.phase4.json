@@ -100,6 +100,16 @@
       "notes": "Allows at most one navigation configuration per channel. Public single-site projection separately requires at most one active navigation globally."
     },
     {
+      "key": "videoimportersettings.channelid.unique",
+      "collection": "videoImporterChannelSettings",
+      "name": "ux_videoimportersettings_channelid",
+      "keys": {
+        "channelId": 1
+      },
+      "unique": true,
+      "notes": "Allows one importer-owned settings snapshot per channel. Audit duplicate documents, then apply manually through the approved Mongo index operation before importer rollout."
+    },
+    {
       "key": "compilations_url.unique",
       "collection": "compilations",
       "name": "ux_compilations_url_ci",

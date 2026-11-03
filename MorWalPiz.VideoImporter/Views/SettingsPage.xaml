@@ -14,34 +14,52 @@
         Background="{StaticResource BackgroundBrush}">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
-            <!-- Hashtags Card -->
+            <!-- Channel Settings Card -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="⚙️ Hashtag Predefiniti"
+                    <TextBlock Text="⚙️ Impostazioni del canale"
                                FontSize="16"
                                FontWeight="SemiBold"
                                Margin="0,0,0,10"/>
-                    
+
+                    <TextBlock Text="Application Name"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    <TextBox x:Name="ApplicationNameTextBox"
+                             Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Hashtag Predefiniti"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
                     <TextBlock Text="Inserisci gli hashtag separati da virgola (esempio: video, social)"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,0,0,10"
                                TextWrapping="Wrap"/>
-                    
                     <TextBox x:Name="HashtagsTextBox"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto"
                              Height="120"/>
+                    <TextBlock x:Name="ChannelSettingsStatusTextBlock"
+                               Margin="0,10,0,0"
+                               TextWrapping="Wrap"
+                               AutomationProperties.Name="Stato salvataggio impostazioni canale"
+                               AutomationProperties.LiveSetting="Assertive"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
                 </StackPanel>
             </Border>
 
-            <!-- API Configuration Card -->
+            <!-- Local Connection Card -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="🔗 Configurazione API"
+                    <TextBlock Text="🔗 Connessione locale a BackOffice"
                                FontSize="16"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,15"/>
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Endpoint e chiave restano su questo computer e non vengono sincronizzati."
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,15"
+                               TextWrapping="Wrap"/>
                     
                     <!-- API Endpoint -->
                     <TextBlock Text="API Endpoint"
@@ -55,12 +73,19 @@
             Margin="0,0,0,5"/>
                     <TextBox x:Name="ApiKeyTextBox"
           Margin="0,0,0,15"/>
-
-                    <!-- Application Name -->
-                    <TextBlock Text="Application Name"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,5"/>
-                    <TextBox x:Name="ApplicationNameTextBox"/>
+                    <StackPanel>
+                        <TextBlock x:Name="LocalConnectionStatusTextBlock"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,10"
+                                   AutomationProperties.Name="Stato connessione locale"
+                                   AutomationProperties.LiveSetting="Assertive"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <Button x:Name="SaveConnectionButton"
+                                Content="Salva connessione locale"
+                                Style="{StaticResource SecondaryButton}"
+                                HorizontalAlignment="Right"
+                                Click="SaveConnectionButton_Click"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

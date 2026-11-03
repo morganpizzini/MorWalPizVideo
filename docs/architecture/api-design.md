@@ -58,6 +58,19 @@ Target JSON routes use URL-segment versioning:
 
 `/api/v1/{resource}`
 
+VideoImporter channel settings use `GET` and complete-replacement `PUT` at
+`/api/v1/video-importer-settings`. Both operations require the API-key scheme,
+`X-Channel-Id`, and the resolved channel context. GET requires
+`videoimporter.settings.read`, returns `200` with the explicit versioned JSON
+envelope when present, and returns `204` only when the scoped channel has no
+document. PUT requires `videoimporter.settings.write`; its request contains a
+schema version and JSON-object payload but never a channel ID. The server
+derives channel ownership from middleware, rejects unsupported versions,
+non-object roots, and payloads over 64 KiB, and returns stable Problem Details
+codes. Route, authentication, authorization, channel, and server failures are
+never interpreted by clients as first-use absence. See
+[ADR-021](adr/ADR-021-video-importer-channel-settings.md).
+
 Use maintained ASP.NET API versioning and API Explorer support. OpenAPI document labels alone do not constitute versioning. Existing unversioned routes remain compatibility aliases until consumers migrate and telemetry shows zero use.
 
 Version only externally observable contracts. Internal implementation and persistence changes do not require a new API version when compatibility is preserved.

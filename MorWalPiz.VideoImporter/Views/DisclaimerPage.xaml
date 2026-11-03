@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Language Selector Card -->
@@ -42,7 +43,15 @@
         </GroupBox>
 
         <!-- Action Buttons -->
-        <Border Grid.Row="2" Style="{StaticResource Card}">
+        <TextBlock x:Name="StatusTextBlock"
+                   Grid.Row="2"
+                   Margin="0,0,0,10"
+                   TextWrapping="Wrap"
+                   AutomationProperties.Name="Stato salvataggio disclaimer"
+                   AutomationProperties.LiveSetting="Assertive"
+                   Foreground="{StaticResource TextSecondaryBrush}"/>
+
+        <Border Grid.Row="3" Style="{StaticResource Card}">
             <StackPanel Style="{StaticResource DialogFooter}">
                 <Button x:Name="CancelButton"
                         Content="Annulla"

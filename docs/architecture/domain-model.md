@@ -83,6 +83,14 @@ The FreezerAnalysis database owns published match revisions, immutable competito
 
 Categories, compilations, pages, sponsors, sponsor applications, configurations, publish schedules, query links, users, API keys, competitions, user requests, and insight records are primarily independent Mongo roots.
 
+`VideoImporterChannelSettings` is a dedicated channel-owned root in the
+`videoImporterChannelSettings` collection. It stores a schema version and
+opaque JSON payload separately from `YTChannel`; the scoped endpoint derives
+`channelId` from the request context. Schema version 1 is owned by VideoImporter
+and includes only application preferences, languages/disclaimers, and
+value-based publish schedules. The local SQLite rows are a recoverable cache,
+not the durable authority. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
+
 ## Value Object Opportunities
 
 - Normalized email address.

@@ -83,6 +83,18 @@ public sealed class MongoIndexOperationsTests
     }
 
     [Fact]
+    public void Video_importer_settings_manifest_requires_a_unique_channel_index()
+    {
+        var index = MongoIndexOperationsService.Manifest
+            .Single(item => item.Key == "videoimportersettings.channelid.unique");
+
+        Assert.True(index.Unique);
+        Assert.Equal("videoImporterChannelSettings", index.Collection);
+        Assert.Equal("channelId", index.Keys.GetElement(0).Name);
+        Assert.Equal("ux_videoimportersettings_channelid", index.Name);
+    }
+
+    [Fact]
     public void Shortlink_manifest_requires_unique_normalized_code_index_without_collation()
     {
         var entry = MongoIndexOperationsService.Manifest.Single(item => item.Key == "shortlinks.code.unique");

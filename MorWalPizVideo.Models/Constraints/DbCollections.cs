@@ -60,6 +60,7 @@
         public const string ScriptStudio = "scriptStudio";
         public const string ScriptStudioGlobalPrompt = "scriptStudioGlobalPrompt";
         public const string ScriptStudioAudit = "scriptStudioAudit";
+        public const string VideoImporterChannelSettings = "videoImporterChannelSettings";
         public const string AiPromptDefinitions = "aiPromptDefinitions";
         public const string AiPromptRevisions = "aiPromptRevisions";
         public const string AiExecutionRecords = "aiExecutionRecords";

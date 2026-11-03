@@ -63,6 +63,12 @@ Current mock repositories are code-initialized, in-memory entity collections loa
 
 VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduling. Schema changes require forward and rollback-aware migrations and must preserve existing local databases.
 
+### VideoImporter channel settings
+
+BackOffice owns the channel-authoritative `videoImporterChannelSettings` aggregate. Its versioned JSON payload is client-owned opaque data; the repository reads and atomically upserts by the channel resolved from `X-Channel-Id`. The unique `channelId` index is source-managed in `MongoIndexOperationsService` and is applied only through the reviewed manual index operation after duplicate audit.
+
+The v1 importer snapshot allowlists application name, default hashtags, languages/disclaimers by language code, and publish schedules by value. SQLite remains a tenant-filtered working cache; the importer writes remotely before projecting acknowledged values in one local transaction. Bootstrap credentials, channel selection, social tokens, history, machine paths, and local row IDs are excluded. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
+
 ## Authentication And Authorization
 
 ### BackOffice

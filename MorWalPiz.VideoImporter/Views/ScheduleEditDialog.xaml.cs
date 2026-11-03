@@ -32,6 +32,7 @@ namespace MorWalPiz.VideoImporter.Views
             };
 
             LoadScheduleData();
+            Loaded += (_, _) => NameTextBox.Focus();
         }
 
         private void LoadScheduleData()
@@ -105,7 +106,8 @@ namespace MorWalPiz.VideoImporter.Views
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Errore durante il salvataggio: {ex.Message}", 
+                System.Diagnostics.Trace.TraceError("Publish schedule validation failed: {0}", ex);
+                System.Windows.MessageBox.Show("Impossibile verificare la pianificazione. Riprova.",
                     "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

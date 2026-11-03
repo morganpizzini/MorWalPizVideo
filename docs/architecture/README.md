@@ -49,6 +49,7 @@ Excluded:
 22. [BackOffice and ServerAPI consistency audit](api-consistency-audit.md)
 23. [Editorial production cards](adr/ADR-019-editorial-production-cards.md)
 24. [BackOffice AI prompt orchestration](adr/ADR-020-backoffice-ai-prompt-orchestration.md)
+25. [VideoImporter channel settings](adr/ADR-021-video-importer-channel-settings.md)
 
 ## Architectural Baseline
 

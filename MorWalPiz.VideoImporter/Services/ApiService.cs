@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.IO;
+using System.Text.Json;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPizVideo.BackOffice.DTOs;
 using BackOfficeDTOs = MorWalPizVideo.BackOffice.DTOs;
@@ -115,9 +116,10 @@ namespace MorWalPiz.VideoImporter.Services
             }
         }
 
-        public async Task<IReadOnlyList<ChannelContract>> GetAccessibleChannelsAsync()
+        public async Task<IReadOnlyList<ChannelContract>> GetAccessibleChannelsAsync(
+            CancellationToken cancellationToken = default)
         {
-            var response = await _httpClient.GetAsync("api/channels/accessible");
+            var response = await _httpClient.GetAsync("api/channels/accessible", cancellationToken);
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"Unable to load accessible channels ({response.StatusCode})");
             return await response.Content.ReadFromJsonAsync<List<ChannelContract>>() ?? [];
@@ -145,6 +147,59 @@ namespace MorWalPiz.VideoImporter.Services
                 throw new HttpRequestException($"Social asset upload failed ({response.StatusCode}).");
             return await response.Content.ReadFromJsonAsync<SocialAssetContract>(cancellationToken: cancellationToken)
                 ?? throw new InvalidOperationException("BackOffice returned an empty social asset response.");
+        }
+
+        public async Task<VideoImporterChannelSettingsResponse?> GetVideoImporterChannelSettingsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            using var response = await _httpClient.GetAsync(
+                "api/v1/video-importer-settings",
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                return null;
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException(
+                    $"Channel settings request failed ({response.StatusCode}).",
+                    null,
+                    response.StatusCode);
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<VideoImporterChannelSettingsResponse>(
+                    cancellationToken: cancellationToken)
+                    ?? throw new InvalidDataException("BackOffice returned an empty channel settings response.");
+            }
+            catch (JsonException exception)
+            {
+                throw new InvalidDataException("BackOffice returned malformed channel settings JSON.", exception);
+            }
+        }
+
+        public async Task<VideoImporterChannelSettingsResponse> SaveVideoImporterChannelSettingsAsync(
+            VideoImporterChannelSettingsRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            using var response = await _httpClient.PutAsJsonAsync(
+                "api/v1/video-importer-settings",
+                request,
+                cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException(
+                    $"Channel settings save failed ({response.StatusCode}).",
+                    null,
+                    response.StatusCode);
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<VideoImporterChannelSettingsResponse>(
+                    cancellationToken: cancellationToken)
+                    ?? throw new InvalidDataException("BackOffice returned an empty channel settings response.");
+            }
+            catch (JsonException exception)
+            {
+                throw new InvalidDataException("BackOffice returned malformed channel settings JSON.", exception);
+            }
         }
 
     }
