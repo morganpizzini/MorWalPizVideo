@@ -60,6 +60,7 @@
         public const string ScriptStudio = "scriptStudio";
         public const string ScriptStudioGlobalPrompt = "scriptStudioGlobalPrompt";
         public const string ScriptStudioAudit = "scriptStudioAudit";
+        public const string VideoImporterChannelSettings = "videoImporterChannelSettings";
 
         // Insights Collections
         public const string InsightTopics = "insightTopics";

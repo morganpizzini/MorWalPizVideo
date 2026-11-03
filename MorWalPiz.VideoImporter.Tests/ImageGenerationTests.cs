@@ -103,9 +103,11 @@ public sealed class ImageGenerationTests
                 await window.InitializeAsync();
                 await window.InitializeAsync();
                 Assert.Equal(1, upload.ValidationCount);
+                Assert.True(App.ChannelSettingsSyncService.IsSynchronizedFor("channel-1"));
                 var selector = (ComboBox)window.FindName("TenantComboBox");
                 window.VideoFiles.Add(new VideoFile());
                 selector.SelectedItem = selector.Items.Cast<Tenant>().Single(tenant => tenant.Id == 2);
+                await WaitUntilAsync(() => App.ChannelSettingsSyncService.IsSynchronizedFor("channel-2"));
                 Assert.Equal(2, tenantContext.CurrentTenantId);
                 Assert.Equal("Video Importer - ShootingIta", window.Title);
                 Assert.Empty(window.VideoFiles);
@@ -115,7 +117,7 @@ public sealed class ImageGenerationTests
                 using (var context = database.CreateContext())
                 {
                     Assert.Equal(2, context.Settings.Single().TenantId);
-                    Assert.Empty(context.Languages);
+                    Assert.Equal("it", context.Languages.Single().Code);
                 }
 
                 upload.PendingRefresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -298,6 +300,17 @@ public sealed class ImageGenerationTests
         Assert.True(thread.Join(TimeSpan.FromSeconds(60)), "Desktop startup test did not complete.");
         if (failure is not null)
             ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var timeout = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            if (DateTime.UtcNow >= timeout)
+                throw new TimeoutException("The selected tenant's channel settings did not synchronize.");
+            await Task.Delay(20);
+        }
     }
 
     private sealed class TestTenantContext : ITenantContext

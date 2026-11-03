@@ -75,13 +75,17 @@ namespace MorWalPiz.VideoImporter
         private readonly ITenantContext _tenantContext;
         private readonly ITenantService _tenantService;
         private readonly IApiServiceFactory _apiServiceFactory;
+        private readonly IChannelConfigurationSyncService _channelSettingsSyncService;
         private readonly CancellationTokenSource _windowCancellation;
+        private CancellationTokenSource? _tenantSelectionCancellation;
+        private bool _isLoadingTenants;
         private Task? _initializationTask;
         internal CancellationToken WindowCancellationToken { get; }
 
         public MainWindow(DatabaseService databaseService, ApiSettings apiSettings,
             IYouTubeUploadService youTubeUploadService, ITenantContext tenantContext,
             ITenantService tenantService, IApiServiceFactory apiServiceFactory,
+            IChannelConfigurationSyncService channelSettingsSyncService,
             IHostApplicationLifetime hostLifetime)
         {
             _databaseService = databaseService;
@@ -90,6 +94,7 @@ namespace MorWalPiz.VideoImporter
             _tenantContext = tenantContext;
             _tenantService = tenantService;
             _apiServiceFactory = apiServiceFactory;
+            _channelSettingsSyncService = channelSettingsSyncService;
             _windowCancellation = CancellationTokenSource.CreateLinkedTokenSource(hostLifetime.ApplicationStopping);
             WindowCancellationToken = _windowCancellation.Token;
             InitializeComponent();
@@ -120,6 +125,8 @@ namespace MorWalPiz.VideoImporter
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
+            _tenantSelectionCancellation?.Cancel();
+            _tenantSelectionCancellation?.Dispose();
             _windowCancellation.Cancel();
             _windowCancellation.Dispose();
             Loaded -= MainWindow_Loaded;
@@ -1099,25 +1106,26 @@ namespace MorWalPiz.VideoImporter
                 var tenants = await _tenantService.GetActiveTenantsAsync();
                 if (WindowCancellationToken.IsCancellationRequested)
                     return;
+                _isLoadingTenants = true;
                 TenantComboBox.ItemsSource = tenants;
-                
-                // Set the current tenant
-                var currentTenant = tenants.FirstOrDefault(t => t.Id == _tenantContext.CurrentTenantId);
-                if (currentTenant != null)
+
+                var selectedTenant = tenants.FirstOrDefault(t => t.Id == _tenantContext.CurrentTenantId)
+                    ?? tenants.FirstOrDefault();
+                if (selectedTenant is not null)
                 {
-                    TenantComboBox.SelectedItem = currentTenant;
-                    await EnsureTenantChannelAsync(currentTenant, false);
+                    if (selectedTenant.Id != _tenantContext.CurrentTenantId)
+                        _tenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
+                    TenantComboBox.SelectedItem = selectedTenant;
+                    Title = $"Video Importer - {selectedTenant.Name}";
                 }
-                else if (tenants.Any())
-                {
-                    // Select the first tenant if current is not found
-                    TenantComboBox.SelectedItem = tenants.First();
-                    _tenantContext.SetCurrentTenant(tenants.First().Id, tenants.First().Name);
-                    await EnsureTenantChannelAsync(tenants.First(), false);
-                }
+                _isLoadingTenants = false;
+
+                if (selectedTenant is not null)
+                    await RefreshTenantChannelSettingsAsync(selectedTenant, false);
             }
             catch (Exception ex)
             {
+                _isLoadingTenants = false;
                 if (WindowCancellationToken.IsCancellationRequested)
                     return;
                 MessageBox.Show($"Errore nel caricamento dei tenant: {ex.Message}", "Errore", 
@@ -1125,12 +1133,11 @@ namespace MorWalPiz.VideoImporter
             }
         }
 
-        private void TenantComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private async void TenantComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            if (TenantComboBox.SelectedItem is Tenant selectedTenant)
+            if (!_isLoadingTenants && TenantComboBox.SelectedItem is Tenant selectedTenant)
             {
                 _tenantContext.SetCurrentTenant(selectedTenant.Id, selectedTenant.Name);
-                _ = EnsureTenantChannelAsync(selectedTenant, false);
                 
                 // Clear current data and reload for the new tenant
                 VideoFiles.Clear();
@@ -1139,46 +1146,108 @@ namespace MorWalPiz.VideoImporter
                 
                 // Update title to show current tenant
                 Title = $"Video Importer - {selectedTenant.Name}";
+                await RefreshTenantChannelSettingsAsync(selectedTenant, false);
             }
         }
 
-        private async Task EnsureTenantChannelAsync(Tenant tenant, bool forceRefresh)
+        private async Task RefreshTenantChannelSettingsAsync(Tenant tenant, bool forceRefresh)
+        {
+            _tenantSelectionCancellation?.Cancel();
+            _tenantSelectionCancellation?.Dispose();
+            _tenantSelectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(WindowCancellationToken);
+            var cancellationToken = _tenantSelectionCancellation.Token;
+            SetChannelSettingsActionsEnabled(false);
+            ChannelSettingsStatusTextBlock.Text = "Sincronizzazione delle impostazioni del canale in corso...";
+
+            try
+            {
+                var channelId = await EnsureTenantChannelAsync(tenant, forceRefresh, cancellationToken);
+                if (cancellationToken.IsCancellationRequested || tenant.Id != _tenantContext.CurrentTenantId)
+                    return;
+                if (string.IsNullOrWhiteSpace(channelId))
+                {
+                    ChannelSettingsStatusTextBlock.Text = "Seleziona un canale per sincronizzare le impostazioni.";
+                    return;
+                }
+
+                var status = await _channelSettingsSyncService.SynchronizeAsync(channelId, cancellationToken);
+                if (cancellationToken.IsCancellationRequested || tenant.Id != _tenantContext.CurrentTenantId)
+                    return;
+                ChannelSettingsStatusTextBlock.Text = status.Message;
+                SetChannelSettingsActionsEnabled(status.State != ChannelConfigurationSyncState.Synchronizing);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+        }
+
+        private async Task<string?> EnsureTenantChannelAsync(
+            Tenant tenant,
+            bool forceRefresh,
+            CancellationToken cancellationToken = default)
         {
             try
             {
                 using var context = _databaseService.CreateContext();
-                var stored = await context.Tenants.FindAsync([tenant.Id], WindowCancellationToken);
+                var stored = await context.Tenants.FindAsync([tenant.Id], cancellationToken);
+                if (!forceRefresh && !string.IsNullOrWhiteSpace(stored?.ChannelId))
+                    return stored.ChannelId;
+                if (!forceRefresh &&
+                    string.IsNullOrWhiteSpace(stored?.ChannelId) &&
+                    !string.IsNullOrWhiteSpace(_apiSettings.ChannelId))
+                {
+                    stored!.ChannelId = _apiSettings.ChannelId;
+                    await context.SaveChangesAsync(cancellationToken);
+                    return stored.ChannelId;
+                }
+
                 var shouldDiscover = forceRefresh || string.IsNullOrWhiteSpace(stored?.ChannelId);
-                if (!shouldDiscover) return;
+                if (!shouldDiscover)
+                    return stored?.ChannelId;
 
                 var service = _apiServiceFactory.Create(_apiSettings.ApiEndpoint, _apiSettings.ApiKey);
-                var channels = await service.GetAccessibleChannelsAsync();
-                if (WindowCancellationToken.IsCancellationRequested)
-                    return;
+                var channels = await service.GetAccessibleChannelsAsync(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (channels.Count == 0)
                 {
                     MessageBox.Show("Nessun canale accessibile per questo tenant.", "Canale non configurato", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    return null;
                 }
 
                 var selection = new ChannelSelectionDialog(channels);
                 selection.Owner = this;
-                if (selection.ShowDialog() != true || selection.SelectedChannel is null) return;
+                if (selection.ShowDialog() != true || selection.SelectedChannel is null)
+                    return null;
                 stored!.ChannelId = selection.SelectedChannel.ChannelId;
-                await context.SaveChangesAsync(WindowCancellationToken);
+                await context.SaveChangesAsync(cancellationToken);
+                return stored.ChannelId;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return null;
             }
             catch (Exception ex)
             {
-                if (WindowCancellationToken.IsCancellationRequested)
-                    return;
+                if (cancellationToken.IsCancellationRequested)
+                    return null;
                 MessageBox.Show($"Errore nel caricamento dei canali: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
             }
         }
 
         private async void RefreshChannelsMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (TenantComboBox.SelectedItem is Tenant tenant)
-                await EnsureTenantChannelAsync(tenant, true);
+                await RefreshTenantChannelSettingsAsync(tenant, true);
+        }
+
+        private void SetChannelSettingsActionsEnabled(bool enabled)
+        {
+            SettingsMenuItem.IsEnabled = enabled;
+            LanguagesMenuItem.IsEnabled = enabled;
+            DisclaimerMenuItem.IsEnabled = enabled;
+            PublishSchedulesMenuItem.IsEnabled = enabled;
         }
 
         private async void TenantManagementMenuItem_Click(object sender, RoutedEventArgs e)

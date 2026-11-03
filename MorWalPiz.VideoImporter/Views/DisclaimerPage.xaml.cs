@@ -2,12 +2,14 @@ using System.Windows;
 using System.Windows.Controls;
 using MorWalPiz.VideoImporter.Data;
 using MorWalPiz.VideoImporter.Models;
+using MorWalPiz.VideoImporter.Services;
 
 namespace MorWalPiz.VideoImporter.Views
 {
     public partial class DisclaimerPage : Window
     {
         private readonly AppDbContext _context;
+        private readonly IChannelConfigurationSyncService _channelSettingsSyncService;
         private List<Language> _selectedLanguages;
         private Dictionary<int, Disclaimer> _disclaimers = new Dictionary<int, Disclaimer>();
         private bool _isInitializing = true; // Flag per tracciare l'inizializzazione
@@ -16,7 +18,10 @@ namespace MorWalPiz.VideoImporter.Views
         {
             InitializeComponent();
             _context = App.DatabaseService.CreateContext();
+            _channelSettingsSyncService = App.ChannelSettingsSyncService;
             LoadData();
+            SaveButton.IsEnabled = _channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId());
+            StatusTextBlock.Text = _channelSettingsSyncService.CurrentStatus.Message;
         }
 
         private void LoadData()
@@ -64,9 +69,6 @@ namespace MorWalPiz.VideoImporter.Views
                 
             if (LanguageSelector.SelectedItem != null)
             {
-                // Salva il testo corrente se è stato modificato
-                //SaveCurrentText();
-
                 // Carica il testo per la lingua selezionata
                 var selectedLanguage = (Language)LanguageSelector.SelectedItem;
                 LoadDisclaimerText(selectedLanguage.Id);
@@ -86,49 +88,64 @@ namespace MorWalPiz.VideoImporter.Views
             }
         }
 
-        private void SaveCurrentText()
+        private async void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            if (LanguageSelector.SelectedItem != null)
-            {
-                var currentLanguage = (Language)LanguageSelector.SelectedItem;
-                var currentText = DisclaimerTextBox.Text?.Trim() ?? string.Empty;
+            if (LanguageSelector.SelectedItem is not Language currentLanguage ||
+                !_channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId()))
+                return;
 
-                // Se esiste già un disclaimer, aggiorna il testo
-                if (_disclaimers.TryGetValue(currentLanguage.Id, out var disclaimer))
-                {
-                    disclaimer.Text = currentText;
-                }
-                // Altrimenti crea un nuovo disclaimer se il testo non è vuoto
-                else if (!string.IsNullOrEmpty(currentText))
-                {
-                    var newDisclaimer = new Disclaimer
-                    {
-                        LanguageId = currentLanguage.Id,
-                        Text = currentText
-                    };
-                    _disclaimers[currentLanguage.Id] = newDisclaimer;
-                    _context.Disclaimers.Add(newDisclaimer);
-                }
-            }
-        }
-
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
+            SaveButton.IsEnabled = false;
+            CancelButton.IsEnabled = false;
+            StatusTextBlock.Text = "Salvataggio del disclaimer...";
             try
             {
-                // Salva il testo corrente
-                SaveCurrentText();
+                var channelId = App.GetCurrentChannelId();
+                var snapshot = await _channelSettingsSyncService.GetLocalSnapshotAsync(App.ApplicationStoppingToken);
+                var disclaimerText = DisclaimerTextBox.Text?.Trim() ?? string.Empty;
+                var languages = snapshot.Languages.Select(language =>
+                    string.Equals(language.Code, currentLanguage.Code, StringComparison.OrdinalIgnoreCase)
+                        ? language with { DisclaimerText = string.IsNullOrEmpty(disclaimerText) ? null : disclaimerText }
+                        : language).ToArray();
+                var result = await _channelSettingsSyncService.SaveAsync(
+                    channelId,
+                    snapshot with { Languages = languages },
+                    App.ApplicationStoppingToken);
+                StatusTextBlock.Text = result.Message;
+                if (!result.LocalCacheSynchronized)
+                {
+                    System.Windows.MessageBox.Show(result.Message, "Cache locale non sincronizzata", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
-                // Salva tutte le modifiche nel database
-                _context.SaveChanges();
-
-                System.Windows.MessageBox.Show("Disclaimer salvati con successo!", "Salvataggio Completato", MessageBoxButton.OK, MessageBoxImage.Information);
-                //DialogResult = true;
-                //Close();
+                if (string.IsNullOrEmpty(disclaimerText))
+                    _disclaimers.Remove(currentLanguage.Id);
+                else
+                    _disclaimers[currentLanguage.Id] = new Disclaimer
+                    {
+                        LanguageId = currentLanguage.Id,
+                        Text = disclaimerText
+                    };
+                System.Windows.MessageBox.Show("Disclaimer salvato con successo!", "Salvataggio Completato", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException) when (App.ApplicationStoppingToken.IsCancellationRequested)
+            {
+                StatusTextBlock.Text = "Salvataggio annullato durante la chiusura dell'applicazione.";
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Errore durante il salvataggio: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusTextBlock.Text = "Salvataggio non riuscito. Il testo resta disponibile per un nuovo tentativo.";
+                System.Diagnostics.Trace.TraceError("Disclaimer settings UI save failed: {0}", ex);
+                System.Windows.MessageBox.Show(
+                    "Il server non ha confermato il salvataggio. Il testo resta disponibile per un nuovo tentativo.",
+                    "Salvataggio non riuscito",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                DisclaimerTextBox.Focus();
+            }
+            finally
+            {
+                SaveButton.IsEnabled = _channelSettingsSyncService.CanAttemptSaveFor(App.GetCurrentChannelId());
+                CancelButton.IsEnabled = true;
             }
         }
 
@@ -136,6 +153,12 @@ namespace MorWalPiz.VideoImporter.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _context.Dispose();
+            base.OnClosed(e);
         }
     }
 }

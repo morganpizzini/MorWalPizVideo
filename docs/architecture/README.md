@@ -48,6 +48,7 @@ Excluded:
 21. [Anonymous Web Push](adr/ADR-017-anonymous-web-push.md)
 22. [BackOffice and ServerAPI consistency audit](api-consistency-audit.md)
 23. [Editorial production cards](adr/ADR-019-editorial-production-cards.md)
+24. [VideoImporter channel settings](adr/ADR-020-video-importer-channel-settings.md)
 
 ## Architectural Baseline
 

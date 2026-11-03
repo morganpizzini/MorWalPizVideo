@@ -43,6 +43,13 @@ Provide deterministic implementations for:
 
 Fakes support configurable latency, transient failure, permanent failure, malformed response, and cancellation. Do not scatter environment checks through controllers; select providers in composition roots.
 
+VideoImporter’s fake BackOffice settings endpoint supports stateful per-channel
+existing/missing settings plus `settings-auth`, `settings-transient`,
+`settings-permanent`, `route-missing`, and `settings-malformed` scenarios.
+Successful PUT responses are retained for subsequent GET requests. Desktop
+tests must use the fake and temporary SQLite; they must not contact BackOffice,
+Key Vault, or MongoDB. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md).
+
 ## Local Application Matrix
 
 | Application | Preferred local dependencies |

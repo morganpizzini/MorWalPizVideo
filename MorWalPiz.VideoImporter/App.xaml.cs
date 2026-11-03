@@ -23,6 +23,8 @@ namespace MorWalPiz.VideoImporter
         public static ITenantContext TenantContext { get; private set; } = null!;
         public static ITenantService TenantService { get; private set; } = null!;
         public static IApiServiceFactory ApiServiceFactory { get; private set; } = null!;
+        public static IChannelConfigurationSyncService ChannelSettingsSyncService { get; private set; } = null!;
+        public static CancellationToken ApplicationStoppingToken { get; private set; }
         public static SocialPublishingService SocialPublishingService { get; private set; } = null!;
         public static IHashtagHistoryService HashtagHistoryService { get; private set; } = null!;
         public static IVideoThumbnailService VideoThumbnailService { get; private set; } = null!;
@@ -35,8 +37,10 @@ namespace MorWalPiz.VideoImporter
         public static string GetCurrentChannelId()
         {
             using var context = DatabaseService.CreateContext();
-            return context.Tenants.Find(TenantContext.CurrentTenantId)?.ChannelId
-                ?? ApiSettings.ChannelId;
+            var selectedChannelId = context.Tenants.Find(TenantContext.CurrentTenantId)?.ChannelId;
+            return !string.IsNullOrWhiteSpace(selectedChannelId)
+                ? selectedChannelId
+                : ApiSettings.ChannelId;
         }
         private IHost? _host;
         private ITenantContext? _tenantContext;
@@ -104,6 +108,7 @@ namespace MorWalPiz.VideoImporter
                         services.AddSingleton<IApiServiceFactory>(_ => new FakeApiServiceFactory(fakeScenario));
                     else
                         services.AddSingleton<IApiServiceFactory, ApiServiceFactory>();
+                    services.AddSingleton<IChannelConfigurationSyncService, ChannelConfigurationSyncService>();
                     services.AddHttpClient("SocialGraph", client =>
                     {
                         client.BaseAddress = new Uri("https://graph.facebook.com/v23.0/");
@@ -134,6 +139,8 @@ namespace MorWalPiz.VideoImporter
             TenantService = _host.Services.GetRequiredService<ITenantService>();
             ApiSettings = _host.Services.GetRequiredService<ApiSettings>();
             ApiServiceFactory = _host.Services.GetRequiredService<IApiServiceFactory>();
+            ChannelSettingsSyncService = _host.Services.GetRequiredService<IChannelConfigurationSyncService>();
+            ApplicationStoppingToken = _host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
             SocialPublishingService = _host.Services.GetRequiredService<SocialPublishingService>();
             HashtagHistoryService = _host.Services.GetRequiredService<IHashtagHistoryService>();
             VideoThumbnailService = _host.Services.GetRequiredService<IVideoThumbnailService>();

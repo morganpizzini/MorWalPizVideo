@@ -7,7 +7,6 @@ namespace MorWalPiz.VideoImporter.Views
 {
     public partial class LanguageEditDialog : Window
     {
-        private readonly AppDbContext _context;
         private readonly ITenantContext _tenantContext;
         private Language _language;
         private bool _isEditMode;
@@ -17,11 +16,20 @@ namespace MorWalPiz.VideoImporter.Views
         public LanguageEditDialog(Language language = null)
         {
             InitializeComponent();
-            _context = App.DatabaseService.CreateContext();
             _tenantContext = App.TenantContext;
             
             _isEditMode = language != null;
-            _language = language ?? new Language();
+            _language = language is null
+                ? new Language()
+                : new Language
+                {
+                    Id = language.Id,
+                    Code = language.Code,
+                    Name = language.Name,
+                    IsDefault = language.IsDefault,
+                    IsSelected = language.IsSelected,
+                    TenantId = language.TenantId
+                };
 
             InitializeDialog();
         }
@@ -55,36 +63,13 @@ namespace MorWalPiz.VideoImporter.Views
                     _language.Name = NameTextBox.Text.Trim();
                     _language.IsSelected = IsSelectedCheckBox.IsChecked ?? false;
 
-                    if (!_isEditMode)
-                    {
-                        _language.TenantId = _tenantContext?.CurrentTenantId ?? 1;
-                        _context.Languages.Add(_language);
-                    }
-                    else
-                    {
-                        _context.Languages.Update(_language);
-                    }
-
-                    // If this language is set as default, remove default from other languages
-                    if (_language.IsDefault)
-                    {
-                        var otherLanguages = _context.Languages
-                            .Where(l => l.Id != _language.Id && l.TenantId == _language.TenantId && l.IsDefault)
-                            .ToList();
-
-                        foreach (var lang in otherLanguages)
-                        {
-                            lang.IsDefault = false;
-                        }
-                    }
-
-                    _context.SaveChanges();
                     DialogResult = true;
                     Close();
                 }
                 catch (Exception ex)
                 {
-                    ShowError($"Errore durante il salvataggio: {ex.Message}");
+                    System.Diagnostics.Trace.TraceError("Language edit validation failed: {0}", ex);
+                    ShowError("Impossibile verificare le impostazioni lingua. Riprova.");
                 }
             }
         }
@@ -115,7 +100,8 @@ namespace MorWalPiz.VideoImporter.Views
 
             // Check for duplicate code
             var currentTenantId = _tenantContext?.CurrentTenantId ?? 1;
-            var existingLanguage = _context.Languages
+            using var context = App.DatabaseService.CreateContext();
+            var existingLanguage = context.Languages
                 .FirstOrDefault(l => l.Code.ToLower() == CodeTextBox.Text.Trim().ToLower() 
                                 && l.TenantId == currentTenantId
                                 && l.Id != _language.Id);
@@ -128,7 +114,7 @@ namespace MorWalPiz.VideoImporter.Views
             }
 
             // Check for duplicate name
-            var existingNameLanguage = _context.Languages
+            var existingNameLanguage = context.Languages
                 .FirstOrDefault(l => l.Name.ToLower() == NameTextBox.Text.Trim().ToLower() 
                                 && l.TenantId == currentTenantId
                                 && l.Id != _language.Id);
@@ -149,10 +135,5 @@ namespace MorWalPiz.VideoImporter.Views
             ErrorTextBlock.Visibility = Visibility.Visible;
         }
 
-        protected override void OnClosed(EventArgs e)
-        {
-            _context?.Dispose();
-            base.OnClosed(e);
-        }
     }
 }

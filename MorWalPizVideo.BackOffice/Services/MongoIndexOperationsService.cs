@@ -116,6 +116,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("channelId", 1),
             Unique: true),
         new(
+            Key: "videoimportersettings.channelid.unique",
+            Collection: DbCollections.VideoImporterChannelSettings,
+            Name: "ux_videoimportersettings_channelid",
+            Keys: new BsonDocument("channelId", 1),
+            Unique: true),
+        new(
             Key: "compilations_url.unique",
             Collection: DbCollections.Compilations,
             Name: "ux_compilations_url_ci",

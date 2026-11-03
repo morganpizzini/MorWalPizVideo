@@ -20,16 +20,16 @@
                 <MenuItem Header="Esci" Click="ExitMenuItem_Click"/>
             </MenuItem>
             <MenuItem Header="Edit">
-                <MenuItem Header="Settings" Click="SettingsMenuItem_Click"/>
+                <MenuItem x:Name="SettingsMenuItem" Header="Settings" Click="SettingsMenuItem_Click" IsEnabled="False"/>
                 <MenuItem Header="Pubblicazione social" Click="SocialPublishingMenuItem_Click"/>
-                <MenuItem Header="Pianificazioni Pubblicazione" Click="PublishSchedulesMenuItem_Click"/>
+                <MenuItem x:Name="PublishSchedulesMenuItem" Header="Pianificazioni Pubblicazione" Click="PublishSchedulesMenuItem_Click" IsEnabled="False"/>
                 <MenuItem Header="Gestione Tenant" Click="TenantManagementMenuItem_Click"/>
                 <MenuItem Header="Aggiorna canali" Click="RefreshChannelsMenuItem_Click"/>
                 <MenuItem Header="Pulisci credenziali YouTube" Click="ClearYouTubeCredentials_Click"/>
             </MenuItem>
             <MenuItem Header="Entità">
-                <MenuItem Header="Lingue" Click="LanguagesMenuItem_Click"/>
-                <MenuItem Header="Disclaimer" Click="DisclaimerMenuItem_Click"/>
+                <MenuItem x:Name="LanguagesMenuItem" Header="Lingue" Click="LanguagesMenuItem_Click" IsEnabled="False"/>
+                <MenuItem x:Name="DisclaimerMenuItem" Header="Disclaimer" Click="DisclaimerMenuItem_Click" IsEnabled="False"/>
             </MenuItem>
             <MenuItem Header="Funzioni">
                 <MenuItem Header="Creazione immagini" Click="ImageCreationMenuItem_Click"/>
@@ -51,6 +51,10 @@
             <!-- Header Card with Actions and Tenant Selector -->
             <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,20">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -58,7 +62,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- File Selection Buttons -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
                         <Button x:Name="BrowseFolderButton"
                                 Content="📁 Sfoglia Cartelle"
                                 Margin="0,0,10,0"
@@ -69,7 +73,7 @@
                     </StackPanel>
 
                     <!-- Tenant Selector -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Tenant:" 
                                    VerticalAlignment="Center" 
                                    Margin="0,0,10,0"
@@ -81,6 +85,15 @@
                                   SelectedValuePath="Id"
                                   SelectionChanged="TenantComboBox_SelectionChanged"/>
                     </StackPanel>
+                    <TextBlock x:Name="ChannelSettingsStatusTextBlock"
+                               Grid.Row="1"
+                               Grid.ColumnSpan="3"
+                               Margin="0,12,0,0"
+                               Text="Le impostazioni del canale non sono ancora state sincronizzate."
+                               TextWrapping="Wrap"
+                               AutomationProperties.Name="Stato sincronizzazione impostazioni canale"
+                               AutomationProperties.LiveSetting="Assertive"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
                 </Grid>
             </Border>
 

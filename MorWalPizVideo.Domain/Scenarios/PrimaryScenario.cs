@@ -163,6 +163,7 @@ public class PrimaryScenario : BaseScenario
         Set("calendarEvents", Array.Empty<CalendarEvent>());
         Set("compilations", Array.Empty<Compilation>());
         Set("configurations", Array.Empty<MorWalPizConfiguration>());
+        Set(DbCollections.VideoImporterChannelSettings, Array.Empty<VideoImporterChannelSettings>());
         Set("customForms", Array.Empty<CustomForm>());
         Set("customFormResponses", Array.Empty<CustomFormResponseDocument>());
         Set("askCampaigns", Array.Empty<AskCampaign>());

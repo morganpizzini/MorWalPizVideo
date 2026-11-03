@@ -201,6 +201,7 @@ if (!enableMock)
     builder.Services.AddTransient<Kernel>();
 }
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
+builder.Services.AddScoped<VideoImporterChannelSettingsService>();
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -445,6 +446,7 @@ if (enableMock)
     builder.Services.AddScoped<IFaqVoteRepository, FaqVoteMockRepository>();
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     builder.Services.AddScoped<ISocialAssetRepository, SocialAssetMockRepository>();
+    builder.Services.AddScoped<IVideoImporterChannelSettingsRepository, VideoImporterChannelSettingsMockRepository>();
     builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobServiceMock>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
@@ -616,6 +618,7 @@ else
     });
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<ISocialAssetRepository, SocialAssetRepository>();
+    builder.Services.AddScoped<IVideoImporterChannelSettingsRepository, VideoImporterChannelSettingsRepository>();
     builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobService>();
     builder.Services.AddScoped<SocialAssetService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();

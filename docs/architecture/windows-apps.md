@@ -15,6 +15,8 @@ VideoImporter is a .NET 10 WPF application for tenant-aware local media preparat
 - A Generic Host owns configuration and DI; `IHttpClientFactory` creates the named BackOffice client used by `IApiServiceFactory`.
 - Startup resolves the constructor-injected `MainWindow` from the host after database, tenant, API settings, and upload-service initialization; `StartupUri` is no longer used.
 - BackOffice calls preserve API-key authentication and existing DTOs.
+- Selected-channel general preferences, language/disclaimer values, and publish schedules synchronize through the versioned BackOffice settings endpoint. Remote Mongo data is authoritative; tenant-filtered SQLite remains a transactional working cache. An explicit scoped `204` is the only first-use seed signal, and user mutations are remotely acknowledged before local projection.
+- Connection endpoint/key and the selected local tenant/channel remain bootstrap state. The typed snapshot excludes credentials, provider tokens, machine paths, local IDs, hashtag history, and other operational state. Channel settings are read-only when no previously synchronized local state can safely be used and BackOffice cannot be reached.
 - Static `App` properties remain compatibility facades for untouched child windows; main-window dependencies are injected. Tenant refreshes are serialized, and shutdown unsubscribes tenant events, cancels window work, awaits the active refresh, then stops/disposes the host.
 
 ### Target Direction
@@ -25,6 +27,19 @@ VideoImporter is a .NET 10 WPF application for tenant-aware local media preparat
 - Replace directly constructed `HttpClient` instances with managed factory/typed clients.
 - Move touched UI behavior toward MVVM without rewriting unrelated legacy screens.
 - Store API keys in user secrets, environment configuration, Key Vault, or OS-protected storage, never SQLite seed data.
+
+### VideoImporter channel settings slice
+
+The importer resolves the tenant's stored channel before pulling channel settings.
+On an explicit `204`, it validates and uploads the existing local snapshot; any
+other HTTP, auth, channel, malformed-response, or cancellation outcome does not
+seed. A `200` snapshot is validated and applied transactionally without changing
+bootstrap fields or other tenant/operational records. Every touched settings
+dialog uses the same remote-first boundary and exposes pending/error/degraded
+text status. If BackOffice is unavailable after a successful synchronization,
+the existing cache remains readable; a retry is remote-first and never reports
+an unsaved local change as durable. See [ADR-020](adr/ADR-020-video-importer-channel-settings.md)
+and the [rollout runbook](operations/video-importer-channel-settings-rollout.md).
 
 ## InsightScanner
 
@@ -82,3 +97,18 @@ Fresh commands, run on Windows with SDK `10.0.400-preview.0.26322.102` (VSTest/x
 | `dotnet test MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj --configuration Release --no-restore --verbosity minimal` | 4 passed, 0 failed, 0 skipped. |
 
 Residual gates: complete real interactive startup/child-window/long-running-operation validation and prove existing-database upgrades beyond the compatibility fixture. The fixture's manually controlled startup is not end-to-end WPF launch evidence. No assertions were deleted or waived; no commit, deployment, production access, or secret retrieval was performed.
+
+## VideoImporter Channel Settings Verification (2026-11-02)
+
+The channel settings slice adds a remote-first BackOffice boundary while
+retaining SQLite compatibility. On Windows, the complete VideoImporter test
+project passed **19/19** in Debug and Release. The tests cover the temporary
+database startup/migration fixture, channel pull/seed/save, error/no-seed
+scenarios, secret/bootstrap exclusion, tenant isolation, and local cache
+projection. The BackOffice endpoint/index focused filter passed **17/17** in
+Release.
+
+These are source/test-runner results, not interactive visual or release
+evidence. Normal-scaling WPF dialog layout, keyboard/screen-reader behavior,
+live API-key scopes, target Mongo index application, and cross-workstation
+staging recovery still require the [rollout runbook](operations/video-importer-channel-settings-rollout.md).

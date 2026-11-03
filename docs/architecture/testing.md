@@ -57,7 +57,7 @@ first narrowing boundary.
 | FreezerAnalysis API coverage | `FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj` | `net10.0`; FreezerAnalysis host, import diagnostics, and deterministic engine behavior |
 | YouTube utilities | `MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj` | `net10.0`; parsing and transformation reliability |
 | InsightScanner Windows tests | `MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj` | `net10.0-windows`, WPF; fake scan-service coverage |
-| VideoImporter Windows tests | `MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj` | `net10.0-windows`, WPF; image and database compatibility coverage |
+| VideoImporter Windows tests | `MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj` | `net10.0-windows`, WPF; image, database compatibility, and channel settings synchronization coverage |
 
 Restore a selected project, then run it:
 
@@ -85,6 +85,8 @@ Select a class, method, or unique name with the standard VSTest filter:
 ```powershell
 dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~CrossApiServiceContractTests"
 dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~HttpClientLifetimeAuditTests"
+dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~VideoImporterSettingsEndpointTests"
+dotnet test MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ChannelConfigurationSyncTests"
 ```
 
 For Reqnroll-generated xUnit tests, select the category emitted by the

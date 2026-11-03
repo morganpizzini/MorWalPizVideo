@@ -9,6 +9,10 @@ Source-owned index operations now exist:
 - BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit`, `POST /api/mongoindexes/apply`, and the explicit legacy-removal route `POST /api/mongoindexes/remove`.
 - The executable allowlist in `MongoIndexOperationsService` is the runtime authority for audit/apply/remove operations. The operational file `docs/architecture/operations/mongo-index-manifest.phase4.json` is a phase-4 review snapshot, is not loaded dynamically at runtime, and must not be used for an apply request until it has been reconciled against the executable allowlist.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
+- The `videoimportersettings.channelid.unique` index is an additional manual
+  rollout prerequisite for VideoImporter synchronization. Follow the
+  [VideoImporter channel settings rollout](operations/video-importer-channel-settings-rollout.md);
+  no production index application is implied by this source definition.
 
 Operational evidence is now recorded for the Phase 4 verification baseline under `docs/architecture/operations/mongo-index-audits/`:
 
