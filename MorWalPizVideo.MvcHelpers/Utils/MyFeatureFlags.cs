@@ -12,5 +12,6 @@
         public const string EnableImpersonation = nameof(EnableImpersonation);
         public const string EnableCors = nameof(EnableCors);
         public const string EnableVideoBulkImport = nameof(EnableVideoBulkImport);
+        public const string EnableAiOrchestration = nameof(EnableAiOrchestration);
     }
 }

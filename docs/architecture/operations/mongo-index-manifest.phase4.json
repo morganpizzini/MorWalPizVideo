@@ -150,6 +150,125 @@
       },
       "unique": true,
       "notes": "Prevents duplicate social media assets for the same channel and normalized upload idempotency key."
+    },
+    {
+      "key": "ai.promptdefinitions.workflow_stage.unique",
+      "collection": "aiPromptDefinitions",
+      "name": "ux_ai_promptdefinitions_workflow_stage",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1
+      },
+      "unique": true,
+      "notes": "Enforces exactly one mutable active/canary pointer document per registered workflow stage. Apply after auditing any existing records."
+    },
+    {
+      "key": "ai.promptrevisions.workflow_stage_created",
+      "collection": "aiPromptRevisions",
+      "name": "ix_ai_promptrevisions_workflow_stage_created",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "createdAtUtc": -1
+      },
+      "unique": false,
+      "notes": "Supports immutable revision history by workflow stage."
+    },
+    {
+      "key": "ai.promptrevisions.workflow_stage_hash.unique",
+      "collection": "aiPromptRevisions",
+      "name": "ux_ai_promptrevisions_workflow_stage_hash",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "contentHash": 1
+      },
+      "unique": true,
+      "notes": "Prevents duplicate immutable prompt revisions within one stage. Audit and resolve duplicate hashes before applying."
+    },
+    {
+      "key": "ai.executionrecords.workflow_stage_created",
+      "collection": "aiExecutionRecords",
+      "name": "ix_ai_executionrecords_workflow_stage_created",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "createdAtUtc": -1
+      },
+      "unique": false,
+      "notes": "Supports bounded metadata-only execution health queries."
+    },
+    {
+      "key": "ai.executionrecords.workflow_stage_revision_created",
+      "collection": "aiExecutionRecords",
+      "name": "ix_ai_executionrecords_workflow_stage_revision_created",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "revisionId": 1,
+        "createdAtUtc": -1
+      },
+      "unique": false,
+      "notes": "Supports bounded baseline/canary promotion evidence queries."
+    },
+    {
+      "key": "ai.executionrecords.expiresat.ttl",
+      "collection": "aiExecutionRecords",
+      "name": "ix_ai_executionrecords_expiresat_ttl",
+      "keys": {
+        "expiresAtUtc": 1
+      },
+      "expireAfterSeconds": 0,
+      "unique": false,
+      "notes": "Removes execution metadata at its explicit per-record retention deadline."
+    },
+    {
+      "key": "ai.evaluationcases.dataset",
+      "collection": "aiEvaluationCases",
+      "name": "ix_ai_evaluationcases_dataset",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "datasetVersion": 1,
+        "redactionStatus": 1
+      },
+      "unique": false,
+      "notes": "Supports approved frozen-dataset evaluation queries."
+    },
+    {
+      "key": "ai.evaluationcases.expiresat.ttl",
+      "collection": "aiEvaluationCases",
+      "name": "ix_ai_evaluationcases_expiresat_ttl",
+      "keys": {
+        "expiresAtUtc": 1
+      },
+      "expireAfterSeconds": 0,
+      "unique": false,
+      "notes": "Removes content-bearing evaluation cases at their explicit consented retention deadline."
+    },
+    {
+      "key": "ai.promptexperiments.workflow_stage_created",
+      "collection": "aiPromptExperiments",
+      "name": "ix_ai_promptexperiments_workflow_stage_created",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "createdAtUtc": -1
+      },
+      "unique": false,
+      "notes": "Supports immutable evaluation history by workflow stage."
+    },
+    {
+      "key": "ai.promptaudit.workflow_stage_created",
+      "collection": "aiPromptAudit",
+      "name": "ix_ai_promptaudit_workflow_stage_created",
+      "keys": {
+        "workflowKey": 1,
+        "stageKey": 1,
+        "createdAtUtc": -1
+      },
+      "unique": false,
+      "notes": "Supports metadata-only prompt lifecycle audit queries."
     }
   ],
   "removals": [

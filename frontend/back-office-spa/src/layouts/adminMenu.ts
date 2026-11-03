@@ -196,6 +196,17 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         permissions: [permissions.scripts.studio],
         icon: WandSparkles,
       },
+      {
+        label: 'AI workflows',
+        path: '/ai-workflows',
+        permissions: [
+          permissions.aiPrompts.view,
+          permissions.aiPrompts.edit,
+          permissions.aiPrompts.evaluate,
+          permissions.aiPrompts.activate,
+        ],
+        icon: ShieldCheck,
+      },
     ],
   },
   {

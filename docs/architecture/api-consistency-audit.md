@@ -61,11 +61,11 @@ None identified within the inspected scope. Endpoint discovery and deployed expl
 
 ### API-04: Chat dependency is absent in mock mode
 
-- **Evidence:** [ChatController](../../MorWalPizVideo.BackOffice/Controllers/ChatController.cs#L15) requires `Kernel`; [BackOffice composition](../../MorWalPizVideo.BackOffice/Program.cs#L190) registers it only when mock mode is off. The route has API-key authorization; missing registration is reached after successful authorization.
-- **Impact:** Offline review/translation/transcript workflows fail during controller activation instead of returning deterministic fake results.
-- **Minimal correction:** Supply a fake at the owning AI boundary for supported mock workflows, or explicitly mark the workflow unsupported and return a deliberate unavailable outcome. Do not instantiate a real external provider merely to satisfy DI.
-- **Tracking:** TD-031; gap against the external-fakes target in [Development](development.md).
-- **Validation owner:** BackOffice.Tests mock-host HTTP tests with an authorized API-key identity; execute each Chat action without external network access. Existing Swagger metadata checks do not prove activation.
+- **Evidence:** [ChatController](../../MorWalPizVideo.BackOffice/Controllers/ChatController.cs) delegates the legacy routes to `IAiWorkflowService`; [BackOffice composition](../../MorWalPizVideo.BackOffice/Program.cs) selects `DeterministicAiModelGateway` and scenario repositories in mock mode. The routes retain API-key authentication.
+- **Impact:** The source-level controller activation gap is corrected. Production prompt seeding and deployment behavior remain operator/host verification gates.
+- **Correction:** Provider access now sits behind the `IAiModelGateway` boundary. Mock mode always uses deterministic prompt baselines and never constructs an external AI provider for Chat. Non-mock hosts retain the compatibility fallback until an operator initializes the new prompt catalog and enables `FeatureManagement:EnableAiOrchestration`.
+- **Tracking:** TD-031 closed in source; deployment remains unverified. See [Development](development.md) and [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md).
+- **Validation owner:** `AiOrchestrationTests` execute review, direct translation, and transcript analysis through the mock HTTP host with an authorized API-key identity; the focused 6-test suite passes without external network access. These tests do not prove deployed Mongo/Azure configuration.
 
 ### API-05: ServerAPI deployment omits relevant security/contract suites
 

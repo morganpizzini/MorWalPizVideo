@@ -89,6 +89,17 @@ Configured under `FeatureManagement` in `appsettings*.json`.
 | `EnableKeyVault` | Loads secrets from Azure Key Vault (URL in `KeyVaultUrl`) using the App Service managed identity through `DefaultAzureCredential`. Production startup fails if the provider cannot load or required settings are missing. |
 | `EnableCors` | Diagnostic-only flag surfaced via `ConfigTestController`. CORS itself always fails closed to the strict `MorWalPizPolicy` (admin SPA origin only, credentials enabled) outside `Development`, which uses a permissive dev-only policy instead. |
 | `EnableVideoBulkImport` | Enables bulk video import discovery and mutation through `import-candidates`, `import-targets`, and `bulk-import`. Single `ImportVideo` remains available when this flag is disabled. |
+| `EnableAiOrchestration` | Enables Chat's stored immutable prompt revisions. Defaults to `false`; leave it disabled until the production prompt catalog is initialized and the release gate is met. Mock mode always executes the deterministic orchestration implementation. |
+| `EnableAiOrchestration` | Routes Chat through immutable prompt revisions and typed workflows. Defaults to `false`; the compatibility fallback remains active until baselines are operator-initialized and the new path is deliberately enabled. Mock mode always exercises the deterministic orchestration path. |
+
+Chat prompt orchestration uses the separate `AiOrchestration` configuration
+section in `appsettings.json`. Model timeout, batch/input limits, explicit
+execution/evaluation retention, evaluation sample/latency policy, and canary
+sample/failure/latency thresholds are non-secret settings. Production
+activation is disabled by default with `AiOrchestration:ActivationEnabled`;
+set it only after the data policy, Mongo index application, evaluation
+thresholds, and rollout evidence have been reviewed. Prompt initialization in
+production is an operator-invoked action, not startup behavior.
 
 YouTube comment analysis is submitted from the existing Insights comments page. Each request is stored in the channel-scoped `insightCommentAnalysisRuns` collection with only the topic/source/request context required for a later manual reschedule. When `EnableHangFire` is enabled and Hangfire is available, the request is queued and the SPA polls its status. When Hangfire is disabled or unavailable, the API explicitly uses the synchronous analysis fallback. Runs transition through `Pending`, `Running`, `Completed`, or terminal `Rejected`; failed runs are not retried automatically. An authorized user can use the run's reschedule action to create a new request from the saved context. Comment bodies and transient author identity are never persisted in the run record.
 
@@ -323,12 +334,22 @@ Comment analysis accepts an optional `sourceKind` describing the analyzed video,
 AI comment analysis also receives the YouTube video title and description as transient context alongside the topic, seed arguments, source kind, and comments. The description is limited to 4,000 characters for the prompt, is never persisted or returned by the insights API, and an empty description is used when metadata retrieval fails so analysis can continue.
 
 #### `ChatController` — `api/chat` *(API key)*
-AI helpers backed by Azure OpenAI via Semantic Kernel. Designed for the WPF importer.
+VideoImporter compatibility routes backed by the typed BackOffice AI workflow
+service and `IAiModelGateway`. Production uses the existing Azure OpenAI
+configuration; mock mode uses deterministic responses and does not call the
+network. Successful responses return an additive `X-AI-Execution-Id` header.
 | Verb | Route | Purpose |
 | ---- | ----- | ------- |
-| POST | `/` | `GetReviewDetails(ReviewRequest)` — generate review/summary for a video. |
-| POST | `/translate` | `TranslateVideoContent(VideoTranslationRequest)` — high-quality translation. |
-| POST | `/transcript-analysis` | `AnalyzeTranscript(TranscriptAnalysisRequest)` — extract topics / chapters. |
+| POST | `/` | `GetReviewDetails(ReviewRequest)` — review video metadata and translations, preserving the legacy response shape. |
+| POST | `/translate` | `TranslateVideoContent(VideoTranslationRequest)` — translate title and description. |
+| POST | `/transcript-analysis` | `AnalyzeTranscript(TranscriptAnalysisRequest)` — create SEO description and metadata options. |
+
+The versioned administrative API is under `/api/v1/ai/workflows`. It supports
+operator bootstrap, immutable revision creation/history, consented evaluation
+cases, baseline/candidate comparison, candidate generation, canary control,
+rollback, and metadata-only execution history. `ai.prompts.view`, `.edit`,
+`.evaluate`, and `.activate` permissions are separate; administrative actions
+are blocked during impersonation. The SPA surface is **AI workflows**.
 
 #### `InsightsController` — `api/insights`
 Content-planning suite: AI agent–driven topic monitoring → news scanning → content plan generation. `InsightNewsItem` is a single shared collection for both AI-discovered news (`Content`) and YouTube-comment-derived ideas (`ShortContent`), distinguished by the `sourceKind` field.

@@ -16,6 +16,18 @@ export type {
   ScriptStudioGenerationResponse,
   ScriptStudioGlobalPrompt,
 } from "./scriptStudio";
+export type {
+  AiPromptMessage,
+  AiPromptDefinition,
+  AiPromptRevision,
+  AiPromptExperiment,
+  AiExecutionRecord,
+  CreateAiPromptRevisionRequest,
+  AiPromptCanaryRequest,
+  AiPromptRollbackRequest,
+  CreateAiEvaluationCaseRequest,
+  EvaluateAiPromptRequest,
+} from "./aiOrchestration";
 
 // Web Push exports
 export type {

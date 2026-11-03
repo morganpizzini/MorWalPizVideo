@@ -45,6 +45,9 @@ const routeDefinitions: RouteConfig[] = [
   feature('script-studio', () => import('../../routes/scriptStudio'), {
     errorElement: createErrorElement(),
   }),
+  feature('ai-workflows', () => import('../../routes/aiWorkflows'), {
+    errorElement: createErrorElement(),
+  }),
   feature('profile', () => import('../../routes/profile'), { errorElement: createErrorElement() }),
   {
     path: 'my-channel',
