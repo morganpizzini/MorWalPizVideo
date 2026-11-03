@@ -96,6 +96,12 @@ public class PrimaryScenario : BaseScenario
         Set("pushAudiences", Array.Empty<PushAudience>());
         Set("pushDispatches", Array.Empty<PushDispatch>());
         Set("pushDispatchRecipients", Array.Empty<PushDispatchRecipient>());
+        Set(DbCollections.AiPromptDefinitions, Array.Empty<AiPromptDefinition>());
+        Set(DbCollections.AiPromptRevisions, Array.Empty<AiPromptRevision>());
+        Set(DbCollections.AiExecutionRecords, Array.Empty<AiExecutionRecord>());
+        Set(DbCollections.AiEvaluationCases, Array.Empty<AiEvaluationCase>());
+        Set(DbCollections.AiPromptExperiments, Array.Empty<AiPromptExperiment>());
+        Set(DbCollections.AiPromptAudit, Array.Empty<AiPromptAuditEvent>());
         Set("publicAccounts", Array.Empty<PublicAccount>());
         Set("publicAccountSessions", Array.Empty<PublicAccountSession>());
 

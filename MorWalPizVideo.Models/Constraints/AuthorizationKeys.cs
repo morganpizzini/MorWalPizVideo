@@ -15,6 +15,10 @@ public static class AuthorizationPermissionKeys
   public const string ScriptsStudio = "scripts.studio";
   public const string ScriptsGlobalPromptManage = "scripts.globalprompt.manage";
   public const string ScriptsQuotaManage = "scripts.quota.manage";
+  public const string AiPromptsView = "ai.prompts.view";
+  public const string AiPromptsEdit = "ai.prompts.edit";
+  public const string AiPromptsEvaluate = "ai.prompts.evaluate";
+  public const string AiPromptsActivate = "ai.prompts.activate";
 
   public const string VideosView = "videos.view";
   public const string VideosManage = "videos.manage";

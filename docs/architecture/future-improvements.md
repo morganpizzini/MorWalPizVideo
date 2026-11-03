@@ -18,6 +18,8 @@
 | Separate form responses | Embedded arrays grow without bound | Scalable submissions and reporting | High | Medium | Dual-write/reconciliation period |
 | Cookie-only BackOffice auth | Local-storage token is XSS-accessible | Reduced browser token exposure | Medium | Medium | CSRF and cross-origin configuration |
 | Complete mock/fake platform | External dependencies slow local work | Offline development, deterministic UI/E2E tests | Medium | Medium | Fakes drifting from provider behavior |
+| AI prompt orchestration production evidence | Stored prompts and deterministic evaluation need governed rollout, consented datasets, and provider usage/cost evidence | Safer revisions, measurable canaries, and reversible prompt changes | High | High, activation-gated | Privacy/retention approval, index application, provider quota and cost observability |
+| VideoImporter AI review feedback | Generated metadata currently has no explicit human acceptance/edit/rejection signal | Curated real-user evaluation cases and a grounded candidate optimization loop | Medium | Medium, separate approval | Desktop persistence and feedback require a compatible client/API slice |
 | Desktop Generic Host/DI | Static services resist testing | Managed clients, isolation, maintainable MVVM evolution | Medium | Medium | Legacy UI migration effort |
 | Blob metadata and health | Current abstraction loses protocol details | Correct content delivery, caching, diagnostics | Medium | Medium | API contract changes |
 | Distributed throttling | In-memory limits do not scale | Consistent abuse protection across instances | Medium | Medium | New infrastructure dependency |

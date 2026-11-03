@@ -13,6 +13,27 @@
 | Followers to ShortLinks | Anonymous untrusted input |
 | APIs to Mongo/Blob/external providers | Managed service credentials |
 
+## AI Prompt and Tool Boundary
+
+BackOffice Chat workflows receive selected-channel identity only from the
+server's existing channel resolver. The current Chat model gateway exposes no
+model-invokable tools. Future tools must be statically registered, typed,
+read-only, bounded, and authorized using server-created context; prompts cannot
+define executable functions, Mongo queries, URLs, filesystem access, or writes.
+User transcripts, context, terminology, and generated intermediate values are
+data, not system policy.
+
+Prompt revisions are immutable and content-hashed. Prompt editing, evaluation,
+and activation have separate permissions. Candidate optimization writes drafts
+only. Production activation is disabled by default and requires a passing
+deterministic evaluation, a human-authorized canary, compare-and-set promotion,
+and a reversible previous-revision pointer. Execution telemetry excludes
+prompts, transcripts, generated output, tool payloads, and credentials.
+Content-bearing evaluation cases require explicit consent/redaction
+confirmation, carry retention deadlines, and must not be enabled with real
+content until the applicable privacy/retention policy is approved. See
+[ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md).
+
 ## Immediate Secret Incident
 
 Secret-bearing material exists in tracked BackOffice artifacts, VideoImporter migrations/settings, and development data. Assume exposed credentials are compromised until proven otherwise.

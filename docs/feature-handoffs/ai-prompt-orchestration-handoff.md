@@ -1,6 +1,6 @@
 # AI prompt orchestration and improvement handoff
 
-**Status:** Proposed architecture for review  
+**Status:** Chat orchestration foundation implemented; production rollout and follow-on feedback/tool work remain gated  
 **Date:** 2026-11-02  
 **Primary owner:** `MorWalPizVideo.BackOffice`  
 **Pilot workflow:** video review, translation, and transcript analysis currently exposed by `ChatController`
@@ -362,6 +362,48 @@ Rollback cannot recover content already sent to the external provider or leaked 
 5. What minimum reviewed dataset size and quality/cost/latency thresholds authorize a canary? Until agreed, candidate generation may exist but production activation must remain blocked.
 6. Is a separate Azure OpenAI deployment required for optimization/judging to isolate quota and reduce correlated self-evaluation? This affects configuration and cost, not the core ownership design.
 7. Should management activation require `backoffice.manageall` in addition to a dedicated `ai.prompts.activate` permission? Recommendation: dedicated permission with explicit audit, optionally limited to global administrators during the pilot.
-8. What invalid-output content may be retained, for how long, and who may reveal it? Recommendation: retain validation metadata for aggregate learning, but keep serialized output and minimum reproducible input in a separate encrypted/access-restricted artifact with a short explicit expiry; require curator permission and audit for content reveal or dataset promotion.
-9. Is DSpyNet acceptable after the compatibility spike, and which exact package/version or commit is approved? This must remain open until license, .NET 10/Linux runtime, Azure OpenAI or adapter support, custom validator-backed metrics, cancellation, telemetry, reproducibility, and dependency health are demonstrated. Rejecting DSpyNet must not block the validation/evidence foundation.
-10. Should a validation failure receive one bounded repair attempt before the API returns failure, and which issue codes are repairable? Recommendation: configure this per workflow and contract version; never retry unknown identity, authorization, tool-scope, or deterministic request errors, and retain each attempted output separately.
+
+## Implementation Status (2026-11-02)
+
+### Implemented in this slice
+
+- `ChatController` is a compatibility adapter backed by typed `IAiWorkflowService` workflows and `IAiModelGateway`. The three VideoImporter API routes and JSON response DTO shapes remain unchanged; execution IDs are additive `X-AI-Execution-Id` headers.
+- `FeatureManagement:EnableAiOrchestration` defaults off on non-mock hosts and retains a compatibility fallback until operators initialize the production baselines and enable the new path. Mock mode always executes the deterministic orchestration path.
+- The legacy fallback is an isolated workflow service using the protected production model gateway and reviewed baseline prompts; it retains the previous default channel terminology while avoiding controller-owned prompts. It does not write new orchestration execution records.
+- Semantic Kernel 1.80.0 remains the production provider behind the gateway. Mock composition registers a deterministic gateway and seeds five baseline stages in its isolated scenario without external network access.
+- Video review uses stable internal item IDs across ten-item chunks and translation stages. It checks exact item identity, duplicate/missing IDs, requested-language completeness, title/description/tag bounds, and transcript output constraints before returning results.
+- Additive Models/Domain persistence covers prompt definitions, immutable revisions, metadata-only executions, consent/redaction-marked evaluation cases, immutable experiment results, lifecycle audit, mock/Mongo repository implementations, compare-and-set active/canary pointers, candidate-only optimization, canary sampling, promotion evidence checks, and rollback.
+- Versioned BackOffice prompt endpoints and the **AI workflows** SPA route cover initialization, revision editing/history, evaluation cases/runs, candidate generation from failed evaluation, stable canary allocation, explicit promotion/cancellation, rollback, and metadata-only execution history. `ai.prompts.view`, `.edit`, `.evaluate`, and `.activate` are distinct; management is blocked during impersonation.
+- Mongo index definitions were added to `docs/architecture/operations/mongo-index-manifest.phase4.json`. No indexes were applied, no production prompts were bootstrapped, and no existing data was migrated.
+- `ActivationEnabled` is false by default and is additionally forced off unless `FeatureManagement:EnableAiOrchestration` is on. Evaluation requires the configured minimum reviewed-case count and pass rate (80% default), baseline non-regression, and latency limits. Canary promotion requires the configured baseline/candidate execution samples, failure-rate ceiling, latency comparison, and a passing evaluation. Token/cost use is not yet captured by the model gateway, so it cannot be used as a promotion signal. Current defaults are in BackOffice `appsettings.json`; an approved quality/privacy policy is still a release gate.
+- ADR-020 and the backend, API, security, development, index, BackOffice README, technical-debt, and API audit documents now record current implementation and remaining gates.
+
+### Changed files
+
+- BackOffice: `Controllers/ChatController.cs`, `Controllers/AiPromptsController.cs`, `Services/Ai/`, `Program.cs`, `appsettings.json`, and `README.md`.
+- Models/Domain/Contracts: AI orchestration entities, DTOs, collection and permission keys, Mongo/mock repository, and deterministic scenario collection setup.
+- Frontend: AI orchestration models/services, BackOffice `ai-workflows` route, permission/menu registration, and focused route/service tests.
+- Validation/docs: `AiOrchestrationTests.cs`, test auth factory, the Mongo index manifest, ADR-020, architecture docs, this handoff, and API consistency tracking.
+
+### Validation evidence
+
+- `dotnet build MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj --no-restore --configuration Debug -v:q` — passed; existing package vulnerability and unrelated compiler warnings remain.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Debug --no-restore --filter "FullyQualifiedName~AiOrchestrationTests" --verbosity quiet` — passed, 8/8, including all three mock-host Chat routes, the compatibility workflow service, prompt lifecycle, canary evidence gating, and evaluation consent/redaction.
+- `yarn --cwd frontend build:shared` — passed.
+- `yarn --cwd frontend workspace @morwalpizvideo/services test --run src/aiOrchestrationService.test.ts` — 3 passed.
+- `vitest run src/authorization/permissions.ai-workflows.test.ts src/routes/aiWorkflows/Component.test.tsx` from `frontend/back-office-spa` — 2 passed.
+- `yarn --cwd frontend workspace back-office-spa build` — passed after final shared model updates.
+- Targeted `prettier --check` and ESLint on changed SPA files — passed; the Impeccable detector returned no findings on changed UI targets.
+- `docs/architecture/operations/mongo-index-manifest.phase4.json` — parses as valid JSON.
+
+### Not implemented / rollout gates
+
+- VideoImporter does not persist execution IDs or send Accepted/Edited/Rejected feedback. This is intentionally a later slice.
+- No model-invokable read tools are registered. Channel terminology is server-preloaded; category/tag and known-content tools remain gated until their exact use cases and owners are approved.
+- Prompt optimization is on-demand and candidate-only; no background job is scheduled. The deterministic mock optimizer is a contract fake, not evidence of improved prompt quality.
+- Provider token usage and cost are not captured, so cost/usage thresholds and dashboards from the proposal remain unimplemented.
+- Evaluation inputs rely on authenticated operator consent/redaction confirmation; production retention/consent policy and representative reviewed dataset have not been approved.
+- Mongo index apply/audit, Azure provider verification, production prompt bootstrap, real provider quality baseline, production canary rehearsal, deployed route verification, and responsive browser screenshots remain outstanding.
+- This environment had no interactive browser or browser executable, so no desktop/mobile screenshots were captured. The frontend build, component test, permission test, and detector are the available UI evidence.
+- FAQ, Ask, Insights, and Script Studio are not migrated. The unused/mismatched SPA VideoService wrapper is unchanged.
+- Independent post-validation `MorWalPiz Code Reviewer` review is required before broad activation.

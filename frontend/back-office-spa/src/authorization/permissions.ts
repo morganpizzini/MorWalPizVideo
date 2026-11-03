@@ -49,6 +49,12 @@ export const permissions = {
   campaigns: resourcePermissions('campaigns'),
   push: { platformSend: 'push.platform.send' },
   diagnostics: { view: 'diagnostics.view' },
+  aiPrompts: {
+    view: 'ai.prompts.view',
+    edit: 'ai.prompts.edit',
+    evaluate: 'ai.prompts.evaluate',
+    activate: 'ai.prompts.activate',
+  },
   scripts: {
     studio: 'scripts.studio',
     globalPromptManage: 'scripts.globalprompt.manage',
@@ -120,6 +126,15 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   // the page is gated separately by push.platform.send, mirroring the server.
   if (module === 'push') return [permissions.backoffice.access];
   if (module === 'diagnostics') return [permissions.diagnostics.view];
+  if (module === 'ai-workflows')
+    return action
+      ? [permissions.aiPrompts.edit, permissions.aiPrompts.evaluate, permissions.aiPrompts.activate]
+      : [
+          permissions.aiPrompts.view,
+          permissions.aiPrompts.edit,
+          permissions.aiPrompts.evaluate,
+          permissions.aiPrompts.activate,
+        ];
   if (module === 'script-studio') return [permissions.scripts.studio];
   if (module === 'rbac') {
     if (segments[1] === 'groups') return [permissions.users.permissionsManage];

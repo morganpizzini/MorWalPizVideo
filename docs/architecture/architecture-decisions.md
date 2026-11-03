@@ -21,6 +21,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-015](adr/ADR-015-backoffice-app-store.md) | BackOffice SPA app-store ownership and bootstrap hydration | Accepted |
 | [ADR-016](adr/ADR-016-shooting-range-public-poc.md) | Authorization-first public posture for the Shooting Range POC | Accepted |
 | [ADR-017](adr/ADR-017-anonymous-web-push.md) | Anonymous per-channel Web Push with snapshot fanout | Accepted |
+| [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md) | BackOffice Chat prompts, typed model gateway, evaluation, and human-controlled canaries | Accepted for pilot; rollout gated |
 
 ## ADR Process
 
