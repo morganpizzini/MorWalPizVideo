@@ -46,7 +46,7 @@ jobs:
 
       - name: Run tests
         working-directory: frontend/back-office-spa
-        run: yarn test
+        run: yarn test --passWithNoTests=false
 
       - name: Publish test results
         if: always()
