@@ -1,5 +1,7 @@
 # ServerAPI BuildKit Cache Handoff
 
+**Status: On hold.** Do not expand or continue ServerAPI Docker/workflow optimization without new user approval. The active cache-optimization target is the public-client handoff in `docs/feature-handoffs/morwalpizvideo-client-buildkit-cache-handoff.md`.
+
 ## Outcome
 
 Optimize only `MorWalPizVideo.ServerAPI/Dockerfile` as a bounded experiment in faster local and persistent-builder image builds. Preserve the .NET 10 runtime image, Release default, final entry point, exposed ports, non-root runtime user, project graph, and published application behavior.
@@ -173,3 +175,40 @@ No new unit, component, contract, migration, or end-to-end test code is required
 
 - Which persistent builder will be used for the timing experiment: local Docker Desktop/Engine, a self-hosted builder, or a Buildx builder? This changes the persistence and concurrency evidence, but not the Dockerfile design.
 - What quantitative threshold will count as success: warm elapsed-time reduction, restore-time reduction after manifest invalidation, or both? Record the threshold before comparing results to avoid selecting only favorable measurements.
+
+## Implementation Status
+
+- Updated `MorWalPizVideo.ServerAPI/Dockerfile` only for build behavior: added the BuildKit frontend directive, added a locked ServerAPI-specific NuGet cache mount to restore and publish, removed the separate build stage, and made publish the single compilation operation with `--no-restore`.
+- Preserved the seven project-manifest copies, Release configuration default, .NET 10 SDK/runtime images, non-root `app` user, exposed ports, publish destination, and DLL entry point.
+- Validation is intentionally deferred pending user approval. This server has Docker installed without the Buildx component, so BuildKit checks and image builds cannot run here until Buildx is available.
+
+## Validation Record - 2026-11-04
+
+- Buildx is installed and available (`Docker 29.9.3`).
+- Dockerfile structure checks passed: the BuildKit syntax directive, seven manifest copies, both matching locked NuGet cache mounts, publish `--no-restore`, absence of `dotnet build`, runtime user, ports, and DLL entry point are all present as intended.
+- Focused regression tests passed: `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --filter "Category=TestGroup:ServerAPI|Category=TestGroup:Shared|Category=TestGroup:CrossApi" --verbosity minimal` executed 62 tests with 0 failures and 0 skips.
+- Docker BuildKit check and image build remain blocked because the daemon is unreachable at `/var/run/docker.sock`. Runtime smoke, cold-build, warm-build, cache invalidation, image-size, and final-image security checks therefore remain pending until the Docker daemon is running and accessible.
+
+## GitHub Actions Cache Decision
+
+The Dockerfile cache mount and a GitHub Actions cache exporter solve different persistence problems:
+
+- The NuGet `RUN --mount=type=cache` reuses package files within the same persistent BuildKit builder. A fresh GitHub-hosted runner does not retain that builder between workflow runs.
+- `docker/setup-buildx-action` plus `docker/build-push-action` with `cache-from: type=gha` and `cache-to: type=gha,mode=max` imports and exports BuildKit build records and layers across workflow runs.
+- The GitHub Actions exporter does not, by itself, guarantee persistence of the mutable `/root/.nuget/packages` cache-mount contents. It can still avoid restore entirely when the restore layer is reusable. Persisting cache-mount contents across runners after a manifest invalidation requires a separately justified cache-mount export/import mechanism and is not included in the minimal workflow option.
+
+Current repository constraints:
+
+- `.github/workflows/ci.yml` intentionally uses `docker build --no-cache` for BackOffice, ServerAPI, and FreezerAnalysis as a clean-build correctness gate. Adding `cache-from` while retaining `no-cache` would not provide the intended layer-cache acceleration.
+- Replacing that ServerAPI clean build with a cache-enabled Buildx build would improve repeat CI builds but would remove the current clean-build guarantee from normal CI.
+- `.github/workflows/deploy-serverapi.yml` deploys a .NET publish directory to Azure Web App and does not build the Dockerfile. Workflow cache changes in central CI therefore do not accelerate the production deployment job.
+
+Recommended follow-up if CI acceleration is approved:
+
+1. Keep BackOffice and FreezerAnalysis behavior unchanged.
+2. Split ServerAPI out of the clean-container matrix into a cache-enabled Buildx job using `docker/setup-buildx-action@v3` and `docker/build-push-action@v6` with a ServerAPI-specific GitHub Actions cache scope.
+3. Retain ServerAPI clean-build coverage in a scheduled or manually dispatched gate, or explicitly accept its removal from every push and pull request. Do not run both jobs on every change if elapsed CI time and runner consumption are the optimization target.
+4. Measure at least two runs on the same branch and inspect BuildKit step cache hits. Treat this as layer-cache evidence only; do not claim cross-run NuGet cache-mount persistence without a manifest-invalidation experiment.
+5. Update `docs/architecture/deployment.md` when the CI gate policy changes.
+
+This follow-up expands the accepted one-Dockerfile boundary and requires explicit approval before `.github/workflows/ci.yml` is changed.

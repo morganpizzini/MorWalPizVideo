@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
@@ -16,16 +17,14 @@ COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", 
 COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Models/"]
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
-RUN dotnet restore "./MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj"
+RUN --mount=type=cache,id=serverapi-nuget,target=/root/.nuget/packages,sharing=locked \
+	dotnet restore "./MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj"
 COPY . .
 WORKDIR "/src/MorWalPizVideo.ServerAPI"
-RUN dotnet build "./MorWalPizVideo.ServerAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MorWalPizVideo.ServerAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=cache,id=serverapi-nuget,target=/root/.nuget/packages,sharing=locked \
+	dotnet publish "./MorWalPizVideo.ServerAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "MorWalPizVideo.ServerAPI.dll"]
