@@ -66,6 +66,19 @@ dotnet restore MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.c
 dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --verbosity normal
 ```
 
+Do not run overlapping build/test commands against the same checkout. They can
+race while replacing assemblies in shared `bin/` and `obj/` folders. For a
+focused run, build once with MSBuild parallelism disabled, then test with
+`--no-build`:
+
+```bash
+dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false
+dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~ChannelTenancyAuthorizationTests"
+```
+
+If a command times out, confirm that its `dotnet`, `testhost`, and `vstest`
+processes have exited before starting the same project again.
+
 Replace the project path in both commands for another project. The Windows
 projects use the CI-compatible form below:
 

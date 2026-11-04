@@ -13,6 +13,18 @@
 
 Consult the relevant backend, frontend, Windows application, security, and feature documents linked from the architecture guide for implementation-specific rules. In particular, follow its cache-tag and HTTP-client guidance rather than duplicating those rules here.
 
+## .NET Build/Test Concurrency
+
+- Do not overlap .NET build or test commands that write the same project's `bin/` or `obj/` outputs. After a timeout, verify the previous `dotnet`, `testhost`, or `vstest` process has exited before retrying.
+- For focused backend validation, build once and run tests without an implicit rebuild:
+
+	```bash
+	dotnet build <project>.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false
+	dotnet test <project>.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~<TestName>"
+	```
+
+- When validating multiple backend test projects, run the build commands serially and keep every later discovery/test command on `--no-build`.
+
 ## Repository work:
 - The user may select a custom agent directly from the agent picker; that agent should work on the request without requiring a separate routing agent.
 - Skills define methods or style and do not override the user's requested scope, approval, or validation requirements.
