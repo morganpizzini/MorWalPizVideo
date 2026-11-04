@@ -7,7 +7,7 @@ export default function ErrorPageRoot() {
 
     return (
         <div>
-            <TitleHeader />
+            <TitleHeader hideLink />
             <ErrorPage/>
         </div>
     );

@@ -12,7 +12,7 @@ import Index from './home/Component';
 import Compilations from './compilations/Component';
 import CustomForm from './customForms/Component';
 import matchLoader from './matches/loader';
-import homeLoader from './home/loader';
+import homeLoader, { homeShouldRevalidate } from './home/loader';
 import pageLoader from './pages/loader';
 import accessoryLoader from './accessories/loader';
 import sponsorsLoader from './sponsors/loader';
@@ -87,6 +87,7 @@ export const routes: RouteObject[] = [
           {
             index: true,
             loader: homeLoader,
+            shouldRevalidate: homeShouldRevalidate,
             element: <Index />,
           },
           {

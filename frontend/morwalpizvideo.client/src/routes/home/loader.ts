@@ -2,7 +2,13 @@ import { getMatches } from '@services/matches';
 import { getConfiguration } from '@services/stream';
 import { getPublicSurveys } from '@services/surveys';
 import { getSponsors } from '@services/sponsors';
-import { getPublicChannelNews } from '@morwalpizvideo/services';
+import { getPublicBlog, getPublicChannelNews, requireSuccessfulResponse } from '@morwalpizvideo/services';
+import type { ShouldRevalidateFunctionArgs } from 'react-router';
+
+export function homeShouldRevalidate({ currentUrl, nextUrl, defaultShouldRevalidate }: ShouldRevalidateFunctionArgs): boolean {
+  if (currentUrl.pathname === nextUrl.pathname && currentUrl.search !== nextUrl.search) return false;
+  return defaultShouldRevalidate;
+}
 
 interface SponsorItem {
   id: string;
@@ -15,12 +21,13 @@ interface SponsorItem {
 
 export default async function loader() {
   try {
-    const [response, configuration, surveys, channelNews, sponsors] = await Promise.all([
-      getMatches(true),
-      getConfiguration(),
-      getPublicSurveys(),
-      getPublicChannelNews(),
-      getSponsors().catch(() => [] as SponsorItem[]),
+    const [response, configuration, surveys, channelNews, sponsors, blog] = await Promise.all([
+      getMatches(true).then(requireSuccessfulResponse),
+      getConfiguration().then(requireSuccessfulResponse),
+      getPublicSurveys().then(requireSuccessfulResponse),
+      getPublicChannelNews().then(requireSuccessfulResponse),
+      getSponsors().then(requireSuccessfulResponse).catch(() => [] as SponsorItem[]),
+      getPublicBlog(1).catch(() => null),
     ]);
 
     return {
@@ -31,6 +38,8 @@ export default async function loader() {
       surveys: surveys ?? [],
       channelNews: channelNews ?? [],
       sponsors: sponsors ?? [],
+      articles: blog?.items ?? [],
+      articlesUnavailable: blog === null,
       error: false,
     };
   } catch {
@@ -42,6 +51,8 @@ export default async function loader() {
       surveys: [],
       channelNews: [],
       sponsors: [],
+      articles: [],
+      articlesUnavailable: true,
       error: true,
     };
   }

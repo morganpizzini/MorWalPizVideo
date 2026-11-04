@@ -1,236 +1,139 @@
 ---
 name: MorWalPizVideo Client
-description: A creative-operational video hub with branded editorial content and practical production tools.
+description: A creator hub with an editorial video, series, article, and community homepage.
 colors:
-  brand-black: '#333333'
-  brand-paper: '#ececec'
-  surface-white: '#ffffff'
-  surface-muted: '#f1f1f1'
-  text-primary: '#1f1f1f'
-  text-body: '#555555'
-  text-muted: '#6c757d'
-  bootstrap-primary: '#0d6efd'
-  telegram-blue: '#2481cc'
-  instagram-pink: '#e4405f'
-  youtube-red: '#ff0000'
-  quick-links-ink: '#18232d'
-  quick-links-sage: '#d5e0dc'
-  quick-links-terracotta: '#ab4b2c'
-  quick-links-blush: '#f1d8ca'
+  magazine-bg: '#101010'
+  magazine-surface: '#181818'
+  magazine-elevated: '#222222'
+  magazine-accent: '#ffff36'
+  magazine-text: '#ffffff'
+  magazine-secondary: '#b8b8b8'
+  magazine-border: '#383838'
+  telegram: '#0088b8'
+  instagram: '#d02b70'
+  youtube: '#e00000'
+  discord: '#5865f2'
 typography:
-  display:
-    fontFamily: 'High Speed, sans-serif'
-    fontSize: '64px'
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: '2px'
-  headline:
-    fontFamily: 'Georgia, Times New Roman, serif'
-    fontSize: 'clamp(2rem, 7vw, 3.5rem)'
-    fontWeight: 400
-    lineHeight: 1.05
   body:
-    fontFamily: 'Roboto, Arial, sans-serif'
-    fontSize: '1rem'
+    fontFamily: 'Manrope, Roboto, sans-serif'
+    fontSize: '14px'
     fontWeight: 400
     lineHeight: 1.5
+    letterSpacing: '0'
+  heading:
+    fontFamily: 'Manrope, Roboto, sans-serif'
+    fontWeight: 800
   label:
-    fontFamily: 'Roboto, Arial, sans-serif'
-    fontSize: '0.75rem'
+    fontFamily: 'Manrope, Roboto, sans-serif'
+    fontSize: '12px'
     fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: '0.04em'
 rounded:
-  xs: '0.35rem'
-  sm: '0.375rem'
-  md: '0.5rem'
-  lg: '0.65rem'
-  card: '10px'
+  sm: '4px'
+  md: '8px'
+  lg: '10px'
   circle: '50%'
 spacing:
-  xs: '0.35rem'
-  sm: '0.6rem'
-  md: '1rem'
-  lg: '2rem'
-  xl: '3rem'
+  sm: '8px'
+  md: '16px'
+  lg: '30px'
 components:
-  button-primary:
-    backgroundColor: '{colors.bootstrap-primary}'
-    textColor: '{colors.surface-white}'
-    rounded: '{rounded.sm}'
-    padding: '0.375rem 0.75rem'
-  button-social-telegram:
-    backgroundColor: '{colors.telegram-blue}'
-    textColor: '{colors.surface-white}'
-    rounded: '5px'
-    padding: '10px 20px'
+  editorial-button:
+    backgroundColor: '{colors.magazine-accent}'
+    textColor: '{colors.magazine-bg}'
+    rounded: '24px'
+    minHeight: '44px'
   content-card:
-    backgroundColor: '{colors.surface-white}'
-    textColor: '{colors.text-primary}'
-    rounded: '{rounded.card}'
-    padding: '0.9rem 1rem 0.75rem'
-  quick-link:
-    backgroundColor: 'rgba(255, 255, 255, 0.78)'
-    textColor: '{colors.quick-links-ink}'
+    backgroundColor: '{colors.magazine-surface}'
+    textColor: '{colors.magazine-text}'
     rounded: '{rounded.md}'
-    padding: '1rem 1.1rem'
+  filter:
+    backgroundColor: 'transparent'
+    selectedColor: '{colors.magazine-accent}'
+    rounded: '20px'
 ---
 
 # Design System: MorWalPizVideo Client
 
 ## Overview
 
-**Creative North Star: "Regia in movimento"**
+**Creative North Star: "Digital magazine for the range"**
 
-MorWalPizVideo is a creative-operational video hub: the interface carries a visible creator identity while helping visitors scan content, reach social channels, manage tools, and follow live or scheduled activity. The main shell layers readable Bootstrap content over a photographic brand backdrop. Its signature wordmark uses the custom High Speed face, with oversized dark initials and pale supporting letters to create a compact, recognizable masthead.
-
-The system is practical first, but it is not anonymous. Content cards, status alerts, filters, social actions, and forms use familiar Bootstrap patterns so repeated work stays predictable. The quick-links surface is a deliberate editorial variation: cool paper, sage, and terracotta create a calmer link directory while retaining the same direct, action-oriented rhythm.
-
-**Key Characteristics:**
-
-- Branded photographic atmosphere behind a readable content layer.
-- Bootstrap utility language strengthened by custom creator branding.
-- Content-led cards with image-first 16:9 media and compact metadata.
-- Flat surfaces at rest, with restrained lift and shadow on interaction.
+The public homepage is a dark editorial hub for Morgan Pizzini's videos, series,
+articles, gear, sponsors, and community. It is designed for quick scanning first,
+with strong media, concise metadata, and a yellow signal accent. The homepage uses
+this system while legacy routes retain their existing light presentation.
 
 ## Colors
 
-The shared application palette is neutral and high-contrast, with saturated social colors reserved for recognizable channel actions. Quick links use a separate muted sage and terracotta register for an editorial directory experience.
+- **Magazine black** (`#101010`) is the page background and header/footer base.
+- **Magazine surface** (`#181818`) frames panels and cards.
+- **Magazine elevated** (`#222222`) supports alerts, media placeholders, and menus.
+- **Signal yellow** (`#ffff36`) identifies primary actions, selected filters, and active navigation.
+- **White** (`#ffffff`) is reserved for primary content and link text.
+- **Secondary gray** (`#b8b8b8`) is used for supporting text and metadata.
+- **Border gray** (`#383838`) separates dense editorial regions.
+- Social colors identify their destination only: Telegram, Instagram, YouTube, and Discord.
 
-### Primary
-
-- **Bootstrap Action Blue** ({colors.bootstrap-primary}): Default primary actions, form submission, and operational calls to action.
-- **Telegram Blue** ({colors.telegram-blue}): Telegram social action, kept distinct from generic application actions.
-
-### Secondary
-
-- **Instagram Pink** ({colors.instagram-pink}): Instagram social action.
-- **YouTube Red** ({colors.youtube-red}): YouTube action and recognizable media affordance.
-- **Quick-links Terracotta** ({colors.quick-links-terracotta}): Accent for directory headings, icon blocks, focus, and hover states.
-
-### Tertiary
-
-- **Quick-links Sage** ({colors.quick-links-sage}): Cool atmospheric endpoint for the quick-links background.
-- **Quick-links Blush** ({colors.quick-links-blush}): Soft backing for quick-links icon tiles.
-
-### Neutral
-
-- **Brand Black** ({colors.brand-black}): Oversized wordmark initials and strong brand contrast.
-- **Brand Paper** ({colors.brand-paper}): Supporting wordmark letters.
-- **Surface White** ({colors.surface-white}): Cards, navigation bands, and readable content surfaces.
-- **Muted Surface** ({colors.surface-muted}): Media placeholders and loading states.
-- **Primary Ink** ({colors.text-primary}): Card titles and important content.
-- **Body Gray** ({colors.text-body}): Supporting descriptions.
-- **Muted Gray** ({colors.text-muted}): Metadata, categories, and secondary labels.
-- **Quick-links Ink** ({colors.quick-links-ink}): Text color for the directory surface.
-
-### Named Rules
-
-**The Accent Rarity Rule.** Social colors and terracotta should identify a destination or state; they should not become a general page wash.
+The palette is intentionally high contrast. Yellow is an action and state color,
+not a page wash.
 
 ## Typography
 
-**Display Font:** High Speed (with sans-serif fallback)
-**Body Font:** Roboto (with Arial, sans-serif fallback)
-**Label/Editorial Font:** Georgia (with Times New Roman, serif fallback for quick-links headlines)
-
-**Character:** High Speed supplies the creator signature and a slightly kinetic masthead. Roboto keeps tools and dense content legible, while Georgia gives the quick-links directory a quieter editorial voice.
-
-### Hierarchy
-
-- **Display** (bold, 64px, line-height 1): Branded title header; oversized initials may reach 84px on desktop.
-- **Headline** (regular, clamp(2rem, 7vw, 3.5rem), line-height 1.05): Quick-links page title.
-- **Title** (600, 1.05rem, line-height 1.25): Content card titles and compact tool headings.
-- **Body** (400, 1rem, line-height 1.5): Application copy and operational descriptions; keep longer text within readable Bootstrap containers.
-- **Label** (700, 0.75rem, line-height 1.2, 0.04em): Uppercase categories, channel labels, and metadata.
-
-### Named Rules
-
-**The Two-Voice Rule.** Use High Speed only for the brand mark; use Roboto for the application and Georgia only for the quick-links editorial headline.
+Manrope is used throughout the public shell. The brand wordmark remains the image
+asset in the header. Headings use strong weight and compact line height; supporting
+copy stays restrained and wraps naturally rather than clipping.
 
 ## Layout
 
-The main application follows Bootstrap's responsive container and utility grid. Header branding is centered with 50px top padding, followed by social actions and dynamic navigation. Home content uses a single-column stack below 768px and a three-column card grid at 768px and above, with 1rem gaps. Cards preserve a 16:9 media ratio so content remains visually stable as the viewport changes.
+The homepage is capped at 1540px with 30px desktop gutters and 16px phone gutters.
+The featured region combines a wide content panel with Follow and Donation panels.
+The latest feed is a four-column desktop grid, three columns on tablet, two columns
+on larger phones, and one column below 480px so card titles and metadata remain
+readable. Article cards follow the same responsive rule.
 
-Quick links use a centered column capped at 40rem, with 1.25rem horizontal page padding and 3rem vertical padding on larger screens. The directory becomes more compact at widths below 34rem. Filter controls wrap naturally; their tag group changes from a vertical divider to a full-width top divider below 576px.
+Media keeps stable 16:9 boxes. Filters scroll horizontally within their own row;
+the page itself must never acquire horizontal overflow. Safe-area insets are
+included in the sticky header and footer for full-screen mobile browsers.
 
-## Elevation & Depth
+## Interaction
 
-This is a flat-with-state-lift system. The photographic body background and translucent white overlay create the base depth; cards and links are flat readable surfaces with ambient shadows. Interaction adds a small scale or upward translation and a stronger shadow, making the interface feel responsive without turning every element into a floating panel.
+The header becomes a disclosure menu below 1200px. It exposes expanded state,
+focuses the first menu item when opened, traps Tab within the open navigation,
+closes on Escape or route activation, and returns focus to the toggle. Search,
+account, social, filter, share, and editorial controls provide visible focus and
+44px coarse-pointer targets. Hover-only media transforms run only for fine pointers.
 
-### Shadow Vocabulary
-
-- **Global hover lift** (`0 4px 6px rgba(0, 0, 0, 0.4)`): Shared button and popup hover response.
-- **Content card rest** (`0 4px 8px rgba(0, 0, 0, 0.2)`): Baseline home and match card separation.
-- **Content card hover** (`0 8px 16px rgba(0, 0, 0, 0.4)`): Stronger emphasis during card interaction.
-- **Quick-link ambient** (`0 0.75rem 2rem rgba(24, 35, 45, 0.08)`): Soft directory item separation.
-- **Quick-link hover** (`0 1rem 2.25rem rgba(24, 35, 45, 0.14)`): Lifted focused or hovered directory item.
-
-### Named Rules
-
-**The State-Lift Rule.** Depth belongs to interaction and hierarchy: use shadow and translation to signal hover or focus, not as decoration on every surface.
-
-## Shapes
-
-The form language is gently rounded and familiar rather than geometric. Bootstrap controls use the framework's native small radius; custom home cards use 10px corners with clipped media, quick-links use 0.5rem corners, and icons use smaller 0.35rem tiles or circular avatars. Borders are sparse and functional, appearing mainly as dividers, input strokes, and quick-link focus boundaries.
+Reduced-motion preferences remove authored movement while preserving immediate color,
+focus, and selected-state feedback.
 
 ## Components
 
-### Buttons
+### Editorial cards
 
-- **Shape:** Small Bootstrap rounding for application actions; social buttons use 5px corners.
-- **Primary:** Bootstrap action blue with white text and compact Bootstrap padding.
-- **Hover / Focus:** Shared controls scale to 1.03 and gain a soft shadow; social buttons deepen to their channel-specific hover colors.
-- **Secondary / Ghost / Tertiary:** Outline and muted Bootstrap variants support navigation, cancellation, filters, and status actions.
+Cards pair an image, content-type badge, title, optional description, destination,
+and date/share footer. Series retain an episode-count badge. The first visible
+featured image is eager; below-fold images are lazy with stable dimensions.
 
-### Chips
+### Editorial controls
 
-- **Style:** Bootstrap badges use compact filled status colors such as secondary, danger, success, info, and primary.
-- **State:** Category filters use small buttons; selected filters use filled info blue and unselected filters use outline info.
+Yellow filled buttons are primary actions. Outline buttons, filter chips, and text
+links use the same accent with clear pressed, disabled, hover, and focus-visible
+states. Share controls remain compact visually but expand to touch-safe hit areas
+for coarse pointers.
 
-### Cards / Containers
+### Header and footer
 
-- **Corner Style:** Home content cards use 10px corners; Bootstrap tool cards retain framework defaults.
-- **Background:** White content surfaces over the translucent photographic shell; media placeholders use muted gray.
-- **Shadow Strategy:** Resting content cards use a moderate ambient shadow and lift on hover.
-- **Border:** Home cards are borderless; footer separators and utility dividers use light gray strokes.
-- **Internal Padding:** Home card bodies use compact 0.9rem 1rem 0.75rem padding, with a slightly tighter footer.
+The sticky header provides the brand, route navigation, search, social destinations,
+and authenticated profile action. The footer keeps configured navigation plus stable
+Sponsor, Gear, Articles, Donation, Privacy, Terms, and consent destinations.
 
-### Inputs / Fields
+## Responsive rules
 
-- **Style:** Bootstrap `form-control` fields provide the shared input language and spacing.
-- **Focus:** Use Bootstrap's primary focus treatment; preserve the standard control affordance.
-- **Error / Disabled:** Bootstrap alert and validation states provide explicit feedback without changing the overall geometry.
+- 1200px: collapse primary navigation into a menu and stack sponsor/gear regions.
+- 768px: stack the feature region and reduce page gutters.
+- 480px: use one content column, stack Follow and Donation, and preserve full-width controls.
+- 360px: retain one column and reduce only nonessential spacing.
 
-### Navigation
-
-- **Style:** Header navigation is centered and dynamic, with Bootstrap link utilities; footer navigation uses light links in a dark translucent footer. The stream surface uses a dark Bootstrap navbar.
-- **States:** Social links are filled by destination color; standard links use Bootstrap hover and focus behavior.
-- **Mobile:** Header title scales its large and small wordmark letters down at 768px; content navigation wraps rather than forcing horizontal overflow.
-
-### Social Actions
-
-The title header's Telegram, Instagram, and YouTube links are signature destination actions. Each uses a recognizable saturated channel color, white text, a compact rounded rectangle, and a small hover darkening response.
-
-### Quick-link Directory Items
-
-Quick links are the signature calm surface: each item is a translucent white row with a compact image or terracotta icon tile, title and truncated supporting text, plus a right-aligned terracotta arrow. Hover and focus-visible lift the row by 2px and strengthen its border and shadow.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** keep the High Speed typeface exclusive to the brand mark.
-- **Do** preserve 16:9 media framing for home content cards.
-- **Do** use saturated social colors only for the matching social destination.
-- **Do** keep operational surfaces readable over the photographic background.
-- **Do** let cards and quick links lift subtly on hover and focus-visible.
-- **Do** retain the quick-links sage, paper, and terracotta atmosphere on that route.
-
-### Don't:
-
-- **Don't** replace the photographic backdrop with a flat application-wide fill without an explicit identity decision.
-- **Don't** use High Speed for body copy, labels, or forms.
-- **Don't** turn every surface into a heavily rounded floating card.
-- **Don't** mix quick-links terracotta into unrelated Bootstrap status semantics.
-- **Don't** let responsive card grids distort media proportions or create horizontal overflow.
+All public routes outside the homepage preserve their existing light shell. The
+canonical public identity is `https://morwalpiz.com`; runtime configuration may
+override generated canonical URLs through `VITE_CANONICAL_BASE_URL`.

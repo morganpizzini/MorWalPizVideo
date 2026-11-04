@@ -1,5 +1,6 @@
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Push;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
 using WebPush;
@@ -23,6 +24,7 @@ public sealed class WebPushService : IWebPushService
 
   public WebPushService(
       IConfiguration configuration,
+      IHttpClientFactory httpClientFactory,
       IUserRepository userRepository,
       IUserChannelRepository userChannelRepository,
       ILogger<WebPushService> logger)
@@ -37,7 +39,7 @@ public sealed class WebPushService : IWebPushService
     var subject = section["Subject"] ?? "mailto:info@morwalpiz.com";
 
     _vapid = new VapidDetails(subject, publicKey, privateKey);
-    _client = new WebPushClient();
+    _client = new WebPushClient(httpClientFactory.CreateClient(HttpClientNames.WebPush));
   }
 
   /// <inheritdoc/>
@@ -46,7 +48,7 @@ public sealed class WebPushService : IWebPushService
     var pushSub = new PushSubscription(sub.Endpoint, sub.P256dh, sub.Auth);
     try
     {
-      await _client.SendNotificationAsync(pushSub, payload, _vapid);
+      await _client.SendNotificationAsync(pushSub, payload, _vapid, ct);
     }
     catch (WebPushException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Gone)
     {

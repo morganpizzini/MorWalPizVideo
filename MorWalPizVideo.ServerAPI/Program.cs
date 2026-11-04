@@ -334,6 +334,10 @@ else
     {
         httpClient.BaseAddress = new Uri("https://www.google.com/recaptcha/api/siteverify");
     });
+    builder.Services.AddHttpClient(HttpClientNames.WebPush, httpClient =>
+    {
+        httpClient.Timeout = TimeSpan.FromSeconds(30);
+    });
     builder.Services.AddScoped<IRecaptchaService, RecaptchaService>();
     //builder.Services.AddHttpClient(HttpClientNames.YouTube, httpClient =>
     //{
@@ -462,8 +466,6 @@ else
 }
 
 app.MapDefaultEndpoints();
-// Map health check endpoint
-app.MapHealthChecks("/health").AllowAnonymous();
 
 //app.UseDefaultFiles();
 //app.MapStaticAssets();
