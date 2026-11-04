@@ -11,6 +11,7 @@ on:
       - 'frontend/yarn.lock'
       - 'frontend/FreezerAnalysis.spa/Dockerfile'
       - 'frontend/FreezerAnalysis.spa/nginx.conf'
+      - '.github/actions/build-container-image/**'
       - '.github/workflows/deploy-freezer-analysis-spa.yml'
   workflow_dispatch:
 
@@ -78,22 +79,20 @@ jobs:
           username: ${{ secrets.AZURE_CLIENT_ID }}
           password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/build-container-image
         with:
           context: ./frontend
           file: ./frontend/FreezerAnalysis.spa/Dockerfile
           push: true
-          build-args: |
+          noCache: false
+          buildArgs: |
             VITE_FREEZER_API_BASE_URL=${{ vars.FREEZER_ANALYSIS_API_BASE_URL }}
           tags: |
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

@@ -9,6 +9,7 @@ on:
       - 'frontend/fe-packages/**'
       - 'frontend/package.json'
       - 'frontend/yarn.lock'
+      - '.github/actions/build-container-image/**'
       - '.github/workflows/deploy-morwalpizvideo-client.yml'
   workflow_dispatch:
   
@@ -75,20 +76,18 @@ jobs:
           username: ${{ secrets.AZURE_CLIENT_ID }}
           password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: ./.github/actions/build-container-image
         with:
           context: ./frontend
           file: ./frontend/morwalpizvideo.client/Dockerfile
           push: true
+          noCache: false
           tags: |
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

@@ -2,7 +2,7 @@ name: Deploy Ask Client
 on:
   push:
     branches: [main]
-    paths: ['frontend/ask.client/**', 'frontend/fe-packages/**', 'frontend/package.json', 'frontend/yarn.lock', '.github/workflows/deploy-ask-client.yml']
+    paths: ['frontend/ask.client/**', 'frontend/fe-packages/**', 'frontend/package.json', 'frontend/yarn.lock', '.github/actions/build-container-image/**', '.github/workflows/deploy-ask-client.yml']
   workflow_dispatch:
 permissions:
   id-token: write
@@ -45,11 +45,13 @@ jobs:
           registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
           username: ${{ secrets.AZURE_CLIENT_ID }}
           password: ${{ secrets.AZURE_CLIENT_SECRET }}
-      - uses: docker/build-push-action@v5
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-container-image
         with:
           context: ./frontend
           file: ./frontend/ask.client/Dockerfile
           push: true
+          noCache: false
           tags: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
       - uses: azure/webapps-deploy@v3
         with:

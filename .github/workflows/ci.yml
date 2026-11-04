@@ -121,19 +121,59 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  build-api-containers:
-    name: Clean API Container - ${{ matrix.project }}
+  build-container-images:
+    name: Container Image - ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: [MorWalPizVideo.BackOffice, MorWalPizVideo.ServerAPI, FreezerAnalysis.Api]
+        include:
+          - name: BackOffice API
+            context: .
+            file: ./MorWalPizVideo.BackOffice/Dockerfile
+            noCache: true
+          - name: ServerAPI
+            context: .
+            file: ./MorWalPizVideo.ServerAPI/Dockerfile
+            noCache: true
+          - name: FreezerAnalysis API
+            context: .
+            file: ./FreezerAnalysis.Api/Dockerfile
+            noCache: true
+          - name: BackOffice SPA
+            context: ./frontend
+            file: ./frontend/back-office-spa/Dockerfile
+            noCache: true
+          - name: Ask SPA
+            context: ./frontend
+            file: ./frontend/ask.client/Dockerfile
+            noCache: true
+          - name: Public Video SPA
+            context: ./frontend
+            file: ./frontend/morwalpizvideo.client/Dockerfile
+            noCache: true
+          - name: Shooting Range SPA
+            context: ./frontend
+            file: ./frontend/shooting-range.client/Dockerfile
+            noCache: true
+          - name: FreezerAnalysis SPA
+            context: ./frontend
+            file: ./frontend/FreezerAnalysis.spa/Dockerfile
+            noCache: true
+            buildArgs: |
+              VITE_FREEZER_API_BASE_URL=${{ vars.FREEZER_ANALYSIS_API_BASE_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build from repository context
-        run: docker build --no-cache --file ${{ matrix.project }}/Dockerfile .
+      - name: Build image without pushing
+        uses: ./.github/actions/build-container-image
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: "false"
+          noCache: ${{ matrix.noCache }}
+          buildArgs: ${{ matrix.buildArgs }}
 
   build-frontend:
     name: Build Frontend Applications

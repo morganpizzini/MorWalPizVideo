@@ -21,11 +21,11 @@ COPY fe-packages/models ./fe-packages/models
 WORKDIR /app/fe-packages/models
 RUN yarn build
 
-COPY fe-packages/services ./fe-packages/services
+COPY fe-packages/services /app/fe-packages/services
 WORKDIR /app/fe-packages/services
 RUN yarn build
 
-COPY fe-packages/layout ./fe-packages/layout
+COPY fe-packages/layout /app/fe-packages/layout
 WORKDIR /app/fe-packages/layout
 RUN yarn build
 
