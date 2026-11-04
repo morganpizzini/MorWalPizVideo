@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Stage 1: Build
 FROM node:22-alpine AS builder
 
@@ -12,25 +14,20 @@ COPY fe-packages/layout/package.json ./fe-packages/layout/
 COPY morwalpizvideo.client/package.json ./morwalpizvideo.client/
 
 # Install all dependencies (workspaces)
-RUN yarn install --frozen-lockfile
+RUN --mount=type=cache,id=morwalpizvideo-client-yarn,target=/usr/local/share/.cache/yarn,sharing=locked \
+    yarn install --frozen-lockfile
 
-# Copy shared package sources and build them
 COPY fe-packages/models ./fe-packages/models
-COPY fe-packages/services ./fe-packages/services
-COPY fe-packages/layout ./fe-packages/layout
-
 WORKDIR /app/fe-packages/models
 RUN yarn build
 
+COPY fe-packages/services ./fe-packages/services
 WORKDIR /app/fe-packages/services
 RUN yarn build
 
+COPY fe-packages/layout ./fe-packages/layout
 WORKDIR /app/fe-packages/layout
 RUN yarn build
-
-# Refresh workspace links after building packages
-WORKDIR /app
-RUN yarn install --force --frozen-lockfile
 
 # Copy morwalpizvideo.client source files
 WORKDIR /app/morwalpizvideo.client
@@ -52,7 +49,8 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Create a minimal package.json with only the production HTTP server dep
-RUN printf '{"type":"module","dependencies":{"express":"^4.19.0"}}' > package.json \
+RUN --mount=type=cache,id=morwalpizvideo-client-npm,target=/root/.npm,sharing=locked \
+    printf '{"type":"module","dependencies":{"express":"^4.19.0"}}' > package.json \
     && npm install --no-audit --no-fund
 
 # Copy client static files and the self-contained SSR bundle

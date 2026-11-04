@@ -1,6 +1,8 @@
-import { Link } from 'react-router';
+import { Form, Link, NavLink, useLocation, useSearchParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
 import './title-header.scss';
 import PublicNavigationLink from '../components/PublicNavigationLink';
+import SocialLinks from '../components/SocialLinks';
 import { usePublicNavigation } from '../routes/layout/navigation';
 import { usePublicAccount } from '../routes/layout/account';
 
@@ -11,94 +13,87 @@ interface TitleComponentProps {
 
 export default function TitleComponent(props: TitleComponentProps) {
   const { navigation, loading, error } = usePublicNavigation();
-  const { session } = usePublicAccount();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const navigationRef = useRef<HTMLDivElement>(null);
+  const [params] = useSearchParams();
+  const { pathname } = useLocation();
+  const selectedType = pathname === '/' ? params.get('type') : null;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const navigationElement = navigationRef.current;
+    const focusableElements = navigationElement?.querySelectorAll<HTMLElement>('a, button, input, [tabindex]:not([tabindex="-1"])');
+    focusableElements?.[0]?.focus();
+
+    function handleMenuKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuToggleRef.current?.focus();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !focusableElements?.length) return;
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleMenuKeyDown);
+    return () => document.removeEventListener('keydown', handleMenuKeyDown);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  function closeMenu() {
+    setMenuOpen(false);
+    menuToggleRef.current?.focus();
+  }
 
   return (
-    <div className={`container text-center ${props.dimensions}`}>
-      <div className="title-container">
-        <Link to={``}>
-          <h1 className="title">
-            <span className="big-letter">M</span>
-            <span className="small-letter">or</span>
-            <span className="big-letter">W</span>
-            <span className="small-letter">al</span>
-            <span className="big-letter">P</span>
-            <span className="small-letter">iz</span>
-          </h1>
+    <header className={`site-header ${props.dimensions ?? ''}`} data-bs-theme="dark">
+      <div className="site-header__inner">
+        <Link to="/" className="site-brand" aria-label="MorWalPiz, homepage">
+          <img src="/images/logo-300.png" alt="" width="54" height="54" />
+          <span>MorWalPiz</span>
         </Link>
-      </div>
-      {!props.hideLink && (
-        <>
-          <div className="social-buttons mt-3">
-            <a
-              href="https://t.me/morwalpiz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-telegram"
-            >
-              <i className="fab fa-telegram"></i> Aggiungi
-            </a>
-            <a
-              href="https://www.youtube.com/@morwalpiz?sub_confirmation=1"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-youtube"
-            >
-              <i className="fab fa-youtube"></i> Iscriviti
-            </a>
-            <a
-              href="https://www.instagram.com/morwalpiz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-instagram"
-            >
-              <i className="fab fa-instagram"></i> Seguimi
-            </a>
-          </div>
-        </>
-      )}
-      {!props.hideLink && (
-        <>
-          {session.authenticated && (
-            <Link
-              to="/account/profile"
-              className="account-action account-action-profile"
-              aria-label={`Profilo di ${session.account?.displayName || session.account?.username || 'utente'}`}
-              title={session.account?.displayName || session.account?.username || 'Profilo'}
-            >
-              <span className="account-action-profile-name">
-                {session.account?.displayName || session.account?.username || 'Profilo'}
-              </span>
-            </Link>
-          )}
-          {loading && (
-            <div
-              className="public-navigation-loading"
-              role="status"
-              aria-label="Loading navigation"
-            />
-          )}
-          {error && (
-            <div className="alert alert-light py-1 mt-3" role="status">
-              Navigation unavailable
-            </div>
-          )}
-          {!loading && !error && navigation?.headerItems.length ? (
-            <nav
-              aria-label="Main navigation"
-              className="d-flex flex-wrap justify-content-center gap-3 mt-3"
-            >
-              {navigation.headerItems.map((item) => (
-                <PublicNavigationLink
-                  key={`${item.targetUrl}-${item.displayText}-${item.displayOrder}`}
-                  item={item}
-                  className="nav-link"
-                />
-              ))}
+        {!props.hideLink && <>
+          <a className="skip-link" href="#main-content">Vai ai contenuti</a>
+          <button ref={menuToggleRef} type="button" className="icon-button site-menu-toggle" aria-label={menuOpen ? 'Chiudi menu' : 'Apri menu'} aria-expanded={menuOpen} aria-controls="site-navigation" onClick={() => menuOpen ? closeMenu() : setMenuOpen(true)}><i className={`fas ${menuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true" /></button>
+          <div ref={navigationRef} className={`site-header__navigation${menuOpen ? ' is-open' : ''}`} id="site-navigation">
+            <nav aria-label="Navigazione principale" className="site-navigation" onClick={(event) => { if ((event.target as HTMLElement).closest('a')) closeMenu(); }}>
+              <Link to="/" className={pathname === '/' && !selectedType ? 'is-active' : ''} aria-current={pathname === '/' && !selectedType ? 'page' : undefined}><i className="fas fa-home" aria-hidden="true" />Home</Link>
+              <Link to="/?type=video#latest-content" className={selectedType === 'video' ? 'is-active' : ''}><i className="fas fa-play" aria-hidden="true" />Video</Link>
+              <Link to="/?type=collection#latest-content" className={selectedType === 'collection' ? 'is-active' : ''}><i className="fas fa-layer-group" aria-hidden="true" />Serie</Link>
+              <NavLink to="/blog" className={({ isActive }) => isActive ? 'is-active' : ''}><i className="far fa-file-alt" aria-hidden="true" />Articoli</NavLink>
+              {!loading && !error && navigation?.headerItems.filter((item) => !['/', '/blog'].includes(item.targetUrl)).map((item) => <PublicNavigationLink key={`${item.targetUrl}-${item.displayOrder}`} item={item} className="site-navigation__configured" />)}
             </nav>
-          ) : null}
-        </>
-      )}
-    </div>
+            {loading && <span className="visually-hidden" role="status">Caricamento menu</span>}
+            {error && <span className="site-navigation__error" role="status">Menu aggiuntivo non disponibile</span>}
+          </div>
+          <div className="site-header__actions">
+            <details className="site-search"><summary className="icon-button" aria-label="Cerca nei contenuti" title="Cerca"><i className="fas fa-search" aria-hidden="true" /></summary><Form method="get" action="/" role="search"><label className="visually-hidden" htmlFor="site-search-input">Cerca nei contenuti</label><input id="site-search-input" name="q" type="search" placeholder="Cerca nei contenuti…" defaultValue={params.get('q') ?? ''} required /><button className="icon-button" aria-label="Cerca" type="submit"><i className="fas fa-arrow-right" aria-hidden="true" /></button></Form></details>
+            <SocialLinks compact />
+            <AccountAction />
+          </div>
+        </>}
+      </div>
+    </header>
   );
+}
+
+function AccountAction() {
+  const { session } = usePublicAccount();
+  if (!session.authenticated) return null;
+  const name = session.account?.displayName || session.account?.username || 'Profilo';
+  return <Link to="/account/profile" className="icon-button account-action-profile" aria-label={`Profilo di ${name}`} title={name}><i className="far fa-user" aria-hidden="true" /></Link>;
 }

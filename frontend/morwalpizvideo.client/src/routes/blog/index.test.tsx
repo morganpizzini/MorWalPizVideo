@@ -118,7 +118,7 @@ describe('public blog routes', () => {
     expect(html).not.toContain('draft');
     expect(html).toContain('<title>Article SEO</title>');
     expect(html).toContain('content="https://cdn.test/cover.jpg"');
-    expect(html).toContain('href="https://morwalpiz.it/blog/article"');
+    expect(html).toContain('href="https://morwalpiz.com/blog/article"');
     expect(html).toContain('"@type":"Article"');
   });
 });

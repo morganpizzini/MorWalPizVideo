@@ -12,7 +12,7 @@ export default function SEO({ title, description, imageUrl, type }: SEOProps) {
   const location = useLocation();
   const isServer = typeof window === 'undefined';
   const baseUrl = isServer
-    ? (import.meta.env.VITE_CANONICAL_BASE_URL ?? 'https://morwalpiz.it')
+    ? (import.meta.env.VITE_CANONICAL_BASE_URL ?? 'https://morwalpiz.com')
     : `${window.location.protocol}//${window.location.host}`;
   const currentUrl = `${baseUrl}${location.pathname}`;
   const resolvedImageUrl = imageUrl ? new URL(imageUrl, baseUrl).href : undefined;

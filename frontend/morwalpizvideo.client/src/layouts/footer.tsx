@@ -3,12 +3,13 @@ import './footer.scss';
 import PublicNavigationLink from '../components/PublicNavigationLink';
 import { usePublicNavigation } from '../routes/layout/navigation';
 import { ConsentPreferencesButton } from '../analytics/ConsentBanner';
+import SocialLinks from '../components/SocialLinks';
 export default function TitleComponent() {
   const { navigation, loading, error } = usePublicNavigation();
 
   return (
-    <footer className="mt-auto">
-      <div className="container py-3">
+    <footer className="site-footer mt-auto" data-bs-theme="dark">
+      <div className="site-footer__inner">
         <div className="row">
           <div className="col-4 col-md-3">
             <a
@@ -22,7 +23,7 @@ export default function TitleComponent() {
                 style={{ height: '75px', width: '75px' }}
               />
             </a>
-            <p className="mb-0">MorWalPiz</p>
+            <p className="mb-0 fw-bold">MorWalPiz</p>
             <p>&copy; {new Date().getFullYear()}</p>
           </div>
           {loading && (
@@ -53,6 +54,8 @@ export default function TitleComponent() {
               </div>
             ))}
           <div className="col-8 col-md-6">
+            <SocialLinks compact />
+            <div className="site-footer__destinations"><Link to="/sponsors">Sponsor</Link><Link to="/attrezzatura">Attrezzatura</Link><Link to="/blog">Articoli</Link><a href="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer">Sostieni il canale</a></div>
             <ul className="nav flex-column">
               <li className="nav-item mb-2">
                 <Link to="/privacy" className="nav-link p-0 link-light">
