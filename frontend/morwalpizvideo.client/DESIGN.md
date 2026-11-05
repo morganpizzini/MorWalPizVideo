@@ -218,6 +218,14 @@ for coarse pointers.
 Section headings use a narrow yellow leading marker as an intentional editorial
 cue; it is not used as a card border.
 
+### App-level notices
+
+Cookie consent and notification prompts use the magazine surface, border, shadow,
+and signal-yellow action tokens. Keep fixed notices within the shared 1540px
+content frame, include mobile gutters and safe-area insets, and retain 44px
+controls. Notices are non-modal and must wrap their copy and actions without
+introducing page overflow.
+
 ### Header and footer
 
 The sticky header provides the brand, route navigation, search, social destinations,

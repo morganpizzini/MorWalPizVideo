@@ -5,6 +5,7 @@ import {
   openConsentPreferences,
   setAnalyticsConsent,
 } from './consent';
+import './consent-banner.scss';
 
 export default function ConsentBanner() {
   const [consent, setConsent] = useState(getAnalyticsConsent());
@@ -23,29 +24,25 @@ export default function ConsentBanner() {
 
   if (!open) return null;
   return (
-    <aside
-      className="position-fixed bottom-0 start-0 end-0 bg-dark text-white p-3 shadow-lg"
-      style={{ zIndex: 1100 }}
-      aria-label="Cookie preferences"
-    >
-      <div className="container d-flex flex-column flex-md-row align-items-md-center gap-3">
-        <div className="flex-grow-1">
+    <aside className="consent-banner" aria-label="Cookie preferences">
+      <div className="consent-banner__panel">
+        <div className="consent-banner__copy">
           <p className="mb-0">
             Cookie tecnici sempre attivi. Le analytics sono disattivate finché non dai il consenso.
             Versione policy {CONSENT_VERSION}.
           </p>
           {preferences && (
-            <p className="small mb-0 mt-2">
+            <p className="consent-banner__preferences mb-0 mt-2">
               Analytics: <strong>{consent === 'accepted' ? 'attive' : 'disattivate'}</strong>. Puoi
               cambiare questa scelta in qualsiasi momento.
             </p>
           )}
         </div>
-        <div className="d-flex gap-2 flex-wrap">
+        <div className="consent-banner__actions">
           {!preferences && (
             <button
               type="button"
-              className="btn btn-outline-light"
+              className="btn consent-banner__action"
               onClick={() => setPreferences(true)}
             >
               Gestisci preferenze
@@ -53,7 +50,7 @@ export default function ConsentBanner() {
           )}
           <button
             type="button"
-            className="btn btn-outline-light"
+            className="btn consent-banner__action"
             onClick={() => {
               setAnalyticsConsent(false);
               setConsent('denied');
@@ -64,7 +61,7 @@ export default function ConsentBanner() {
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn consent-banner__action consent-banner__action--primary"
             onClick={() => {
               setAnalyticsConsent(true);
               setConsent('accepted');
@@ -81,7 +78,7 @@ export default function ConsentBanner() {
 
 export function ConsentPreferencesButton() {
   return (
-    <button type="button" className="btn btn-link p-0 link-light" onClick={openConsentPreferences}>
+    <button type="button" className="consent-preferences-button" onClick={openConsentPreferences}>
       Gestisci cookie
     </button>
   );

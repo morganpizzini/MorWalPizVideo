@@ -1,56 +1,97 @@
-/* Push opt-in prompt: a dismissible bar anchored to the viewport bottom.
-   Deliberately not a modal; the visitor is browsing, not in a protected task. */
 .push-opt-in {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: 1045;
-    display: flex;
-    justify-content: center;
-    padding: 0 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
-    pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  z-index: 1045;
+  display: flex;
+  justify-content: center;
+  padding-inline: 0.75rem;
+  pointer-events: none;
 }
 
 .push-opt-in__panel {
-    pointer-events: auto;
-    width: min(44rem, 100%);
-    background-color: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    padding: 1rem 1.25rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem 1.25rem;
-    animation: push-opt-in-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  pointer-events: auto;
+  width: min(44rem, 100%);
+  background-color: var(--magazine-surface);
+  color: var(--magazine-text);
+  border: 1px solid var(--magazine-border);
+  border-top: 2px solid var(--magazine-accent);
+  border-radius: var(--magazine-radius-lg);
+  box-shadow: 0 0.6rem 1.4rem var(--magazine-shadow-strong);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  animation: push-opt-in-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.push-opt-in__panel .text-body-secondary {
+  color: var(--magazine-secondary) !important;
+}
+
+.push-opt-in__panel .btn-primary {
+  --bs-btn-color: var(--magazine-bg);
+  --bs-btn-bg: var(--magazine-accent);
+  --bs-btn-border-color: var(--magazine-accent);
+  --bs-btn-hover-color: var(--magazine-bg);
+  --bs-btn-hover-bg: var(--magazine-accent-hover);
+  --bs-btn-hover-border-color: var(--magazine-accent-hover);
+  --bs-btn-active-color: var(--magazine-bg);
+  --bs-btn-active-bg: var(--magazine-accent-hover);
+  --bs-btn-active-border-color: var(--magazine-accent-hover);
+  --bs-btn-disabled-color: var(--magazine-bg);
+  --bs-btn-disabled-bg: var(--magazine-accent);
+  --bs-btn-disabled-border-color: var(--magazine-accent);
+  border-radius: var(--magazine-radius-button);
+  font-size: var(--magazine-font-small);
+  font-weight: 700;
+}
+
+.push-opt-in__panel .btn-outline-secondary {
+  --bs-btn-color: var(--magazine-text);
+  --bs-btn-border-color: var(--magazine-border);
+  --bs-btn-hover-color: var(--magazine-accent);
+  --bs-btn-hover-bg: var(--magazine-elevated);
+  --bs-btn-hover-border-color: var(--magazine-accent);
+  --bs-btn-active-color: var(--magazine-accent);
+  --bs-btn-active-bg: var(--magazine-elevated);
+  --bs-btn-active-border-color: var(--magazine-accent);
+  border-radius: var(--magazine-radius-button);
+  font-size: var(--magazine-font-small);
+  font-weight: 700;
+}
+
+.push-opt-in__panel .btn {
+  min-height: 44px;
 }
 
 .push-opt-in__copy {
-    flex: 1 1 18rem;
-    min-width: 0;
+  flex: 1 1 18rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .push-opt-in__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 @keyframes push-opt-in-enter {
-    from {
-        opacity: 0;
-        transform: translateY(0.75rem);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
 
-    to {
-        opacity: 1;
-        transform: none;
-    }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .push-opt-in__panel {
-        animation: none;
-    }
+  .push-opt-in__panel {
+    animation: none;
+  }
 }

@@ -10,6 +10,15 @@ Apply the public homepage's dark editorial visual system and shared site chrome 
 
 The user confirmed that the scope is MorWalPizVideo only and that all public pages, including utility and currently standalone routes, should adopt the same visual system. They subsequently asked to include the existing account screens in the overall UI as well. Style the login, registration, and profile surfaces now, but do not activate account routes or change authentication rollout as part of this visual alignment.
 
+### Overlay alignment follow-up (2026-11-05)
+
+- `ConsentBanner` now uses an app-framed editorial surface, magazine tokens, responsive action wrapping, safe-area spacing, and yellow primary/outline actions instead of Bootstrap utility layout.
+- The push opt-in prompt now uses the same magazine surface, text, border, and button tokens. Its opt-in, dismiss, completion, and error behavior is unchanged.
+- The footer cookie-preferences action now uses the app's yellow link treatment.
+- Updated the public-client `DESIGN.md` with the app-level notice rules.
+- Validation: `npm --prefix frontend/morwalpizvideo.client run build` passed; the Impeccable layout detector returned no findings for the updated components and styles. The build still reports its existing `env-config.js` bundling notice and stale Browserslist data warning.
+- Browser captures were unavailable in this session, so validation was limited to source inspection, the detector, and the production build.
+
 ### Baseline Evidence (Before Implementation)
 
 - `frontend/morwalpizvideo.client/DESIGN.md` defines the current homepage identity: magazine black `#101010`, surface `#181818`, elevated surface `#222222`, signal yellow `#ffff36`, white and secondary-gray text, Manrope, and a 1540px content cap. It explicitly says routes outside the homepage retain the light shell.
@@ -69,6 +78,7 @@ The user confirmed that the scope is MorWalPizVideo only and that all public pag
 - `frontend/morwalpizvideo.client/src/routes/system/bluetooth.tsx` and `system/sponsors-video.tsx`: Align static/support pages and remove legacy light-only page surfaces.
 - `frontend/morwalpizvideo.client/src/routes/system/privacy.tsx` and `system/terms.tsx`: Align legal reading surfaces without changing policy copy.
 - `frontend/morwalpizvideo.client/src/routes/newsletter/Component.tsx` and `pushSettings/Component.tsx`: Align forms and notification states while preserving token, push, and subscription behavior.
+- `frontend/morwalpizvideo.client/src/analytics/ConsentBanner.tsx` and `src/analytics/consent-banner.scss`, plus `src/components/push-opt-in.scss`: Align global cookie and notification overlays with the public app layout without changing consent or push behavior.
 - `frontend/morwalpizvideo.client/src/routes/account/Components.tsx` and `account/style.scss`: Align login, registration, profile, loading, field/global error, success, and logout presentation; preserve account service calls and legal consent behavior.
 - `frontend/morwalpizvideo.client/src/error-page.tsx`: Align routed error presentation and provide the correct page landmark under the shared shell.
 - Add a focused public-client shell/route test under `frontend/morwalpizvideo.client/src/routes/layout/` (or extend the established route test) to cover shared chrome, route nesting, and landmark structure.

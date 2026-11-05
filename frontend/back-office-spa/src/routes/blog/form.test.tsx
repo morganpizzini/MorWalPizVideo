@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BlogPostAdmin } from '@morwalpizvideo/models';
+import type { BlogDocument, BlogPostAdmin } from '@morwalpizvideo/models';
 import { createBlogPost, publishBlogPost, saveBlogPost } from '@morwalpizvideo/services';
 import { requirePermissions } from '@/router/guards';
 import { appStore } from '@/state/appStore';
@@ -11,9 +11,40 @@ const mocks = vi.hoisted(() => ({
   initial: null as BlogPostAdmin | null,
   fetcher: { state: 'idle', data: undefined as unknown },
 }));
+vi.hoisted(() => {
+  const storage = { getItem: vi.fn(() => null), setItem: vi.fn(), removeItem: vi.fn() };
+  Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+  vi.stubGlobal('localStorage', storage);
+});
 vi.mock('@/router/asyncData', () => ({ useResolvedLoaderData: () => mocks.initial }));
 vi.mock('@/router/guards', () => ({ requirePermissions: vi.fn().mockResolvedValue(null) }));
-vi.mock('./Editor', () => ({ BlogEditor: () => <div>Composition</div> }));
+vi.mock('./Editor', () => ({
+  BlogEditor: ({
+      document,
+      onChange,
+    }: {
+      document: BlogDocument;
+      onChange: (document: BlogDocument) => void;
+    }) => (
+      <div>
+        <span>Composition</span>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              version: 1,
+              blocks: [
+                ...document.blocks,
+                { id: 'unsaved-edit', type: 'heading', text: 'Latest unsaved edit' },
+              ],
+            })
+          }
+        >
+          Update composition
+        </button>
+      </div>
+    ),
+}));
 vi.mock('@morwalpizvideo/services', async importOriginal => ({
   ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   createBlogPost: vi.fn(),
@@ -51,9 +82,16 @@ const post: BlogPostAdmin = {
   },
 };
 function request(values: Record<string, string>) {
-  const form = new FormData();
+  const form = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => form.set(key, value));
   return new Request('https://admin.test/blogposts/post-1/edit', { method: 'POST', body: form });
+}
+function encodedForm(form: HTMLFormElement) {
+  const values = new URLSearchParams();
+  new FormData(form).forEach((value, key) => {
+    if (typeof value === 'string') values.append(key, value);
+  });
+  return values;
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,7 +119,7 @@ describe('blog draft workflow', () => {
     await action({
       request: new Request('https://admin.test/blogposts/post-1/edit', {
         method: 'POST',
-        body: new FormData(form),
+        body: encodedForm(form),
       }),
       params: { id: post.id },
     });
@@ -112,7 +150,7 @@ describe('blog draft workflow', () => {
     await action({
       request: new Request('https://admin.test/blogposts/post-1/edit', {
         method: 'POST',
-        body: new FormData(form),
+        body: encodedForm(form),
       }),
       params: { id: post.id },
     });
@@ -157,6 +195,25 @@ describe('blog draft workflow', () => {
     expect(screen.getByRole('button', { name: 'Publish revision' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Unpublish' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
+  });
+  it('previews the latest unsaved composition and restores edit mode without saving', () => {
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Update composition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    expect(screen.getByRole('region', { name: 'Article preview' })).toBeInTheDocument();
+    expect(screen.getByText('Latest unsaved edit')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Update composition' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    expect(screen.getByText('Composition')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Update composition' })).toBeInTheDocument();
+    expect(saveBlogPost).not.toHaveBeenCalled();
+    expect(publishBlogPost).not.toHaveBeenCalled();
   });
   it('keeps publish controls out of the update-only UI', () => {
     appStore.setState({ effectivePermissions: ['pages.update'] });

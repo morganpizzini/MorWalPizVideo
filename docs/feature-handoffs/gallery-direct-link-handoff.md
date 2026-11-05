@@ -201,3 +201,24 @@ Validation performed:
 
 - `npm --prefix frontend\morwalpizvideo.client test -- --run src/routes/gallery-route.test.tsx` — passed (1 test).
 - `npm --prefix frontend\morwalpizvideo.client run build` — passed.
+
+## Expired gallery response handling
+
+The public gallery loader now translates API 404 responses into the standard
+user-facing message, “This gallery has expired or is no longer available.”
+Other API failures continue through the existing route error handling.
+
+Modified files:
+
+- `frontend/morwalpizvideo.client/src/routes/gallery/loader.ts`: maps API 404s
+  and missing slugs to the standard message.
+- `frontend/morwalpizvideo.client/src/routes/gallery/loader.test.ts`: verifies
+  the 404 mapping and preservation of non-404 errors.
+
+Validation performed:
+
+- `npm --prefix frontend/morwalpizvideo.client test -- --run src/routes/gallery/loader.test.ts`
+  — passed (2 tests).
+- `npm --prefix frontend/morwalpizvideo.client run build` — passed. The build
+  retains the existing `/env-config.js` module warning and stale Browserslist
+  database notice.

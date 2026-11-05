@@ -111,6 +111,19 @@ surface via CSS. The production mounting test scopes actions to the desktop side
 not an arbitrary first matching button. Test teardown drains Puck's canvas-loader timer.
 The Puck jsdom geometry warning (`NaN` top) remains; it is not browser visual evidence.
 
+The admin composition canvas uses stable module-level Puck configuration and render
+components, with current image records supplied through editor-local context. Rich text
+and headings edit inline; image, gallery, carousel, video, heading-level and column
+settings are available from each block's contextual panel, while Puck's right sidebar
+remains optional. Canvas updates resolve blocks by current Puck ID and use the public
+replace action, preserving the canonical version-1 document and existing adapters.
+Editor-only frames provide setup guidance for empty/incomplete blocks, and an internal
+canvas gutter reserves space above the first block. The form's existing Preview toggle
+continues rendering the latest unsaved canonical draft through `BlogRenderer`; preview
+unmounts Puck, so transient selection, caret and undo history are not preserved across
+the toggle. Browser measurement of first-block toolbar clearance remains unverified;
+jsdom is not evidence of clipping bounds or pointer hit testing.
+
 Shared models, transport and `BlogRenderer` are exported from the existing models,
 services and layout packages. Public routes are `/blog` and `/blog/:slug`; the existing
 public shell is retained. Columns stack on mobile; the carousel has named buttons,
