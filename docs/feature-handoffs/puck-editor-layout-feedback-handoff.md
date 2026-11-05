@@ -12,7 +12,7 @@ the sidebar optional.
 Implementation was completed in `Editor.tsx`, `Editor.css`, `Editor.test.tsx`,
 `form.test.tsx`, and the shared Vitest setup; `form.tsx` and the canonical
 adapters remain unchanged. The existing unsaved-draft Preview path is covered
-at the form level. The blog-route suite passes all 27 tests after adding a
+at the form level. The blog-route suite passes all 28 tests after adding a
 test-only `localStorage` implementation. Chromium is downloaded, but launching
 it fails because the host is missing `libatk-1.0.so.0`; no Playwright test
 configuration or browser tests exist in BackOffice yet.
@@ -475,17 +475,24 @@ review execution is not assigned to the architect.
   exposes contextual settings with focus restoration.
 - `Editor.css` adds editor-only selectable frames, empty-state guidance, text
   affordances, contextual panel styling, and a 48px top / 16px inline canvas
-  gutter. The shared renderer and persisted document shape are unchanged.
-- `Editor.test.tsx` covers controlled-parent updates, media selection, empty
+  gutter. It selectively re-enables pointer events and text selection for inline
+  editors and settings controls because Puck disables block descendants by
+  default. The shared renderer and persisted document shape are unchanged.
+- `Editor.test.tsx` covers pointer-driven heading typing, rich-text focus,
+  settings clicks and typing, controlled-parent updates, media selection, empty
   frames, column-child updates, invalid video handling, and settings focus.
   `form.test.tsx` covers unsaved Preview and returning to edit without saving.
 - The shared Vitest `setup.ts` provides a deterministic in-memory `localStorage`
   implementation so service initialization works even when the jsdom/Node
   environment does not expose storage.
 - Passed:
-  - `yarn --cwd frontend/back-office-spa vitest run src/routes/blog --silent` — 7 files, 27 tests in 17.08 seconds.
+  - `yarn --cwd frontend/back-office-spa vitest run src/routes/blog --silent` — 7 files, 28 tests.
   - `yarn --cwd frontend/back-office-spa tsc -b --pretty false`.
+  - `yarn --cwd frontend/back-office-spa eslint src/routes/blog/Editor.test.tsx`.
   - `yarn --cwd frontend/back-office-spa eslint src/test/setup.ts`.
+- The editor test suite confirms pointer-driven heading and settings input,
+  plus rich-text focus. Real-browser rich-text typing, drag, and layout checks
+  remain unverified due to the host's missing Chromium system dependency.
 - Playwright 1.64.1 and browser binaries are present, but a headless Chromium
   launch fails because `libatk-1.0.so.0` is absent. Install Playwright's Linux
   browser dependencies on the host before attempting browser checks. The

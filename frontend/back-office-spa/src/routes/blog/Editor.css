@@ -3,6 +3,22 @@
   padding: 48px 16px 16px;
 }
 
+[data-puck-component] .blog-editor__text-editor,
+[data-puck-component] .blog-editor__text-editor *,
+[data-puck-component] .blog-editor__heading-input,
+[data-puck-component] .blog-editor__settings-trigger,
+[data-puck-component] .blog-editor__settings-panel,
+[data-puck-component] .blog-editor__settings-panel * {
+  pointer-events: auto;
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+[data-puck-component] .blog-editor__rich-text .tiptap,
+[data-puck-component] .blog-editor__heading-input {
+  cursor: text;
+}
+
 .blog-editor__frame {
   min-height: 72px;
   margin-block: 0 16px;

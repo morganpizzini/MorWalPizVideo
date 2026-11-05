@@ -117,6 +117,9 @@ and headings edit inline; image, gallery, carousel, video, heading-level and col
 settings are available from each block's contextual panel, while Puck's right sidebar
 remains optional. Canvas updates resolve blocks by current Puck ID and use the public
 replace action, preserving the canonical version-1 document and existing adapters.
+Puck disables pointer interaction and selection on block descendants by default, so the
+editor selectively restores them for inline text and settings controls while retaining
+Puck's drag behavior elsewhere.
 Editor-only frames provide setup guidance for empty/incomplete blocks, and an internal
 canvas gutter reserves space above the first block. The form's existing Preview toggle
 continues rendering the latest unsaved canonical draft through `BlogRenderer`; preview

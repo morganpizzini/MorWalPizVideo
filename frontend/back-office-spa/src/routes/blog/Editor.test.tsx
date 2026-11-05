@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlogEditor } from './Editor';
@@ -84,6 +85,45 @@ function ControlledEditor({
 }
 
 describe('production Puck composition', () => {
+  it('allows pointer interaction and typing in inline block editors', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const document: BlogDocument = {
+      version: 1,
+      blocks: [
+        { id: 'rich-empty', type: 'richText' },
+        { id: 'heading-empty', type: 'heading' },
+        { id: 'video-empty', type: 'video' },
+      ],
+    };
+    const { container } = render(<ControlledEditor initialDocument={document} />);
+    const heading = await waitFor(() =>
+      container.querySelector<HTMLInputElement>('input[aria-label="Article heading"]')
+    );
+    const richText = container.querySelector<HTMLElement>(
+      '.blog-editor__frame .tiptap[contenteditable="true"]'
+    )!;
+
+    await user.click(heading!);
+    await user.type(heading!, 'Heading text');
+    await user.click(richText);
+    expect(richText).toHaveFocus();
+
+    const settings = container.querySelector<HTMLButtonElement>(
+      '[aria-label="Settings for Video block"]'
+    )!;
+    await user.click(settings);
+    const videoId = await waitFor(() =>
+      container.querySelector<HTMLInputElement>(
+        '.blog-editor__settings-panel input[aria-label="YouTube video ID"]'
+      )
+    );
+    await user.type(videoId!, 'dQw4w9WgXcQ');
+
+    expect(heading).toHaveValue('Heading text');
+    expect(screen.getByTestId('canonical-document')).toHaveTextContent('Heading text');
+    expect(screen.getByTestId('canonical-document')).toHaveTextContent('dQw4w9WgXcQ');
+  }, 10000);
+
   it('keeps canvas editor nodes mounted while the controlled parent receives edits', async () => {
     const document: BlogDocument = {
       version: 1,
