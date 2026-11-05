@@ -37,7 +37,7 @@ export default function Matches() {
         imageUrl={`https://img.youtube.com/vi/${match.thumbnailUrl}/hqdefault.jpg`}
         type="article"
       />
-      <h1>{match.title}</h1>
+      <h1 className="my-3">{match.title}</h1>
       {images.length > 0 && (
         <section aria-labelledby="match-images-heading" className="mb-4">
           <h2 id="match-images-heading" className="h4">

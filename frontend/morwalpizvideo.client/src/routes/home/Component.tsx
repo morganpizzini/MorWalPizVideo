@@ -207,7 +207,7 @@ export default function Index() {
               {!hasFilters && filtered.length > 0 && <ShortsCard />}
             </div>
           </section>
-          <div className="sponsors-and-gear">
+          <div className="sponsors-and-gear px-1">
             <Sponsors sponsors={data.sponsors} />
             <Link to="/attrezzatura" className="gear-banner"><i className="fas fa-tag" aria-hidden="true" /><span><strong>Attrezzatura & accessori</strong><small>Quello che porto sul campo.</small></span><span className="editorial-button editorial-button--outline">Scopri <i className="fas fa-arrow-right" aria-hidden="true" /></span></Link>
           </div>

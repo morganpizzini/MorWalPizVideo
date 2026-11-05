@@ -137,7 +137,7 @@ public class VideosController : ApplicationControllerBase
             return BadRequest($"One or more images could not be processed: {exception.Message}");
         }
 
-        await InvalidateVideoCachesAsync(existingMatch.Id);
+        await InvalidateVideoCachesAsync(existingMatch.Id, invalidateRelatedCaches: false);
         return Ok(ContractUtils.Convert(existingMatch with { Images = images }));
     }
 
@@ -155,7 +155,7 @@ public class VideosController : ApplicationControllerBase
             return NotFound();
 
         await blobService.DeleteImageAsync(image.StorageKey, blobOptions.ContainerName, HttpContext.RequestAborted);
-        await InvalidateVideoCachesAsync(existingMatch.Id);
+        await InvalidateVideoCachesAsync(existingMatch.Id, invalidateRelatedCaches: false);
         return Ok(ContractUtils.Convert(existingMatch with { Images = remainingImages }));
     }
 
@@ -1199,7 +1199,10 @@ public class VideosController : ApplicationControllerBase
         }
     }
 
-    private async Task<string> InvalidateVideoCachesAsync(string? matchId = null, string? localStatus = null)
+    private async Task<string> InvalidateVideoCachesAsync(
+        string? matchId = null,
+        string? localStatus = null,
+        bool invalidateRelatedCaches = true)
     {
         var succeeded = true;
         var statuses = new List<string>();
@@ -1233,29 +1236,32 @@ public class VideosController : ApplicationControllerBase
         if (purgeMatches.Status is not null)
             statuses.Add(purgeMatches.Status);
 
-        var resetCalendar = await TryCacheOperationAsync(
-            () => client.ResetCache(CacheKeys.CalendarEvents),
-            "reset calendar",
-            matchId);
-        succeeded &= resetCalendar.Succeeded;
-        if (resetCalendar.Status is not null)
-            statuses.Add(resetCalendar.Status);
+        if (invalidateRelatedCaches)
+        {
+            var resetCalendar = await TryCacheOperationAsync(
+                () => client.ResetCache(CacheKeys.CalendarEvents),
+                "reset calendar",
+                matchId);
+            succeeded &= resetCalendar.Succeeded;
+            if (resetCalendar.Status is not null)
+                statuses.Add(resetCalendar.Status);
 
-        var purgeCalendar = await TryCacheOperationAsync(
-            () => client.PurgeCache(CacheKeys.CalendarEvents),
-            "purge calendar",
-            matchId);
-        succeeded &= purgeCalendar.Succeeded;
-        if (purgeCalendar.Status is not null)
-            statuses.Add(purgeCalendar.Status);
+            var purgeCalendar = await TryCacheOperationAsync(
+                () => client.PurgeCache(CacheKeys.CalendarEvents),
+                "purge calendar",
+                matchId);
+            succeeded &= purgeCalendar.Succeeded;
+            if (purgeCalendar.Status is not null)
+                statuses.Add(purgeCalendar.Status);
 
-        var resetShortLinks = await TryCacheOperationAsync(
-            () => client.ResetCache(CacheKeys.ShortLinks),
-            "reset short links",
-            matchId);
-        succeeded &= resetShortLinks.Succeeded;
-        if (resetShortLinks.Status is not null)
-            statuses.Add(resetShortLinks.Status);
+            var resetShortLinks = await TryCacheOperationAsync(
+                () => client.ResetCache(CacheKeys.ShortLinks),
+                "reset short links",
+                matchId);
+            succeeded &= resetShortLinks.Succeeded;
+            if (resetShortLinks.Status is not null)
+                statuses.Add(resetShortLinks.Status);
+        }
 
         var reload = await TryCacheOperationAsync(
             () => client.ReloadCache(),
