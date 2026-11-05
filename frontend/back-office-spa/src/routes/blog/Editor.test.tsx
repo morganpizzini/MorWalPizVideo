@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlogEditor } from './Editor';
@@ -86,7 +86,11 @@ function ControlledEditor({
 
 describe('production Puck composition', () => {
   it('allows pointer interaction and typing in inline block editors', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime,
+      // JSDOM sees Puck's injected drag styles but does not apply the editor stylesheet.
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    });
     const document: BlogDocument = {
       version: 1,
       blocks: [

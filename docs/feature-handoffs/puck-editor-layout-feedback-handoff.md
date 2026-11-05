@@ -493,6 +493,9 @@ review execution is not assigned to the architect.
 - The editor test suite confirms pointer-driven heading and settings input,
   plus rich-text focus. Real-browser rich-text typing, drag, and layout checks
   remain unverified due to the host's missing Chromium system dependency.
+- The pointer test disables user-event's CSS hit-test check because jsdom sees
+  Puck's injected drag styles but does not apply the editor stylesheet; it
+  exercises event handling and content updates, not browser hit testing.
 - Playwright 1.64.1 and browser binaries are present, but a headless Chromium
   launch fails because `libatk-1.0.so.0` is absent. Install Playwright's Linux
   browser dependencies on the host before attempting browser checks. The

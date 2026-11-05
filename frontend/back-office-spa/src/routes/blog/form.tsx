@@ -16,13 +16,16 @@ import {
   generateScriptStudio,
 } from '@morwalpizvideo/services';
 import { BlogRenderer } from '@morwalpiz/layout';
-import { Save, Upload, Eye, Send, EyeOff, WandSparkles, X } from 'lucide-react';
+import { ButtonGroup, Dropdown } from 'react-bootstrap';
+import { Save, Upload, Eye, Send, EyeOff, WandSparkles, X, Trash2 } from 'lucide-react';
 import { useResolvedLoaderData } from '@/router/asyncData';
 import PageHeader from '@components/PageHeader';
 import { hasPermission, permissions } from '@/authorization/permissions';
-import { useAppStore } from '@/state/appStore';
+import { appStore, useAppStore } from '@/state/appStore';
 import { useChannelContext } from '@/contexts/ChannelContext';
 import { requirePermissions } from '@/router/guards';
+import TagInput from '@components/TagInput';
+import { normalizeTags } from '@components/TagInput/tagRules';
 import { BlogEditor } from './Editor';
 import { buildInsightBlogSnapshot } from './prefill';
 import { applyPrettifiedContent, extractBlogContent } from './prettify';
@@ -45,39 +48,120 @@ export const loader = ({ params }: { params: { id?: string } }) =>
 export async function action({ request, params }: { request: Request; params: { id?: string } }) {
   const form = await request.formData();
   const intent = String(form.get('intent') ?? 'save');
+  const postId = params.id ?? (String(form.get('postId') ?? '') || undefined);
   const revision = Number(form.get('revision'));
+  const channelId = String(form.get('channelId') ?? '');
+  let savedPost: BlogPostAdmin | undefined;
   try {
     if (!['save', 'upload', 'publish', 'unpublish'].includes(intent))
       return data({ error: 'Unknown action.' }, { status: 400 });
-    if (intent !== 'save' && (!params.id || !Number.isSafeInteger(revision) || revision < 1))
+    if (intent !== 'save' && (!Number.isSafeInteger(revision) || revision < 1))
       return data({ error: 'Invalid article revision.' }, { status: 400 });
-    if (params.id && intent === 'upload') {
+
+    if (intent === 'publish' || intent === 'unpublish') {
+      const denial = await requirePermissions([permissions.pages.manage]);
+      if (denial) return denial;
+    }
+    if (channelId && appStore.getState().selectedChannelId !== channelId)
+      return data(
+        { error: 'The selected channel changed. Switch back and retry.' },
+        { status: 409 }
+      );
+
+    if (intent === 'upload') {
+      const denial = await requirePermissions([permissions.pages.update, permissions.pages.manage]);
+      if (denial) return denial;
       const file = form.get('file');
       if (!(file instanceof File) || !file.size)
         return data({ error: 'Choose an image.' }, { status: 400 });
+      const payload = JSON.parse(String(form.get('payload'))) as SaveBlogPost;
+      if (!payload.draft.title.trim() || !payload.slug.trim())
+        return data({ error: 'Save a title and slug before uploading an image.' }, { status: 400 });
+      payload.draft.tags = normalizeTags(payload.draft.tags);
+      if (!postId || String(form.get('saveBeforeUpload')) === 'true') {
+        savedPost = postId ? await saveBlogPost(postId, payload) : await createBlogPost(payload);
+      }
+      const uploadPostId = savedPost?.id ?? postId;
+      const uploadRevision = savedPost?.revision ?? revision;
+      if (!uploadPostId)
+        return data({ error: 'Unable to identify the article for this upload.' }, { status: 400 });
+      if (channelId && appStore.getState().selectedChannelId !== channelId) {
+        return data(
+          { post: savedPost, error: 'The selected channel changed. Switch back before uploading.' },
+          { status: 409 }
+        );
+      }
+      const uploaded = await uploadBlogImage(
+        uploadPostId,
+        uploadRevision,
+        file,
+        String(form.get('altText') ?? '')
+      );
       return {
-        post: await uploadBlogImage(params.id, revision, file, String(form.get('altText') ?? '')),
+        post: uploaded,
+        uploadedImageId: uploaded.images[uploaded.images.length - 1]?.id,
+        uploadedImageAlt: String(form.get('altText') ?? '').trim(),
+        message: 'Image uploaded. Save the draft to apply the cover selection.',
       };
     }
-    if (params.id && (intent === 'publish' || intent === 'unpublish')) {
-      const denial = await requirePermissions([permissions.pages.manage]);
-      if (denial) return denial;
-      return { post: await publishBlogPost(params.id, revision, intent === 'publish') };
+
+    if (intent === 'publish') {
+      const payload = JSON.parse(String(form.get('payload'))) as SaveBlogPost;
+      if (!payload.draft.title.trim() || !payload.slug.trim())
+        return data({ error: 'Title and slug are required.' }, { status: 400 });
+      payload.draft.tags = normalizeTags(payload.draft.tags);
+      savedPost = postId ? await saveBlogPost(postId, payload) : await createBlogPost(payload);
+      if (channelId && appStore.getState().selectedChannelId !== channelId) {
+        return data(
+          {
+            post: savedPost,
+            error: 'Draft saved, but the selected channel changed. Switch back to publish.',
+          },
+          { status: 409 }
+        );
+      }
+      const published = await publishBlogPost(savedPost.id, savedPost.revision, true);
+      return { post: published, message: 'Article published.' };
     }
+
+    if (intent === 'unpublish') {
+      if (!postId) return data({ error: 'Save the article before unpublishing.' }, { status: 400 });
+      return {
+        post: await publishBlogPost(postId, revision, false),
+        message: 'Article unpublished.',
+      };
+    }
+
     const payload = JSON.parse(String(form.get('payload'))) as SaveBlogPost;
     if (!payload.draft.title.trim() || !payload.slug.trim())
       return data({ error: 'Title and slug are required.' }, { status: 400 });
-    payload.draft.tags = payload.draft.tags.map(tag => tag.trim()).filter(Boolean);
-    const post = params.id ? await saveBlogPost(params.id, payload) : await createBlogPost(payload);
-    return params.id ? { post } : redirect(`/blogposts/${post.id}/edit`);
+    payload.draft.tags = normalizeTags(payload.draft.tags);
+    const post = postId ? await saveBlogPost(postId, payload) : await createBlogPost(payload);
+    return postId
+      ? {
+          post,
+          message: post.isPublished
+            ? 'Draft saved. The live article is unchanged.'
+            : 'Draft saved.',
+        }
+      : redirect(`/blogposts/${post.id}/edit`);
   } catch (error) {
+    const message =
+      error instanceof ApiResponseError
+        ? error.message
+        : 'Unable to complete the request. Check the connection and retry.';
+    if (savedPost && intent === 'publish')
+      return data(
+        { post: savedPost, error: `Draft saved, but publishing failed: ${message}` },
+        { status: error instanceof ApiResponseError ? error.status : 400 }
+      );
+    if (savedPost && intent === 'upload')
+      return data(
+        { post: savedPost, error: `Draft saved, but image upload failed: ${message}` },
+        { status: error instanceof ApiResponseError ? error.status : 400 }
+      );
     return data(
-      {
-        error:
-          error instanceof ApiResponseError
-            ? error.message
-            : 'Unable to save. Check the connection and retry.',
-      },
+      { error: message },
       { status: error instanceof ApiResponseError ? error.status : 400 }
     );
   }
@@ -105,19 +189,34 @@ function BlogForm({
   initial: BlogPostAdmin | null;
   insightDraft?: InsightArticleDraft;
 }) {
-  const fetcher = useFetcher<{ post?: BlogPostAdmin; error?: string }>();
+  const fetcher = useFetcher<{
+    post?: BlogPostAdmin;
+    error?: string;
+    message?: string;
+    uploadedImageId?: string;
+    uploadedImageAlt?: string;
+  }>();
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
+  const { selectedChannelId } = useChannelContext();
+  const [post, setPost] = useState(initial);
   const canSave = hasPermission(effectivePermissions, [
-    initial ? permissions.pages.update : permissions.pages.create,
+    post ? permissions.pages.update : permissions.pages.create,
     permissions.pages.manage,
   ]);
+  const canUpload = post
+    ? hasPermission(effectivePermissions, [permissions.pages.update, permissions.pages.manage])
+    : hasPermission(effectivePermissions, [permissions.pages.manage]) ||
+      (hasPermission(effectivePermissions, [permissions.pages.create]) &&
+        hasPermission(effectivePermissions, [permissions.pages.update]));
   const canPublish = hasPermission(effectivePermissions, [permissions.pages.manage]);
   const canPrettify = hasPermission(effectivePermissions, [permissions.scripts.studio]);
-  const [post, setPost] = useState(initial);
   const [draft, setDraft] = useState<BlogSnapshot>(
     () => initial?.draft ?? (insightDraft ? buildInsightBlogSnapshot(insightDraft) : emptyDraft())
   );
   const [slug, setSlug] = useState(initial?.slug ?? '');
+  const [uploadAltText, setUploadAltText] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const uploadInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState(false);
   const [prettifyOpen, setPrettifyOpen] = useState(false);
   const [prettifyInstructions, setPrettifyInstructions] = useState('');
@@ -134,8 +233,20 @@ function BlogForm({
   useEffect(() => {
     if (fetcher.data?.post && !busy) {
       setPost(fetcher.data.post);
-      setDraft(fetcher.data.post.draft);
+      setDraft(
+        fetcher.data.uploadedImageId
+          ? {
+              ...fetcher.data.post.draft,
+              coverImageId: fetcher.data.uploadedImageId,
+              coverAlt: fetcher.data.uploadedImageAlt ?? '',
+            }
+          : fetcher.data.post.draft
+      );
       setSlug(fetcher.data.post.slug);
+      if (fetcher.data.uploadedImageId) {
+        setUploadFile(null);
+        if (uploadInput.current) uploadInput.current.value = '';
+      }
     }
   }, [fetcher.data, busy]);
   const field = (key: keyof BlogSnapshot, value: string) =>
@@ -194,9 +305,9 @@ function BlogForm({
           {fetcher.data.error}
         </div>
       )}
-      {fetcher.data?.post && !busy && (
+      {fetcher.data?.message && !busy && (
         <p role="status" className="text-success">
-          Saved. Revision {post?.revision}
+          {fetcher.data.message} Revision {post?.revision}
         </p>
       )}
       <fetcher.Form method="post" aria-busy={busy}>
@@ -206,6 +317,8 @@ function BlogForm({
           value={JSON.stringify({ slug, revision: post?.revision ?? 1, draft })}
         />
         <input type="hidden" name="revision" value={post?.revision ?? 1} />
+        <input type="hidden" name="postId" value={post?.id ?? ''} />
+        <input type="hidden" name="channelId" value={selectedChannelId ?? ''} />
         <fieldset disabled={busy}>
           <div className="row g-3 mb-3">
             <label className="col-md-8">
@@ -249,43 +362,16 @@ function BlogForm({
                 onChange={event => field('author', event.target.value)}
               />
             </label>
-            <label className="col-md-6">
-              Tags
-              <input
-                className="form-control"
-                value={draft.tags.join(',')}
-                onChange={event =>
-                  setDraft(current => ({ ...current, tags: event.target.value.split(',') }))
-                }
+            <div className="col-12">
+              <TagInput
+                label="Tags"
+                value={draft.tags}
+                onChange={tags => setDraft(current => ({ ...current, tags }))}
+                maxTags={20}
+                maxTagLength={60}
+                disabled={busy}
               />
-            </label>
-            <label className="col-md-6">
-              Cover
-              <select
-                className="form-select"
-                value={draft.coverImageId ?? ''}
-                onChange={event =>
-                  setDraft(current => ({ ...current, coverImageId: event.target.value || null }))
-                }
-              >
-                <option value="">None</option>
-                {post?.images.map(image => (
-                  <option key={image.id} value={image.id}>
-                    {image.altText}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="col-md-6">
-              Cover alt text
-              <input
-                className="form-control"
-                value={draft.coverAlt}
-                maxLength={300}
-                required={!!draft.coverImageId}
-                onChange={event => field('coverAlt', event.target.value)}
-              />
-            </label>
+            </div>
             <label className="col-md-6">
               SEO title
               <input
@@ -306,16 +392,58 @@ function BlogForm({
             </label>
           </div>
           <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              name="intent"
-              value="save"
-              disabled={!canSave}
-            >
-              <Save size={16} className="me-2" />
-              {busy ? 'Saving...' : 'Save draft'}
-            </button>
+            {canPublish ? (
+              <Dropdown as={ButtonGroup}>
+                <button className="btn btn-primary" type="submit" name="intent" value="publish">
+                  <Save size={16} className="me-2" />
+                  {busy ? 'Saving...' : 'Save'}
+                </button>
+                <Dropdown.Toggle
+                  split
+                  variant="primary"
+                  aria-label="More save options"
+                  disabled={busy || !canSave}
+                />
+                <Dropdown.Menu align="end">
+                  <Dropdown.Item
+                    as="button"
+                    type="submit"
+                    name="intent"
+                    value="save"
+                    disabled={!canSave}
+                  >
+                    Save as draft
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            ) : (
+              <button
+                className="btn btn-primary"
+                type="submit"
+                name="intent"
+                value="save"
+                disabled={!canSave}
+              >
+                <Save size={16} className="me-2" />
+                {busy ? 'Saving...' : 'Save as draft'}
+              </button>
+            )}
+            {canPublish && (
+              <span className="small text-secondary">Save publishes this article.</span>
+            )}
+            {canPublish &&
+              fetcher.data?.error?.startsWith('Draft saved, but publishing failed:') && (
+                <button
+                  className="btn btn-outline-primary"
+                  type="submit"
+                  name="intent"
+                  value="publish"
+                  disabled={busy}
+                >
+                  <Send size={16} className="me-2" />
+                  Retry publish
+                </button>
+              )}
             <button
               className="btn btn-outline-primary"
               type="button"
@@ -334,18 +462,6 @@ function BlogForm({
               <Eye size={16} className="me-2" />
               Preview
             </button>
-            {post && canPublish && (
-              <button
-                className="btn btn-success"
-                type="submit"
-                name="intent"
-                value="publish"
-                disabled={dirty}
-              >
-                <Send size={16} className="me-2" />
-                {post.isPublished ? 'Publish revision' : 'Publish'}
-              </button>
-            )}
             {post?.isPublished && canPublish && (
               <button
                 className="btn btn-outline-danger"
@@ -367,38 +483,155 @@ function BlogForm({
           </div>
         </fieldset>
       </fetcher.Form>
-      {post && (
+      <section className="border rounded p-3 mb-3" aria-labelledby="cover-media-title">
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <h2 id="cover-media-title" className="h5 mb-1">
+              Cover image
+            </h2>
+            <p className="text-secondary mb-0">Upload or choose an image from this article.</p>
+          </div>
+          {draft.coverImageId && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() =>
+                setDraft(current => ({ ...current, coverImageId: null, coverAlt: '' }))
+              }
+              disabled={busy}
+            >
+              <Trash2 size={16} className="me-1" />
+              Remove cover
+            </button>
+          )}
+        </div>
+        {draft.coverImageId && post?.images.find(image => image.id === draft.coverImageId) && (
+          <figure className="mb-3">
+            <img
+              src={post.images.find(image => image.id === draft.coverImageId)!.publicUrl}
+              alt={draft.coverAlt}
+              className="img-fluid rounded"
+              style={{ maxHeight: '16rem', objectFit: 'contain' }}
+            />
+            <figcaption className="small text-secondary mt-1">
+              {dirty ? 'Cover selection is not saved yet.' : 'Selected cover'}
+            </figcaption>
+          </figure>
+        )}
+        {post?.images.length ? (
+          <div className="d-flex flex-wrap gap-2 mb-3" aria-label="Article media">
+            {post.images.map(image => (
+              <button
+                key={image.id}
+                type="button"
+                className={`btn p-1 ${draft.coverImageId === image.id ? 'btn-primary' : 'btn-outline-secondary'}`}
+                aria-pressed={draft.coverImageId === image.id}
+                aria-label={`Use ${image.altText || 'image'} as cover`}
+                onClick={() =>
+                  setDraft(current => ({
+                    ...current,
+                    coverImageId: image.id,
+                    coverAlt: image.altText,
+                  }))
+                }
+                disabled={busy}
+              >
+                <img
+                  src={image.publicUrl}
+                  alt=""
+                  loading="lazy"
+                  className="rounded"
+                  style={{ width: '7rem', height: '5rem', objectFit: 'cover' }}
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-secondary">No images uploaded for this article yet.</p>
+        )}
+        <label className="form-label" htmlFor="cover-alt">
+          Cover alt text
+        </label>
+        <input
+          id="cover-alt"
+          className="form-control mb-3"
+          value={draft.coverAlt}
+          maxLength={300}
+          required={!!draft.coverImageId}
+          disabled={busy}
+          onChange={event => field('coverAlt', event.target.value)}
+        />
         <fetcher.Form
           method="post"
           encType="multipart/form-data"
-          className="border-top border-bottom py-3 mb-3"
+          className="row g-2 align-items-end"
+          onSubmit={event => {
+            event.preventDefault();
+            if (!uploadFile) return;
+            const formData = new FormData(event.currentTarget);
+            formData.set('file', uploadFile);
+            fetcher.submit(formData, { method: 'post', encType: 'multipart/form-data' });
+          }}
         >
           <input type="hidden" name="intent" value="upload" />
-          <input type="hidden" name="revision" value={post.revision} />
-          <fieldset disabled={busy || dirty || !canSave} className="row g-2 align-items-end">
+          <input type="hidden" name="revision" value={post?.revision ?? 1} />
+          <input type="hidden" name="postId" value={post?.id ?? ''} />
+          <input type="hidden" name="channelId" value={selectedChannelId ?? ''} />
+          <input
+            type="hidden"
+            name="payload"
+            value={JSON.stringify({ slug, revision: post?.revision ?? 1, draft })}
+          />
+          <input type="hidden" name="saveBeforeUpload" value={dirty || !post ? 'true' : 'false'} />
+          <fieldset disabled={busy || !canUpload} className="row g-2 align-items-end">
             <label className="col-md-5">
-              Image
+              Upload image
               <input
+                ref={uploadInput}
                 name="file"
                 type="file"
                 className="form-control"
                 accept="image/jpeg,image/png,image/webp"
                 required
+                onChange={event => setUploadFile(event.target.files?.[0] ?? null)}
               />
+              {uploadFile && <span className="form-text">{uploadFile.name}</span>}
             </label>
             <label className="col-md-5">
-              Alt text
-              <input name="altText" className="form-control" maxLength={300} required />
+              Image alt text
+              <input
+                name="altText"
+                className="form-control"
+                maxLength={300}
+                required
+                value={uploadAltText}
+                onChange={event => setUploadAltText(event.target.value)}
+              />
             </label>
             <div className="col-md-2">
-              <button className="btn btn-outline-primary" type="submit">
+              <button
+                className="btn btn-outline-primary"
+                type="submit"
+                disabled={!uploadFile || !uploadAltText.trim()}
+              >
                 <Upload size={16} className="me-2" />
                 Upload
               </button>
             </div>
           </fieldset>
+          <p className="small text-secondary mb-0">
+            JPEG, PNG, or WebP; maximum 10 MB and 25 megapixels. If the article is new or has
+            unsaved changes, uploading saves a draft first. The uploaded image is selected as cover;
+            save again to apply it.
+          </p>
+          {!canUpload && (
+            <p className="small text-secondary mb-0">
+              Uploading to a new article requires create and update permission; existing articles
+              require update permission.
+            </p>
+          )}
         </fetcher.Form>
-      )}
+      </section>
       {preview ? (
         <section aria-label="Article preview" className="bg-white p-3">
           <h1 className="h2">{draft.title}</h1>

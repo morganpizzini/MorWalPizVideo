@@ -5,7 +5,13 @@ import userEvent from '@testing-library/user-event';
 import TagInput from '../TagInput';
 import { normalizeTags } from '../TagInput/tagRules';
 
-function Harness({ initial = [], suggestions = [] }: { initial?: string[]; suggestions?: string[] }) {
+function Harness({
+  initial = [],
+  suggestions = [],
+}: {
+  initial?: string[];
+  suggestions?: string[];
+}) {
   const [tags, setTags] = useState<string[]>(initial);
   return <TagInput label="Tags" value={tags} onChange={setTags} suggestions={suggestions} />;
 }
@@ -49,6 +55,18 @@ describe('TagInput', () => {
 
     expect(screen.getByText('Gear')).toBeInTheDocument();
     expect(screen.getByText('Optics')).toBeInTheDocument();
+  });
+
+  it('creates every tag from a single comma-separated paste', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={['Tutorial']} />);
+
+    await user.click(getField());
+    await user.paste('Gear,Tutorial,Optics,');
+
+    expect(screen.getByRole('button', { name: 'Remove tag Gear' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove tag Tutorial' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove tag Optics' })).toBeInTheDocument();
   });
 
   it('ignores empty values', async () => {

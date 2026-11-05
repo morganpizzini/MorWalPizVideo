@@ -55,7 +55,8 @@ export default function TagInput({
       .slice(0, 8);
   }, [suggestions, value, draft]);
 
-  const isSuggestionListOpen = !disabled && !isFull && draft.trim().length > 0 && visibleSuggestions.length > 0;
+  const isSuggestionListOpen =
+    !disabled && !isFull && draft.trim().length > 0 && visibleSuggestions.length > 0;
 
   const commitTag = (candidate: string): void => {
     const trimmed = candidate.trim();
@@ -85,6 +86,27 @@ export default function TagInput({
     setError(null);
   };
 
+  const commitTags = (candidates: string[]): void => {
+    const next = [...value];
+    let validationError: string | null = null;
+    for (const candidate of candidates) {
+      const trimmed = candidate.trim();
+      if (!trimmed) continue;
+      if (trimmed.length > maxTagLength) {
+        validationError = `Tags cannot exceed ${maxTagLength} characters.`;
+        continue;
+      }
+      if (next.some(tag => equalsIgnoreCase(tag, trimmed))) continue;
+      if (next.length >= maxTags) {
+        validationError = `A maximum of ${maxTags} tags is allowed.`;
+        continue;
+      }
+      next.push(trimmed);
+    }
+    if (next.length !== value.length) onChange(next);
+    setError(validationError);
+  };
+
   const removeTag = (tagToRemove: string): void => {
     onChange(value.filter(tag => tag !== tagToRemove));
     setError(null);
@@ -99,7 +121,7 @@ export default function TagInput({
     if (next.includes(',')) {
       const segments = next.split(',');
       const trailing = segments.pop() ?? '';
-      segments.forEach(segment => commitTag(segment));
+      commitTags(segments);
       setDraft(trailing.trimStart());
       return;
     }
@@ -214,7 +236,12 @@ export default function TagInput({
         </div>
 
         {isSuggestionListOpen && (
-          <ul className="tag-input__suggestions" id={listboxId} role="listbox" aria-label="Tag suggestions">
+          <ul
+            className="tag-input__suggestions"
+            id={listboxId}
+            role="listbox"
+            aria-label="Tag suggestions"
+          >
             {visibleSuggestions.map((suggestion, index) => (
               <li
                 key={suggestion}

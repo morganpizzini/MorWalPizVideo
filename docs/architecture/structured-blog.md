@@ -98,13 +98,28 @@ Admin routes are `/blogposts`, `/blogposts/create`, `/blogposts/:id/edit`, guard
 the existing Pages permissions. Blog is an admin menu entry, not a new permission family.
 The editor uses Puck 0.23.0 custom fields and Tiptap 3.31.4 with React 19, canonical
 adapters, metadata fields, image upload/selection/order, composition and shared preview.
-Dirty drafts must be saved before publication, unpublication or upload. Publication
-controls require `pages.manage`; server checks remain authoritative. Revision conflicts
-are surfaced without silently overwriting content. The slug input is read-only whenever
-the admin response has `firstPublishedAt`, including after unpublish and reopen. Save
-retains the unchanged slug; never-published drafts remain editable. Publish/unpublish
-responses update the same history-driven lock. The server's permanent slug enforcement
-is unchanged and remains authoritative.
+For users with `pages.manage`, the primary Save action saves the current draft and then
+publishes that saved revision; the adjacent Save as draft action persists without
+changing the live snapshot. Unpublish remains a separate action and is disabled while
+the draft has unsaved edits. If publication fails after saving, the editor retains the
+confirmed draft/revision and reports the partial success. Users without publish
+permission retain a Save as draft action. Server authorization remains authoritative.
+The article-local Cover image box lists only the post's owned images. Upload requires
+update/manage permission; creating the post for an initial upload also requires
+create/manage permission. On a new or dirty article it saves the draft before uploading,
+then selects the returned image as an unsaved cover until the next draft save or publish.
+Upload and publish use the server-returned revision. Upload failures after a draft save
+report that saved state instead of claiming the operation was atomic.
+
+The form reuses the BackOffice removable tag-pill control with the blog's 20-tag,
+60-character limits. Its comma-paste handling accumulates all tags from one input
+event. The blog index places Create article in the existing right-aligned PageHeader
+actions slot. Revision conflicts are surfaced without silently overwriting content.
+The slug input is read-only whenever the admin response has `firstPublishedAt`,
+including after unpublish and reopen. Save retains the unchanged slug;
+never-published drafts remain editable. Publish/unpublish responses update the same
+history-driven lock. The server's permanent slug enforcement is unchanged and remains
+authoritative.
 
 Puck mounts both its mobile Fields plugin and desktop sidebar, hiding the inactive
 surface via CSS. The production mounting test scopes actions to the desktop sidebar,

@@ -26,13 +26,17 @@ export function Component() {
   ]);
   return (
     <>
-      <PageHeader title="Blog" />
-      {canCreate && (
-        <Link to="create" className="btn btn-primary mb-3">
-          <Plus size={16} className="me-2" />
-          Create article
-        </Link>
-      )}
+      <PageHeader
+        title="Blog"
+        actions={
+          canCreate ? (
+            <Link to="create" className="btn btn-primary">
+              <Plus size={16} className="me-2" />
+              Create article
+            </Link>
+          ) : undefined
+        }
+      />
       {!posts.length ? (
         <p role="status">No articles.</p>
       ) : (
