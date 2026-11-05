@@ -11,6 +11,60 @@ namespace MorWalPizVideo.ShortLinks.Tests.Features;
 [Trait("Category", "TestGroup:ShortLinks")]
 public class ShortLinksMockScenarioTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Last_uses_latest_attached_reference_and_never_an_unattached_thumbnail(int count)
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var repository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var source = await repository.GetItemAsync(PrimaryScenario.MatchId);
+        await repository.UpdateItemAsync(source with
+        {
+            ContentType = YoutubeContentType.SingleVideo,
+            OwnerChannelId = PrimaryScenario.ChannelId,
+            ThumbnailVideoId = "unattached-thumbnail",
+            VideoRefs = Enumerable.Range(0, count).Select(index =>
+                new VideoRef($"attached-{index}", [], channelIds: [PrimaryScenario.ChannelId])
+                { CreationDateTime = DateTime.UtcNow.AddDays(index) }).ToArray()
+        });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.GetAsync("/last");
+
+        Assert.Equal(count == 0 ? HttpStatusCode.BadRequest : HttpStatusCode.Redirect, response.StatusCode);
+        if (count > 0)
+        {
+            Assert.StartsWith($"https://www.youtube.com/watch?v=attached-{count - 1}&list=", response.Headers.Location?.ToString());
+            Assert.DoesNotContain("unattached-thumbnail", response.Headers.Location?.ToString());
+        }
+    }
+
+    [Fact]
+    public async Task Canonical_link_does_not_redirect_to_thumbnail_after_target_reference_is_removed()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var matches = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+        var source = await matches.GetItemAsync(PrimaryScenario.MatchId);
+        await matches.UpdateItemAsync(source with
+        {
+            ContentType = YoutubeContentType.SingleVideo,
+            OwnerChannelId = PrimaryScenario.ChannelId,
+            ThumbnailVideoId = "removed-video",
+            VideoRefs = []
+        });
+        await factory.Services.GetRequiredService<IShortLinkRepository>().AddItemAsync(
+            new ShortLink("removed-target", "removed-video", [])
+            {
+                ContentId = source.Id, LinkType = LinkType.YouTubeVideo,
+                ManagementChannelId = PrimaryScenario.ChannelId
+            });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var response = await client.GetAsync("/removed-target");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+    }
 
     [Fact]
     public async Task Ask_shortlink_redirects_to_the_current_slug_and_hides_inactive_or_foreign_campaigns()

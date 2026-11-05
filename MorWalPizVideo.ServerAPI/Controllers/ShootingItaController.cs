@@ -34,7 +34,8 @@ public sealed class ShootingItaController(
         var count = await contentService.CountPublicMatchesForChannelsAsync(channelIds, includePrivate);
         var matches = await contentService.GetPublicMatchesForChannelsAsync(channelIds, includePrivate, skip, take);
         var safeTake = Math.Clamp(take, 1, 200);
-        return Ok(new BaseResponse<IList<YouTubeContent>>(matches, count, $"skip={Math.Max(0, skip) + safeTake}&take={safeTake}"));
+        var responseMatches = matches.Select(match => match with { ContentType = match.EffectiveContentType }).ToList();
+        return Ok(new BaseResponse<IList<YouTubeContent>>(responseMatches, count, $"skip={Math.Max(0, skip) + safeTake}&take={safeTake}"));
     }
 
     [HttpGet("quicklinks/{url}")]

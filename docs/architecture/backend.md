@@ -28,6 +28,17 @@ sequenceDiagram
 
 Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally. `DataService` and `IGenericDataService` remain compatibility surfaces for controllers not yet migrated.
 
+Video enrichment/refresh fetches attached reference IDs, not thumbnail IDs,
+and preserves attachment order, categories, channel IDs, creation timestamps,
+and references absent from provider results. Provider-owned aggregate metadata
+is refreshed only for one reference whose ID equals the aggregate `ContentId`,
+the identity created by single import. Editorial aggregate text/URL/thumbnail
+is otherwise retained; presentation cardinality does not transfer ownership
+of that text. Video mutations also reset calendar memory entries and purge the
+calendar output tag because reference count and URL affect enriched destinations.
+Append/compensation invalidation reports degradation through the existing
+cache helper, including when compensation cannot remove the persisted append.
+
 ## Public Accounts
 
 ServerAPI public accounts are a separate Domain-owned boundary backed by `PublicAccount` and `PublicAccountSession` collections. The dedicated cookie scheme revalidates the hashed session token and account security version on each authenticated request. Controllers expose only Contracts DTOs; registration, login, profile mutation, and logout require CSRF validation, while existing anonymous content and push routes remain unchanged.

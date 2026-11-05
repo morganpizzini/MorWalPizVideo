@@ -29,7 +29,8 @@ public sealed class PublicCalendarControllerTests(ServerApiWebApplicationFactory
         var item = json.RootElement.EnumerateArray().Single(item => item.GetProperty("id").GetString() == entity.Id);
         Assert.True(item.GetProperty("oldEvent").GetBoolean());
         Assert.False(item.TryGetProperty("revision", out _));
-        Assert.Equal(match.ContentType == YoutubeContentType.SingleVideo ? match.ContentId : match.Url, item.GetProperty("matchUrl").GetString());
+        Assert.Equal(match.IsLink ? match.VideoRefs[0].YoutubeId : match.Url, item.GetProperty("matchUrl").GetString());
+        Assert.Equal(match.IsLink ? match.VideoRefs[0].YoutubeId : null, item.GetProperty("matchVideoId").GetString());
         Assert.Equal(entity.ChannelId, item.GetProperty("channelId").GetString());
         Assert.Equal(entity.StartDate, item.GetProperty("startDate").GetDateTime());
         Assert.Equal(entity.EndDate, item.GetProperty("endDate").GetDateTime());

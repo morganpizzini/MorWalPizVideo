@@ -4,12 +4,12 @@ export default function ErrorPage() {
     const error = useRouteError() as { statusText?: string; message?: string } | null;
     console.error(error);
     return (
-        <div className="container mt-3" id="error-page">
+        <main className="container mt-3" id="error-page">
             <h1>Oops!</h1>
             <p>Sono spiacente, errore inatteso.</p>
             <p>
                 <i>{error?.statusText || error?.message}</i>
             </p>
-        </div>
+        </main>
     );
 }

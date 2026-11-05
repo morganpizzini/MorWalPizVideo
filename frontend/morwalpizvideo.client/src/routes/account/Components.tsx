@@ -234,12 +234,21 @@ export function Profile() {
       .catch((requestError) => setError(errorMessage(requestError)));
   }, [session.authenticated]);
 
-  if (loading) return <p role="status">Caricamento...</p>;
+  if (loading)
+    return (
+      <main className="account-page">
+        <h1 className="visually-hidden">Profilo</h1>
+        <p role="status">Caricamento...</p>
+      </main>
+    );
   if (!session.authenticated || !profile)
     return (
-      <p>
-        Accedi per visualizzare il profilo. <Link to="/account/login">Accedi</Link>
-      </p>
+      <main className="account-page">
+        <h1 className="visually-hidden">Profilo</h1>
+        <p>
+          Accedi per visualizzare il profilo. <Link to="/account/login">Accedi</Link>
+        </p>
+      </main>
     );
 
   const submit = async (event: FormEvent) => {
@@ -326,26 +335,28 @@ function AccountForm({
   children: ReactNode;
 }) {
   return (
-    <section className="account-card card card-no-float mx-auto" style={{ maxWidth: 480 }}>
-      <div className="card-body">
-        <h2>{title}</h2>
-        <form onSubmit={onSubmit}>
-          {children}
-          {error && (
-            <div className="alert alert-danger mt-3" role="alert">
-              {error}
-            </div>
-          )}
-          {message && (
-            <div className="alert alert-success mt-3" role="status">
-              {message}
-            </div>
-          )}
-          <button type="submit" className="btn btn-primary mt-4">
-            {submitLabel}
-          </button>
-        </form>
-      </div>
-    </section>
+    <main className="account-page">
+      <section className="account-card card card-no-float mx-auto">
+        <div className="card-body">
+          <h1>{title}</h1>
+          <form onSubmit={onSubmit}>
+            {children}
+            {error && (
+              <div className="alert alert-danger mt-3" role="alert">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="alert alert-success mt-3" role="status">
+                {message}
+              </div>
+            )}
+            <button type="submit" className="btn btn-primary mt-4">
+              {submitLabel}
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
   );
 }

@@ -1,5 +1,16 @@
 # Multi-Video Import Handoff
 
+## Reference Classification Follow-Up
+
+The [reference-based classification handoff](video-reference-classification-handoff.md)
+supersedes stored type as the runtime video/collection decision: root import
+starts with one reference; a second attached reference makes its effective type
+a collection without rewriting the archival discriminator. Shared refresh now
+retains all attachments and refreshes their actual IDs, preserving editorial
+aggregate metadata for multi-reference content. Related mutation/compensation
+cache invalidation includes enriched calendar destinations. The bulk contract,
+feature flag, canonical-link outcomes, and historical plan below are unchanged.
+
 ## Outcome
 
 Repair the feature-flagged BackOffice bulk import so an operator can import multiple root YouTube videos in one request, assign categories to every imported video, and attach zero or more newly imported reference videos to each root. The implementation must reuse the proven single-import and reference-append behavior instead of maintaining a third copy in `VideosController`.

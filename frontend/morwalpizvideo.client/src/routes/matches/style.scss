@@ -1,22 +1,33 @@
 .video-block {
+    min-width: 0;
     padding: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-color: var(--magazine-border) !important;
+    background: var(--magazine-surface);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 
     .video-title {
         font-size: 20px;
         font-weight: bold;
-        transition: all 0.5s ease;
     }
 
     .video-description {
         font-size: 14px;
-        color: #555;
-        transition: all 0.5s ease;
+        color: var(--magazine-secondary);
     }
 
     &:hover {
-        transform: scale(1.03); /* Slight zoom-in on hover */
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.36);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .video-block {
+        transition: none;
+    }
+
+    .video-block:hover {
+        transform: none;
     }
 }

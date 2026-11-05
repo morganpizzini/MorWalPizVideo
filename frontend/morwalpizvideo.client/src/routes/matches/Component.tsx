@@ -30,7 +30,7 @@ export default function Matches() {
     trackPageView('match', '/matches/:id');
   }
   return (
-    <>
+    <main className="matches-page">
       <SEO
         title={match.title}
         description={match.description ?? ''}
@@ -49,7 +49,7 @@ export default function Matches() {
       <div id="video-container" className="row">
         {match.videoRefs.map((video: MatchVideoRef) => (
           <div key={video.youtubeId} className="col-12 mb-3">
-            <div key={video.youtubeId} className="video-block border rounded border-dark bg-white">
+            <div key={video.youtubeId} className="video-block border rounded">
               <div className="row">
                 <div className="col-md-6">
                   <div className="video-thumbnail">
@@ -69,7 +69,7 @@ export default function Matches() {
           </div>
         ))}
       </div>
-    </>
+    </main>
   );
 }
 

@@ -5,7 +5,6 @@ import configKeys from "@utils/configKeys"
 function Stream() {
     const [chatVisible, setChatVisible] = useState(true);
     const { configuration } = useLoaderData();
-    console.log(configuration)
 
     const toggleChat = () => {
         setChatVisible(prevState => !prevState);
@@ -18,9 +17,10 @@ function Stream() {
                 <meta name="description" content="Live streaming video" />
             </Helmet>
 
-            <div className="navbar navbar-dark bg-dark mb-3">
+            <main className="stream-page">
+            <div className="navbar navbar-dark bg-dark mb-3 stream-header">
                 <div className="container-fluid">
-                    <span className="navbar-brand">Live Streaming {!configuration[configKeys.STREAM_ENABLE] && <>- OFFLINE</>}</span>
+                    <h1 className="navbar-brand h5 mb-0">Live Streaming {!configuration[configKeys.STREAM_ENABLE] && <>- OFFLINE</>}</h1>
                     <button
                         className="btn btn-outline-light ms-auto"
                         onClick={toggleChat}
@@ -54,6 +54,7 @@ function Stream() {
                     </div>
                 </div>
             </>}
+            </main>
         </>
     );
 }

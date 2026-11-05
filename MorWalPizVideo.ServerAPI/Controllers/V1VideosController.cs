@@ -53,7 +53,7 @@ public sealed class V1VideosController(IContentService contentService, ILinksSer
         match.Url,
         match.Title,
         match.Description,
-        match.ContentType.ToString(),
+        match.EffectiveContentType.ToString(),
         match.VideoRefs.Select(video => new V1VideoReferenceResponse(
             video.YoutubeId,
             video.Title,

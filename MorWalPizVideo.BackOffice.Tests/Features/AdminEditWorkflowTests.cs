@@ -12,6 +12,7 @@ using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
+using MorWalPizVideo.Server.Services.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -543,8 +544,10 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
         link.ContentId == match.Id && link.Target == videoId));
     Assert.Equal(returned.ShortLinkCode, canonicalLink.Code);
     Assert.Equal(LinkType.YouTubeVideo, canonicalLink.LinkType);
-    Assert.Equal(new[] { CacheKeys.Matches, CacheKeys.ShortLinks }, _factory.CrossApiService.ResetKeys);
-    Assert.Equal(new[] { CacheKeys.Matches }, _factory.CrossApiService.PurgedTags);
+    Assert.Equal(new[] { CacheKeys.Matches, CacheKeys.CalendarEvents, CacheKeys.ShortLinks }, _factory.CrossApiService.ResetKeys);
+    Assert.Equal(new[] { CacheKeys.Matches, CacheKeys.CalendarEvents }, _factory.CrossApiService.PurgedTags);
+    Assert.Equal(YoutubeContentType.SingleVideo, updated.EffectiveContentType);
+    Assert.Equal(YoutubeContentType.Collection, updated.ContentType);
     Assert.Equal([match.Id], _factory.CrossApiService.RefreshedVideoIds);
 
     using var retrievalClient = _factory.CreateClientWithPermissions(AuthorizationPermissionKeys.ShortLinksView);
@@ -586,6 +589,141 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
     Assert.Single(unchanged!.VideoRefs);
     Assert.Empty(_factory.CrossApiService.PurgedTags);
+  }
+
+  [Fact]
+  public async Task Video_reference_changes_refresh_and_delete_invalidate_calendar_without_tracking_type()
+  {
+    var videoId = $"root-{Guid.NewGuid():N}";
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateSingleVideo(videoId, []) with
+      {
+        OwnerChannelId = PrimaryScenario.ChannelId, Title = "Editorial title",
+        VideoRefs = [new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId])]
+      });
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+    _factory.CrossApiService.Clear();
+    var addedId = $"ref-{Guid.NewGuid():N}";
+    var append = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs",
+      new { youtubeId = addedId, categories = new[] { "300000000000000000000001" } });
+    Assert.Equal(HttpStatusCode.OK, append.StatusCode);
+    var detail = await client.GetFromJsonAsync<YouTubeContentContract>($"/api/Videos/{match.Id}");
+    Assert.Equal(YoutubeContentType.Collection, detail!.ContentType);
+    AssertCalendarInvalidated();
+
+    _factory.CrossApiService.Clear();
+    var refresh = await client.PostAsync($"/api/Videos/{match.Id}/refresh-youtube", null);
+    Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
+    var refreshed = await refresh.Content.ReadFromJsonAsync<YouTubeContentContract>();
+    Assert.Equal(new[] { videoId, addedId }, refreshed!.VideoRefs.Select(video => video.YoutubeId));
+    Assert.Equal("Editorial title", refreshed.Title);
+    AssertCalendarInvalidated();
+
+    foreach (var count in new[] { 1, 0 })
+    {
+      _factory.CrossApiService.Clear();
+      var replace = await client.PutAsJsonAsync($"/api/Videos/{match.Id}", new
+      {
+        title = "Updated", description = "", url = "", thumbnailVideoId = videoId,
+        categories = Array.Empty<string>(), matchType = 1, contentType = 1,
+        videoRefs = count == 1 ? new[] { new VideoRef(videoId, [], channelIds: [PrimaryScenario.ChannelId]) } : []
+      });
+      Assert.Equal(HttpStatusCode.NoContent, replace.StatusCode);
+      var updated = await _factory.MatchRepository.GetItemAsync(match.Id);
+      Assert.Equal(count == 1 ? YoutubeContentType.SingleVideo : YoutubeContentType.Collection, updated.EffectiveContentType);
+      Assert.Equal(YoutubeContentType.SingleVideo, updated.ContentType);
+      AssertCalendarInvalidated();
+    }
+
+    _factory.CrossApiService.Clear();
+    Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/Videos/{match.Id}")).StatusCode);
+    AssertCalendarInvalidated();
+  }
+
+  [Fact]
+  public async Task Calendar_cache_failure_is_reported_as_degraded_without_undoing_a_persisted_append()
+  {
+    var match = await _factory.MatchRepository!.AddItemAsync(
+      YouTubeContent.CreateSingleVideo($"root-{Guid.NewGuid():N}", []) with { OwnerChannelId = PrimaryScenario.ChannelId });
+    using var client = CreateClient(AuthorizationPermissionKeys.VideosUpdate, PrimaryScenario.ChannelId);
+    _factory.CrossApiService.Clear();
+    _factory.CrossApiService.FailOnKey = CacheKeys.CalendarEvents;
+    try
+    {
+      var response = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+      {
+        youtubeId = $"ref-{Guid.NewGuid():N}", categories = new[] { "300000000000000000000001" }
+      });
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Equal("degraded", (await response.Content.ReadFromJsonAsync<VideoRefContract>())!.CacheStatus);
+      var persisted = await _factory.MatchRepository.GetItemAsync(match.Id);
+      Assert.Equal(2, persisted.VideoRefs.Length);
+      Assert.Equal(YoutubeContentType.Collection, persisted.EffectiveContentType);
+    }
+    finally
+    {
+      _factory.CrossApiService.Clear();
+    }
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task Failed_canonical_link_invalidates_calendar_even_if_compensation_fails(bool compensationFails)
+  {
+    await using var baseFactory = new VideoReferenceWebApplicationFactory();
+    await using var factory = baseFactory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+    {
+      services.RemoveAll<IShortLinkRepository>();
+      services.AddSingleton<IShortLinkRepository>(new FailingShortLinkRepository(new PrimaryScenario()));
+      if (compensationFails)
+      {
+        services.RemoveAll<IYouTubeContentRepository>();
+        services.AddSingleton<IYouTubeContentRepository>(new FailingCompensationRepository(new PrimaryScenario()));
+      }
+    }));
+    var repository = factory.Services.GetRequiredService<IYouTubeContentRepository>();
+    var match = await repository.AddItemAsync(YouTubeContent.CreateSingleVideo($"root-{Guid.NewGuid():N}", []) with
+    {
+      OwnerChannelId = PrimaryScenario.ChannelId
+    });
+    var cache = factory.Services.GetRequiredService<RecordingCrossApiService>();
+    cache.Clear();
+    using var client = factory.CreateClient();
+    client.DefaultRequestHeaders.Add("X-Test-Permissions", AuthorizationPermissionKeys.VideosUpdate);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync($"/api/Videos/{match.Id}/video-refs", new
+    {
+      youtubeId = $"ref-{Guid.NewGuid():N}", categories = new[] { "300000000000000000000001" }
+    });
+
+    Assert.Equal(compensationFails ? HttpStatusCode.InternalServerError : HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    var persisted = await repository.GetItemAsync(match.Id);
+    Assert.Equal(compensationFails ? 2 : 1, persisted.VideoRefs.Length);
+    Assert.Equal(compensationFails ? YoutubeContentType.Collection : YoutubeContentType.SingleVideo, persisted.EffectiveContentType);
+    Assert.Contains(CacheKeys.CalendarEvents, cache.ResetKeys);
+    Assert.Contains(CacheKeys.CalendarEvents, cache.PurgedTags);
+  }
+
+  private void AssertCalendarInvalidated()
+  {
+    Assert.Contains(CacheKeys.CalendarEvents, _factory.CrossApiService.ResetKeys);
+    Assert.Contains(CacheKeys.CalendarEvents, _factory.CrossApiService.PurgedTags);
+  }
+
+  private sealed class FailingShortLinkRepository(IMockScenario scenario)
+    : ShortLinkMockRepository(scenario), IShortLinkRepository
+  {
+    public new Task<ShortLink> AddItemAsync(ShortLink item) =>
+      throw new InvalidOperationException("Simulated canonical link failure");
+  }
+
+  private sealed class FailingCompensationRepository(IMockScenario scenario)
+    : MatchMockRepository(scenario), IYouTubeContentRepository
+  {
+    public new Task<bool> RemoveVideoReferenceAsync(string matchId, VideoRef expectedReference) =>
+      Task.FromResult(false);
   }
 
   [Fact]

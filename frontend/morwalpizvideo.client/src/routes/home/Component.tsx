@@ -161,7 +161,7 @@ export default function Index() {
   }
 
   return (
-    <div className="magazine-home">
+    <main className="magazine-home">
       <SEO title="MorWalPiz" description="Video, serie e articoli di Morgan Pizzini. Tiro sportivo, gare e vita sul campo." imageUrl={featured ? itemImage(featured) : '/images/logo-300.png'} type="website" />
       <h1 className="visually-hidden">MorWalPiz: video, serie e articoli</h1>
       {data.error ? (
@@ -221,7 +221,7 @@ export default function Index() {
           {filtered.length > 4 && <section className="more-content" aria-label="Altri contenuti"><h2 className="editorial-heading">Ancora da scoprire</h2><div className="editorial-grid">{filtered.slice(4).map((item) => <ContentCard key={item.type === 'article' ? `article-${item.article.slug}` : `match-${item.match.url || item.match.contentId}`} item={item} />)}</div></section>}
         </>
       )}
-    </div>
+    </main>
   );
 }
 

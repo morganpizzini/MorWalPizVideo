@@ -6,6 +6,7 @@ export default function ChannelNewsDetail() {
     const image = item.images[0];
 
     return (
+        <main className="channel-news-page">
         <article className="container py-4 channel-news-detail">
             <Link to="/" className="btn btn-outline-secondary mb-3">Torna alla home</Link>
             <header className="channel-news-detail__header">
@@ -19,5 +20,6 @@ export default function ChannelNewsDetail() {
             {image && <img className="channel-news-detail__hero" src={image.publicUrl} alt={image.altText || item.title} />}
             <div className="channel-news-detail__body" dangerouslySetInnerHTML={{ __html: item.descriptionHtml }} />
         </article>
+        </main>
     );
 }

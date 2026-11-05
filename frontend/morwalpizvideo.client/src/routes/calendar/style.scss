@@ -2,14 +2,14 @@
 .calendar-container {
     max-width: 1200px;
     margin: 0 auto;
-    background-color: #f8f9fa;
-    border-radius: 8px;
+    background-color: transparent;
+    border-radius: var(--magazine-radius-md);
 }
 
 // Calendar Event Cards
 .calendar-event-card {
-    border: none;
-    border-radius: 12px;
+    border: 1px solid var(--magazine-border);
+    border-radius: var(--magazine-radius-calendar);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     overflow: hidden;
@@ -21,15 +21,15 @@
 
     // Upcoming event styling
     &.upcoming-event {
-        border-left: 4px solid #0d6efd;
-        background: linear-gradient(to right, rgba(13, 110, 253, 0.03) 0%, white 100%);
+        border-inline-start: 1px solid var(--magazine-accent);
+        background: var(--magazine-surface);
     }
 
     // Old event styling
     &.old-event {
         opacity: 0.7;
-        border-left: 4px solid #6c757d;
-        background-color: #f8f9fa;
+        border-inline-start: 1px solid var(--magazine-border);
+        background-color: var(--magazine-surface);
 
         &:hover {
             opacity: 0.85;
@@ -53,23 +53,27 @@
 
 // Event Details
 .event-details {
+    min-width: 0;
+
     .event-title {
         font-weight: 600;
         font-size: 1.25rem;
         line-height: 1.4;
-        color: #212529;
+        color: var(--magazine-text);
         margin-bottom: 0.5rem;
+        overflow-wrap: anywhere;
 
         @media (max-width: 768px) {
-            font-size: 1.1rem;
+            font-size: var(--magazine-font-calendar-heading);
         }
     }
 
     .event-description {
-        font-size: 0.95rem;
+        font-size: var(--magazine-font-calendar-description);
         line-height: 1.5;
-        color: #6c757d;
+        color: var(--magazine-secondary);
         margin-bottom: 0.75rem;
+        overflow-wrap: anywhere;
 
         em {
             font-style: italic;
@@ -87,16 +91,17 @@
         font-size: 0.85rem;
         font-weight: 500;
         padding: 0.4rem 0.8rem;
-        border-radius: 20px;
+        border-radius: var(--magazine-radius-filter);
         text-transform: capitalize;
         letter-spacing: 0.3px;
         transition: all 0.2s ease;
 
         &.bg-primary {
-            background-color: #0d6efd !important;
+            color: var(--magazine-bg);
+            background-color: var(--magazine-accent) !important;
             
             &:hover {
-                background-color: #0b5ed7 !important;
+                background-color: var(--magazine-accent-hover) !important;
                 transform: scale(1.05);
             }
         }
@@ -137,15 +142,15 @@
         font-weight: 500;
         text-decoration: none;
         padding: 0.5rem 1rem;
-        border-radius: 6px;
+        border-radius: var(--magazine-radius-calendar-action);
         transition: all 0.3s ease;
         white-space: nowrap;
 
         &.btn-outline-primary {
             &:hover {
-                background-color: #0d6efd;
-                border-color: #0d6efd;
-                color: white;
+                background-color: var(--magazine-accent);
+                border-color: var(--magazine-accent);
+                color: var(--magazine-bg);
                 transform: translateX(-2px);
             }
         }
@@ -185,7 +190,7 @@
 @media print {
     .calendar-event-card {
         box-shadow: none;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--magazine-print-border);
         page-break-inside: avoid;
     }
 }

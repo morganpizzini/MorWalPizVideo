@@ -3,10 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import {} from 'react-router';
 import { Card, Row, Col, Badge, Button, Form } from 'react-bootstrap';
 import PageHeader from '@components/PageHeader';
-import { Match, ContentType, Channel, LinkType } from '@morwalpizvideo/models';
+import { Match, Channel, LinkType } from '@morwalpizvideo/models';
 import type { MatchImage } from '@morwalpizvideo/models';
 import { deleteVideoImage, uploadVideoImages } from '@morwalpizvideo/services';
-import { composeShortLinkUrl } from '@components/VideoList';
+import { composeShortLinkUrl, getVideoContentLabel } from '@components/VideoList';
 import { useToast } from '@components/ToastNotification/ToastContext';
 
 interface Category {
@@ -174,11 +174,11 @@ const Component: React.FC = () => {
               <hr />
               <Row>
                 <Col sm={3}>
-                  <strong>Match Type:</strong>
+                  <strong>Content:</strong>
                 </Col>
                 <Col sm={9}>
-                  <Badge bg={match.contentType === ContentType.SingleVideo ? 'info' : 'warning'}>
-                    {match.contentType === ContentType.SingleVideo ? 'Single Video' : 'Collection'}
+                  <Badge bg={match.videoRefs?.length === 1 ? 'info' : 'warning'} text="dark">
+                    {getVideoContentLabel(match.videoRefs?.length ?? 0)}
                   </Badge>
                 </Col>
               </Row>

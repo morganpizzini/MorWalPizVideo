@@ -10,6 +10,15 @@ The model is persistence-oriented and uses immutable C# records with MongoDB att
 
 Owns content identity, title/description, URL, thumbnail, categories, free-form tags, video references, linked YouTube videos, and privacy/visibility. It supports single-video and collection forms. YouTube short links are standalone records that reference this aggregate for target validation.
 
+`EffectiveContentType` is derived from attached `VideoRefs`: exactly one is a
+single video; zero or multiple references are a collection. `IsLink` is the
+compatibility boolean for this rule. The stored BSON `contentType` remains
+archival compatibility metadata, not a runtime decision or editable setting.
+Admin/public DTOs, v1 string types, and Shooting ITA responses project the
+effective type without rewriting storage. Images, links, and the thumbnail
+do not count as attachments. The computed property is excluded from BSON/JSON.
+See the [classification handoff](../feature-handoffs/video-reference-classification-handoff.md).
+
 Tags are aggregate-level free-form strings persisted in the `tags` Mongo element. Legacy documents without the element deserialize to an empty array (`[BsonIgnoreExtraElements]` plus a default value), and both the admin and public contracts always serialize `tags` as `[]` when absent. Normalization is centralized in `MorWalPizVideo.Models.Constraints.ContentTagRules`: values are trimmed, empty/whitespace values are rejected, and duplicates collapse case-insensitively while keeping the first display casing. Bounds are 20 tags per aggregate and 32 characters per tag.
 
 Target boundary:

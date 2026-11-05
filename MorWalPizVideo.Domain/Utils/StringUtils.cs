@@ -4,7 +4,7 @@ namespace MorWalPizVideo.Server.Utils
 {
     public static class StringUtils
     {
-        public static string TrimDescription(this string description, int maxLength = 100)
+        public static string TrimDescription(this string description, int maxLength = 300)
         {
             if (description.Length <= maxLength)
             {

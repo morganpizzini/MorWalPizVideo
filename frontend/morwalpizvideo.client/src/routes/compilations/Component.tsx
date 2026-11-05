@@ -2,7 +2,6 @@ import { useLoaderData } from 'react-router';
 import '../matches/style.scss';
 import SEO from '@utils/seo';
 import { trackPageView } from '../../analytics/consent';
-import TitleComponent from '@layouts/title-header';
 import { VideoPlayer } from '@morwalpiz/layout';
 
 interface CompVideo {
@@ -22,7 +21,7 @@ export default function Compilations() {
   }
 
   return (
-    <>
+    <main className="compilations-page">
       <SEO
         title={compilation.title}
         description={compilation.description ?? ''}
@@ -34,8 +33,6 @@ export default function Compilations() {
         type="article"
       />
       <div className="container">
-        <TitleComponent hideLink={true} dimensions="small" />
-
         <h1 className="text-center mb-2">{compilation.title}</h1>
         {compilation.description && <p className="text-center mb-2">{compilation.description}</p>}
         <hr />
@@ -43,7 +40,7 @@ export default function Compilations() {
         <div id="video-container" className="row">
           {compilation.videos?.map((video: CompVideo) => (
             <div key={video.youtubeId} className="col-6 mb-3">
-              <div className="video-block border rounded border-dark bg-white">
+              <div className="video-block border rounded">
                 <div className="video-thumbnail">
                   <VideoPlayer youtubeId={video.youtubeId} height="180px" />
                 </div>
@@ -55,6 +52,6 @@ export default function Compilations() {
           ))}
         </div>
       </div>
-    </>
+    </main>
   );
 }

@@ -41,42 +41,6 @@ import galleryLoader from './gallery/loader';
 
 export const routes: RouteObject[] = [
   {
-    path: '/gallery/:slug',
-    loader: galleryLoader,
-    element: <Gallery />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
-    path: '/quick-links/:url',
-    loader: quickLinksLoader,
-    element: <QuickLinks />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
-    path: '/channel-news/:idOrSlug',
-    loader: channelNewsLoader,
-    element: <ChannelNews />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
-    path: 'compilations/:compilationUrl',
-    loader: compilationsLoader,
-    element: <Compilations />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
-    path: 'forms/:formUrl',
-    loader: customFormLoader,
-    element: <CustomForm />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
-    path: 'survey/:surveyUrl',
-    loader: surveyLoader,
-    element: <Survey />,
-    errorElement: <ErrorPageRoot />,
-  },
-  {
     path: '/',
     element: <Root />,
     errorElement: <ErrorPageRoot />,
@@ -84,6 +48,36 @@ export const routes: RouteObject[] = [
       {
         errorElement: <ErrorPage />,
         children: [
+          {
+            path: 'gallery/:slug',
+            loader: galleryLoader,
+            element: <Gallery />,
+          },
+          {
+            path: 'quick-links/:url',
+            loader: quickLinksLoader,
+            element: <QuickLinks />,
+          },
+          {
+            path: 'channel-news/:idOrSlug',
+            loader: channelNewsLoader,
+            element: <ChannelNews />,
+          },
+          {
+            path: 'compilations/:compilationUrl',
+            loader: compilationsLoader,
+            element: <Compilations />,
+          },
+          {
+            path: 'forms/:formUrl',
+            loader: customFormLoader,
+            element: <CustomForm />,
+          },
+          {
+            path: 'survey/:surveyUrl',
+            loader: surveyLoader,
+            element: <Survey />,
+          },
           {
             index: true,
             loader: homeLoader,

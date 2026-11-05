@@ -1,5 +1,14 @@
+.account-page {
+  padding-block: clamp(1.5rem, 5vw, 4rem);
+}
+
 .account-card {
-  border: 0;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 0.75rem 2rem rgba(33, 37, 41, 0.16);
+  width: min(100%, 30rem);
+  border: 1px solid var(--magazine-border);
+  background: var(--magazine-surface);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.3);
+
+  a {
+    color: var(--magazine-accent);
+  }
 }

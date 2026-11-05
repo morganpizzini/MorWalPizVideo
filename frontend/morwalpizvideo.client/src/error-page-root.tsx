@@ -6,7 +6,7 @@ export default function ErrorPageRoot() {
     console.error(error);
 
     return (
-        <div>
+        <div id="main-content" tabIndex={-1}>
             <TitleHeader hideLink />
             <ErrorPage/>
         </div>

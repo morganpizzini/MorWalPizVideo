@@ -41,7 +41,9 @@ public class CalendarSerializationTests
         var entity = Sample() with { Categories = [new CategoryRef("category-id", "Category title")] };
         var legacy = JsonSerializer.SerializeToElement(entity, WebJson);
         var current = JsonSerializer.SerializeToElement(ContractUtils.ConvertPublic(entity), WebJson);
-        Assert.Equal(legacy.EnumerateObject().Select(property => property.Name).Order(), current.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(legacy.EnumerateObject().Select(property => property.Name).Append("matchVideoId").Order(),
+            current.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(JsonValueKind.Null, current.GetProperty("matchVideoId").ValueKind);
         foreach (var property in legacy.EnumerateObject())
             Assert.Equal(property.Value.GetRawText(), current.GetProperty(property.Name).GetRawText());
     }
@@ -83,6 +85,7 @@ public class CalendarSerializationTests
         Assert.Equal(BsonType.ObjectId, document["_id"].BsonType);
         Assert.False(document.Contains("MatchUrl"));
         Assert.False(document.Contains("OldEvent"));
+        Assert.False(document.Contains("matchVideoId"));
         var restored = BsonSerializer.Deserialize<CalendarEvent>(document);
         Assert.Equal(0, restored.Revision);
         Assert.Equal(Sample().Id, restored.Id);

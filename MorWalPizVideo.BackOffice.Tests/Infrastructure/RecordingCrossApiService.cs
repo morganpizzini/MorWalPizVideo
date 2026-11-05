@@ -8,10 +8,11 @@ public sealed class RecordingCrossApiService : ICrossApiService
     public List<string> PurgedTags { get; } = [];
     public List<string> RefreshedVideoIds { get; } = [];
     public bool ShouldFail { get; set; }
+    public string? FailOnKey { get; set; }
 
     public Task<string> ResetCache(string key)
     {
-        if (ShouldFail) throw new InvalidOperationException("simulated cache failure");
+        if (ShouldFail || key == FailOnKey) throw new InvalidOperationException("simulated cache failure");
         lock (ResetKeys)
         {
             ResetKeys.Add(key);
@@ -21,7 +22,7 @@ public sealed class RecordingCrossApiService : ICrossApiService
 
     public Task<string> PurgeCache(string key)
     {
-        if (ShouldFail) throw new InvalidOperationException("simulated cache failure");
+        if (ShouldFail || key == FailOnKey) throw new InvalidOperationException("simulated cache failure");
         lock (PurgedTags)
         {
             PurgedTags.Add(key);
@@ -46,5 +47,6 @@ public sealed class RecordingCrossApiService : ICrossApiService
         PurgedTags.Clear();
         RefreshedVideoIds.Clear();
         ShouldFail = false;
+        FailOnKey = null;
     }
 }

@@ -45,7 +45,7 @@ export function LegacySponsors() {
     handleReCaptchaVerify();
   }, [handleReCaptchaVerify]);
   return (
-    <>
+    <main className="sponsors-page">
       <PageTitle title="SPONSORS" subtitle="Scopri i partner che sostengono il progetto." />
       <div className="row text-center mb-5">
         {sponsors.map((sponsor: SponsorItem) => (
@@ -61,7 +61,7 @@ export function LegacySponsors() {
         ))}
       </div>
       <div className="row">
-        <div className="col-12 offset-md-8 col-md-4 bg-light p-3">
+        <div className="col-12 offset-md-8 col-md-4 sponsors-form p-3">
           <h4 className="mb-0">Vuoi aiutarmi anche tu in questa avventura?</h4>
           <p className="fs-08 mb-1">
             Lascia alcune informazioni base e verrai ricontattato, grazie!
@@ -121,7 +121,7 @@ export function LegacySponsors() {
           </fetcher.Form>
         </div>
       </div>
-    </>
+    </main>
   );
 }
 
@@ -130,7 +130,7 @@ export default function Sponsors() {
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   return (
-    <>
+    <main className="sponsors-page">
       <PageTitle title="SPONSORS" subtitle="Scopri i partner che sostengono il progetto." />
       <section className="card sponsors-card mb-5" aria-labelledby="sponsors-list-title">
         <div className="card-body">
@@ -158,7 +158,7 @@ export default function Sponsors() {
       </section>
       {form && (
         <div className="row">
-          <div className="col-12 offset-md-8 col-md-4 bg-light p-3">
+          <div className="col-12 offset-md-8 col-md-4 sponsors-form p-3">
             <CustomFormRenderer
               form={form}
               getRecaptchaToken={async () =>
@@ -177,6 +177,6 @@ export default function Sponsors() {
           </div>
         </div>
       )}
-    </>
+    </main>
   );
 }

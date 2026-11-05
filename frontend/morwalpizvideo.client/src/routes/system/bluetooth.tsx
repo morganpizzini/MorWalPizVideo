@@ -153,9 +153,10 @@ const BluetoothEventsPage = () => {
     }, []);
 
     return (
+        <main className="bluetooth-page">
         <Container className="my-5">
             <Card className="text-center">
-                <Card.Header>🟦 Dispositivo BLE - Event Logger</Card.Header>
+                <Card.Header as="h1" className="h4">Dispositivo BLE - Event Logger</Card.Header>
                 <Card.Body>
                     <Card.Title>Stato Connessione:</Card.Title>
                     <h5>
@@ -217,6 +218,7 @@ const BluetoothEventsPage = () => {
                 </Card.Body>
             </Card>
         </Container>
+        </main>
     );
 };
 

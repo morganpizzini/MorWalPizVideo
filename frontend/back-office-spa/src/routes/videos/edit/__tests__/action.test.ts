@@ -29,7 +29,7 @@ describe('video edit action', () => {
       publishedAt: '',
       creationDateTime: '2026-01-01T00:00:00.000Z',
     });
-    const formData = new FormData();
+    const formData = new URLSearchParams();
     formData.set('_intent', 'addVideoReference');
     formData.set('youtubeId', ' new-video ');
     formData.set('categories', JSON.stringify(['category-1']));

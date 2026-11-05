@@ -12,6 +12,8 @@ export interface CalendarEvent {
   channelId?: string;
   revision?: number;
   matchUrl?: string | null;
+  /** Public response only: sole attached video ID, null for collections; absent on legacy APIs. */
+  matchVideoId?: string | null;
   oldEvent?: boolean;
   creationDateTime?: string;
 }

@@ -48,6 +48,22 @@ beforeEach(() => {
 });
 
 describe('video detail images', () => {
+  it.each([
+    [0, 'Empty Collection (0 videos)'],
+    [1, 'Single Video (1 video)'],
+    [2, 'Collection (2 videos)'],
+  ])('classifies %i references without trusting the wire type', (count, label) => {
+    vi.mocked(useResolvedLoaderData).mockReturnValue({
+      match: { ...match, contentType: count === 1 ? 1 : 0, videoRefs: Array.from({ length: count }, (_, index) => ({
+        youtubeId: `video-${index}`, categories: [], channelIds: [],
+      })) },
+      channels: [],
+      categories: [],
+    });
+    render(<Component />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText('Match Type:')).not.toBeInTheDocument();
+  });
   it('uploads selected files and deletes an image using the updated contract', async () => {
     const uploadedImage = {
       publicUrl: 'https://cdn.test/new.jpg',

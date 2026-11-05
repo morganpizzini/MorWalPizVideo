@@ -28,4 +28,5 @@ public sealed record SaveCalendarEventRequest
 public sealed record PublicCalendarEventResponse(
     string Id, DateTime CreationDateTime, string Title, string Description,
     DateTime StartDate, DateTime EndDate, CategoryRef[] Categories,
-    string MatchId, string ChannelId, string? MatchUrl, bool OldEvent);
+    string MatchId, string ChannelId, string? MatchUrl, bool OldEvent,
+    string? MatchVideoId = null);

@@ -2,7 +2,22 @@
 
 ## Scope
 
-Accepted roadmap slices 5 and 6 cover Calendar only. Both APIs use `ICalendarService`; BackOffice accepts `SaveCalendarEventRequest` and returns the existing admin contract with an additive `revision`. ServerAPI returns `PublicCalendarEventResponse` with exactly the previous entity JSON fields, including `creationDateTime`, `oldEvent`, `channelId`, and enriched `matchUrl`. Public JSON does not expose revision. Routes, permissions, channel requirements, and existing cache behavior are unchanged.
+Accepted roadmap slices 5 and 6 cover Calendar only. Both APIs use `ICalendarService`; BackOffice accepts `SaveCalendarEventRequest` and returns the existing admin contract with an additive `revision`. ServerAPI retains the previous entity JSON fields, including `creationDateTime`, `oldEvent`, `channelId`, and enriched `matchUrl`, and now adds nullable response-only `matchVideoId` for reference-based video classification. Public JSON does not expose revision. Routes, permissions, and channel requirements are unchanged.
+
+For a visible aggregate with exactly one attached reference, both enriched
+`matchUrl` and `matchVideoId` contain that reference's YouTube ID, not its
+thumbnail or aggregate/content ID. Collections retain their content URL and
+serialize `matchVideoId: null`; unavailable/private matches retain the calendar
+entity's existing URL and have no projected video ID. The projection never
+updates calendar BSON or revisions. Admin/write DTOs remain unchanged.
+
+The public client uses the explicit video ID; field absence retains legacy
+rendering during rollout, while explicit null disables ID-equality guessing.
+Ship compatible public-client support before the new ServerAPI artifact.
+Video reference/URL mutations, refresh, deletion, and append compensation now
+also reset calendar memory entries and purge the lowercase calendar output tag.
+Invalidate old calendar payloads on activation/rollback. No data migration is
+required; see the [classification handoff](../feature-handoffs/video-reference-classification-handoff.md).
 
 The admin URL retains the title in the router's `:id` parameter. Loaders consume that already-decoded title and encode it once for `by-title`. Edits PUT to the persisted document ID, not the title. Route/body ID disagreement is rejected, server channel context overrides body channel, and updates preserve creation time. Categories retain embedded IDs/titles, including references absent from the current category list. Duplicate creation remains globally case-insensitive; duplicate-title updates retain their existing behavior.
 

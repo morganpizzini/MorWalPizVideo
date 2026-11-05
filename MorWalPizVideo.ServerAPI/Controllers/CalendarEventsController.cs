@@ -6,7 +6,6 @@ using MorWalPiz.Contracts;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Controllers;
 using MorWalPizVideo.Server.Services;
-using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 
 namespace MorWalPizVideo.ServerAPI.Controllers
 {
@@ -43,8 +42,9 @@ namespace MorWalPizVideo.ServerAPI.Controllers
                 return elements.Select(entity =>
                 {
                     matchesById.TryGetValue(entity.MatchId ?? string.Empty, out var match);
-                    var enriched = match == null ? entity : entity with { MatchUrl = match.ContentType == YoutubeContentType.SingleVideo ? match.ContentId : match.Url };
-                    return ContractUtils.ConvertPublic(enriched);
+                    var videoId = match?.IsLink == true ? match.VideoRefs[0].YoutubeId : null;
+                    var enriched = match == null ? entity : entity with { MatchUrl = videoId ?? match.Url };
+                    return ContractUtils.ConvertPublic(enriched) with { MatchVideoId = videoId };
                 }).ToList();
             }));
         }

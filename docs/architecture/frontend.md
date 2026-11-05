@@ -50,6 +50,12 @@ Current authentication is secure HttpOnly cookie based with CSRF protection; the
 
 Administrative capabilities, including API-key and digital-artifact management, belong only here.
 
+Video edit has no editable "Match Type". Edit and detail acknowledge attached
+references as Empty Collection (0 videos), Single Video (1 video), or
+Collection (N videos). Edit uses its existing reference state after successful
+append/revalidation, not a pending draft or the compatibility wire type.
+The list's existing reference-count URL rule is unchanged.
+
 RBAC and admin user management are owned by this SPA and the BackOffice API. The `/rbac` route tree validates the HttpOnly-cookie session through `/api/auth/validate`: user lists and details require `users.view`, lifecycle mutations require the corresponding `users.create`, `users.update`, or `users.delete` leaf, and groups, memberships, and direct-permission assignments require `users.permissions.manage`. The SPA does not reproduce hierarchy rules; it consumes server-expanded permissions. `users.manage` provides the reviewed user-administration capabilities, while `backoffice.manageall` is the frontend global override. Header controls do not depend on cached display identity or localStorage authorization state; denied sessions redirect to `/forbidden` and invalid sessions to `/login`.
 
 ## Public Application
@@ -62,6 +68,12 @@ RBAC and admin user management are owned by this SPA and the BackOffice API. The
 Public account UI is additive and does not guard existing content or anonymous Web Push routes. Session restoration is server-authoritative through the HttpOnly account cookie. Production activation is currently blocked because the deployed anonymous account CSRF endpoint returns `401` despite current source/test metadata allowing anonymous access; see the public-account handoff for the required deployed-artifact and host-policy proof.
 
 Remove API-key administration routes from this application. Replace legacy `morwalpiz.it` canonical metadata with the authoritative domain.
+
+Public calendar navigation consumes nullable response-only `matchVideoId` for
+the YouTube action and `matchUrl` for collection navigation. Explicit null
+means no single-video target; only responses with the field absent use the old
+ID-equality rule during rolling deployment. No new route or authentication
+requirement is introduced.
 
 ## Shop Client
 

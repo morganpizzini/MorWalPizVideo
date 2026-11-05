@@ -1,5 +1,6 @@
 export default function Privacy() {
   return (
+    <main>
     <article className="container py-4 legal-page">
       <h1>Informativa Privacy</h1>
       <p>Versione: 2026-11-01</p>
@@ -52,5 +53,6 @@ export default function Privacy() {
         versione.
       </p>
     </article>
+    </main>
   );
 }

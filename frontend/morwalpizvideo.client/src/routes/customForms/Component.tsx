@@ -143,6 +143,7 @@ export function LegacyCustomForm() {
 
   if (isSubmitted) {
     return (
+      <main className="custom-form-page">
       <div className="container my-5">
         <div className="row justify-content-center">
           <div className="col-md-8">
@@ -166,10 +167,12 @@ export function LegacyCustomForm() {
           </div>
         </div>
       </div>
+      </main>
     );
   }
 
   return (
+    <main className="custom-form-page">
     <div className="container my-5">
       <div className="row justify-content-center">
         <div className="col-md-8">
@@ -281,6 +284,7 @@ export function LegacyCustomForm() {
         </div>
       </div>
     </div>
+    </main>
   );
 }
 
@@ -289,6 +293,7 @@ export default function CustomFormPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   return (
+    <main className="custom-form-page">
     <div className="container my-5">
       <div className="row justify-content-center">
         <div className="col-md-8">
@@ -304,5 +309,6 @@ export default function CustomFormPage() {
         </div>
       </div>
     </div>
+    </main>
   );
 }

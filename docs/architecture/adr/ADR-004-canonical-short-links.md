@@ -13,6 +13,14 @@ The standalone record is canonical for every short-link type, including YouTube 
 
 ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. Detailed visits use a separate collection with an approved retention policy.
 
+YouTube resolution uses actual attached references, not the archival aggregate
+`contentType` or a thumbnail fallback. `/last` selects the latest reference by
+its existing creation-time ordering, including the sole-reference case.
+Canonical links require their stored target to remain attached and in the
+configured channel. Empty aggregates and removed targets retain explicit
+failure responses. This does not change canonical ownership, query parameters,
+mobile redirect schemes, or click/event accounting.
+
 Classified request analytics are additive to the canonical raw click count.
 The redirect classifies the request locally from User-Agent, atomically
 increments the raw count, category counter, and timestamp, then writes a

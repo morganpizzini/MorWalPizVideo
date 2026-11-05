@@ -34,6 +34,12 @@ export function shouldShowMainUrl(videoRefCount: number): boolean {
   return videoRefCount !== 1;
 }
 
+export function getVideoContentLabel(videoRefCount: number): string {
+  if (videoRefCount === 0) return 'Empty Collection (0 videos)';
+  if (!shouldShowMainUrl(videoRefCount)) return 'Single Video (1 video)';
+  return `Collection (${videoRefCount} videos)`;
+}
+
 export function getSocialPublishingVideoId(match: Match): string | undefined {
   return match.thumbnailVideoId || match.videoRefs?.[0]?.youtubeId;
 }

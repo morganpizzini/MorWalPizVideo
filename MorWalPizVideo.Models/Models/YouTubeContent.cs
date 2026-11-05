@@ -86,9 +86,16 @@ namespace MorWalPizVideo.Server.Models
         [BsonElement("categories")]
         public CategoryRef[] Categories { get; init; } = Array.Empty<CategoryRef>();
 
+        /// <summary>Legacy persisted discriminator; runtime classification uses attached references.</summary>
         [DataMember]
         [BsonElement("contentType")]
         public YoutubeContentType ContentType { get; init; } = YoutubeContentType.Collection;
+
+        [BsonIgnore]
+        [JsonIgnore]
+        public YoutubeContentType EffectiveContentType => VideoRefs?.Length == 1
+            ? YoutubeContentType.SingleVideo
+            : YoutubeContentType.Collection;
 
         [DataMember]
         [BsonElement("youtubeVideoLinks")]
@@ -138,9 +145,8 @@ namespace MorWalPizVideo.Server.Models
                 : CreationDateTime;
         }
 
-        // Backward compatibility property - the Match is considered a direct video link if it's a SingleVideo type
         [BsonIgnore]
-        public bool IsLink => ContentType == YoutubeContentType.SingleVideo;
+        public bool IsLink => EffectiveContentType == YoutubeContentType.SingleVideo;
 
         // Constructor for a single video match
         public static YouTubeContent CreateSingleVideo(string videoId, CategoryRef[] categories)
@@ -240,10 +246,10 @@ namespace MorWalPizVideo.Server.Models
         // Convert Match to VideoDisplayItem for UI
         public VideoDisplayItem ToDisplayItem()
         {
-            if (ContentType == YoutubeContentType.SingleVideo)
+            if (IsLink)
             {
                 return VideoDisplayItem.CreateSingleVideo(
-                    ThumbnailVideoId,
+                    VideoRefs[0].YoutubeId,
                     Title,
                     Description,
                     ThumbnailVideoId,
@@ -252,7 +258,7 @@ namespace MorWalPizVideo.Server.Models
             else
             {
                 // Get all video IDs from the VideoRefs
-                var videoIds = VideoRefs.Select(v => v.YoutubeId).ToArray();
+                var videoIds = (VideoRefs ?? []).Select(v => v.YoutubeId).ToArray();
 
                 return VideoDisplayItem.CreatePlaylist(
                     Id,

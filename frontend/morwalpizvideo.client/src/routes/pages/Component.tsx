@@ -13,14 +13,14 @@ export default function Matches() {
     trackPageView('page', '/pages/:slug');
   }
   return (
-    <>
+    <main className="public-page">
       <SEO
         title={page.title}
         description={description}
         imageUrl={page.thumbnailUrl}
         type="article"
       />
-      <div id="page-container" className="p-4 bg-white">
+      <div id="page-container" className="page-content">
         <h1 className="page-title">{page.title}</h1>
         <hr />
         {page.videoId && (
@@ -63,6 +63,6 @@ export default function Matches() {
           />
         )}
       </div>
-    </>
+    </main>
   );
 }

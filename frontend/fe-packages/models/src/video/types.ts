@@ -3,7 +3,7 @@
 import { ShortLink } from "../shortLink";
 
 /**
- * Enum representing the type of match in the system
+ * Compatibility wire values derived from attached references (exactly one is SingleVideo).
  */
 export enum ContentType {
   SingleVideo = 0,
@@ -74,7 +74,9 @@ export interface Match {
   thumbnailVideoId: string;
   videoRefs: VideoRef[];
   categories: CategoryRef[];
+  /** Computed from videoRefs; not an editable or authoritative stored discriminator. */
   contentType: ContentType;
+  /** Compatibility alias: true exactly when videoRefs contains one attachment. */
   isLink: boolean;
   creationDateTime: string;
   shortLinks: ShortLink[];

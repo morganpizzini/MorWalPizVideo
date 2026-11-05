@@ -255,6 +255,8 @@ public class VideosController : ApplicationControllerBase
 
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
+        await client.ResetCache(CacheKeys.CalendarEvents);
+        await client.PurgeCache(CacheKeys.CalendarEvents);
         await client.ReloadCache();
 
         return NoContent();
@@ -452,6 +454,8 @@ public class VideosController : ApplicationControllerBase
         await _contentService.DeleteMatchAsync(match.Id);
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
+        await client.ResetCache(CacheKeys.CalendarEvents);
+        await client.PurgeCache(CacheKeys.CalendarEvents);
         await client.ReloadCache();
         return NoContent();
     }
@@ -871,6 +875,8 @@ public class VideosController : ApplicationControllerBase
 
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
+        await client.ResetCache(CacheKeys.CalendarEvents);
+        await client.PurgeCache(CacheKeys.CalendarEvents);
         await client.ReloadCache();
 
         return Ok(ContractUtils.Convert(updatedMatch));
@@ -1029,6 +1035,8 @@ public class VideosController : ApplicationControllerBase
             {
                 await client.ResetCache(CacheKeys.Matches);
                 await client.PurgeCache(CacheKeys.Matches);
+                await client.ResetCache(CacheKeys.CalendarEvents);
+                await client.PurgeCache(CacheKeys.CalendarEvents);
             }
             catch (Exception cacheException)
             {
@@ -1047,6 +1055,8 @@ public class VideosController : ApplicationControllerBase
         await client.ResetCache(CacheKeys.Channels);
         await client.ResetCache(CacheKeys.Matches);
         await client.PurgeCache(CacheKeys.Matches);
+        await client.ResetCache(CacheKeys.CalendarEvents);
+        await client.PurgeCache(CacheKeys.CalendarEvents);
         await client.ReloadCache();
 
         return Ok(new { youtubeId, channelId = payload.ChannelId });
@@ -1184,6 +1194,7 @@ public class VideosController : ApplicationControllerBase
             logger.LogError(exception,
                 "Could not compensate video reference {VideoId} in match {MatchId}",
                 expectedReference.YoutubeId, matchId);
+            await InvalidateVideoCachesAsync(matchId);
             return false;
         }
     }
@@ -1221,6 +1232,22 @@ public class VideosController : ApplicationControllerBase
         succeeded &= purgeMatches.Succeeded;
         if (purgeMatches.Status is not null)
             statuses.Add(purgeMatches.Status);
+
+        var resetCalendar = await TryCacheOperationAsync(
+            () => client.ResetCache(CacheKeys.CalendarEvents),
+            "reset calendar",
+            matchId);
+        succeeded &= resetCalendar.Succeeded;
+        if (resetCalendar.Status is not null)
+            statuses.Add(resetCalendar.Status);
+
+        var purgeCalendar = await TryCacheOperationAsync(
+            () => client.PurgeCache(CacheKeys.CalendarEvents),
+            "purge calendar",
+            matchId);
+        succeeded &= purgeCalendar.Succeeded;
+        if (purgeCalendar.Status is not null)
+            statuses.Add(purgeCalendar.Status);
 
         var resetShortLinks = await TryCacheOperationAsync(
             () => client.ResetCache(CacheKeys.ShortLinks),

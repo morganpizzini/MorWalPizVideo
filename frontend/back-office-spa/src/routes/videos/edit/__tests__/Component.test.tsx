@@ -118,11 +118,13 @@ describe('Edit Video', () => {
     const user = userEvent.setup();
     const view = await renderComponent();
 
+    expect(screen.getByRole('status')).toHaveTextContent('Empty Collection (0 videos)');
     await user.type(screen.getByLabelText('YouTube ID'), 'new-video');
     await user.click(getManageCategoryButton());
     await user.click(screen.getByRole('button', { name: 'Add Video Reference' }));
 
     expect(screen.queryByText('new-video')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Empty Collection (0 videos)');
     expect(mockAddSubmit).toHaveBeenCalledWith(
       {
         _intent: 'addVideoReference',
@@ -151,6 +153,7 @@ describe('Edit Video', () => {
     view.rerender(<Component />);
 
     await waitFor(() => expect(screen.getByText('new-video')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent('Single Video (1 video)');
     expect(screen.getByText('/abc12')).toBeInTheDocument();
     expect(mockToastShow).toHaveBeenCalledWith('Success', 'Video reference added successfully', {
       variant: 'success',
@@ -171,6 +174,7 @@ describe('Edit Video', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('new-video')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Empty Collection (0 videos)');
       expect(mockToastShow).toHaveBeenCalledWith(
         'Video reference add failed',
         'Duplicate reference',
@@ -228,6 +232,9 @@ describe('Edit Video', () => {
     const submittedFormData = mockSaveSubmit.mock.calls[0][0] as FormData;
     expect(submittedFormData.get('title')).toBe('Updated title');
     expect(submittedFormData.get('videoRefs')).toBeNull();
+    expect(submittedFormData.get('matchType')).toBeNull();
+    expect(submittedFormData.get('contentType')).toBeNull();
+    expect(screen.queryByLabelText('Match Type')).not.toBeInTheDocument();
     expect(mockAddSubmit).not.toHaveBeenCalled();
   });
 
@@ -271,5 +278,40 @@ describe('Edit Video', () => {
     await renderComponent();
 
     expect(screen.getByText('/persisted-code')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Single Video (1 video)');
+  });
+
+  it('acknowledges a collection after loader revalidation even if the wire type is stale', async () => {
+    const view = await renderComponent();
+    vi.mocked(useLoaderData).mockReturnValue({
+      match: { ...match, videoRefs: [
+        { youtubeId: 'one', categories: [], channelIds: [] },
+        { youtubeId: 'two', categories: [], channelIds: [] },
+      ] },
+      categories,
+    });
+    view.rerender(<Component />);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Collection (2 videos)'));
+  });
+
+  it('changes a single video into a collection only after its second attachment succeeds', async () => {
+    vi.mocked(useLoaderData).mockReturnValue({
+      match: { ...match, videoRefs: [{ youtubeId: 'one', categories: [], channelIds: [] }] },
+      categories,
+    });
+    const user = userEvent.setup();
+    const view = await renderComponent();
+    expect(screen.getByRole('status')).toHaveTextContent('Single Video (1 video)');
+    await user.type(screen.getByLabelText('YouTube ID'), 'two');
+    await user.click(getManageCategoryButton());
+    await user.click(screen.getByRole('button', { name: 'Add Video Reference' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Single Video (1 video)');
+
+    addFetcher.data = { success: true, videoRef: {
+      youtubeId: 'two', categories, channelIds: ['channel-1'], title: 'Second video',
+      description: '', publishedAt: '', creationDateTime: '2026-01-01T00:00:00.000Z',
+    } };
+    view.rerender(<Component />);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Collection (2 videos)'));
   });
 });

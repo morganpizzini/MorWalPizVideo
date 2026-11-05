@@ -6,9 +6,10 @@ export default function Matches() {
   }
 
   return (
-    <>
-      <div id="page-container" className="p-4 bg-white">
+    <main className="links-page">
+      <div id="page-container" className="page-content">
         <div className="linktree-container">
+          <h1 className="visually-hidden">Link utili</h1>
           <div className="linktree-links">
             <a href="/sl/last" className="linktree-link" target="_blank" rel="noopener noreferrer">
               📺 Ultimo video YT 📺
@@ -40,6 +41,6 @@ export default function Matches() {
           </div>
         </div>
       </div>
-    </>
+    </main>
   );
 }

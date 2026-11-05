@@ -1,5 +1,6 @@
 export default function Terms() {
   return (
+    <main>
     <article className="container py-4 legal-page">
       <h1>Termini di utilizzo</h1>
       <p>Versione: 2026-10-27</p>
@@ -32,5 +33,6 @@ export default function Terms() {
         indicati sul sito.
       </p>
     </article>
+    </main>
   );
 }

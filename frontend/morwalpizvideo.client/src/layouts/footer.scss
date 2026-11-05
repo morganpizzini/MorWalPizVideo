@@ -3,9 +3,9 @@
     border-top: 1px solid #383838;
     background: #101010;
     color: #b8b8b8;
-    font-size: 13px;
+    font-size: var(--magazine-font-footer);
     &__inner { width: min(100%, 1540px); margin: auto; padding: 0 calc(30px + env(safe-area-inset-right)) 0 calc(30px + env(safe-area-inset-left)); }
-    h5 { color: #fff; font-size: 14px; font-weight: 700; }
+    h5 { color: #fff; font-size: var(--magazine-font-body); font-weight: 700; }
     a:hover { color: #ffff36 !important; }
     .social-links { border-left: 0; padding-left: 0; margin-bottom: 20px; }
     &__destinations { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 20px; a { color: #fff; text-decoration: none; } }

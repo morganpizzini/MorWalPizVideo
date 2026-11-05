@@ -3,7 +3,6 @@ using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services;
-using YoutubeContentType = MorWalPizVideo.Server.Models.YoutubeContentType;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Server.Services.Interfaces;
 using MorWalPizVideo.ShortLinks.Services;
@@ -98,18 +97,10 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 if (lastMatch == null)
                     return BadRequest("last match cannot found");
 
-                string videoId; 
-                if (lastMatch.ContentType == YoutubeContentType.SingleVideo)
-                {
-                    videoId = lastMatch.ThumbnailVideoId;
-                }
-                else
-                {
-                    var selectedVideo = lastMatch.VideoRefs.OrderByDescending(x => x.CreationDateTime).FirstOrDefault();
-                    if (selectedVideo == null)
-                        return BadRequest("Video not found");
-                    videoId = selectedVideo.YoutubeId;
-                }
+                var selectedVideo = (lastMatch.VideoRefs ?? []).OrderByDescending(x => x.CreationDateTime).FirstOrDefault();
+                if (selectedVideo == null)
+                    return BadRequest("Video not found");
+                var videoId = selectedVideo.YoutubeId;
                 string lastQueryString = "&list=PLS0u4VTR02qSj1w2YktAft_4Vs52O9adG";
                 return RedirectYouTubeVideo(videoId, lastQueryString, isAndroid, isIOS);
             }
@@ -279,12 +270,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                     var selectedVideo = existingMatch.VideoRefs.FirstOrDefault(x => x.YoutubeId == shortLink.Target);
                     var videoId = selectedVideo?.YoutubeId;
                     if (videoId is null)
-                    {
-                        if (existingMatch.ContentType != YoutubeContentType.SingleVideo)
-                            return BadRequest("Video shortLink not found");
-
-                        videoId = existingMatch.ThumbnailVideoId;
-                    }
+                        return BadRequest("Video shortLink not found");
 
                     return RedirectYouTubeVideo(videoId, linkQuerystring, isAndroid, isIOS);
             }

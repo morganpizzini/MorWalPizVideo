@@ -9,6 +9,7 @@ import { Match, VideoRef, CategoryRef, LinkType } from '@morwalpizvideo/models';
 import VideoRefEditModal from '@components/VideoRefEditModal';
 import TagInput from '@components/TagInput';
 import { normalizeTags } from '@components/TagInput/tagRules';
+import { getVideoContentLabel } from '@components/VideoList';
 
 type CategoryWithFallbackId = CategoryRef & { categoryId?: string };
 
@@ -304,22 +305,6 @@ const Component: React.FC = () => {
 
                 <Row className="mb-3">
                   <Col sm={3}>
-                    <BootstrapForm.Label htmlFor="matchType">Match Type</BootstrapForm.Label>
-                  </Col>
-                  <Col sm={9}>
-                    <BootstrapForm.Select
-                      id="matchType"
-                      name="matchType"
-                      defaultValue={match.contentType.toString()}
-                    >
-                      <option value="0">Single Video</option>
-                      <option value="1">Collection</option>
-                    </BootstrapForm.Select>
-                  </Col>
-                </Row>
-
-                <Row className="mb-3">
-                  <Col sm={3}>
                     <BootstrapForm.Label htmlFor="thumbnailVideoId">
                       Thumbnail Video ID
                     </BootstrapForm.Label>
@@ -354,6 +339,12 @@ const Component: React.FC = () => {
           <Card className="mt-3">
             <Card.Header>
               <h5>Manage Video References ({videoRefs.length})</h5>
+              <div role="status" aria-live="polite">
+                <strong>Content: </strong>
+                <Badge bg={videoRefs.length === 1 ? 'info' : 'warning'} text="dark">
+                  {getVideoContentLabel(videoRefs.length)}
+                </Badge>
+              </div>
             </Card.Header>
             <Card.Body>
               <div className="border rounded p-3 mb-3">

@@ -26,42 +26,22 @@ namespace MorWalPizVideo.Server.Services
             
             IList<YouTubeContent> matches = await _dataService.FetchMatches();
 
-            // Get all videoIds that need to be populated with details
-            // For single videos (IsLink=true), fetch if title/description is empty
-            // For collections, get all videoIds from the VideoRefs
-            var videoIds = new List<string>();
-            
-            // Add single video IDs that need metadata
-            videoIds.AddRange(
-                matches
-                    .Where(x => x.IsLink && (string.IsNullOrEmpty(x.Title) || string.IsNullOrEmpty(x.Description)))
-                    .Select(x => x.ThumbnailVideoId)
-            );
-            
-            // Add collection video ref IDs that need metadata
-            videoIds.AddRange(
-                matches
-                    .Where(x => !x.IsLink && x.VideoRefs != null && x.VideoRefs.Length > 0)
-                    .SelectMany(x => x.VideoRefs)
-                    .Where(a => string.IsNullOrEmpty(a.Title))
-                    .Select(x => x.YoutubeId)
-            );
-            
-            videoIds = videoIds.Distinct().ToList();
+            var videoIds = matches
+                .SelectMany(match => (match.VideoRefs ?? [])
+                    .Where(video => string.IsNullOrEmpty(video.Title) || string.IsNullOrEmpty(video.Description) ||
+                        (IsProviderOwnedRoot(match) &&
+                         (string.IsNullOrEmpty(match.Title) || string.IsNullOrEmpty(match.Description))))
+                    .Select(video => video.YoutubeId))
+                .Distinct()
+                .ToList();
 
             if (videoIds.Count > 0)
             {
                 var videos = await _youtubeService.FetchFromYoutube(videoIds);
                 matches = ParseMatches(matches, videos);
 
-                // Identify matches that need to be updated in the repository
                 var matchesToUpdate = matches
-                    .Where(x => x.IsLink && videoIds.Contains(x.ThumbnailVideoId))
-                    .Concat(
-                        matches
-                            .Where(x => !x.IsLink && x.VideoRefs != null)
-                            .Where(x => x.VideoRefs.Any(v => videoIds.Contains(v.YoutubeId)))
-                    )
+                    .Where(match => (match.VideoRefs ?? []).Any(video => videoIds.Contains(video.YoutubeId)))
                     .ToList();
 
                 foreach (var match in matchesToUpdate)
@@ -82,19 +62,7 @@ namespace MorWalPizVideo.Server.Services
                 return null;
             }
 
-            // Collect all video IDs that need to be refreshed (force refresh, ignore existing metadata)
-            var videoIds = new List<string>();
-            
-            if (match.IsLink)
-            {
-                // For single videos, refresh the thumbnail video
-                videoIds.Add(match.ThumbnailVideoId);
-            }
-            else if (match.VideoRefs != null && match.VideoRefs.Length > 0)
-            {
-                // For collections, refresh all video refs
-                videoIds.AddRange(match.VideoRefs.Select(x => x.YoutubeId));
-            }
+            var videoIds = (match.VideoRefs ?? []).Select(video => video.YoutubeId).Distinct().ToList();
 
             if (videoIds.Count == 0)
             {
@@ -102,7 +70,7 @@ namespace MorWalPizVideo.Server.Services
             }
 
             // Fetch fresh YouTube metadata
-            var videos = await _youtubeService.FetchFromYoutube(videoIds.Distinct().ToList());
+            var videos = await _youtubeService.FetchFromYoutube(videoIds);
             
             // Parse and update the match
             var updatedMatches = ParseMatches(new[] { match }, videos);
@@ -153,6 +121,9 @@ namespace MorWalPizVideo.Server.Services
             return builder.ToString();
         }
 
+        private static bool IsProviderOwnedRoot(YouTubeContent match) =>
+            match.IsLink && string.Equals(match.ContentId, match.VideoRefs[0].YoutubeId, StringComparison.Ordinal);
+
         private IList<YouTubeContent> ParseMatches(IList<YouTubeContent> matches, IList<Video> videos)
         {
             // Create a dictionary for quick video lookup
@@ -161,93 +132,44 @@ namespace MorWalPizVideo.Server.Services
 
             foreach (var match in matches)
             {
-                if (match.IsLink && videoDict.TryGetValue(match.ThumbnailVideoId, out var singleVideo))
+                var publishedDates = new List<DateTime>();
+                var updatedVideoRefs = (match.VideoRefs ?? []).Select(videoRef =>
                 {
-                    // For single video matches, update title, description, etc. from the video
-                    // Also update the VideoRef with metadata
-                    var updatedVideoRef = new VideoRef(
-                        singleVideo.YoutubeId,
-                        match.VideoRefs?.FirstOrDefault()?.Categories ?? Array.Empty<CategoryRef>(),
-                        singleVideo.Title,
-                        singleVideo.Description,
-                        singleVideo.PublishedAt,
-                        match.VideoRefs?.FirstOrDefault()?.ChannelIds
-                    )
+                    if (!videoDict.TryGetValue(videoRef.YoutubeId, out var video))
+                        return videoRef;
+
+                    if (video.PublishedAt != DateTime.MinValue)
+                        publishedDates.Add(video.PublishedAt);
+
+                    return videoRef with
                     {
-                        CreationDateTime = match.VideoRefs?.FirstOrDefault()?.CreationDateTime ?? DateTime.UtcNow
+                        Title = video.Title,
+                        Description = video.Description,
+                        PublishedAt = video.PublishedAt
                     };
-                    
-                    // Generate URL from title if current URL is empty
-                    var url = string.IsNullOrWhiteSpace(match.Url) 
-                        ? GenerateUrlSlug(singleVideo.Title) 
-                        : match.Url;
-                    
-                    var updatedMatch = match with
+                }).ToArray();
+                var updatedMatch = match with { VideoRefs = updatedVideoRefs };
+
+                // Presentation cardinality does not transfer ownership of editorial metadata.
+                if (IsProviderOwnedRoot(match) && videoDict.TryGetValue(match.VideoRefs[0].YoutubeId, out var singleVideo))
+                {
+                    updatedMatch = updatedMatch with
                     {
                         Title = singleVideo.Title,
                         Description = singleVideo.Description,
-                        Url = url,
-                        CreationDateTime = singleVideo.PublishedAt,
-                        VideoRefs = new[] { updatedVideoRef }
+                        Url = string.IsNullOrWhiteSpace(match.Url) ? GenerateUrlSlug(singleVideo.Title) : match.Url,
+                        CreationDateTime = singleVideo.PublishedAt
                     };
-                    
-                    updatedMatches.Add(updatedMatch);
                 }
-                else if (!match.IsLink && match.VideoRefs?.Length > 0)
+                else if (publishedDates.Count > 0)
                 {
-                    // For collection matches, load video details for all the refs
-                    var videosList = new List<Video>();
-                    var updatedVideoRefs = new List<VideoRef>();
-                    
-                    foreach (var videoRef in match.VideoRefs)
+                    updatedMatch = updatedMatch with
                     {
-                        if (videoDict.TryGetValue(videoRef.YoutubeId, out var video))
-                        {
-                            // Set the category from the ref
-                            videosList.Add(video with { Categories = videoRef.Categories });
-                            
-                            // Create updated VideoRef with metadata from fetched video
-                            var updatedVideoRef = new VideoRef(
-                                videoRef.YoutubeId,
-                                videoRef.Categories,
-                                video.Title,
-                                video.Description,
-                                video.PublishedAt,
-                                videoRef.ChannelIds
-                            )
-                            {
-                                CreationDateTime = videoRef.CreationDateTime
-                            };
-                            updatedVideoRefs.Add(updatedVideoRef);
-                        }
-                        else
-                        {
-                            // Keep original VideoRef if video data not found
-                            updatedVideoRefs.Add(videoRef);
-                        }
-                    }
-
-                    // Update the match with the new VideoRefs containing metadata
-                    var updatedMatch = match with { VideoRefs = updatedVideoRefs.ToArray() };
-                    
-                    // Update creation date time based on oldest video
-                    if (videosList.Count > 0 && videosList.Any(v => v.PublishedAt != DateTime.MinValue))
-                    {
-                        updatedMatch = updatedMatch with
-                        {
-                            CreationDateTime = videosList
-                                .Where(v => v.PublishedAt != DateTime.MinValue)
-                                .Min(v => v.PublishedAt)
-                        };
-                    }
-
-                    updatedMatches.Add(updatedMatch);
+                        CreationDateTime = publishedDates.Min()
+                    };
                 }
-                else
-                {
-                    // No changes needed
-                    updatedMatches.Add(match);
-                }
+
+                updatedMatches.Add(updatedMatch);
             }
 
             return updatedMatches;

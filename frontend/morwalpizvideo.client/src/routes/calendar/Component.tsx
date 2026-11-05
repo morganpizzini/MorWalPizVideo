@@ -17,6 +17,7 @@ interface CalEvent {
   categories?: CalCategory[];
   matchId?: string;
   matchUrl?: string;
+  matchVideoId?: string | null;
 }
 
 export default function Calendar() {
@@ -25,7 +26,7 @@ export default function Calendar() {
     trackPageView('calendar', '/calendar');
   }
   return (
-    <>
+    <main className="calendar-page">
       <SEO
         title="calendar"
         description="i miei prossimi impegni"
@@ -37,6 +38,9 @@ export default function Calendar() {
       <div className="calendar-container p-4">
         {calendar.map((event: CalEvent, i: number) => {
           const isOldEvent = event.oldEvent;
+          const videoId = event.matchVideoId === undefined
+            ? (event.matchUrl === event.matchId ? event.matchUrl : null)
+            : event.matchVideoId;
           return (
             <div
               key={i}
@@ -83,9 +87,9 @@ export default function Calendar() {
                   {/* Right section: Match Link */}
                   {event.matchId && event.matchUrl && (
                     <div className="event-actions ms-md-3 mt-3 mt-md-0 d-flex align-items-start">
-                      {event.matchUrl === event.matchId ? (
+                      {videoId ? (
                         <Link
-                          to={`https://youtu.be/${event.matchUrl}`}
+                          to={`https://youtu.be/${videoId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-link p-0 youtube-link"
@@ -110,6 +114,6 @@ export default function Calendar() {
           );
         })}
       </div>
-    </>
+    </main>
   );
 }

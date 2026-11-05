@@ -4,8 +4,8 @@ export default function Matches() {
     trackPageView('sponsor-video', '/sponsors-video');
   }
   return (
-    <>
-      <div id="page-container" className="p-4 bg-white">
+    <main className="sponsors-video-route">
+      <div className="sponsors-video-page">
         <h1 className="page-title">Video di presentazione</h1>
         <hr />
         <p>
@@ -48,6 +48,6 @@ export default function Matches() {
           </a>
         </div>
       </div>
-    </>
+    </main>
   );
 }
