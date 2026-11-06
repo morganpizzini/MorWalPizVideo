@@ -90,7 +90,6 @@ jobs:
           cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
-        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.MORWALPIZVIDEO_CLIENT_APP_NAME }}

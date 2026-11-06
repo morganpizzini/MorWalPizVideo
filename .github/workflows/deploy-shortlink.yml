@@ -19,6 +19,7 @@ on:
   workflow_dispatch:
   
 permissions:
+  id-token: write
   contents: read 
   checks: write
 
@@ -84,9 +85,50 @@ jobs:
           cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
           cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
-      - name: Deploy to Azure Web App
+      - name: Deploy Docker image to Azure Web App
         if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.SHORTLINKS_APP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy-code-to-azure:
+    name: Deploy Code Package to Azure
+    runs-on: ubuntu-latest
+    environment: production
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj
+
+      - name: Build
+        run: dotnet build MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj --configuration Release --no-build --output ./publish
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy code package to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.SHORTLINKS_APP_NAME }}
+          package: ./publish
+
+      - name: Azure logout
+        if: always()
+        run: az logout

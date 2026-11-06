@@ -46,9 +46,9 @@ Other Azure application names and custom bindings are environment-managed and mu
 
 ## Container Image Staging
 
-Deployment workflows now run validation first, then build and push a commit-SHA image and a mutable `latest` tag to the configured Azure Container Registry. Buildx imports and exports a per-image `buildcache` registry reference. The existing Azure Web App deployment steps are retained but explicitly skipped; image publication does not update any running App Service or change the production topology. The ServerAPI post-deployment smoke test is skipped with its deployment step.
+Deployment workflows run validation first, then build and push a commit-SHA image and a mutable `latest` tag to the configured Azure Container Registry. Buildx imports and exports a per-image `buildcache` registry reference. BackOffice API, ServerAPI, and ShortLinks also retain their existing ZIP-package deployments to Azure Web Apps in separate jobs. Their test gates are prerequisites for both jobs. ServerAPI runs its anonymous account bootstrap smoke test after the package deployment. The Azure image-deployment step remains explicitly skipped in these workflows.
 
-This is a temporary migration stage. To resume Azure deployment, an operator must deliberately re-enable the owning workflow's Azure Web App step and verify the image's runtime configuration, health/readiness, and rollback procedure. No image cleanup is performed by these workflows. The shop workflow follows the same requested image-only staging, but this does not lift its product or runtime hold.
+For other application workflows, Azure Web App deployment remains skipped while image-only staging is prepared. Resuming deployment from those images requires verifying runtime configuration, health/readiness, and rollback. No image cleanup is performed by these workflows. The shop workflow follows image-only staging, but this does not lift its product or runtime hold.
 
 ## Local Orchestration
 
