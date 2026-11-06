@@ -1,919 +1,596 @@
-# Blog Reader Interactions Handoff
+# Blog Account Interactions Handoff
 
-Status: proposed architecture for user review; not approved or implemented.
-User decisions incorporated: anonymous comment viewing, channel-owned registration
-and administration, and a directory of every portal registrant (2026-11-05).
-Evidence inspected: 2026-11-05. Source inspection only; no applications, tests,
-builds, deployments, or database operations were run.
+Status: implemented; deployment verification remains.
+Initial evidence was collected on 2026-11-05. Implementation and validation details
+are recorded below.
+
+This revision supersedes the earlier channel-owned registration proposal. The user
+now wants one shared public identity, compatible with FreezerAnalysis, a BackOffice
+directory of all public accounts, and channel-specific portal restrictions.
+There is no separate "reader account" type: reader describes someone viewing an
+article, anonymously or using their existing public account.
 
 ## Outcome
 
-Enable article sharing, registered-reader comments, and like/dislike reactions in
-the public MorWalPiz application. Give BackOffice an article interaction view,
-comment moderation, and reader details containing their comments and reactions.
-A signed-in comment-blocked reader must not see the comments section, and ServerAPI
-must reject that account's authenticated comment operations. Approved comments are
-public; accessing them after logout is explicitly acceptable to the user.
+Enable sharing, comments and like/dislike interactions on published articles.
+Anonymous visitors can read approved comments; logged-in public accounts can
+interact unless restricted for that portal's channel. BackOffice shows all public
+accounts, including accounts with zero article activity, and their interaction
+details filtered to the selected channel.
 
-Confirmed requirements:
+Confirmed decisions:
 
-- Anonymous visitors can read approved comments. Posting and reacting require an
-  active account registered to the current portal's channel.
-- Registration, account management, articles, interactions and restrictions are
-  channel-owned. Public clients cannot select a foreign channel in a request.
-- A comment block applies across articles in the selected channel, not across
-  unrelated applications. It does not disable login, sharing, or reactions.
-- BackOffice lists every account registered to the selected channel's portal,
-  including readers with no comments or reactions, and manages them from detail.
+- Public identity/registration is shared, not channel-owned. The same account may
+  use FreezerAnalysis and public portals. Staff BackOffice identity remains separate.
+- Articles, comments, reactions and portal restrictions are channel-owned.
+- Anonymous approved-comment viewing is allowed. Comment-blocked accounts can still
+  read approved comments and react; blocking only disables comment submission.
+- BackOffice provides an all-public-account directory and account detail, not a
+  directory inferred from comments or a channel registration list.
 
-Proposed defaults retained for review:
+Confirmed behavior:
 
-- Sharing needs no account. Comments start pending; moderators approve, reject or hide.
-- Reader details show all paginated comments and current reactions in that channel,
-  not staff RBAC history or an invented record of completed social shares.
-- Reader administration includes profile editing and account deactivation/reactivation,
-  separately from comment-only blocking. Password recovery and permanent deletion
-  remain separately scoped lifecycle work.
+- Every active public account can interact with a portal by default. No per-channel
+  signup, membership record or onboarding step is required.
+- Distinguish comment-only blocking from revocation of authenticated portal access.
+  Comment blocking prevents comment submission but leaves approved comments visible
+  and reactions available. Portal revocation prevents authenticated comments and
+  reactions; public articles and approved comments remain readable.
+- Neither action disables the shared account, logs it out of FreezerAnalysis, nor
+  changes its global password/profile. Anonymous articles/comments remain public.
+- Comments start pending; moderators approve, reject or hide them.
 
-Completion boundary: one coherent path from working registration through an
-article interaction to BackOffice inspection, reader management, moderation,
-blocking and unblocking. Registration must immediately populate the channel directory.
-Do not redesign the blog editor, merge identity stores, reopen the shop, implement
-social auto-publishing, or add a general-purpose activity/event platform.
+Completion boundary: existing account registration/login works in the public app;
+an account can interact with an article; an authorized administrator finds that
+account before or after any interaction, inspects selected-channel activity,
+moderates comments, and blocks/revokes/restores that channel's access.
 
-## Current Evidence
+Non-goals: separate reader identities, channel account cloning or migration,
+cross-host cookie SSO, global account suspension/password administration,
+staff/public identity merging, social auto-publishing, shop work, replies,
+notifications, and a general-purpose activity platform.
 
-### Capability assessment
+## Delivered Implementation
 
-| Capability | Verified current source | Gap |
-| --- | --- | --- |
-| Structured articles | Published-only public list/detail, separate draft snapshot, channel ownership, revision protection | No interaction model, endpoints, or article interaction UI |
-| Reader registration | Public account contracts, Domain service, Mongo/mock repository, registration/login/session/profile/logout endpoints | Screens are not connected to the active router; accounts/lookups are not channel-scoped |
-| Public account navigation | Root mounts the account provider; authenticated header links to profile | The profile URL is not registered; anonymous discovery must be included in the repair |
-| Social sharing | Homepage uses `react-share` for Facebook/WhatsApp; blog article has Open Graph and Article metadata | Article detail has no share controls; deployed crawler behavior is unverified |
-| Comments / like / dislike | No such fields or workflow in the inspected blog model, contracts, service or routes | New focused persistence, contracts, APIs and UI required |
-| BackOffice user details | Staff profile, RBAC, password controls and administrative audit logs | Reads staff `User`, not `PublicAccount`; cannot show registered readers by reusing the staff ID |
-| BackOffice article management | Create/save/publish/unpublish/delete/images under channel scope and Pages permissions | No reaction counts, comment queue or reader restriction controls |
-| Comment restriction | Public accounts have activity/security-version state, not a blog comment restriction | Needs a separately owned, server-enforced moderation rule |
+The public article page now has canonical social-share controls, authenticated
+like/dislike reactions, and approved comments with a sign-in prompt for anonymous
+visitors. Existing shared-account registration/login/profile routes are wired into
+the public client. ServerAPI resolves the configured public channel; accounts remain
+global and unchanged.
 
-### Source ownership and flow
+BackOffice has a permission-gated global public-account directory, interaction and
+portal-access detail for the selected channel, article interaction summaries, and
+comment moderation. Directory/detail DTOs omit email and credentials. Comment blocks
+only prevent posting. Portal revocation prevents authenticated reactions and
+comments. Both preserve public article and approved-comment reads.
 
-- [Public route configuration](../../frontend/morwalpizvideo.client/src/routes/config.tsx)
-  defines `/blog` and `/blog/:slug`, but imports none of the account screens and
-  defines no `/account/login`, `/account/register`, or `/account/profile`.
-  [Browser bootstrap](../../frontend/morwalpizvideo.client/src/main.tsx) uses this
-  route configuration directly.
-- [Account screens](../../frontend/morwalpizvideo.client/src/routes/account/Components.tsx)
-  already invoke registration/login/profile services and navigate to those URLs.
-  [Public root](../../frontend/morwalpizvideo.client/src/routes/layout/root.tsx)
-  mounts the [account provider](../../frontend/morwalpizvideo.client/src/routes/layout/account.tsx).
-  Its restoration catch currently converts every failure to an anonymous session,
-  making an outage indistinguishable from being signed out.
-- [PublicAccountController and PublicProfileController](../../MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs)
-  expose versioned endpoints and use account CSRF validation.
-  [PublicAccountService](../../MorWalPizVideo.Domain/Accounts/PublicAccountService.cs)
-  normalizes identities, records legal acknowledgements, hashes passwords,
-  creates eight-hour sessions, and validates account activity/security version.
-  [PublicAccount](../../MorWalPizVideo.Models/Models/PublicAccount.cs) and its session
-  are separate from [staff User](../../MorWalPizVideo.Models/Models/User.cs).
-- [Public account authentication](../../MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs)
-  reads the dedicated HttpOnly cookie and revalidates the persisted session.
-  [Public account transport](../../frontend/fe-packages/services/src/publicAccountService.ts)
-  uses the isolated account client; [transport core](../../frontend/fe-packages/services/src/apiTransport.ts)
-  separately owns public, account and administrative request contexts.
-- Public blog flow is
-  [article route/loader](../../frontend/morwalpizvideo.client/src/routes/blog/index.tsx)
-  → [blog service client](../../frontend/fe-packages/services/src/blogService.ts)
-  → [BlogController](../../MorWalPizVideo.ServerAPI/Controllers/BlogController.cs)
-  → [BlogService and repositories](../../MorWalPizVideo.Domain/BlogService.cs)
-  → [BlogPost](../../MorWalPizVideo.Models/Models/BlogPost.cs).
-  ServerAPI resolves the configured public channel, never a visitor-supplied one.
-  Both public content endpoints have 300-second output caching tagged `blog`.
-- [BlogPostsController](../../MorWalPizVideo.BackOffice/Controllers/BlogPostsController.cs)
-  receives channel ownership through the established pipeline. Publication and
-  deletion coordinate content cache eviction through `ICrossApiService`.
-  Blog writes replace the aggregate with an expected revision.
-- [Blog contracts](../../MorWalPiz.Contracts/Contracts/BlogContracts.cs) and
-  [TypeScript blog models](../../frontend/fe-packages/models/src/blog.ts) expose
-  published content without public account identity or interaction state.
-- [Staff detail page](../../frontend/back-office-spa/src/routes/rbac/UsersDetailPage.tsx)
-  reads RBAC and staff audit endpoints. [UserController](../../MorWalPizVideo.BackOffice/Controllers/UserController.cs)
-  reads staff through `DataService`; it is not a public reader-management API.
-  BackOffice currently registers no public-account repository in its
-  [composition root](../../MorWalPizVideo.BackOffice/Program.cs).
-- [Homepage ShareMenu](../../frontend/morwalpizvideo.client/src/routes/home/Component.tsx)
-  provides prior art. [Public package manifest](../../frontend/morwalpizvideo.client/package.json)
-  already declares `react-share`; no sharing SDK dependency is necessary.
-  [SEO helper](../../frontend/morwalpizvideo.client/src/utils/seo.tsx) emits canonical
-  and Open Graph metadata, but browser canonical origin follows the current host.
-- [Mongo index operations](../../MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs)
-  declare public-account username/email uniqueness and session TTL indexes.
-  Source declarations are not evidence that indexes have been applied.
-- Channel ownership is absent from `PublicAccount` and its session. Current
-  [repository interface](../../MorWalPizVideo.Domain/Interfaces/IRepository.cs),
+Implementation owners include:
+- Models, contracts, Domain repositories/services and authorization:
+  [BlogInteractions.cs](../../MorWalPizVideo.Models/Models/BlogInteractions.cs),
+  [BlogInteractionContracts.cs](../../MorWalPiz.Contracts/Contracts/BlogInteractionContracts.cs),
+  [BlogInteractionService.cs](../../MorWalPizVideo.Domain/BlogInteractions/BlogInteractionService.cs).
+- Public API and BackOffice API:
+  [ServerAPI BlogInteractionsController](../../MorWalPizVideo.ServerAPI/Controllers/BlogInteractionsController.cs),
+  [BackOffice BlogInteractionsController](../../MorWalPizVideo.BackOffice/Controllers/BlogInteractionsController.cs),
+  [PublicAccountsController](../../MorWalPizVideo.BackOffice/Controllers/PublicAccountsController.cs).
+- Public client and shared contracts/services:
+  [Interactions.tsx](../../frontend/morwalpizvideo.client/src/routes/blog/Interactions.tsx),
+  [blogInteractionService.ts](../../frontend/fe-packages/services/src/blogInteractionService.ts),
+  [blogInteractions.ts](../../frontend/fe-packages/models/src/blogInteractions.ts).
+- BackOffice UI:
+  [public accounts](../../frontend/back-office-spa/src/routes/publicAccounts/index.tsx),
+  [account detail](../../frontend/back-office-spa/src/routes/publicAccounts/detail.tsx),
+  [article interactions](../../frontend/back-office-spa/src/routes/blogInteractions/index.tsx).
+
+Mongo collections are additive: `blogComments`, `blogReactions`, and
+`blogPortalAccess`. ServerAPI and BackOffice create/verify their declared indexes
+before accepting traffic in Mongo mode; mock mode skips the initializer. This
+feature-scoped startup behavior is defined in
+[ADR-022](../architecture/adr/ADR-022-startup-blog-index-bootstrap.md). Also verify
+the deployed public account stores are shared as intended; identity compatibility
+does not imply shared sessions.
+
+Focused tests cover Domain behavior, API authorization/moderation/public reads,
+frontend interaction behavior, and scoped versus unscoped transport. Final validation
+for this delivery is listed in the completion record at the end of this document.
+Browser visual capture and production account-store/index verification remain open.
+
+## Initial Evidence (Before Implementation)
+
+### Verified identity boundary
+
+- [PublicAccount](../../MorWalPizVideo.Models/Models/PublicAccount.cs) has username,
+  normalized username/email, display name, password hash, legal acknowledgements,
+  activity and security version, but no channel ownership. Its sessions reference
+  account ID with fixed expiry and revocation state.
+- [PublicAccountService](../../MorWalPizVideo.Domain/Accounts/PublicAccountService.cs)
+  already owns registration, password verification, eight-hour sessions, account
+  activity/security-version revalidation, logout and profile operations.
+- [Repository interface](../../MorWalPizVideo.Domain/Interfaces/IRepository.cs),
   [Mongo repository](../../MorWalPizVideo.Domain/Interfaces/Repository.cs) and
-  [mock repository](../../MorWalPizVideo.Domain/Interfaces/MockRepository.cs) find
-  identities by username/email/ID without channel filtering. Current indexes make
-  username/email unique across the whole account collection, not per portal.
-- [Freezer account controller](../../FreezerAnalysis.Api/Controllers/FreezerAccountController.cs)
-  also uses `IPublicAccountService`. Its
-  [Mongo registration](../../FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs)
-  registers the same account repository against the platform database, while its
-  feature data uses a distinct database. The public cookie handler also invokes the
-  shared service without an expected identity scope. Every one of these consumers
-  must be updated before scoped identities are introduced.
-- [Endpoint tests](../../MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs)
-  exercise registration, CSRF, restoration, profile/logout and legal acceptance.
-  [Blog controller tests](../../MorWalPizVideo.BackOffice.Tests/Features/BlogControllerTests.cs)
-  and [service tests](../../MorWalPizVideo.BackOffice.Tests/Features/BlogServiceTests.cs)
-  cover publication, ownership, revisions, validation and caches.
-  [Public route tests](../../frontend/morwalpizvideo.client/src/routes/blog/index.test.tsx)
-  cover published rendering, SEO and loader errors. These were inspected, not run.
+  [mock repository](../../MorWalPizVideo.Domain/Interfaces/MockRepository.cs) use
+  global username/email/ID lookup. These match the revised shared identity model.
+- [FreezerAnalysis Mongo registration](../../FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs)
+  registers that same service/repository against its configured platform account
+  database. Its application database is separate.
+  [Freezer account controller](../../FreezerAnalysis.Api/Controllers/FreezerAccountController.cs)
+  uses the shared service, but issues a distinct host-owned session cookie.
+- [ServerAPI account controllers](../../MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs)
+  use the dedicated public account cookie/CSRF behavior in
+  [PublicAccountAuthentication](../../MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs).
+  Sharing identity does not currently share browser sessions across those hosts.
+  Whether deployed hosts target the same account store requires operational proof.
+- [Staff User](../../MorWalPizVideo.Models/Models/User.cs),
+  [UserController](../../MorWalPizVideo.BackOffice/Controllers/UserController.cs)
+  and [staff detail](../../frontend/back-office-spa/src/routes/rbac/UsersDetailPage.tsx)
+  belong to staff RBAC. Their IDs/password controls are not public account management.
 
-### Evidence conflicts and release uncertainty
+### Verified article and frontend flow
 
-- Architecture documents describe additive account UI, but the active router does
-  not connect those screens. Source wins; registration is not end-to-end complete.
-- [Frontend architecture](../architecture/frontend.md) records a deployed account
-  CSRF `401` blocker. The current [ServerAPI deployment workflow](../../.github/workflows/deploy-serverapi.yml)
-  now includes an anonymous CSRF/CORS/cookie smoke gate. Neither source nor that
-  workflow proves the current deployed gate passed; obtain release evidence.
-- The architecture guide identifies Aruba hosting, while the current
-  [public client workflow](../../.github/workflows/deploy-morwalpizvideo-client.yml)
-  builds client plus SSR and deploys an Azure container. Confirm which artifact
-  serves `morwalpiz.com`; do not infer deployed SSR from local rendering tests.
-- Current relevant .NET manifests target .NET 10. Domain also references
-  YouTubeUtilities, so its dependency map is broader than the historical leaf-only
-  description. This feature needs no project-reference changes.
+- Public flow is [blog route/loader](../../frontend/morwalpizvideo.client/src/routes/blog/index.tsx)
+  -> [shared blog client](../../frontend/fe-packages/services/src/blogService.ts)
+  -> [BlogController](../../MorWalPizVideo.ServerAPI/Controllers/BlogController.cs)
+  -> [BlogService/repositories](../../MorWalPizVideo.Domain/BlogService.cs)
+  -> [BlogPost](../../MorWalPizVideo.Models/Models/BlogPost.cs).
+  Public channel resolution is server-configured, not visitor-selected.
+- Public blog reads expose only published content and use a 300-second output
+  cache tagged `blog`. Drafts/publication revisions and media are managed by
+  [BlogPostsController](../../MorWalPizVideo.BackOffice/Controllers/BlogPostsController.cs)
+  through channel scope and Pages permissions.
+- [Blog contracts](../../MorWalPiz.Contracts/Contracts/BlogContracts.cs) and
+  [TS blog models](../../frontend/fe-packages/models/src/blog.ts) contain no comments,
+  reactions or viewer-specific access. This gap was addressed by the implementation
+  above using separate interaction contracts.
+- [Account screens](../../frontend/morwalpizvideo.client/src/routes/account/Components.tsx)
+  existed, but [active public routes](../../frontend/morwalpizvideo.client/src/routes/config.tsx)
+  did not register login/register/profile URLs.
+  [Root](../../frontend/morwalpizvideo.client/src/routes/layout/root.tsx) mounts the
+  [account provider](../../frontend/morwalpizvideo.client/src/routes/layout/account.tsx),
+  whose restoration catch treats every failure as anonymous.
+- [Account service client](../../frontend/fe-packages/services/src/publicAccountService.ts)
+  and [transport core](../../frontend/fe-packages/services/src/apiTransport.ts)
+  already separate account credentials/CSRF from public credentialless calls and
+  staff channel context.
+- [Homepage ShareMenu](../../frontend/morwalpizvideo.client/src/routes/home/Component.tsx)
+  uses existing `react-share` Facebook/WhatsApp controls.
+  [SEO](../../frontend/morwalpizvideo.client/src/utils/seo.tsx) emits canonical/Open
+  Graph metadata; article detail lacks share controls.
+- BackOffice currently registers no public-account repository in its
+  [composition root](../../MorWalPizVideo.BackOffice/Program.cs).
+  [Admin blog index](../../frontend/back-office-spa/src/routes/blog/index.tsx)
+  has editorial actions but no interaction summary or moderation.
+- [Mongo index operations](../../MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs)
+  declare global account username/email uniqueness and session TTL.
+  Keep these definitions: no per-channel identity index replacement is needed.
+- Relevant .NET manifests target .NET 10. [Frontend manifest](../../frontend/package.json)
+  defines Yarn Classic workspaces and ordered shared models/services/layout builds.
+  No new project reference, package dependency or deployable is needed.
 
-## Proposed Design
+### Evidence limits
 
-### 1. Repair and prove public registration first
+Account UI documentation conflicts with current router wiring; source wins.
+[Frontend architecture](../architecture/frontend.md) records a deployed CSRF blocker;
+the [ServerAPI deployment workflow](../../.github/workflows/deploy-serverapi.yml)
+now has a bootstrap smoke gate, but no current deployed result was established.
+The guide identifies Aruba hosting while the
+[public deployment workflow](../../.github/workflows/deploy-morwalpizvideo-client.yml)
+builds SSR and deploys an Azure container. Confirm the artifact serving the canonical
+domain before claiming cookie or social-crawler readiness. No checks were run here.
 
-Connect the existing account screens under the existing public root, add discoverable
-sign-in/register navigation, and preserve anonymous content routes. Restore sessions
-server-authoritatively. Distinguish session-loading, signed-out and failed-restoration
-states. While restoration is unknown, do not mount account-aware comments or a
-posting form. Once genuinely anonymous, show approved public comments; an account
-service outage must not silently switch a possibly blocked session to anonymous.
+## Design Notes And Deferred Recommendations
 
-Support returning to the originating article after registration/login. Accept only
-validated same-application relative destinations, without external/protocol-relative
-redirects. Preserve an unsent comment locally while the page remains open, but do not
-persist comment bodies or credentials in browser storage.
+The following analysis preserves the original design exploration; it is not a
+statement that every suggested refinement was implemented. Prefer the delivered
+behavior above and the completion record below when describing current capability.
+Author comment withdrawal exists in the public API, but the public UI does not expose
+it. Reaction clearing is implemented. Specific limits, cursor strategies and retention
+details in this section are recommendations, not validated production guarantees.
 
-Do not register readers as BackOffice staff, assign them staff groups, issue admin
-cookies, merge accounts by email, or enable public self-registration on BackOffice.
-BackOffice manages portal accounts and interactions using its own administrator session.
+### Shared accounts, channel-owned capabilities
 
-#### Channel-owned account namespace
+Keep `PublicAccount` and `PublicAccountSession` unchanged. Registration, passwords,
+profile and authentication remain Domain-owned shared identity behavior. Do not add
+ChannelId to accounts/sessions, clone identities, partition email uniqueness, or
+create a Freezer-versus-portal legacy namespace.
 
-Recommend separate account identities per channel, not merely membership tags on a
-global identity. Registering the same email/username on a different portal is an
-independent registration; credentials, profile, suspension and interactions do not
-grant access across channels. This interprets the user's channel-owned registration
-requirement; no cross-portal SSO or automatic identity merging is proposed.
+Add a separate account/portal access aggregate keyed uniquely by channel/account.
+It holds comment-blocked and portal-access-revoked states, revision, and latest
+actor/time/internal reason. Keep the two states independently so restoring portal
+access does not unintentionally clear a previous comment block.
 
-Extend `PublicAccount` with immutable nullable channel ownership and an account
-revision. A non-empty channel identifies a portal account. Missing/null ownership
-is the explicit legacy/non-portal namespace retained for FreezerAnalysis, never an
-implicit match for any portal. New portal registrations always get their channel
-from the server's configured public-channel resolver. Bodies, query parameters and
-public channel headers cannot supply or override ownership.
+No access record means allowed for an active authenticated account. A failed
+repository query is an error, not "no record" or a permissive fallback.
+BackOffice determines the channel through its authorization pipeline; ServerAPI
+resolves the configured public channel. Requests cannot forge either ownership or
+the account author ID.
 
-Make expected identity scope mandatory at service/repository boundaries for
-registration, username/email lookup, profile reads/writes, session validation and
-revocation. Resolve it from trusted host context: ServerAPI uses its configured
-channel; BackOffice uses its authorized selected channel; FreezerAnalysis explicitly
-uses the legacy/non-portal namespace. Reuse existing password/session logic, not a
-second authentication system. Do not leave a broadly accessible unscoped lookup
-overload for convenience.
+Validate the shared account session first, then check portal access on every
+authenticated portal capability. Keep this policy in focused Domain services,
+not shared identity authentication: a channel ban must not invalidate Freezer sessions.
+Global login/profile/logout stay available even if a portal is revoked.
+Do not grant channel administrators global suspension, password change or identity
+editing through the portal-access action.
 
-Session validation loads the account in the expected scope before accepting its
-activity/security version. Carry channel ownership in newly created session records
-and require it to agree with the referenced account. Legacy sessions are accepted
-only in the legacy namespace during transition; mapped portal accounts must sign
-in again. Profile/session/logout endpoints need the same scope enforcement as
-comments; a valid channel-A cookie must not become channel-B access.
+Portal revocation here means authenticated capability denial, not hiding already
+public articles. Denying a person anonymous access to public content is not achievable
+with an account restriction; making content private would be a different feature.
 
-Username/email uniqueness becomes per-channel, with separate uniqueness for the
-legacy namespace. Resolve duplicates within scope, never by taking the first global
-match. Existing public JSON registration/login URLs and payloads can stay unchanged
-because scope is server-owned. Channel ownership cannot be edited or transferred
-through reader detail.
+### Registration and public UI
 
-Existing accounts lack evidence of portal/channel ownership. Inventory and approve
-an explicit mapping before migrating any account. Do not assign every legacy account
-to the currently configured channel or infer ownership from email. FreezerAnalysis
-identities and feature references must remain usable. The migration decision for
-accounts used by both applications is a release prerequisite.
+Wire the existing account screens under the public root, with discoverable
+sign-in/register navigation and a validated relative return path to the article.
+Reject external/protocol-relative return destinations. An existing Freezer account
+should sign in with its existing credentials rather than register again, provided
+both deployments use the same configured account store.
 
-### 2. Keep interaction persistence separate from article content and identity
+Distinguish restoration loading, actual anonymous state and restoration failure.
+Do not silently expose the signed-in comments section as anonymous on a network
+failure. Anonymous state shows approved comments and a posting sign-in invitation.
+Allowed signed-in state adds form, own pending submissions and reactions.
+Comment-blocked state hides the entire comments section; revoked state shows a
+portal-unavailable notice and no authenticated interaction controls.
 
-Add three Models-owned aggregates and focused Domain repository/service behavior:
+Refresh access on article entry, account changes, window focus and relevant errors.
+Clear stale comments/controls after a forbidden response. Existing open tabs update
+on next revalidation; do not promise immediate remote erasure or add WebSockets.
 
-| Aggregate | Required responsibilities |
+### Comments, reactions and persistence
+
+Add focused Models aggregates and Domain Mongo/mock repositories:
+
+| Aggregate | Responsibility |
 | --- | --- |
-| Blog comment | Stable ID, channel ID, post ID, public account ID, plain-text body, moderation state, creation/update UTC times, revision, submission request ID, latest moderation actor/time/reason |
-| Blog reaction | Channel ID, post ID, public account ID, one current value (like/dislike), update UTC time and revision |
-| Reader comment restriction | Channel ID, public account ID, blocked state, revision, latest administrative actor/time/reason |
+| Blog comment | ID, channel/post/account IDs, plain-text body, state, creation/update UTC, revision, submission request ID and latest moderation metadata |
+| Blog reaction | Channel/post/account IDs, one like/dislike value, update UTC and revision |
+| Account portal access | Channel/account IDs, comment block, portal revocation, revision and latest administrative metadata |
 
-Use ObjectId-compatible entity identifiers. Resolve slug to stable post ID before
-persisting interactions. Do not attach unbounded arrays to `BlogPost`, `PublicAccount`
-or staff `User`; do not make each reaction increment the editorial revision.
+Use ObjectId-compatible entity IDs and stable post ID after slug resolution.
+Do not embed unbounded interactions in articles/accounts or increment an editorial
+revision on every vote.
 
-Persist restrictions outside `PublicAccount`: current profile updates replace that
-document, and its service is also used by FreezerAnalysis. Blog restrictions must
-not change another application's login behavior or be lost during profile saves.
+Comments contain trimmed plain text of 1-2000 characters; render escaped text and
+display names. No HTML, uploads, link previews or arbitrary embeds. Pending is the
+default. Public reads expose approved comments only; own-pending reads are private.
+Moderators approve/reject pending comments, hide approved comments, and explicitly
+reapprove hidden/rejected comments with revision checks. They do not rewrite text.
+Author withdrawal is terminal, removes ordinary body exposure and preserves only
+necessary tombstone/idempotency metadata under the approved retention policy.
 
-All queries push channel filters, projections, ordering and bounds into MongoDB.
-Use cursor pages ordered by immutable creation time plus ID for comments. Default
-page size 20, maximum 50; reject invalid bounds/cursors with explicit errors.
-Admin lists include totals and continuation metadata, never silently truncate
-"all interactions" to one page.
+Submissions carry an account/channel-unique request ID. An identical replay returns
+the existing submission; a different post/body under that ID conflicts. Withdrawal
+must not let a retry recreate the comment. Proposed validated rate limits: 5
+submissions/account/minute, 20/IP/minute, no queue; return `429` with retry guidance.
 
-Initial counts are database aggregations over authoritative reaction/comment records,
-not independently maintained counters. Batch summaries for up to 50 article IDs in
-an admin page rather than one query per row. Count only approved comments publicly.
-Performance evidence, not speculative scale, should justify later cached counters.
+Reactions require an active shared account with portal access. A comment-only block
+does not stop voting. Use set/switch/clear semantics, unique channel/post/account
+persistence and revision checks; resolve conflicting duplicate upserts explicitly.
+Return authoritative counts and caller state without exposing a voter directory.
+Retain a revision/tombstone for cleared reactions so stale requests cannot overwrite
+a newer choice; count only active values.
 
-### 3. Reactions are one reversible choice per reader/article
+Queries must push predicates, projection, ordering and limits into MongoDB.
+Comments use stable creation-time/ID cursors, default 20 and maximum 50 per page.
+Account lists use bounded global search and registration-time/ID pagination.
+Activity details expose totals/continuation rather than pretending a first page is
+all history. Query reaction/comment aggregates for counts; batch article summaries
+for up to 50 IDs instead of per-row calls. No separate cached-counter system initially.
 
-Everyone can read like and dislike totals. An authenticated public reader can select
-one value, switch it, or clear it. Provide set/clear semantics rather than an ambiguous
-toggle endpoint. Return authoritative totals and the caller's state separately from
-cached article content.
+### BackOffice directory, detail and moderation
 
-Enforce uniqueness on channel/post/account at the database boundary. Use revision
-checks to reject competing stale changes, and reconcile after conflict. Handle
-duplicate upsert races explicitly; retries must never create a second vote.
-Do not expose a public voter directory or email addresses.
+Add Community/Public Accounts separate from staff RBAC. Query all `PublicAccount`
+records directly, including Freezer-created and zero-activity accounts. Creation
+origin is not inferred or required. Selecting a channel does not filter identity
+out of the global directory; it changes portal access controls and interaction tabs.
 
-A comment block does not stop reactions. Channel-account deactivation is a separate
-reader administration action and does stop authenticated interactions and login.
-A reaction-only restriction is outside this first scope.
+Detail shows safe account identity/registration date, selected-channel portal status,
+comment restriction, paginated comments and current reactions with article links.
+No activity is a valid empty state. A channel administrator can preemptively restrict
+an existing account before its first interaction. Article commenters link back to
+the same public account detail.
 
-### 4. Comments and moderation
+The global directory is an explicit platform visibility permission, not something
+automatically granted to every staff user with a channel assignment. Proposed keys:
+`publicaccounts.view`, `blog.interactions.view`, `blog.comments.moderate`,
+`portalaccess.manage`, `blog.interactions.manage`.
+The interaction umbrella implies its viewing/moderation leaves; portal-access-manage
+implies interaction-view. Directory/detail identity reads require publicaccounts-view;
+selected-channel activity requires interaction-view and channel authorization.
+Minimal commenter display identity can be returned to moderators without granting
+the directory. Keep `backoffice.manageall` and existing staff permission assignment.
+Do not infer these permissions from `users.manage` or `pages.update`.
 
-- New comments contain trimmed plain text of 1-2000 characters. No HTML, markdown,
-  uploads, executable embeds or automatic link previews. React must render escaped
-  text, including hostile text and reader display names.
-- New comments are pending. Anonymous visitors see only approved comments. Allowed
-  signed-in readers additionally see their own pending submissions through a
-  separate private query; public responses never include pending/rejected/hidden text.
-  Rejected/hidden own submissions expose status, not private moderation reasons.
-- Moderators approve pending comments, reject pending comments, and hide approved
-  comments. Restoring a hidden/rejected comment requires explicit approval.
-  Revision checks prevent conflicting moderation decisions.
-- Allow authors to withdraw their own comments. Withdrawal is terminal and removes
-  the body from ordinary public/admin responses; preserve only a tombstone and
-  necessary moderation metadata according to the approved retention policy.
-  Moderators cannot restore withdrawn content.
-- Editing, replies, mentions and comment reactions are deferred. Do not let a
-  moderator silently rewrite a reader's text.
-- Require a client-generated submission request ID, unique per channel/account.
-  Replaying identical content returns the original submission; reusing the key with
-  different post/body returns conflict. Preserve a tombstone so withdrawal does not
-  allow a retry to recreate the comment.
-- Rate-limit submissions by account and IP using the existing limiter infrastructure.
-  Proposed initial limits: 5 submissions/account/minute and 20/IP/minute, no queue.
-  Return `429` with retry guidance; configure through validated host options.
+Global directory projection initially contains account ID, username, display name,
+registration date and active state, not email, password hashes, session records,
+legal evidence or staff permissions. Contact-data access/global identity mutation
+would require a separate explicit platform permission and approved scope.
 
-Article details show likes/dislikes, approved count, pending count and paginated
-comments with filters and moderation actions. Add a channel-wide pending queue so
-moderators do not have to open every article. No social-network credentials or AI
-moderation provider is needed.
+Portal block/revoke/restore actions are channel-authorized, revision-protected,
+audited and require an internal reason. Persist latest actor/time/reason in the
+changed record so attribution survives a best-effort audit sink failure.
+Never mutate global account IsActive/security version to implement these actions.
+Historical comments/reactions remain; moderators handle comment visibility separately.
+Add per-article moderation and a channel-wide pending queue with filters/counts.
 
-### 5. Reader details and comment blocking
+### API, cache and publication
 
-Add a separate BackOffice Community/Readers surface; do not append public reader
-controls to staff `/rbac/users/:id`. Query channel-owned accounts directly, not the
-union of interaction authors. A registration appears immediately even with zero
-activity. Include inactive and comment-blocked accounts, bounded server-side search,
-status filters, registration-date ordering with ID tie-break and real pagination.
+New JSON routes use `/api/v1`. Separate anonymous approved-comment/count controllers,
+PublicAccount-scheme capabilities and staff directory/moderation/access controllers.
+Do not add unsafe actions to the class-level anonymous BlogController.
+Global directory reads are intentionally unscoped; selected-channel activity/access
+routes require channel context. Update shared transport prefix classification so
+global reads do not wait for or leak channel context, but scoped mutations include it.
 
-Reader detail shows registration date, account status, profile, comment restriction,
-paginated comments with article/status/date, current likes/dislikes with article/date
-and totals. A reader with no interactions has a clear empty state. Link article
-commenters to reader details and interactions back to article moderation.
+Public reads omit credentials; account operations use dedicated cookies/CORS and
+CSRF on every unsafe request. Staff calls use existing staff auth/CSRF. Admin bearer,
+API-key or fake-development identity cannot substitute for a public account on
+production interaction writes. Shared identity cookies are not cross-host SSO.
 
-Use separate permission families for portal-account administration and editorial
-moderation. Proposed lowercase keys: `portalaccounts.view`, `portalaccounts.update`,
-`portalaccounts.manage`, `blog.interactions.view`, `blog.comments.moderate`,
-`blog.readers.moderate`, `blog.interactions.manage`. Expand account-manage to
-view/update; update implies account-view. Expand interaction-manage to its three
-leaves, with moderation/restriction leaves implying interaction-view.
-Do not infer these grants from staff `users.manage` or content `pages.update`.
-Keep the existing `backoffice.manageall` override and channel checks.
+Keep the existing 300-second article cache and publication eviction unchanged.
+Interaction/access/private account/admin responses initially have no output caching.
+Use private/no-store for personalized responses and exclude them from service-worker
+caching. No caller-specific data enters cached public article/comment DTOs.
+A reaction does not purge editorial content.
 
-Account-view grants the owned portal's directory/profile, including email; account
-update grants bounded username/email/display-name editing and deactivation/reactivation.
-Blog-only moderators receive minimal display identity, never contact email or account
-controls. Compose detail tabs by their permissions; interaction data requires
-interaction-view, and account administration requires the account leaves.
-An authorized channel administrator can inspect any account registered in that
-channel, regardless of whether it has ever interacted.
+Every public interaction checks current publication/channel, even when cached HTML
+is still visible. Unpublication retains interactions; republishing restores them.
+Hard deletion leaves moderated history with an unavailable-article marker, never
+reattached to a new post reusing the slug. Admin history queries may inspect these
+records; permanent purge needs approved retention. Already-authorized in-flight
+requests may finish; requests after restriction/unpublication acknowledgment must
+honor the new state. Anonymous approved reads remain available after an account ban.
 
-All profile/status changes are revision-protected, scope-filtered and audited.
-Validate normalized uniqueness within the selected channel. Use focused atomic
-updates and increment the account revision for public self-service edits as well as
-admin edits; return conflict rather than overwrite concurrent changes. Preserve
-legal acknowledgements and channel ownership. No endpoint exposes credential hashes,
-raw sessions, staff permissions or editable security-version fields.
+### Sharing, UX and additional article functionality
 
-Deactivation increments security version atomically and prevents login and session
-use for that channel account. Reactivation does not revive old sessions; require
-sign-in again. Preserve historical interactions without automatically hiding them.
-Comment-only blocking is distinct and leaves login/reactions available. No manual
-staff password assignment, permanent deletion or impersonation is added.
+Extract the homepage share control app-locally; reuse existing Facebook/WhatsApp,
+add copy-link and progressive native Web Share. Use canonical article URLs without
+query/tracking fragments; fix touched canonical/share derivation for alternate hosts.
+Cancellation is not failure; real clipboard/share errors need accessible fallback.
+Do not report share clicks as confirmed social publications or promise a complete
+account sharing history. Analytics remains subject to existing consent.
 
-Block and unblock are audited revision-protected administrative actions with a
-required internal reason. No public reason text. A block prevents authenticated
-comment reads, submissions and withdrawals in that channel; the signed-in UI removes
-the entire comments heading/list/form, not merely disables the submit button. Provide a
-non-comment-specific account/support notice if needed.
+Impeccable implementation workflow: `shape` then `harden`, as refinement, not redesign.
+Public article mode is Read; preserve [public DESIGN.md](../../frontend/morwalpizvideo.client/DESIGN.md),
+body, SEO and renderer. BackOffice mode is Operate; preserve React Bootstrap/Lucide,
+page headers, data routes, permission-aware actions and channel selection. No public
+PRODUCT.md or BackOffice PRODUCT.md/DESIGN.md was found; source remains incumbent.
+Require mobile/desktop captures for public article, global account directory,
+selected-channel detail and queue; test empty/populated/long-content states, keyboard,
+focus, contrast, pressed reaction states, announcements and overflow.
 
-Anonymous approved-comment reads use a credentialless public endpoint. They are
-intentionally still usable by someone who logs out after a block; no secrecy,
-anti-evasion or hidden-content guarantee is claimed.
-
-For signed-in readers, an access response must be read before mounting or fetching
-the comments section. Recheck on
-article entry, window focus, sign-in/session change and after relevant errors.
-After a block is acknowledged, subsequent authenticated comment requests return forbidden.
-An already-open tab clears loaded comments at its next access revalidation; no
-WebSocket infrastructure or instantaneous remote erasure is promised.
-
-Blocking does not automatically delete or hide historical approved comments.
-Moderators manage those separately. Unblocking restores access without changing
-comment statuses. Account creation under another identity cannot be absolutely
-prevented by this feature; premoderation and rate limits reduce abuse.
-
-### 6. API and cache boundaries
-
-Create distinct controllers for anonymous approved comments/counts, account-aware
-access/own-comment/reaction operations and staff reader management/moderation.
-Do not put writes in the current class-level anonymous `BlogController`.
-Anonymous comment reads use public transport with credentials omitted. Account
-access and own-pending lists use account transport; never blend private fields into
-the public comment response.
-
-New JSON routes use `/api/v1`. Public interaction paths resolve the configured
-public channel; administrative paths use `RequireChannelScope` and the existing
-staff authorization pipeline. New BackOffice route prefixes must be added to the
-shared transport's channel-scope classification.
-
-Account-aware calls explicitly select the PublicAccount scheme and credentialed
-account CORS policy. Validate CSRF for every unsafe account operation. BackOffice
-uses its existing staff cookie/CSRF flow, never the public account cookie. Account
-registration, profile, session and logout also enforce the trusted channel scope. Bearer,
-fake development and API-key principals must not substitute for a reader session
-on production interaction endpoints.
-
-Keep the existing 300-second public article cache unchanged. Interaction totals,
-access, viewer state, comment lists and admin lists initially have no output cache;
-account-specific responses use private/no-store cache policy and are excluded from
-service-worker caching. No personalized field enters `PublicBlogPost`.
-Do not purge article content on each vote. Existing publish/unpublish/delete cache
-coordination remains untouched.
-
-Every public article interaction operation checks that the target is currently published in the
-resolved channel. Unpublication/deletion makes interaction endpoints unavailable,
-even while old article HTML remains cached. Requests already authorized before a
-concurrent block/unpublish may finish; subsequent authenticated comment requests must
-honor a block, and all public interaction requests must honor unpublication.
-Anonymous approved reads remain allowed after a comment block. This is the bounded
-consistency model, not a cross-document transactional guarantee. Administrative
-history/moderation queries can still inspect unpublished or unavailable articles.
-
-Unpublication retains interactions for republishing. Hard article deletion retains
-channel-scoped moderation history with an unavailable-article marker; it never
-reattaches those records if the slug is reused by a different post ID. Permanent
-purge follows the separately approved retention process, not request-time cascading
-deletion across collections.
-
-### 7. Share the article, not credentials or personal activity
-
-Extract the homepage's app-local sharing control for reuse by homepage and article
-detail. Keep it out of the shared layout package unless another app actually needs
-the same behavior. Reuse existing Facebook and WhatsApp integrations; add copy-link
-and progressive native Web Share where supported.
-
-Use the canonical article URL without tracking/query fragments; fix the touched
-canonical/share derivation to remain correct on alternate hosts. Native share
-cancellation is not an error; actual clipboard/share failures get accessible
-feedback and a usable link fallback.
-
-A share button cannot prove publication on a social network. Do not count clicks
-as completed shares or promise a complete per-reader sharing history. If analytics
-is later approved, label it share intent and respect the existing consent boundary.
-Verify canonical and Open Graph metadata in the deployed crawler-visible HTML;
-add X/Twitter card metadata only as a focused sharing enhancement, not an SEO rewrite.
-
-### 8. UI planning and optional article enhancements
-
-Use the installed Impeccable workflow at implementation time, not as an architecture
-redesign. Narrow commands: `shape` for the interaction layout, then `harden` for
-states and permission feedback. This is an incumbent refinement.
-
-- Public article mode: Read; preserve body/SEO/renderer and the dark editorial
-  identity recorded in [public DESIGN.md](../../frontend/morwalpizvideo.client/DESIGN.md).
-  Put sharing/reactions after the article and comments after the interaction row.
-- BackOffice mode: Operate; preserve React Bootstrap/Lucide, existing page headers,
-  channel selection, data routes and permission-aware action conventions. Directory
-  and detail include newly registered/no-activity, active, inactive and blocked states.
-- No public PRODUCT.md or BackOffice PRODUCT.md/DESIGN.md was found. Use current
-  source as the incumbent, not permission to replace its visual world.
-- Include anonymous/loading/error/blocked/pending/empty/conflict/rate-limited states.
-  Keyboard support, labeled reaction buttons with pressed state, status announcements,
-  validation associations and mobile wrapping are acceptance criteria.
-- Minimum visual evidence: public article and admin article/reader/queue captures at
-  narrow mobile and desktop sizes, with long names/text and empty/populated states;
-  check focus, contrast, overflow and screen-reader behavior. No design artifacts
-  or browser work were produced in this analysis.
-
-Recommended additions inside the baseline are copy-link, a pending moderation queue,
-withdrawal, rate limiting and explicit moderation reasons. These close operational
-or user-safety gaps in the requested behavior.
-
-Optional follow-ups, not part of the implementation boundary:
-
-1. Email verification, password reset and self-service account deletion: important
-   before a broad public launch, but require a bounded account-lifecycle plan,
-   delivery provider decisions and cross-consumer review.
-2. Per-article close-comments control for sensitive/old articles.
-3. Report-comment action and a moderator abuse queue.
-4. Reader comment editing with reapproval; threaded replies and notifications.
-5. Related articles and tag filtering, reusing existing published metadata.
-6. Reading time/table of contents derived from the canonical document.
-7. Bookmarks and a reader-facing interaction history.
-
-Do not add all optional features automatically. Email verification can reduce
-throwaway-account abuse, but email ownership alone does not establish trust.
+Deferred recommendations: copy-link, email verification/recovery/deletion, report-comment queue,
+per-article close-comments, reapproved editing, replies/notifications, related articles,
+tag filtering, reading time/table of contents and bookmarks. Do not implement these
+without approval.
 
 ## Impacted Projects
 
 | Project/surface | Impact |
 | --- | --- |
-| MorWalPizVideo.Models | Channel-owned account/session schema, revision, interaction aggregates, collections and permissions |
-| MorWalPizVideo.Domain | Scope-aware account/session operations, paginated directory/admin updates, interaction invariants and permission expansion |
-| MorWalPiz.Contracts | Safe admin account and interaction DTOs; preserve public account request URLs/body compatibility |
-| MorWalPizVideo.ServerAPI | Trusted channel registration/login/profile/session behavior, public comments and authenticated interactions |
-| MorWalPizVideo.BackOffice | All-registrant directory, account administration, moderation, audit and scoped index transition |
-| MorWalPizVideo.BackOffice.Tests | Domain/API behavior, metadata, tenant/auth, mock and concurrency coverage |
-| frontend/fe-packages/models | Additive interaction DTO exports |
-| frontend/fe-packages/services | Typed public/account/admin functions, endpoints and scoped-prefix handling |
-| frontend/morwalpizvideo.client | Route repair, account error states, article interactions, sharing, targeted SEO |
-| frontend/back-office-spa | All-registrant channel directory, profile/status controls, article interactions, pending queue and reader details |
-| frontend/fe-packages/layout | Verify only: existing renderer/presentation remains unchanged |
-| FreezerAnalysis.Api and FreezerAnalysis.Api.Tests | Modify shared-account callers/composition to explicit legacy scope; prove old identities and feature references remain usable |
-| frontend/FreezerAnalysis.spa | Verify only: existing account JSON/session transport stays compatible; no portal registration or blog behavior |
-| frontend/ask.client and frontend/shooting-ita-frontend | Verify only: shared services/model consumers, no feature changes |
-| frontend/morwalpiz-shop.client | Frozen verify-only consumer; no shop implementation or activation |
-| MvcHelpers | Scope-aware cookie validation with host-owned account scope; retain separate cookie schemes |
-| AppHost and ServiceDefaults | Verify orchestration/telemetry reuse; no topology change |
-| Other .NET services, WPF apps, standalone tools and remaining frontend workspaces | No behavior change; relevant project/package manifests show no need for blog-specific work |
-| API/public/admin and Freezer deployment pipelines, Mongo operations | Coordinated scope-safe reader rollout, index replacement, approved account migration and browser/crawler gates |
+| Models | Three new aggregates, collections and permission constants; existing accounts/sessions unchanged |
+| Domain | Portal access/interaction services, repositories/mocks, global paginated account queries, permission expansion |
+| MorWalPiz.Contracts | Safe public/admin DTOs; current registration/session/article bodies remain compatible |
+| ServerAPI | Public/account interaction controllers, access checks, composition and limits |
+| BackOffice | Global account directory, scoped activity/moderation/access APIs, audit/index registrations |
+| BackOffice.Tests | Shared/API/auth/channel/mock/concurrency behavior tests |
+| Shared frontend models/services | Additive DTOs, typed functions and correct scoped/unscoped transport routing |
+| Public client | Account-route repair, article interactions, sharing and state/error behavior |
+| Admin SPA | Global directory/detail, selected-channel controls, moderation queue and permissions |
+| FreezerAnalysis.Api and tests | Verify only: shared identity/store/session behavior remains unaffected |
+| FreezerAnalysis.spa, ask.client, Shooting ITA | Verify only: shared service/model compatibility; no feature changes |
+| Shop client | Frozen compatibility consumer; no implementation or activation |
+| Layout, MvcHelpers, ServiceDefaults, AppHost | Verify existing rendering/auth/telemetry/topology reuse; no behavioral changes required |
+| Other services, WPF apps and standalone tools | Not applicable: no blog interaction ownership or necessary reference change |
+| API/admin/public deployment and Mongo operations | Additive index/backend-first rollout, account-store and browser/crawler proof |
 
 ## Impacted Files
 
-Paths below are repository-relative. New file names are recommendations; keep the
-existing owning directory patterns rather than creating a new project.
+Repository-relative paths; new names below are recommendations following current ownership.
 
 ### Modify
 
-- `MorWalPizVideo.Models/Constraints/DbCollections.cs`: new collection constants.
-- `MorWalPizVideo.Models/Models/PublicAccount.cs`: immutable portal channel scope,
-  account revision and session scope, with explicit legacy BSON compatibility.
-- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`,
-  `MorWalPizVideo.Domain/Interfaces/IRepository.cs`, `Repository.cs` and `MockRepository.cs`:
-  required expected scope on identity/session operations, per-channel uniqueness,
-  paginated registered-account queries and atomic revision/status updates.
-- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs` and
-  `MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs`:
-  trusted host scope on registration/login/profile/session/logout and cookie validation.
-- `MorWalPizVideo.Models/Constraints/AuthorizationKeys.cs` and
-  `MorWalPizVideo.Domain/Security/AuthorizationPermissionExpander.cs`: moderation
-  account-administration and moderation leaves, umbrellas and tested implications.
-- `MorWalPizVideo.ServerAPI/Program.cs`: focused services/repositories in both
-  production and mock branches, trusted portal-account scope and interaction limiters.
-- `MorWalPizVideo.BackOffice/Program.cs`: same interaction repositories/services,
-  plus scoped public-account administration without public authentication in this host.
-- `MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs`: reviewed
-  interaction/directory indexes and reviewed replacement of global account uniqueness.
-- `FreezerAnalysis.Api/Controllers/FreezerAccountController.cs`,
-  `FreezerAnalysis.Api/Services/FreezerAnalysisMongoRegistration.cs` and
-  `FreezerAnalysis.Api/Program.cs`: explicit legacy namespace in account callers,
-  authentication and mock/production composition; keep feature data/cookies unchanged.
-- `FreezerAnalysis.Api.Tests/FreezerAnalysisApiTests.cs`: scope composition and
-  compatibility coverage for legacy identities.
-- `MorWalPizVideo.Domain/Scenarios/PrimaryScenario.cs`: coherent synthetic
-  channel registrants (including zero-activity), two-channel collisions, legacy
-  accounts and interaction/restriction fixtures for scope-aware mocks.
-- `frontend/fe-packages/models/src/index.ts` and
-  `frontend/fe-packages/services/src/index.ts`: additive exports.
-- `MorWalPiz.Contracts/Contracts/PublicAccountContracts.cs` and
-  `frontend/fe-packages/models/src/publicAccount.ts`: compatible revision support
-  for public profile updates; do not accept client ownership/security fields.
-- `frontend/fe-packages/services/src/endpoints.ts`,
-  `frontend/fe-packages/services/src/endpoints-frontend.ts`,
-  `frontend/fe-packages/services/src/apiTransport.ts`: endpoint ownership, isolated
-  clients and channel-scope prefix classification.
-- `frontend/morwalpizvideo.client/src/routes/config.tsx`: connect account routes.
-- `frontend/morwalpizvideo.client/src/routes/account/Components.tsx`,
-  `frontend/morwalpizvideo.client/src/routes/layout/account.tsx` and
-  `frontend/morwalpizvideo.client/src/layouts/title-header.tsx`: discoverable account
-  flow, validated article return path, explicit restoration failure.
-- `frontend/morwalpizvideo.client/src/routes/blog/index.tsx` and `style.scss`:
-  interaction composition without blocking anonymous article rendering.
-- `frontend/morwalpizvideo.client/src/routes/home/Component.tsx` and
-  `frontend/morwalpizvideo.client/src/utils/seo.tsx`: reuse share control and keep
-  canonical sharing metadata consistent.
-- `frontend/back-office-spa/src/routes/blog/index.tsx`: batched interaction summaries
-  and moderation links; keep editorial actions on their existing permissions.
-- `frontend/back-office-spa/src/router/routes/lazy-index.ts`,
-  `frontend/back-office-spa/src/authorization/permissions.ts` and
-  `frontend/back-office-spa/src/layouts/adminMenu.ts`: new routes and capability mapping.
-- Existing adjacent public blog, admin blog transport/index, admin menu/permission,
-  account endpoint and permission-expansion tests: preserve surrounding behavior and
-  cover every scoped account/session boundary.
-- `.github/workflows/deploy-serverapi.yml` and
-  `.github/workflows/deploy-morwalpizvideo-client.yml`: extend only the focused release
-  proof that cannot be established by existing gates.
+- `MorWalPizVideo.Models/Constraints/DbCollections.cs` and `AuthorizationKeys.cs`:
+  new collections and directory/moderation/access permission constants.
+- `MorWalPizVideo.Domain/Security/AuthorizationPermissionExpander.cs`: explicit implications.
+- `MorWalPizVideo.Domain/Interfaces/IRepository.cs`, `Repository.cs`, `MockRepository.cs`:
+  add bounded global account directory queries without changing identity lookup semantics.
+- `MorWalPizVideo.Domain/Scenarios/PrimaryScenario.cs`: synthetic global accounts,
+  zero-activity examples, two-channel interactions and restriction states.
+- `MorWalPizVideo.ServerAPI/Program.cs` and `MorWalPizVideo.BackOffice/Program.cs`:
+  focused services/Mongo/mock composition; BackOffice public-account repository.
+- `MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs`: additive
+  interaction/access/directory indexes, preserving global account indexes.
+- `frontend/fe-packages/models/src/index.ts` and services `src/index.ts`,
+  `endpoints.ts`, `endpoints-frontend.ts`, `apiTransport.ts`: exports/endpoints and
+  accurate global versus channel-scoped routing.
+- Public `src/routes/config.tsx`, `routes/account/Components.tsx`,
+  `routes/layout/account.tsx`, `layouts/title-header.tsx`: account routing/navigation,
+  safe return destinations and explicit restoration states.
+- Public `src/routes/blog/index.tsx`, `style.scss`, `routes/home/Component.tsx`,
+  `utils/seo.tsx`: interaction composition, share reuse and canonical consistency.
+- Admin `src/routes/blog/index.tsx`, `router/routes/lazy-index.ts`,
+  `authorization/permissions.ts`, `layouts/adminMenu.ts`: summaries, new routes,
+  global-directory visibility and channel-sensitive actions.
+- Adjacent existing blog/account/permission/menu/transport tests: direct regression coverage.
 
 ### Add
 
-- Models under `MorWalPizVideo.Models/Models/`: comment, reaction and reader restriction.
-- Focused service/repository interface, Mongo and mock implementation under
-  `MorWalPizVideo.Domain/`: keep blog interaction persistence apart from identity CRUD.
-- `MorWalPiz.Contracts/Contracts/BlogInteractionContracts.cs`: distinct request,
-  public access/count/viewer, comment page and admin reader/moderation responses.
-- A portal-account administration contract under `MorWalPiz.Contracts/Contracts/`
-  and matching shared TS model/service: safe directory/detail, revision-protected
-  profile/status requests and permission-dependent contact projection.
-- A small trusted account-scope resolver/context under the existing Domain account
-  ownership, with host composition for portal versus legacy scope. Reuse configured
-  public-channel resolution rather than duplicate it across handlers/controllers.
-- Focused versioned controllers under `MorWalPizVideo.ServerAPI/Controllers/` and
-  `MorWalPizVideo.BackOffice/Controllers/`: separate anonymous comments/counts,
-  public account operations, owned account management and moderation boundaries.
-- `frontend/fe-packages/models/src/blogInteractions.ts` and
-  `frontend/fe-packages/services/src/blogInteractionService.ts`: shared typed contracts
-  and explicit transport contexts.
-- Public app-local share component under
-  `frontend/morwalpizvideo.client/src/components/`, and interaction components/hooks
-  beside `src/routes/blog/`: keep public UI app-owned.
-- Admin article interaction/queue routes beside
-  `frontend/back-office-spa/src/routes/blog/` and reader list/detail routes under a
-  separate Community/Readers feature directory.
-- Focused backend tests under `MorWalPizVideo.BackOffice.Tests/Features/`, public
-  account route/provider and interaction tests beside their owners, admin moderation/
-  reader tests beside new routes, shared-service transport tests.
+- Comment, reaction and account-portal-access models under Models/Models.
+- Focused Domain services and repository interfaces/Mongo/mock implementations.
+- `MorWalPiz.Contracts/Contracts/BlogInteractionContracts.cs` plus public-account
+  directory/access DTOs under Contracts; no credential/entity serialization.
+- ServerAPI interaction controllers and BackOffice global directory/scoped activity/
+  portal-access/moderation controllers under their existing controller directories.
+- Shared frontend interaction/account-directory model/service modules and tests.
+- Public app-local share component and blog interaction components/hooks.
+- Admin public account list/detail, article interaction and moderation queue routes.
+- Focused tests under `MorWalPizVideo.BackOffice.Tests/Features/` and beside new
+  frontend owners; approved disposable-Mongo validation when required.
 
 ### Generated/Migration
 
-No EF migration, generated source or lockfile change is expected. Mongo account/session
-scope expansion, approved legacy-to-portal mapping and global-uniqueness replacement
-are now required operational transitions, alongside additive interaction collections.
-Use the existing reviewed Mongo operations and a bounded owner-approved migration
-artifact after mapping is settled; never imply automatic migration. Document
-inventory, idempotency, conflicts and rollback limits.
+None for existing identities/articles: no account cloning, ownership backfill, EF
+migration, credential copy, cookie scope change, lockfile or global-index replacement.
+New collections/indexes require approved Mongo operations, not automatic migration.
 
 ### Documentation
 
-- This handoff: retain decisions, actual changed files, validation and residual risks
-  after implementation.
-- `docs/architecture/structured-blog.md`, `backend.md`, `frontend.md`, `security.md`,
-  `domain-model.md`, `api-design.md` and the Mongo operations/index inventory: update
-  the relevant sections, including corrected account-route/release status.
-- `docs/architecture/adr/ADR-018-public-account-boundary.md`: document the proposed
-  channel-owned account namespace and migration, preserving staff/public separation.
-- New focused ADR under `docs/architecture/adr/`: record approved moderation
-  ownership, anonymous visibility and restriction scope; add it to the architecture index.
-- FreezerAnalysis account-boundary documentation: record explicit legacy namespace
-  compatibility without adding portal/channel features to that application.
+- This handoff remains the editable source of truth; record implementation/results later.
+- Update relevant structured-blog, backend, frontend, security, domain-model, API and
+  Mongo operations sections; distinguish shared identity from portal authorization.
+- Link the interaction boundary from ADR-018 without changing shared registration.
+  Add a focused ADR for global-directory authorization, channel restrictions and
+  anonymous comment visibility; update the architecture index.
 
 ### Verify Only
 
-- `MorWalPizVideo.Models/Models/BlogPost.cs` and
-  `MorWalPizVideo.Domain/BlogService.cs`: preserve article data/publication revisions;
-  no embedded interaction arrays.
-- `MorWalPiz.Contracts/Contracts/BlogContracts.cs`: existing article payloads remain compatible.
-- `MorWalPizVideo.BackOffice/Controllers/BlogPostsController.cs` and `UserController.cs`,
-  `frontend/back-office-spa/src/routes/rbac/UsersDetailPage.tsx`: preserve editorial
-  mutations and staff identity workflows.
-- BackOffice authorization/channel pipeline and `Services/Interfaces/IAuditService.cs`:
-  reuse rather than duplicate or weaken.
-- `frontend/morwalpizvideo.client/vite.config.ts`, `src/entry-server.tsx`,
-  server/container hosting files: prove API/cache isolation and crawler HTML.
-- `MorWalPizVideo.AppHost/Program.cs`, relevant .NET manifests and frontend package
-  manifests: no new deployable, package dependency or API-to-API reference.
-- `.github/workflows/deploy-backoffice-api.yml`, `deploy-back-office-spa.yml`,
-  `deploy-freezer-analysis-api.yml`, `ci.yml`: gates and trigger paths must cover
-  changed shared sources; deploy all account readers before scoped data is written.
+- Models `PublicAccount.cs` and `BlogPost.cs`, Domain `Accounts/PublicAccountService.cs`,
+  `BlogService.cs`, shared public account/blog contracts: preserve identity and content.
+- MvcHelpers public authentication, ServerAPI account controllers, Freezer account
+  controller/Mongo registration/Program and Freezer tests: no portal policy in auth.
+- BackOffice staff UserController/RBAC pages, BlogPostsController, channel/authorization
+  pipeline and audit helpers: preserve staff/editorial behavior.
+- Public Vite/SSR/server/container files, all consuming manifests and AppHost:
+  no private response caching, new dependency or topology changes.
+- CI and API/admin/public/Freezer deployment workflows: coverage, trigger paths,
+  compatible shared sources and actual release evidence.
 
 ## Impact Matrix
 
 | Area | Decision |
 | --- | --- |
-| Backend/API | ServerAPI owns approved reader writes; BackOffice owns moderation; Domain shares invariants |
-| Frontend/UI | Public account route repair plus incumbent article/admin refinement |
-| Database/Data | Scoped account/session transition, per-channel uniqueness, all-registrant queries and three interaction collections |
-| Contracts/Models | Account/session scope and account revision; safe admin DTOs; cached article remains unchanged |
-| Authentication/Authorization | Trusted scope on every account/session operation, separate staff sessions and account/moderation leaves |
-| Validation | Plain text/body limits, cursor bounds, revision/idempotency, ownership and publication checks |
-| Cache | Existing content cache unchanged; interaction/account responses uncached and private where applicable |
-| Configuration/Secrets | Validated interaction rate-limit/activation options; no new secrets or social credentials |
-| Logging/Telemetry | Structured operation/result metrics, moderation audit and no body/email/token logging |
-| Background Jobs | Not required for initial synchronous behavior; retention/notifications remain separately approved |
-| Deployment/Operations | Scope-safe readers first, approved account mapping and index transition, then portal activation |
-| Backward Compatibility | Anonymous articles/comments, staff RBAC and push preserved; explicit legacy namespace protects Freezer identities |
+| Backend/API | Shared identity; public interactions; staff global directory with scoped access/moderation |
+| Frontend/UI | Existing account-route repair and incumbent article/admin refinement |
+| Database/Data | Three additive collections, bounded queries/indexes; current accounts unchanged |
+| Contracts/Models | Additive safe DTOs, no personalized article/account shape break |
+| Authentication/Authorization | Existing sessions; portal policy after authentication; global visibility separated from channel powers |
+| Validation | Body/cursor bounds, ownership/publication, revisions/idempotency and restriction reasons |
+| Cache | Existing article tags/eviction preserved; interaction/private state uncached |
+| Configuration/Secrets | Validated limits/activation; verify shared account store, no new secrets |
+| Logging/Telemetry | Structured outcomes/audit; no comment bodies, email, passwords or session tokens |
+| Background Jobs | Not needed; notifications/retention jobs require separate approval |
+| Deployment/Operations | Additive backend/index-first rollout with real-browser/crawler and moderation readiness |
+| Backward Compatibility | Freezer identity/sessions, staff RBAC, anonymous articles and push remain intact |
 
 ## Reuse Opportunities
 
-- Existing account registration service, password hashing, sessions and cookie
-  schemes, extended with required scope; no second password/authentication system.
-- Existing BlogService for publication and configured-channel lookup behavior.
-  Reuse/extract only the small channel resolver needed by new public controllers.
-- Existing public/account/admin transport instances, URL composition, parsed API
-  field errors and channel bootstrap lifecycle.
-- Existing permission expansion, `AllowUser`, `RequireChannelScope`, protected data
-  routes, page headers, React Bootstrap/Lucide and audit display components.
-- Existing `react-share`, homepage control behavior, SEO helper and BlogRenderer.
-- Existing Mongo index audit/apply service and scenario-backed mocks.
-- Existing API factories/test auth, blog tests and shared transport-isolation tests.
+Reuse PublicAccountService/password/session behavior; do not reinvent identity.
+Reuse BlogService/public-channel resolution, public/account/admin transports, URL/error
+helpers, channel bootstrap, permission expansion, AllowUser/RequireChannelScope,
+page headers/Bootstrap/Lucide, audit recording/display, react-share, SEO, BlogRenderer,
+existing Mongo index operations and scenario/test fixtures.
+Do not use generic audit's first 50 rows as "all article activity"; query paginated
+interaction records directly.
 
 ## Risks
 
-| Rank | Cause / affected surface | Mitigation | Verification signal |
+| Rank | Cause / surface | Mitigation | Verification signal |
 | --- | --- | --- | --- |
-| High | Unwired account routes and uncertain deployed CSRF/cross-site-cookie support prevent any interaction | Repair route flow; collect deployed bootstrap and real browser session evidence before activation | Direct account URLs render; register/login survives reload on canonical origin in supported browsers |
-| High | Global account lookups/session validation cross portal boundaries | Trusted scope on every account operation, scoped uniqueness and explicit legacy namespace | Same username/email can belong to two channels; cookies/profile/logout/admin actions cannot cross scope |
-| High | Staff/public identity conflation or unrestricted reader lookup leaks data/escalates access | Separate reader UI/API; query channel registration; account-view gates email; blog-only roles get minimal identity | All owned registrants visible; foreign-channel detail denied; no session/credential/RBAC disclosure |
-| High | Authenticated block bypass or mixed public/private response leaks pending comments | Separate public approved endpoint and restricted private operations; explicit UI access state | Anonymous approved reads work, authenticated blocked writes fail, pending text never appears publicly |
-| High | Guessing legacy ownership or old unscoped binaries corrupts migration | Owner-approved mapping, scope-aware reader rollout and write freeze before index replacement | Unmapped accounts do not appear in portals; legacy Freezer login/references work; migration conflicts stop visibly |
-| High | Duplicate/concurrent reactions, submissions or moderation corrupt state | Unique indexes, request IDs, atomic revisions and explicit conflict handling | Parallel requests yield one reaction/submission and stale moderation fails |
-| High | Abuse and unacceptable reader data retention | Premoderation, bounded submissions, withdrawal and legal/retention approval | Pending text never public; body never logged; retention and escalation owner signed off |
-| Medium | Slug reuse, unpublication, deletion or cached HTML misroutes interactions | Stable post ID and live publication checks; retained unavailable marker | New post with old slug inherits nothing; unpublished/deleted interaction routes unavailable |
-| Medium | Ban or unpublish overlaps an already authorized request | Explicit in-flight consistency boundary and access revalidation | Requests started after acknowledgment are denied; no promise of remote erasure |
-| Medium | Account-store/database mismatch between API hosts | Verify both hosts read the intended store with the same channel ownership | A synthetic registrant appears in owned BackOffice before any interaction |
-| Medium | Raw comment/display-name content produces unsafe UI | Plain text and escaped rendering; no HTML/link preview processing | Hostile text renders inert in both applications |
-| Medium | Share preview absent on actual public host despite SSR tests | Inspect deployed crawler-visible canonical/OG HTML and absolute accessible cover URL | Preview fetch obtains article title/description/image without JS or account |
-| Medium | Directory/search and interaction aggregation become expensive | Query channel-owned accounts with supporting indexes and batched summaries | No full collection reads or per-row summary query fanout |
-| Medium | Concurrent profile/status changes undo suspension or edits | Revision-protected focused updates; atomic security-version changes | Stale admin/self-service changes fail; reactivation never restores revoked sessions |
-| Low | Generic audit sink fails after moderation persistence | Persist latest actor/time/reason within changed document; reuse logged audit behavior | Mutation remains attributable; audit failure is logged and monitored |
+| High | Portal restriction accidentally suspends shared identity or Freezer access | Separate channel/account record; no IsActive/security-version mutation | Revoked portal interaction fails while Freezer login/session/profile remains usable |
+| High | Global directory exposes identities to all channel staff | Explicit platform visibility permission and minimal projection | Plain staff/channel assignment cannot enumerate accounts; authorized admin sees zero-activity accounts |
+| High | Foreign-channel restriction/activity or forged author IDs | Trusted channel/account context and server checks | Guessed IDs/body/header overrides cannot mutate/read another channel |
+| High | Mixed public/private comments expose pending content | Approved-only public projection and separate private endpoints | Anonymous/cross-account requests never receive pending/rejected/hidden text |
+| High | Duplicate/concurrent submission/reaction/moderation corrupts state | Unique indexes, request IDs and atomic revisions/tombstones | Exact persisted cardinality and stale-request rejection |
+| High | Unwired account UI or cross-site cookies blocks feature | Repair routes and prove canonical-origin browser behavior | Existing account login/registration survives reload in supported browsers |
+| Medium | Deployments use different account stores despite same service | Operator verification without revealing config values | One synthetic identity can sign in independently at both hosts |
+| Medium | Account restoration failure becomes anonymous bypass-shaped UI | Explicit failed state and retry, no silent fallback | Failed restore does not mount signed-in comments/form |
+| Medium | Abuse/retention/unsafe text | Premoderation, limits, withdrawal and approved policy; escaped text | Hostile text inert, queue staffed, content absent from logs |
+| Medium | Cached deleted article or reused slug misroutes interactions | Live publication and stable post ID | Unpublished routes unavailable; new post inherits no old activity |
+| Medium | "Portal revocation" misunderstood as anonymous content denial | Explicit authenticated-capability semantics | Public articles/comments still work after logout |
+| Medium | Expensive directory/aggregation or missing share preview | Bounded indexed/batched reads and actual crawler HTML | No full scans/per-row query fanout; accessible article OG metadata |
+| Low | Audit sink fails after access/moderation update | Latest actor/time/reason in persisted aggregate; logged sink failure | Committed change remains attributable |
 
 ## Technical Debt
 
-- Account UI is currently disconnected from routing: blocks this feature; repair now.
-- Account restoration silently hides failures: tightly coupled to permission UX;
-  address now with explicit failed state and retry.
-- Documentation conflicts with source and deployment hosting: correct touched
-  statements, preserve unknown deployed facts, do not certify release from source.
-- Existing public accounts are unscoped and indexed globally: blocks channel-owned
-  registration; address now across every service/repository/auth consumer.
-- Existing public-account profile update replaces the entire account with no revision.
-  Scoped account management makes atomic revision-safe profile/status updates directly
-  necessary. Keep comment restrictions separately persisted; no wider identity redesign.
-- Existing BlogMockRepository owns an independent list rather than scenario state.
-  Preserve existing blog fixtures; new interaction mocks use coherent scenario state.
-  Host-to-host mock state is not automatically shared; the cross-host test needs an
-  explicitly shared synthetic fixture or equivalent isolated store.
-- Existing audit read methods filter through generic repositories and cap at 50;
-  not suitable for "all reader interactions." Query interaction collections directly
-  with real pagination. Reuse audit recording/display only.
-- General cache reliability work, shop lifecycle and repository-wide cleanup remain
-  out of scope. Do not make them prerequisites for uncached interaction endpoints.
+Unwired account routes and silent restoration failures block this feature; repair now.
+Documentation/deployed-host conflicts require evidence, not assumed closure.
+Current account profile replacement is unchanged because admin identity editing is
+not required; keep restrictions outside that document to avoid lost updates.
+BlogMockRepository has independent state: preserve blog fixtures and explicitly share
+synthetic account/article/access state for cross-host tests.
+Global identity administration, general cache reliability and shop lifecycle remain
+separate backlog. The prior channel-account migration/index-contraction proposal
+is withdrawn, not a prerequisite or future default.
 
-## Implementation Roadmap
+## Completion And Validation
 
-1. **Finalize release prerequisites.** Treat anonymous approved comments, channel-owned
-   registration and the all-registrant directory as settled. Approve premoderation,
-   retention/privacy and legacy-account ownership mapping; establish production
-   account/canonical-host evidence. Owners: this handoff and architecture documents.
-   Gate: no migration/identity decision delegated to implementation.
-2. **Expand account schema and make all consumers scope-safe.** Add account/session
-   scope, revisions, scope-aware service/repository operations and host-owned context;
-   update ServerAPI, MvcHelpers, FreezerAnalysis callers and mocks. Owners: Models,
-   Domain, both public hosts and their tests. Gate: legacy Freezer behavior plus
-   two-channel account/session/profile/logout isolation, before live scoped writes.
-3. **Transition account indexes/data and deliver portal account administration.**
-   Apply the approved migration and uniqueness replacement, add direct scoped
-   directory/profile/status APIs and account permission leaves. Owners: Mongo
-   operations, BackOffice, Domain, Contracts and shared models/services.
-   Depends on steps 1-2. Gate: retry-safe migration, all owned registrants visible,
-   zero-activity detail and revision-safe suspension/reactivation.
-4. **Complete existing public account UI.** Wire account routes/navigation and safe
-   article return; expose restoration failure/retry and refresh revisions after
-   profile updates. Owners: public route/account/header files. Depends on step 2.
-   Gate: channel registration appears immediately in step 3's directory;
-   login/profile/logout and anonymous blog regressions.
-5. **Define interaction contracts and persistence.** Add three aggregates, focused
-   repositories/DTOs/indexes, idempotency and deterministic fixtures. Owners: Models,
-   Domain, Contracts, shared TS models. Depends on scoped account design in step 2.
-   Gate: domain transition, duplicate, pagination and mock parity tests.
-6. **Deliver ServerAPI interaction behavior.** Add anonymous approved reads and isolated
-   account operations, live publication/channel checks, CSRF and limits. Owners:
-   ServerAPI and Domain. Depends on steps 2 and 5.
-   Gate: anonymous approved-only reads; blocked authenticated operations; actual host
-   401/403/404/409/429 behavior; no draft/private-identity leaks.
-7. **Deliver BackOffice moderation APIs and both UIs.** Add scoped article summaries/
-   queue, interaction tabs in reader detail, revision-safe moderation/restrictions,
-   audit, account profile/status controls and transport/route/menu permissions.
-   Public UI adds sharing, reactions and anonymous versus account-aware comments.
-   Owners: BackOffice, shared packages and both SPAs. Depends on steps 3-6.
-   Gate: role/channel matrices, registration-to-admin workflow, block/unblock,
-   deactivation/reactivation, keyboard/error/cancellation and private cache exclusion.
-8. **Validate and document the shipped boundary.** Follow the test runbook, build
-   shared packages in dependency order, perform targeted API/frontend checks, then
-   real canonical-origin browser and visual evidence. Update this handoff/ADR and
-   owning architecture sections with actual results. Gate: complete acceptance and
-   explicit residual risks; stop before optional follow-ups.
-9. **Activate after operational proof.** Use a single default-off host-owned blog
-   interaction activation flag, surfaced through an explicit availability response;
-   no frontend build-time flag is the authority. Both API hosts must honor it.
-   Deploy scope-aware readers, account administration, approved indexes/data and
-   management/backend support before public controls. The interaction flag does not
-   permit unsafe legacy account behavior; account transition has its own maintenance
-   window. Gate: moderation owner available, cookies working, no private caching,
-   foreign-scope access, unresolved migration conflicts or duplicate identities.
+Implemented end to end across Models, Domain, Contracts, ServerAPI, BackOffice,
+shared frontend packages, the public client and BackOffice SPA. No feature activation
+flag was added. BackOffice account list/detail responses omit email and credentials;
+the focused API test asserts that projection.
 
-An independent post-validation review is warranted because the change crosses
-identity, tenant authorization, reader-generated content and concurrent persistence.
-The user may select MorWalPiz Code Reviewer; the architect does not execute that review.
+Validation completed after the final behavior changes:
 
-## Testing Strategy
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~BlogInteraction"` — passed, 5 tests.
+- `yarn workspace @morwalpizvideo/models build` and `yarn workspace @morwalpizvideo/services build` — passed.
+- `yarn workspace @morwalpizvideo/services test` — passed, 50 tests.
+- `yarn workspace morwalpizvideo.client test src/routes/blog/Interactions.test.tsx src/routes/blog/index.test.tsx` — passed, 5 tests.
+- `yarn workspace morwalpizvideo.client build` — passed.
+- `yarn workspace back-office-spa build` — passed.
+- Prettier was applied to the changed files that failed the focused formatting check.
 
-- **Unit / Domain:** plain-text bounds (0/1/2000/2001), whitespace/Unicode behavior,
-  moderation/withdrawal transitions, missing account/post, cursor validation,
-  reaction set/switch/clear, revision conflicts and idempotent submission replay.
-- **API behavior:** extend `MorWalPizVideo.BackOffice.Tests` using existing factories.
-  Verify cookie scheme, absent/wrong CSRF, active/inactive/expired/revoked accounts,
-  wrong channel/post, unpublished/deleted articles and explicit errors.
-  Anonymous articles/counts and approved comments must work. Public pending/hidden/
-  rejected content never appears. Block/unblock affects authenticated comments without
-  changing reactions or staff login; channel-account suspension separately prevents
-  login/interactions and invalidates existing sessions.
-- **Authorization:** inventory new endpoint metadata; verify no class-level anonymous
-  write bypass. Test view-only, moderation-only, restriction-only, umbrella and
-  manage-all with owned/foreign channels. Add account-view/update/umbrella cases;
-  detail requires registered channel ownership, not prior interaction. Account-view
-  may expose owned email, while blog-only views redact it; session/credential/staff
-  permission fields are always absent.
-- **Account isolation/lifecycle:** same username/email can register independently in
-  channels A and B; a duplicate within A fails. Unknown/foreign channel input cannot
-  choose registration scope. Test session/profile/logout and administrative account
-  updates across channels, public/admin profile races, stale revisions, suspension
-  and reactivation without session revival. A newly registered account is listed
-  before any article request and shows zero-activity detail.
-- **Database/concurrency:** mock tests are insufficient for index/atomicity proof.
-  Use an approved disposable Mongo environment for duplicate indexes, simultaneous
-  first votes, competing switches, duplicate submission IDs, withdrawal replay,
-  competing moderation/restriction/account revisions and scoped username/email
-  uniqueness. Assert exact persisted cardinality and counts, not merely successful
-  responses. Never use deployed personal data.
-- **Component/route:** public direct account URLs and safe return path; restoration
-  errors; anonymous/allowed/blocked states; own pending versus another user's pending;
-  like/dislike pressed state; failed requests, conflict and `429`; withdrawal.
-  Admin directory includes new/inactive/blocked users without interactions; search,
-  filtering, pages, permission-specific contact/profile/status controls, no-activity
-  detail and account revision conflict feedback. Cover counts, queue and block/unblock.
-  Keep existing blog renderer/editor behavior unchanged.
-- **Contract/transport:** validate DTO shapes, private-field absence, comment page
-  continuation and count semantics. Test account requests include credentials/CSRF
-  but no staff bearer/channel context; admin routes include the selected channel.
-  Preserve public credentials omission and other app service behavior.
-- **Security scenarios:** inert malicious text, forged account/channel/body identity,
-  unsafe return destinations, blocked direct API access, credentialed disallowed
-  origins, cache contamination and no sensitive logging. This is an implementation
-  test plan, not a completed vulnerability audit.
-- **Migration/rollout:** inspect mapping/index evidence, disabled-flag behavior and
-  scope-aware reader deployment order. Test absent/null legacy ownership, legacy
-  sessions, migrated portal accounts requiring sign-in, partial/replayed migration
-  and conflicts. Verify FreezerAnalysis legacy registration/login/session and feature
-  ownership references in `FreezerAnalysis.Api.Tests`; portal credentials are not
-  accepted there. Old clients continue reading articles.
-- **End-to-end/browser:** a synthetic reader registers from an article, restores
-  session, and appears in BackOffice before interacting. An administrator edits the
-  profile; the reader submits pending text and changes/clears a reaction. The admin
-  sees it in article/reader views, approves/hides, blocks/unblocks comments and
-  deactivates/reactivates the account. Anonymous approved viewing still works after
-  logout; pending text does not. Include cross-tab focus refresh, account switching,
-  expired sessions and channel changes.
-  Test actual cross-site cookie behavior on supported desktop/mobile browsers.
-- **Sharing/SSR/accessibility:** native supported/unsupported/cancel/failure and
-  clipboard failure; correct canonical URL, deployed OG HTML, accessible image,
-  narrow/desktop layout, keyboard/focus/contrast and screen-reader announcements.
+The .NET build reports existing ImageSharp 3.1.12 NU1902/NU1903 vulnerability
+warnings. No browser visual capture, disposable-Mongo concurrency test, production
+deployment test or cross-host account-store verification was performed.
+
+## Rollout And Remaining Work
+
+Before production use, verify the Mongo-compatible provider supports the startup
+collection/index operations and grants the required permissions. The startup path
+fails closed on conflicts; it never drops indexes or resolves duplicate data.
+Verify that ServerAPI, BackOffice and FreezerAnalysis use the intended shared
+public-account store. Their account identity is shared conceptually, but host-owned
+session cookies remain separate.
+
+Assign the global `publicaccounts.view` permission only to approved staff; ordinary
+channel assignment does not imply access to the global account directory. Confirm a
+moderation owner and retention/privacy policy for pending, rejected and hidden comment
+bodies before collecting production data. Author withdrawal, reply threads,
+notifications, share analytics, email recovery/verification and global account
+administration are not implemented.
+
+Canonical-host cookie behavior and social crawler metadata also need deployment
+verification. Visual browser validation was not available for this delivery.
+
+No identity migration, account cloning, EF migration, or destructive rollback is
+required. Existing account IDs, credentials, sessions and Freezer references remain
+unchanged. Rollback must remove/disable both API interaction capabilities and their
+UI controls while retaining records and restrictions; do not bring back an endpoint
+that ignores those restrictions. Public articles/comments remain public.
 
 ## Migration And Rollback
 
-Channel-owned registration now requires a Mongo account/session compatibility
-transition. Article documents and SQLite remain unchanged; interactions/restrictions
-are new collections. Do not migrate readers into staff users, transfer ownership
-through public/admin profile APIs or expose account credential material.
+No identity migration is needed. Preserve existing account IDs, credentials, username/
+email uniqueness, sessions and Freezer references. Existing active accounts receive
+portal capability by default unless an access record says otherwise. Do not create
+membership records for every account or infer who was a "reader" previously.
 
-### Expand and establish scope-safe readers
+Approve/apply additive indexes: reaction channel/post/account unique; comment
+channel/account/request-ID unique; access channel/account unique; comment post/state
+and account history cursor indexes; moderation queue and reaction history indexes;
+global account registration/search indexes matching real queries.
+Verify BSON field names and current account uniqueness/session TTL deployment.
+No request-time index creation, global-index removal, EF migration or backfill.
 
-First deploy schema-tolerant, scope-aware account/session readers and writers to
-ServerAPI, MvcHelpers consumers, FreezerAnalysis and BackOffice. Legacy missing/null
-scope stays explicitly non-portal. Verify that every account consumer is updated;
-older unscoped binaries must not run against newly scoped identities.
-Keep existing uniqueness indexes while expanding and do not activate portal
-registration yet. Default legacy revision values must be handled explicitly by
-atomic first-update filters, not silently accepted as unrestricted writes.
+Deploy additive API support and indexes, then shared packages/admin/public clients;
+activate interactions only after identity-store/browser/moderation gates pass.
+Monitor auth/CSRF, forbidden capability use, conflicts, 429, queue backlog, query
+latency and audit failures without sensitive content.
 
-### Approve ownership and migrate
+Rollback disables interactions on both hosts and removes controls while retaining
+comments, reactions and access restrictions. Existing identity/login/Freezer behavior
+stays usable. Never enable an older interaction endpoint ignoring retained restrictions.
+No destructive collection deletion or identity reversal is required.
+Public content remains public; restrictions cannot erase previously delivered HTML.
 
-Inventory existing account/session counts and application references in a protected
-operator context. An approved per-account/per-channel mapping is required, with
-ambiguous/unmapped rows reported and left unchanged. No automatic attribution from
-the current public host, email or display name.
+Retention, rejected/hidden bodies, tombstone/idempotency window, privacy requests and
+permanent purge need owner approval before collecting live data. No content TTL,
+new cookie scheme, social credential deployment or background job is proposed.
 
-Recommended preservation path: retain the original legacy identity and references
-for FreezerAnalysis; create a new channel-owned identity for each approved portal
-registration using a new account ID. Preserve legal evidence and original creation
-time, and record migration provenance separately from an asserted new acceptance.
-Credential continuity, if approved, is handled only inside the protected migration,
-never by exporting hashes to clients/docs/logs. No live synchronization of passwords
-or profiles across the independent identities is introduced.
+## Deferred Product Decisions
 
-An idempotent migration mapping must bind source account and destination channel
-to the created destination account ID. Replays must verify the existing destination,
-not create duplicates or overwrite later profile/status changes. Conflicting
-username/email or ownership evidence stops that row with explicit operator reporting.
-Do not clone all Freezer accounts into portals. New portal accounts sign in again;
-old public sessions bound to legacy identities do not authenticate the portal.
-Freeze affected account writes for the bounded snapshot/index/mapping transition
-so password/profile changes cannot silently race it.
-
-Required indexes: unique channel/post/account reaction; unique channel/account/
-submission-request comment; comment pages by channel/post/state/creation/ID and
-channel/account/creation/ID; channel/state/creation/ID moderation queue; reaction
-reader-history index; unique channel/account restriction. Verify actual serialized
-field names. Audit/apply with approved Mongo operations, not request-time index
-creation. Add channel/registration-time/ID directory indexes and indexes matching
-bounded account search/status queries. Retain the session TTL.
-
-Create replacement per-channel username/email unique indexes plus distinct
-missing/null-legacy username/email uniqueness. Validate partial-index eligibility
-against actual stored types; reject empty/invalid scope rather than treating it as
-legacy. Audit duplicates first, prove replacement definitions with disposable Mongo
-tests, and use the existing approved index apply/removal workflow.
-Only after scope-safe hosts and replacement indexes are proven may the old global
-username/email indexes be removed in the maintenance window. Their removal is an
-explicitly approved compatibility contraction; do not perform it as request-time
-startup or migrate blindly. Apply portal copies after global uniqueness no longer
-prevents the approved per-channel registrations, with all affected writes frozen.
-
-Deploy shared account support and all consuming hosts before scoped data, then
-approved indexes/mapping, BackOffice account administration and the public account
-UI; deliver/activate article interactions after those prerequisites.
-Activate only after account, moderation and canonical-host gates pass. Backend
-availability is authoritative during mixed frontend versions.
-Observe auth/CSRF failures, forbidden comments, `429`, conflicts, queue backlog,
-Mongo latency and audit failure metrics without logging content or tokens.
-
-Rollback first disables interactions/portal registration or uses the approved account
-maintenance mode as appropriate, and removes controls. Retain collections, scoped
-indexes, destination mappings, accounts and restrictions. Do not delete registrations
-or change their channel to make an old binary work.
-
-Before scoped data/index contraction, an ordinary artifact rollback is possible.
-Afterward, rollback must stay on scope-aware binaries. Reinstating old global unique
-indexes may be impossible once two channels use the same username/email; restoring
-them requires a separately approved conflict/recovery plan, not data deletion.
-Retained legacy identities protect existing Freezer feature references, but new
-portal identities are not automatically downgraded to that namespace.
-Never reopen an older comment endpoint lacking restriction enforcement.
-Approved comments remain public by design; blocking controls authenticated use,
-not anonymous viewing or remotely erasing HTML.
-
-Retention duration, rejected/hidden body handling, privacy-request recovery and
-permanent deletion must be approved before live data collection. Withdrawal's
-tombstone/request-ID retention must preserve idempotency for the approved window.
-No automatic TTL deletion of comments/reactions is proposed without that decision.
-No cache migration, new cookie scheme, social credential rollout or Hangfire job is
-needed. Scoped session validation and reauthentication are nevertheless required.
-
-## Open Questions
-
-Anonymous approved viewing, selected-channel ownership (including registration),
-and the directory of every channel registrant are settled and must not be reopened.
-
-1. Which existing legacy accounts have verified registrations to which portals?
-   Approve the preservation/copy mapping and credential-continuity decision before
-   migration; current records do not contain channel or registration-host evidence.
-2. Confirm pending-first moderation and author withdrawal. Who owns queue review,
-   abuse escalation, retention periods and privacy requests?
-3. Confirm the proposed profile editing/deactivation/reactivation management scope.
-   Password recovery and permanent account deletion need separately approved flows;
-   they are not implied by a generic staff password/delete button.
-4. Does "all user interaction" mean comments and current reactions, or an immutable
-   timeline of every reaction change? Completed shares cannot be reliably observed;
-   an event timeline would be additional persistence/retention scope.
-5. Which deployed artifact serves the canonical domain, and do current supported
-   browsers successfully retain the public account cookie? If third-party cookies
-   fail, an API custom-domain/proxy change requires a separate approved deployment
-   decision before activation.
-6. Are email verification/password recovery required before launch, or accepted as
-   a separately scheduled account-lifecycle slice?
+1. Assign platform-wide `publicaccounts.view` and interaction/moderation permissions
+   to the intended BackOffice roles.
+2. Set moderation, retention, privacy-request and abuse-escalation ownership.
+3. Decide whether email verification/recovery/deletion should be a separate feature.
+4. A full reaction-change timeline, share-intent analytics, replies and notifications
+   are additional persistence/privacy scope and are not implied by this implementation.

@@ -735,6 +735,27 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
             UpdateItemAsync(account);
 
+        public async Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var accounts = await GetItemsAsync(string.IsNullOrWhiteSpace(search)
+                ? _ => true
+                : item => item.Username.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                          item.DisplayName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+            return accounts.OrderBy(item => item.Username, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Id, StringComparer.Ordinal)
+                .Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50))
+                .Take(Math.Clamp(pageSize, 1, 50)).ToArray();
+        }
+
+        public async Task<long> CountAccountsAsync(string? search, CancellationToken cancellationToken = default)
+        {
+            var accounts = await GetItemsAsync(string.IsNullOrWhiteSpace(search)
+                ? _ => true
+                : item => item.Username.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                          item.DisplayName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+            return accounts.Count;
+        }
+
         public Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default) =>
             Task.FromResult(scenario.Add(DbCollections.PublicAccountSessions, session));
 

@@ -27,7 +27,7 @@ import {
   RootLayout,
   VerificationPage,
   type RootData,
-} from "./routes";
+} from "./routes/config";
 import "./styles.css";
 
 registerSW({ immediate: true });

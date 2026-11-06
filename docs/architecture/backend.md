@@ -60,7 +60,7 @@ The [2026-10-24 API consistency audit](api-consistency-audit.md) consolidates th
 - `BaseRepository<T>` implements generic CRUD.
 - Specialized repository interfaces identify collections and feature queries.
 - Updates commonly replace complete documents.
-- Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`) with manifest ownership in `docs/architecture/operations/mongo-index-manifest.phase4.json`.
+- Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`). ServerAPI and BackOffice also verify/create only the blog-interaction indexes before accepting traffic in Mongo mode; mock mode skips this startup service. Other indexes remain manually applied. See [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 - `BsonIgnoreExtraElements` supports additive compatibility for many entities.
 - User lookups must use the repository ID path, which supports legacy BSON `ObjectId` and string `_id` values; do not apply string operators such as `ToLower()` to `User.Id` in Mongo predicates.
 
@@ -150,7 +150,9 @@ revisions. Mock mode always uses
 collections; it does not call an external provider. Mock startup seeds the
 reviewed deterministic baselines. Production prompt baselines are initialized
 explicitly through the permission-protected `/api/v1/ai/workflows/bootstrap`
-operation; startup never mutates Mongo indexes or creates production prompts.
+operation; startup never creates production prompts. The limited blog-interaction
+index bootstrap is documented separately in
+[ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 
 Immutable revisions are resolved per stage. Video review creates opaque item
 IDs before ten-item chunking, validates exact response identities and requested
@@ -200,7 +202,7 @@ Rules:
 - Public affiliate products use the single `YouTubeChannelId` configured by the
     ServerAPI host. Product and product-category mutations invalidate the local
     `products` cache and the ServerAPI `tag-product` output-cache tag.
-- The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. Index creation is an approved manual operation, not a startup action; local source review does not prove production deployment.
+- The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. Those indexes remain approved manual operations, not startup actions; local source review does not prove production deployment. Blog-interaction indexes are the limited startup-managed exception in [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 
 ## Background Work
 

@@ -194,6 +194,46 @@ describe('offline field reconciliation', () => {
       authenticated: true,
       account: { id: accountId, username: 'runner', email: 'runner@example.test', displayName: 'Runner' }
     });
+
+    describe('field documents and contextual help', () => {
+      it('keeps the ZIP action and downloads each phone image independently', async () => {
+        const snapshot: Snapshot = {
+          id: 'image-snapshot',
+          matchId: 'match-1',
+          engineVersion: 'engine-v1',
+          parameterVersion: 'parameters-v1',
+          createdAtUtc: '2026-10-29T10:00:00Z',
+          stages: []
+        };
+        const downloadImage = vi.spyOn(freezerApi, 'downloadArtifactImage')
+          .mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
+        const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:image');
+        vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+        renderFieldPage(snapshot, 'image-account');
+
+        expect(await screen.findByRole('button', { name: 'Scarica documenti gara' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Scarica PNG fronte' }));
+        await waitFor(() => expect(downloadImage).toHaveBeenCalledWith(snapshot.id, 'front'));
+        expect(createObjectUrl).toHaveBeenCalledOnce();
+        fireEvent.click(screen.getByRole('button', { name: 'Scarica PNG retro' }));
+        await waitFor(() => expect(downloadImage).toHaveBeenCalledWith(snapshot.id, 'back'));
+      });
+
+      it('exposes parameter explanations through keyboard-focusable help controls', async () => {
+        const snapshot: Snapshot = {
+          id: 'help-snapshot',
+          matchId: 'match-1',
+          engineVersion: 'engine-v1',
+          parameterVersion: 'parameters-v1',
+          createdAtUtc: '2026-10-29T10:00:00Z',
+          stages: []
+        };
+        renderVerificationPage(snapshot, null);
+        const help = (await screen.findAllByRole('button', { name: 'Mostra spiegazione' }))[0];
+        expect(help).toHaveAttribute('aria-describedby', 'backtest-beta-help');
+        expect(screen.getByText(/Parametro di sensibilità della stima/)).toBeInTheDocument();
+      });
+    });
     const verifySnapshot = vi.spyOn(freezerApi, 'getSnapshot').mockResolvedValue(snapshot);
     const appendFieldEvent = vi.spyOn(freezerApi, 'appendFieldEvent').mockResolvedValue(savedEvent);
     renderFieldPage(snapshot, accountId, true);

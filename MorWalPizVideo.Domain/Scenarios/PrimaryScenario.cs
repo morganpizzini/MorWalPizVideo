@@ -104,6 +104,9 @@ public class PrimaryScenario : BaseScenario
         Set(DbCollections.AiPromptAudit, Array.Empty<AiPromptAuditEvent>());
         Set("publicAccounts", Array.Empty<PublicAccount>());
         Set("publicAccountSessions", Array.Empty<PublicAccountSession>());
+        Set(DbCollections.BlogComments, Array.Empty<BlogComment>());
+        Set(DbCollections.BlogReactions, Array.Empty<BlogReaction>());
+        Set(DbCollections.BlogPortalAccess, Array.Empty<BlogPortalAccess>());
 
         var passwordHash = PasswordHashing.HashPassword(AdminPassword, AdminPasswordSalt);
         Set("users",

@@ -389,6 +389,12 @@ public sealed record FreezerFrozenSnapshot : BaseEntity
     [BsonElement("matchId")]
     public string MatchId { get; init; } = string.Empty;
 
+    [BsonElement("division")]
+    public string? Division { get; init; }
+
+    [BsonElement("powerFactor")]
+    public string? PowerFactor { get; init; }
+
     [BsonElement("matchRevisionId")]
     public string MatchRevisionId { get; init; } = string.Empty;
 

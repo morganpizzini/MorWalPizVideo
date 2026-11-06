@@ -1,9 +1,14 @@
 # Mongo Index Audit Artifacts (Phase 4)
 
 This is the canonical operator guide for the source-owned Mongo index operation,
-aligned with ADR-008. The runtime `MongoIndexOperationsService.Manifest` and the
-operational manifest are the source of truth. This guide intentionally does not
-create a separate index inventory.
+aligned with ADR-008 and the limited startup exception in ADR-022. The runtime
+`MongoIndexOperationsService.Manifest` and the operational manifest are the source
+of truth. This guide intentionally does not create a separate index inventory.
+
+The blog-interaction indexes are verified/created by ServerAPI and BackOffice at
+startup in Mongo mode; their three collections are created empty when missing.
+Startup does not apply any other manifest keys and never removes or repairs a
+conflicting index. All other indexes continue through the reviewed procedures below.
 
 ## Required evidence per rollout
 
@@ -97,10 +102,10 @@ The operation processes approved keys sequentially. Each result reports either
 `created` or `skipped_existing`. If a later key fails, earlier indexes may already
 have been applied; re-audit the environment before retrying.
 
-An existing index with the manifest name is reported as `skipped_existing` without
-fully reconciling its key pattern or options. Compare the actual deployed index
-specification separately; same-name existence is not proof that the specification
-matches the manifest.
+An index is `skipped_existing` only when its key pattern and declared uniqueness,
+partial filter, collation and expiration options match the manifest. A same-name
+index with a different definition is not treated as a match and must be reconciled
+through an explicit reviewed operation.
 
 ## Legacy removal contract
 
@@ -132,8 +137,10 @@ result reports `removed`; a missing legacy index reports `skipped_absent` and is
 idempotent. Unknown removal keys fail with HTTP 400. Mongo index conflicts and
 invalid operation errors are returned as clear bad-request responses.
 
-Indexes are never created at startup. Keep backups, rollback notes, audit/apply
-responses, and explain evidence with each environment-specific rollout record.
+Only the blog-interaction index subset in ADR-022 is created at startup. Other
+indexes require the reviewed audit/apply process described here. Keep backups,
+rollback notes, audit/apply responses, and explain evidence with each
+environment-specific rollout record.
 
 Historical sample artifacts are not production evidence. Never record raw API keys,
 connection strings, or other connection details in documentation or operational

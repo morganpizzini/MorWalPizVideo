@@ -20,6 +20,8 @@ using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.BackOffice.Services.Ai;
 using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
+using MorWalPizVideo.Domain.Accounts;
+using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Domain.Push;
@@ -213,6 +215,8 @@ else
     builder.Services.AddScoped<IAiOrchestrationRepository, AiOrchestrationMockRepository>();
 }
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
+builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+builder.Services.AddScoped<BlogInteractionService>();
 builder.Services.AddScoped<VideoImporterChannelSettingsService>();
 // Add services to the container.
 
@@ -494,6 +498,8 @@ if (enableMock)
     builder.Services.AddSingleton<SmtpMockService>();
     builder.Services.AddSingleton<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
+    builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
+    builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionMockRepository>();
     builder.Services.AddScoped<IPushAudienceRepository, PushAudienceMockRepository>();
     builder.Services.AddScoped<IPushNotificationTemplateRepository, PushNotificationTemplateMockRepository>();
     builder.Services.AddScoped<IPushDispatchRepository, PushDispatchMockRepository>();
@@ -542,8 +548,11 @@ else
     builder.Services.AddScoped<IMongoDbService, MongoDbService>();
     builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
+    builder.Services.AddHostedService<BlogInteractionMongoIndexStartupService>();
 
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
+    builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();
+    builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
     builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();

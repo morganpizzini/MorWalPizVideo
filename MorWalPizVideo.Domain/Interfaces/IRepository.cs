@@ -21,6 +21,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default);
         Task<PublicAccount> AddAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
         Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<long> CountAccountsAsync(string? search, CancellationToken cancellationToken = default);
         Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default);
         Task<PublicAccountSession?> FindActiveSessionAsync(string tokenHash, DateTime now, CancellationToken cancellationToken = default);
         Task RevokeSessionAsync(string tokenHash, DateTime revokedAt, CancellationToken cancellationToken = default);

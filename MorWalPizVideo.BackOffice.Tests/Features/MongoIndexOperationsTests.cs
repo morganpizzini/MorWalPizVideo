@@ -1,13 +1,12 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.Domain.BlogInteractions;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -37,34 +36,37 @@ public sealed class MongoIndexOperationsTests
     }
 
     [Fact]
-    public async Task Startup_initializer_applies_the_shortlink_unique_index_idempotently()
+    public void Blog_interaction_startup_manifest_contains_only_feature_owned_indexes()
     {
-        var operations = new RecordingMongoIndexOperationsService();
-        using var provider = new ServiceCollection()
-            .AddScoped<IMongoIndexOperationsService>(_ => operations)
-            .BuildServiceProvider();
-        var initializer = new MongoIndexStartupInitializer(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<MongoIndexStartupInitializer>.Instance);
-
-        await initializer.StartAsync(CancellationToken.None);
-
         Assert.Equal([
-            "shortlinks.code.unique",
-            "customforms_channelid_url.unique",
-            "surveys_channelid_url.unique",
-            "surveys_channelid_lifecycle_window",
-            "customformresponses.processingstatus_leaseuntil",
-            "newsletterusers.channelid_emailhash.unique",
-            "newsletterusers.channelid_confirmationtokenhash",
-            "newsletterusers.channelid_unsubscribetokenhash",
-            "newsletterrecipients.channelid_newsletterid_userid.unique",
-            "newsletterevents.channelid_newsletterid_type_occurredat",
-            "socialassets.channelid_idempotencykey.unique",
-            "publicaccounts.normalizedusername.unique",
-            "publicaccounts.normalizedemail.unique",
-            "publicaccountsessions.expiresat.ttl"
-        ], operations.AppliedKeys);
+            "blogcomments.channel_account_request.unique",
+            "blogcomments.channel_post_status_created",
+            "blogcomments.channel_status_created",
+            "blogcomments.channel_account_created",
+            "blogreactions.channel_post_account.unique",
+            "blogreactions.channel_account_created",
+            "blogportalaccess.channel_account.unique"
+        ], BlogInteractionMongoIndexes.Manifest.Select(index => index.Key));
+        Assert.All(BlogInteractionMongoIndexes.Manifest, index =>
+            Assert.Contains(MongoIndexOperationsService.Manifest, manifestEntry =>
+                manifestEntry.Key == index.Key &&
+                manifestEntry.Name == index.Name &&
+                manifestEntry.Collection == index.Collection &&
+                manifestEntry.Keys.Equals(index.Keys) &&
+                manifestEntry.Unique == index.Unique));
+    }
+
+    [Theory]
+    [InlineData(26, "NamespaceNotFound", true)]
+    [InlineData(26, null, true)]
+    [InlineData(48, "NamespaceExists", false)]
+    [InlineData(2, "BadValue", false)]
+    public void Missing_collection_detection_is_limited_to_namespace_not_found(
+        int code,
+        string? codeName,
+        bool expected)
+    {
+        Assert.Equal(expected, BlogInteractionMongoIndexes.IsNamespaceNotFound(code, codeName));
     }
 
     [Fact]
@@ -149,6 +151,43 @@ public sealed class MongoIndexOperationsTests
         Assert.True(MongoIndexOperationsService.HasExpectedDefinition(correct, desired));
         Assert.False(MongoIndexOperationsService.HasExpectedDefinition(nonUnique, desired));
         Assert.False(MongoIndexOperationsService.HasExpectedDefinition(wrongKeys, desired));
+    }
+
+    [Fact]
+    public void Partial_filter_definition_is_part_of_index_audit()
+    {
+        var expected = MongoIndexOperationsService.Manifest
+            .Single(item => item.Key == "customforms_channelid_url.unique");
+        var matching = new BsonDocument
+        {
+            { "name", expected.Name },
+            { "key", expected.Keys },
+            { "unique", true },
+            { "partialFilterExpression", expected.PartialFilter }
+        };
+        var wrongFilter = matching.DeepClone().AsBsonDocument;
+        wrongFilter["partialFilterExpression"] = new BsonDocument("channelId", new BsonDocument("$exists", false));
+        var missingFilter = matching.DeepClone().AsBsonDocument;
+        missingFilter.Remove("partialFilterExpression");
+
+        Assert.True(MongoIndexOperationsService.HasExpectedDefinition(matching, expected));
+        Assert.False(MongoIndexOperationsService.HasExpectedDefinition(wrongFilter, expected));
+        Assert.False(MongoIndexOperationsService.HasExpectedDefinition(missingFilter, expected));
+    }
+
+    [Fact]
+    public void Unexpected_partial_filter_is_not_treated_as_an_exact_definition()
+    {
+        var expected = MongoIndexOperationsService.Manifest.Single(item => item.Key == "pages_url.unique");
+        var withPartialFilter = new BsonDocument
+        {
+            { "name", expected.Name },
+            { "key", expected.Keys },
+            { "unique", true },
+            { "partialFilterExpression", new BsonDocument("url", new BsonDocument("$exists", true)) }
+        };
+
+        Assert.False(MongoIndexOperationsService.HasExpectedDefinition(withPartialFilter, expected));
     }
 
     [Fact]
@@ -237,18 +276,14 @@ public sealed class MongoIndexOperationsTests
 
     private sealed class RecordingMongoIndexOperationsService : IMongoIndexOperationsService
     {
-        public IList<string> AppliedKeys { get; private set; } = [];
         public IList<string> RemovalKeys { get; private set; } = [];
         public IList<MongoIndexRemovalResult> RemovalResults { get; set; } = [];
 
         public Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IList<MongoIndexAuditItem>>([]);
 
-        public Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default)
-        {
-            AppliedKeys = approvedKeys;
-            return Task.FromResult<IList<MongoIndexApplyResult>>([]);
-        }
+        public Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IList<MongoIndexApplyResult>>([]);
 
         public Task<IList<MongoIndexRemovalResult>> RemoveAsync(IList<string> approvedRemovalKeys, CancellationToken cancellationToken = default)
         {

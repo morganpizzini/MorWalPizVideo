@@ -50,6 +50,7 @@ Aspire AppHost starts:
 
 - ServerAPI, public client, and the on-hold shop client for local compatibility.
 - BackOffice and BackOffice SPA.
+- FreezerAnalysis API and SPA; the SPA binds to Aspire's assigned `PORT` and does not silently select a different port.
 - ShortLinks.
 - Shooting Range API and client.
 

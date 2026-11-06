@@ -29,6 +29,10 @@ The implementation touched `FreezerAnalysis.Api/Program.cs`, `FreezerAnalysis.Ap
 - The comparison UI is implemented within the existing route module rather than extracted into a dedicated component file.
 - The two PDF extraction integration checks remain skipped unless `FREEZER_ANALYSIS_PDFTEXTEXTRACTOR_PATH` is configured.
 
+## Route And Match-Day Refinement Proposal (2026-11-05)
+
+The current route organization, HF selection, field-note usability, individual PNG downloads, and editable-plan reopening are covered by the user-editable [route and field refinement handoff](freezer-analysis-route-field-refinement-handoff.md). That document is a proposed plan, not an implementation record. It preserves frozen history and explicitly addresses historical queued notes when the working draft is reopened. The earlier completion record does not claim these new requests have been delivered.
+
 ## Technical Debt Reduction Plan (2026-10-30)
 
 ### Outcome

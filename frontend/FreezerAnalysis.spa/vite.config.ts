@@ -4,6 +4,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   server: {
+    port: Number(process.env.PORT) || 5178,
+    strictPort: Boolean(process.env.PORT),
     proxy: {
       "/api": {
         target: process.env.VITE_FREEZER_API_PROXY_TARGET,

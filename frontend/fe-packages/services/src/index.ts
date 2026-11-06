@@ -266,6 +266,21 @@ export {
   getPublicBlog,
   getPublicBlogPost,
 } from "./blogService";
+export {
+  getBlogInteractionSummary,
+  getBlogComments,
+  getBlogViewerState,
+  submitBlogComment,
+  setBlogReaction,
+  clearBlogReaction,
+  withdrawBlogComment,
+  getPublicAccountDirectory,
+  getPublicAccountInteractions,
+  updatePublicAccountPortalAccess,
+  getBlogAdminComments,
+  getBlogArticleInteractions,
+  moderateBlogComment,
+} from "./blogInteractionService";
 
 // Video ↔ Channel join (FR-016 / FR-017)
 export {

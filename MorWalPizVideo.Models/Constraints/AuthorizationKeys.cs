@@ -12,6 +12,11 @@ public static class AuthorizationPermissionKeys
   public const string UsersUpdate = "users.update";
   public const string UsersDelete = "users.delete";
   public const string UsersPermissionsManage = "users.permissions.manage";
+  public const string PublicAccountsView = "publicaccounts.view";
+  public const string BlogInteractionsView = "blog.interactions.view";
+  public const string BlogCommentsModerate = "blog.comments.moderate";
+  public const string PortalAccessManage = "portalaccess.manage";
+  public const string BlogInteractionsManage = "blog.interactions.manage";
   public const string ScriptsStudio = "scripts.studio";
   public const string ScriptsGlobalPromptManage = "scripts.globalprompt.manage";
   public const string ScriptsQuotaManage = "scripts.quota.manage";

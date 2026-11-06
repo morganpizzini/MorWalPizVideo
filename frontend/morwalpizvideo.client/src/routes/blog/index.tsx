@@ -4,6 +4,7 @@ import { ApiResponseError, getPublicBlog, getPublicBlogPost } from '@morwalpizvi
 import { BlogRenderer } from '@morwalpiz/layout';
 import { Helmet } from 'react-helmet-async';
 import SEO from '../../utils/seo';
+import BlogInteractions from './Interactions';
 import './style.scss';
 
 export async function blogLoader({ request }: LoaderFunctionArgs): Promise<BlogPage> {
@@ -78,6 +79,7 @@ export function BlogList() {
 export function BlogArticle() {
   const post = useLoaderData() as BlogPostPublic;
   const metadata = post.metadata;
+  const canonicalUrl = `https://morwalpiz.com/blog/${encodeURIComponent(metadata.slug)}`;
   const article = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -125,6 +127,31 @@ export function BlogArticle() {
             ))}
           </ul>
         )}
+        <section className="blog-share" aria-labelledby="blog-share-title">
+          <h2 id="blog-share-title">Condividi l'articolo</h2>
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Facebook
+          </a>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`${metadata.title} ${canonicalUrl}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            WhatsApp
+          </a>
+          <a
+            href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonicalUrl)}&text=${encodeURIComponent(metadata.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            X
+          </a>
+        </section>
+        <BlogInteractions slug={metadata.slug} />
       </article>
     </main>
   );

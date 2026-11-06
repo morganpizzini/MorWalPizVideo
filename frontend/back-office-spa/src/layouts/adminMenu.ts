@@ -149,6 +149,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: FileText,
       },
       {
+        label: 'Blog interactions',
+        path: '/blog-interactions',
+        permissions: [permissions.blogInteractions.view, permissions.blogInteractions.moderate],
+        icon: FileText,
+      },
+      {
         label: 'Navigation',
         path: '/navigation',
         permissions: [permissions.navigation.view, permissions.navigation.manage],
@@ -220,6 +226,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
           permissions.users.manage,
           permissions.users.permissionsManage,
         ],
+        icon: Users,
+      },
+      {
+        label: 'Public accounts',
+        path: '/public-accounts',
+        permissions: [permissions.publicAccounts.view],
         icon: Users,
       },
       {

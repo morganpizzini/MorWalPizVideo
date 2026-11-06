@@ -41,6 +41,11 @@ const BLOG_POSTS = `${baseEndpoint}/blogposts`;
 const BLOG_POST_DETAIL = `${BLOG_POSTS}/{id}`;
 const BLOG = `${baseEndpoint}/blog`;
 const BLOG_DETAIL = `${BLOG}/{slug}`;
+const PUBLIC_ACCOUNTS = `${baseEndpoint}/publicaccounts`;
+const PUBLIC_ACCOUNT_INTERACTIONS = `${baseEndpoint}/blog-interactions/accounts/{accountId}`;
+const PUBLIC_ACCOUNT_PORTAL_ACCESS = `${PUBLIC_ACCOUNT_INTERACTIONS}/access`;
+const BLOG_INTERACTION_COMMENTS = `${baseEndpoint}/blog-interactions/comments`;
+const BLOG_INTERACTION_ARTICLES = `${baseEndpoint}/blog-interactions/articles`;
 const CHANNELS = `${baseEndpoint}/channels`;
 const CHANNELS_ACCESSIBLE = `${CHANNELS}/accessible`;
 const CHANNELS_DETAIL = `${CHANNELS}/{channelId}`;
@@ -215,6 +220,11 @@ export default {
   BLOG_POST_DETAIL,
   BLOG,
   BLOG_DETAIL,
+  PUBLIC_ACCOUNTS,
+  PUBLIC_ACCOUNT_INTERACTIONS,
+  PUBLIC_ACCOUNT_PORTAL_ACCESS,
+  BLOG_INTERACTION_COMMENTS,
+  BLOG_INTERACTION_ARTICLES,
   CHANNELS,
   CHANNELS_ACCESSIBLE,
   CHANNELS_DETAIL,

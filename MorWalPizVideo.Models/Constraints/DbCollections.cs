@@ -102,6 +102,9 @@
         public const string NewsletterEvents = "newsletterEvents";
         public const string PublicAccounts = "publicAccounts";
         public const string PublicAccountSessions = "publicAccountSessions";
+        public const string BlogComments = "blogComments";
+        public const string BlogReactions = "blogReactions";
+        public const string BlogPortalAccess = "blogPortalAccess";
 
         public const string FreezerMatches = "freezerMatches";
         public const string FreezerMatchRevisions = "freezerMatchRevisions";

@@ -101,6 +101,14 @@ Shooting ITA is in scope and reuses shared layout and service behavior. Current 
 
 The service worker precaches only the app shell and static assets; it does not cache API responses. The field snapshot and queued field events use account-partitioned IndexedDB records. Queued operations retain client-generated IDs and are reconciled through the API's idempotent field-event endpoint. Offline access is limited to previously cached snapshots; authentication and server mutations still require the API.
 
+The route bootstrap imports its route-facing surface from
+`FreezerAnalysis.spa/src/routes/config.tsx`. Implementations are owned by
+feature modules under `src/routes/` (`layout`, `account`, `matches`, `profile`,
+`identity-review`, `match-detail`, `verification`, and `field`); the
+compatibility `src/routes.tsx` file contains exports only. These modules share
+the existing session and loader contracts without changing URLs,
+authentication, offline snapshots, or loader behavior.
+
 ## State Management
 
 The BackOffice SPA uses its local Zustand app store for information needed across the protected shell lifetime: logged-user display identity, server-effective permissions, session status, feature flags, accessible channels, and the selected channel id. The protected root loader hydrates this store once after session validation; feature state comes from the unscoped `GET /api/features` endpoint. The store is a UI snapshot, not an authentication authority: the HttpOnly cookie, CSRF handling, `authService` validation, and server authorization remain authoritative.

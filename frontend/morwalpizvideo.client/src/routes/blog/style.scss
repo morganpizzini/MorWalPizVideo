@@ -32,6 +32,50 @@
     aspect-ratio: 16 / 9;
     object-fit: cover;
   }
+  .blog-share,
+  .blog-interactions {
+    max-width: 75ch;
+    margin: 2rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--magazine-border);
+  }
+  .blog-share {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    h2 {
+      flex-basis: 100%;
+      font-size: 1.25rem;
+    }
+  }
+  .blog-interactions {
+    h2 {
+      font-size: 1.5rem;
+    }
+    h3 {
+      margin-top: 1.75rem;
+      font-size: 1.2rem;
+    }
+  }
+  .blog-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-block: 1rem;
+  }
+  .blog-comment-form {
+    margin-block: 1.5rem;
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+  }
+  .blog-comment {
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--magazine-border);
+  }
 }
 
 .blog-page {

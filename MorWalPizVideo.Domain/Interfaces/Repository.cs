@@ -1109,6 +1109,27 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
             _collection.ReplaceOneAsync(item => item.Id == account.Id, account, cancellationToken: cancellationToken);
 
+        public async Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var filter = string.IsNullOrWhiteSpace(search)
+                ? Builders<PublicAccount>.Filter.Empty
+                : Builders<PublicAccount>.Filter.Regex(item => item.Username, new BsonRegularExpression(Regex.Escape(search.Trim()), "i")) |
+                  Builders<PublicAccount>.Filter.Regex(item => item.DisplayName, new BsonRegularExpression(Regex.Escape(search.Trim()), "i"));
+            return await _collection.Find(filter).SortBy(item => item.Username)
+                .ThenBy(item => item.Id)
+                .Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50))
+                .Limit(Math.Clamp(pageSize, 1, 50)).ToListAsync(cancellationToken);
+        }
+
+        public Task<long> CountAccountsAsync(string? search, CancellationToken cancellationToken = default)
+        {
+            var filter = string.IsNullOrWhiteSpace(search)
+                ? Builders<PublicAccount>.Filter.Empty
+                : Builders<PublicAccount>.Filter.Regex(item => item.Username, new BsonRegularExpression(Regex.Escape(search.Trim()), "i")) |
+                  Builders<PublicAccount>.Filter.Regex(item => item.DisplayName, new BsonRegularExpression(Regex.Escape(search.Trim()), "i"));
+            return _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        }
+
         public Task<PublicAccountSession> AddSessionAsync(PublicAccountSession session, CancellationToken cancellationToken = default) =>
             AddSessionCoreAsync(session, cancellationToken);
 

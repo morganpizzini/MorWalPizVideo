@@ -67,6 +67,11 @@ public interface IFreezerAnalysisRepository
     Task<FreezerAnalysisDraft?> GetDraftAsync(string accountId, string matchId, CancellationToken cancellationToken);
     Task<FreezerAnalysisDraft> CreateDraftAsync(FreezerAnalysisDraft draft, CancellationToken cancellationToken);
     Task<FreezerAnalysisDraft?> UpdateDraftAsync(FreezerAnalysisDraft draft, long expectedRevision, CancellationToken cancellationToken);
+    Task<FreezerAnalysisDraft?> ReopenDraftAsync(
+        string accountId,
+        string matchId,
+        long expectedRevision,
+        CancellationToken cancellationToken);
     Task<FreezePublicationResult> FreezeAsync(FreezerFrozenSnapshot snapshot, long expectedRevision, CancellationToken cancellationToken);
     Task<FreezerFrozenSnapshot?> GetSnapshotAsync(string accountId, string snapshotId, CancellationToken cancellationToken);
     Task<IReadOnlyList<FreezerFrozenSnapshot>> ListSnapshotsAsync(string accountId, int limit, CancellationToken cancellationToken);

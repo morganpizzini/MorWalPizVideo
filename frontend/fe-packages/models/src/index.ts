@@ -58,6 +58,26 @@ export type {
   PublicAccountSession,
   PublicAccountCsrf,
 } from "./publicAccount";
+export type {
+  BlogInteractionSummary,
+  BlogComment,
+  BlogCommentPage,
+  BlogViewerState,
+  BlogCommentSubmission,
+  BlogReactionRequest,
+  BlogAdminComment,
+  BlogAdminCommentPage,
+  BlogArticleInteractions,
+  BlogArticleInteractionsPage,
+  BlogPortalAccess,
+  BlogPortalAccessRequest,
+  PublicAccountDirectoryItem,
+  PublicAccountDirectoryPage,
+  PublicAccountAdminDetail,
+  BlogReactionAdmin,
+  PublicAccountInteractionDetail,
+} from "./blogInteractions";
+export { BlogCommentStatus, BlogReactionValue } from "./blogInteractions";
 
 // Categories exports
 export type {

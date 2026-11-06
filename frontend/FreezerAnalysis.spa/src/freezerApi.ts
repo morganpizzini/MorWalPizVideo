@@ -655,6 +655,13 @@ export const freezerApi = {
         draft,
       ),
     ),
+  reopenDraft: (matchId: string, expectedRevision: number) =>
+    checked<Draft>(
+      accountApi.post(
+        `/api/v1/matches/${encodeURIComponent(matchId)}/draft/reopen`,
+        { expectedRevision },
+      ),
+    ),
   getEstimate: (matchId: string) =>
     checked<Estimate>(
       accountApi.get(
@@ -753,6 +760,17 @@ export const freezerApi = {
       ),
     );
   },
+  downloadArtifactImage: async (snapshotId: string, side: "front" | "back") =>
+    checked<Blob>(
+      accountApi.call(
+        `/api/v1/snapshots/${encodeURIComponent(snapshotId)}/images/${side}`,
+        "GET",
+        undefined,
+        "",
+        undefined,
+        true,
+      ),
+    ),
 };
 
 export function rememberAccountId(accountId: string): void {

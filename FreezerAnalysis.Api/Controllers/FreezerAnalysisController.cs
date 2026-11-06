@@ -316,6 +316,19 @@ public sealed class FreezerAnalysisController(
             var saved = await coordinator.SaveDraftAsync(AccountId(), matchId, request, cancellationToken);
             return saved is null ? Conflict(new ProblemDetails { Title = "The draft is frozen or has changed." }) : Ok(saved);
         }
+
+        [HttpPost("matches/{matchId}/draft/reopen")]
+        public async Task<ActionResult<FreezerDraftResponse>> ReopenDraft(
+            string matchId,
+            FreezerFreezeRequest request,
+            CancellationToken cancellationToken)
+        {
+            var reopened = await coordinator.ReopenDraftAsync(
+                AccountId(), matchId, request.ExpectedRevision, cancellationToken);
+            return reopened is null
+                ? Conflict(new ProblemDetails { Title = "The draft has changed or is not frozen." })
+                : Ok(reopened);
+        }
         catch (KeyNotFoundException)
         {
             return NotFound();
@@ -535,6 +548,62 @@ public sealed class FreezerAnalysisController(
             artifact.Value.Archive,
             artifact.Value.Manifest.ContentType,
             $"freezer-card-{artifact.Value.Manifest.SnapshotId}.zip");
+    }
+
+    [HttpGet("artifacts/{artifactId}/images/{side}")]
+    public async Task<IActionResult> GetArtifactImage(
+        string artifactId,
+        string side,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var artifact = await coordinator.GetArtifactImageAsync(
+                AccountId(), artifactId, side, cancellationToken);
+            if (artifact is null)
+                return NotFound();
+            Response.Headers.ETag = $"\"{artifact.Value.Manifest.Sha256}\"";
+            return File(
+                artifact.Value.Image,
+                "image/png",
+                $"freezer-card-{artifact.Value.Manifest.SnapshotId}-phone-{side}.png");
+        }
+
+        [HttpGet("snapshots/{snapshotId}/images/{side}")]
+        public async Task<IActionResult> GetSnapshotImage(
+            string snapshotId,
+            string side,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var artifact = await coordinator.GetSnapshotImageAsync(
+                    AccountId(), snapshotId, side, cancellationToken);
+                if (artifact is null)
+                    return NotFound();
+                Response.Headers.ETag = $"\"{artifact.Value.Manifest.Sha256}\"";
+                return File(
+                    artifact.Value.Image,
+                    "image/png",
+                    $"freezer-card-{snapshotId}-phone-{side}.png");
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest();
+            }
+            catch (InvalidDataException exception)
+            {
+                return Problem(exception.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest();
+        }
+        catch (InvalidDataException exception)
+        {
+            return Problem(exception.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
     }
 
     private string AccountId() =>

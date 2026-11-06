@@ -4,6 +4,7 @@ import {
   ChannelContextError,
   rejectChannelBootstrap,
   resolveChannelBootstrap,
+  isScopedBackOfficeRequest,
   startChannelBootstrap,
 } from "./apiTransport";
 
@@ -48,6 +49,33 @@ describe("channel bootstrap readiness", () => {
     expect(
       new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"),
     ).toBe("gallery-channel");
+  });
+
+  it("scopes interaction management but leaves the global public account directory unscoped", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(
+      isScopedBackOfficeRequest("/api/blog-interactions/accounts/account-1"),
+    ).toBe(true);
+    expect(isScopedBackOfficeRequest("/api/publicaccounts")).toBe(false);
+
+    await adminApiService.get("/api/publicaccounts");
+    const bootstrap = startChannelBootstrap();
+    const request = adminApiService.get(
+      "/api/blog-interactions/accounts/account-1",
+    );
+    resolveChannelBootstrap(bootstrap, "interaction-channel");
+    await request;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"),
+    ).toBeNull();
+    expect(
+      new Headers(fetchMock.mock.calls[1][1].headers).get("X-Channel-Id"),
+    ).toBe("interaction-channel");
   });
 
   it("fails scoped requests locally when no channel is assigned", async () => {

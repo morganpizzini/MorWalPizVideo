@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiResponseError, getPublicBlog, getPublicBlogPost } from '@morwalpizvideo/services';
 import type { BlogPage, BlogPostPublic } from '@morwalpizvideo/models';
 import { BlogArticle, BlogList, articleLoader, blogLoader } from './index';
+import { PublicAccountProvider } from '../layout/account';
 
 const mocks = vi.hoisted(() => ({ loaderData: {} as BlogPage | BlogPostPublic }));
 vi.mock('react-router', async (importOriginal) => ({
@@ -109,9 +110,11 @@ describe('public blog routes', () => {
     mocks.loaderData = post;
     const html = renderToStaticMarkup(
       <HelmetProvider>
-        <MemoryRouter initialEntries={['/blog/article']}>
-          <BlogArticle />
-        </MemoryRouter>
+        <PublicAccountProvider>
+          <MemoryRouter initialEntries={['/blog/article']}>
+            <BlogArticle />
+          </MemoryRouter>
+        </PublicAccountProvider>
       </HelmetProvider>
     );
     expect(html).toContain('Published body');
@@ -120,5 +123,8 @@ describe('public blog routes', () => {
     expect(html).toContain('content="https://cdn.test/cover.jpg"');
     expect(html).toContain('href="https://morwalpiz.com/blog/article"');
     expect(html).toContain('"@type":"Article"');
+    expect(html).toContain('Condividi l&#x27;articolo');
+    expect(html).toContain('Partecipa alla conversazione');
+    expect(html).toContain('Commenti approvati');
   });
 });

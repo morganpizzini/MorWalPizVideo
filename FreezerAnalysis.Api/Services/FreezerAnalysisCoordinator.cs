@@ -564,6 +564,17 @@ public sealed class FreezerAnalysisCoordinator(
         return saved is null ? null : ToResponse(saved);
     }
 
+    public async Task<FreezerDraftResponse?> ReopenDraftAsync(
+        string accountId,
+        string matchId,
+        long expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        var reopened = await repository.ReopenDraftAsync(
+            accountId, matchId, expectedRevision, cancellationToken);
+        return reopened is null ? null : ToResponse(reopened);
+    }
+
     public async Task<FreezerEstimateResponse> EstimateAsync(
         string accountId,
         string matchId,
@@ -1019,6 +1030,8 @@ public sealed class FreezerAnalysisCoordinator(
             DraftId = draft.Id,
             DraftRevision = expectedRevision,
             MatchId = matchId,
+            Division = draft.Division,
+            PowerFactor = (await repository.GetProfileAsync(accountId, cancellationToken))?.PowerFactor,
             MatchRevisionId = revision.Id,
             InputPackageHash = packageHash,
             InputPackageObjectKey = storedPackage.Key,
@@ -1874,7 +1887,11 @@ public sealed class FreezerAnalysisCoordinator(
         var draft = await repository.GetDraftAsync(accountId, snapshot.MatchId, cancellationToken);
         var profile = await repository.GetProfileAsync(accountId, cancellationToken);
         var events = await repository.GetFieldEventsAsync(accountId, snapshotId, cancellationToken);
-        var context = events.LastOrDefault()?.RenderingContext ?? draft?.RenderingContext ?? new FreezerRenderingContext();
+        var context = events
+            .Where(item => item.Kind == "turn" && item.RenderingContext is not null)
+            .LastOrDefault()?.RenderingContext
+            ?? draft?.RenderingContext
+            ?? new FreezerRenderingContext();
         var forecasts = snapshot.Forecast.ToDictionary(item => item.StageId, StringComparer.Ordinal);
         var stages = revision.Stages.Select(stage =>
         {
@@ -1890,8 +1907,8 @@ public sealed class FreezerAnalysisCoordinator(
         return new FreezerCardPayload(
             match.Name,
             match.LocalMatchDate,
-            draft?.Division ?? profile?.Division ?? string.Empty,
-            profile?.PowerFactor ?? string.Empty,
+            snapshot.Division ?? draft?.Division ?? profile?.Division ?? string.Empty,
+            snapshot.PowerFactor ?? profile?.PowerFactor ?? string.Empty,
             stages,
             context.StartStage,
             context.StartTurn,
@@ -1951,6 +1968,44 @@ public sealed class FreezerAnalysisCoordinator(
             await repository.GetSnapshotAsync(accountId, artifact.SnapshotId, cancellationToken) is null)
             return null;
         return (artifact, await ReadArtifactAsync(artifact, cancellationToken));
+    }
+
+    public async Task<(FreezerArtifactManifest Manifest, byte[] Image)?> GetArtifactImageAsync(
+        string accountId,
+        string artifactId,
+        string side,
+        CancellationToken cancellationToken)
+    {
+        if (side is not ("front" or "back"))
+            throw new ArgumentException("The image side must be front or back.", nameof(side));
+        var artifact = await GetArtifactAsync(accountId, artifactId, cancellationToken);
+        if (artifact is null)
+            return null;
+        using var archive = new MemoryStream(artifact.Value.Archive, writable: false);
+        using var zip = new ZipArchive(archive, ZipArchiveMode.Read);
+        var entry = zip.GetEntry($"phone-{side}.png");
+        if (entry is null)
+            throw new InvalidDataException($"The artifact is missing phone-{side}.png.");
+        await using var stream = entry.Open();
+        using var image = new MemoryStream();
+        await stream.CopyToAsync(image, cancellationToken);
+        var bytes = image.ToArray();
+        if (bytes.Length < 8 ||
+            !bytes.AsSpan(0, 8).SequenceEqual([137, 80, 78, 71, 13, 10, 26, 10]))
+            throw new InvalidDataException("The artifact image is not a valid PNG.");
+        return (artifact.Value.Manifest, bytes);
+    }
+
+    public async Task<(FreezerArtifactManifest Manifest, byte[] Image)?> GetSnapshotImageAsync(
+        string accountId,
+        string snapshotId,
+        string side,
+        CancellationToken cancellationToken)
+    {
+        var artifact = await CreateOrGetArtifactAsync(accountId, snapshotId, cancellationToken);
+        return artifact is null
+            ? null
+            : await GetArtifactImageAsync(accountId, artifact.Value.Manifest.Id, side, cancellationToken);
     }
 
     public async Task<IReadOnlyList<FreezerFieldEventResponse>?> GetFieldEventsAsync(

@@ -126,6 +126,18 @@ const routeDefinitions: RouteConfig[] = [
     errorElement: createErrorElement(),
   }),
   feature('blogposts', () => import('../../routes/blog'), { errorElement: createErrorElement() }),
+  feature('blog-interactions', () => import('../../routes/blogInteractions'), {
+    errorElement: createErrorElement(),
+  }),
+  {
+    path: 'public-accounts',
+    Component: Outlet,
+    errorElement: createErrorElement(),
+    children: [
+      indexFeature('', () => import('../../routes/publicAccounts')),
+      feature(':id', () => import('../../routes/publicAccounts/detail')),
+    ],
+  },
   feature('blogposts/create', () => import('../../routes/blog/form'), {
     errorElement: createErrorElement(),
   }),

@@ -61,6 +61,7 @@ const scopedBackOfficePrefixes = [
   "/api/quicklinks",
   "/api/pages",
   "/api/blogposts",
+  "/api/blog-interactions",
   "/api/navigation",
   "/api/insights",
   "/api/dashboard",
@@ -76,9 +77,12 @@ const scopedBackOfficePrefixes = [
 function problemDetailsMessage(payload: unknown): string | null {
   if (typeof payload !== "object" || payload === null) return null;
   const record = payload as Record<string, unknown>;
-  return [record.detail, record.title].find(
-    (value): value is string => typeof value === "string" && value.trim().length > 0,
-  ) ?? null;
+  return (
+    [record.detail, record.title].find(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    ) ?? null
+  );
 }
 
 export function isScopedBackOfficeRequest(url: string): boolean {

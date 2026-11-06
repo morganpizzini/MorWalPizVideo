@@ -14,6 +14,7 @@ using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Domain.Accounts;
+using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -111,6 +112,15 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("public-blog-interactions", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"public-blog-interactions:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
 // Configure Azure KeyVault if enabled
@@ -192,6 +202,8 @@ else
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+builder.Services.AddScoped<BlogInteractionService>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISurveyService, SurveyService>();
 builder.Services.AddSingleton<SmtpMockService>();
 builder.Services.AddScoped<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
@@ -241,6 +253,7 @@ if (enableMock)
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
+    builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionMockRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserMockRepository>();
@@ -296,6 +309,7 @@ else
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();
+    builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();
     builder.Services.AddScoped<INewsletterUserRepository, NewsletterUserRepository>();
@@ -329,6 +343,7 @@ else
     builder.Services.AddScoped<IMongoDbService, MongoDbService>();
     builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
+    builder.Services.AddHostedService<BlogInteractionMongoIndexStartupService>();
 
     builder.Services.AddHttpClient(HttpClientNames.Recaptcha, httpClient =>
     {

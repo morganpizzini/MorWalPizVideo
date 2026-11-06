@@ -20,6 +20,20 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.UsersDelete,
           AuthorizationPermissionKeys.UsersPermissionsManage
         ],
+        [AuthorizationPermissionKeys.BlogInteractionsManage] =
+        [
+          AuthorizationPermissionKeys.BlogInteractionsView,
+          AuthorizationPermissionKeys.BlogCommentsModerate,
+          AuthorizationPermissionKeys.PortalAccessManage
+        ],
+        [AuthorizationPermissionKeys.BlogCommentsModerate] =
+        [
+          AuthorizationPermissionKeys.BlogInteractionsView
+        ],
+        [AuthorizationPermissionKeys.PortalAccessManage] =
+        [
+          AuthorizationPermissionKeys.BlogInteractionsView
+        ],
         [AuthorizationPermissionKeys.ScriptsStudio] = [AuthorizationPermissionKeys.ScriptsStudio],
         [AuthorizationPermissionKeys.ScriptsGlobalPromptManage] = [AuthorizationPermissionKeys.ScriptsGlobalPromptManage],
         [AuthorizationPermissionKeys.ScriptsQuotaManage] = [AuthorizationPermissionKeys.ScriptsQuotaManage],

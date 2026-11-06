@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
@@ -246,6 +247,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Name: "ux_publicaccounts_normalizedemail",
             Keys: new BsonDocument("normalizedEmail", 1),
             Unique: true),
+        .. BlogInteractionMongoIndexes.Manifest.Select(index => new MongoIndexManifestEntry(
+            index.Key,
+            index.Collection,
+            index.Name,
+            index.Keys,
+            index.Unique)),
         new(
             Key: "publicaccountsessions.expiresat.ttl",
             Collection: DbCollections.PublicAccountSessions,
@@ -276,8 +283,7 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
         foreach (var entry in selected)
         {
             var collection = database.GetCollection<BsonDocument>(entry.Collection);
-            var cursor = await collection.Indexes.ListAsync(cancellationToken);
-            var indexDocs = await cursor.ToListAsync(cancellationToken);
+            var indexDocs = await ListIndexesAsync(collection, cancellationToken);
 
             var exists = indexDocs.Any(x =>
                 x.GetValue("name", string.Empty).AsString == entry.Name &&
@@ -317,15 +323,15 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             var model = new CreateIndexModel<BsonDocument>(entry.Keys, options);
             try
             {
+                await EnsureCollectionExistsAsync(entry.Collection, cancellationToken);
                 await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
             }
             catch (MongoCommandException exception) when (
-                exception.Code == 85 || exception.Code == 68)
+                exception.Code is 68 or 85 or 86)
             {
                 // Multiple application instances may initialize the same index at
                 // startup. Re-audit before treating the concurrent create as a failure.
-                var current = await collection.Indexes.ListAsync(cancellationToken);
-                var currentIndexes = await current.ToListAsync(cancellationToken);
+                var currentIndexes = await ListIndexesAsync(collection, cancellationToken);
                 if (currentIndexes.Any(index =>
                     index.GetValue("name", string.Empty).AsString == entry.Name &&
                     HasExpectedDefinition(index, entry)))
@@ -361,8 +367,7 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             var replacement = Manifest.Single(entry =>
                 string.Equals(entry.Key, removal.ReplacementKey, StringComparison.OrdinalIgnoreCase));
             var collection = database.GetCollection<BsonDocument>(removal.Collection);
-            var cursor = await collection.Indexes.ListAsync(cancellationToken);
-            var indexDocs = await cursor.ToListAsync(cancellationToken);
+            var indexDocs = await ListIndexesAsync(collection, cancellationToken);
 
             if (!TryGetIndex(indexDocs, replacement.Name, out var replacementIndex) ||
                 !HasExpectedDefinition(replacementIndex, replacement))
@@ -418,13 +423,58 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
                             collationValue.AsBsonDocument.GetValue("locale", string.Empty).AsString == expected.Collation.Locale &&
                             collationValue.AsBsonDocument.GetValue("strength", 0).ToInt32() == (int)expectedStrength;
 
+        var partialFilterMatches = expected.PartialFilter is null
+            ? !indexDocument.Contains("partialFilterExpression")
+            : indexDocument.TryGetValue("partialFilterExpression", out var actualPartialFilter) &&
+              actualPartialFilter.IsBsonDocument &&
+              actualPartialFilter.AsBsonDocument.Equals(expected.PartialFilter);
+        var expirationMatches = expected.ExpireAfter is null
+            ? !indexDocument.Contains("expireAfterSeconds")
+            : indexDocument.TryGetValue("expireAfterSeconds", out var actualExpiration) &&
+              actualExpiration.ToInt64() == (long)expected.ExpireAfter.Value.TotalSeconds;
+
         return indexDocument.GetValue("unique", false).ToBoolean() == expected.Unique &&
             indexDocument.TryGetValue("key", out var actualKeys) &&
             actualKeys.IsBsonDocument &&
             actualKeys.AsBsonDocument.Equals(expected.Keys) &&
             collationMatches &&
-            (expected.ExpireAfter is null ||
-             indexDocument.GetValue("expireAfterSeconds", -1).ToInt64() == (long)expected.ExpireAfter.Value.TotalSeconds);
+            partialFilterMatches &&
+            expirationMatches;
+    }
+
+    private async Task<List<BsonDocument>> ListIndexesAsync(
+        IMongoCollection<BsonDocument> collection,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cursor = await collection.Indexes.ListAsync(cancellationToken);
+            return await cursor.ToListAsync(cancellationToken);
+        }
+        catch (MongoCommandException exception) when (
+            exception.Code == 26 ||
+            string.Equals(exception.CodeName, "NamespaceNotFound", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+    }
+
+    private async Task EnsureCollectionExistsAsync(string collectionName, CancellationToken cancellationToken)
+    {
+        var cursor = await database.ListCollectionsAsync(
+            new ListCollectionsOptions { Filter = new BsonDocument("name", collectionName) },
+            cancellationToken);
+        if (await cursor.AnyAsync(cancellationToken))
+            return;
+
+        try
+        {
+            await database.CreateCollectionAsync(collectionName, cancellationToken: cancellationToken);
+        }
+        catch (MongoCommandException exception) when (exception.Code == 48)
+        {
+            // Another index operation created the collection concurrently.
+        }
     }
 
     internal static string GetRemovalAction(

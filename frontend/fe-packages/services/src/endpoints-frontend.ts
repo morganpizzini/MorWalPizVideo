@@ -49,6 +49,7 @@ const PUBLIC_ACCOUNT_SESSION = "api/v1/account/session";
 const PUBLIC_ACCOUNT_LOGOUT = "api/v1/account/sessions/current";
 const PUBLIC_ACCOUNT_CSRF = "api/v1/account/csrf";
 const PUBLIC_ACCOUNT_PROFILE = "api/v1/profile";
+const PUBLIC_BLOG_INTERACTIONS = `${baseEndpoint}/blog/{slug}/interactions`;
 
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
@@ -96,6 +97,7 @@ export default {
   PUBLIC_ACCOUNT_LOGOUT,
   PUBLIC_ACCOUNT_CSRF,
   PUBLIC_ACCOUNT_PROFILE,
+  PUBLIC_BLOG_INTERACTIONS,
   CONFIGURATION_STREAM,
   QUICK_LINKS,
   QUICK_LINKS_DETAIL,

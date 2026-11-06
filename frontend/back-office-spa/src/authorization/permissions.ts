@@ -8,6 +8,13 @@ export const permissions = {
     delete: 'users.delete',
     permissionsManage: 'users.permissions.manage',
   },
+  publicAccounts: { view: 'publicaccounts.view' },
+  blogInteractions: {
+    view: 'blog.interactions.view',
+    moderate: 'blog.comments.moderate',
+    accessManage: 'portalaccess.manage',
+    manage: 'blog.interactions.manage',
+  },
   videos: {
     view: 'videos.view',
     manage: 'videos.manage',
@@ -120,6 +127,14 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
 
   if (!module) return [permissions.backoffice.access];
   if (module === 'profile') return [permissions.backoffice.access];
+  if (module === 'public-accounts')
+    return [
+      permissions.publicAccounts.view,
+      permissions.blogInteractions.view,
+      permissions.blogInteractions.accessManage,
+    ];
+  if (module === 'blog-interactions')
+    return [permissions.blogInteractions.view, permissions.blogInteractions.moderate];
   if (module === 'my-channel') return [permissions.backoffice.access];
   if (module === 'newsletters') return [permissions.backoffice.access];
   // Channel owners reach the channel broadcast section with plain backoffice access; the platform section inside

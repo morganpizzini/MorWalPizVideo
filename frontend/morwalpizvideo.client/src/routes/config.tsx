@@ -38,6 +38,7 @@ import surveyLoader from './survey/loader';
 import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
 import Gallery from './gallery/Component';
 import galleryLoader from './gallery/loader';
+import { Login, Profile, Register } from './account/Components';
 
 export const routes: RouteObject[] = [
   {
@@ -96,6 +97,9 @@ export const routes: RouteObject[] = [
           },
           { path: 'blog', loader: blogLoader, element: <BlogList /> },
           { path: 'blog/:slug', loader: articleLoader, element: <BlogArticle /> },
+          { path: 'account/login', element: <Login /> },
+          { path: 'account/register', element: <Register /> },
+          { path: 'account/profile', element: <Profile /> },
           {
             path: 'bluetooth',
             element: <Bluetooth />,

@@ -7,6 +7,7 @@ MongoDB is owned and operated by the project owner.
 Source-owned index operations now exist:
 
 - BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit`, `POST /api/mongoindexes/apply`, and the explicit legacy-removal route `POST /api/mongoindexes/remove`.
+- ServerAPI and BackOffice automatically verify/create only the new blog-interaction indexes before accepting traffic in Mongo mode. Missing feature collections are created empty before indexes; conflicts and database errors fail startup. Mock mode skips this path. All other indexes continue through explicit reviewed operations; see [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 - The executable allowlist in `MongoIndexOperationsService` is the runtime authority for audit/apply/remove operations. The operational file `docs/architecture/operations/mongo-index-manifest.phase4.json` is a phase-4 review snapshot, is not loaded dynamically at runtime, and must not be used for an apply request until it has been reconciled against the executable allowlist.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 - The `videoimportersettings.channelid.unique` index is an additional manual
@@ -26,7 +27,7 @@ Per-environment production records should continue to be added for each rollout 
 
 ## Safety Sequence
 
-For every index or structural migration:
+For manually managed indexes or structural migrations:
 
 1. Take and verify a restorable backup/snapshot.
 2. Inventory collection size and current indexes.
@@ -40,7 +41,10 @@ For every index or structural migration:
 10. Monitor duplicate-key failures, lock/load impact, and storage growth.
 11. Retain compatibility reads until deployed consumers are verified.
 
-Never create a unique index before duplicate analysis.
+Never apply a legacy unique index before duplicate analysis. The ADR-022 startup
+exception is limited to the blog-interaction feature's additive indexes; startup
+never drops/rebuilds indexes or cleans data. A duplicate-data conflict fails startup
+and requires manual review.
 
 For `BaseEntity` string IDs, use the repository `GetItemAsync`/`DeleteItemAsync`/`UpdateItemAsync` paths, which select an ObjectId or string `_id` filter. Do not translate an entity `Id` equality expression for externally supplied values because non-ObjectId values can fail BSON serialization before other predicates are evaluated.
 

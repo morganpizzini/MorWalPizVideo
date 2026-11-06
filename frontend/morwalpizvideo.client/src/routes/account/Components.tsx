@@ -215,7 +215,7 @@ export function Register() {
 }
 
 export function Profile() {
-  const { session, loading, logout, refresh } = usePublicAccount();
+  const { session, loading, sessionError, logout, refresh } = usePublicAccount();
   const [profile, setProfile] = useState<PublicAccountSummary | null>(session.account ?? null);
   const [displayName, setDisplayName] = useState(session.account?.displayName ?? '');
   const [email, setEmail] = useState(session.account?.email ?? '');
@@ -245,9 +245,13 @@ export function Profile() {
     return (
       <main className="account-page">
         <h1 className="visually-hidden">Profilo</h1>
-        <p>
-          Accedi per visualizzare il profilo. <Link to="/account/login">Accedi</Link>
-        </p>
+        {sessionError ? (
+          <p role="alert">Impossibile verificare l'accesso all'account. Riprova tra poco.</p>
+        ) : (
+          <p>
+            Accedi per visualizzare il profilo. <Link to="/account/login">Accedi</Link>
+          </p>
+        )}
       </main>
     );
 

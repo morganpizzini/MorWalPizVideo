@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="MorWalPizVideo.BackOffice.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MorWalPizVideo.Models\MorWalPizVideo.Models.csproj" />
     <ProjectReference Include="..\MorWalPizVideo.YouTubeUtilities\MorWalPizVideo.YouTubeUtilities.csproj" />
   </ItemGroup>

@@ -457,6 +457,22 @@ public sealed class FreezerAnalysisMongoRepository(FreezerAnalysisDatabase appli
         return result.ModifiedCount == 1 ? updated : null;
     }
 
+    public Task<FreezerAnalysisDraft?> ReopenDraftAsync(
+        string accountId,
+        string matchId,
+        long expectedRevision,
+        CancellationToken cancellationToken) =>
+        drafts.FindOneAndUpdateAsync(
+            x => x.AccountId == accountId && x.MatchId == matchId &&
+                 x.Revision == expectedRevision && x.StartedAtUtc == null &&
+                 x.FrozenSnapshotId != null,
+            Builders<FreezerAnalysisDraft>.Update
+                .Set(x => x.FrozenSnapshotId, null)
+                .Inc(x => x.Revision, 1)
+                .Set(x => x.UpdatedAtUtc, DateTime.UtcNow),
+            new FindOneAndUpdateOptions<FreezerAnalysisDraft> { ReturnDocument = ReturnDocument.After },
+            cancellationToken);
+
     public async Task<FreezePublicationResult> FreezeAsync(
         FreezerFrozenSnapshot snapshot,
         long expectedRevision,
@@ -524,6 +540,10 @@ public sealed class FreezerAnalysisMongoRepository(FreezerAnalysisDatabase appli
         var previous = await FindFieldEventAsync(fieldEvent.AccountId, fieldEvent.ClientOperationId, cancellationToken);
         if (previous is not null)
             return previous.SnapshotId == fieldEvent.SnapshotId ? previous : null;
+        var historicalSnapshot = await snapshots.Find(x =>
+            x.Id == fieldEvent.SnapshotId &&
+            x.AccountId == fieldEvent.AccountId &&
+            x.DraftId == draftId).AnyAsync(cancellationToken);
 
         var eventUpdate = Builders<FreezerAnalysisDraft>.Update.Inc(x => x.LastEventSequence, 1);
         if (fieldEvent.RenderingContext is { } context)
@@ -532,7 +552,10 @@ public sealed class FreezerAnalysisMongoRepository(FreezerAnalysisDatabase appli
         }
 
         var draft = await drafts.FindOneAndUpdateAsync(
-            x => x.Id == draftId && x.AccountId == fieldEvent.AccountId && x.FrozenSnapshotId == fieldEvent.SnapshotId,
+            historicalSnapshot
+                ? x => x.Id == draftId && x.AccountId == fieldEvent.AccountId
+                : x => x.Id == draftId && x.AccountId == fieldEvent.AccountId &&
+                       x.FrozenSnapshotId == fieldEvent.SnapshotId,
             eventUpdate,
             new FindOneAndUpdateOptions<FreezerAnalysisDraft> { ReturnDocument = ReturnDocument.After },
             cancellationToken);

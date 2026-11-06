@@ -283,6 +283,30 @@ public sealed class InMemoryFreezerAnalysisRepository : IFreezerAnalysisReposito
         }
     }
 
+    public Task<FreezerAnalysisDraft?> ReopenDraftAsync(
+            string accountId,
+            string matchId,
+            long expectedRevision,
+            CancellationToken cancellationToken)
+        {
+            lock (gate)
+            {
+                var current = drafts.Values.FirstOrDefault(x =>
+                    x.AccountId == accountId && x.MatchId == matchId);
+                if (current is null || current.Revision != expectedRevision ||
+                    current.StartedAtUtc is not null || current.FrozenSnapshotId is null)
+                    return Task.FromResult<FreezerAnalysisDraft?>(null);
+                var reopened = current with
+                {
+                    Revision = current.Revision + 1,
+                    FrozenSnapshotId = null,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+                drafts[reopened.Id] = reopened;
+                return Task.FromResult<FreezerAnalysisDraft?>(reopened);
+        }
+    }
+
     public Task<FreezePublicationResult> FreezeAsync(FreezerFrozenSnapshot snapshot, long expectedRevision, CancellationToken cancellationToken)
     {
         lock (gate)
@@ -326,7 +350,8 @@ public sealed class InMemoryFreezerAnalysisRepository : IFreezerAnalysisReposito
             if (eventsByOperation.TryGetValue(key, out var existing))
                 return Task.FromResult(existing.SnapshotId == fieldEvent.SnapshotId ? existing : null);
             if (!drafts.TryGetValue(draftId, out var draft) || draft.AccountId != fieldEvent.AccountId ||
-                draft.FrozenSnapshotId != fieldEvent.SnapshotId)
+                (draft.FrozenSnapshotId != fieldEvent.SnapshotId &&
+                 snapshots.GetValueOrDefault(fieldEvent.SnapshotId)?.DraftId != draftId))
                 return Task.FromResult<FreezerFieldEvent?>(null);
 
             var persisted = fieldEvent with { Sequence = draft.LastEventSequence + 1 };
