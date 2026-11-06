@@ -81,6 +81,9 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
     {
         if (request.File.Length is <= 0 or > 10_000_000 || string.IsNullOrWhiteSpace(request.AltText) || request.AltText.Length > 300 || request.Revision < 1)
             return BadRequest("Image and alt text (1-300 characters) are required.");
+        if (!string.IsNullOrEmpty(request.Purpose) && request.Purpose != "cover")
+            return BadRequest("Unsupported image purpose.");
+        var isCover = request.Purpose == "cover";
         var existing = await service.GetAsync(ChannelId, id);
         if (existing is null) return NotFound();
         if (existing.Revision != request.Revision) return Conflict("Post changed. Reload before uploading.");
@@ -95,6 +98,8 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
             input.Position = 0;
             var prepared = await ChannelNewsMediaProcessor.PrepareImageAsync(input);
             await using var preparedContent = prepared.Content;
+            if (isCover && (prepared.Width != 1920 || prepared.Height != 1080))
+                return BadRequest("Cover images must be cropped to 1920 by 1080 pixels before upload.");
             storageKey = $"blog/{ChannelId}/{id}/{Guid.NewGuid():N}{prepared.Extension}";
             await blobs.UploadImageAsync(storageKey, prepared.Content, options.Value.PageContainerName);
             uploaded = true;
@@ -134,6 +139,7 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
         public IFormFile File { get; set; } = null!;
         public long Revision { get; set; }
         public string AltText { get; set; } = string.Empty;
+        public string? Purpose { get; set; }
     }
 
     private async Task<IActionResult> MutateAsync(Func<Task<BlogPost?>> operation, bool invalidate)

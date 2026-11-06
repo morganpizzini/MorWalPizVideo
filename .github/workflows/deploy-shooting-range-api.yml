@@ -13,17 +13,22 @@ on:
       - 'MorWalPizVideo.ServiceDefaults/**'
       - 'MorWalPiz.Contracts/**'
       - 'MorWalPizVideo.ShootingRange.Tests/**'
+      - 'MorWalPizVideo.ShootingRange/Dockerfile'
+      - '.dockerignore'
+      - '.github/actions/build-container-image/**'
       - '.github/workflows/deploy-shooting-range-api.yml'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
   checks: write
 
+env:
+  IMAGE_NAME: shooting-range-api
+
 jobs:
-  build-test-and-deploy:
-    name: Build, Test and Deploy Shooting Range API
+  test:
+    name: Build and Test Shooting Range API
     runs-on: ubuntu-latest
     environment: production
 
@@ -69,22 +74,37 @@ jobs:
           files: ./TestResults/**/*.trx
           check_name: Shooting Range test results
 
-      - name: Publish API
-        run: dotnet publish MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-build --output ./publish
+  build-and-push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Azure Login
-        uses: azure/login@v2
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-container-image
+        with:
+          context: .
+          file: ./MorWalPizVideo.ShootingRange/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.SHOOTING_RANGE_API_APP_NAME }}
-          package: ./publish
-
-      - name: Azure logout
-        if: always()
-        run: az logout
+          images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

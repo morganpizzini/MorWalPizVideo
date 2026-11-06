@@ -14,7 +14,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read 
   checks: write
 
@@ -61,8 +60,8 @@ jobs:
         working-directory: frontend
         run: yarn workspace back-office-spa build
 
-  build-and-deploy:
-    name: Build and Deploy to Azure
+  build-and-push-image:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     environment: production
     needs: test
@@ -70,13 +69,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
@@ -99,11 +91,8 @@ jobs:
           cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.BACK_OFFICE_SPA_APP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Azure logout
-        if: always()
-        run: az logout

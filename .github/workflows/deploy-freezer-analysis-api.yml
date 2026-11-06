@@ -12,13 +12,19 @@ on:
       - 'MorWalPizVideo.Models/**'
       - 'MorWalPizVideo.MvcHelpers/**'
       - 'MorWalPizVideo.ServiceDefaults/**'
+      - 'MorWalPizVideo.YouTubeUtilities/**'
+      - 'FreezerAnalysis.Api/Dockerfile'
+      - '.dockerignore'
+      - '.github/actions/build-container-image/**'
       - '.github/workflows/deploy-freezer-analysis-api.yml'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
   checks: write
+
+env:
+  IMAGE_NAME: freezer-analysis-api
 
 jobs:
   test:
@@ -54,8 +60,8 @@ jobs:
           check_name: FreezerAnalysis API test results
           comment_mode: off
 
-  build-and-deploy:
-    name: Build and Deploy to Azure
+  build-and-push-image:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     environment: production
     needs: test
@@ -64,33 +70,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
         with:
-          dotnet-version: '10.0.x'
+          registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Restore dependencies
-        run: dotnet restore FreezerAnalysis.Api/FreezerAnalysis.Api.csproj
-
-      - name: Build
-        run: dotnet build FreezerAnalysis.Api/FreezerAnalysis.Api.csproj --configuration Release --no-restore
-
-      - name: Publish
-        run: dotnet publish FreezerAnalysis.Api/FreezerAnalysis.Api.csproj --configuration Release --no-build --output ./publish
-
-      - name: Azure Login
-        uses: azure/login@v2
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-container-image
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          context: .
+          file: ./FreezerAnalysis.Api/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.FREEZER_ANALYSIS_API_APP_NAME }}
-          package: ./publish
-
-      - name: Azure logout
-        if: always()
-        run: az logout
+          images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

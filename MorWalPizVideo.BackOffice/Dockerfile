@@ -1,14 +1,11 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# syntax=docker/dockerfile:1.7
 
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
@@ -19,18 +16,14 @@ COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", 
 COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Models/"]
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
-RUN dotnet restore "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj"
+RUN --mount=type=cache,id=backoffice-nuget,target=/root/.nuget/packages,sharing=locked \
+	dotnet restore "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj"
 COPY . .
-WORKDIR "/src/MorWalPizVideo.BackOffice"
-RUN dotnet build "./MorWalPizVideo.BackOffice.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN --mount=type=cache,id=backoffice-nuget,target=/root/.nuget/packages,sharing=locked \
+	dotnet publish "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj" \
+		-c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
-# This stage is used to publish the service project to be copied to the final stage
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MorWalPizVideo.BackOffice.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "MorWalPizVideo.BackOffice.dll"]

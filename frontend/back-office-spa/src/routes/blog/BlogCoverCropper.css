@@ -1,0 +1,76 @@
+.blog-cover-crop__stage {
+  position: relative;
+  width: min(100%, 56rem);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid #6c757d;
+  border-radius: 0.375rem;
+  background: #fff;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.blog-cover-crop__stage:active {
+  cursor: grabbing;
+}
+
+.blog-cover-crop__stage > img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.blog-cover-crop__grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.blog-cover-crop__grid span {
+  position: absolute;
+  display: block;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 80%),
+    0 0 0 2px rgb(255 255 255 / 90%);
+}
+
+.blog-cover-crop__grid span:nth-child(1),
+.blog-cover-crop__grid span:nth-child(2) {
+  top: 0;
+  bottom: 0;
+  width: 0;
+}
+
+.blog-cover-crop__grid span:nth-child(1) {
+  left: 33.333%;
+}
+
+.blog-cover-crop__grid span:nth-child(2) {
+  left: 66.667%;
+}
+
+.blog-cover-crop__grid span:nth-child(3),
+.blog-cover-crop__grid span:nth-child(4) {
+  right: 0;
+  left: 0;
+  height: 0;
+}
+
+.blog-cover-crop__grid span:nth-child(3) {
+  top: 33.333%;
+}
+
+.blog-cover-crop__grid span:nth-child(4) {
+  top: 66.667%;
+}
+
+.blog-cover-crop__prepared {
+  display: block;
+  width: min(100%, 56rem);
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  background: #fff;
+}

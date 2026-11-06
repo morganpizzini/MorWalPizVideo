@@ -111,6 +111,16 @@ then selects the returned image as an unsaved cover until the next draft save or
 Upload and publish use the server-returned revision. Upload failures after a draft save
 report that saved state instead of claiming the operation was atomic.
 
+New cover uploads in the BackOffice form open a local 16:9 crop preview with a
+rule-of-thirds grid, drag/touch positioning, keyboard-operable position and zoom sliders,
+and reset. Upload remains disabled until the editor confirms a crop; that crop is exported
+as a 1920 × 1080 JPEG before submitting. Small selected regions are upscaled with a warning.
+The existing image endpoint accepts an optional multipart `purpose=cover`, downsizes
+oversized images through the current image processor, then validates the prepared dimensions
+before blob storage. The UI sends only the prepared image. Requests without `purpose`
+retain the legacy arbitrary-dimension image behavior; stored covers, image-block media,
+draft/publish semantics and public DTOs are unchanged.
+
 The form reuses the BackOffice removable tag-pill control with the blog's 20-tag,
 60-character limits. Its comma-paste handling accumulates all tags from one input
 event. The blog index places Create article in the existing right-aligned PageHeader
@@ -160,7 +170,11 @@ Images use `BlobStorage:PageContainerName` under `blog/{channelId}/{postId}/...`
 Uploads require nonempty alt text (maximum 300 characters), at most 100 images per post,
 maximum 10000000 input bytes, a single frame and at most 25 megapixels. The existing
 ChannelNews media processor auto-orients/re-encodes/resizes; the endpoint limit is
-12000000 bytes. Failed metadata persistence attempts to roll back the new blob.
+12000000 bytes. New BackOffice cover submissions use the optional `purpose=cover` discriminator
+and are checked after server-side processing for exactly 1920 × 1080 pixels. The SPA exports a
+static JPEG locally; server processing remains an authoritative size gate and may downscale a
+larger 16:9 input. Missing purpose preserves the older arbitrary-dimension upload contract.
+Failed metadata persistence attempts to roll back the new blob.
 
 Draft changes never delete images referenced by the published snapshot. Retention is
 deliberately conservative: there is no individual image-delete endpoint, no garbage
@@ -177,10 +191,13 @@ at most five seconds. Failures after persistence are logged and return
 seconds. Draft save/upload do not invalidate the unchanged public snapshot.
 
 Mongo repository creates the unique `blog_channel_slug_unique` ascending ChannelId+Slug
-index before create/replace. This is lazy first-write provisioning, not the central Page
-index audit/apply manifest or a startup migration. Runtime Mongo credentials need index
-creation plus normal read/write privileges. Insufficient permissions or existing duplicate
-channel/slugs block writes; do not disable uniqueness to bypass that failure.
+index before create/replace. It also creates the `blog_channel_publishedat_id` compound
+index (`channelId` ascending, `publishedAt` descending, `_id` ascending) before list
+queries, matching the channel filter and stable list ordering. These are lazy
+feature-owned indexes, not entries in the central Page index audit/apply manifest or a
+startup migration. Runtime Mongo credentials need index-creation plus normal read/write
+privileges. Insufficient permissions or existing duplicate channel/slugs block writes;
+do not disable uniqueness to bypass that failure.
 
 Rollout sequence:
 

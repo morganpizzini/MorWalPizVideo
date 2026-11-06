@@ -140,6 +140,14 @@ jobs:
             context: .
             file: ./FreezerAnalysis.Api/Dockerfile
             noCache: true
+          - name: ShortLinks API
+            context: .
+            file: ./MorWalPizVideo.ShortLinks/Dockerfile
+            noCache: true
+          - name: Shooting Range API
+            context: .
+            file: ./MorWalPizVideo.ShootingRange/Dockerfile
+            noCache: true
           - name: BackOffice SPA
             context: ./frontend
             file: ./frontend/back-office-spa/Dockerfile

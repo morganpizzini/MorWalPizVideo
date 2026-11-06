@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { data, redirect, useFetcher, useLocation } from 'react-router';
 import type {
   BlogPostAdmin,
@@ -27,6 +27,7 @@ import { requirePermissions } from '@/router/guards';
 import TagInput from '@components/TagInput';
 import { normalizeTags } from '@components/TagInput/tagRules';
 import { BlogEditor } from './Editor';
+import { BlogCoverCropper } from './BlogCoverCropper';
 import { buildInsightBlogSnapshot } from './prefill';
 import { applyPrettifiedContent, extractBlogContent } from './prettify';
 
@@ -95,7 +96,8 @@ export async function action({ request, params }: { request: Request; params: { 
         uploadPostId,
         uploadRevision,
         file,
-        String(form.get('altText') ?? '')
+        String(form.get('altText') ?? ''),
+        'cover'
       );
       return {
         post: uploaded,
@@ -215,8 +217,16 @@ function BlogForm({
   );
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [uploadAltText, setUploadAltText] = useState('');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSource, setUploadSource] = useState<File | null>(null);
+  const [preparedUpload, setPreparedUpload] = useState<File | null>(null);
+  const [cropSession, setCropSession] = useState(0);
+  const setPreparedCover = useCallback((file: File | null) => setPreparedUpload(file), []);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const cancelCoverUpload = useCallback(() => {
+    setUploadSource(null);
+    setPreparedUpload(null);
+    if (uploadInput.current) uploadInput.current.value = '';
+  }, []);
   const [preview, setPreview] = useState(false);
   const [prettifyOpen, setPrettifyOpen] = useState(false);
   const [prettifyInstructions, setPrettifyInstructions] = useState('');
@@ -244,7 +254,8 @@ function BlogForm({
       );
       setSlug(fetcher.data.post.slug);
       if (fetcher.data.uploadedImageId) {
-        setUploadFile(null);
+        setUploadSource(null);
+        setPreparedUpload(null);
         if (uploadInput.current) uploadInput.current.value = '';
       }
     }
@@ -567,9 +578,9 @@ function BlogForm({
           className="row g-2 align-items-end"
           onSubmit={event => {
             event.preventDefault();
-            if (!uploadFile) return;
+            if (!preparedUpload) return;
             const formData = new FormData(event.currentTarget);
-            formData.set('file', uploadFile);
+            formData.set('file', preparedUpload);
             fetcher.submit(formData, { method: 'post', encType: 'multipart/form-data' });
           }}
         >
@@ -593,9 +604,14 @@ function BlogForm({
                 className="form-control"
                 accept="image/jpeg,image/png,image/webp"
                 required
-                onChange={event => setUploadFile(event.target.files?.[0] ?? null)}
+                onChange={event => {
+                  const file = event.target.files?.[0] ?? null;
+                  setUploadSource(file);
+                  setPreparedUpload(null);
+                  if (file) setCropSession(current => current + 1);
+                }}
               />
-              {uploadFile && <span className="form-text">{uploadFile.name}</span>}
+              {uploadSource && <span className="form-text">{uploadSource.name}</span>}
             </label>
             <label className="col-md-5">
               Image alt text
@@ -612,17 +628,29 @@ function BlogForm({
               <button
                 className="btn btn-outline-primary"
                 type="submit"
-                disabled={!uploadFile || !uploadAltText.trim()}
+                disabled={!preparedUpload || !uploadAltText.trim()}
               >
                 <Upload size={16} className="me-2" />
                 Upload
               </button>
             </div>
           </fieldset>
+          {uploadSource && (
+            <div className="col-12">
+              <BlogCoverCropper
+                key={cropSession}
+                file={uploadSource}
+                preparedFile={preparedUpload}
+                disabled={busy || !canUpload}
+                onPrepared={setPreparedCover}
+                onCancel={cancelCoverUpload}
+              />
+            </div>
+          )}
           <p className="small text-secondary mb-0">
-            JPEG, PNG, or WebP; maximum 10 MB and 25 megapixels. If the article is new or has
-            unsaved changes, uploading saves a draft first. The uploaded image is selected as cover;
-            save again to apply it.
+            JPEG, PNG, or WebP; maximum 10 MB and 25 megapixels. Confirm a 16:9 crop before
+            uploading. If the article is new or has unsaved changes, uploading saves a draft first.
+            The uploaded image is selected as cover; save again to apply it.
           </p>
           {!canUpload && (
             <p className="small text-secondary mb-0">

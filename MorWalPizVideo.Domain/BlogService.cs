@@ -203,14 +203,29 @@ public sealed class BlogRepository(IMongoDatabase database) : BaseRepository<Blo
 {
     private IMongoCollection<BlogPost> collection => _collection;
     private Task? indexTask;
+    private Task? listIndexTask;
+    internal const string ListIndexName = "blog_channel_publishedat_id";
+    internal static BsonDocument ListIndexKeys => new()
+    {
+        { "channelId", 1 },
+        { "publishedAt", -1 },
+        { "_id", 1 }
+    };
+
     private Task EnsureIndexAsync() => indexTask ??= collection.Indexes.CreateOneAsync(new CreateIndexModel<BlogPost>(
         Builders<BlogPost>.IndexKeys.Ascending(post => post.ChannelId).Ascending(post => post.Slug),
         new CreateIndexOptions { Name = "blog_channel_slug_unique", Unique = true }));
+
+    private Task EnsureListIndexAsync() => listIndexTask ??= collection.Indexes.CreateOneAsync(
+        new CreateIndexModel<BlogPost>(new BsonDocumentIndexKeysDefinition<BlogPost>(ListIndexKeys),
+            new CreateIndexOptions { Name = ListIndexName }));
+
     public Task<BlogPost?> GetAsync(string channelId, string id) => collection.Find(post => post.ChannelId == channelId && post.Id == id).FirstOrDefaultAsync()!;
     public Task<BlogPost?> GetPublishedAsync(string channelId, string slug) => collection.Find(post => post.ChannelId == channelId && post.Slug == slug && post.Published != null)
         .Project<BlogPost>(Builders<BlogPost>.Projection.Exclude(post => post.Draft)).FirstOrDefaultAsync()!;
     public async Task<IReadOnlyList<BlogPost>> ListAsync(string channelId, bool publishedOnly, int skip, int take)
     {
+        await EnsureListIndexAsync();
         var query = collection.Find(post => post.ChannelId == channelId && (!publishedOnly || post.Published != null))
             .SortByDescending(post => post.PublishedAt).ThenBy(post => post.Id).Skip(skip).Limit(take);
         return publishedOnly

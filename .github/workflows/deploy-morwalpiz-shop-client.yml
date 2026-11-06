@@ -7,11 +7,11 @@ on:
     paths:
       - "frontend/morwalpiz-shop.client/**"
       - "frontend/fe-packages/**"
+      - ".github/actions/build-container-image/**"
       - ".github/workflows/deploy-morwalpiz-shop-client.yml"
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
@@ -20,9 +20,9 @@ env:
   NODE_VERSION: '22.x'
 
 jobs:
-  build-and-deploy:
+  validate:
+    name: Validate Shop Client Build
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout code
@@ -43,12 +43,14 @@ jobs:
         working-directory: ./frontend
         run: yarn build:shared && yarn workspace morwalpiz-shop.client build
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  build-and-push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
@@ -57,11 +59,8 @@ jobs:
           username: ${{ secrets.AZURE_CLIENT_ID }}
           password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/build-container-image
         with:
           context: ./frontend
           file: ./frontend/morwalpiz-shop.client/Dockerfile
@@ -69,13 +68,12 @@ jobs:
           tags: |
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Azure logout
-        if: always()
-        run: az logout

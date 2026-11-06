@@ -1,2 +1,9 @@
 credentials*.json
 **/credentials*.json
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/dist-ssr/
+.git/
+TestResults/

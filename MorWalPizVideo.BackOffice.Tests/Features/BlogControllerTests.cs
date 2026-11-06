@@ -84,6 +84,64 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
     }
 
     [Fact]
+    public async Task Cover_upload_rejects_non_full_hd_before_storage_and_stores_full_hd_jpeg()
+    {
+        using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PagesManage);
+        var created = await client.PostAsJsonAsync("/api/blogposts", new SaveBlogPostRequest
+        { Slug = $"cover-{Guid.NewGuid():N}", Draft = new BlogSnapshot { Title = "Cover" } });
+        var post = (await created.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+
+        using (var smallImage = new Image<Rgba32>(16, 16))
+        await using (var smallStream = new MemoryStream())
+        {
+            await smallImage.SaveAsPngAsync(smallStream);
+            using var invalidUpload = new MultipartFormDataContent();
+            invalidUpload.Add(new ByteArrayContent(smallStream.ToArray()), "file", "small.png");
+            invalidUpload.Add(new StringContent("1"), "revision");
+            invalidUpload.Add(new StringContent("Cover"), "altText");
+            invalidUpload.Add(new StringContent("cover"), "purpose");
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await client.PostAsync($"/api/blogposts/{post.Id}/images", invalidUpload)).StatusCode);
+
+            using var unknownPurpose = new MultipartFormDataContent();
+            unknownPurpose.Add(new ByteArrayContent(smallStream.ToArray()), "file", "small.png");
+            unknownPurpose.Add(new StringContent("1"), "revision");
+            unknownPurpose.Add(new StringContent("Cover"), "altText");
+            unknownPurpose.Add(new StringContent("thumbnail"), "purpose");
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await client.PostAsync($"/api/blogposts/{post.Id}/images", unknownPurpose)).StatusCode);
+        }
+
+        Assert.Empty(await factory.BlobService.GetImagesInFolderAsync($"blog/{PrimaryScenario.ChannelId}/{post.Id}"));
+        post = (await client.GetFromJsonAsync<BlogPostResponse>($"/api/blogposts/{post.Id}"))!;
+        Assert.Equal(1, post.Revision);
+        Assert.Empty(post.Images);
+
+        using (var image = new Image<Rgba32>(2560, 1440))
+        await using (var stream = new MemoryStream())
+        {
+            await image.SaveAsPngAsync(stream);
+            using var upload = new MultipartFormDataContent();
+            upload.Add(new ByteArrayContent(stream.ToArray()), "file", "large-cover.png");
+            upload.Add(new StringContent("1"), "revision");
+            upload.Add(new StringContent("Cover"), "altText");
+            upload.Add(new StringContent("cover"), "purpose");
+            var response = await client.PostAsync($"/api/blogposts/{post.Id}/images", upload);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            post = (await response.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+        }
+
+        var stored = Assert.Single(post.Images);
+        Assert.Equal(1920, stored.Width);
+        Assert.Equal(1080, stored.Height);
+        await using var blob = await factory.BlobService.DownloadImageAsync(stored.Id);
+        Assert.NotNull(blob);
+        using var storedImage = await Image.LoadAsync(blob);
+        Assert.Equal(1920, storedImage.Width);
+        Assert.Equal(1080, storedImage.Height);
+    }
+
+    [Fact]
     public async Task Title_derived_slug_delete_and_invalid_image_are_http_contracts()
     {
         using var client = factory.CreateClient();

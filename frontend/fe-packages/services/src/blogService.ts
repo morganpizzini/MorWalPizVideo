@@ -43,11 +43,13 @@ export const uploadBlogImage = async (
   revision: number,
   file: File,
   altText: string,
+  purpose?: "cover",
 ): Promise<BlogPostAdmin> => {
   const form = new FormData();
   form.append("file", file);
   form.append("revision", String(revision));
   form.append("altText", altText);
+  if (purpose) form.append("purpose", purpose);
   return requireSuccessfulResponse(
     await postFormData(`${detail(id)}/images`, form),
   );

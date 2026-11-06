@@ -12,6 +12,18 @@ public sealed class BlogServiceTests
     private static BlogSnapshot Draft(string title = "First") => new() { Title = title };
 
     [Fact]
+    public void Blog_list_index_matches_channel_filter_and_stable_sort_order()
+    {
+        Assert.Equal("blog_channel_publishedat_id", BlogRepository.ListIndexName);
+        Assert.Equal(new BsonDocument
+        {
+            { "channelId", 1 },
+            { "publishedAt", -1 },
+            { "_id", 1 }
+        }, BlogRepository.ListIndexKeys);
+    }
+
+    [Fact]
     public void Versioned_document_columns_and_published_snapshot_roundtrip_through_bson()
     {
         var snapshot = Draft() with { Document = new BlogDocument { Blocks =

@@ -24,6 +24,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md) | BackOffice Chat prompts, typed model gateway, evaluation, and human-controlled canaries | Accepted for pilot; rollout gated |
 | [ADR-021](adr/ADR-021-video-importer-channel-settings.md) | BackOffice-authoritative VideoImporter channel settings with a recoverable SQLite cache | Accepted |
 | [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md) | Startup bootstrap for the narrowly scoped blog-interaction indexes | Accepted; supersedes ADR-008 only for those indexes |
+| [ADR-023](adr/ADR-023-container-image-staging.md) | Stage container images in ACR while Azure Web App deployment remains skipped | Accepted |
 
 ## ADR Process
 

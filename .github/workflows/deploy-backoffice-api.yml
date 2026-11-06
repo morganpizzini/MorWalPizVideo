@@ -12,13 +12,18 @@ on:
       - 'MorWalPizVideo.ServiceDefaults/**'
       - 'MorWalPizVideo.YouTubeUtilities/**'
       - 'MorWalPiz.Contracts/**'
+      - 'MorWalPizVideo.BackOffice/Dockerfile'
+      - '.dockerignore'
+      - '.github/actions/build-container-image/**'
       - '.github/workflows/deploy-backoffice-api.yml'
   workflow_dispatch:
   
 permissions:
-  id-token: write
   contents: read 
   checks: write
+
+env:
+  IMAGE_NAME: backoffice-api
 
 jobs:
   test-related-backend:
@@ -62,43 +67,38 @@ jobs:
           files: ./TestResults/**/*.trx
           check_name: BackOffice test results
 
-  build-and-deploy:
-    name: Build and Deploy to Azure
+  build-and-push-image:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     environment: production
     needs: test-related-backend
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
         with:
-          dotnet-version: '10.0.x'
+          registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Restore dependencies
-        run: dotnet restore MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj
-
-      - name: Build
-        run: dotnet build MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj --configuration Release --no-restore
-
-      - name: Publish
-        run: dotnet publish MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj --configuration Release --no-build --output ./publish
-
-      - name: Azure Login
-        uses: azure/login@v2
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-container-image
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          context: .
+          file: ./MorWalPizVideo.BackOffice/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.BACKOFFICE_API_APP_NAME }}
-          package: ./publish
-
-      - name: Azure logout
-        if: always()
-        run: az logout
+          images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

@@ -51,6 +51,16 @@ vi.mock('./Editor', () => ({
     </div>
   ),
 }));
+vi.mock('./BlogCoverCropper', () => ({
+  BlogCoverCropper: ({ onPrepared }: { onPrepared: (file: File) => void }) => (
+    <button
+      type="button"
+      onClick={() => onPrepared(new File(['prepared crop'], 'cover.jpg', { type: 'image/jpeg' }))}
+    >
+      Confirm test crop
+    </button>
+  ),
+}));
 vi.mock('@morwalpizvideo/services', async importOriginal => ({
   ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   createBlogPost: vi.fn(),
@@ -148,6 +158,31 @@ describe('blog draft workflow', () => {
     expect(screen.getByRole('heading', { name: 'Cover image' })).toBeInTheDocument();
     expect(screen.getByLabelText('Upload image')).toBeInTheDocument();
     expect(screen.getByText('No images uploaded for this article yet.')).toBeInTheDocument();
+  });
+  it('only submits the confirmed crop instead of the selected source image', () => {
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    const source = new File(['original'], 'source.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Upload image'), {
+      target: { files: [source] },
+    });
+    fireEvent.change(screen.getByLabelText('Image alt text'), {
+      target: { value: 'A cropped cover' },
+    });
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
+    fireEvent.submit(screen.getByRole('button', { name: 'Upload' }).closest('form')!);
+
+    const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
+    expect(submitted.get('file')).toEqual(
+      expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
+    );
+    expect(submitted.get('file')).not.toBe(source);
   });
   it('locks a previously published slug after unpublish and reopen and saves it unchanged', async () => {
     const reopened: BlogPostAdmin = { ...post, isPublished: false, publishedAt: null };
@@ -378,7 +413,8 @@ describe('blog draft workflow', () => {
       post.id,
       saved.revision,
       expect.any(File),
-      'Cover'
+      'Cover',
+      'cover'
     );
     expect(result).toMatchObject({
       post: uploaded,
@@ -411,7 +447,8 @@ describe('blog draft workflow', () => {
       created.id,
       created.revision,
       expect.any(File),
-      'Cover'
+      'Cover',
+      'cover'
     );
     expect(result).toMatchObject({ post: uploaded, uploadedImageId: 'media-new' });
   });

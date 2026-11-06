@@ -14,7 +14,6 @@ on:
   workflow_dispatch:
   
 permissions:
-  id-token: write
   contents: read 
   checks: write
 
@@ -22,11 +21,10 @@ env:
   IMAGE_NAME: morwalpizvideo-client
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy to Azure
+  test:
+    name: Test Public Client
     runs-on: ubuntu-latest
-    environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,12 +60,14 @@ jobs:
         working-directory: frontend
         run: yarn workspace morwalpizvideo.client build:all
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  build-and-push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
@@ -90,11 +90,8 @@ jobs:
           cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.MORWALPIZVIDEO_CLIENT_APP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Azure logout
-        if: always()
-        run: az logout

@@ -15,7 +15,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
@@ -23,10 +22,9 @@ env:
   NODE_VERSION: '22.x'
 
 jobs:
-  build-test-and-deploy:
-    name: Build, Test and Deploy Shooting Range Client
+  validate:
+    name: Validate Shooting Range Client
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout code
@@ -55,12 +53,14 @@ jobs:
         working-directory: frontend
         run: yarn workspace shooting-range.client test --passWithNoTests=false
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  build-and-push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
@@ -75,15 +75,15 @@ jobs:
           context: ./frontend
           file: ./frontend/shooting-range.client/Dockerfile
           push: true
-          noCache: false
-          tags: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: |
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Azure Web App
+        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.SHOOTING_RANGE_CLIENT_APP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Azure logout
-        if: always()
-        run: az logout

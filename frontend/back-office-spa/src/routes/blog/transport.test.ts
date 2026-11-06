@@ -59,7 +59,8 @@ describe('blog HTTP contracts', () => {
       'post-1',
       9,
       new File(['image'], 'image.png', { type: 'image/png' }),
-      'Image alt'
+      'Image alt',
+      'cover'
     );
     const requests = fetchMock.mock.calls.filter(([url]) => !url.endsWith('/csrf'));
     for (const [, options] of requests) {
@@ -76,7 +77,28 @@ describe('blog HTTP contracts', () => {
     const multipart = requests[5][1].body as FormData;
     expect(multipart.get('revision')).toBe('9');
     expect(multipart.get('altText')).toBe('Image alt');
+    expect(multipart.get('purpose')).toBe('cover');
     expect((requests[5][1].headers as Headers).has('Content-Type')).toBe(false);
+  });
+  it('omits the optional upload purpose for existing callers', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        new Response(JSON.stringify(url.endsWith('/csrf') ? { token: 'csrf-token' } : {}), {
+          status: 200,
+        })
+      )
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    setSelectedChannelId('channel-1');
+    await uploadBlogImage(
+      'post-1',
+      9,
+      new File(['image'], 'image.png', { type: 'image/png' }),
+      'Image alt'
+    );
+
+    const request = fetchMock.mock.calls.find(([url]) => !url.endsWith('/csrf'))!;
+    expect((request[1].body as FormData).get('purpose')).toBeNull();
   });
   it('does not leak the selected channel into public reads', async () => {
     const fetchMock = vi
