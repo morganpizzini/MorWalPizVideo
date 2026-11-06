@@ -15,11 +15,9 @@ COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Mode
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
 COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", "MorWalPizVideo.YouTubeUtilities/"]
-RUN --mount=type=cache,id=shortlinks-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet restore "./MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj"
+RUN dotnet restore "./MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj"
 COPY . .
-RUN --mount=type=cache,id=shortlinks-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet publish "./MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj" \
+RUN dotnet publish "./MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj" \
 		-c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final

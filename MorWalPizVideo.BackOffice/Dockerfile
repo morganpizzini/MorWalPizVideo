@@ -16,11 +16,9 @@ COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", 
 COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Models/"]
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
-RUN --mount=type=cache,id=backoffice-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet restore "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj"
+RUN dotnet restore "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj"
 COPY . .
-RUN --mount=type=cache,id=backoffice-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet publish "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj" \
+RUN dotnet publish "./MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj" \
 		-c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final

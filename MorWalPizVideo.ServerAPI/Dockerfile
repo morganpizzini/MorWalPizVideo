@@ -17,12 +17,10 @@ COPY ["MorWalPizVideo.YouTubeUtilities/MorWalPizVideo.YouTubeUtilities.csproj", 
 COPY ["MorWalPizVideo.Models/MorWalPizVideo.Models.csproj", "MorWalPizVideo.Models/"]
 COPY ["MorWalPizVideo.MvcHelpers/MorWalPizVideo.MvcHelpers.csproj", "MorWalPizVideo.MvcHelpers/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
-RUN --mount=type=cache,id=serverapi-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet restore "./MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj"
+RUN dotnet restore "./MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj"
 COPY . .
 WORKDIR "/src/MorWalPizVideo.ServerAPI"
-RUN --mount=type=cache,id=serverapi-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet publish "./MorWalPizVideo.ServerAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
+RUN dotnet publish "./MorWalPizVideo.ServerAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
