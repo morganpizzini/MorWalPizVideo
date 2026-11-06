@@ -193,11 +193,12 @@ seconds. Draft save/upload do not invalidate the unchanged public snapshot.
 Mongo repository creates the unique `blog_channel_slug_unique` ascending ChannelId+Slug
 index before create/replace. It also creates the `blog_channel_publishedat_id` compound
 index (`channelId` ascending, `publishedAt` descending, `_id` ascending) before list
-queries, matching the channel filter and stable list ordering. These are lazy
-feature-owned indexes, not entries in the central Page index audit/apply manifest or a
-startup migration. Runtime Mongo credentials need index-creation plus normal read/write
-privileges. Insufficient permissions or existing duplicate channel/slugs block writes;
-do not disable uniqueness to bypass that failure.
+queries. Lists sort only by `publishedAt` descending because Cosmos requires a matching
+composite-index policy for multi-field ordering; equal timestamps have no guaranteed
+relative order. These are lazy feature-owned indexes, not entries in the central Page
+index audit/apply manifest or a startup migration. Runtime Mongo credentials need
+index-creation plus normal read/write privileges. Insufficient permissions or existing
+duplicate channel/slugs block writes; do not disable uniqueness to bypass that failure.
 
 Rollout sequence:
 

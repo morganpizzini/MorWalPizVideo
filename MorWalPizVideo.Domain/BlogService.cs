@@ -211,6 +211,10 @@ public sealed class BlogRepository(IMongoDatabase database) : BaseRepository<Blo
         { "publishedAt", -1 },
         { "_id", 1 }
     };
+    internal static BsonDocument ListSortKeys => new()
+    {
+        { "publishedAt", -1 }
+    };
 
     private Task EnsureIndexAsync() => indexTask ??= collection.Indexes.CreateOneAsync(new CreateIndexModel<BlogPost>(
         Builders<BlogPost>.IndexKeys.Ascending(post => post.ChannelId).Ascending(post => post.Slug),
@@ -227,7 +231,7 @@ public sealed class BlogRepository(IMongoDatabase database) : BaseRepository<Blo
     {
         await EnsureListIndexAsync();
         var query = collection.Find(post => post.ChannelId == channelId && (!publishedOnly || post.Published != null))
-            .SortByDescending(post => post.PublishedAt).ThenBy(post => post.Id).Skip(skip).Limit(take);
+            .Sort(new BsonDocumentSortDefinition<BlogPost>(ListSortKeys)).Skip(skip).Limit(take);
         return publishedOnly
             ? await query.Project<BlogPost>(Builders<BlogPost>.Projection.Exclude(post => post.Draft)).ToListAsync()
             : await query.ToListAsync();
@@ -257,7 +261,7 @@ public sealed class BlogMockRepository : IBlogRepository
         }
     }
     public Task<IReadOnlyList<BlogPost>> ListAsync(string channelId, bool publishedOnly, int skip, int take)
-    { lock (gate) return Task.FromResult<IReadOnlyList<BlogPost>>(items.Where(post => post.ChannelId == channelId && (!publishedOnly || post.Published != null)).OrderByDescending(post => post.PublishedAt).ThenBy(post => post.Id).Skip(skip).Take(take).Select(post => publishedOnly ? post with { Draft = new() } : post).ToArray()); }
+    { lock (gate) return Task.FromResult<IReadOnlyList<BlogPost>>(items.Where(post => post.ChannelId == channelId && (!publishedOnly || post.Published != null)).OrderByDescending(post => post.PublishedAt).Skip(skip).Take(take).Select(post => publishedOnly ? post with { Draft = new() } : post).ToArray()); }
     public Task CreateAsync(BlogPost post)
     {
         lock (gate) { EnsureUnique(post); items.Add(post); return Task.CompletedTask; }

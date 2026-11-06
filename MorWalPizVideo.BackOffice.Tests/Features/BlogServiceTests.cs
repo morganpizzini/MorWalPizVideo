@@ -12,7 +12,7 @@ public sealed class BlogServiceTests
     private static BlogSnapshot Draft(string title = "First") => new() { Title = title };
 
     [Fact]
-    public void Blog_list_index_matches_channel_filter_and_stable_sort_order()
+    public void Blog_list_indexes_and_sort_match_channel_and_timestamp_ordering()
     {
         Assert.Equal("blog_channel_publishedat_id", BlogRepository.ListIndexName);
         Assert.Equal(new BsonDocument
@@ -21,6 +21,7 @@ public sealed class BlogServiceTests
             { "publishedAt", -1 },
             { "_id", 1 }
         }, BlogRepository.ListIndexKeys);
+        Assert.Equal(new BsonDocument { { "publishedAt", -1 } }, BlogRepository.ListSortKeys);
     }
 
     [Fact]
