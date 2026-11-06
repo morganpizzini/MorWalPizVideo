@@ -8,9 +8,11 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.FeatureManagement;
+using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.ServerAPI.Controllers;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
@@ -18,7 +20,7 @@ using System.Net;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
-[Trait("Category", "TestGroup:BackOffice")]
+[Trait("Category", "TestGroup:ServerAPI")]
 public sealed class HostSecurityContainmentTests
 {
     [Theory]
@@ -38,6 +40,12 @@ public sealed class HostSecurityContainmentTests
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IMongoDbService>();
+                var mongoIndexStartupService = services.FirstOrDefault(service =>
+                    service.ServiceType == typeof(IHostedService) &&
+                    service.ImplementationType == typeof(BlogInteractionMongoIndexStartupService));
+                if (mongoIndexStartupService is not null)
+                    services.Remove(mongoIndexStartupService);
+
                 services.AddControllers().AddApplicationPart(typeof(HostSecurityProbeController).Assembly);
             });
         });
