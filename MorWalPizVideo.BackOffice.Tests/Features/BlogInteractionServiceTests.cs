@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Scenarios;
@@ -11,6 +12,13 @@ public sealed class BlogInteractionServiceTests
 {
     private const string AccountId = "800000000000000000000001";
     private const string PostId = "900000000000000000000001";
+
+    [Fact]
+    public void Comment_list_sort_uses_one_field_for_Cosmos_compatibility()
+    {
+        Assert.Equal(new BsonDocument { { "creationDateTime", -1 } },
+            BlogInteractionRepository.CommentListSortKeys);
+    }
 
     [Fact]
     public async Task Comment_submission_is_idempotent_and_requires_moderation()

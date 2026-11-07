@@ -33,6 +33,10 @@ The initializer:
 All other manifest indexes retain ADR-008's reviewed manual-apply process. This
 exception is not a general startup migration facility.
 
+The public comment-list query orders only by `creationDateTime` descending. It does
+not add `_id` as a secondary sort because Cosmos requires a matching composite-index
+policy for multi-field ordering; equal timestamps have no guaranteed relative order.
+
 ## Alternatives
 
 - Manually apply these new-feature indexes before each deployment: rejected for this

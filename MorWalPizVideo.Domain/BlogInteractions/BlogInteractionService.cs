@@ -180,6 +180,10 @@ public sealed class BlogInteractionRepository(IMongoDatabase database) : IBlogIn
     private readonly IMongoCollection<BlogComment> comments = database.GetCollection<BlogComment>(DbCollections.BlogComments);
     private readonly IMongoCollection<BlogReaction> reactions = database.GetCollection<BlogReaction>(DbCollections.BlogReactions);
     private readonly IMongoCollection<BlogPortalAccess> access = database.GetCollection<BlogPortalAccess>(DbCollections.BlogPortalAccess);
+    internal static BsonDocument CommentListSortKeys => new()
+    {
+        { "creationDateTime", -1 }
+    };
 
     public async Task<IReadOnlyList<BlogComment>> GetCommentsAsync(string channelId, string? postId, string? accountId, BlogCommentStatus? status, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -187,7 +191,7 @@ public sealed class BlogInteractionRepository(IMongoDatabase database) : IBlogIn
         if (postId is not null) filter &= Builders<BlogComment>.Filter.Eq(x => x.PostId, postId);
         if (accountId is not null) filter &= Builders<BlogComment>.Filter.Eq(x => x.AccountId, accountId);
         if (status.HasValue) filter &= Builders<BlogComment>.Filter.Eq(x => x.Status, status.Value);
-        return await comments.Find(filter).SortByDescending(x => x.CreationDateTime).ThenByDescending(x => x.Id)
+        return await comments.Find(filter).Sort(new BsonDocumentSortDefinition<BlogComment>(CommentListSortKeys))
             .Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50))
             .Limit(Math.Clamp(pageSize, 1, 50)).ToListAsync(cancellationToken);
     }
@@ -256,7 +260,7 @@ public sealed class BlogInteractionMockRepository(IMockScenario scenario) : IBlo
     {
         lock (gate) return Task.FromResult<IReadOnlyList<BlogComment>>(scenario.Read<BlogComment>(DbCollections.BlogComments)
             .Where(x => x.ChannelId == channelId && (postId is null || x.PostId == postId) && (accountId is null || x.AccountId == accountId) && (!status.HasValue || x.Status == status))
-            .OrderByDescending(x => x.CreationDateTime).ThenByDescending(x => x.Id).Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50)).Take(Math.Clamp(pageSize, 1, 50)).ToArray());
+            .OrderByDescending(x => x.CreationDateTime).Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50)).Take(Math.Clamp(pageSize, 1, 50)).ToArray());
     }
     public Task<long> CountCommentsAsync(string channelId, string? postId, BlogCommentStatus? status, string? accountId = null, CancellationToken cancellationToken = default) =>
         Task.FromResult((long)scenario.Read<BlogComment>(DbCollections.BlogComments).Count(x => x.ChannelId == channelId && (postId is null || x.PostId == postId) && (accountId is null || x.AccountId == accountId) && (!status.HasValue || x.Status == status)));

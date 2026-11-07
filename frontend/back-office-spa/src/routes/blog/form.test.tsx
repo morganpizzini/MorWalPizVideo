@@ -159,30 +159,56 @@ describe('blog draft workflow', () => {
     expect(screen.getByLabelText('Upload image')).toBeInTheDocument();
     expect(screen.getByText('No images uploaded for this article yet.')).toBeInTheDocument();
   });
-  it('only submits the confirmed crop instead of the selected source image', () => {
+  it('uploads the confirmed crop immediately and allows the same source to be selected again', () => {
     render(
       <MemoryRouter>
         <Component />
       </MemoryRouter>
     );
     const source = new File(['original'], 'source.png', { type: 'image/png' });
-    fireEvent.change(screen.getByLabelText('Upload image'), {
+    const uploadInput = screen.getByLabelText('Upload image');
+    fireEvent.change(uploadInput, {
+      target: { files: [source] },
+    });
+    expect(uploadInput).toHaveValue('');
+    fireEvent.change(uploadInput, {
       target: { files: [source] },
     });
     fireEvent.change(screen.getByLabelText('Image alt text'), {
       target: { value: 'A cropped cover' },
     });
-    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
-    expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
-    fireEvent.submit(screen.getByRole('button', { name: 'Upload' }).closest('form')!);
 
     const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
     expect(submitted.get('file')).toEqual(
       expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
     );
     expect(submitted.get('file')).not.toBe(source);
+    expect(submitted.get('altText')).toBe('A cropped cover');
+    expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument();
+  });
+  it('waits for alt text before uploading the crop, then submits automatically', () => {
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByLabelText('Upload image'), {
+      target: { files: [new File(['original'], 'source.png', { type: 'image/png' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Add image alt text to upload the crop.');
+    fireEvent.change(screen.getByLabelText('Image alt text'), {
+      target: { value: 'A cropped cover' },
+    });
+    expect(mocks.fetcher.submit).toHaveBeenCalledOnce();
+    const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
+    expect(submitted.get('file')).toEqual(
+      expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
+    );
+    expect(submitted.get('altText')).toBe('A cropped cover');
   });
   it('locks a previously published slug after unpublish and reopen and saves it unchanged', async () => {
     const reopened: BlogPostAdmin = { ...post, isPublished: false, publishedAt: null };
@@ -275,7 +301,7 @@ describe('blog draft workflow', () => {
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Changed draft' } });
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Unpublish' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument();
   });
   it('previews the latest unsaved composition and restores edit mode without saving', () => {
     render(
