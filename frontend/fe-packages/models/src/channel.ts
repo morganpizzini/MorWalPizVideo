@@ -31,6 +31,8 @@ export type ChannelVideo = Readonly<{
 }>;
 
 export type ChannelSocial = Readonly<{ provider: string; handler: string }>;
+export type PublicChannelSocialLink = Readonly<{ provider: string; url: string }>;
+export type PublicChannelSocials = Readonly<{ links: readonly PublicChannelSocialLink[] }>;
 
 export type ChannelSocialPublishing = Readonly<{
   telegram: ChannelSocialPublishingProvider;

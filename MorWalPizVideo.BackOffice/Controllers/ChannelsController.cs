@@ -119,7 +119,16 @@ public class ChannelsController : ApplicationControllerBase
     [HttpGet("terminology")]
     [RequireChannelScope]
     [AllowUser(AuthorizationPermissionKeys.ChannelsView, AuthorizationPermissionKeys.ChannelsManage)]
-    public IActionResult GetTerminology() => Ok(ChannelTerminologyRules.ToContract(HttpContext.GetChannelContext().Channel.Terminology));
+    public IActionResult GetTerminology()
+    {
+        var channel = HttpContext.GetChannelContext().Channel;
+        if (!ChannelTerminologyRules.TryToContract(channel.Terminology, out var contract, out var error))
+        {
+            logger.LogError("Invalid channel terminology configuration {ChannelId} {Reason}", channel.ChannelId, error);
+            return Conflict(new ProblemDetails { Status = 409, Title = "Invalid channel terminology configuration", Detail = "The channel terminology configuration must be repaired.", Extensions = { ["code"] = "channel_terminology_invalid" } });
+        }
+        return Ok(contract);
+    }
 
     [HttpPut("terminology")]
     [RequireChannelScope]
@@ -142,7 +151,8 @@ public class ChannelsController : ApplicationControllerBase
             }
         };
         await _dataService.UpdateChannel(updated);
-        return Ok(ChannelTerminologyRules.ToContract(updated.Terminology));
+        ChannelTerminologyRules.TryToContract(updated.Terminology, out var contract, out _);
+        return Ok(contract);
     }
 
     [HttpDelete("terminology")]
@@ -190,7 +200,7 @@ public class ChannelsController : ApplicationControllerBase
             return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
         }
         var socials = NormalizeSocials(request.Socials);
-        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers are allowed.");
         var socialPublishing = BuildSocialPublishing(request.SocialPublishing, null, channelId, out var publishingError);
         if (publishingError is not null) return BadRequest(publishingError);
         var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
@@ -229,7 +239,7 @@ public class ChannelsController : ApplicationControllerBase
             return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
         }
         var socials = NormalizeSocials(request.Socials);
-        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, and Patreon providers are allowed.");
+        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers are allowed.");
         var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError);
         if (publishingError is not null) return BadRequest(publishingError);
         var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
@@ -456,7 +466,7 @@ public class ChannelsController : ApplicationControllerBase
 
     private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)
     {
-        var allowed = new[] { "instagram", "youtube", "reddit", "x", "patreon" };
+        var allowed = new[] { "instagram", "youtube", "reddit", "x", "patreon", "facebook", "telegram", "discord" };
         var result = new List<ChannelSocial>();
         foreach (var request in requests ?? [])
         {

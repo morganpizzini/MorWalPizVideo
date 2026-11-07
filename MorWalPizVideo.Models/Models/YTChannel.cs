@@ -12,7 +12,7 @@ namespace MorWalPizVideo.Server.Models
     {
         [DataMember]
         [BsonElement("socials")]
-        public List<ChannelSocial> Socials { get; init; } = [];
+        public List<ChannelSocial>? Socials { get; init; } = [];
         [DataMember]
         [BsonElement("shortLinkUrl")]
         public string ShortLinkUrl { get; init; } = string.Empty;
@@ -50,7 +50,7 @@ namespace MorWalPizVideo.Server.Models
         public SocialPublishingConfiguration SocialPublishing { get; init; } = new();
 
         [BsonElement("terminology")]
-        public ChannelTerminologyConfiguration Terminology { get; init; } = new();
+        public ChannelTerminologyConfiguration? Terminology { get; init; } = new();
         
     }
 
@@ -58,20 +58,20 @@ namespace MorWalPizVideo.Server.Models
     public record ChannelTerminologyConfiguration
     {
         [BsonElement("italianToEnglish")]
-        public List<TerminologyMapping> ItalianToEnglish { get; init; } = [];
+        public List<TerminologyMapping>? ItalianToEnglish { get; init; } = [];
 
         [BsonElement("invariantEnglish")]
-        public List<TerminologyMapping> InvariantEnglish { get; init; } = [];
+        public List<TerminologyMapping>? InvariantEnglish { get; init; } = [];
     }
 
     [BsonIgnoreExtraElements]
     public record TerminologyMapping
     {
         [BsonElement("source")]
-        public string Source { get; init; } = string.Empty;
+        public string? Source { get; init; } = string.Empty;
 
         [BsonElement("target")]
-        public string Target { get; init; } = string.Empty;
+        public string? Target { get; init; } = string.Empty;
     }
 
     [BsonIgnoreExtraElements]

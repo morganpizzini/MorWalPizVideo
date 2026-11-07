@@ -24,6 +24,11 @@ public static class ChannelTerminologyRules
 
         foreach (var request in values)
         {
+            if (request is null || string.IsNullOrWhiteSpace(request.Source))
+            {
+                error = "Terminology source is required.";
+                return false;
+            }
             var source = request.Source.Trim();
             var target = request.Target?.Trim() ?? string.Empty;
             if (source.Length == 0 || source.Length > MaxTermLength || target.Length > MaxTermLength)
@@ -44,10 +49,24 @@ public static class ChannelTerminologyRules
         return true;
     }
 
-    public static ChannelTerminologyContract ToContract(ChannelTerminologyConfiguration configuration) => new(
-        configuration.ItalianToEnglish.Select(ToContract).ToArray(),
-        configuration.InvariantEnglish.Select(ToContract).ToArray());
+    public static bool TryToContract(ChannelTerminologyConfiguration? configuration,
+        out ChannelTerminologyContract contract, out string? error)
+    {
+        var normalized = ChannelTerminologyNormalizer.Normalize(configuration);
+        if (!normalized.IsValid)
+        {
+            contract = new([], []);
+            error = normalized.Error;
+            return false;
+        }
+
+        contract = new(
+            normalized.Configuration.ItalianToEnglish!.Select(ToContract).ToArray(),
+            normalized.Configuration.InvariantEnglish!.Select(ToContract).ToArray());
+        error = null;
+        return true;
+    }
 
     private static TerminologyMappingContract ToContract(TerminologyMapping mapping) =>
-        new(mapping.Source, mapping.Target);
+        new(mapping.Source ?? string.Empty, mapping.Target ?? string.Empty);
 }

@@ -11,7 +11,16 @@ interface HelmetData {
   link: { toString(): string };
 }
 
-export async function render(request: Request): Promise<{ html: string; head: string }> {
+function extractHoistedHead(html: string): { html: string; head: string } {
+  const headTags =
+    /<title\b[^>]*>[\s\S]*?<\/title>|<meta\b[^>]*>|<link\b[^>]*\brel="(?:canonical|image_src)"[^>]*>/gi;
+  const head = html.match(headTags)?.join('') ?? '';
+  return { html: html.replace(headTags, ''), head };
+}
+
+export async function render(
+  request: Request
+): Promise<{ html: string; head: string; status: number }> {
   const handler = createStaticHandler(routes);
   const context = await handler.query(request);
 
@@ -35,9 +44,14 @@ export async function render(request: Request): Promise<{ html: string; head: st
   );
 
   const { helmet } = helmetContext;
-  const head = helmet
+  const collectedHead = helmet
     ? `${helmet.title.toString()}${helmet.meta.toString()}${helmet.link.toString()}`
     : '';
+  const extracted = extractHoistedHead(html);
 
-  return { html, head };
+  return {
+    html: extracted.html,
+    head: collectedHead || extracted.head,
+    status: context.statusCode ?? 200,
+  };
 }

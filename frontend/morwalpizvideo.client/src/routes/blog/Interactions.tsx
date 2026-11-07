@@ -216,7 +216,7 @@ export default function BlogInteractions({ slug }: { slug: string }) {
         )}
       <div className="blog-comments">
         <h3>
-          Commenti approvati <span>{summary.approvedComments}</span>
+          Commenti <span>{summary.approvedComments}</span>
         </h3>
         {loading ? (
           <p role="status">Caricamento commenti...</p>

@@ -11,7 +11,7 @@ import {
 } from '@morwalpizvideo/services';
 import { requirePermissions } from '@/router/guards';
 import { appStore } from '@/state/appStore';
-import { action, Component } from './form';
+import { action, Component, getUploadAltDefault } from './form';
 
 const mocks = vi.hoisted(() => ({
   initial: null as BlogPostAdmin | null,
@@ -119,6 +119,11 @@ beforeEach(() => {
   appStore.setState({ effectivePermissions: ['pages.manage'], selectedChannelId: null });
 });
 describe('blog draft workflow', () => {
+  it('uses a deterministic fallback when a filename has no meaningful stem', () => {
+    expect(getUploadAltDefault('---.png')).toBe('Immagine');
+    expect(getUploadAltDefault('旅行-写真.webp')).toBe('旅行 写真');
+  });
+
   it('uses removable tag pills and keeps the blog tag limit', () => {
     render(
       <MemoryRouter>
@@ -159,7 +164,7 @@ describe('blog draft workflow', () => {
     expect(screen.getByLabelText('Upload image')).toBeInTheDocument();
     expect(screen.getByText('No images uploaded for this article yet.')).toBeInTheDocument();
   });
-  it('uploads the confirmed crop immediately and allows the same source to be selected again', () => {
+  it('waits for the explicit Upload action and allows the same source to be selected again', () => {
     render(
       <MemoryRouter>
         <Component />
@@ -180,15 +185,43 @@ describe('blog draft workflow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
 
+    expect(mocks.fetcher.submit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
     const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
     expect(submitted.get('file')).toEqual(
       expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
     );
     expect(submitted.get('file')).not.toBe(source);
     expect(submitted.get('altText')).toBe('A cropped cover');
-    expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument();
   });
-  it('waits for alt text before uploading the crop, then submits automatically', () => {
+  it('derives editable alt text from the filename and uses the visible fallback when cleared', () => {
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByLabelText('Upload image'), {
+      target: { files: [new File(['original'], 'mountain-sunrise_final.png', { type: 'image/png' })] },
+    });
+    expect(screen.getByLabelText('Image alt text')).toHaveValue('mountain sunrise final');
+    fireEvent.change(screen.getByLabelText('Image alt text'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
+
+    expect(mocks.fetcher.submit).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No alt text was entered. Upload will use “mountain sunrise final”'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+    const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
+    expect(submitted.get('file')).toEqual(
+      expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
+    );
+    expect(submitted.get('altText')).toBe('mountain sunrise final');
+    expect(screen.getByLabelText('Image alt text')).toHaveValue('mountain sunrise final');
+  });
+  it('keeps the prepared crop for an explicit retry after an upload error', () => {
+    mocks.fetcher.data = { error: 'Upload failed' };
     render(
       <MemoryRouter>
         <Component />
@@ -198,17 +231,9 @@ describe('blog draft workflow', () => {
       target: { files: [new File(['original'], 'source.png', { type: 'image/png' })] },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm test crop' }));
-
-    expect(screen.getByRole('status')).toHaveTextContent('Add image alt text to upload the crop.');
-    fireEvent.change(screen.getByLabelText('Image alt text'), {
-      target: { value: 'A cropped cover' },
-    });
+    expect(screen.getByRole('button', { name: 'Retry upload' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry upload' }));
     expect(mocks.fetcher.submit).toHaveBeenCalledOnce();
-    const submitted = mocks.fetcher.submit.mock.calls[0][0] as FormData;
-    expect(submitted.get('file')).toEqual(
-      expect.objectContaining({ name: 'cover.jpg', type: 'image/jpeg' })
-    );
-    expect(submitted.get('altText')).toBe('A cropped cover');
   });
   it('locks a previously published slug after unpublish and reopen and saves it unchanged', async () => {
     const reopened: BlogPostAdmin = { ...post, isPublished: false, publishedAt: null };

@@ -98,6 +98,8 @@ export function BlogArticle() {
           description={post.seoDescription || metadata.summary}
           imageUrl={metadata.coverUrl ?? undefined}
           type="article"
+          socialTitle={metadata.title}
+          socialDescription={metadata.summary}
         />
         <Helmet>
           <script type="application/ld+json">
@@ -105,16 +107,19 @@ export function BlogArticle() {
           </script>
         </Helmet>
         <Link to="/blog">Blog</Link>
-        <header className="my-4">
+        <header className="blog-article-header my-4">
           <h1>{metadata.title}</h1>
           <p className="text-secondary">
             {metadata.author}
             {metadata.author && ' · '}
             <time dateTime={metadata.publishedAt}>{metadata.publishedAt.slice(0, 10)}</time>
           </p>
-          {metadata.summary && <p className="lead">{metadata.summary}</p>}
           {metadata.coverUrl && (
-            <img src={metadata.coverUrl} alt={metadata.coverAlt} className="img-fluid w-100" />
+            <img
+              src={metadata.coverUrl}
+              alt={metadata.coverAlt}
+              className="blog-article-cover img-fluid"
+            />
           )}
         </header>
         <BlogRenderer document={post.document} images={post.images} />

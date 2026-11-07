@@ -15,6 +15,7 @@ const MATCHES_IMAGES = `${MATCHES}/{matchId}/images`;
 
 // Channels (used by the FR-016 video↔channel join)
 const CHANNELS = `${baseEndpoint}/channels`;
+const CHANNEL_SOCIALS = "api/v1/channel/socials";
 const SHIT_CHANNELS = `${baseEndpoint}/shit/channels`;
 const SHIT_MATCHES = `${baseEndpoint}/shit/matches`;
 const SHIT_QUICK_LINKS = `${baseEndpoint}/shit/quicklinks`;
@@ -73,6 +74,7 @@ export default {
   MATCHES_DETAIL,
   MATCHES_IMAGES,
   CHANNELS,
+  CHANNEL_SOCIALS,
   SHIT_CHANNELS,
   SHIT_MATCHES,
   SHIT_QUICK_LINKS,

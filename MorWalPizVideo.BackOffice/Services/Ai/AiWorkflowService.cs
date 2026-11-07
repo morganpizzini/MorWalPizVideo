@@ -445,14 +445,17 @@ public sealed class AiWorkflowService(
 
     private static string BuildTerminology(ChannelTerminologyConfiguration? configured)
     {
-        var source = configured is not null &&
-            (configured.ItalianToEnglish.Count > 0 || configured.InvariantEnglish.Count > 0)
-                ? configured
+        var normalized = ChannelTerminologyNormalizer.Normalize(configured);
+        if (!normalized.IsValid)
+            throw new InvalidOperationException("The channel terminology configuration is invalid.");
+        var source = normalized.Configuration.ItalianToEnglish!.Count > 0 ||
+            normalized.Configuration.InvariantEnglish!.Count > 0
+                ? normalized.Configuration
                 : DefaultTerminology();
         var payload = JsonSerializer.Serialize(new
         {
-            italianToEnglish = source.ItalianToEnglish.Select(item => new { source = item.Source, target = item.Target }),
-            invariantEnglish = source.InvariantEnglish.Select(item => new { source = item.Source })
+            italianToEnglish = source.ItalianToEnglish!.Select(item => new { source = item.Source, target = item.Target }),
+            invariantEnglish = source.InvariantEnglish!.Select(item => new { source = item.Source })
         }, JsonOptions);
         return $"<TERMINOLOGIA>{payload}</TERMINOLOGIA>";
     }

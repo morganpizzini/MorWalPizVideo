@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import {
   getPublicProfile,
+  getPublicAccountErrorMessage,
   loginPublicAccount,
   registerPublicAccount,
   updatePublicProfile,
@@ -12,7 +13,7 @@ import { usePublicAccount } from '../layout/account';
 import './style.scss';
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unable to complete the request.';
+  return getPublicAccountErrorMessage(error);
 }
 
 function fieldError(fieldErrors: Record<string, string[]>, field: string): string[] {
@@ -35,29 +36,56 @@ function FieldErrors({ id, errors }: { id: string; errors: string[] }) {
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refresh } = usePublicAccount();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [pending, setPending] = useState(false);
+  const [registrationSuccess] = useState(() => location.state?.registrationSuccess === true);
+  const [sessionWarning] = useState(() => location.state?.sessionRestoreFailed === true);
+
+  useEffect(() => {
+    if (registrationSuccess || sessionWarning) {
+      void navigate('/account/login', { replace: true, state: null });
+    }
+  }, [navigate, registrationSuccess, sessionWarning]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
     setFieldErrors({});
+    setPending(true);
     try {
       await loginPublicAccount({ identifier, password });
-      await refresh();
+      if (!(await refresh())) {
+        throw new Error('La sessione autenticata non è stata verificata.');
+      }
       void navigate('/account/profile');
     } catch (requestError) {
       const nextFieldErrors = getApiFieldErrors(requestError);
       setFieldErrors(nextFieldErrors);
       setError(Object.keys(nextFieldErrors).length ? '' : errorMessage(requestError));
+    } finally {
+      setPending(false);
     }
   };
 
   return (
-    <AccountForm title="Accedi" submitLabel="Accedi" onSubmit={submit} error={error}>
+    <AccountForm
+      title="Accedi"
+      submitLabel="Accedi"
+      onSubmit={submit}
+      error={error}
+      pending={pending}
+      message={registrationSuccess ? 'Registrazione completata. Ora puoi accedere.' : undefined}
+      warning={
+        sessionWarning
+          ? 'Account creato, ma non è stato possibile verificare la sessione. Accedi per continuare.'
+          : undefined
+      }
+    >
       <label className="form-label" htmlFor="identifier">
         Username o email
       </label>
@@ -106,24 +134,37 @@ export function Register() {
   });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [pending, setPending] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
     setFieldErrors({});
+    setPending(true);
     try {
       await registerPublicAccount(form);
-      await refresh();
-      void navigate('/account/profile');
+      const sessionRestored = await refresh();
+      void navigate('/account/login', {
+        replace: true,
+        state: { registrationSuccess: true, sessionRestoreFailed: !sessionRestored },
+      });
     } catch (requestError) {
       const nextFieldErrors = getApiFieldErrors(requestError);
       setFieldErrors(nextFieldErrors);
       setError(Object.keys(nextFieldErrors).length ? '' : errorMessage(requestError));
+    } finally {
+      setPending(false);
     }
   };
 
   return (
-    <AccountForm title="Crea account" submitLabel="Registrati" onSubmit={submit} error={error}>
+    <AccountForm
+      title="Crea account"
+      submitLabel="Registrati"
+      onSubmit={submit}
+      error={error}
+      pending={pending}
+    >
       <label className="form-label" htmlFor="username">
         Username
       </label>
@@ -329,6 +370,8 @@ function AccountForm({
   onSubmit,
   error,
   message,
+  warning,
+  pending = false,
   children,
 }: {
   title: string;
@@ -336,6 +379,8 @@ function AccountForm({
   onSubmit: (event: FormEvent) => void;
   error: string;
   message?: string;
+  warning?: string;
+  pending?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -355,8 +400,13 @@ function AccountForm({
                 {message}
               </div>
             )}
-            <button type="submit" className="btn btn-primary mt-4">
-              {submitLabel}
+            {warning && (
+              <div className="alert alert-warning mt-3" role="status">
+                {warning}
+              </div>
+            )}
+            <button type="submit" className="btn btn-primary mt-4" disabled={pending}>
+              {pending ? 'Invio in corso…' : submitLabel}
             </button>
           </form>
         </div>

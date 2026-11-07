@@ -123,8 +123,22 @@ describe('public blog routes', () => {
     expect(html).toContain('content="https://cdn.test/cover.jpg"');
     expect(html).toContain('href="https://morwalpiz.com/blog/article"');
     expect(html).toContain('"@type":"Article"');
+    expect(html).not.toContain('class="lead"');
     expect(html).toContain('Condividi l&#x27;articolo');
     expect(html).toContain('Partecipa alla conversazione');
-    expect(html).toContain('Commenti approvati');
+    expect(html).toContain('Commenti');
+    expect(html).not.toContain('Commenti approvati');
+
+    expect(html.match(/property="og:title"/g)).toHaveLength(1);
+    expect(html.match(/property="og:description"/g)).toHaveLength(1);
+    expect(html.match(/property="og:image"/g)).toHaveLength(1);
+    expect(html.match(/name="twitter:title"/g)).toHaveLength(1);
+    expect(html.match(/name="twitter:description"/g)).toHaveLength(1);
+    expect(html.match(/name="twitter:image"/g)).toHaveLength(1);
+    expect(html).toContain('content="Public article"');
+    expect(html).toContain('content="Published summary"');
+    expect(html.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(html).toContain('href="https://morwalpiz.com/blog/article"');
+    expect(html).not.toContain('localhost');
   });
 });

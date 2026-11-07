@@ -996,6 +996,37 @@ export function createApiClient({
           return parsedResponse.data;
         } else {
           // error handling
+          if (mode === "account") {
+            let parsedResponse: unknown = null;
+            try {
+              parsedResponse = await response.json();
+            } catch {
+              // Keep the status when the server returns an empty/non-JSON body.
+            }
+
+            const payload =
+              typeof parsedResponse === "object" && parsedResponse !== null
+                ? (parsedResponse as Record<string, unknown>)
+                : {};
+            const errors = Array.isArray(payload.errors)
+              ? payload.errors
+              : [payload.detail ?? payload.title ?? payload.message].filter(
+                  (message): message is string => typeof message === "string",
+                );
+            const fieldErrors =
+              payload.errors &&
+              typeof payload.errors === "object" &&
+              !Array.isArray(payload.errors)
+                ? (payload.errors as Record<string, unknown>)
+                : undefined;
+
+            return {
+              errors,
+              fieldErrors,
+              status: response.status,
+            };
+          }
+
           const errorMessages = [];
           switch (response.status) {
             case 400: {

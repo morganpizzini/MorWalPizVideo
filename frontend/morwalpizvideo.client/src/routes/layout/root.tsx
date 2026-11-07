@@ -5,11 +5,13 @@ import ScrollToTop from '@utils/scroll-to-top';
 import { PublicNavigationProvider } from './navigation';
 import PushOptIn from '../../components/push-opt-in';
 import { PublicAccountProvider } from './account';
+import { PublicSocialsProvider } from './socials';
 export default function Root() {
   const navigation = useNavigation();
   return (
     <PublicNavigationProvider>
       <PublicAccountProvider>
+        <PublicSocialsProvider>
         <>
           <ScrollToTop />
           <TitleComponent />
@@ -24,7 +26,7 @@ export default function Root() {
           </div>
           <Footer />
           <PushOptIn />
-        </>
+        </></PublicSocialsProvider>
       </PublicAccountProvider>
     </PublicNavigationProvider>
   );

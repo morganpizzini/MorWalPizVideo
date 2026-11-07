@@ -90,6 +90,8 @@ export type {
 export type {
   Channel,
   ChannelSocial,
+  PublicChannelSocialLink,
+  PublicChannelSocials,
   ChannelVideo,
   ChannelTerminology,
   TerminologyMapping,

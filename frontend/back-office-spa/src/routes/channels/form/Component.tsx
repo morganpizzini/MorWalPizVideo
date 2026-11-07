@@ -247,6 +247,9 @@ const ChannelForm: React.FC = () => {
                 <option value="reddit">Reddit</option>
                 <option value="x">X</option>
                 <option value="patreon">Patreon</option>
+                <option value="facebook">Facebook</option>
+                <option value="telegram">Telegram</option>
+                <option value="discord">Discord</option>
               </Form.Select>
             </div>
             <div className="col-12 col-md">

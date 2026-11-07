@@ -6,12 +6,20 @@ interface SEOProps {
   description: string;
   imageUrl?: string;
   type: string;
+  socialTitle?: string;
+  socialDescription?: string;
 }
 
-export default function SEO({ title, description, imageUrl, type }: SEOProps) {
+export default function SEO({
+  title,
+  description,
+  imageUrl,
+  type,
+  socialTitle = title,
+  socialDescription = description,
+}: SEOProps) {
   const location = useLocation();
-  const isServer = typeof window === 'undefined';
-  const baseUrl = isServer
+  const baseUrl = import.meta.env.SSR
     ? (import.meta.env.VITE_CANONICAL_BASE_URL ?? 'https://morwalpiz.com')
     : `${window.location.protocol}//${window.location.host}`;
   const currentUrl = `${baseUrl}${location.pathname}`;
@@ -30,10 +38,16 @@ export default function SEO({ title, description, imageUrl, type }: SEOProps) {
       {imageUrl && imageUrl.length > 0 && <link rel="image_src" href={resolvedImageUrl} />}
 
       <meta property="og:type" content={type} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
+      <meta property="og:title" content={socialTitle} />
+      <meta property="og:description" content={socialDescription} />
       {imageUrl && imageUrl.length > 0 && <meta property="og:image" content={resolvedImageUrl} />}
       <meta property="og:url" content={currentUrl} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={socialTitle} />
+      <meta name="twitter:description" content={socialDescription} />
+      {imageUrl && imageUrl.length > 0 && (
+        <meta name="twitter:image" content={resolvedImageUrl} />
+      )}
     </Helmet>
   );
 }

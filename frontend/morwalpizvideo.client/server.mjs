@@ -61,13 +61,13 @@ app.get('*', async (req, res) => {
         const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
         const fullUrl = `${proto}://${host}${req.originalUrl}`;
 
-        const { html, head } = await render(new Request(fullUrl));
+        const { html, head, status } = await render(new Request(fullUrl));
 
         const page = template
             .replace('<!--ssr-head-->', head)
             .replace('<div id="root"></div>', `<div id="root">${html}</div>`);
 
-        res.status(200).set('Content-Type', 'text/html').end(page);
+        res.status(status).set('Content-Type', 'text/html').end(page);
     } catch (e) {
         // Redirect responses emitted by React Router loaders/actions
         if (e instanceof Response) {
@@ -75,10 +75,11 @@ app.get('*', async (req, res) => {
             if (location) {
                 return res.redirect(e.status, location);
             }
+            return res.status(e.status || 500).set('Content-Type', 'text/html').end(template);
         }
         console.error('SSR render error:', e);
         // Graceful fallback: serve the SPA shell — client JS takes over
-        res.status(200).set('Content-Type', 'text/html').end(template);
+        res.status(500).set('Content-Type', 'text/html').end(template);
     }
 });
 

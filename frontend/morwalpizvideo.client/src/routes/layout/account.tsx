@@ -1,12 +1,16 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { getPublicAccountSession, logoutPublicAccount } from '@morwalpizvideo/services';
+import {
+  getPublicAccountErrorMessage,
+  getPublicAccountSession,
+  logoutPublicAccount,
+} from '@morwalpizvideo/services';
 import type { PublicAccountSession } from '@morwalpizvideo/models';
 
 interface PublicAccountContextValue {
   session: PublicAccountSession;
   loading: boolean;
   sessionError: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -20,10 +24,14 @@ export function PublicAccountProvider({ children }: { children: ReactNode }) {
 
   const refresh = async () => {
     try {
-      setSession(await getPublicAccountSession());
+      const nextSession = await getPublicAccountSession();
+      setSession(nextSession);
       setSessionError(null);
+      return nextSession.authenticated;
     } catch (error) {
-      setSessionError(error instanceof Error ? error.message : 'Account status is unavailable.');
+      setSession(anonymousSession);
+      setSessionError(getPublicAccountErrorMessage(error));
+      return false;
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,11 @@ import type {
   PublicAccountSummary,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
-import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
+import {
+  ApiResponseError,
+  accountApiService,
+  requireSuccessfulResponse,
+} from "./apiTransport";
 
 async function getCsrfToken(): Promise<string> {
   const response = (await accountApiService.get(
@@ -22,15 +26,48 @@ function requireAuthenticatedSession(response: unknown): PublicAccountSession {
   if (
     !response ||
     typeof response !== "object" ||
-    !(response as PublicAccountSession).authenticated
+    typeof (response as PublicAccountSession).authenticated !== "boolean"
   ) {
     throw new Error("The account request was not accepted");
   }
   return response as PublicAccountSession;
 }
 
-export const getPublicAccountSession = (): Promise<PublicAccountSession> =>
-  accountApiService.get(frontendEndpoints.PUBLIC_ACCOUNT_SESSION);
+export async function getPublicAccountSession(): Promise<PublicAccountSession> {
+  const response = await accountApiService.get(
+    frontendEndpoints.PUBLIC_ACCOUNT_SESSION,
+  );
+  requireSuccessfulResponse(response);
+  if (
+    !response ||
+    typeof response !== "object" ||
+    typeof (response as PublicAccountSession).authenticated !== "boolean"
+  ) {
+    throw new Error("The account session response was invalid");
+  }
+  return response as PublicAccountSession;
+}
+
+export function getPublicAccountErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiResponseError)) {
+    return "Impossibile completare la richiesta. Riprova tra poco.";
+  }
+
+  switch (error.status) {
+    case 401:
+      return "Credenziali non valide o account non disponibile.";
+    case 403:
+      return "La richiesta di sicurezza è scaduta. Ricarica la pagina e riprova.";
+    case 409:
+      return "Non è possibile completare la richiesta con questi dati.";
+    case 429:
+      return "Troppe richieste. Attendi qualche minuto e riprova.";
+    default:
+      return error.status && error.status >= 500
+        ? "Il servizio account non è disponibile. Riprova tra poco."
+        : "Impossibile completare la richiesta. Riprova tra poco.";
+  }
+}
 
 export async function registerPublicAccount(
   request: PublicAccountRegistrationRequest,

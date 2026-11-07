@@ -39,6 +39,7 @@ export type {
 
 export {
   getPublicAccountSession,
+  getPublicAccountErrorMessage,
   registerPublicAccount,
   loginPublicAccount,
   getPublicProfile,

@@ -230,9 +230,12 @@ public sealed class LegacyAiWorkflowService(IAiModelGateway modelGateway) : IAiW
 
     private static string SerializeTerminology(MorWalPizVideo.Server.Models.ChannelTerminologyConfiguration? terminology)
     {
-        var configuration = terminology is not null &&
-            (terminology.ItalianToEnglish.Count > 0 || terminology.InvariantEnglish.Count > 0)
-                ? terminology
+        var normalized = MorWalPizVideo.Server.Models.ChannelTerminologyNormalizer.Normalize(terminology);
+        if (!normalized.IsValid)
+            throw new InvalidOperationException("The channel terminology configuration is invalid.");
+        var configuration = normalized.Configuration.ItalianToEnglish!.Count > 0 ||
+            normalized.Configuration.InvariantEnglish!.Count > 0
+                ? normalized.Configuration
                 : new MorWalPizVideo.Server.Models.ChannelTerminologyConfiguration
                 {
                     ItalianToEnglish =
