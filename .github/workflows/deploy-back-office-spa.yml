@@ -65,6 +65,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     needs: test
+    permissions:
+      contents: read
+      checks: write
+      id-token: write
     
     steps:
       - name: Checkout code
