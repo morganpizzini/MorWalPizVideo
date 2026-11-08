@@ -5,6 +5,7 @@ import PublicNavigationLink from '../components/PublicNavigationLink';
 import SocialLinks from '../components/SocialLinks';
 import { usePublicNavigation } from '../routes/layout/navigation';
 import { usePublicAccount } from '../routes/layout/account';
+import { getAccountLoginLink } from '../routes/account/returnUrl';
 
 interface TitleComponentProps {
   dimensions?: string;
@@ -178,11 +179,12 @@ export default function TitleComponent(props: TitleComponentProps) {
 }
 
 function AccountAction() {
+  const location = useLocation();
   const { session } = usePublicAccount();
   if (!session.authenticated)
     return (
       <Link
-        to="/account/login"
+        to={getAccountLoginLink(location)}
         className="icon-button"
         aria-label="Accedi al tuo account"
         title="Accedi"
@@ -198,7 +200,7 @@ function AccountAction() {
       aria-label={`Profilo di ${name}`}
       title={name}
     >
-      <i className="far fa-user" aria-hidden="true" />
+      <span>{name}</span>
     </Link>
   );
 }

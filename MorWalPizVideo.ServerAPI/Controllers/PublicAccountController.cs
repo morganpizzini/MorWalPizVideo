@@ -21,6 +21,7 @@ public sealed class PublicAccountController(
     [AllowAnonymous]
     public ActionResult<PublicAccountCsrfContract> GetCsrf()
     {
+        Response.Headers.CacheControl = "no-store";
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         Response.Cookies.Append(
             PublicAccountSecurity.CsrfCookie,

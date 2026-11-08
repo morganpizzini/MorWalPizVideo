@@ -224,6 +224,42 @@ Limite: rollback non annulla account gia registrati e non giustifica eliminarli.
 - Il primo tentativo del test UI con `jsdom` non è stato usato: il workspace
   non contiene `frontend/node_modules/jsdom`; il test consegnato è statico.
 
+## Follow-up Delivery Evidence (2026-11-08)
+
+### Implemented
+
+- Normalized API paths before identifying anonymous login/registration
+  requests. The account endpoint constants omit a leading slash, so the prior
+  check missed them and fetched a second CSRF token; transport could overwrite
+  the freshly supplied header with its cached token. Session logout remains
+  subject to automatic CSRF because only the exact anonymous session endpoint
+  is exempted.
+- Marked CSRF responses `Cache-Control: no-store` and made frontend CSRF GETs
+  bypass the browser cache.
+- Added safe `returnUrl` handling from the header account action through the
+  registration/login route, returning to the requested local page after a
+  verified login. External and authentication-loop destinations are rejected.
+- Displayed the authenticated account's display name in the header account
+  action, retaining username as the fallback.
+- Updated the ServerAPI controller, shared account transport/service, public
+  account routes, header, and their focused tests.
+
+### Validation
+
+- `cd frontend/fe-packages/services && npm test -- --run
+  src/publicAccountService.test.ts` — PASS, 5 tests.
+- `cd frontend/fe-packages/services && npm run build` — PASS.
+- `cd frontend/morwalpizvideo.client && npm test -- --run
+  src/routes/account/Components.test.tsx src/routes/account/returnUrl.test.ts
+  src/layouts/title-header.test.tsx` — PASS, 8 tests.
+- `cd frontend/morwalpizvideo.client && npm run build` — PASS.
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+  --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — PASS.
+- Focused `PublicAccountEndpointTests` run with `--no-build` — PASS, 4 tests.
+- The .NET build reports existing SixLabors.ImageSharp vulnerability advisories.
+  The client build reports existing `env-config.js` bundling and stale
+  Browserslist-data warnings.
+
 ### Residual blocker and operational boundary
 
 Il controllo live anonimo comunicato dall'owner ha restituito CSRF `200` con

@@ -738,6 +738,7 @@ export function createApiClient({
     const pendingToken = fetch(buildFullUrl(csrfEndpoint, requestBaseUrl), {
       method: "GET",
       credentials: "include",
+      cache: "no-store",
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -808,10 +809,11 @@ export function createApiClient({
     query?: any,
     overrideHeaderEnv: string = "",
     returnFullRresponse: boolean = false,
+    cache?: RequestCache,
   ) {
     return call(url, "GET", {}, overrideHeaderEnv, query, false, false, {
       returnFullResponse: returnFullRresponse,
-    });
+    }, undefined, false, cache);
   }
 
   function getFile(url: string, query?: any, overrideHeaderEnv: string = "") {
@@ -855,6 +857,7 @@ export function createApiClient({
     responseOptions?: ResponseOptions,
     extraHeaders?: Record<string, string>,
     skipAccessibleChannelsCoalescing = false,
+    cache?: RequestCache,
   ): Promise<any> {
     if (
       !skipAccessibleChannelsCoalescing &&
@@ -874,6 +877,7 @@ export function createApiClient({
           responseOptions,
           extraHeaders,
           true,
+          cache,
         ),
       );
     }
@@ -926,12 +930,14 @@ export function createApiClient({
     const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(
       method.toUpperCase(),
     );
+    const requestPath =
+      `/${url.split("?")[0].replace(/^\/+/, "")}`.toLowerCase();
     const isAnonymousAuthRequest =
-      url.includes("/api/auth/login") ||
-      url.includes("/api/auth/csrf") ||
-      url.includes("/api/v1/accounts") ||
-      url.includes("/api/v1/account/sessions") ||
-      url.includes("/api/v1/account/csrf");
+      requestPath === "/api/auth/login" ||
+      requestPath === "/api/auth/csrf" ||
+      requestPath === "/api/v1/accounts" ||
+      requestPath === "/api/v1/account/sessions" ||
+      requestPath === "/api/v1/account/csrf";
     if (
       credentials === "include" &&
       isUnsafeMethod &&
@@ -949,6 +955,7 @@ export function createApiClient({
       method: method,
       headers: headers,
     };
+    if (cache) options.cache = cache;
 
     // Determine if we have a request body that needs to be sent
     let hasBody = false;

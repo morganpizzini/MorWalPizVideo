@@ -10,6 +10,12 @@ import {
 import { getApiFieldErrors } from '@morwalpizvideo/services';
 import type { PublicAccountSummary } from '@morwalpizvideo/models';
 import { usePublicAccount } from '../layout/account';
+import {
+  getAccountLoginPath,
+  getAccountRegisterPath,
+  getPostLoginDestination,
+  getSafeReturnUrl,
+} from './returnUrl';
 import './style.scss';
 
 function errorMessage(error: unknown): string {
@@ -45,12 +51,13 @@ export function Login() {
   const [pending, setPending] = useState(false);
   const [registrationSuccess] = useState(() => location.state?.registrationSuccess === true);
   const [sessionWarning] = useState(() => location.state?.sessionRestoreFailed === true);
+  const returnUrl = getSafeReturnUrl(location.search);
 
   useEffect(() => {
     if (registrationSuccess || sessionWarning) {
-      void navigate('/account/login', { replace: true, state: null });
+      void navigate(getAccountLoginPath(returnUrl), { replace: true, state: null });
     }
-  }, [navigate, registrationSuccess, sessionWarning]);
+  }, [navigate, registrationSuccess, returnUrl, sessionWarning]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -62,7 +69,7 @@ export function Login() {
       if (!(await refresh())) {
         throw new Error('La sessione autenticata non è stata verificata.');
       }
-      void navigate('/account/profile');
+      void navigate(getPostLoginDestination(location.search), { replace: true });
     } catch (requestError) {
       const nextFieldErrors = getApiFieldErrors(requestError);
       setFieldErrors(nextFieldErrors);
@@ -115,7 +122,7 @@ export function Login() {
       />
       <FieldErrors id="login-password-errors" errors={fieldError(fieldErrors, 'Password')} />
       <p className="mt-3 mb-0">
-        Non hai un account? <Link to="/account/register">Registrati</Link>
+        Non hai un account? <Link to={getAccountRegisterPath(returnUrl)}>Registrati</Link>
       </p>
     </AccountForm>
   );
@@ -123,7 +130,9 @@ export function Login() {
 
 export function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refresh } = usePublicAccount();
+  const returnUrl = getSafeReturnUrl(location.search);
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -144,7 +153,7 @@ export function Register() {
     try {
       await registerPublicAccount(form);
       const sessionRestored = await refresh();
-      void navigate('/account/login', {
+      void navigate(getAccountLoginPath(returnUrl), {
         replace: true,
         state: { registrationSuccess: true, sessionRestoreFailed: !sessionRestored },
       });
@@ -355,7 +364,7 @@ export function Profile() {
       <FieldErrors id="profile-email-errors" errors={fieldError(fieldErrors, 'Email')} />
       <button
         type="button"
-        className="btn btn-outline-secondary ms-2"
+        className="btn btn-outline-secondary me-2 mt-4"
         onClick={() => void logout()}
       >
         Esci

@@ -41,12 +41,34 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
 
         Assert.Equal(HttpStatusCode.Forbidden, withoutCsrf.StatusCode);
     Assert.Equal(HttpStatusCode.OK, csrfResponse.StatusCode);
+        Assert.Equal("no-store", csrfResponse.Headers.CacheControl?.ToString());
         Assert.NotNull(csrf);
         Assert.False(string.IsNullOrWhiteSpace(csrf.Token));
         Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
         Assert.True(session!.Authenticated);
         Assert.Equal(request.Email, session.Account!.Email);
         Assert.NotEqual(HttpStatusCode.Unauthorized, publicPage.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_with_invalid_credentials_returns_unauthorized_after_valid_csrf()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var csrfResponse = await client.GetAsync("/api/v1/account/csrf");
+        var csrf = await csrfResponse.Content.ReadFromJsonAsync<PublicAccountCsrfContract>();
+        using var login = new HttpRequestMessage(HttpMethod.Post, "/api/v1/account/sessions")
+        {
+            Content = JsonContent.Create(new PublicAccountLoginRequest
+            {
+                Identifier = $"missing-{Guid.NewGuid():N}",
+                Password = "incorrect-password"
+            })
+        };
+        login.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+
+        var response = await client.SendAsync(login);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

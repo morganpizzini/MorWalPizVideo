@@ -77,6 +77,19 @@
   &:hover { background: #303030; color: #ffff36; }
 }
 
+.account-action-profile {
+  width: auto;
+  max-width: 220px;
+  flex: 0 1 auto;
+  padding: 0 12px;
+  border-radius: 22px;
+  overflow: hidden;
+  font-size: var(--magazine-font-footer);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .social-links { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .social-link {
   display: inline-flex;

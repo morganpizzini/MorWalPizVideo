@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPublicAccountErrorMessage,
   getPublicAccountSession,
+  loginPublicAccount,
+  logoutPublicAccount,
 } from "./publicAccountService";
 import { ApiResponseError, accountApiService } from "./apiTransport";
 
@@ -57,6 +59,52 @@ describe("public account transport", () => {
     ).toContain("Troppe richieste");
     expect(getPublicAccountErrorMessage(new Error("network"))).toContain(
       "Riprova",
+    );
+  });
+
+  it("uses the freshly fetched CSRF token without relying on the browser cache", async () => {
+    const csrfToken = "fresh-account-csrf-token";
+    const fetchMock = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).endsWith("/csrf")
+          ? Response.json({ token: csrfToken })
+          : Response.json({ title: "Invalid account credentials." }, { status: 401 }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      loginPublicAccount({ identifier: "unknown", password: "wrong-password" }),
+    ).rejects.toMatchObject({ status: 401 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]?.cache).toBe("no-store");
+    const loginRequest = fetchMock.mock.calls[1][1];
+    expect(loginRequest?.credentials).toBe("include");
+    expect(new Headers(loginRequest?.headers).get("X-CSRF-TOKEN")).toBe(csrfToken);
+    expect(JSON.parse(String(loginRequest?.body))).toEqual({
+      identifier: "unknown",
+      password: "wrong-password",
+    });
+  });
+
+  it("continues to acquire CSRF for the authenticated logout endpoint", async () => {
+    const csrfToken = "logout-account-csrf-token";
+    const fetchMock = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).endsWith("/csrf")
+          ? Response.json({ token: csrfToken })
+          : new Response(null, { status: 204 }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await logoutPublicAccount();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]?.cache).toBe("no-store");
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("X-CSRF-TOKEN")).toBe(
+      csrfToken,
     );
   });
 });

@@ -16,6 +16,10 @@ import {
 async function getCsrfToken(): Promise<string> {
   const response = (await accountApiService.get(
     frontendEndpoints.PUBLIC_ACCOUNT_CSRF,
+    undefined,
+    "",
+    false,
+    "no-store",
   )) as PublicAccountCsrf;
   if (!response?.token) throw new Error("Unable to acquire account CSRF token");
   return response.token;

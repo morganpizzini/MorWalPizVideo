@@ -35,4 +35,18 @@ describe('public account login', () => {
 
     expect(markup).toContain('role="status">Registrazione completata. Ora puoi accedere.');
   });
+
+  it('preserves returnUrl when moving from login to registration', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryRouter
+        initialEntries={['/account/login?returnUrl=%2Fblog%2Fstory%3Fpage%3D2%23comments']}
+      >
+        <Login />
+      </MemoryRouter>
+    );
+
+    expect(markup).toContain(
+      'href="/account/register?returnUrl=%2Fblog%2Fstory%3Fpage%3D2%23comments"'
+    );
+  });
 });
