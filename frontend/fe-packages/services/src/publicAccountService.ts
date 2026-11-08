@@ -40,6 +40,10 @@ function requireAuthenticatedSession(response: unknown): PublicAccountSession {
 export async function getPublicAccountSession(): Promise<PublicAccountSession> {
   const response = await accountApiService.get(
     frontendEndpoints.PUBLIC_ACCOUNT_SESSION,
+    undefined,
+    "",
+    false,
+    "no-store",
   );
   requireSuccessfulResponse(response);
   if (

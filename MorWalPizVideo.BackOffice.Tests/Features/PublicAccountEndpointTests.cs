@@ -36,12 +36,14 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         var registered = await client.SendAsync(registration);
-        var session = await client.GetFromJsonAsync<PublicAccountSessionContract>("/api/v1/account/session");
+        var sessionResponse = await client.GetAsync("/api/v1/account/session");
+        var session = await sessionResponse.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
         var publicPage = await client.GetAsync("/api/navigation");
 
         Assert.Equal(HttpStatusCode.Forbidden, withoutCsrf.StatusCode);
     Assert.Equal(HttpStatusCode.OK, csrfResponse.StatusCode);
         Assert.Equal("no-store", csrfResponse.Headers.CacheControl?.ToString());
+        Assert.Equal("no-store", sessionResponse.Headers.CacheControl?.ToString());
         Assert.NotNull(csrf);
         Assert.False(string.IsNullOrWhiteSpace(csrf.Token));
         Assert.Equal(HttpStatusCode.OK, registered.StatusCode);

@@ -45,6 +45,19 @@ describe("public account transport", () => {
     );
   });
 
+  it("requests session state without using a cached anonymous response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({ authenticated: false }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getPublicAccountSession()).resolves.toEqual({
+      authenticated: false,
+    });
+
+    expect(fetchMock.mock.calls[0][1]?.cache).toBe("no-store");
+  });
+
   it("keeps account errors safe and status-aware for an empty session response", async () => {
     const fetchMock = vi
       .fn()

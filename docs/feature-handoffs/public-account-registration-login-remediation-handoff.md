@@ -236,6 +236,8 @@ Limite: rollback non annulla account gia registrati e non giustifica eliminarli.
   is exempted.
 - Marked CSRF responses `Cache-Control: no-store` and made frontend CSRF GETs
   bypass the browser cache.
+- Applied the same no-cache policy to session restoration so an earlier
+  anonymous result cannot override the authenticated cookie after login.
 - Added safe `returnUrl` handling from the header account action through the
   registration/login route, returning to the requested local page after a
   verified login. External and authentication-loop destinations are rejected.
@@ -247,7 +249,7 @@ Limite: rollback non annulla account gia registrati e non giustifica eliminarli.
 ### Validation
 
 - `cd frontend/fe-packages/services && npm test -- --run
-  src/publicAccountService.test.ts` — PASS, 5 tests.
+  src/publicAccountService.test.ts` — PASS, 6 tests.
 - `cd frontend/fe-packages/services && npm run build` — PASS.
 - `cd frontend/morwalpizvideo.client && npm test -- --run
   src/routes/account/Components.test.tsx src/routes/account/returnUrl.test.ts

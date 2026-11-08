@@ -84,6 +84,7 @@ public sealed class PublicAccountController(
     [AllowAnonymous]
     public async Task<ActionResult<PublicAccountSessionContract>> Session(CancellationToken cancellationToken)
     {
+        Response.Headers.CacheControl = "no-store";
         if (!Request.Cookies.TryGetValue(PublicAccountSecurity.SessionCookie, out var token))
             return Ok(new PublicAccountSessionContract { Authenticated = false });
 
