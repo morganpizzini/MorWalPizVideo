@@ -51,6 +51,101 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
     }
 
     [Fact]
+    public async Task Save_and_publish_endpoints_publish_at_one_revision()
+    {
+        using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PagesManage);
+        var create = await client.PostAsJsonAsync("/api/blogposts/save-and-publish", new SaveBlogPostRequest
+        {
+            Slug = $"atomic-{Guid.NewGuid():N}",
+            Draft = new BlogSnapshot { Title = "Published once", Tags = ["first"] }
+        });
+
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = (await create.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+        Assert.Equal(1, created.Revision);
+        Assert.True(created.IsPublished);
+
+        var save = await client.PutAsJsonAsync($"/api/blogposts/{created.Id}/save-and-publish",
+            new SaveBlogPostRequest
+            {
+                Slug = created.Slug,
+                Revision = created.Revision,
+                Draft = created.Draft with { Title = "Updated once", Tags = ["second"] }
+            });
+
+        Assert.Equal(HttpStatusCode.OK, save.StatusCode);
+        var published = (await save.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+        Assert.Equal(2, published.Revision);
+        Assert.True(published.IsPublished);
+        Assert.Equal("Updated once", published.Draft.Title);
+        var stored = await factory.Services.GetRequiredService<IBlogRepository>()
+            .GetPublishedAsync(PrimaryScenario.ChannelId, created.Slug);
+        Assert.Equal(["second"], stored!.Published!.Tags);
+    }
+
+    [Fact]
+    public async Task Image_deletion_persists_retry_state_then_removes_exact_owned_blob()
+    {
+        using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PagesManage);
+        var (post, image) = await CreatePostWithImageAsync(client);
+        var folder = $"blog/{PrimaryScenario.ChannelId}/{post.Id}";
+        factory.BlobService.Outcome = BlobMockOutcome.TransientFailure;
+
+        try
+        {
+            var failure = await client.DeleteAsync(
+                $"/api/blogposts/{post.Id}/images?imageId={Uri.EscapeDataString(image.Id)}&revision={post.Revision}");
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, failure.StatusCode);
+            var pending = (await failure.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+            Assert.Equal(post.Revision + 1, pending.Revision);
+            Assert.Contains(image.Id, pending.PendingImageDeletionIds);
+
+            factory.BlobService.Outcome = BlobMockOutcome.Success;
+            Assert.Contains($"mock://blob/{image.Id}", await factory.BlobService.GetImagesInFolderAsync(folder));
+            var retry = await client.DeleteAsync(
+                $"/api/blogposts/{post.Id}/images?imageId={Uri.EscapeDataString(image.Id)}&revision={pending.Revision}");
+            Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+            var deleted = (await retry.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+            Assert.Equal(pending.Revision + 1, deleted.Revision);
+            Assert.DoesNotContain(image.Id, deleted.PendingImageDeletionIds);
+            Assert.DoesNotContain(deleted.Images, item => item.Id == image.Id);
+            Assert.DoesNotContain($"mock://blob/{image.Id}", await factory.BlobService.GetImagesInFolderAsync(folder));
+            Assert.Equal("page-media", factory.BlobService.LastContainerName);
+        }
+        finally
+        {
+            factory.BlobService.Outcome = BlobMockOutcome.Success;
+        }
+    }
+
+    [Fact]
+    public async Task Image_deletion_rejects_a_published_reference_without_touching_storage()
+    {
+        using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PagesManage);
+        var (post, image) = await CreatePostWithImageAsync(client);
+        var referenced = await client.PutAsJsonAsync($"/api/blogposts/{post.Id}/save-and-publish",
+            new SaveBlogPostRequest
+            {
+                Slug = post.Slug,
+                Revision = post.Revision,
+                Draft = post.Draft with { CoverImageId = image.Id, CoverAlt = image.AltText }
+            });
+        Assert.Equal(HttpStatusCode.OK, referenced.StatusCode);
+        var published = (await referenced.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+
+        var deletion = await client.DeleteAsync(
+            $"/api/blogposts/{post.Id}/images?imageId={Uri.EscapeDataString(image.Id)}&revision={published.Revision}");
+
+        Assert.Equal(HttpStatusCode.Conflict, deletion.StatusCode);
+        Assert.Contains($"mock://blob/{image.Id}", await factory.BlobService.GetImagesInFolderAsync(
+            $"blog/{PrimaryScenario.ChannelId}/{post.Id}"));
+        var unchanged = await factory.Services.GetRequiredService<IBlogRepository>()
+            .GetAsync(PrimaryScenario.ChannelId, post.Id);
+        Assert.Empty(unchanged!.PendingImageDeletionIds);
+        Assert.Contains(image.Id, unchanged.Published!.CoverImageId);
+    }
+
+    [Fact]
     public async Task Owned_image_references_survive_draft_changes_without_exposing_draft_media()
     {
         using var client = factory.CreateClientWithPermissions(AuthorizationPermissionKeys.PagesManage);
@@ -139,6 +234,29 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
         using var storedImage = await Image.LoadAsync(blob);
         Assert.Equal(1920, storedImage.Width);
         Assert.Equal(1080, storedImage.Height);
+    }
+
+    private async Task<(BlogPostResponse Post, BlogImageResponse Image)> CreatePostWithImageAsync(HttpClient client)
+    {
+        var created = await client.PostAsJsonAsync("/api/blogposts", new SaveBlogPostRequest
+        {
+            Slug = $"delete-{Guid.NewGuid():N}",
+            Draft = new BlogSnapshot { Title = "Delete one image" }
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var post = (await created.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+
+        using var image = new Image<Rgba32>(16, 16);
+        await using var stream = new MemoryStream();
+        await image.SaveAsPngAsync(stream);
+        using var upload = new MultipartFormDataContent();
+        upload.Add(new ByteArrayContent(stream.ToArray()), "file", "delete.png");
+        upload.Add(new StringContent(post.Revision.ToString()), "revision");
+        upload.Add(new StringContent("Delete image"), "altText");
+        var response = await client.PostAsync($"/api/blogposts/{post.Id}/images", upload);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        post = (await response.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+        return (post, Assert.Single(post.Images));
     }
 
     [Fact]

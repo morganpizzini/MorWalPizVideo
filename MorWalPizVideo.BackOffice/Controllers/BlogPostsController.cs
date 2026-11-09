@@ -55,6 +55,43 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
     public Task<IActionResult> Save(string id, SaveBlogPostRequest request) => MutateAsync(() =>
         service.SaveAsync(ChannelId, id, request.Revision, request.Slug, request.Draft), false);
 
+    [HttpPost("save-and-publish")]
+    [AllowUser(AuthorizationPermissionKeys.PagesManage)]
+    public async Task<IActionResult> CreateAndPublish(SaveBlogPostRequest request)
+    {
+        try { var post = await service.CreateAndPublishAsync(ChannelId, request.Slug, request.Draft); return CreatedAtAction(nameof(Get), new { id = post.Id }, BlogPostResponse.From(post)); }
+        catch (BlogValidationException exception) { return BadRequest(exception.Message); }
+        catch (BlogConflictException exception) { return Conflict(exception.Message); }
+    }
+
+    [HttpPut("{id}/save-and-publish")]
+    [AllowUser(AuthorizationPermissionKeys.PagesManage)]
+    public Task<IActionResult> SaveAndPublish(string id, SaveBlogPostRequest request) => MutateAsync(() =>
+        service.SaveAndPublishAsync(ChannelId, id, request.Revision, request.Slug, request.Draft), true);
+
+    [HttpDelete("{id}/images")]
+    [AllowUser(AuthorizationPermissionKeys.PagesUpdate, AuthorizationPermissionKeys.PagesManage)]
+    public async Task<IActionResult> DeleteImage(string id, [FromQuery] string imageId, [FromQuery] long revision)
+    {
+        try
+        {
+            var reserved = await service.ReserveImageDeletionAsync(ChannelId, id, revision, imageId);
+            if (reserved is null) return NotFound();
+            var image = reserved.Images.FirstOrDefault(item => item.StorageKey == imageId);
+            if (image is null) return NotFound();
+            try { await blobs.DeleteImageAsync(image.StorageKey, options.Value.PageContainerName); }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Blog image deletion failed for {PostId} {ChannelId} {ImageId}", id, ChannelId, imageId);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, BlogPostResponse.From(reserved));
+            }
+            var finalized = await service.FinalizeImageDeletionAsync(ChannelId, id, reserved.Revision, imageId);
+            return finalized is null ? NotFound() : Ok(BlogPostResponse.From(finalized));
+        }
+        catch (BlogValidationException exception) { return BadRequest(exception.Message); }
+        catch (BlogConflictException exception) { return Conflict(exception.Message); }
+    }
+
     [HttpPost("{id}/publish")]
     [AllowUser(AuthorizationPermissionKeys.PagesManage)]
     public Task<IActionResult> Publish(string id, BlogRevisionRequest request) => MutateAsync(() =>

@@ -60,6 +60,7 @@ export {
   ApiResponseError,
   requireSuccessfulResponse,
 } from "./apiService";
+export { saveAndPublishBlogPost, deleteBlogImage } from "./blogService";
 
 // Export entity-specific service functions
 export {

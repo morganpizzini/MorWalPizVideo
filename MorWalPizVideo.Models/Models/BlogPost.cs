@@ -59,4 +59,5 @@ public sealed record BlogPost : BaseEntity
     public DateTime? FirstPublishedAt { get; init; }
     public DateTime? PublishedAt { get; init; }
     public IReadOnlyList<PageImage> Images { get; init; } = [];
+    public IReadOnlyList<string> PendingImageDeletionIds { get; init; } = [];
 }

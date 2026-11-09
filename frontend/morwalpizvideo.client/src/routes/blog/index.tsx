@@ -106,8 +106,7 @@ export function BlogArticle() {
             {JSON.stringify(article).replace(/</g, '\\u003c')}
           </script>
         </Helmet>
-        <Link to="/blog">Blog</Link>
-        <header className="blog-article-header my-4">
+        <header className="blog-article-header my-2">
           <h1>{metadata.title}</h1>
           <p className="text-secondary">
             {metadata.author}

@@ -12,6 +12,8 @@ import {
   type BlogAdminCommentPage,
   type BlogArticleInteractionsPage,
 } from '@morwalpizvideo/models';
+import { hasPermission, permissions } from '@/authorization/permissions';
+import { useAppStore } from '@/state/appStore';
 
 export default function BlogInteractionsPage() {
   const [articles, setArticles] = useState<BlogArticleInteractionsPage | null>(null);
@@ -23,6 +25,11 @@ export default function BlogInteractionsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState('');
+  const effectivePermissions = useAppStore(state => state.effectivePermissions);
+  const canEditArticles = hasPermission(effectivePermissions, [
+    permissions.pages.update,
+    permissions.pages.manage,
+  ]);
 
   async function load() {
     setLoading(true);
@@ -68,7 +75,6 @@ export default function BlogInteractionsPage() {
       )}
       {loading && <p role="status">Loading blog interactions...</p>}
       <section>
-        <h2 className="h5">Article activity</h2>
         {!articles?.items.length && !loading ? <p>No articles found.</p> : null}
         {articles?.items.length ? (
           <>
@@ -86,9 +92,13 @@ export default function BlogInteractionsPage() {
                 {articles.items.map(article => (
                   <tr key={article.postId}>
                     <td>
-                      <Link to={`/blogposts/${encodeURIComponent(article.postId)}`}>
-                        {article.title || article.slug}
-                      </Link>
+                      {canEditArticles ? (
+                        <Link to={`/blogposts/${encodeURIComponent(article.postId)}/edit`}>
+                          {article.title || article.slug}
+                        </Link>
+                      ) : (
+                        article.title || article.slug
+                      )}
                     </td>
                     <td>{article.published ? 'Published' : 'Draft'}</td>
                     <td>{article.likes}</td>

@@ -141,8 +141,13 @@ const routeDefinitions: RouteConfig[] = [
   feature('blogposts/create', () => import('../../routes/blog/form'), {
     errorElement: createErrorElement(),
   }),
+  feature('blogposts/:id', () => import('../../routes/blog/alias')),
   feature('blogposts/:id/edit', () => import('../../routes/blog/form'), {
     errorElement: createErrorElement(),
+    handle: {
+      breadcrumb: (post: { draft?: { title?: string } } | undefined) =>
+        post?.draft?.title?.trim() || 'Article',
+    },
   }),
   group('shortlinks', () => import('../../routes/shortLinks/index'), [
     indexFeature('', () => import('../../routes/shortLinks/index')),
@@ -393,6 +398,7 @@ const routeDefinitions: RouteConfig[] = [
       ],
     },
   ]),
+  feature('*', () => import('../../routes/notFound')),
 ];
 
 function protectRoute(route: RouteConfig, parentPath = ''): RouteConfig {

@@ -52,6 +52,33 @@ public sealed class BlogService(IBlogRepository repository)
         return await ReplaceAsync(existing with { Slug = normalizedSlug, Draft = draft with { UpdatedAt = DateTime.UtcNow } }, revision);
     }
 
+    public async Task<BlogPost?> SaveAndPublishAsync(string channelId, string id, long revision, string slug, BlogSnapshot draft)
+    {
+        var existing = await GetAsync(channelId, id);
+        if (existing is null) return null;
+        if (draft is null) throw new BlogValidationException("Draft is required.");
+        var normalizedSlug = string.IsNullOrWhiteSpace(slug) ? existing.Slug : NormalizeSlug(slug);
+        if (existing.FirstPublishedAt is not null && normalizedSlug != existing.Slug)
+            throw new BlogConflictException("A previously published slug cannot change.");
+        var now = DateTime.UtcNow;
+        return await ReplaceAsync(existing with { Slug = normalizedSlug, Draft = draft with { UpdatedAt = now },
+            Published = draft with { UpdatedAt = now }, FirstPublishedAt = existing.FirstPublishedAt ?? now, PublishedAt = now }, revision);
+    }
+
+    public async Task<BlogPost> CreateAndPublishAsync(string channelId, string slug, BlogSnapshot draft)
+    {
+        var now = DateTime.UtcNow;
+        var post = new BlogPost { Id = ObjectId.GenerateNewId().ToString(), ChannelId = channelId,
+            Slug = string.IsNullOrWhiteSpace(slug) ? SlugFromTitle(draft?.Title ?? string.Empty) : NormalizeSlug(slug),
+            Draft = draft is null ? null! : draft with { UpdatedAt = now },
+            Published = draft is null ? null : draft with { UpdatedAt = now },
+            FirstPublishedAt = now, PublishedAt = now, CreationDateTime = now };
+        Validate(post);
+        try { await repository.CreateAsync(post); }
+        catch (MongoWriteException exception) when (exception.WriteError?.Code == 11000) { throw new BlogConflictException("Slug already exists in this channel."); }
+        return post;
+    }
+
     public async Task<BlogPost?> PublishAsync(string channelId, string id, long revision, bool publish)
     {
         var existing = await GetAsync(channelId, id);
@@ -73,10 +100,41 @@ public sealed class BlogService(IBlogRepository repository)
         return await ReplaceAsync(existing with { Images = existing.Images.Append(image).ToArray() }, revision);
     }
 
+    public async Task<BlogPost?> ReserveImageDeletionAsync(string channelId, string id, long revision, string imageId)
+    {
+        ValidateRevision(revision);
+        var existing = await GetAsync(channelId, id);
+        if (existing is null) return null;
+        if (existing.Revision != revision) throw new BlogConflictException("Post changed. Reload before deleting the image.");
+        if (string.IsNullOrWhiteSpace(imageId)) throw new BlogValidationException("Image ID is required.");
+        if (!existing.Images.Any(image => image.StorageKey == imageId)) return null;
+        if (References(existing.Draft, imageId) || (existing.Published is not null && References(existing.Published, imageId)))
+            throw new BlogConflictException("The image is still referenced by the draft or published article.");
+        if (existing.PendingImageDeletionIds.Contains(imageId, StringComparer.Ordinal)) return existing;
+        return await ReplaceAsync(existing with { PendingImageDeletionIds = existing.PendingImageDeletionIds.Append(imageId).ToArray() }, revision);
+    }
+
+    public async Task<BlogPost?> FinalizeImageDeletionAsync(string channelId, string id, long revision, string imageId)
+    {
+        ValidateRevision(revision);
+        var existing = await GetAsync(channelId, id);
+        if (existing is null) return null;
+        if (existing.Revision != revision) throw new BlogConflictException("Post changed while deleting the image. Retry with the current revision.");
+        if (!existing.PendingImageDeletionIds.Contains(imageId, StringComparer.Ordinal)) return existing;
+        return await ReplaceAsync(existing with
+        {
+            Images = existing.Images.Where(image => image.StorageKey != imageId).ToArray(),
+            PendingImageDeletionIds = existing.PendingImageDeletionIds.Where(item => item != imageId).ToArray()
+        }, revision);
+    }
+
     private async Task<BlogPost> ReplaceAsync(BlogPost post, long revision)
     {
         ValidateRevision(revision);
         if (post.Revision != revision) throw new BlogConflictException("Post changed. Reload before saving.");
+        if (post.PendingImageDeletionIds.Any(id => References(post.Draft, id) ||
+            (post.Published is not null && References(post.Published, id))))
+            throw new BlogConflictException("The article references an image pending deletion.");
         Validate(post);
         var updated = post with { Revision = revision + 1 };
         try
@@ -93,6 +151,8 @@ public sealed class BlogService(IBlogRepository repository)
         var existing = await GetAsync(channelId, id);
         if (existing is null) return null;
         if (existing.Revision != revision) throw new BlogConflictException("Post changed. Reload before deleting.");
+        if (existing.PendingImageDeletionIds.Count != 0)
+            throw new BlogConflictException("Retry pending image deletions before deleting the article.");
         if (!await repository.DeleteAsync(channelId, id, revision))
             throw new BlogConflictException("Post changed. Reload before deleting.");
         return existing;
@@ -119,7 +179,18 @@ public sealed class BlogService(IBlogRepository repository)
             throw new BlogValidationException("Channel and ASCII slug (1-120 characters) are required.");
         ValidateSnapshot(post.Draft, post.Images);
         if (post.Published is not null) ValidateSnapshot(post.Published, post.Images);
+        if (post.PendingImageDeletionIds.Any(id => !post.Images.Any(image => image.StorageKey == id)))
+            throw new BlogValidationException("Pending image deletions must reference owned images.");
+        if (post.PendingImageDeletionIds.Any(id => References(post.Draft, id) ||
+            (post.Published is not null && References(post.Published, id))))
+            throw new BlogValidationException("Pending images cannot be referenced by an article snapshot.");
     }
+
+    private static bool References(BlogSnapshot snapshot, string imageId) =>
+        snapshot.CoverImageId == imageId || References(snapshot.Document.Blocks, imageId);
+    private static bool References(IEnumerable<BlogBlock> blocks, string imageId) =>
+        blocks.Any(block => block.ImageIds.Contains(imageId, StringComparer.Ordinal) ||
+            block.Columns.Any(column => References(column, imageId)));
 
     private static void ValidateSnapshot(BlogSnapshot snapshot, IReadOnlyList<PageImage> images)
     {

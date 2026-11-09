@@ -28,6 +28,9 @@ as channel-scoped, using the existing channel-header/token provider and credenti
 | POST | `/api/blogposts/{id}/unpublish` | `pages.manage` only | Remove public snapshot. |
 | DELETE | `/api/blogposts/{id}?revision=...` | `pages.delete` | Delete aggregate; 204. |
 | POST | `/api/blogposts/{id}/images` | `pages.update` | Multipart `file`, `revision`, `altText`; updated admin response. |
+| POST | `/api/blogposts/save-and-publish` | `pages.manage` | Create and publish in one insert. |
+| PUT | `/api/blogposts/{id}/save-and-publish` | `pages.manage` | Publish an edited snapshot in one revision increment. |
+| DELETE | `/api/blogposts/{id}/images?imageId=...&revision=...` | `pages.update` | Exact-key deletion with persisted retry state. |
 
 Validation errors return 400; revision/slug conflicts return 409; missing or foreign-owned
 posts return 404. Existing authorization determines 401/403 responses.
@@ -86,6 +89,14 @@ filters by channel, ID and revision atomically. Publish copies the stored draft 
 Published; later draft saves leave that snapshot unchanged. Unpublish clears Published
 but retains first-publication history and media.
 
+Primary Save uses the dedicated save-and-publish route and exactly one revision increment;
+Save as draft remains unchanged. Image removal persists `PendingImageDeletionIds` before
+deleting the server-resolved exact key from the configured page container, then finalizes with
+optimistic concurrency. Draft, Published, cover and nested block references are protected;
+storage failures retain metadata and a user-visible retry marker. Provider retention,
+versions, snapshots, CDN and browser copies require operational verification before any
+permanent-erasure claim.
+
 The admin response additively exposes nullable `firstPublishedAt` directly from the
 aggregate's `FirstPublishedAt`; it is not inferred from current publication state.
 The existing response constructor, save request and public response shapes are unchanged.
@@ -98,11 +109,11 @@ Admin routes are `/blogposts`, `/blogposts/create`, `/blogposts/:id/edit`, guard
 the existing Pages permissions. Blog is an admin menu entry, not a new permission family.
 The editor uses Puck 0.23.0 custom fields and Tiptap 3.31.4 with React 19, canonical
 adapters, metadata fields, image upload/selection/order, composition and shared preview.
-For users with `pages.manage`, the primary Save action saves the current draft and then
-publishes that saved revision; the adjacent Save as draft action persists without
+For users with `pages.manage`, the primary Save action saves and publishes the current
+draft in one revisioned request; the adjacent Save as draft action persists without
 changing the live snapshot. Unpublish remains a separate action and is disabled while
-the draft has unsaved edits. If publication fails after saving, the editor retains the
-confirmed draft/revision and reports the partial success. Users without publish
+the draft has unsaved edits. Atomic Save reports one publish outcome; media deletion
+failures retain pending recovery state. Users without publish
 permission retain a Save as draft action. Server authorization remains authoritative.
 The article-local Cover image box lists only the post's owned images. Upload requires
 update/manage permission; creating the post for an initial upload also requires

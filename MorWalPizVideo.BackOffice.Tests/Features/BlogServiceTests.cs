@@ -158,6 +158,36 @@ public sealed class BlogServiceTests
     }
 
     [Fact]
+    public async Task Save_and_publish_advances_one_revision_and_removal_reserves_then_finalizes()
+    {
+        var service = new BlogService(new BlogMockRepository());
+        var post = await service.CreateAsync("one", "first", Draft());
+        post = (await service.AddImageAsync("one", post.Id, post.Revision,
+            new PageImage { StorageKey = "blog/one/first/a.jpg", PublicUrl = "https://example/a.jpg" }))!;
+        var published = (await service.SaveAndPublishAsync("one", post.Id, post.Revision, post.Slug, Draft("Published")))!;
+        Assert.Equal(post.Revision + 1, published.Revision);
+        Assert.Equal("Published", published.Published!.Title);
+        var reserved = (await service.ReserveImageDeletionAsync("one", post.Id, published.Revision, "blog/one/first/a.jpg"))!;
+        Assert.Contains("blog/one/first/a.jpg", reserved.PendingImageDeletionIds);
+        var finalized = (await service.FinalizeImageDeletionAsync("one", post.Id, reserved.Revision, "blog/one/first/a.jpg"))!;
+        Assert.DoesNotContain(finalized.Images, image => image.StorageKey == "blog/one/first/a.jpg");
+        Assert.Empty(finalized.PendingImageDeletionIds);
+    }
+
+    [Fact]
+    public async Task Referenced_image_cannot_be_reserved_and_stale_finalization_is_rejected()
+    {
+        var service = new BlogService(new BlogMockRepository());
+        var post = await service.CreateAsync("one", "first", Draft());
+        post = (await service.AddImageAsync("one", post.Id, post.Revision,
+            new PageImage { StorageKey = "blog/one/first/a.jpg", PublicUrl = "https://example/a.jpg" }))!;
+        var referenced = Draft() with { CoverImageId = "blog/one/first/a.jpg", CoverAlt = "A" };
+        post = (await service.SaveAsync("one", post.Id, post.Revision, post.Slug, referenced))!;
+        await Assert.ThrowsAsync<BlogConflictException>(() =>
+            service.ReserveImageDeletionAsync("one", post.Id, post.Revision, "blog/one/first/a.jpg"));
+    }
+
+    [Fact]
     public async Task Only_one_concurrent_writer_can_publish()
     {
         var service = new BlogService(new BlogMockRepository());

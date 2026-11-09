@@ -55,6 +55,15 @@ The [2026-10-24 API consistency audit](api-consistency-audit.md) consolidates th
 
 ## Persistence
 
+### Blog media deletion boundary
+
+BackOffice blog image deletion is channel-scoped and permission-checked. The aggregate
+persists `PendingImageDeletionIds` before deleting the exact server-resolved key from the
+configured page container, then removes metadata with an expected-revision replacement.
+Unrelated writers preserve markers; saves reject references and whole-post deletion waits
+for recovery. Provider retention, versions, snapshots, CDN and browser copies require
+operational verification before permanent-erasure claims.
+
 ### MongoDB
 
 - `BaseRepository<T>` implements generic CRUD.

@@ -13,6 +13,8 @@ import {
   saveBlogPost,
   publishBlogPost,
   uploadBlogImage,
+  saveAndPublishBlogPost,
+  deleteBlogImage,
   generateScriptStudio,
 } from '@morwalpizvideo/services';
 import { BlogRenderer } from '@morwalpiz/layout';
@@ -121,18 +123,10 @@ export async function action({ request, params }: { request: Request; params: { 
       if (!payload.draft.title.trim() || !payload.slug.trim())
         return data({ error: 'Title and slug are required.' }, { status: 400 });
       payload.draft.tags = normalizeTags(payload.draft.tags);
-      savedPost = postId ? await saveBlogPost(postId, payload) : await createBlogPost(payload);
-      if (channelId && appStore.getState().selectedChannelId !== channelId) {
-        return data(
-          {
-            post: savedPost,
-            error: 'Draft saved, but the selected channel changed. Switch back to publish.',
-          },
-          { status: 409 }
-        );
-      }
-      const published = await publishBlogPost(savedPost.id, savedPost.revision, true);
-      return { post: published, message: 'Article published.' };
+      return {
+        post: await saveAndPublishBlogPost(postId, payload),
+        message: 'Article published.',
+      };
     }
 
     if (intent === 'unpublish') {
@@ -161,11 +155,6 @@ export async function action({ request, params }: { request: Request; params: { 
       error instanceof ApiResponseError
         ? error.message
         : 'Unable to complete the request. Check the connection and retry.';
-    if (savedPost && intent === 'publish')
-      return data(
-        { post: savedPost, error: `Draft saved, but publishing failed: ${message}` },
-        { status: error instanceof ApiResponseError ? error.status : 400 }
-      );
     if (savedPost && intent === 'upload')
       return data(
         { post: savedPost, error: `Draft saved, but image upload failed: ${message}` },
@@ -211,6 +200,7 @@ function BlogForm({
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const { selectedChannelId } = useChannelContext();
   const [post, setPost] = useState(initial);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
   const canSave = hasPermission(effectivePermissions, [
     post ? permissions.pages.update : permissions.pages.create,
     permissions.pages.manage,
@@ -248,6 +238,31 @@ function BlogForm({
     formData.set('file', preparedUpload);
     formData.set('altText', effectiveAlt);
     fetcher.submit(formData, { method: 'post', encType: 'multipart/form-data' });
+  };
+  const removeImage = async (imageId: string) => {
+    if (!post || busy || dirty || !window.confirm('Permanently delete this stored image? This cannot be undone by restoring the article.'))
+      return;
+    setDeletingImageId(imageId);
+    try {
+      const updated = await deleteBlogImage(post.id, imageId, post.revision);
+      setPost(updated);
+      setDraft(updated.draft);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Image deletion failed. Reload and retry.';
+      try {
+        const latest = await getBlogPost(post.id);
+        setPost(latest);
+        setDraft(latest.draft);
+        window.alert(errorMessage);
+      } catch (refreshError) {
+        const refreshMessage =
+          refreshError instanceof Error ? refreshError.message : 'Unable to reload article state.';
+        window.alert(`${errorMessage} ${refreshMessage}`);
+      }
+    } finally {
+      setDeletingImageId(null);
+    }
   };
   const [preview, setPreview] = useState(false);
   const [prettifyOpen, setPrettifyOpen] = useState(false);
@@ -552,22 +567,18 @@ function BlogForm({
         )}
         {post?.images.length ? (
           <div className="d-flex flex-wrap gap-2 mb-3" aria-label="Article media">
-            {post.images.map(image => (
-              <button
-                key={image.id}
-                type="button"
-                className={`btn p-1 ${draft.coverImageId === image.id ? 'btn-primary' : 'btn-outline-secondary'}`}
-                aria-pressed={draft.coverImageId === image.id}
-                aria-label={`Use ${image.altText || 'image'} as cover`}
-                onClick={() =>
-                  setDraft(current => ({
-                    ...current,
-                    coverImageId: image.id,
-                    coverAlt: image.altText,
-                  }))
-                }
-                disabled={busy}
-              >
+            {post.images.map(image => {
+              const deletionPending = post.pendingImageDeletionIds?.includes(image.id) ?? false;
+              return (
+              <div key={image.id} className="d-flex flex-column gap-1">
+                <button
+                  type="button"
+                  className={`btn p-1 ${draft.coverImageId === image.id ? 'btn-primary' : 'btn-outline-secondary'}`}
+                  aria-pressed={draft.coverImageId === image.id}
+                  aria-label={`Use ${image.altText || 'image'} as cover`}
+                  onClick={() => setDraft(current => ({ ...current, coverImageId: image.id, coverAlt: image.altText }))}
+                  disabled={busy || !!post.pendingImageDeletionIds?.includes(image.id)}
+                >
                 <img
                   src={image.publicUrl}
                   alt=""
@@ -575,11 +586,23 @@ function BlogForm({
                   className="rounded"
                   style={{ width: '7rem', height: '5rem', objectFit: 'cover' }}
                 />
-              </button>
-            ))}
+                </button>
+                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeImage(image.id)}
+                  disabled={busy || dirty || deletingImageId !== null}>
+                  <Trash2 size={14} className="me-1" />
+                  {deletionPending ? 'Retry permanent deletion' : 'Remove image'}
+                </button>
+              </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-secondary">No images uploaded for this article yet.</p>
+        )}
+        {!!post?.pendingImageDeletionIds?.length && (
+          <div className="alert alert-warning" role="status">
+            Pending permanent deletion: {post.pendingImageDeletionIds.join(', ')}. Retry each image after a storage failure.
+          </div>
         )}
         <label className="form-label" htmlFor="cover-alt">
           Cover alt text

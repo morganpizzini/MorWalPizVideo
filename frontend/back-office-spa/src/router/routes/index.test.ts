@@ -55,4 +55,14 @@ describe('protectedRoutes', () => {
     expect(getRoutePermissions('newsletters', false)).toEqual([permissions.backoffice.access]);
     expect(getRoutePermissions('newsletters', true)).toEqual([permissions.backoffice.access]);
   });
+
+  it('matches the bare blog article alias and authenticated not-found wildcard', () => {
+    expect(
+      matchRoutes(protectedRoutes as RouteObject[], '/blogposts/article-1')?.at(-1)?.params.id
+    ).toBe('article-1');
+    expect(
+      matchRoutes(protectedRoutes as RouteObject[], '/unknown-admin-path')?.at(-1)?.route.path
+    ).toBe('*');
+    expect(getRoutePermissions('*', false)).toEqual([permissions.backoffice.access]);
+  });
 });

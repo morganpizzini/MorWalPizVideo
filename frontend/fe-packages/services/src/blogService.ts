@@ -8,6 +8,7 @@ import {
   get,
   post,
   put,
+  Delete,
   postFormData,
   requireSuccessfulResponse,
 } from "./apiService";
@@ -28,6 +29,10 @@ export const saveBlogPost = async (
   payload: SaveBlogPost,
 ): Promise<BlogPostAdmin> =>
   requireSuccessfulResponse(await put(detail(id), payload));
+export const saveAndPublishBlogPost = async (id: string | undefined, payload: SaveBlogPost): Promise<BlogPostAdmin> =>
+  requireSuccessfulResponse(await (id ? put(`${detail(id)}/save-and-publish`, payload) : post(`${endpoints.BLOG_POSTS}/save-and-publish`, payload)));
+export const deleteBlogImage = async (id: string, imageId: string, revision: number): Promise<BlogPostAdmin> =>
+  requireSuccessfulResponse(await Delete(`${detail(id)}/images?imageId=${encodeURIComponent(imageId)}&revision=${revision}`));
 export const publishBlogPost = async (
   id: string,
   revision: number,

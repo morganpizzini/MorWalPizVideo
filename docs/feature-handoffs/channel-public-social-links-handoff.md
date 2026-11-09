@@ -224,6 +224,18 @@ File modificati: `MorWalPizVideo.Domain/ChannelSocialLinks.cs`,
 `frontend/back-office-spa/src/routes/channels/form/Component.tsx` e
 `MorWalPizVideo.BackOffice.Tests/Features/ChannelBoundaryTests.cs`.
 
+## Icone social header/footer
+
+Font Awesome e aggiornato alla versione 6.7.2 per supportare `fa-x-twitter`,
+prima assente nella versione 5 caricata dal client. I pulsanti Facebook e X
+hanno ora sfondi circolari dedicati, coerenti con Instagram e YouTube; la
+modalita compatta dell'header mantiene i suoi colori esistenti.
+
+File aggiornati: `frontend/morwalpizvideo.client/index.html` e
+`frontend/morwalpizvideo.client/src/layouts/title-header.scss`. Verificati
+il test SocialLinks (1/1), il test header pubblico (3/3), il build di
+produzione del client e la presenza di `fa-x-twitter` nel CSS CDN caricato.
+
 Validazione: build/test focalizzato BackOffice Release compilato i progetti
 interessati; `ChannelTerminologyTests` 2/2 verdi. Il build dell'intera solution
 è stato interrotto per progetti Windows e asset di test preesistenti mancanti.

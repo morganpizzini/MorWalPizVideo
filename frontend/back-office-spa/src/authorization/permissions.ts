@@ -126,6 +126,7 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
   const module = segments[0] ?? '';
 
   if (!module) return [permissions.backoffice.access];
+  if (module === '*') return [permissions.backoffice.access];
   if (module === 'profile') return [permissions.backoffice.access];
   if (module === 'public-accounts')
     return [

@@ -1,12 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlogDocument, BlogPostAdmin } from '@morwalpizvideo/models';
 import {
   createBlogPost,
+  deleteBlogImage,
+  getBlogPost,
   publishBlogPost,
   saveBlogPost,
+  saveAndPublishBlogPost,
   uploadBlogImage,
 } from '@morwalpizvideo/services';
 import { requirePermissions } from '@/router/guards';
@@ -64,8 +67,11 @@ vi.mock('./BlogCoverCropper', () => ({
 vi.mock('@morwalpizvideo/services', async importOriginal => ({
   ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   createBlogPost: vi.fn(),
+  deleteBlogImage: vi.fn(),
+  getBlogPost: vi.fn(),
   saveBlogPost: vi.fn(),
   publishBlogPost: vi.fn(),
+  saveAndPublishBlogPost: vi.fn(),
   uploadBlogImage: vi.fn(),
 }));
 vi.mock('react-router', async importOriginal => ({
@@ -117,6 +123,9 @@ beforeEach(() => {
   mocks.fetcher.data = undefined;
   mocks.fetcher.submit.mockReset();
   appStore.setState({ effectivePermissions: ['pages.manage'], selectedChannelId: null });
+});
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 describe('blog draft workflow', () => {
   it('uses a deterministic fallback when a filename has no meaningful stem', () => {
@@ -395,12 +404,10 @@ describe('blog draft workflow', () => {
     });
     expect((result as Response).headers.get('Location')).toBe('/blogposts/post-1/edit');
   });
-  it('saves the current revision before publishing and uses the returned revision', async () => {
-    const saved = { ...post, revision: 5 };
-    const published = { ...post, revision: 6, isPublished: true };
-    vi.mocked(saveBlogPost).mockResolvedValue(saved);
-    vi.mocked(publishBlogPost).mockResolvedValue(published);
-    await action({
+  it('saves and publishes an existing article with one revision increment', async () => {
+    const published = { ...post, revision: 5, isPublished: true };
+    vi.mocked(saveAndPublishBlogPost).mockResolvedValue(published);
+    const result = await action({
       request: request({
         intent: 'publish',
         revision: '4',
@@ -409,19 +416,20 @@ describe('blog draft workflow', () => {
       params: { id: post.id },
     });
     expect(requirePermissions).toHaveBeenCalledWith(['pages.manage']);
-    expect(saveBlogPost).toHaveBeenCalledWith(post.id, {
+    expect(saveAndPublishBlogPost).toHaveBeenCalledOnce();
+    expect(saveAndPublishBlogPost).toHaveBeenCalledWith(post.id, {
       slug: post.slug,
       revision: 4,
       draft: post.draft,
     });
-    expect(publishBlogPost).toHaveBeenCalledWith(post.id, 5, true);
-    expect(published.revision).toBe(6);
+    expect(saveBlogPost).not.toHaveBeenCalled();
+    expect(publishBlogPost).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ post: published, message: 'Article published.' });
+    expect(published.revision).toBe(5);
   });
-  it('creates a draft and publishes it using the created identity and revision', async () => {
-    const created = { ...post, revision: 1, isPublished: false };
-    const published = { ...post, revision: 2, isPublished: true };
-    vi.mocked(createBlogPost).mockResolvedValue(created);
-    vi.mocked(publishBlogPost).mockResolvedValue(published);
+  it('creates and publishes a new article in one operation', async () => {
+    const published = { ...post, revision: 1, isPublished: true };
+    vi.mocked(saveAndPublishBlogPost).mockResolvedValue(published);
     const result = await action({
       request: request({
         intent: 'publish',
@@ -430,8 +438,14 @@ describe('blog draft workflow', () => {
       }),
       params: {},
     });
-    expect(createBlogPost).toHaveBeenCalledOnce();
-    expect(publishBlogPost).toHaveBeenCalledWith(created.id, created.revision, true);
+    expect(saveAndPublishBlogPost).toHaveBeenCalledOnce();
+    expect(saveAndPublishBlogPost).toHaveBeenCalledWith(undefined, {
+      slug: post.slug,
+      revision: 1,
+      draft: post.draft,
+    });
+    expect(createBlogPost).not.toHaveBeenCalled();
+    expect(publishBlogPost).not.toHaveBeenCalled();
     expect(result).toMatchObject({ post: published, message: 'Article published.' });
   });
   it('saves dirty work before uploading and uses the returned revision', async () => {
@@ -503,10 +517,8 @@ describe('blog draft workflow', () => {
     );
     expect(result).toMatchObject({ post: uploaded, uploadedImageId: 'media-new' });
   });
-  it('returns the saved post when publication fails after saving', async () => {
-    const saved = { ...post, revision: 5, isPublished: false };
-    vi.mocked(saveBlogPost).mockResolvedValue(saved);
-    vi.mocked(publishBlogPost).mockRejectedValue(new Error('offline'));
+  it('reports an atomic publish failure without claiming a draft was saved', async () => {
+    vi.mocked(saveAndPublishBlogPost).mockRejectedValue(new Error('offline'));
     const result = await action({
       request: request({
         intent: 'publish',
@@ -515,25 +527,81 @@ describe('blog draft workflow', () => {
       }),
       params: { id: post.id },
     });
+    expect(saveAndPublishBlogPost).toHaveBeenCalledOnce();
+    expect(saveBlogPost).not.toHaveBeenCalled();
+    expect(publishBlogPost).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       data: {
-        post: saved,
-        error:
-          'Draft saved, but publishing failed: Unable to complete the request. Check the connection and retry.',
+        error: 'Unable to complete the request. Check the connection and retry.',
       },
     });
   });
-  it('offers an explicit retry after a save succeeds but publication fails', () => {
-    mocks.fetcher.data = {
-      post: { ...post, revision: 5, isPublished: false },
-      error: 'Draft saved, but publishing failed: offline',
-    };
+  it('shows an explicit atomic publish error without offering a second publish action', () => {
+    mocks.fetcher.data = { error: 'Unable to publish. Retry Save.' };
     render(
       <MemoryRouter>
         <Component />
       </MemoryRouter>
     );
-    expect(screen.getByRole('button', { name: 'Retry publish' })).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Unable to publish. Retry Save.');
+    expect(screen.queryByRole('button', { name: 'Retry publish' })).not.toBeInTheDocument();
+  });
+  it('confirms permanent deletion and removes only the selected article image', async () => {
+    const user = userEvent.setup();
+    const image = {
+      id: 'blog/channel/post/image.jpg',
+      publicUrl: '/media/image.jpg',
+      width: 1920,
+      height: 1080,
+      altText: 'Cover',
+    };
+    mocks.initial = { ...post, images: [image] };
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(deleteBlogImage).mockResolvedValue({ ...post, revision: 5, images: [] });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Remove image' }));
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('Permanently delete this stored image')
+    );
+    expect(deleteBlogImage).toHaveBeenCalledWith(post.id, image.id, post.revision);
+    await waitFor(() => expect(screen.queryByAltText('')).not.toBeInTheDocument());
+  });
+  it('reloads and exposes retry after storage deletion remains pending', async () => {
+    const user = userEvent.setup();
+    const image = {
+      id: 'blog/channel/post/image.jpg',
+      publicUrl: '/media/image.jpg',
+      width: 1920,
+      height: 1080,
+      altText: 'Cover',
+    };
+    mocks.initial = { ...post, images: [image] };
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(deleteBlogImage).mockRejectedValue(new Error('Storage unavailable.'));
+    vi.mocked(getBlogPost).mockResolvedValue({
+      ...post,
+      revision: 5,
+      images: [image],
+      pendingImageDeletionIds: [image.id],
+    });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Remove image' }));
+
+    expect(getBlogPost).toHaveBeenCalledWith(post.id);
+    expect(await screen.findByRole('button', { name: 'Retry permanent deletion' })).toBeEnabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Pending permanent deletion');
   });
   it('checks manage permission before publishing', async () => {
     vi.mocked(publishBlogPost).mockResolvedValue(post);
@@ -547,6 +615,7 @@ describe('blog draft workflow', () => {
       }),
       params: { id: post.id },
     });
+    expect(saveAndPublishBlogPost).not.toHaveBeenCalled();
     expect(saveBlogPost).not.toHaveBeenCalled();
     vi.mocked(requirePermissions).mockResolvedValueOnce(new Response(null, { status: 403 }));
     await action({
@@ -567,5 +636,6 @@ describe('blog draft workflow', () => {
     }
     expect(saveBlogPost).not.toHaveBeenCalled();
     expect(publishBlogPost).not.toHaveBeenCalled();
+    expect(saveAndPublishBlogPost).not.toHaveBeenCalled();
   });
 });

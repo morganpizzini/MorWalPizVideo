@@ -66,6 +66,7 @@ export interface BlogPostAdmin {
   firstPublishedAt: string | null;
   publishedAt: string | null;
   images: BlogImage[];
+  pendingImageDeletionIds?: string[];
 }
 export interface SaveBlogPost {
   slug: string;

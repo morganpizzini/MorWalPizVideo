@@ -13,13 +13,15 @@ public sealed record SaveBlogPostRequest
 public sealed record BlogRevisionRequest([Range(1, long.MaxValue)] long Revision);
 public sealed record BlogImageResponse(string Id, string PublicUrl, int Width, int Height, string AltText);
 public sealed record BlogPostResponse(string Id, string Slug, long Revision, BlogSnapshot Draft,
-    bool IsPublished, DateTime? PublishedAt, IReadOnlyList<BlogImageResponse> Images)
+    bool IsPublished, DateTime? PublishedAt, IReadOnlyList<BlogImageResponse> Images,
+    IReadOnlyList<string> PendingImageDeletionIds)
 {
     public DateTime? FirstPublishedAt { get; init; }
 
     public static BlogPostResponse From(BlogPost post) => new(post.Id, post.Slug, post.Revision, post.Draft,
         post.Published is not null, post.PublishedAt, post.Images.Select(image =>
-            new BlogImageResponse(image.StorageKey, image.PublicUrl, image.Width, image.Height, image.AltText)).ToArray())
+            new BlogImageResponse(image.StorageKey, image.PublicUrl, image.Width, image.Height, image.AltText)).ToArray(),
+        post.PendingImageDeletionIds)
         { FirstPublishedAt = post.FirstPublishedAt };
 }
 

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useMatches } from 'react-router';
+import React, { Suspense } from 'react';
+import { Await, Link, useLocation, useMatches } from 'react-router';
+import type { BlogPostAdmin } from '@morwalpizvideo/models';
 import { Breadcrumb, Button } from 'react-bootstrap';
 import './index.css'; // Assuming you have a global CSS file for styles
 interface BreadcrumbsProps {
@@ -9,22 +10,30 @@ interface BreadcrumbsProps {
   toggleSidebar?: () => void;
 }
 
+type BlogBreadcrumb = (post: BlogPostAdmin | undefined) => string;
+
+interface BlogBreadcrumbHandle {
+  breadcrumb: BlogBreadcrumb;
+}
+
+function isBlogBreadcrumbHandle(handle: unknown): handle is BlogBreadcrumbHandle {
+  return (
+    typeof handle === 'object' &&
+    handle !== null &&
+    'breadcrumb' in handle &&
+    typeof handle.breadcrumb === 'function'
+  );
+}
+
+function getBlogPostPromise(data: unknown): Promise<BlogPostAdmin> | undefined {
+  if (typeof data !== 'object' || data === null || !('data' in data)) return undefined;
+  const resolvedData = data.data;
+  return resolvedData instanceof Promise ? resolvedData : undefined;
+}
+
 const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSidebar }) => {
   const location = useLocation();
   const matches = useMatches();
-  const [entity, setEntity] = useState<Record<string, string> | undefined>(undefined);
-
-  useEffect(() => {
-    const lastMatchData = matches[matches.length - 1]?.data;
-    setEntity(
-      lastMatchData && typeof lastMatchData === 'object' && !Array.isArray(lastMatchData)
-        ? (lastMatchData as Record<string, string>)
-        : undefined
-    );
-    return () => {
-      setEntity(undefined);
-    };
-  }, [matches]);
 
   // Skip rendering breadcrumbs on home page
   if (location.pathname === '/') {
@@ -42,6 +51,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
     shortlinks: 'Short Links',
     channels: 'Channels',
     videos: 'Videos',
+    blogposts: 'Blog articles',
     rbac: 'RBAC',
     create: 'Create',
     edit: 'Edit',
@@ -50,11 +60,36 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
   // Combine default labels with custom labels
   const labels = { ...defaultLabels, ...customLabels };
 
-  // Function to get entity name
-  const getEntityName = (segment: string): string =>
-    entity?.breadcrumbIdentifier ? entity.breadcrumbIdentifier
-      : segment;
-
+  const blogMatch = matches.find(match => isBlogBreadcrumbHandle(match.handle));
+  const blogHandle =
+    blogMatch && isBlogBreadcrumbHandle(blogMatch.handle) ? blogMatch.handle : undefined;
+  const lastMatchData = matches[matches.length - 1]?.data;
+  const flatEntity =
+    lastMatchData && typeof lastMatchData === 'object' && !Array.isArray(lastMatchData)
+      ? (lastMatchData as Record<string, string>)
+      : undefined;
+  const getEntityName = (segment: string, index: number): React.ReactNode => {
+    if (
+      index === 1 &&
+      segment !== 'create' &&
+      segment !== 'edit' &&
+      blogMatch &&
+      blogHandle
+    ) {
+      const data = getBlogPostPromise(blogMatch.data);
+      if (data) {
+        const breadcrumb = blogHandle.breadcrumb;
+        return (
+          <Suspense fallback="Article">
+            <Await resolve={data} errorElement="Article">
+              {(post: BlogPostAdmin) => breadcrumb(post)}
+            </Await>
+          </Suspense>
+        );
+      }
+    }
+    return flatEntity?.breadcrumbIdentifier || segment;
+  };
 
   return (
     <div className="d-flex align-items-center mt-3 mb-3">
@@ -83,7 +118,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
           const isId = segment !== 'create' && segment !== 'edit' && !labels[segment];
 
           // Get the appropriate label
-          const label = isId ? getEntityName(segment) : labels[segment] || segment;
+          const label = isId ? getEntityName(segment, index) : labels[segment] || segment;
 
           return (
             <Breadcrumb.Item

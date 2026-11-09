@@ -742,7 +742,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 : item => item.Username.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) ||
                           item.DisplayName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
             return accounts.OrderBy(item => item.Username, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(item => item.Id, StringComparer.Ordinal)
                 .Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50))
                 .Take(Math.Clamp(pageSize, 1, 50)).ToArray();
         }

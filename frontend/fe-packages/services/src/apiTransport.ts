@@ -72,6 +72,9 @@ const scopedBackOfficePrefixes = [
   "/api/sponsors",
   "/api/customforms",
   "/api/galleries",
+  "/api/partners",
+  "/api/campaigns",
+  "/api/script-studio",
 ];
 
 function problemDetailsMessage(payload: unknown): string | null {
@@ -90,7 +93,9 @@ export function isScopedBackOfficeRequest(url: string): boolean {
   if (
     normalizedUrl === "/api/channels" ||
     normalizedUrl === "/api/channels/accessible" ||
-    normalizedUrl === "/api/features"
+    normalizedUrl === "/api/features" ||
+    normalizedUrl === "/api/script-studio/quota" ||
+    normalizedUrl.startsWith("/api/script-studio/quota/")
   ) {
     return false;
   }

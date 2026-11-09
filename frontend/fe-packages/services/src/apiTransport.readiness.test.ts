@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { adminApiService, get, setSelectedChannelId } from "./apiService";
 import {
+  adminApiService,
+  get,
+  setSelectedChannelId,
+} from "./apiService";
+import {
+  accountApiService,
   ChannelContextError,
+  publicApiService,
   rejectChannelBootstrap,
   resolveChannelBootstrap,
   isScopedBackOfficeRequest,
@@ -49,6 +55,79 @@ describe("channel bootstrap readiness", () => {
     expect(
       new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"),
     ).toBe("gallery-channel");
+  });
+
+  it.each([
+    "/api/partners",
+    "/api/partners/partner-1",
+    "/api/campaigns?status=active",
+    "/api/campaigns/campaign-1/timeline",
+    "/api/script-studio",
+    "/api/script-studio/documents/doc-1",
+    "/api/script-studio/generate",
+    "/api/script-studio/prompts/global",
+  ])("waits for readiness and scopes %s", async url => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const bootstrap = startChannelBootstrap();
+    const request = adminApiService.get(url);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    resolveChannelBootstrap(bootstrap, "workspace-channel");
+    await request;
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"))
+      .toBe("workspace-channel");
+  });
+
+  it.each([
+    "/api/script-studio/quota",
+    "/api/script-studio/quota/user-1",
+    "/api/script-studio/quota/user-1/history",
+  ])("keeps quota administration unscoped for %s", async url => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const bootstrap = startChannelBootstrap();
+
+    await adminApiService.get(url);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get("X-Channel-Id"))
+      .toBeNull();
+    resolveChannelBootstrap(bootstrap, "unused-channel");
+  });
+
+  it("uses segment boundaries around the scoped families", () => {
+    expect(isScopedBackOfficeRequest("/api/partners-other")).toBe(false);
+    expect(isScopedBackOfficeRequest("/api/campaigns-archive")).toBe(false);
+    expect(isScopedBackOfficeRequest("/api/script-studio/quota-other")).toBe(
+      true,
+    );
+    expect(isScopedBackOfficeRequest("/api/script-studio/quotaish")).toBe(
+      true,
+    );
+  });
+
+  it("keeps public and account transports isolated from channel context", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    setSelectedChannelId("admin-channel");
+
+    await publicApiService.get("/api/partners");
+    await accountApiService.get("/api/campaigns");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [, options] of fetchMock.mock.calls) {
+      const headers = new Headers(options.headers);
+      expect(headers.get("X-Channel-Id")).toBeNull();
+      expect(headers.get("Authorization")).toBeNull();
+    }
   });
 
   it("scopes interaction management but leaves the global public account directory unscoped", async () => {
