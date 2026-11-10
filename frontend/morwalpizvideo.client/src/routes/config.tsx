@@ -42,6 +42,12 @@ import { Login, Profile, Register } from './account/Components';
 
 export const routes: RouteObject[] = [
   {
+    path: 'quick-links/:url',
+    loader: quickLinksLoader,
+    element: <QuickLinks />,
+    errorElement: <ErrorPage />,
+  },
+  {
     path: '/',
     element: <Root />,
     errorElement: <ErrorPageRoot />,
@@ -53,11 +59,6 @@ export const routes: RouteObject[] = [
             path: 'gallery/:slug',
             loader: galleryLoader,
             element: <Gallery />,
-          },
-          {
-            path: 'quick-links/:url',
-            loader: quickLinksLoader,
-            element: <QuickLinks />,
           },
           {
             path: 'channel-news/:idOrSlug',

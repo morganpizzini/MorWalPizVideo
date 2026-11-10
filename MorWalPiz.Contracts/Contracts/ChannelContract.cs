@@ -23,6 +23,9 @@ public class ChannelContract
     public string ShortLinkUrl { get; set; } = string.Empty;
 
     [DataMember]
+    public string PublicBaseUrl { get; set; } = string.Empty;
+
+    [DataMember]
     [JsonPropertyName("isSHIT")]
     public bool IsSHIT { get; set; }
 

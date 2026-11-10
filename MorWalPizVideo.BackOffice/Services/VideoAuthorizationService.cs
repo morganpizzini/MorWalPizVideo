@@ -14,6 +14,7 @@ public interface IVideoAuthorizationService
     Task<bool> CanAccessAsync(ClaimsPrincipal principal, YouTubeContent match);
     Task<bool> CanManageChannelAsync(ClaimsPrincipal principal, string channelId);
     Task<bool> CanReadInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId);
+    Task<IReadOnlyList<YouTubeContent>> CanReadInChannelAsync(ClaimsPrincipal principal, IReadOnlyCollection<YouTubeContent> matches, string channelId);
     Task<bool> CanMutateInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId);
 }
 
@@ -69,17 +70,33 @@ public sealed class VideoAuthorizationService(
     }
 
     public async Task<bool> CanReadInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId)
+        => (await CanReadInChannelAsync(principal, [match], channelId)).Count != 0;
+
+    public async Task<IReadOnlyList<YouTubeContent>> CanReadInChannelAsync(
+        ClaimsPrincipal principal,
+        IReadOnlyCollection<YouTubeContent> matches,
+        string channelId)
     {
-        if (await IsAdminAsync(principal) || principal.FindFirst("ApiKeyId") is not null)
+        if (matches.Count == 0)
         {
-            return match.OwnerChannelId == channelId || match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId));
+            return [];
         }
 
-        var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
-        var ownsChannel = !string.IsNullOrWhiteSpace(userId) &&
-            (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
-                owner.IsActive && owner.ChannelId == channelId);
-        return ownsChannel && (match.OwnerChannelId == channelId || match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId)));
+        if (!await IsAdminAsync(principal) && principal.FindFirst("ApiKeyId") is null)
+        {
+            var userId = ImpersonationClaimsTransformation.GetEffectiveUserId(principal);
+            var ownsChannel = !string.IsNullOrWhiteSpace(userId) &&
+                (await userChannelOwnerRepository.GetByUserIdAsync(userId)).Any(owner =>
+                    owner.IsActive && owner.ChannelId == channelId);
+            if (!ownsChannel)
+            {
+                return [];
+            }
+        }
+
+        return matches.Where(match =>
+            match.OwnerChannelId == channelId ||
+            match.VideoRefs.Any(video => video.ChannelIds.Contains(channelId))).ToList();
     }
 
     public async Task<bool> CanMutateInChannelAsync(ClaimsPrincipal principal, YouTubeContent match, string channelId)

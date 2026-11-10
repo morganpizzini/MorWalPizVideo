@@ -46,6 +46,38 @@ public sealed class YouTubeContentIndexedCacheTests
     }
 
     [Fact]
+    public async Task Warm_global_reads_preserve_tied_order_and_wrong_entity_ids_trigger_rebuild()
+    {
+        var repository = new MatchMockRepository(new EmptyScenario());
+        var timestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var first = CreateMatch("first", PrimaryScenario.ChannelId, timestamp) with { IsPrivate = true };
+        var second = CreateMatch("second", PrimaryScenario.ChannelId, timestamp);
+        await repository.AddItemAsync(first);
+        await repository.AddItemAsync(second);
+        var store = new InMemoryIndexedCacheStore();
+        var cache = CreateCache(repository, store);
+        var populated = await cache.GetGlobalAsync();
+        var writes = store.SetCount;
+        await repository.UpdateItemAsync(first with { Title = "changed in source" });
+
+        var warm = await cache.GetGlobalAsync();
+
+        Assert.Equal(populated.Select(match => match.Id), warm.Select(match => match.Id));
+        Assert.Equal(["first", "second"], warm.Select(match => match.Id));
+        Assert.NotEqual("changed in source", warm[0].Title);
+        Assert.Equal(writes, store.SetCount);
+        Assert.True(warm[0].IsPrivate);
+
+        await store.SetAsync(YouTubeContentCacheKeys.Entry(YouTubeContentCacheKeys.AdminScope, first.Id),
+            first with { Id = "wrong-id" });
+        var healed = await cache.GetGlobalAsync();
+
+        Assert.Equal(["first", "second"], healed.Select(match => match.Id));
+        Assert.Equal("changed in source", healed[0].Title);
+        Assert.Equal(["second"], (await cache.GetPublicForChannelAsync(PrimaryScenario.ChannelId)).Select(match => match.Id));
+    }
+
+    [Fact]
     public async Task Missing_entry_rebuilds_index_and_targeted_update_and_delete_are_applied()
     {
         var repository = new MatchMockRepository(new EmptyScenario());

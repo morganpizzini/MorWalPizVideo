@@ -93,6 +93,34 @@ samples do not prove live production state.
 
 Field names must be confirmed against deployed BSON before creation. Prefer explicit normalized fields over locale-dependent case-insensitive behavior when uniqueness matters.
 
+## Personal Quick-Action Rollout
+
+BackOffice's personal dashboard actions add the empty
+`backofficeQuickActionPreferences` collection. The executable manifest key
+`quickactionpreferences.user_channel.unique` declares
+`ux_quickactionpreferences_user_channel`, unique on `{ "userId": 1, "channelId": 1 }`
+with binary/case-preserving identifiers and no partial filter or TTL.
+
+Use the existing approved API-key operator audit/apply process and backup/
+duplicate-review sequence above. Apply this index after the API artifact exposes
+its manifest entry and before releasing the new SPA or otherwise exposing the
+preference endpoint to clients. Verify the resulting unique definition and record
+redacted environment-specific evidence. Mock tests and a source manifest do not
+prove that MongoDB/Cosmos has applied it or that parallel first writes are safe
+on the deployed provider.
+
+No existing User/channel document or preference backfill is required. If a
+pre-release instance already inserted duplicate pairs, stop release for explicit
+resolution rather than deleting arbitrary preferences. The repository uses
+pair-keyed atomic upsert with a narrow duplicate-key retry.
+
+Release API before SPA. Smoke-test authenticated GET, CSRF-protected PUT/DELETE,
+and the same user's second-device read. Routine rollback removes the SPA feature
+first and retains the additive API, collection and index; no removal-manifest
+entry, automatic startup index bootstrap, or collection deletion is introduced.
+Index application and real-provider concurrency verification remain operational
+gates, not changes performed by local feature implementation.
+
 ## Canonical Short-Link Migration
 
 1. Inventory standalone links and legacy YouTube links embedded in `youtubeContent` and `ytChannels`.

@@ -19,11 +19,19 @@ const channels = [
 ];
 
 function SelectionProbe() {
-  const { selectedChannelId, selectChannel } = useChannelContext();
+  const { selectedChannelId, selectChannel, setChannelSwitchLocked } = useChannelContext();
   return (
     <>
       <output data-testid="selected-channel">{selectedChannelId ?? ''}</output>
-      <button type="button" onClick={() => selectChannel('channel-two')}>Switch</button>
+      <button type="button" onClick={() => selectChannel('channel-two')}>
+        Switch
+      </button>
+      <button type="button" onClick={() => setChannelSwitchLocked(true)}>
+        Lock
+      </button>
+      <button type="button" onClick={() => setChannelSwitchLocked(false)}>
+        Unlock
+      </button>
     </>
   );
 }
@@ -38,6 +46,19 @@ beforeEach(() => {
 });
 
 describe('ChannelContext', () => {
+  it('prevents a channel switch while a scoped mutation is pending', () => {
+    render(
+      <ChannelProvider channels={channels}>
+        <SelectionProbe />
+      </ChannelProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+    expect(screen.getByTestId('selected-channel')).toHaveTextContent('channel-one');
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+    expect(screen.getByTestId('selected-channel')).toHaveTextContent('channel-two');
+  });
   it('clears a stale selection when no accessible channels remain', () => {
     setSelectedChannelId('stale-channel');
 

@@ -4,6 +4,7 @@ import { Button, Form } from 'react-bootstrap';
 import { useFetcher, useNavigate, useParams } from 'react-router';
 import type { QuickLink, QuickLinks } from '@morwalpizvideo/models';
 import { QuickLinkKind } from '@morwalpizvideo/models';
+import { QuickLinkKindIcon } from '@morwalpiz/layout';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import GenericErrorList from '@components/GenericErrorList';
 import FieldError from '@components/FieldError';
@@ -89,11 +90,13 @@ const QuickLinksForm: React.FC = () => {
         <fieldset className="mb-3">
           <legend className="h5">Links</legend>
           {links.map((link, index) => (
-            <div className="border rounded p-3 mb-3" key={`${index}-${link.targetUrl}`}>
+            <div className="border rounded p-3 mb-3" key={index}>
               <div className="row g-2">
                 <Form.Group className="col-md-3">
-                  <Form.Label>Kind</Form.Label>
+                  <Form.Label htmlFor={`link-kind-${index}`}>Kind</Form.Label>
                   <Form.Select
+                    id={`link-kind-${index}`}
+                    aria-describedby={`link-kind-description-${index}`}
                     value={link.kind}
                     onChange={event =>
                       updateLink(index, { kind: Number(event.target.value) as QuickLink['kind'] })
@@ -105,6 +108,14 @@ const QuickLinksForm: React.FC = () => {
                       </option>
                     ))}
                   </Form.Select>
+                  <div className="d-flex align-items-center gap-2 mt-2">
+                    <span className="quick-links-kind-preview">
+                      <QuickLinkKindIcon kind={link.kind} />
+                    </span>
+                    <Form.Text id={`link-kind-description-${index}`}>
+                      Default icon unless custom media is set.
+                    </Form.Text>
+                  </div>
                 </Form.Group>
                 <Form.Group className="col-md-9">
                   <Form.Label>Target URL</Form.Label>

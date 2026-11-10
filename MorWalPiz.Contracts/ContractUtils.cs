@@ -128,6 +128,7 @@ namespace MorWalPiz.Contracts
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
                 ShortLinkUrl = entity.ShortLinkUrl,
+                PublicBaseUrl = entity.PublicBaseUrl,
                 IsSHIT = entity.IsSHIT,
                 ChannelLogoUrl = entity.ChannelLogoUrl,
                 YouTubeStudioUrl = entity.YouTubeStudioUrl,

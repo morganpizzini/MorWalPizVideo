@@ -218,6 +218,7 @@ builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
 builder.Services.AddScoped<BlogInteractionService>();
 builder.Services.AddScoped<VideoImporterChannelSettingsService>();
+builder.Services.AddScoped<DashboardQuickActionsService>();
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -473,6 +474,7 @@ if (enableMock)
     builder.Services.AddScoped<IApiKeyRepository, ApiKeyMockRepository>();
     builder.Services.AddScoped<ISocialAssetRepository, SocialAssetMockRepository>();
     builder.Services.AddScoped<IVideoImporterChannelSettingsRepository, VideoImporterChannelSettingsMockRepository>();
+    builder.Services.AddScoped<IBackOfficeQuickActionPreferencesRepository, BackOfficeQuickActionPreferencesMockRepository>();
     builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobServiceMock>();
     builder.Services.AddScoped<ICompetitionRepository, CompetitionMockRepository>();
 
@@ -650,6 +652,7 @@ else
     builder.Services.AddScoped<IBlobService, BlobService>();
     builder.Services.AddScoped<ISocialAssetRepository, SocialAssetRepository>();
     builder.Services.AddScoped<IVideoImporterChannelSettingsRepository, VideoImporterChannelSettingsRepository>();
+    builder.Services.AddScoped<IBackOfficeQuickActionPreferencesRepository, BackOfficeQuickActionPreferencesRepository>();
     builder.Services.AddScoped<ISocialAssetBlobService, SocialAssetBlobService>();
     builder.Services.AddScoped<SocialAssetService>();
     builder.Services.AddScoped<IImageGenerationService, ImageGenerationService>();

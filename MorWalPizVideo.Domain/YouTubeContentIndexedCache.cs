@@ -142,8 +142,9 @@ public sealed class YouTubeContentIndexedCache(
             .Where(entry => entry is not null)
             .Cast<YouTubeContent>()
             .ToList();
+        var indexedIds = index.Select(entry => entry.EntityId).ToHashSet(StringComparer.Ordinal);
         if (materialized.Count != index.Count ||
-            materialized.Any(entry => !index.Any(indexEntry => indexEntry.EntityId == entry.Id)))
+            materialized.Any(entry => !indexedIds.Contains(entry.Id)))
             return await RebuildScopeAsync(scope, cancellationToken);
 
         return SortEntries(scope, materialized);

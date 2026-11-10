@@ -17,6 +17,7 @@ export type Channel = Readonly<{
   channelLogoUrl?: string;
   mine: boolean;
   shortLinkUrl?: string;
+  publicBaseUrl?: string;
   youTubeStudioUrl?: string;
   googleAnalyticsUrl?: string;
   socials?: readonly ChannelSocial[];

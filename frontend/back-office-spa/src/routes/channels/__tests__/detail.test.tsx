@@ -49,6 +49,7 @@ const mockChannel: Channel = {
   yTChannelId: 'UC12345',
   mine: false,
   shortLinkUrl: 'https://morwalpiz.com/sl',
+  publicBaseUrl: 'https://public.example',
   socials: [
     { provider: 'instagram', handler: '@morwalpiz' },
     { provider: 'x', handler: 'morwalpiz' },
@@ -129,6 +130,7 @@ describe('Channel Detail', () => {
     await renderComponent();
 
     expect(screen.getByText('https://morwalpiz.com/sl')).toBeInTheDocument();
+    expect(screen.getByText('https://public.example')).toBeInTheDocument();
     expect(screen.getByText('instagram: @morwalpiz')).toBeInTheDocument();
     expect(screen.getByText('x: morwalpiz')).toBeInTheDocument();
     expect(screen.getByText('telegram: configured for -100123')).toBeInTheDocument();

@@ -23,6 +23,7 @@ public class AddChannelRequest
     public string? YTChannelId { get; set; }
 
     public string? ShortLinkUrl { get; set; }
+    public string? PublicBaseUrl { get; set; }
 
     [JsonPropertyName("isSHIT")]
     public bool IsSHIT { get; set; }
@@ -39,6 +40,7 @@ public class UpdateChannelRequest
     public string ChannelName { get; set; } = string.Empty;
 
     public string? ShortLinkUrl { get; set; }
+    public string? PublicBaseUrl { get; set; }
 
     [JsonPropertyName("isSHIT")]
     public bool IsSHIT { get; set; }
@@ -186,6 +188,11 @@ public class ChannelsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ChannelsAdmin)]
     public async Task<IActionResult> AddChannel(AddChannelRequest request)
     {
+        var publicBaseUrl = NormalizePublicBaseUrl(request.PublicBaseUrl);
+        if (publicBaseUrl is null)
+        {
+            return BadRequest("Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
+        }
         var channelId = request.YTChannelId is null
             ? await ytService.GetChannelId(request.ChannelName.Trim())
             : request.YTChannelId.Trim();
@@ -208,6 +215,7 @@ public class ChannelsController : ApplicationControllerBase
         await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim())
         {
             ShortLinkUrl = shortLinkUrl,
+            PublicBaseUrl = publicBaseUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
             YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
@@ -238,6 +246,13 @@ public class ChannelsController : ApplicationControllerBase
         {
             return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
         }
+        var publicBaseUrl = request.PublicBaseUrl is null
+            ? existing.PublicBaseUrl
+            : NormalizePublicBaseUrl(request.PublicBaseUrl);
+        if (publicBaseUrl is null)
+        {
+            return BadRequest("Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
+        }
         var socials = NormalizeSocials(request.Socials);
         if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers are allowed.");
         var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError);
@@ -248,6 +263,7 @@ public class ChannelsController : ApplicationControllerBase
         {
             ChannelName = request.ChannelName.Trim(),
             ShortLinkUrl = shortLinkUrl,
+            PublicBaseUrl = publicBaseUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
             YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
@@ -256,6 +272,19 @@ public class ChannelsController : ApplicationControllerBase
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
         return Ok(new { success = true, cacheInvalidation });
+    }
+
+    private static string? NormalizePublicBaseUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var trimmed = value.Trim();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^https?://[^/?#\\\s]+/?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+            !Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
+            string.IsNullOrEmpty(uri.Host) || !string.IsNullOrEmpty(uri.UserInfo) ||
+            trimmed.Contains('@') || uri.AbsolutePath != "/" ||
+            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            return null;
+        return uri.GetLeftPart(UriPartial.Authority);
     }
 
     private static (string YouTubeStudioUrl, string GoogleAnalyticsUrl)? NormalizeExternalAnalyticsLinks(string? youtubeStudioUrl, string? googleAnalyticsUrl)
@@ -393,6 +422,7 @@ public class ChannelsController : ApplicationControllerBase
             YTChannelId = contract.YTChannelId,
             ChannelName = contract.ChannelName,
             ShortLinkUrl = contract.ShortLinkUrl,
+            PublicBaseUrl = contract.PublicBaseUrl,
             IsSHIT = contract.IsSHIT,
             ChannelLogoUrl = contract.ChannelLogoUrl,
             Socials = contract.Socials,

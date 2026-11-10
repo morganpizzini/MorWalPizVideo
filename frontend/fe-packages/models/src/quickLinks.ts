@@ -4,6 +4,7 @@ export const QuickLinkKind = {
   Instagram: 2,
   Facebook: 3,
   Video: 4,
+  YouTube: 5,
 } as const;
 
 export type QuickLinkKind = typeof QuickLinkKind[keyof typeof QuickLinkKind];

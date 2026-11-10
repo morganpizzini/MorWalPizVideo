@@ -121,6 +121,7 @@ public sealed class QuickLinksService(IQuickLinksRepository repository) : IQuick
             QuickLinkKind.Instagram => IsHost(host, "instagram.com"),
             QuickLinkKind.Facebook => IsHost(host, "facebook.com") || IsHost(host, "fb.com"),
             QuickLinkKind.Video => IsHost(host, "youtube.com") || IsHost(host, "youtu.be") || IsHost(host, "vimeo.com"),
+            QuickLinkKind.YouTube => IsHost(host, "youtube.com") || IsHost(host, "youtu.be"),
             _ => false
         };
     }

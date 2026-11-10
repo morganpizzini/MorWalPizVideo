@@ -92,3 +92,17 @@ Coordinate three hosts/two SPAs on rollout. No backfill.
 Rollback must pause unsafe old refresh and purge caches: old stored-SingleVideo
 multi-reference refresh can truncate again. Already-mutated metadata requires
 operator backup, not merely code reversal.
+
+## BackOffice video-read performance
+
+Implemented locally 2026-11-10: the common video-read helper bulk-authorizes
+already-loaded matches, preserving per-record selected-channel membership.
+Canonical links remain a live overlay but are queried only for returned
+aggregate IDs. Shared indexed-cache reads use batches of up to eight and linear
+membership validation without changing keys, scopes, ordering, or recovery.
+List/detail/tag and mutation-lookup consumers retain their existing contracts.
+
+The focused backend selection passed **90/90** after a Release build; this is
+local behavior/query-count/concurrency proof, not a deployed latency claim.
+See the [delivery handoff](../feature-handoffs/backoffice-video-fetch-performance-handoff.md)
+for exact commands, modified files, and remaining real-provider measurements.

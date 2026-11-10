@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { get, put, Delete, getSelectedChannelId } from '@morwalpizvideo/services';
+import { get, post, put, Delete, getSelectedChannelId } from '@morwalpizvideo/services';
 import detailLoader from '../detail/loader';
 import formLoader from '../form/loader';
 import formAction from '../form/action';
 import indexLoader from '../index/loader';
 import indexAction from '../index/action';
 import selfLoader from '../self/loader';
+import selfEditAction from '../self/edit/action';
 
 vi.mock('@morwalpizvideo/services', () => ({
   get: vi.fn(),
@@ -59,6 +60,62 @@ beforeEach(() => {
 });
 
 describe('channel route error handling', () => {
+  it.each([undefined, 'channel-one'])(
+    'forwards normalized public origin on create/edit (%s)',
+    async id => {
+      vi.mocked(post).mockResolvedValue({});
+      vi.mocked(put).mockResolvedValue({});
+      const result = await formAction({
+        request: formRequest({
+          channelName: 'Channel',
+          yTChannelId: 'UCONE',
+          publicBaseUrl: ' https://EXAMPLE.com:8443/ ',
+        }),
+        params: { id },
+      } as never);
+      expect(responseStatus(result)).toBe(id ? 200 : 201);
+      expect(id ? put : post).toHaveBeenCalledWith(
+        id ? '/api/channels/channel-one' : '/api/channels',
+        expect.objectContaining({ publicBaseUrl: 'https://example.com:8443' })
+      );
+    }
+  );
+
+  it('clears public origin through the shared self-service action', async () => {
+    vi.mocked(getSelectedChannelId).mockReturnValue('channel-one');
+    vi.mocked(put).mockResolvedValue({});
+    await selfEditAction({ request: formRequest({ channelName: 'Channel', publicBaseUrl: ' ' }) });
+    expect(put).toHaveBeenCalledWith(
+      '/api/channels/channel-one',
+      expect.objectContaining({ publicBaseUrl: '' })
+    );
+  });
+
+  it.each([
+    '/relative',
+    '//example.com',
+    'javascript:alert(1)',
+    'ftp://example.com',
+    'https://user:password@example.com',
+    'https://@example.com',
+    'https://example.com/path',
+    'https://example.com/../',
+    'https://example.com?',
+    'https://example.com#',
+    'https://example.com\\path',
+  ])('rejects invalid public origin without calling the API: %s', async publicBaseUrl => {
+    const result = await formAction({
+      request: formRequest({ channelName: 'Channel', publicBaseUrl }),
+      params: { id: 'channel-one' },
+    } as never);
+    expect(responseStatus(result)).toBe(400);
+    expect(result).toMatchObject({
+      data: { success: false, errors: { publicBaseUrl: expect.any(String) } },
+    });
+    expect(put).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it('throws a router 404 instead of returning an API error as a Channel', async () => {
     vi.mocked(get).mockResolvedValue(scopedNotFound as never);
 

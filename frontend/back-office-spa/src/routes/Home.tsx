@@ -3,10 +3,7 @@ import { Alert, Badge, Button, Col, Row, Spinner, Table } from 'react-bootstrap'
 import {
   Activity,
   ArrowUpRight,
-  FilePlus2,
-  FileText,
   Link as LinkIcon,
-  ListVideo,
   LogIn,
   PlaySquare,
   RefreshCw,
@@ -17,6 +14,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { endpoints, get } from '@morwalpizvideo/services';
 import { getRoutePermissions, hasPermission } from '../authorization/permissions';
 import { useAppStore } from '../state/appStore';
+import DashboardQuickActions from '../components/DashboardQuickActions';
 
 interface DashboardSummary {
   totalShortLinks: number;
@@ -94,14 +92,6 @@ export default function Home() {
   const selectedChannelId = useAppStore(state => state.selectedChannelId);
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
   const canViewVideos = hasPermission(effectivePermissions, getRoutePermissions('/videos', false));
-  const canViewArticles = hasPermission(
-    effectivePermissions,
-    getRoutePermissions('/blogposts', false)
-  );
-  const canCreateArticles = hasPermission(
-    effectivePermissions,
-    getRoutePermissions('/blogposts/create', false)
-  );
   const [retryCount, setRetryCount] = useState(0);
   const [dashboardData, setDashboardData] = useState<DashboardDataState>({
     channelId: null,
@@ -198,33 +188,7 @@ export default function Home() {
           </Badge>
         ) : null}
       </div>
-      {canViewVideos || canCreateArticles || canViewArticles ? (
-        <section className="dashboard-actions mb-4" aria-labelledby="dashboard-actions-title">
-          <h2 id="dashboard-actions-title" className="h5 mb-3">
-            Attività rapide
-          </h2>
-          <div className="d-flex flex-wrap gap-2">
-            {canViewVideos ? (
-              <Link to="/videos" className="btn btn-primary">
-                <ListVideo size={17} aria-hidden="true" />
-                <span>Gestisci video</span>
-              </Link>
-            ) : null}
-            {canCreateArticles ? (
-              <Link to="/blogposts/create" className="btn btn-outline-primary">
-                <FilePlus2 size={17} aria-hidden="true" />
-                <span>Scrivi articolo</span>
-              </Link>
-            ) : null}
-            {canViewArticles ? (
-              <Link to="/blogposts" className="btn btn-outline-secondary">
-                <FileText size={17} aria-hidden="true" />
-                <span>Tutti gli articoli</span>
-              </Link>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+      <DashboardQuickActions />
 
       {currentDashboardData.status === 'loading' ? (
         <div className="dashboard-state" role="status" aria-live="polite">

@@ -48,6 +48,7 @@ const ChannelForm: React.FC = () => {
   const [yTChannelId, setYTChannelId] = useState('');
   const [isSHIT, setIsSHIT] = useState(false);
   const [shortLinkUrl, setShortLinkUrl] = useState('');
+  const [publicBaseUrl, setPublicBaseUrl] = useState('');
   const [youTubeStudioUrl, setYouTubeStudioUrl] = useState('');
   const [googleAnalyticsUrl, setGoogleAnalyticsUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -77,6 +78,7 @@ const ChannelForm: React.FC = () => {
       setChannelName(entity.channelName);
       setIsSHIT(entity.isSHIT ?? false);
       setShortLinkUrl(entity.shortLinkUrl ?? '');
+      setPublicBaseUrl(entity.publicBaseUrl ?? '');
       setYouTubeStudioUrl(entity.youTubeStudioUrl ?? '');
       setGoogleAnalyticsUrl(entity.googleAnalyticsUrl ?? '');
       setSocials(
@@ -133,6 +135,7 @@ const ChannelForm: React.FC = () => {
       {
         ...payload,
         shortLinkUrl,
+        publicBaseUrl,
         youTubeStudioUrl,
         googleAnalyticsUrl,
         socials: JSON.stringify(socials),
@@ -190,6 +193,26 @@ const ChannelForm: React.FC = () => {
             <FieldError error={errors?.yTChannelId} />
           </Form.Group>
         )}
+
+        <Form.Group controlId="formPublicBaseUrl" className="mb-3">
+          <Form.Label>Public website base URL</Form.Label>
+          <Form.Control
+            type="url"
+            value={publicBaseUrl}
+            onChange={e => setPublicBaseUrl(e.target.value)}
+            placeholder="https://example.com"
+            aria-describedby="publicBaseUrlHelp publicBaseUrlError"
+            aria-invalid={Boolean(errors?.publicBaseUrl)}
+            isInvalid={Boolean(errors?.publicBaseUrl)}
+          />
+          <Form.Text id="publicBaseUrlHelp">
+            Optional public website origin for QuickLinks. HTTPS recommended; no path.
+            This is separate from the short link prefix.
+          </Form.Text>
+          <div id="publicBaseUrlError">
+            <FieldError error={errors?.publicBaseUrl} />
+          </div>
+        </Form.Group>
 
         <Form.Group controlId="formShortLinkUrl" className="mb-3">
           <Form.Label>Short link base URL</Form.Label>

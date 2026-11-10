@@ -1063,9 +1063,18 @@ public sealed class LinksService(
 
     public async Task<IList<YouTubeContent>> MergeCanonicalVideoShortLinksAsync(IList<YouTubeContent> matches)
     {
+        if (matches.Count == 0)
+        {
+            return matches;
+        }
+
+        var contentIds = matches.Select(match => match.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
         var canonicalLinks = (await shortLinkRepository.GetItemsAsync(link =>
                 link.LinkType == LinkType.YouTubeVideo &&
-                !string.IsNullOrWhiteSpace(link.ContentId)))
+                link.ContentId != null &&
+                contentIds.Contains(link.ContentId)))
             .GroupBy(link => $"{link.ContentId}\u001f{link.Target}", StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.OrderBy(link => link.QueryString.Length).First(), StringComparer.Ordinal);
 

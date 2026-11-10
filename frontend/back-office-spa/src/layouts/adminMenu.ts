@@ -233,6 +233,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
     label: 'Administration',
     items: [
       {
+        label: 'Attività rapide',
+        path: '/dashboard-actions',
+        permissions: [BACKOFFICE_ACCESS],
+        icon: Settings,
+      },
+      {
         label: 'Channels',
         path: '/channels',
         permissions: [permissions.channels.admin],

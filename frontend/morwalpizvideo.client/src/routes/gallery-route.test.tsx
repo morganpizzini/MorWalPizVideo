@@ -2,11 +2,10 @@ import { matchRoutes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { routes } from './config';
 
-describe('public gallery route', () => {
+describe('public utility routes', () => {
   it('resolves direct public utility links inside the shared application shell', () => {
     const cases = [
       ['/gallery/summer-trip', 'gallery/:slug'],
-      ['/quick-links/community', 'quick-links/:url'],
       ['/channel-news/featured', 'channel-news/:idOrSlug'],
       ['/compilations/highlights', 'compilations/:compilationUrl'],
       ['/forms/contact', 'forms/:formUrl'],
@@ -28,5 +27,19 @@ describe('public gallery route', () => {
 
     const matches = matchRoutes(routes, '/gallery/summer-trip');
     expect(matches?.some((match) => match.route.path === 'gallery/:slug')).toBe(true);
+  });
+
+  it('resolves Quick Links outside the shared application shell', () => {
+    const matches = matchRoutes(routes, '/quick-links/community');
+    const quickLinksRoute = matches?.find((match) => match.route.path === 'quick-links/:url');
+
+    expect(matches?.some((match) => match.route.path === '/')).toBe(false);
+    expect(quickLinksRoute?.route).toEqual(
+      expect.objectContaining({
+        loader: expect.any(Function),
+        element: expect.anything(),
+        errorElement: expect.anything(),
+      })
+    );
   });
 });

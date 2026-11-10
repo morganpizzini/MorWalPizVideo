@@ -29,8 +29,12 @@ namespace MorWalPizVideo.Server.Services
             CancellationToken cancellationToken = default)
         {
             var values = new Dictionary<string, T?>(StringComparer.Ordinal);
-            foreach (var key in keys)
-                values[key] = await GetAsync<T>(key, cancellationToken);
+            foreach (var batch in keys.Chunk(8))
+            {
+                var batchValues = await Task.WhenAll(batch.Select(async key => await GetAsync<T>(key, cancellationToken)));
+                for (var index = 0; index < batch.Length; index++)
+                    values[batch[index]] = batchValues[index];
+            }
             return values;
         }
 

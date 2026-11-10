@@ -223,6 +223,9 @@ const ChannelDetail: React.FC = () => {
         <p>
           <strong>Short link base URL:</strong> {entity.shortLinkUrl || 'Not configured'}
         </p>
+        <p className="text-break">
+          <strong>Public website base URL:</strong> {entity.publicBaseUrl || 'Not configured'}
+        </p>
         <div>
           <strong>Socials:</strong>
           {entity.socials?.length ? (

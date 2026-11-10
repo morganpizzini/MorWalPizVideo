@@ -130,6 +130,7 @@ const SHORTLINKS_LOGS = `${SHORTLINKS_DETAIL}/logs`;
 const SHORTLINKS_CLICKS = `${SHORTLINKS_DETAIL}/clicks`;
 const SHORTLINKS_ANALYTICS = `${SHORTLINKS_DETAIL}/analytics`;
 const DASHBOARD_SUMMARY = `${baseEndpoint}/dashboard/summary`;
+const DASHBOARD_QUICK_ACTIONS = `${baseEndpoint}/v1/dashboard/quick-actions`;
 const DASHBOARD_VIDEO_PUBLICATIONS = `${baseEndpoint}/dashboard/video-publications`;
 const ASK_CAMPAIGN = `${baseEndpoint}/ask/{channelName}/{campaignSlug}`;
 const ASK_SUBMISSIONS = `${ASK_CAMPAIGN}/submissions`;
@@ -179,6 +180,7 @@ const CAMPAIGNS_TIMELINE = `${CAMPAIGNS_DETAIL}/timeline`;
 const CAMPAIGNS_TIMELINE_DETAIL = `${CAMPAIGNS_TIMELINE}/{entryId}`;
 
 export default {
+  DASHBOARD_QUICK_ACTIONS,
   VIDEOS,
   VIDEOS_DETAIL,
   VIDEOS_VIDEO_REFS,

@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import type { QuickLink, QuickLinks } from '@morwalpizvideo/models';
 import { QuickLinkKind } from '@morwalpizvideo/models';
+import { QuickLinkKindIcon } from './QuickLinkKindIcon.js';
 
 export interface QuickLinksRendererProps {
   page: QuickLinks;
@@ -18,6 +19,8 @@ function kindLabel(kind: QuickLink['kind']): string {
       return 'Facebook';
     case QuickLinkKind.Video:
       return 'Video';
+    case QuickLinkKind.YouTube:
+      return 'YouTube';
     default:
       return 'External link';
   }
@@ -48,8 +51,14 @@ export function QuickLinksRenderer({ page, className = '', kicker = 'Quick links
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {link.imageUrl && <img src={link.imageUrl} alt="" className="quick-links-image" />}
-                {link.icon && <span className="quick-links-icon" aria-hidden="true">{link.icon}</span>}
+                {link.imageUrl?.trim() && <img src={link.imageUrl} alt="" className="quick-links-image" />}
+                {link.icon?.trim() ? (
+                  <span className="quick-links-icon" aria-hidden="true">{link.icon}</span>
+                ) : !link.imageUrl?.trim() ? (
+                  <span className="quick-links-icon">
+                    <QuickLinkKindIcon kind={link.kind} />
+                  </span>
+                ) : null}
                 <span className="quick-links-copy">
                   <span className="quick-links-title">{linkTitle(link)}</span>
                   {link.subtitle && <span className="quick-links-description">{link.subtitle}</span>}

@@ -357,6 +357,34 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
   }
 
   [Fact]
+  public async Task QuickLinks_create_persists_and_returns_the_additive_youtube_kind()
+  {
+    var slug = $"youtube-links-{Guid.NewGuid():N}";
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll, PrimaryScenario.ChannelId);
+
+    var response = await client.PostAsJsonAsync("/api/QuickLinks", new
+    {
+      title = "YouTube links",
+      url = slug,
+      links = new[]
+      {
+        new
+        {
+          kind = (int)QuickLinkKind.YouTube,
+          targetUrl = "https://youtu.be/video"
+        }
+      }
+    });
+
+    var stored = (await _factory.QuickLinksRepository!.GetItemsAsync()).Single(link => link.Url == slug);
+    var detail = await client.GetFromJsonAsync<QuickLinksContract>($"/api/QuickLinks/{stored.Id}");
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(QuickLinkKind.YouTube, stored.Links.Single().Kind);
+    Assert.Equal(QuickLinkKind.YouTube, detail!.Links.Single().Kind);
+  }
+
+  [Fact]
   public async Task QuickLinks_update_and_delete_require_the_persisted_channel_owner()
   {
     var slug = $"links-owner-{Guid.NewGuid():N}";

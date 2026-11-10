@@ -50,6 +50,13 @@ Current authentication is secure HttpOnly cookie based with CSRF protection; the
 
 Administrative capabilities, including API-key and digital-artifact management, belong only here.
 
+Channel creation and global/self-service editing expose optional `publicBaseUrl`
+configuration. QuickLinks detail generates an external `/quick-links/:url`
+destination only when the selected accessible channel owns the record and has
+a valid HTTP/HTTPS origin. It displays explicit configuration/ownership feedback
+otherwise; there is no admin-relative or hardcoded-host fallback. Normal action
+revalidation refreshes the root accessible-channel store after saves.
+
 Video edit has no editable "Match Type". Edit and detail acknowledge attached
 references as Empty Collection (0 videos), Single Video (1 video), or
 Collection (N videos). Edit uses its existing reference state after successful
@@ -75,6 +82,13 @@ means no single-video target; only responses with the field absent use the old
 ID-equality rule during rolling deployment. No new route or authentication
 requirement is introduced.
 
+The public Quick Links route `/quick-links/:url` is a standalone exception to
+the public `Root` shell: it renders the configured page title and ordered link
+destinations without site navigation, header, or footer. Its shared
+`QuickLinksRenderer` supplies kind-based default icons, while configured
+images/icons override defaults. Link kind values are persisted numeric
+contracts; append new values without renumbering existing kinds.
+
 ## Shop Client
 
 The shop is pre-production and on hold. Shared session cookies, checkout/order history and authenticated download regeneration below are intended target behavior, not a verified current release. Its existing legacy transport remains compatible and frozen.
@@ -94,6 +108,11 @@ This workflow remains target design context rather than active roadmap scope.
 ## Shooting ITA
 
 Shooting ITA is in scope and reuses shared layout and service behavior. Current maintained routes include home and focused video/category views. Its unused hard-coded Axios placeholder and dependency have been removed; maintained API calls use `@morwalpizvideo/services`. Preserve its local category derivation where the behavior is application-specific.
+
+The public QuickLinks route accepts `/quick-links/:url`, matching BackOffice
+destinations and the public client. The existing `/quick-link/:custom-linktree`
+URL remains a compatibility alias to the same component and channel-filtered
+`api/shit/quicklinks` loader; API authorization and visibility are unchanged.
 
 ## FreezerAnalysis SPA
 

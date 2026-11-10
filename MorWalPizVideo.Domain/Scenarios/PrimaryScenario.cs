@@ -87,6 +87,7 @@ public class PrimaryScenario : BaseScenario
         ]);
         Set(DbCollections.ShortLinkRequestEvents, Array.Empty<ShortLinkRequestEvent>());
         Set("quickLinks", Array.Empty<QuickLinks>());
+        Set(DbCollections.BackOfficeQuickActionPreferences, Array.Empty<BackOfficeQuickActionPreferences>());
         Set("channelNews", Array.Empty<ChannelNews>());
         Set("editorialProductionCards", Array.Empty<EditorialProductionCard>());
         Set("partners", Array.Empty<Partner>());

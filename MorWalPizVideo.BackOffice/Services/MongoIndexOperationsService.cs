@@ -123,6 +123,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("channelId", 1),
             Unique: true),
         new(
+            Key: "quickactionpreferences.user_channel.unique",
+            Collection: DbCollections.BackOfficeQuickActionPreferences,
+            Name: "ux_quickactionpreferences_user_channel",
+            Keys: new BsonDocument { { "userId", 1 }, { "channelId", 1 } },
+            Unique: true),
+        new(
             Key: "compilations_url.unique",
             Collection: DbCollections.Compilations,
             Name: "ux_compilations_url_ci",

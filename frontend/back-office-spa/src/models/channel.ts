@@ -14,6 +14,7 @@ export type Channel = Readonly<{
   /** YouTube channel identifier */
   yTChannelId: string;
   isSHIT?: boolean;
+  publicBaseUrl?: string;
   youTubeStudioUrl?: string;
   googleAnalyticsUrl?: string;
   socials?: readonly ChannelSocial[];

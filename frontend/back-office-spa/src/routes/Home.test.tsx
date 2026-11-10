@@ -4,15 +4,17 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { render } from '../test/test-utils';
 import { useAppStore } from '../state/appStore';
 import { useNavigate } from 'react-router';
-import { get } from '@morwalpizvideo/services';
+import { get, getDashboardQuickActions } from '@morwalpizvideo/services';
+import { useRouteLoaderData } from 'react-router';
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
-  return { ...actual, useNavigate: vi.fn() };
+  return { ...actual, useNavigate: vi.fn(), useRouteLoaderData: vi.fn() };
 });
 
 vi.mock('@morwalpizvideo/services', () => ({
   get: vi.fn(),
+  getDashboardQuickActions: vi.fn(),
   endpoints: {
     DASHBOARD_SUMMARY: '/api/dashboard/summary',
     DASHBOARD_VIDEO_PUBLICATIONS: '/api/dashboard/video-publications',
@@ -82,6 +84,7 @@ function deferred<T>() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useNavigate).mockReturnValue(vi.fn());
+  vi.mocked(useRouteLoaderData).mockReturnValue({ session: { userId: 'user-one' } });
   useAppStore.getState().reset();
   useAppStore.setState({
     selectedChannelId: 'channel-one',
@@ -90,6 +93,49 @@ beforeEach(() => {
   vi.mocked(get).mockImplementation((url: string) =>
     Promise.resolve(url.includes('summary') ? summary() : publications())
   );
+  vi.mocked(getDashboardQuickActions).mockImplementation(async () => {
+    const permissions = useAppStore.getState().effectivePermissions;
+    const definitions = [
+      {
+        key: 'videos.manage',
+        label: 'Gestisci video',
+        url: '/videos',
+        icon: 'videos',
+        permission: 'videos.view',
+      },
+      {
+        key: 'articles.create',
+        label: 'Scrivi articolo',
+        url: '/blogposts/create',
+        icon: 'article-create',
+        permission: 'pages.create',
+      },
+      {
+        key: 'articles.list',
+        label: 'Tutti gli articoli',
+        url: '/blogposts',
+        icon: 'articles',
+        permission: 'pages.view',
+      },
+    ].filter(item => permissions.includes(item.permission));
+    return {
+      channelId: useAppStore.getState().selectedChannelId!,
+      isConfigured: false,
+      canEdit: true,
+      updatedAtUtc: null,
+      availableActions: definitions,
+      actions: definitions.map(item => ({
+        id: item.key,
+        kind: 'predefined' as const,
+        actionKey: item.key,
+      })),
+      visibleActions: definitions.map(item => ({
+        ...item,
+        id: item.key,
+        kind: 'predefined' as const,
+      })),
+    };
+  });
 });
 
 async function renderComponent() {
@@ -159,7 +205,8 @@ describe('Home dashboard', () => {
       await screen.findByText('Seleziona un canale accessibile per visualizzare i dati operativi.')
     ).toBeInTheDocument();
     expect(get).not.toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'Scrivi articolo' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Scrivi articolo' })).not.toBeInTheDocument();
+    expect(getDashboardQuickActions).not.toHaveBeenCalled();
   });
 
   it('shows an explicit empty state when the selected channel has no recent publications', async () => {

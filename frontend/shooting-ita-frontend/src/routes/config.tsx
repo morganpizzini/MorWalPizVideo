@@ -23,6 +23,7 @@ export const routes = [{ path: '/', element: <RootShell />, children: [
     { path: 'exclusives', element: <ExclusivesRoute />, loader: exclusivesLoader },
     { path: 'popular', element: <PopularRoute />, loader: popularLoader },
     { path: 'quick-link/:custom-linktree', element: <QuickLinkRoute />, loader: quickLinkLoader },
+    { path: 'quick-links/:url', element: <QuickLinkRoute />, loader: quickLinkLoader },
     { path: 'channel-news/:idOrSlug', element: <ChannelNewsDetail />, loader: channelNewsLoader },
     { path: 'faq', element: <FaqPage />, loader: faqLoader },
     { path: 'notifiche', element: <PushSettings /> },

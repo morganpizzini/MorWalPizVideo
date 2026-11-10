@@ -8,10 +8,10 @@ describe('back-office navigation catalog', () => {
     const items = adminMenuGroups.flatMap(group => group.items);
     const paths = [...items, dashboardMenuItem].map(item => item.path);
 
-    expect(paths).toHaveLength(32);
+    expect(paths).toHaveLength(33);
     expect(new Set(paths).size).toBe(paths.length);
     expect(new Set(adminMenuGroups.map(group => group.id)).size).toBe(adminMenuGroups.length);
-    expect(adminMenuGroups.every(group => group.items.length <= 7)).toBe(true);
+    expect(adminMenuGroups.every(group => group.items.length <= 8)).toBe(true);
     expect(paths).toEqual(
       expect.arrayContaining([
         '/',
@@ -46,8 +46,21 @@ describe('back-office navigation catalog', () => {
         '/morwalpizconfigurations',
         '/diagnostics',
         '/ai-workflows',
+        '/dashboard-actions',
       ])
     );
+  });
+
+  it('allows personal quick-action configuration with basic BackOffice access', () => {
+    const item = adminMenuGroups
+      .find(group => group.id === 'administration')!
+      .items.find(entry => entry.path === '/dashboard-actions')!;
+    expect(item.permissions).toEqual([permissions.backoffice.access]);
+    expect(getRoutePermissions('dashboard-actions', false)).toEqual([
+      permissions.backoffice.access,
+    ]);
+    expect(getRoutePermissions('dashboard-actions', true)).toEqual([permissions.backoffice.access]);
+    expect(protectedRoutes.some(route => route.path === 'dashboard-actions')).toBe(true);
   });
 
   it('keeps Galleries after Images and protects both with image permissions', () => {

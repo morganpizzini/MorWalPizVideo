@@ -214,6 +214,24 @@ public sealed class CookieAntiforgeryTests : IClassFixture<BackOfficeWebApplicat
   }
 
   [Fact]
+  public async Task Quick_action_writes_and_reset_require_cookie_csrf()
+  {
+    using var client = CreateClient();
+    using var loginResponse = await LoginAsync(client);
+    Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+    client.DefaultRequestHeaders.Add("X-Channel-Id", PrimaryScenario.ChannelId);
+    const string endpoint = "/api/v1/dashboard/quick-actions";
+    Assert.Equal(HttpStatusCode.BadRequest,
+        (await client.PutAsJsonAsync(endpoint, new { actions = Array.Empty<object>() })).StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.DeleteAsync(endpoint)).StatusCode);
+    var token = await IssueTokenAsync(client);
+    client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", token);
+    Assert.Equal(HttpStatusCode.OK,
+        (await client.PutAsJsonAsync(endpoint, new { actions = Array.Empty<object>() })).StatusCode);
+    Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync(endpoint)).StatusCode);
+  }
+
+  [Fact]
   public async Task Health_probe_remains_available_when_an_auth_cookie_is_present()
   {
     using var client = CreateClient();

@@ -10,7 +10,8 @@ public enum QuickLinkKind
     [EnumMember] Telegram = 1,
     [EnumMember] Instagram = 2,
     [EnumMember] Facebook = 3,
-    [EnumMember] Video = 4
+    [EnumMember] Video = 4,
+    [EnumMember] YouTube = 5
 }
 
 [BsonIgnoreExtraElements]

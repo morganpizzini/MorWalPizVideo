@@ -90,6 +90,7 @@ export default createBrowserRouter([
   },
   {
     path: '/',
+    id: 'backoffice',
     Component: PrimaryLayout,
     loader: authLoader,
     children: protectedRoutes,

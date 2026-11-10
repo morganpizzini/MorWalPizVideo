@@ -1072,18 +1072,10 @@ public class VideosController : ApplicationControllerBase
             return [];
         }
 
-        var channelId = HttpContext.GetChannelContext().ChannelId;
-        var matches = await _contentService.GetAuthorizedMatchesAsync(userId, await authorization.IsAdminAsync(User), channelId);
-        var authorizedMatches = new List<YouTubeContent>();
-        foreach (var match in matches)
-        {
-            if (await authorization.CanReadInChannelAsync(User, match, channelId))
-            {
-                authorizedMatches.Add(match);
-            }
-        }
-
-        return await _linksService.MergeCanonicalVideoShortLinksAsync(authorizedMatches);
+        var channelContext = HttpContext.GetChannelContext();
+        var matches = await _contentService.GetAuthorizedMatchesAsync(userId, channelContext.IsAdmin, channelContext.ChannelId);
+        var authorizedMatches = await authorization.CanReadInChannelAsync(User, matches.ToArray(), channelContext.ChannelId);
+        return await _linksService.MergeCanonicalVideoShortLinksAsync(authorizedMatches.ToList());
     }
 
     private async Task<YouTubeContent?> FindAuthorizedMatchAsync(string id)

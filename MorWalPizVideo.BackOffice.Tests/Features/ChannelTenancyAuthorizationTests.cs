@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using MongoDB.Bson;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 using MorWalPizVideo.Domain.Interfaces;
@@ -289,6 +290,97 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     }
 
     return client;
+  }
+
+  [Theory]
+  [InlineData("  https://EXAMPLE.com/  ", "https://example.com")]
+  [InlineData("http://localhost:5173/", "http://localhost:5173")]
+  [InlineData("https://example.com:8443", "https://example.com:8443")]
+  [InlineData("", "")]
+  public async Task Public_origin_round_trips_through_create_update_and_all_channel_responses(string input, string expected)
+  {
+    var channelId = $"public-origin-{Guid.NewGuid():N}";
+    using var admin = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll);
+    var create = await admin.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = channelId, yTChannelId = channelId, publicBaseUrl = input
+    });
+    Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+    var stored = Assert.Single(await _factory.YTChannelRepository!.GetItemsAsync(c => c.ChannelId == channelId));
+    Assert.Equal(expected, stored.PublicBaseUrl);
+    Assert.Equal(expected, (await admin.GetFromJsonAsync<ChannelContract>($"/api/Channels/{channelId}"))!.PublicBaseUrl);
+    Assert.Equal(expected, Assert.Single((await admin.GetFromJsonAsync<List<ChannelContract>>("/api/Channels"))!, c => c.ChannelId == channelId).PublicBaseUrl);
+
+    await AddOwnerAsync("test-user-id", channelId);
+    using var owner = CreateClient(AuthorizationPermissionKeys.ChannelsManage);
+    foreach (var payload in new object[]
+    {
+      new { channelName = channelId },
+      new { channelName = channelId, publicBaseUrl = (string?)null }
+    })
+    {
+      Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", payload)).StatusCode);
+      Assert.Equal(expected, (await _factory.YTChannelRepository.GetItemAsync(stored.Id))!.PublicBaseUrl);
+    }
+
+    Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    {
+      channelName = channelId, publicBaseUrl = " https://updated.example:8443/ "
+    })).StatusCode);
+    Assert.Equal("https://updated.example:8443", (await owner.GetFromJsonAsync<ChannelContract>($"/api/Channels/{channelId}"))!.PublicBaseUrl);
+    using var accessible = CreateClient(AuthorizationPermissionKeys.BackofficeAccess);
+    Assert.Equal("https://updated.example:8443", Assert.Single(
+      (await accessible.GetFromJsonAsync<List<ChannelContract>>("/api/Channels/accessible"))!,
+      c => c.ChannelId == channelId).PublicBaseUrl);
+
+    Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    {
+      channelName = channelId, publicBaseUrl = " "
+    })).StatusCode);
+    Assert.Equal("", (await _factory.YTChannelRepository.GetItemAsync(stored.Id))!.PublicBaseUrl);
+  }
+
+  [Theory]
+  [InlineData("/relative")]
+  [InlineData("//example.com")]
+  [InlineData("javascript:alert(1)")]
+  [InlineData("ftp://example.com")]
+  [InlineData("https://user:password@example.com")]
+  [InlineData("https://@example.com")]
+  [InlineData("https://example.com/path")]
+  [InlineData("https://example.com/../")]
+  [InlineData("https://example.com?")]
+  [InlineData("https://example.com#")]
+  [InlineData("https://example.com/?q=test")]
+  [InlineData("https://example.com/#fragment")]
+  [InlineData("https://example.com\\path")]
+  public async Task Invalid_public_origins_do_not_create_or_modify_channels(string input)
+  {
+    var channel = await AddChannelAsync($"invalid-origin-{Guid.NewGuid():N}");
+    using var client = CreateClient(AuthorizationPermissionKeys.BackofficeManageAll);
+    var newId = $"rejected-{Guid.NewGuid():N}";
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/Channels", new
+    {
+      channelName = newId, yTChannelId = newId, publicBaseUrl = input
+    })).StatusCode);
+    Assert.Empty(await _factory.YTChannelRepository!.GetItemsAsync(c => c.ChannelId == newId));
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/Channels/{channel.ChannelId}", new
+    {
+      channelName = "Should not persist", publicBaseUrl = input
+    })).StatusCode);
+    Assert.Equal(channel.ToBsonDocument(), (await _factory.YTChannelRepository.GetItemAsync(channel.Id))!.ToBsonDocument());
+  }
+
+  [Fact]
+  public void Legacy_channel_bson_without_public_origin_remains_readable()
+  {
+    var document = new MongoDB.Bson.BsonDocument
+    {
+      ["channelId"] = "legacy", ["channelName"] = "Legacy"
+    };
+    var channel = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<YTChannel>(document);
+    Assert.Equal("", channel.PublicBaseUrl);
+    Assert.Equal("", MorWalPiz.Contracts.ContractUtils.Convert(channel).PublicBaseUrl);
   }
 
   private async Task<YTChannel> AddChannelAsync(string channelId)

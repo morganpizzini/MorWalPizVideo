@@ -1,4 +1,9 @@
 // Main barrel export file for @morwalpizvideo/services
+export {
+  getDashboardQuickActions,
+  saveDashboardQuickActions,
+  resetDashboardQuickActions,
+} from "./backOfficeQuickActionsService";
 
 // API Service exports
 export { default as apiService } from "./apiService";

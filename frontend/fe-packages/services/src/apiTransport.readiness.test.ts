@@ -66,6 +66,7 @@ describe("channel bootstrap readiness", () => {
     "/api/script-studio/documents/doc-1",
     "/api/script-studio/generate",
     "/api/script-studio/prompts/global",
+    "/api/v1/dashboard/quick-actions",
   ])("waits for readiness and scopes %s", async url => {
     const fetchMock = vi
       .fn()

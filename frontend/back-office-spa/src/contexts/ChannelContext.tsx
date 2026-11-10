@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 import { useRevalidator } from 'react-router';
 import {
   getSelectedChannelId,
@@ -11,12 +19,16 @@ interface ChannelContextValue {
   channels: readonly Channel[];
   selectedChannelId: string | null;
   selectChannel: (channelId: string) => void;
+  channelSwitchLocked: boolean;
+  setChannelSwitchLocked: (locked: boolean) => void;
 }
 
 const channelContext = createContext<ChannelContextValue>({
   channels: [],
   selectedChannelId: null,
   selectChannel: () => undefined,
+  channelSwitchLocked: false,
+  setChannelSwitchLocked: () => undefined,
 });
 
 interface ChannelProviderProps extends PropsWithChildren {
@@ -25,6 +37,12 @@ interface ChannelProviderProps extends PropsWithChildren {
 
 export function ChannelProvider({ channels, children }: ChannelProviderProps) {
   const revalidator = useRevalidator();
+  const [channelSwitchLocked, setLocked] = useState(false);
+  const lockedRef = useRef(false);
+  const setChannelSwitchLocked = useCallback((locked: boolean) => {
+    lockedRef.current = locked;
+    setLocked(locked);
+  }, []);
   const selectedChannelId = useAppStore(state => state.selectedChannelId);
   const setSelectedChannelId = useAppStore(state => state.setSelectedChannelId);
   const setAccessibleChannels = useAppStore(state => state.setAccessibleChannels);
@@ -32,16 +50,18 @@ export function ChannelProvider({ channels, children }: ChannelProviderProps) {
   const availableChannels = storeChannels.length ? storeChannels : channels;
 
   useEffect(() => {
-    const hasCurrentSelection = selectedChannelId !== null &&
+    const hasCurrentSelection =
+      selectedChannelId !== null &&
       channels.some(channel => channel.channelId === selectedChannelId);
     const persistedChannelId = getSelectedChannelId();
-    const hasPersistedSelection = persistedChannelId !== null &&
+    const hasPersistedSelection =
+      persistedChannelId !== null &&
       channels.some(channel => channel.channelId === persistedChannelId);
     const nextSelectedChannelId = hasCurrentSelection
       ? selectedChannelId
       : hasPersistedSelection
         ? persistedChannelId
-        : channels[0]?.channelId ?? null;
+        : (channels[0]?.channelId ?? null);
 
     setAccessibleChannels(channels);
     persistSelectedChannelId(nextSelectedChannelId);
@@ -49,6 +69,7 @@ export function ChannelProvider({ channels, children }: ChannelProviderProps) {
   }, [channels, setAccessibleChannels, setSelectedChannelId]);
 
   const selectChannel = (channelId: string) => {
+    if (lockedRef.current) return;
     if (!availableChannels.some(channel => channel.channelId === channelId)) {
       return;
     }
@@ -59,7 +80,15 @@ export function ChannelProvider({ channels, children }: ChannelProviderProps) {
   };
 
   return (
-    <channelContext.Provider value={{ channels: availableChannels, selectedChannelId, selectChannel }}>
+    <channelContext.Provider
+      value={{
+        channels: availableChannels,
+        selectedChannelId,
+        selectChannel,
+        channelSwitchLocked,
+        setChannelSwitchLocked,
+      }}
+    >
       {children}
     </channelContext.Provider>
   );

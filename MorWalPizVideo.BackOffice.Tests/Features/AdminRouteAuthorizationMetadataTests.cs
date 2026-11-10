@@ -21,7 +21,7 @@ public sealed class AdminRouteAuthorizationMetadataTests
             typeof(InsightsController), typeof(ProductCategoriesController), typeof(ProductsController),
             typeof(QueryLinksController), typeof(RbacController), typeof(ShortLinksController),
             typeof(SponsorsController), typeof(UserController), typeof(VideosController), typeof(AskController),
-            typeof(PartnersController), typeof(CampaignsController)
+            typeof(PartnersController), typeof(CampaignsController), typeof(DashboardQuickActionsController)
         ];
 
         var unsecuredActions = controllerTypes

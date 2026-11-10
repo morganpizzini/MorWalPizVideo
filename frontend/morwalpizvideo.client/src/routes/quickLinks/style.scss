@@ -1,6 +1,6 @@
 .quick-links-page {
-    min-height: 0;
-    padding: clamp(1.5rem, 4vw, 3rem) 0;
+    min-height: 100vh;
+    padding: clamp(2.5rem, 10vh, 6rem) clamp(1rem, 4vw, 2rem) 3rem;
     color: var(--magazine-text);
 }
 
@@ -111,6 +111,6 @@
 
 @media (max-width: 34rem) {
     .quick-links-page {
-        padding-top: 2rem;
+        padding-top: 2.5rem;
     }
 }

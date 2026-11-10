@@ -49,6 +49,9 @@ const routeDefinitions: RouteConfig[] = [
     errorElement: createErrorElement(),
   }),
   feature('profile', () => import('../../routes/profile'), { errorElement: createErrorElement() }),
+  feature('dashboard-actions', () => import('../../routes/dashboardActions'), {
+    errorElement: createErrorElement(),
+  }),
   {
     path: 'my-channel',
     Component: Outlet,

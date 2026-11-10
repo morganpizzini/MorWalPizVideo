@@ -28,6 +28,17 @@ sequenceDiagram
 
 Focused services for content, catalog, shop, forms, insights, links, and publishing are now in place. High-impact BackOffice paths (`ShortLinksController`, `VideosController`, `CompilationsController`) are service-based and covered by focused dependency tests; remaining legacy controller migrations proceed incrementally. `DataService` and `IGenericDataService` remain compatibility surfaces for controllers not yet migrated.
 
+BackOffice's common video-read helper uses the validated channel context for
+content retrieval and a bulk channel-read authorization overload. Access-profile
+and ownership reads are constant per nonempty bulk call, not per video; each
+record still requires selected-channel owner/reference membership. The scalar
+operation shares those rules, including effective impersonated identity and
+API-key behavior. A live canonical short-link overlay queries only returned
+aggregate document IDs, preserving freshness after isolated link edits even
+when the indexed content cache is warm. Routes, contracts, ordering, and mutation
+authorization are unchanged. See the [performance handoff](../feature-handoffs/backoffice-video-fetch-performance-handoff.md)
+for local regression evidence and pending deployed latency measurements.
+
 Video enrichment/refresh fetches attached reference IDs, not thumbnail IDs,
 and preserves attachment order, categories, channel IDs, creation timestamps,
 and references absent from provider results. Provider-owned aggregate metadata
@@ -71,6 +82,9 @@ operational verification before permanent-erasure claims.
 - Updates commonly replace complete documents.
 - Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`). ServerAPI and BackOffice also verify/create only the blog-interaction indexes before accepting traffic in Mongo mode; mock mode skips this startup service. Other indexes remain manually applied. See [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 - `BsonIgnoreExtraElements` supports additive compatibility for many entities.
+- QuickLinks link kinds are numeric persisted/API enum values. Preserve existing
+  assignments and append new kinds only; the YouTube kind is `5`, while
+  generic Video remains `4`.
 - User lookups must use the repository ID path, which supports legacy BSON `ObjectId` and string `_id` values; do not apply string operators such as `ToLower()` to `User.Id` in Mongo predicates.
 
 Full collection materialization and in-memory sorting/filtering bypass Mongo indexes. New repository methods must push predicates, projections, ordering, limits, and atomic updates into MongoDB.

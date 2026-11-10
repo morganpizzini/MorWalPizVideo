@@ -2,7 +2,9 @@
 
 ## Status
 
-Current implementation for the BackOffice SPA. The dashboard uses the existing unversioned `/api/...` convention and does not add a MongoDB collection.
+Current implementation for the BackOffice SPA. Analytics retain the existing
+unversioned `/api/...` convention. Personal quick actions use a versioned API and
+an additive MongoDB preference collection.
 
 ### Insight-to-article workflow
 
@@ -59,6 +61,48 @@ Returns daily video publication points. `days` is bounded to 21. The source fiel
 
 Videos without a valid `PublishedAt` are excluded. Historical click analytics and internal publication events are outside this snapshot contract and would require a separate event collection.
 
+### Personal quick actions
+
+`GET`, `PUT`, and `DELETE /api/v1/dashboard/quick-actions` read, replace, and reset
+the current effective user's preferences for the channel resolved from
+`X-Channel-Id`. All require `backoffice.access` and channel scope; API-key
+principals are denied. Impersonation can read the target's preferences but cannot
+save or reset them. Cookie writes retain CSRF protection; responses are no-store.
+
+The additive `backofficeQuickActionPreferences` collection has one ordered list
+per user/channel pair. The source-owned unique compound index
+`quickactionpreferences.user_channel.unique` must be applied before production
+exposure; see [Mongo operations](mongo-operations.md#personal-quick-action-rollout).
+Atomic full-list writes use last-successful-write-wins semantics across devices.
+No backfill, User document update, public API, or cross-API cache purge is needed.
+
+Missing preferences return the original video/article defaults filtered by
+current permissions without inserting a document. A saved empty list stays empty.
+The response includes editable `actions`, an authorized `availableActions`
+catalog, a resolved `visibleActions` projection, `isConfigured`, `channelId`,
+`updatedAtUtc`, and `canEdit`. Unavailable/retired predefined entries stay saved
+but are hidden from Home; permission restoration can reveal them again.
+
+Predefined entries reference stable server-owned catalog keys. Custom labels and
+URLs are arbitrary strings preserved without trimming, normalization, route or
+destination validation. The editor uses text inputs; Home uses escaped text and
+native same-tab anchors for custom links, preserving the entered href rather than
+composing it as a router/API URL. Browser resolution and built-in React safety
+behavior remain intact. Broken, misleading, or empty custom links are the user's
+responsibility; this exception does not change public QuickLinks validation.
+Structural DTO validation and a 64 KiB total request limit still apply.
+
+The Administration item **Attività rapide** opens `/dashboard-actions` for any
+BackOffice user, not just configuration administrators. It supports add, edit,
+keyboard-accessible reorder/remove, explicit save/cancel and confirmed reset.
+Channel switches discard unsaved drafts with a notice and are blocked during
+submission. Requests and responses are bound to validated session identity and
+selected channel, not localStorage display identity. Failed saves retain drafts;
+preference read failures show a local retry without hiding analytics.
+
+See the [delivery handoff](../feature-handoffs/backoffice-personal-quick-actions-handoff.md)
+for implementation files, focused validation and remaining deployed/Mongo gates.
+
 ## Frontend structure
 
 - `PrimaryLayout` composes header, responsive sidebar, breadcrumbs, content outlet, and footer.
@@ -67,7 +111,11 @@ Videos without a valid `PublishedAt` are excluded. Historical click analytics an
   `/blogposts/create`, and `/blogposts/:id/edit`. These routes and their existing
   draft/save/publish workflow remain the Blog reachability contract.
 - `AdminSidebar` renders one permission-filtered navigation tree inside one Bootstrap `Offcanvas` with `responsive="lg"`. Dashboard remains a direct link; Publishing, Media library, Website, Audience, Growth & insights, Catalog, and Administration are one-level, single-open sections. Empty permission-filtered sections are omitted, and the section for a deep-linked module opens automatically. Channel selection and configured external reports remain part of the same scrollable sidebar.
-- `Home` places permission-filtered shortcuts for video management and article writing/listing above the existing KPI panels, 21-day Recharts publication chart, operational values, and recent publications. Shortcuts navigate to existing routes and never perform a write. Video links and chart drill-through are available only to users with video-list access; other dashboard users can still read analytics and publication titles.
+- `Home` places the selected user's channel-scoped quick actions and a Personalizza
+  link above existing analytics. Predefined shortcuts are permission-filtered;
+  literal custom links are not checked against the route catalog. Clicking a
+  shortcut does not perform an API mutation. Video links/chart drill-through in
+  analytics still require video-list access.
 - Dashboard summary and publication reads refresh when the selected channel changes. Previous-channel figures are hidden while refreshed data loads; stale responses are ignored. Analytics loading, error/retry, and no-selected-channel states do not hide the page heading or available shortcuts. The server response remains authoritative for metric scope; global account/form values are not described as channel-local.
 - Existing CRUD routes and `GenericTable` remain the module implementation surface.
 

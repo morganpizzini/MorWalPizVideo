@@ -65,6 +65,7 @@ const scopedBackOfficePrefixes = [
   "/api/navigation",
   "/api/insights",
   "/api/dashboard",
+  "/api/v1/dashboard/quick-actions",
   "/api/apikeys",
   "/api/newsletters",
   "/api/products",

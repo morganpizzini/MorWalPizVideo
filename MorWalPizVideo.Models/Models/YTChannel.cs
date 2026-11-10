@@ -18,6 +18,11 @@ namespace MorWalPizVideo.Server.Models
         public string ShortLinkUrl { get; init; } = string.Empty;
 
         [DataMember]
+        [BsonElement("publicBaseUrl")]
+        [BsonDefaultValue("")]
+        public string PublicBaseUrl { get; init; } = string.Empty;
+
+        [DataMember]
         [BsonElement("videos")]
         public List<YouTubeVideo> Videos { get; init; } = new List<YouTubeVideo>();
 

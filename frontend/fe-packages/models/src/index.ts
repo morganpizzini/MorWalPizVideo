@@ -1,4 +1,11 @@
 // Main barrel export file for @morwalpizvideo/models
+export type {
+  QuickActionEntry,
+  QuickActionDefinition,
+  ResolvedQuickAction,
+  QuickActionsResponse,
+  SaveQuickActionsRequest,
+} from "./backOfficeQuickActions";
 
 // Calendar Event exports
 export type {

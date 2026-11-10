@@ -59,6 +59,16 @@ public sealed class ImpersonationTests : IClassFixture<BackOfficeWebApplicationF
         Assert.Equal(targetId, validation.TargetUserId);
         Assert.True(validation.IsImpersonating);
 
+        using var quickActions = await client.GetAsync("/api/v1/dashboard/quick-actions");
+        Assert.Equal(HttpStatusCode.OK, quickActions.StatusCode);
+        using var quickActionsPayload = JsonDocument.Parse(await quickActions.Content.ReadAsStringAsync());
+        Assert.False(quickActionsPayload.RootElement.GetProperty("canEdit").GetBoolean());
+        using var blockedQuickActionsPut = JsonRequest(HttpMethod.Put, "/api/v1/dashboard/quick-actions", new { actions = Array.Empty<object>() }, csrfToken);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(blockedQuickActionsPut)).StatusCode);
+        using var blockedQuickActionsDelete = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/dashboard/quick-actions");
+        blockedQuickActionsDelete.Headers.Add("X-CSRF-TOKEN", csrfToken);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(blockedQuickActionsDelete)).StatusCode);
+
         using var contentResponse = await client.GetAsync("/api/Compilations");
         Assert.Equal(HttpStatusCode.OK, contentResponse.StatusCode);
 

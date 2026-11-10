@@ -71,6 +71,21 @@ The implementation is registered behind the existing `EnableCache` flag. When di
 
 Short-link create/update/delete operations do not directly invalidate or refresh this cache in this iteration. A subsequent content rebuild or targeted YouTubeContent refresh re-applies canonical enrichment, so short-link enrichment can be briefly stale after an isolated short-link mutation.
 
+BackOffice's video-read helper compensates with a live canonical-link overlay
+scoped to the authorized aggregate document IDs. Preserve that read unless
+isolated link mutations acquire an equivalent freshness guarantee; cached
+enrichment alone does not provide it.
+
+The current shared `MorWalPizIndexedCacheStore.GetManyAsync` adapter retrieves
+entries in batches of at most eight asynchronous provider reads. This is bounded
+concurrency over `IDistributedCache`, not provider-native Redis batching. Results
+retain input-key insertion order and ordinal key comparison, with the last input
+occurrence winning for duplicates, regardless of completion order. Failed batches
+await their started reads and propagate errors rather than returning partial
+success. The existing cache wrapper does not cancel in-flight provider reads.
+Warm-read membership validation uses an ordinal ID set rather than a nested index
+scan; count/null checks and full-rebuild recovery remain unchanged.
+
 ## Building Entries
 
 `BuildEntries(entityIds?, scope?)` is the single source of truth for constructing cache values.

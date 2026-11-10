@@ -18,7 +18,7 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
   const permissions = useAppStore(state => state.effectivePermissions);
-  const { channels, selectedChannelId, selectChannel } = useChannelContext();
+  const { channels, selectedChannelId, selectChannel, channelSwitchLocked } = useChannelContext();
   const { pathname } = useLocation();
   const visibleGroups = useMemo(
     () =>
@@ -74,7 +74,7 @@ export default function AdminSidebar({ show, onHide }: AdminSidebarProps) {
           aria-label="Select channel"
           value={selectedChannelId ?? ''}
           onChange={event => selectChannel(event.target.value)}
-          disabled={channels.length === 0}
+          disabled={channels.length === 0 || channelSwitchLocked}
         >
           {channels.length === 0 ? <option value="">No accessible channels</option> : null}
           {channels.map(channel => (

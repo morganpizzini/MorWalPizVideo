@@ -1,6 +1,7 @@
 import { ActionFunctionArgs, data } from 'react-router';
 import { post, put, endpoints, ComposeUrl } from '@morwalpizvideo/services';
 import { channelActionError, getChannelApiError } from '../response';
+import { normalizePublicBaseUrl } from '../publicBaseUrl';
 
 export default async function action({ request, params }: ActionFunctionArgs) {
   const values = Object.fromEntries(await request.formData());
@@ -9,6 +10,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const channelName = typeof values.channelName === 'string' ? values.channelName.trim() : '';
   const yTChannelId = typeof values.yTChannelId === 'string' ? values.yTChannelId.trim() : '';
   const shortLinkUrl = typeof values.shortLinkUrl === 'string' ? values.shortLinkUrl.trim() : '';
+  const publicBaseUrl = normalizePublicBaseUrl(
+    typeof values.publicBaseUrl === 'string' ? values.publicBaseUrl : ''
+  );
   const youTubeStudioUrl =
     typeof values.youTubeStudioUrl === 'string' ? values.youTubeStudioUrl.trim() : '';
   const googleAnalyticsUrl =
@@ -19,6 +23,10 @@ export default async function action({ request, params }: ActionFunctionArgs) {
 
   if (!channelName) {
     errors['channelName'] = 'Channel name cannot be empty';
+  }
+  if (publicBaseUrl === null) {
+    errors['publicBaseUrl'] =
+      'Enter an HTTP or HTTPS origin without credentials, paths, query strings, or fragments';
   }
 
   if (!id && !yTChannelId) {
@@ -44,6 +52,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelId: id,
         channelName,
         shortLinkUrl,
+        ...(typeof values.publicBaseUrl === 'string' ? { publicBaseUrl } : {}),
         youTubeStudioUrl,
         googleAnalyticsUrl,
         socials: socials ?? [],
@@ -60,6 +69,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelName,
         yTChannelId,
         shortLinkUrl,
+        publicBaseUrl,
         isSHIT,
         socials: socials ?? [],
         socialPublishing,
