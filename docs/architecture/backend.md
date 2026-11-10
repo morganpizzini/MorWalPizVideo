@@ -178,7 +178,7 @@ Prompt activation is disabled unless both the orchestration flag and
 must pass an evaluated candidate through a bounded canary and manually promote
 or cancel it. Compare-and-set pointer updates protect activation and rollback.
 See [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md) and the
-[AI handoff](../feature-handoffs/ai-prompt-orchestration-handoff.md) for pilot
+[AI feature record](../features/editorial-and-ai.md#chat-orchestration) for pilot
 boundaries and pending release gates.
 
 ### ServerAPI

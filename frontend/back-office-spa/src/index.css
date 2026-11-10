@@ -170,12 +170,57 @@ body {
 }
 
 .sidebar-section-label {
-  color: #718096;
+  color: #91a4b7;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.5rem 0.8rem;
+}
+
+.admin-sidebar-group {
+  margin-bottom: 0.4rem;
+}
+
+.sidebar-group-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.4rem;
+  color: #91a4b7;
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0.08em;
+  padding: 0.65rem 0.8rem;
+  text-align: left;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.sidebar-group-toggle:hover,
+.sidebar-group-toggle[aria-expanded='true'],
+.sidebar-group-toggle[aria-current='location'] {
+  color: #fff;
+}
+
+.sidebar-group-toggle:hover {
+  background: #243342;
+}
+
+.sidebar-group-toggle:focus-visible {
+  outline: 2px solid #9fc7d8;
+  outline-offset: 2px;
+}
+
+.sidebar-group-chevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.sidebar-group-toggle[aria-expanded='true'] .sidebar-group-chevron {
+  transform: rotate(180deg);
 }
 
 .channel-selector .form-select {
@@ -284,6 +329,40 @@ body {
   filter: invert(1);
 }
 
+.admin-sidebar-offcanvas .offcanvas-body {
+  overflow-y: auto;
+}
+
+.dashboard-actions {
+  border-bottom: 1px solid #d9e2ec;
+  padding-bottom: 1.25rem;
+}
+
+.dashboard-actions .btn {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.55rem;
+  min-height: 42px;
+}
+
+.dashboard-state {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dashboard-chart {
+  height: 320px;
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-video-link {
+  font-weight: 500;
+  text-underline-offset: 0.15em;
+}
+
 @media (min-width: 992px) {
   .admin-sidebar.admin-sidebar-offcanvas {
     width: 248px !important;
@@ -296,6 +375,11 @@ body {
   .admin-sidebar-offcanvas .offcanvas-body,
   .admin-sidebar-offcanvas .nav {
     width: 100%;
+  }
+
+  .admin-sidebar-offcanvas .offcanvas-body {
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -323,4 +407,10 @@ body {
   border-radius: 0.5rem;
   padding: 1.25rem;
   min-height: 300px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-group-chevron {
+    transition: none;
+  }
 }

@@ -17,7 +17,7 @@ archival compatibility metadata, not a runtime decision or editable setting.
 Admin/public DTOs, v1 string types, and Shooting ITA responses project the
 effective type without rewriting storage. Images, links, and the thumbnail
 do not count as attachments. The computed property is excluded from BSON/JSON.
-See the [classification handoff](../feature-handoffs/video-reference-classification-handoff.md).
+See the [classification record](../features/content-import.md#reference-classification).
 
 Tags are aggregate-level free-form strings persisted in the `tags` Mongo element. Legacy documents without the element deserialize to an empty array (`[BsonIgnoreExtraElements]` plus a default value), and both the admin and public contracts always serialize `tags` as `[]` when absent. Normalization is centralized in `MorWalPizVideo.Models.Constraints.ContentTagRules`: values are trimmed, empty/whitespace values are rejected, and duplicates collapse case-insensitively while keeping the first display casing. Bounds are 20 tags per aggregate and 32 characters per tag.
 

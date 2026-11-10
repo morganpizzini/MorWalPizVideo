@@ -16,7 +16,7 @@ post until the user explicitly saves it.
 
 ### Editorial production cards
 
-The BackOffice SPA exposes the protected `/editorial-production-cards` route
+The BackOffice SPA exposes the protected `/editorialproductioncards` route
 for channel-scoped production tracking. Cards are persisted by the BackOffice
 API with explicit revision checks and server-owned status transitions; saving
 a card never uploads or publishes a video. Optional YouTube Studio and Google
@@ -66,8 +66,9 @@ Videos without a valid `PublishedAt` are excluded. Historical click analytics an
 - The Blog menu item targets `/blogposts`; the protected route catalog owns `/blogposts`,
   `/blogposts/create`, and `/blogposts/:id/edit`. These routes and their existing
   draft/save/publish workflow remain the Blog reachability contract.
-- `AdminSidebar` renders one permission-filtered navigation tree inside one Bootstrap `Offcanvas` with `responsive="lg"`.
-- `Home` renders KPI panels, the 21-day Recharts publication chart, operational values, and clickable recent publications.
+- `AdminSidebar` renders one permission-filtered navigation tree inside one Bootstrap `Offcanvas` with `responsive="lg"`. Dashboard remains a direct link; Publishing, Media library, Website, Audience, Growth & insights, Catalog, and Administration are one-level, single-open sections. Empty permission-filtered sections are omitted, and the section for a deep-linked module opens automatically. Channel selection and configured external reports remain part of the same scrollable sidebar.
+- `Home` places permission-filtered shortcuts for video management and article writing/listing above the existing KPI panels, 21-day Recharts publication chart, operational values, and recent publications. Shortcuts navigate to existing routes and never perform a write. Video links and chart drill-through are available only to users with video-list access; other dashboard users can still read analytics and publication titles.
+- Dashboard summary and publication reads refresh when the selected channel changes. Previous-channel figures are hidden while refreshed data loads; stale responses are ignored. Analytics loading, error/retry, and no-selected-channel states do not hide the page heading or available shortcuts. The server response remains authoritative for metric scope; global account/form values are not described as channel-local.
 - Existing CRUD routes and `GenericTable` remain the module implementation surface.
 
 ### Responsive shell
@@ -75,6 +76,8 @@ Videos without a valid `PublishedAt` are excluded. Historical click analytics an
 Below Bootstrap's `lg` breakpoint (992px), the sidebar is an overlay opened by the header menu button. The Offcanvas close button and each navigation link close it, preserving keyboard focus and dismissal behavior supplied by React-Bootstrap.
 
 At 992px and above, the same Offcanvas becomes a persistent 248px flex item. The main column uses its remaining width and `min-width: 0` to prevent the dashboard grid and responsive tables from forcing horizontal shell overflow. No second desktop navigation tree is rendered.
+
+The sidebar body remains vertically scrollable at short viewport heights. Section toggles are native buttons with `aria-expanded` and `aria-controls`; collapsing a section hides its links from the accessibility tree without removing the current-route indication from the section header.
 
 Application styles are imported immediately after Bootstrap in `main.tsx`, so the shell, sidebar, dashboard panels, and responsive sizing rules participate in the production cascade.
 
@@ -91,7 +94,16 @@ Validated on 2026-08-08:
 
 HTTP authorization tests intentionally remain representative rather than exhaustive for every controller-operation pair. The explicit attribute inventory plus focused RBAC, video, insights, forms, and catalog HTTP tests is the current regression signal; newly added sensitive operations still require a focused HTTP case.
 
-Real-browser viewport inspection was unavailable in the implementation environment because no Playwright package or supported local browser executable was installed. The remaining visual validation is one navigation landmark, no overlap or horizontal overflow, a non-zero chart area, and keyboard-accessible mobile dismissal immediately below and above 992px and at mobile, tablet, and wide-desktop widths.
+The 2026-08-08 validation did not have a supported browser available; the later refinement validation below adds a bounded mocked-API viewport review.
+
+### Navigation and home refinement validation
+
+The latest BackOffice navigation/home refinement was verified with:
+
+- 54 passing Vitest tests across seven files covering the navigation catalog, sidebar disclosure, dashboard actions/channel refresh, protected routes, shell, article form, and video index.
+- A passing BackOffice SPA TypeScript/Vite production build. Vite emitted its existing warning for minified JavaScript chunks larger than 500 kB.
+- A headless Playwright review using mocked API responses at widths 375, 768, 991, 992, and 1440px, plus a 375x520 short-height viewport. Each viewport retained a 1:1 document/viewport width; the chart retained a 320px render area and no browser page errors occurred. Desktop and mobile home/sidebar screenshots were captured as local session artifacts, not committed.
+- API requests were intercepted locally; this visual review did not validate a deployed backend or real user session.
 
 ## Test requirements
 

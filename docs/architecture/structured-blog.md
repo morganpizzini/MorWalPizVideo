@@ -187,12 +187,16 @@ static JPEG locally; server processing remains an authoritative size gate and ma
 larger 16:9 input. Missing purpose preserves the older arbitrary-dimension upload contract.
 Failed metadata persistence attempts to roll back the new blob.
 
-Draft changes never delete images referenced by the published snapshot. Retention is
-deliberately conservative: there is no individual image-delete endpoint, no garbage
-collector, and aggregate deletion currently retains blobs too. Operators must not delete
-media on draft-reference removal. Durable orphan cleanup/retry is not implemented; a
-rollback delete failure needs operational recovery. Real HTTP multipart upload, blob
-rollback and production storage permissions remain unverified in this continuation.
+Draft changes never delete images referenced by the published snapshot. The earlier
+no-individual-delete baseline is superseded by
+[ADR-025](adr/ADR-025-blog-media-deletion-and-atomic-publish.md): explicit image
+removal uses persisted pending state, exact-key deletion and revision-checked
+finalization. This is not a garbage collector; draft-reference removal is not
+permission to delete media. General orphan cleanup remains separate. See the
+[authoring record](../features/blog-authoring.md#atomic-save-and-recoverable-image-deletion)
+for the writer-upgrade boundary, retry behavior and irreversible-storage rollback
+limits. Production storage permissions, provider retention and permanent erasure
+remain operationally unverified.
 
 Public cache TTL is 300 seconds with lowercase `ApiTagCacheKeys.Blog = "tag-blog"`;
 list varies by page/pageSize and detail by slug. Publish/unpublish/delete invoke existing

@@ -17,7 +17,7 @@ Ship compatible public-client support before the new ServerAPI artifact.
 Video reference/URL mutations, refresh, deletion, and append compensation now
 also reset calendar memory entries and purge the lowercase calendar output tag.
 Invalidate old calendar payloads on activation/rollback. No data migration is
-required; see the [classification handoff](../feature-handoffs/video-reference-classification-handoff.md).
+required; see the [classification record](../features/content-import.md#reference-classification).
 
 The admin URL retains the title in the router's `:id` parameter. Loaders consume that already-decoded title and encode it once for `by-title`. Edits PUT to the persisted document ID, not the title. Route/body ID disagreement is rejected, server channel context overrides body channel, and updates preserve creation time. Categories retain embedded IDs/titles, including references absent from the current category list. Duplicate creation remains globally case-insensitive; duplicate-title updates retain their existing behavior.
 

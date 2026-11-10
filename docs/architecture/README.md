@@ -6,6 +6,10 @@
 
 This directory is the long-term architectural reference for MorWalPizVideo. It records both the architecture that exists in source and the approved target direction. Future work should consult this guide before performing a repository-wide analysis.
 
+Use the [documentation index](../README.md) for compact feature delivery records,
+open implementation gates, and the former handoff filename map. Architecture
+and ADRs remain authoritative for system boundaries.
+
 Current source, project manifests, deployment workflows, and executable tests remain authoritative when they conflict with this guide. Update the relevant document and ADR whenever an implementation changes an architectural boundary.
 
 ## Scope
