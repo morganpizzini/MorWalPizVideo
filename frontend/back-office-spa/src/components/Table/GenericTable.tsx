@@ -22,6 +22,7 @@ interface GenericTableProps<T extends object> {
   previousButtonText?: string;
   nextButtonText?: string;
   enableRowSelection?: boolean;
+  persistPaginationInUrl?: boolean;
   selectedRowIds?: Set<string>;
   onSelectedRowIdsChange?: (ids: Set<string>) => void;
   getRowId?: (row: T) => string;
@@ -36,6 +37,7 @@ function GenericTable<T extends object>({
   previousButtonText = 'Previous',
   nextButtonText = 'Next',
   enableRowSelection = false,
+  persistPaginationInUrl = true,
   selectedRowIds = new Set<string>(),
   onSelectedRowIdsChange,
   getRowId = row => String((row as { id?: string }).id ?? ''),
@@ -44,8 +46,11 @@ function GenericTable<T extends object>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const [localPageIndex, setLocalPageIndex] = useState(0);
 
-  const pageIndex = Math.max(0, parseInt(searchParams.get('page') || '1', 10) - 1);
+  const pageIndex = persistPaginationInUrl
+    ? Math.max(0, parseInt(searchParams.get('page') || '1', 10) - 1)
+    : localPageIndex;
 
   // Table configuration
   const table = useReactTable<T>({
@@ -60,6 +65,11 @@ function GenericTable<T extends object>({
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: updater => {
       const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
+      if (!persistPaginationInUrl) {
+        setLocalPageIndex(next.pageIndex);
+        return;
+      }
+
       setSearchParams(
         prev => {
           const params = new URLSearchParams(prev);
@@ -101,14 +111,18 @@ function GenericTable<T extends object>({
             value={globalFilter ?? ''}
             onChange={e => {
               setGlobalFilter(e.target.value);
-              setSearchParams(
-                prev => {
-                  const params = new URLSearchParams(prev);
-                  params.delete('page');
-                  return params;
-                },
-                { replace: true }
-              );
+              if (persistPaginationInUrl) {
+                setSearchParams(
+                  prev => {
+                    const params = new URLSearchParams(prev);
+                    params.delete('page');
+                    return params;
+                  },
+                  { replace: true }
+                );
+              } else {
+                setLocalPageIndex(0);
+              }
             }}
             placeholder={searchPlaceholder}
           />

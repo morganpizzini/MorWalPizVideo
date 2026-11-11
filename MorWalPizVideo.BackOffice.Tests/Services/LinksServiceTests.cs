@@ -90,6 +90,41 @@ public sealed class LinksServiceTests
     }
 
     [Fact]
+    public async Task Code_availability_checks_legacy_embedded_links_case_insensitively()
+    {
+        var scenario = new EmptyScenario();
+        var matchRepository = new MatchMockRepository(scenario);
+        var channelRepository = new YTChannelMockRepository(scenario);
+        await matchRepository.AddItemAsync(
+            YouTubeContent.CreateSingleVideo("match", []) with
+            {
+                Id = "match",
+                ShortLinks = [new ShortLink("LegacyVideo", "video", [])]
+            });
+        await channelRepository.AddItemAsync(
+            new YTChannel("channel-id", "Channel")
+            {
+                ShortLinks = [new ShortLink("LegacyChannel", "channel", [])]
+            });
+        var service = new LinksService(
+            new ShortLinkMockRepository(scenario),
+            new QueryLinkMockRepository(scenario),
+            matchRepository,
+            channelRepository);
+
+        Assert.False(await service.IsCodeAvailableAsync("legacyvideo"));
+        Assert.False(await service.IsCodeAvailableAsync("LEGACYCHANNEL"));
+
+        var predicate = (Expression<Func<YouTubeContent, bool>>)(match =>
+            match.ShortLinks.Any(link => link.Code.ToLower() == "legacyvideo"));
+        var rendered = new ExpressionFilterDefinition<YouTubeContent>(predicate).Render(
+            new RenderArgs<YouTubeContent>(
+                BsonSerializer.LookupSerializer<YouTubeContent>(),
+                BsonSerializer.SerializerRegistry));
+        Assert.NotEmpty(rendered);
+    }
+
+    [Fact]
     public async Task Merge_does_not_hide_repository_failures()
     {
         var repository = new CountingShortLinkRepository { Failure = new InvalidOperationException("Links unavailable") };

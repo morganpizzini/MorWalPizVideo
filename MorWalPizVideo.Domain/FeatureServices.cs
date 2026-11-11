@@ -1300,13 +1300,13 @@ public sealed class LinksService(
         }
 
         if ((await contentRepository.GetItemsAsync(match =>
-            match.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Count > 0)
+            match.ShortLinks.Any(link => link.Code.ToLower() == normalizedCode))).Count > 0)
         {
             return false;
         }
 
         return !(await channelRepository.GetItemsAsync(channel =>
-            channel.ShortLinks.Any(link => link.MatchesCode(normalizedCode)))).Any();
+            channel.ShortLinks.Any(link => link.Code.ToLower() == normalizedCode))).Any();
     }
 
     public async Task UpdateShortLinkAsync(ShortLink entity)

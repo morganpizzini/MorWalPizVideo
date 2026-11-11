@@ -127,6 +127,7 @@ const ShortLinks: React.FC = () => {
         columns={columns}
         getRowId={link => link.shortLinkId}
         pageSize={10}
+        persistPaginationInUrl={false}
         searchPlaceholder="Search short links..."
         emptyMessage="No short links found"
       />

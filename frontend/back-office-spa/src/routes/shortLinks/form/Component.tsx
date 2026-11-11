@@ -103,6 +103,12 @@ const ShortLinkForm: React.FC = () => {
     }
   }, [busy, result, navigate, isEditMode, toast]);
 
+  useEffect(() => {
+    if (!busy && fetcher.data?.success === false) {
+      setShowModal(false);
+    }
+  }, [busy, fetcher.data]);
+
   const isDisabled = () => target.length === 0 || (isEditMode && code.trim().length === 0) || busy;
 
   const handleSubmit = (event: React.FormEvent) => {

@@ -35,6 +35,7 @@ const mockShortLinks: ShortLink[] = [
 ];
 
 const mockSubmit = vi.fn();
+const mockSetSearchParams = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,7 +46,7 @@ beforeEach(() => {
     data: undefined,
     submit: mockSubmit,
   } as any);
-  vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), vi.fn()] as any);
+  vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(), mockSetSearchParams] as any);
 });
 
 async function renderComponent() {
@@ -65,6 +66,26 @@ describe('ShortLinks Index', () => {
     await renderComponent();
     expect(screen.getByText('abc123')).toBeInTheDocument();
     expect(screen.getByText('xyz789')).toBeInTheDocument();
+  });
+
+  it('paginates without changing the route search parameters', async () => {
+    const links = Array.from({ length: 11 }, (_, index) => ({
+      ...mockShortLinks[0],
+      shortLinkId: String(index),
+      code: `code-${index + 1}`,
+    }));
+    vi.mocked(useLoaderData).mockReturnValue(links as ShortLink[]);
+
+    await renderComponent();
+    expect(screen.getByText('code-1')).toBeInTheDocument();
+    expect(screen.queryByText('code-11')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    expect(screen.getByText('code-11')).toBeInTheDocument();
+    expect(screen.queryByText('code-1')).not.toBeInTheDocument();
+    expect(mockSetSearchParams).not.toHaveBeenCalled();
   });
 
   it('renders Detail, Edit and Delete actions for each row', async () => {
