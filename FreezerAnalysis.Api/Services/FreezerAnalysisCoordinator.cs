@@ -1990,8 +1990,9 @@ public sealed class FreezerAnalysisCoordinator(
         using var image = new MemoryStream();
         await stream.CopyToAsync(image, cancellationToken);
         var bytes = image.ToArray();
+        ReadOnlySpan<byte> signature = [137, 80, 78, 71, 13, 10, 26, 10];
         if (bytes.Length < 8 ||
-            !bytes.AsSpan(0, 8).SequenceEqual([137, 80, 78, 71, 13, 10, 26, 10]))
+            !bytes.AsSpan(0, signature.Length).SequenceEqual(signature))
             throw new InvalidDataException("The artifact image is not a valid PNG.");
         return (artifact.Value.Manifest, bytes);
     }
