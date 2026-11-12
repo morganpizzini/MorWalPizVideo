@@ -5,6 +5,9 @@
  * @property yTChannelId - YouTube channel identifier
  */
 export type Channel = Readonly<{
+  /** Persisted channel document identifier; optional for legacy responses. */
+  id?: string;
+
   /** Unique identifier for the channel */
   channelId: string;
 
@@ -55,7 +58,7 @@ export type ChannelTerminology = {
 /**
  * Type for creating a new channel (all fields required except id which may be generated)
  */
-export type CreateChannelDTO = Omit<Channel, "channelId"> & {
+export type CreateChannelDTO = Omit<Channel, "channelId" | "id"> & {
   channelId?: string;
 };
 
@@ -63,7 +66,7 @@ export type CreateChannelDTO = Omit<Channel, "channelId"> & {
  * Type for updating an existing channel (all fields optional except id)
  */
 export type UpdateChannelDTO = Partial<
-  Omit<Channel, "channelId" | "yTChannelId">
+  Omit<Channel, "channelId" | "id">
 > & {
   channelId: string;
 };

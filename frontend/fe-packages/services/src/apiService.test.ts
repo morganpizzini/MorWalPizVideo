@@ -56,6 +56,42 @@ afterEach(() => {
 });
 
 describe("transport response contracts", () => {
+  it.each([
+    [
+      Response.json(
+        {
+          title: "One or more validation errors occurred.",
+          errors: { GoogleAnalyticsUrl: ["Analytics URL is invalid."] },
+          code: "validation_error",
+        },
+        { status: 400 },
+      ),
+      {
+        errors: ["One or more validation errors occurred."],
+        fieldErrors: { GoogleAnalyticsUrl: ["Analytics URL is invalid."] },
+      },
+    ],
+    [
+      new Response('{"errors":["invalid request"]}', {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+      { errors: ["invalid request"], fieldErrors: undefined },
+    ],
+    [
+      new Response("invalid request", { status: 400 }),
+      { errors: ["invalid request"] },
+    ],
+    [new Response("", { status: 400 }), { errors: [], fieldErrors: undefined }],
+  ])("reads admin 400 response bodies without losing status: %s", async (response, expected) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+
+    await expect(adminApiService.get("/api/channels")).resolves.toMatchObject({
+      ...expected,
+      status: 400,
+    });
+  });
+
   it("sends the selected channel for admin sponsor reads and mutations", async () => {
     const fetchMock = vi
       .fn()

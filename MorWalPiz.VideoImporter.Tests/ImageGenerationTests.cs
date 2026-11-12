@@ -188,6 +188,93 @@ public sealed class ImageGenerationTests
     }
 
     [Fact]
+    public void Startup_schema_failure_notifies_stops_and_never_resolves_main_window()
+    {
+        RunOnDesktopThread(async () =>
+        {
+            var originalDirectory = Directory.GetCurrentDirectory();
+            var directory = Path.Combine(Path.GetTempPath(), $"importer-startup-failure-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(directory);
+            App? application = null;
+            try
+            {
+                Directory.SetCurrentDirectory(directory);
+                var tenantContext = new TestTenantContext();
+                var database = new DatabaseService(tenantContext);
+                database.InitializeDatabase();
+                using (var context = database.CreateContext())
+                    context.Database.ExecuteSqlRaw("ALTER TABLE \"Tenants\" DROP COLUMN \"ChannelId\"");
+
+                var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["DOTNET_ENVIRONMENT"] = "Test",
+                    ["UseFake"] = "true"
+                }).Build();
+                DispatcherOperation? startupOperation = null;
+                void CaptureStartup(object? sender, DispatcherHookEventArgs args) => startupOperation = args.Operation;
+                var dispatcher = Dispatcher.CurrentDispatcher;
+                dispatcher.Hooks.OperationPosted += CaptureStartup;
+                try
+                {
+                    application = new App { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+                }
+                finally
+                {
+                    dispatcher.Hooks.OperationPosted -= CaptureStartup;
+                }
+                Assert.NotNull(startupOperation);
+                Assert.True(startupOperation.Abort());
+                application.InitializeComponent();
+
+                var mainWindowResolutionCount = 0;
+                var host = App.CreateHost(configuration, services =>
+                {
+                    services.AddSingleton<ITenantContext>(_ => tenantContext);
+                    services.AddSingleton<DatabaseService>(_ => database);
+                    services.AddSingleton<MainWindow>(_ =>
+                    {
+                        mainWindowResolutionCount++;
+                        throw new InvalidOperationException("Main window must not be resolved before schema readiness.");
+                    });
+                });
+                var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+                var startupFailure = await Assert.ThrowsAsync<DatabaseStartupException>(() =>
+                    application.StartHostAsync(host));
+
+                string? notification = null;
+                int? exitCode = null;
+                await application.HandleStartupFailureAsync(
+                    startupFailure,
+                    (message, _) => notification = message,
+                    code => exitCode = code);
+
+                Assert.Equal(0, mainWindowResolutionCount);
+                Assert.Contains("Tenants.ChannelId", notification, StringComparison.Ordinal);
+                Assert.Contains(database.DatabasePath, notification, StringComparison.Ordinal);
+                Assert.Equal(-1, exitCode);
+                Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
+                Assert.DoesNotContain("private secret", App.BuildStartupFailureMessage(
+                    database.DatabasePath,
+                    new DatabaseStartupException(
+                        DatabaseStartupStage.Migration,
+                        [],
+                        new InvalidOperationException("private secret"))));
+            }
+            finally
+            {
+                if (application is not null)
+                {
+                    await application.StopHostAsync();
+                    application.Shutdown();
+                }
+                Directory.SetCurrentDirectory(originalDirectory);
+                Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+                Directory.Delete(directory, true);
+            }
+        });
+    }
+
+    [Fact]
     public void Desktop_host_rejects_production_fake_mode()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

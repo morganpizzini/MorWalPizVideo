@@ -38,8 +38,91 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var response = await client.PutAsJsonAsync($"/api/Channels/{channelId}", new { channelName = "Updated name" });
     var updated = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.Equal("Updated name", updated!.ChannelName);
+  }
+
+  [Fact]
+  public async Task Channel_edit_changes_the_youtube_binding_and_preserves_stable_identity_and_analytics()
+  {
+    var stableChannelId = $"stable-{Guid.NewGuid():N}";
+    var channel = await _factory.YTChannelRepository!.AddItemAsync(
+      new YTChannel(stableChannelId, "Channel")
+      {
+        YTChannelId = "UC_OLD",
+        GoogleAnalyticsUrl = "https://analytics.example/property",
+        YouTubeStudioUrl = "https://legacy.example/studio"
+      });
+    using var client = CreateClient(
+      AuthorizationPermissionKeys.BackofficeManageAll,
+      PrimaryScenario.ChannelId);
+
+    var update = await client.PutAsJsonAsync($"/api/Channels/{stableChannelId}", new
+    {
+      channelName = "Updated channel",
+      yTChannelId = " UC_NEW ",
+      youTubeStudioUrl = "https://attacker.example"
+    });
+    var stored = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
+    var detail = await client.GetFromJsonAsync<ChannelContract>($"/api/Channels/{stableChannelId}");
+
+    Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
+    Assert.NotNull(stored);
+    Assert.Equal(stableChannelId, stored!.ChannelId);
+    Assert.Equal("UC_NEW", stored.YTChannelId);
+    Assert.Equal("https://analytics.example/property", stored.GoogleAnalyticsUrl);
+    Assert.Equal("https://legacy.example/studio", stored.YouTubeStudioUrl);
+    Assert.NotNull(detail);
+    Assert.Equal(channel.Id, detail!.Id);
+    Assert.Equal(stableChannelId, detail.ChannelId);
+    Assert.Equal("UC_NEW", detail.YTChannelId);
+    Assert.Equal("https://studio.youtube.com/channel/UC_NEW", detail.YouTubeStudioUrl);
+    Assert.Equal("https://analytics.example/property", detail.GoogleAnalyticsUrl);
+
+    var clearAnalytics = await client.PutAsJsonAsync($"/api/Channels/{stableChannelId}", new
+    {
+      channelName = "Updated channel",
+      googleAnalyticsUrl = " "
+    });
+    stored = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
+    Assert.Equal(HttpStatusCode.NoContent, clearAnalytics.StatusCode);
+    Assert.Equal(string.Empty, stored!.GoogleAnalyticsUrl);
+    Assert.Equal("UC_NEW", stored.YTChannelId);
+  }
+
+  [Fact]
+  public async Task Invalid_channel_fields_return_validation_problem_details_without_mutating_the_channel()
+  {
+    var stableChannelId = $"stable-{Guid.NewGuid():N}";
+    var channel = await _factory.YTChannelRepository!.AddItemAsync(
+      new YTChannel(stableChannelId, "Channel") { GoogleAnalyticsUrl = "https://analytics.example" });
+    using var client = CreateClient(
+      AuthorizationPermissionKeys.BackofficeManageAll,
+      PrimaryScenario.ChannelId);
+
+    var response = await client.PutAsJsonAsync($"/api/Channels/{stableChannelId}", new
+    {
+      channelName = "Should not persist",
+      yTChannelId = "https://youtube.example/channel/UC_BAD",
+      googleAnalyticsUrl = "https://analytics.example/property?query=value"
+    });
+    var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+    var analyticsResponse = await client.PutAsJsonAsync($"/api/Channels/{stableChannelId}", new
+    {
+      channelName = "Should not persist",
+      yTChannelId = "UC_VALID",
+      googleAnalyticsUrl = "https://analytics.example/property?query=value"
+    });
+    var analyticsProblem = await analyticsResponse.Content.ReadFromJsonAsync<JsonElement>();
+    var unchanged = await _factory.YTChannelRepository.GetItemAsync(channel.Id);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.True(problem.GetProperty("errors").TryGetProperty("yTChannelId", out _));
+    Assert.Equal(HttpStatusCode.BadRequest, analyticsResponse.StatusCode);
+    Assert.True(analyticsProblem.GetProperty("errors").TryGetProperty("GoogleAnalyticsUrl", out _));
+    Assert.NotNull(unchanged);
+    Assert.Equal(channel.ChannelName, unchanged!.ChannelName);
+    Assert.Equal(channel.GoogleAnalyticsUrl, unchanged.GoogleAnalyticsUrl);
   }
 
   [Fact]
@@ -53,6 +136,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Created channel",
       yTChannelId = channelId,
       shortLinkUrl = " https://morwalpiz.com/sl/ ",
+      googleAnalyticsUrl = "https://analytics.example/property",
       socials = new[] { new { provider = "Instagram", handler = "@created" }, new { provider = "X", handler = "created" } }
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
@@ -65,9 +149,10 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var updated = await _factory.YTChannelRepository.GetItemAsync(created.Id);
 
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
     Assert.Equal("https://morwalpiz.com/links", updated!.ShortLinkUrl);
+    Assert.Equal("https://analytics.example/property", updated.GoogleAnalyticsUrl);
     Assert.Equal("youtube", Assert.Single(updated.Socials).Provider);
   }
 
@@ -89,7 +174,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
     Assert.NotEqual("telegram-secret", created.SocialPublishing.Telegram.CredentialCiphertext);
     Assert.NotEmpty(created.SocialPublishing.Telegram.CredentialCiphertext);
 
@@ -106,7 +191,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Publishing channel updated"
     });
     var preserved = await _factory.YTChannelRepository.GetItemAsync(created.Id);
-    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
     Assert.Equal(created.SocialPublishing.Telegram.CredentialCiphertext, preserved!.SocialPublishing.Telegram.CredentialCiphertext);
     Assert.Equal("-100123", preserved.SocialPublishing.Telegram.DestinationId);
 
@@ -119,7 +204,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       }
     });
     var cleared = await _factory.YTChannelRepository.GetItemAsync(created.Id);
-    Assert.Equal(HttpStatusCode.OK, clearResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, clearResponse.StatusCode);
     Assert.Empty(cleared!.SocialPublishing.Telegram.CredentialCiphertext);
     Assert.Equal("-100123", cleared.SocialPublishing.Telegram.DestinationId);
   }
@@ -177,7 +262,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.True(created.IsSHIT);
   }
 
@@ -195,7 +280,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Cache test channel",
       yTChannelId = channelId
     });
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, createResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
 
@@ -205,13 +290,13 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
       channelName = "Cache test Shooting channel",
       isSHIT = true
     });
-    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
 
     _factory.CrossApiService.Clear();
     var deleteResponse = await client.DeleteAsync($"/api/Channels/{channelId}");
-    Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
     Assert.Equal(expectedPurgedTags, _factory.CrossApiService.PurgedTags);
   }
@@ -260,7 +345,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var removeResponse = await client.DeleteAsync($"/api/Channels/{channelId}/logo");
     var removed = (await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
-    Assert.Equal(HttpStatusCode.OK, removeResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
     Assert.Equal(string.Empty, removed!.ChannelLogoStorageKey);
     Assert.Equal(string.Empty, removed.ChannelLogoUrl);
     Assert.Equal(expectedResetKeys, _factory.CrossApiService.ResetKeys);
@@ -283,7 +368,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).Single();
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    Assert.True(payload.GetProperty("success").GetBoolean());
+    Assert.False(payload.TryGetProperty("success", out _));
     Assert.Equal("failed", payload.GetProperty("cacheInvalidation").GetProperty("status").GetString());
     Assert.Equal("public_cache_invalidation_failed", payload.GetProperty("cacheInvalidation").GetProperty("warningCode").GetString());
     Assert.Equal("Cache warning channel", created.ChannelName);
@@ -379,7 +464,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var stored = (await _factory.QuickLinksRepository!.GetItemsAsync()).Single(link => link.Url == slug);
     var detail = await client.GetFromJsonAsync<QuickLinksContract>($"/api/QuickLinks/{stored.Id}");
 
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.Equal(QuickLinkKind.YouTube, stored.Links.Single().Kind);
     Assert.Equal(QuickLinkKind.YouTube, detail!.Links.Single().Kind);
   }
@@ -495,7 +580,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     });
     var created = (await _factory.YTChannelRepository!.GetItemsAsync(channel => channel.ChannelId == channelId)).SingleOrDefault();
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.NotNull(created);
     Assert.Equal("Created channel", created!.ChannelName);
   }

@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { useFetcher, useNavigate, useParams, useSearchParams } from 'react-router';
-import { get } from '@morwalpizvideo/services';
 import { render } from '../../../test/test-utils';
 import Component from './Component';
 

@@ -115,12 +115,12 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     var updateResponse = await client.PutAsJsonAsync(
       $"/api/Channels/{ownedChannel.ChannelId}",
       new { channelName = "Renamed by owner" });
-    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
     var updated = await _factory.YTChannelRepository!.GetItemAsync(ownedChannel.Id);
     Assert.Equal("Renamed by owner", updated!.ChannelName);
 
     var deleteResponse = await client.DeleteAsync($"/api/Channels/{ownedChannel.ChannelId}");
-    Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
     var remaining = await _factory.YTChannelRepository.GetItemsAsync(channel => channel.ChannelId == ownedChannel.ChannelId);
     Assert.Empty(remaining);
   }
@@ -305,7 +305,7 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     {
       channelName = channelId, yTChannelId = channelId, publicBaseUrl = input
     });
-    Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, create.StatusCode);
     var stored = Assert.Single(await _factory.YTChannelRepository!.GetItemsAsync(c => c.ChannelId == channelId));
     Assert.Equal(expected, stored.PublicBaseUrl);
     Assert.Equal(expected, (await admin.GetFromJsonAsync<ChannelContract>($"/api/Channels/{channelId}"))!.PublicBaseUrl);
@@ -319,11 +319,11 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
       new { channelName = channelId, publicBaseUrl = (string?)null }
     })
     {
-      Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", payload)).StatusCode);
+      Assert.Equal(HttpStatusCode.NoContent, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", payload)).StatusCode);
       Assert.Equal(expected, (await _factory.YTChannelRepository.GetItemAsync(stored.Id))!.PublicBaseUrl);
     }
 
-    Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    Assert.Equal(HttpStatusCode.NoContent, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
     {
       channelName = channelId, publicBaseUrl = " https://updated.example:8443/ "
     })).StatusCode);
@@ -333,7 +333,7 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
       (await accessible.GetFromJsonAsync<List<ChannelContract>>("/api/Channels/accessible"))!,
       c => c.ChannelId == channelId).PublicBaseUrl);
 
-    Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
+    Assert.Equal(HttpStatusCode.NoContent, (await owner.PutAsJsonAsync($"/api/Channels/{channelId}", new
     {
       channelName = channelId, publicBaseUrl = " "
     })).StatusCode);
@@ -380,7 +380,17 @@ public sealed class ChannelTenancyAuthorizationTests : IClassFixture<BackOfficeW
     };
     var channel = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<YTChannel>(document);
     Assert.Equal("", channel.PublicBaseUrl);
+    Assert.Equal("legacy", channel.EffectiveYTChannelId);
     Assert.Equal("", MorWalPiz.Contracts.ContractUtils.Convert(channel).PublicBaseUrl);
+    Assert.Equal("https://studio.youtube.com/channel/legacy", MorWalPiz.Contracts.ContractUtils.Convert(channel).YouTubeStudioUrl);
+
+    document["yTChannelId"] = MongoDB.Bson.BsonNull.Value;
+    var nullBinding = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<YTChannel>(document);
+    Assert.Equal("legacy", nullBinding.EffectiveYTChannelId);
+
+    var bound = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<YTChannel>(
+      new YTChannel("legacy", "Legacy") { YTChannelId = "UC_EXTERNAL" }.ToBsonDocument());
+    Assert.Equal("UC_EXTERNAL", bound.EffectiveYTChannelId);
   }
 
   private async Task<YTChannel> AddChannelAsync(string channelId)

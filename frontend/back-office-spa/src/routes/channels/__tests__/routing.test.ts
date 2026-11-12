@@ -8,7 +8,8 @@ import indexAction from '../index/action';
 import selfLoader from '../self/loader';
 import selfEditAction from '../self/edit/action';
 
-vi.mock('@morwalpizvideo/services', () => ({
+vi.mock('@morwalpizvideo/services', async importOriginal => ({
+  ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
@@ -172,8 +173,6 @@ describe('channel route error handling', () => {
     expect(put).toHaveBeenCalledWith('/api/channels/channel-one', {
       channelId: 'channel-one',
       channelName: 'Updated',
-      youTubeStudioUrl: '',
-      googleAnalyticsUrl: '',
       shortLinkUrl: 'https://morwalpiz.com/sl',
       socials: [
         { provider: 'instagram', handler: '@morwalpiz' },
@@ -185,6 +184,77 @@ describe('channel route error handling', () => {
         facebook: { clearCredential: false },
       },
     });
+  });
+
+  it('sends Analytics and editable YouTube ID on create and update', async () => {
+    vi.mocked(post).mockResolvedValue({});
+    vi.mocked(put).mockResolvedValue({});
+
+    await formAction({
+      request: formRequest({
+        channelName: 'Channel',
+        yTChannelId: 'UC_NEW',
+        googleAnalyticsUrl: 'https://analytics.example/property',
+      }),
+      params: {},
+    } as never);
+    await formAction({
+      request: formRequest({
+        channelName: 'Channel',
+        yTChannelId: 'UC_UPDATED',
+        googleAnalyticsUrl: 'https://analytics.example/property',
+      }),
+      params: { id: 'stable-channel-key' },
+    } as never);
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/channels',
+      expect.objectContaining({
+        yTChannelId: 'UC_NEW',
+        googleAnalyticsUrl: 'https://analytics.example/property',
+      })
+    );
+    expect(put).toHaveBeenCalledWith(
+      '/api/channels/stable-channel-key',
+      expect.objectContaining({
+        channelId: 'stable-channel-key',
+        yTChannelId: 'UC_UPDATED',
+        googleAnalyticsUrl: 'https://analytics.example/property',
+      })
+    );
+  });
+
+  it('preserves Analytics when the form omits it and maps backend field messages', async () => {
+    vi.mocked(put).mockResolvedValue({
+      errors: ['One or more validation errors occurred.'],
+      fieldErrors: {
+        GoogleAnalyticsUrl: ['Analytics URL is invalid.'],
+        YTChannelId: ['Enter a YouTube channel ID.'],
+        UnknownField: ['Review this value.'],
+      },
+      status: 400,
+    } as never);
+
+    const result = await formAction({
+      request: formRequest({ channelName: 'Channel' }),
+      params: { id: 'stable-channel-key' },
+    } as never);
+
+    expect(put).toHaveBeenCalledWith(
+      '/api/channels/stable-channel-key',
+      expect.not.objectContaining({ googleAnalyticsUrl: expect.anything() })
+    );
+    expect(result).toMatchObject({
+      data: {
+        success: false,
+        errors: {
+          googleAnalyticsUrl: 'Analytics URL is invalid.',
+          yTChannelId: 'Enter a YouTube channel ID.',
+          generics: ['UnknownField: Review this value.'],
+        },
+      },
+    });
+    expect(responseStatus(result)).toBe(400);
   });
 
   it('sends replace and clear intent without requiring existing credentials', async () => {

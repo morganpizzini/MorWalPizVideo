@@ -6,6 +6,11 @@ import { lazyAction, lazyRoute } from '../lazyRoute';
 import { getRoutePermissions } from '../../authorization/permissions';
 import { withActionPermission, withDeferredPermission } from '../guards';
 import { createAsyncRouteComponent } from '../asyncData';
+import type { Channel } from '@morwalpizvideo/models';
+
+const channelBreadcrumbHandle = {
+  channelBreadcrumb: (channel: Channel | undefined) => channel?.id?.trim() || 'Channel',
+};
 
 const feature = (
   path: string,
@@ -171,8 +176,13 @@ const routeDefinitions: RouteConfig[] = [
       path: ':id',
       Component: Outlet,
       children: [
-        indexFeature('', () => import('../../routes/channels/detail')),
-        feature('edit', () => import('../../routes/channels/form')),
+        {
+          ...indexFeature('', () => import('../../routes/channels/detail')),
+          handle: channelBreadcrumbHandle,
+        },
+        feature('edit', () => import('../../routes/channels/form'), {
+          handle: channelBreadcrumbHandle,
+        }),
       ],
     },
   ]),

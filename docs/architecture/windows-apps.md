@@ -13,7 +13,8 @@ VideoImporter is a .NET 10 WPF application for tenant-aware local media preparat
 - Configuration loads JSON, user secrets, environment variables, and optional Key Vault.
 - YouTube upload is abstracted through `IYouTubeUploadService`.
 - A Generic Host owns configuration and DI; `IHttpClientFactory` creates the named BackOffice client used by `IApiServiceFactory`.
-- Startup resolves the constructor-injected `MainWindow` from the host after database, tenant, API settings, and upload-service initialization; `StartupUri` is no longer used.
+- Startup pins one absolute SQLite path, applies pending EF migrations, rejects migration history from a newer binary, and verifies the physical tables, columns, primary keys, indexes, and foreign keys against EF's relational model before resolving the main window or database consumers. Migration or schema failure shows a fatal Italian notification, disposes the host, and exits nonzero; startup does not recreate or repair the database.
+- Startup resolves the constructor-injected `MainWindow` from the host only after database readiness; `StartupUri` is no longer used. Remote-settings degraded mode is available only after the local schema passes this gate.
 - BackOffice calls preserve API-key authentication and existing DTOs.
 - Selected-channel general preferences, language/disclaimer values, and publish schedules synchronize through the versioned BackOffice settings endpoint. Remote Mongo data is authoritative; tenant-filtered SQLite remains a transactional working cache. An explicit scoped `204` is the only first-use seed signal, and user mutations are remotely acknowledged before local projection.
 - Connection endpoint/key and the selected local tenant/channel remain bootstrap state. The typed snapshot excludes credentials, provider tokens, machine paths, local IDs, hashtag history, and other operational state. Channel settings are read-only when no previously synchronized local state can safely be used and BackOffice cannot be reached.
@@ -76,7 +77,7 @@ InsightScanner is a .NET 10 WPF application that scans external sources and subm
 
 ## Testing Gaps
 
-Neither WPF application has a complete automated suite. VideoImporter now has a regression test that upgrades a database from the previous migration and loads tenants with the new channel column. Continue prioritizing tenant isolation, contract serialization, retry/cancellation behavior, and fake external providers before UI automation.
+Neither WPF application has a complete automated suite. VideoImporter tests cover migration upgrades, physical schema drift, unknown migration history, pinned database path, and fail-closed startup. These Windows/WPF tests must execute on Windows; cross-target compilation on Linux does not prove runtime startup. Continue prioritizing tenant isolation, contract serialization, retry/cancellation behavior, and fake external providers before UI automation.
 
 ## Desktop Slice 8 Verification (2026-10-01)
 

@@ -57,6 +57,14 @@ a valid HTTP/HTTPS origin. It displays explicit configuration/ownership feedback
 otherwise; there is no admin-relative or hardcoded-host fallback. Normal action
 revalidation refreshes the root accessible-channel store after saves.
 
+Channel editing keeps the stable tenant `channelId` out of editable identity
+controls and allows authorized editors to change the YouTube binding. The form
+derives the Studio URL rather than editing a persisted URL, round-trips the
+Google Analytics link, and associates API field errors with controls. Channel
+breadcrumbs display the document `id` while their links retain the stable
+`channelId` route. Normal 204 mutations and warning-only 200 responses are
+handled without requiring a redundant API `success` flag.
+
 Video edit has no editable "Match Type". Edit and detail acknowledge attached
 references as Empty Collection (0 videos), Single Video (1 video), or
 Collection (N videos). Edit uses its existing reference state after successful

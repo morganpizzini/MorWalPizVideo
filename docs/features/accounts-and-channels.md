@@ -167,6 +167,33 @@ readiness tests, admin authLoader and Script Studio callers/controllers.
 **20 readiness tests** and shared build passed; no deployed requests inspected.
 Manual prefix drift remains debt. Bundle rollback restores the original failure.
 
+## Channel identity and editing
+
+Implemented in the worktree; deployment, real-browser, and persistent-Mongo
+compatibility are not established:
+
+- Keep Mongo document `Id` as the breadcrumb label and `ChannelId` as the stable
+  tenant, ownership, authorization, route, and API-key key. Optional persisted
+  `YTChannelId` is the editable YouTube binding; legacy records fall back to
+  `ChannelId`. Scans use the effective binding but keep ownership/history under
+  the stable key. No tenant transfer or content/history migration occurs.
+- Shared responses derive the Studio URL from the effective binding. Channel
+  Analytics input is preserved when omitted/null and explicitly cleared by
+  blank input. Manual invalid values use field-keyed Validation Problem Details.
+- Normal channel mutations and logo deletion return 204 after cache invalidation;
+  cache degradation returns warning details, and logo upload retains its data
+  response. The SPA supports both 204 and warning-only 200 responses, maps field
+  errors to controls, and keeps stable channel route links under document-ID
+  breadcrumbs.
+- Focused evidence: backend channel/tenancy **37 passed**, shared transport
+  **24 passed**, SPA channel/breadcrumb **28 passed**, shared and SPA builds
+  passed. A broader backend selection found one unrelated QuickLinks test
+  expecting 200 while the endpoint returns 204; that code was not changed.
+- See [ADR-026](../architecture/adr/ADR-026-stable-channel-identity-and-youtube-binding.md)
+  for the accepted identity boundary and
+  [the implementation handoff](../feature-handoffs/channel-editing-and-response-contracts-handoff.md)
+  for validation and rollout gates.
+
 ## Public account directory sort
 
 Recorded delivered/focused-tested 2026-11-09:

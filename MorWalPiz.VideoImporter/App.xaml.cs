@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Azure.Identity;
 using MorWalPiz.VideoImporter.Models;
 using MorWalPiz.VideoImporter.Services;
@@ -46,25 +47,35 @@ namespace MorWalPiz.VideoImporter
         private ITenantContext? _tenantContext;
         private IYouTubeUploadService? _youTubeUploadService;
         private IConfiguration? _configuration;
+        private ILogger<App>? _logger;
         private Task _tenantRefreshTask = Task.CompletedTask;
         private bool _isStopping;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddUserSecrets<App>()
-                .AddEnvironmentVariables();
-            var initialConfiguration = configuration.Build();
-            var keyVaultUrl = initialConfiguration["KeyVaultUrl"];
-            if (!string.IsNullOrEmpty(keyVaultUrl))
-                configuration.AddAzureKeyVault(new Uri(keyVaultUrl), new DefaultAzureCredential());
+            try
+            {
+                var configuration = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddUserSecrets<App>()
+                    .AddEnvironmentVariables();
+                var initialConfiguration = configuration.Build();
+                var keyVaultUrl = initialConfiguration["KeyVaultUrl"];
+                if (!string.IsNullOrEmpty(keyVaultUrl))
+                    configuration.AddAzureKeyVault(new Uri(keyVaultUrl), new DefaultAzureCredential());
 
-            MainWindow = await StartHostAsync(CreateHost(configuration.Build()));
-            MainWindow.Show();
+                MainWindow = await StartHostAsync(CreateHost(configuration.Build()));
+                ShutdownMode = ShutdownMode.OnMainWindowClose;
+                MainWindow.Show();
+            }
+            catch (Exception exception)
+            {
+                await HandleStartupFailureAsync(exception);
+            }
         }
 
         internal static IHost CreateHost(IConfiguration configuration, Action<IServiceCollection>? configureServices = null)
@@ -128,6 +139,7 @@ namespace MorWalPiz.VideoImporter
         internal async Task<MainWindow> StartHostAsync(IHost host, Action<DatabaseService>? initializeDatabase = null)
         {
             _host = host;
+            _logger = _host.Services.GetService<ILogger<App>>();
             await _host.StartAsync();
             Configuration = _host.Services.GetRequiredService<IConfiguration>();
             TenantContext = _host.Services.GetRequiredService<ITenantContext>();
@@ -161,8 +173,156 @@ namespace MorWalPiz.VideoImporter
 
         protected override async void OnExit(ExitEventArgs e)
         {
-            await StopHostAsync();
-            base.OnExit(e);
+            try
+            {
+                await StopHostAsync();
+            }
+            catch (Exception exception)
+            {
+                LogCleanupFailure(exception);
+            }
+            finally
+            {
+                base.OnExit(e);
+            }
+        }
+
+        internal async Task HandleStartupFailureAsync(
+            Exception exception,
+            Action<string, string>? showNotification = null,
+            Action<int>? shutdown = null)
+        {
+            LogStartupFailure(exception);
+            try
+            {
+                await StopHostAsync();
+            }
+            catch (Exception cleanupException)
+            {
+                LogCleanupFailure(cleanupException);
+            }
+
+            try
+            {
+                var message = BuildStartupFailureMessage(GetStartupDatabasePath(), exception);
+                (showNotification ?? ShowStartupFailureNotification)(message, "Errore di avvio");
+            }
+            catch (Exception notificationException)
+            {
+                System.Diagnostics.Trace.TraceError(
+                    "VideoImporter startup notification failed. Failure type: {0}",
+                    notificationException.GetType().Name);
+            }
+            finally
+            {
+                (shutdown ?? Shutdown)(-1);
+            }
+        }
+
+        internal static string BuildStartupFailureMessage(string databasePath, Exception exception)
+        {
+            var description = exception is DatabaseStartupException databaseException
+                ? databaseException.Stage switch
+                {
+                    DatabaseStartupStage.MigrationHistory => "La cronologia delle migrazioni non è compatibile con questa versione.",
+                    DatabaseStartupStage.Migration => "La migrazione del database non è riuscita.",
+                    DatabaseStartupStage.MigrationVerification => "Non è stato possibile verificare le migrazioni applicate.",
+                    DatabaseStartupStage.SchemaVerification => "Lo schema del database non corrisponde a quello richiesto."
+                }
+                : "L'inizializzazione dell'applicazione non è riuscita.";
+            var details = exception is DatabaseStartupException { Details.Count: > 0 } failure
+                ? $"\nDettagli: {string.Join(", ", failure.Details)}"
+                : string.Empty;
+
+            return $"VideoImporter non può avviarsi e verrà chiuso.\n\n{description}{details}\n\nDatabase: {databasePath}";
+        }
+
+        private static void ShowStartupFailureNotification(string message, string title) =>
+            System.Windows.MessageBox.Show(
+                message,
+                title,
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+
+        private void LogStartupFailure(Exception exception)
+        {
+            var stage = exception is DatabaseStartupException databaseException
+                ? databaseException.Stage.ToString()
+                : "ApplicationStartup";
+            var details = exception is DatabaseStartupException { Details.Count: > 0 } failure
+                ? string.Join(", ", failure.Details)
+                : string.Empty;
+            var databasePath = GetStartupDatabasePath();
+            if (_logger is not null)
+            {
+                try
+                {
+                    _logger.LogCritical(
+                        "VideoImporter startup failed at {StartupStage} for {DatabasePath}. Failure type: {FailureType}. Schema or migration details: {FailureDetails}",
+                        stage,
+                        databasePath,
+                        exception.GetType().Name,
+                        details);
+                    return;
+                }
+                catch (Exception)
+                {
+                    System.Diagnostics.Trace.TraceError(
+                        "VideoImporter startup failure logging failed at {0} for {1}. Failure type: {2}",
+                        stage,
+                        databasePath,
+                        exception.GetType().Name);
+                    return;
+                }
+            }
+
+            System.Diagnostics.Trace.TraceError(
+                "VideoImporter startup failed at {0} for {1}. Failure type: {2}. Schema or migration details: {3}",
+                stage,
+                databasePath,
+                exception.GetType().Name,
+                details);
+        }
+
+        private void LogCleanupFailure(Exception exception)
+        {
+            var logger = _logger;
+            if (logger is not null)
+            {
+                try
+                {
+                    logger.LogError(
+                        "VideoImporter host cleanup failed. Failure type: {FailureType}",
+                        exception.GetType().Name);
+                    return;
+                }
+                catch (Exception)
+                {
+                    System.Diagnostics.Trace.TraceError(
+                        "VideoImporter host cleanup logging failed. Failure type: {0}",
+                        exception.GetType().Name);
+                    return;
+                }
+            }
+
+            System.Diagnostics.Trace.TraceError(
+                "VideoImporter host cleanup failed. Failure type: {0}",
+                exception.GetType().Name);
+        }
+
+        private string GetStartupDatabasePath()
+        {
+            if (DatabaseService is not null)
+                return DatabaseService.DatabasePath;
+
+            try
+            {
+                return Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "VideoImporter.db"));
+            }
+            catch (Exception)
+            {
+                return "VideoImporter.db";
+            }
         }
 
         internal async Task StopHostAsync()

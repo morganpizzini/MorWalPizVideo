@@ -57,6 +57,10 @@ create it. Deployment is backend/index/API-key scopes first, importer last.
 
 - BackOffice owns the durable value; desktop local values are a recoverable
   projection/cache.
+- Local cache access and remote-settings degraded mode are available only after
+  VideoImporter startup has applied migrations and verified the physical SQLite
+  schema. A migration-history/schema mismatch blocks all interactive use; the
+  importer does not recreate or automatically repair the local database.
 - An older BackOffice without the endpoint is a failure, never a first-use
   signal. New importers continue to display local cached data and show a
   degraded status.

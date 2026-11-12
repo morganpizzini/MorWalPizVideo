@@ -39,6 +39,9 @@ public class UpdateChannelRequest
     [Required]
     public string ChannelName { get; set; } = string.Empty;
 
+    [JsonPropertyName("yTChannelId")]
+    public string? YTChannelId { get; set; }
+
     public string? ShortLinkUrl { get; set; }
     public string? PublicBaseUrl { get; set; }
 
@@ -140,7 +143,12 @@ public class ChannelsController : ApplicationControllerBase
         if (!ChannelTerminologyRules.TryNormalize(request.ItalianToEnglish, out var italianToEnglish, out var error) ||
             !ChannelTerminologyRules.TryNormalize(request.InvariantEnglish, out var invariantEnglish, out error))
         {
-            return BadRequest(error);
+            var field = ChannelTerminologyRules.TryNormalize(
+                request.ItalianToEnglish, out _, out _)
+                ? nameof(request.InvariantEnglish)
+                : nameof(request.ItalianToEnglish);
+            ModelState.AddModelError(field, error ?? "Terminology is invalid.");
+            return ValidationProblem(ModelState);
         }
 
         var context = HttpContext.GetChannelContext();
@@ -188,42 +196,53 @@ public class ChannelsController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ChannelsAdmin)]
     public async Task<IActionResult> AddChannel(AddChannelRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.ChannelName))
+        {
+            return InvalidField(nameof(request.ChannelName), "Channel name cannot be empty.");
+        }
+
         var publicBaseUrl = NormalizePublicBaseUrl(request.PublicBaseUrl);
         if (publicBaseUrl is null)
         {
-            return BadRequest("Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
+            return InvalidField(nameof(request.PublicBaseUrl), "Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
         }
         var channelId = request.YTChannelId is null
             ? await ytService.GetChannelId(request.ChannelName.Trim())
             : request.YTChannelId.Trim();
 
-        if (string.IsNullOrWhiteSpace(channelId))
+        if (!TryNormalizeYTChannelId(channelId, out var ytChannelId))
         {
-            return BadRequest("YouTube channel ID is required");
+            return InvalidField("yTChannelId", "Enter a YouTube channel ID, not a URL or path.");
         }
         var shortLinkUrl = NormalizeShortLinkUrl(request.ShortLinkUrl);
         if (shortLinkUrl is null)
         {
-            return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
+            return InvalidField(nameof(request.ShortLinkUrl), "Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
         }
-        var socials = NormalizeSocials(request.Socials);
-        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers are allowed.");
-        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, null, channelId, out var publishingError);
-        if (publishingError is not null) return BadRequest(publishingError);
-        var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
-        if (externalLinks is null) return BadRequest("Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
+        var socials = NormalizeSocials(request.Socials, out var socialField);
+        if (socials is null)
+            return InvalidField(socialField ?? "Socials", "Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers with handlers are allowed.");
+        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, null, channelId, out var publishingError, out var publishingField);
+        if (publishingError is not null) return InvalidField(publishingField ?? "SocialPublishing", publishingError);
+        var googleAnalyticsUrl = request.GoogleAnalyticsUrl is null
+            ? string.Empty
+            : NormalizeExternalAnalyticsLink(request.GoogleAnalyticsUrl);
+        if (googleAnalyticsUrl is null)
+            return InvalidField(nameof(request.GoogleAnalyticsUrl), "Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
         await _dataService.SaveChannel(new YTChannel(channelId, request.ChannelName.Trim())
         {
+            YTChannelId = ytChannelId,
             ShortLinkUrl = shortLinkUrl,
             PublicBaseUrl = publicBaseUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
-            YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
-            GoogleAnalyticsUrl = externalLinks.Value.GoogleAnalyticsUrl,
+            GoogleAnalyticsUrl = googleAnalyticsUrl,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
-        return Ok(new { success = true, cacheInvalidation });
+        return cacheInvalidation.Status == "failed"
+            ? Ok(new { cacheInvalidation })
+            : NoContent();
     }
 
     [HttpPut("{id}")]
@@ -241,37 +260,68 @@ public class ChannelsController : ApplicationControllerBase
             return NotFound();
         }
 
+        if (string.IsNullOrWhiteSpace(request.ChannelName))
+        {
+            return InvalidField(nameof(request.ChannelName), "Channel name cannot be empty.");
+        }
+
         var shortLinkUrl = NormalizeShortLinkUrl(request.ShortLinkUrl);
         if (shortLinkUrl is null)
         {
-            return BadRequest("Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
+            return InvalidField(nameof(request.ShortLinkUrl), "Short link URL must be an absolute HTTP or HTTPS base URL without a query or fragment.");
         }
         var publicBaseUrl = request.PublicBaseUrl is null
             ? existing.PublicBaseUrl
             : NormalizePublicBaseUrl(request.PublicBaseUrl);
         if (publicBaseUrl is null)
         {
-            return BadRequest("Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
+            return InvalidField(nameof(request.PublicBaseUrl), "Public base URL must be an HTTP or HTTPS origin without credentials, paths, query strings, or fragments.");
         }
-        var socials = NormalizeSocials(request.Socials);
-        if (socials is null) return BadRequest("Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers are allowed.");
-        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError);
-        if (publishingError is not null) return BadRequest(publishingError);
-        var externalLinks = NormalizeExternalAnalyticsLinks(request.YouTubeStudioUrl, request.GoogleAnalyticsUrl);
-        if (externalLinks is null) return BadRequest("Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
+        string? ytChannelId = existing.YTChannelId;
+        if (request.YTChannelId is not null &&
+            !TryNormalizeYTChannelId(request.YTChannelId, out ytChannelId))
+        {
+            return InvalidField("yTChannelId", "Enter a YouTube channel ID, not a URL or path.");
+        }
+        var socials = NormalizeSocials(request.Socials, out var socialField);
+        if (socials is null)
+            return InvalidField(socialField ?? "Socials", "Only Instagram, YouTube, Reddit, X, Patreon, Facebook, Telegram, and Discord providers with handlers are allowed.");
+        var socialPublishing = BuildSocialPublishing(request.SocialPublishing, existing.SocialPublishing, existing.ChannelId, out var publishingError, out var publishingField);
+        if (publishingError is not null) return InvalidField(publishingField ?? "SocialPublishing", publishingError);
+        var googleAnalyticsUrl = request.GoogleAnalyticsUrl is null
+            ? existing.GoogleAnalyticsUrl
+            : NormalizeExternalAnalyticsLink(request.GoogleAnalyticsUrl);
+        if (googleAnalyticsUrl is null)
+            return InvalidField(nameof(request.GoogleAnalyticsUrl), "Analytics links must be absolute HTTPS URLs without credentials, query strings, or fragments.");
         await _dataService.UpdateChannel(existing with
         {
             ChannelName = request.ChannelName.Trim(),
+            YTChannelId = ytChannelId,
             ShortLinkUrl = shortLinkUrl,
             PublicBaseUrl = publicBaseUrl,
             Socials = socials,
             SocialPublishing = socialPublishing,
-            YouTubeStudioUrl = externalLinks.Value.YouTubeStudioUrl,
-            GoogleAnalyticsUrl = externalLinks.Value.GoogleAnalyticsUrl,
+            GoogleAnalyticsUrl = googleAnalyticsUrl,
             IsSHIT = request.IsSHIT
         });
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
-        return Ok(new { success = true, cacheInvalidation });
+        return cacheInvalidation.Status == "failed"
+            ? Ok(new { cacheInvalidation })
+            : NoContent();
+    }
+
+    private IActionResult InvalidField(string field, string message)
+    {
+        ModelState.AddModelError(field, message);
+        return ValidationProblem(ModelState);
+    }
+
+    private static bool TryNormalizeYTChannelId(string? value, out string normalized)
+    {
+        normalized = value?.Trim() ?? string.Empty;
+        return normalized.Length > 0 &&
+            normalized.All(character =>
+                char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
     }
 
     private static string? NormalizePublicBaseUrl(string? value)
@@ -285,13 +335,6 @@ public class ChannelsController : ApplicationControllerBase
             !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
             return null;
         return uri.GetLeftPart(UriPartial.Authority);
-    }
-
-    private static (string YouTubeStudioUrl, string GoogleAnalyticsUrl)? NormalizeExternalAnalyticsLinks(string? youtubeStudioUrl, string? googleAnalyticsUrl)
-    {
-        var youtube = NormalizeExternalAnalyticsLink(youtubeStudioUrl);
-        var analytics = NormalizeExternalAnalyticsLink(googleAnalyticsUrl);
-        return youtube is null || analytics is null ? null : (youtube, analytics);
     }
 
     private static string? NormalizeExternalAnalyticsLink(string? value)
@@ -320,7 +363,9 @@ public class ChannelsController : ApplicationControllerBase
 
         await _dataService.RemoveChannelById(id);
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
-        return Ok(new { success = true, cacheInvalidation });
+        return cacheInvalidation.Status == "failed"
+            ? Ok(new { cacheInvalidation })
+            : NoContent();
     }
 
     [HttpPost("{id}/logo")]
@@ -330,39 +375,42 @@ public class ChannelsController : ApplicationControllerBase
         if (!await channelAuthorization.CanManageChannelAsync(User, id))
             return NotFound();
         if (logo is null || logo.Length == 0)
-            return BadRequest("A PNG logo is required.");
+            return InvalidField("logo", "A PNG logo is required.");
 
         var existing = await _dataService.GetChannelById(id);
         if (existing is null)
             return NotFound();
 
+        PreparedChannelNewsImage prepared;
         try
         {
             await using var input = logo.OpenReadStream();
-            var prepared = await ChannelNewsMediaProcessor.PrepareLogoAsync(input);
-            var storageKey = $"channel-logos/{existing.ChannelId}/{Guid.NewGuid():N}{prepared.Extension}";
-            await blobService.UploadImagesAsync(storageKey, prepared.Content, false);
-            await _dataService.UpdateChannel(existing with
-            {
-                ChannelLogoStorageKey = storageKey,
-                ChannelLogoUrl = blobService.GetImageUrl(storageKey)
-            });
-            var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
-            return Ok(new
-            {
-                success = true,
-                channel = ContractUtils.Convert(existing with
-                {
-                    ChannelLogoStorageKey = storageKey,
-                    ChannelLogoUrl = blobService.GetImageUrl(storageKey)
-                }),
-                cacheInvalidation
-            });
+            prepared = await ChannelNewsMediaProcessor.PrepareLogoAsync(input);
         }
-        catch (Exception exception)
+        catch (InvalidDataException)
         {
-            return BadRequest($"The channel logo is not a valid PNG: {exception.Message}");
+            return InvalidField("logo", "The channel logo must be a valid PNG image.");
         }
+        catch (SixLabors.ImageSharp.InvalidImageContentException)
+        {
+            return InvalidField("logo", "The channel logo must be a valid PNG image.");
+        }
+
+        using var preparedContent = prepared.Content;
+        var storageKey = $"channel-logos/{existing.ChannelId}/{Guid.NewGuid():N}{prepared.Extension}";
+        var updated = existing with
+        {
+            ChannelLogoStorageKey = storageKey,
+            ChannelLogoUrl = blobService.GetImageUrl(storageKey)
+        };
+        await blobService.UploadImagesAsync(storageKey, preparedContent, false);
+        await _dataService.UpdateChannel(updated);
+        var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
+        return Ok(new
+        {
+            channel = ContractUtils.Convert(updated),
+            cacheInvalidation
+        });
     }
 
     [HttpDelete("{id}/logo")]
@@ -382,7 +430,9 @@ public class ChannelsController : ApplicationControllerBase
             await blobService.DeleteImageAsync(existing.ChannelLogoStorageKey);
         }
         var cacheInvalidation = await TryInvalidatePublicShootingItaCachesAsync();
-        return Ok(new { success = true, cacheInvalidation });
+        return cacheInvalidation.Status == "failed"
+            ? Ok(new { cacheInvalidation })
+            : NoContent();
     }
 
     private async Task<CacheInvalidationResult> TryInvalidatePublicShootingItaCachesAsync()
@@ -425,6 +475,8 @@ public class ChannelsController : ApplicationControllerBase
             PublicBaseUrl = contract.PublicBaseUrl,
             IsSHIT = contract.IsSHIT,
             ChannelLogoUrl = contract.ChannelLogoUrl,
+            YouTubeStudioUrl = contract.YouTubeStudioUrl,
+            GoogleAnalyticsUrl = contract.GoogleAnalyticsUrl,
             Socials = contract.Socials,
             Videos = contract.Videos,
             SocialPublishing = new SocialPublishingManagementContract
@@ -447,16 +499,21 @@ public class ChannelsController : ApplicationControllerBase
         SocialPublishingConfigurationRequest? request,
         SocialPublishingConfiguration? existing,
         string channelId,
-        out string? error)
+        out string? error,
+        out string? errorField)
     {
         request ??= new SocialPublishingConfigurationRequest();
         existing ??= new SocialPublishingConfiguration();
         request.Telegram ??= new SocialPublishingProviderRequest();
         request.Discord ??= new SocialPublishingProviderRequest();
         request.Facebook ??= new SocialPublishingProviderRequest();
-        error = ValidateProviderRequest(request.Telegram, "Telegram")
-            ?? ValidateProviderRequest(request.Discord, "Discord")
-            ?? ValidateProviderRequest(request.Facebook, "Facebook");
+        errorField = null;
+        error = ValidateProviderRequest(request.Telegram, "Telegram");
+        if (error is not null) errorField = "SocialPublishing.Telegram.Credential";
+        error ??= ValidateProviderRequest(request.Discord, "Discord");
+        if (error is not null && errorField is null) errorField = "SocialPublishing.Discord.Credential";
+        error ??= ValidateProviderRequest(request.Facebook, "Facebook");
+        if (error is not null && errorField is null) errorField = "SocialPublishing.Facebook.Credential";
         if (error is not null)
         {
             return existing;
@@ -494,15 +551,34 @@ public class ChannelsController : ApplicationControllerBase
             ? $"{provider} credential cannot be replaced and cleared in the same request."
             : null;
 
-    private static List<ChannelSocial>? NormalizeSocials(IEnumerable<ChannelSocialRequest>? requests)
+    private static List<ChannelSocial>? NormalizeSocials(
+        IEnumerable<ChannelSocialRequest>? requests,
+        out string? errorField)
     {
         var allowed = new[] { "instagram", "youtube", "reddit", "x", "patreon", "facebook", "telegram", "discord" };
         var result = new List<ChannelSocial>();
+        errorField = null;
+        var index = 0;
         foreach (var request in requests ?? [])
         {
-            var provider = request.Provider.Trim().ToLowerInvariant();
-            if (!allowed.Contains(provider, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(request.Handler)) return null;
+            if (request is null)
+            {
+                errorField = $"Socials[{index}]";
+                return null;
+            }
+            var provider = request.Provider?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(provider) || !allowed.Contains(provider, StringComparer.Ordinal))
+            {
+                errorField = $"Socials[{index}].Provider";
+                return null;
+            }
+            if (string.IsNullOrWhiteSpace(request.Handler))
+            {
+                errorField = $"Socials[{index}].Handler";
+                return null;
+            }
             result.Add(new ChannelSocial { Provider = provider, Handler = request.Handler.Trim() });
+            index++;
         }
         return result.GroupBy(s => s.Provider, StringComparer.Ordinal).Select(g => g.Last()).ToList();
     }

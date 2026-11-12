@@ -136,7 +136,7 @@ namespace MorWalPizVideo.BackOffice.Services
       var videoCount = videos > 0 ? Math.Min(videos, MaxVideosPerScan) : DefaultVideosPerScan;
       var commentCount = commentsNumber > 0 ? Math.Min(commentsNumber, MaxCommentsPerVideo) : DefaultCommentsPerVideo;
 
-      var channelComments = await _ytService.GetChannelComments(channel.ChannelId, videoCount, commentCount, showVideo: true);
+      var channelComments = await _ytService.GetChannelComments(channel.EffectiveYTChannelId, videoCount, commentCount, showVideo: true);
       var processedVideos = channel.Videos?.ToList() ?? new List<YouTubeVideo>();
       var videoMetadata = await FetchVideoMetadataAsync(channelComments.Videos.Select(video => video.VideoId));
       var candidates = new List<InsightNewsItem>();
@@ -214,7 +214,7 @@ namespace MorWalPizVideo.BackOffice.Services
       {
         var channel = await _insightsService.GetChannelByIdAsync(request.ChannelId);
         if (channel == null) return response;
-        var comments = await _ytService.GetChannelComments(channel.ChannelId, 10, commentCount, showVideo: true);
+        var comments = await _ytService.GetChannelComments(channel.EffectiveYTChannelId, 10, commentCount, showVideo: true);
         var videoMetadata = await FetchVideoMetadataAsync(comments.Videos.Select(video => video.VideoId));
         videos.AddRange(comments.Videos.Select(video =>
           (video.VideoId,

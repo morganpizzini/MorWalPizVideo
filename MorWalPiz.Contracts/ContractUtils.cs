@@ -124,14 +124,14 @@ namespace MorWalPiz.Contracts
             {
                 Id = entity.Id,
                 ChannelId = entity.ChannelId,
-                YTChannelId = entity.ChannelId,
+                YTChannelId = entity.EffectiveYTChannelId,
                 ChannelName = entity.ChannelName,
                 Videos = entity.Videos?.Select(Convert).ToArray() ?? [],
                 ShortLinkUrl = entity.ShortLinkUrl,
                 PublicBaseUrl = entity.PublicBaseUrl,
                 IsSHIT = entity.IsSHIT,
                 ChannelLogoUrl = entity.ChannelLogoUrl,
-                YouTubeStudioUrl = entity.YouTubeStudioUrl,
+                YouTubeStudioUrl = $"https://studio.youtube.com/channel/{Uri.EscapeDataString(entity.EffectiveYTChannelId)}",
                 GoogleAnalyticsUrl = entity.GoogleAnalyticsUrl,
                 Socials = entity.Socials?.Select(s => new ChannelSocialContract
                 {

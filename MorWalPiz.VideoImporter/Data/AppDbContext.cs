@@ -8,6 +8,7 @@ namespace MorWalPiz.VideoImporter.Data
   public class AppDbContext : DbContext
   {
     private readonly ITenantContext _tenantContext;
+    private readonly string? _databasePath;
 
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Language> Languages { get; set; }
@@ -26,10 +27,15 @@ namespace MorWalPiz.VideoImporter.Data
       _tenantContext = tenantContext;
     }
 
+    public AppDbContext(ITenantContext tenantContext, string databasePath)
+    {
+      _tenantContext = tenantContext;
+      _databasePath = databasePath;
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-      // Configura il database SQLite, salvandolo nella cartella dell'applicazione
-      string dbPath = Path.Combine(Directory.GetCurrentDirectory(), "VideoImporter.db");
+      string dbPath = _databasePath ?? Path.Combine(Directory.GetCurrentDirectory(), "VideoImporter.db");
       optionsBuilder.UseSqlite($"Data Source={dbPath}");
     }
 

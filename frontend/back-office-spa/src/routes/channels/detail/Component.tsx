@@ -17,7 +17,7 @@ import PageHeader from '@components/PageHeader';
 import GenericErrorList from '@components/GenericErrorList';
 import { useChannelContext } from '../../../contexts/ChannelContext';
 import { PageSkeleton } from '@components/LoadingSkeleton';
-import { hasCacheInvalidationWarning } from '../response';
+import { getChannelApiError, hasCacheInvalidationWarning } from '../response';
 
 const ChannelDetail: React.FC = () => {
   const entity = useResolvedLoaderData<Channel>();
@@ -142,10 +142,15 @@ const ChannelDetail: React.FC = () => {
         ComposeUrl(endpoints.CHANNEL_LOGO, { channelId: entity.channelId }),
         formData
       );
-      if (response?.errors) {
+      const apiError = getChannelApiError(response);
+      if (apiError) {
+        const fieldMessages = Object.values(apiError.fieldErrors ?? {}).flat().map(String);
+        const messages = fieldMessages.length
+          ? fieldMessages
+          : (apiError.errors ?? []).map(String);
         toast.show(
           'Logo upload failed',
-          String(response.errors[0] ?? 'Unable to upload channel logo'),
+          messages[0] ?? 'Unable to upload channel logo',
           { variant: 'danger' }
         );
         return;
@@ -162,8 +167,12 @@ const ChannelDetail: React.FC = () => {
           { variant: 'warning' }
         );
       }
-    } catch {
-      toast.show('Logo upload failed', 'Unable to upload channel logo', { variant: 'danger' });
+    } catch (error) {
+      toast.show(
+        'Logo upload failed',
+        error instanceof Error ? error.message : 'Unable to upload channel logo',
+        { variant: 'danger' }
+      );
     } finally {
       setLogoBusy(false);
     }
@@ -175,10 +184,15 @@ const ChannelDetail: React.FC = () => {
       const response = await Delete(
         ComposeUrl(endpoints.CHANNEL_LOGO, { channelId: entity.channelId })
       );
-      if (response?.errors) {
+      const apiError = getChannelApiError(response);
+      if (apiError) {
+        const fieldMessages = Object.values(apiError.fieldErrors ?? {}).flat().map(String);
+        const messages = fieldMessages.length
+          ? fieldMessages
+          : (apiError.errors ?? []).map(String);
         toast.show(
           'Logo removal failed',
-          String(response.errors[0] ?? 'Unable to remove channel logo'),
+          messages[0] ?? 'Unable to remove channel logo',
           { variant: 'danger' }
         );
         return;
@@ -194,8 +208,12 @@ const ChannelDetail: React.FC = () => {
           { variant: 'warning' }
         );
       }
-    } catch {
-      toast.show('Logo removal failed', 'Unable to remove channel logo', { variant: 'danger' });
+    } catch (error) {
+      toast.show(
+        'Logo removal failed',
+        error instanceof Error ? error.message : 'Unable to remove channel logo',
+        { variant: 'danger' }
+      );
     } finally {
       setLogoBusy(false);
     }

@@ -89,6 +89,62 @@ function problemDetailsMessage(payload: unknown): string | null {
   );
 }
 
+async function readAdminBadRequest(response: Response) {
+  const rawBody = await response.text();
+  let payload: unknown;
+  if (rawBody.trim()) {
+    try {
+      payload = JSON.parse(rawBody) as unknown;
+    } catch {
+      payload = rawBody.trim();
+    }
+  }
+
+  if (typeof payload === "string") {
+    return {
+      errors: payload.trim() ? [payload.trim()] : [],
+      status: response.status,
+      channelContextError: false,
+    };
+  }
+
+  const record =
+    typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>)
+      : undefined;
+  const validationErrors = record?.errors;
+  const fieldErrors =
+    typeof validationErrors === "object" &&
+    validationErrors !== null &&
+    !Array.isArray(validationErrors)
+      ? (validationErrors as Record<string, unknown>)
+      : typeof record?.fieldErrors === "object" &&
+          record.fieldErrors !== null &&
+          !Array.isArray(record.fieldErrors)
+        ? (record.fieldErrors as Record<string, unknown>)
+        : undefined;
+  const message = problemDetailsMessage(record) ??
+    (typeof record?.message === "string" ? record.message : null);
+  const errors = Array.isArray(validationErrors)
+    ? validationErrors
+    : message
+      ? [message]
+      : !fieldErrors && record
+        ? Object.values(record).flatMap((value) =>
+            Array.isArray(value) ? value : value === undefined ? [] : [value],
+          )
+        : [];
+
+  return {
+    errors,
+    fieldErrors,
+    status: response.status,
+    channelContextError:
+      record?.code === "channel_context_required" ||
+      record?.code === "channel_context_unavailable",
+  };
+}
+
 export function isScopedBackOfficeRequest(url: string): boolean {
   const normalizedUrl = `/${url.split("?")[0].toLowerCase().replace(/^\/+/, "")}`;
   if (
@@ -1043,6 +1099,9 @@ export function createApiClient({
           const errorMessages = [];
           switch (response.status) {
             case 400: {
+              if (mode === "admin") {
+                return readAdminBadRequest(response);
+              }
               const parsedResponse = await response.json();
               const problemMessage = problemDetailsMessage(parsedResponse);
               if (problemMessage) {

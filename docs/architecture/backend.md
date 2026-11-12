@@ -125,6 +125,14 @@ BackOffice channel selection is explicit. `GET /api/channels/accessible` returns
 
 `ChannelsController`'s `GetChannel`/`UpdateChannel`/`RemoveChannel` and logo operations manage the channel identified by the route `id` itself, so they authorize via `IVideoAuthorizationService.CanManageChannelAsync` (role or ownership of that channel) instead of `RequireChannelScope`/`X-Channel-Id`. The SPA self-service route resolves only the selected accessible channel and reuses these ownership checks; it cannot choose an arbitrary ID or change ownership/identity. User channel assignment (`PUT /api/rbac/users/{id}/channels`) is restricted to `backoffice.manageall` and is blocked during impersonation.
 
+The Mongo document `Id` is display/navigation metadata; `ChannelId` remains the
+stable tenant and route key. Optional `YTChannelId` stores the editable external
+YouTube binding and falls back to `ChannelId` for legacy records. Channel edits
+do not transfer tenant ownership, content, API-key bindings, or scan history.
+YouTube scans use the effective external binding but persist attribution and
+history against the stable tenant key. The legacy stored Studio URL is not
+authoritative; shared responses derive it from the effective binding.
+
 The effective impersonated target identity is used for channel ownership and content authorization, while the actor remains the audit and CSRF identity. Administrators can select any channel; normal users are limited to owned channels. Video collaborators retain read access but not mutation access. Compilation management is channel-scoped, but readable videos from other accessible channels may be included. Public compilation URLs are anonymous and globally resolved, so their route and output cache vary by URL rather than administrative channel.
 
 Affiliate `Product` and `ProductCategory` documents are channel-scoped.

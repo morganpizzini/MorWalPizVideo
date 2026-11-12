@@ -7,7 +7,13 @@ import FieldError from '@components/FieldError';
 import { useToast } from '@components/ToastNotification/ToastContext';
 import { Channel, ChannelSocial } from '@morwalpizvideo/models';
 import PageHeader from '@components/PageHeader';
-import { hasCacheInvalidationWarning } from '../response';
+import {
+  hasCacheInvalidationWarning,
+  type ChannelActionError,
+  type ChannelMutationResult,
+} from '../response';
+
+type ChannelFormActionResult = ChannelActionError | (ChannelMutationResult & { success: true });
 
 type PublishingProviderKey = 'telegram' | 'discord' | 'facebook';
 type EditablePublishingProvider = {
@@ -45,11 +51,10 @@ const ChannelForm: React.FC = () => {
   const isEditMode = entity !== null;
 
   const [channelName, setChannelName] = useState(entity?.channelName || '');
-  const [yTChannelId, setYTChannelId] = useState('');
+  const [yTChannelId, setYTChannelId] = useState(entity?.yTChannelId ?? '');
   const [isSHIT, setIsSHIT] = useState(false);
   const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [publicBaseUrl, setPublicBaseUrl] = useState('');
-  const [youTubeStudioUrl, setYouTubeStudioUrl] = useState('');
   const [googleAnalyticsUrl, setGoogleAnalyticsUrl] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [socials, setSocials] = useState<ChannelSocial[]>([]);
@@ -63,23 +68,23 @@ const ChannelForm: React.FC = () => {
 
   const navigate = useNavigate();
   const toast = useToast();
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<ChannelFormActionResult>();
   const busy = fetcher.state !== 'idle';
   const lastResult = useRef<unknown>(undefined);
-  const errors = fetcher.data?.errors;
-  const result =
-    fetcher.data != undefined &&
-    (fetcher.data.errors == undefined || fetcher.data.errors.length == 0)
-      ? fetcher.data
-      : null;
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const focusAfterModalClose = useRef(false);
+  const actionResult = fetcher.data;
+  const errors = actionResult?.success === false ? actionResult.errors : undefined;
+  const result = actionResult?.success === true ? actionResult : null;
 
   useEffect(() => {
     if (entity) {
       setChannelName(entity.channelName);
+      setYTChannelId(entity.yTChannelId ?? '');
       setIsSHIT(entity.isSHIT ?? false);
       setShortLinkUrl(entity.shortLinkUrl ?? '');
       setPublicBaseUrl(entity.publicBaseUrl ?? '');
-      setYouTubeStudioUrl(entity.youTubeStudioUrl ?? '');
       setGoogleAnalyticsUrl(entity.googleAnalyticsUrl ?? '');
       setSocials(
         entity.socials?.map(social => ({ provider: social.provider, handler: social.handler })) ??
@@ -93,11 +98,30 @@ const ChannelForm: React.FC = () => {
     }
   }, [entity]);
 
+  const focusFirstError = () => {
+    const invalidControl = formRef.current?.querySelector<HTMLElement>(
+      'input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]'
+    );
+    const invalidSection = formRef.current?.querySelector<HTMLElement>(
+      '[role="group"][aria-invalid="true"], fieldset[aria-invalid="true"]'
+    );
+    (invalidControl ?? invalidSection ?? errorSummaryRef.current)?.focus();
+  };
+
   useEffect(() => {
-    if (busy || !result || lastResult.current === result) return;
-    lastResult.current = result;
+    if (busy || !actionResult || lastResult.current === actionResult) return;
+    lastResult.current = actionResult;
     setShowModal(false);
-    if (result.success) {
+    if (actionResult.success === false) {
+      if (showModal) {
+        focusAfterModalClose.current = true;
+      } else {
+        focusFirstError();
+      }
+      return;
+    }
+
+    if (actionResult.success === true) {
       toast.show(
         'Success',
         isEditMode ? 'Channel updated successfully' : 'Channel created successfully',
@@ -113,11 +137,11 @@ const ChannelForm: React.FC = () => {
       }
       navigate('..');
     }
-  }, [busy, result, navigate, isEditMode, toast]);
+  }, [busy, actionResult, navigate, isEditMode, toast, showModal]);
 
   const isDisabled = () => {
     if (!channelName || channelName.trim().length === 0 || busy) return true;
-    if (!isEditMode && (!yTChannelId || yTChannelId.trim().length === 0)) return true;
+    if (!yTChannelId || yTChannelId.trim().length === 0) return true;
     return false;
   };
 
@@ -128,15 +152,12 @@ const ChannelForm: React.FC = () => {
 
   const confirmSubmit = () => {
     const payload: Record<string, string> = { channelName, isSHIT: String(isSHIT) };
-    if (!isEditMode) {
-      payload.yTChannelId = yTChannelId;
-    }
+    payload.yTChannelId = yTChannelId;
     fetcher.submit(
       {
         ...payload,
         shortLinkUrl,
         publicBaseUrl,
-        youTubeStudioUrl,
         googleAnalyticsUrl,
         socials: JSON.stringify(socials),
         socialPublishing: JSON.stringify(socialPublishing),
@@ -166,33 +187,50 @@ const ChannelForm: React.FC = () => {
   return (
     <>
       <PageHeader title={isEditMode ? 'Edit Channel' : 'Create Channel'} />
-      <GenericErrorList errors={errors?.generics} />
-      <Form onSubmit={handleSubmit}>
+      <div
+        ref={errorSummaryRef}
+        id="channel-form-errors"
+        tabIndex={-1}
+        aria-label="Channel form errors"
+      >
+        <GenericErrorList errors={errors?.generics} />
+      </div>
+      <Form ref={formRef} onSubmit={handleSubmit}>
         <Form.Group controlId="formChannelName" className="mb-3">
           <Form.Label>
             Channel Name <span className="text-danger">*</span>
           </Form.Label>
           <Form.Control
+            id="formChannelName"
             type="text"
             value={channelName}
             onChange={e => setChannelName(e.target.value)}
+            aria-invalid={Boolean(errors?.channelName)}
+            aria-describedby={errors?.channelName ? 'channelNameError' : undefined}
+            isInvalid={Boolean(errors?.channelName)}
           />
-          <FieldError error={errors?.channelName} />
+          <div id="channelNameError">
+            <FieldError error={errors?.channelName} />
+          </div>
         </Form.Group>
 
-        {!isEditMode && (
-          <Form.Group controlId="formYTChannelId" className="mb-3">
-            <Form.Label>
-              YouTube Channel ID <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              type="text"
-              value={yTChannelId}
-              onChange={e => setYTChannelId(e.target.value)}
-            />
+        <Form.Group controlId="formYTChannelId" className="mb-3">
+          <Form.Label>
+            YouTube Channel ID <span className="text-danger">*</span>
+          </Form.Label>
+          <Form.Control
+            id="formYTChannelId"
+            type="text"
+            value={yTChannelId}
+            onChange={e => setYTChannelId(e.target.value)}
+            aria-invalid={Boolean(errors?.yTChannelId)}
+            aria-describedby={errors?.yTChannelId ? 'ytChannelIdError' : undefined}
+            isInvalid={Boolean(errors?.yTChannelId)}
+          />
+          <div id="ytChannelIdError">
             <FieldError error={errors?.yTChannelId} />
-          </Form.Group>
-        )}
+          </div>
+        </Form.Group>
 
         <Form.Group controlId="formPublicBaseUrl" className="mb-3">
           <Form.Label>Public website base URL</Form.Label>
@@ -217,33 +255,42 @@ const ChannelForm: React.FC = () => {
         <Form.Group controlId="formShortLinkUrl" className="mb-3">
           <Form.Label>Short link base URL</Form.Label>
           <Form.Control
+            id="formShortLinkUrl"
             type="url"
             value={shortLinkUrl}
             onChange={e => setShortLinkUrl(e.target.value)}
             placeholder="https://example.com/sl"
+            aria-invalid={Boolean(errors?.shortLinkUrl)}
+            aria-describedby={errors?.shortLinkUrl ? 'shortLinkUrlError' : undefined}
+            isInvalid={Boolean(errors?.shortLinkUrl)}
           />
-        </Form.Group>
-
-        <Form.Group controlId="formYouTubeStudioUrl" className="mb-3">
-          <Form.Label>YouTube Studio link</Form.Label>
-          <Form.Control
-            type="url"
-            value={youTubeStudioUrl}
-            onChange={e => setYouTubeStudioUrl(e.target.value)}
-            placeholder="https://studio.youtube.com/..."
-          />
-          <Form.Text>Optional HTTPS link opened from the BackOffice channel context.</Form.Text>
+          <div id="shortLinkUrlError">
+            <FieldError error={errors?.shortLinkUrl} />
+          </div>
         </Form.Group>
 
         <Form.Group controlId="formGoogleAnalyticsUrl" className="mb-3">
           <Form.Label>Google Analytics link</Form.Label>
           <Form.Control
+            id="formGoogleAnalyticsUrl"
             type="url"
             value={googleAnalyticsUrl}
             onChange={e => setGoogleAnalyticsUrl(e.target.value)}
             placeholder="https://analytics.google.com/..."
+            aria-invalid={Boolean(errors?.googleAnalyticsUrl)}
+            aria-describedby={
+              errors?.googleAnalyticsUrl
+                ? 'googleAnalyticsUrlHelp googleAnalyticsUrlError'
+                : 'googleAnalyticsUrlHelp'
+            }
+            isInvalid={Boolean(errors?.googleAnalyticsUrl)}
           />
-          <Form.Text>Optional HTTPS link opened from the BackOffice channel context.</Form.Text>
+          <Form.Text id="googleAnalyticsUrlHelp">
+            Optional HTTPS link opened from the BackOffice channel context.
+          </Form.Text>
+          <div id="googleAnalyticsUrlError">
+            <FieldError error={errors?.googleAnalyticsUrl} />
+          </div>
         </Form.Group>
 
         <Form.Check
@@ -255,7 +302,14 @@ const ChannelForm: React.FC = () => {
           className="mb-3"
         />
 
-        <Form.Label>Socials</Form.Label>
+        <Form.Label id="socialsLabel">Socials</Form.Label>
+        <div
+          role="group"
+          aria-labelledby="socialsLabel"
+          aria-describedby={errors?.socials ? 'socialsError' : undefined}
+          aria-invalid={Boolean(errors?.socials)}
+          tabIndex={errors?.socials ? -1 : undefined}
+        >
         {socials.map((social, index) => (
           <div className="row g-2 align-items-center mb-2" key={`${social.provider}-${index}`}>
             <div className="col-12 col-md-3">
@@ -263,6 +317,8 @@ const ChannelForm: React.FC = () => {
                 aria-label={`Social provider ${index + 1}`}
                 value={social.provider}
                 onChange={e => updateSocial(index, 'provider', e.target.value)}
+                aria-invalid={Boolean(errors?.socials)}
+                aria-describedby={errors?.socials ? 'socialsError' : undefined}
               >
                 <option value="">Select provider</option>
                 <option value="instagram">Instagram</option>
@@ -281,6 +337,8 @@ const ChannelForm: React.FC = () => {
                 value={social.handler}
                 onChange={e => updateSocial(index, 'handler', e.target.value)}
                 placeholder="Handle or public identifier"
+                aria-invalid={Boolean(errors?.socials)}
+                aria-describedby={errors?.socials ? 'socialsError' : undefined}
               />
             </div>
             <div className="col-12 col-md-auto">
@@ -307,13 +365,25 @@ const ChannelForm: React.FC = () => {
             Add social
           </Button>
         </div>
+        <div id="socialsError">
+          <FieldError error={errors?.socials} />
+        </div>
+        </div>
 
         <h2 className="h5 mt-4 mb-3">Social publishing</h2>
-        <FieldError error={errors?.socialPublishing} />
+        <div id="socialPublishingError">
+          <FieldError error={errors?.socialPublishing} />
+        </div>
         {publishingProviders.map(provider => {
           const settings = socialPublishing[provider.key];
           return (
-            <fieldset className="mb-4" key={provider.key}>
+            <fieldset
+              className={`mb-4${errors?.socialPublishing ? ' border border-danger rounded p-3' : ''}`}
+              key={provider.key}
+              aria-invalid={Boolean(errors?.socialPublishing)}
+              aria-describedby={errors?.socialPublishing ? 'socialPublishingError' : undefined}
+              tabIndex={errors?.socialPublishing ? -1 : undefined}
+            >
               <legend className="fs-6 fw-semibold mb-2">{provider.name}</legend>
               <div className="row g-3">
                 <Form.Group className="col-12 col-md-6" controlId={`${provider.key}DestinationId`}>
@@ -322,6 +392,10 @@ const ChannelForm: React.FC = () => {
                     value={settings.destinationId}
                     onChange={event =>
                       updatePublishing(provider.key, { destinationId: event.target.value })
+                    }
+                    aria-invalid={Boolean(errors?.socialPublishing)}
+                    aria-describedby={
+                      errors?.socialPublishing ? 'socialPublishingError' : undefined
                     }
                   />
                 </Form.Group>
@@ -340,6 +414,10 @@ const ChannelForm: React.FC = () => {
                         credential: event.target.value,
                         clearCredential: false,
                       })
+                    }
+                    aria-invalid={Boolean(errors?.socialPublishing)}
+                    aria-describedby={
+                      errors?.socialPublishing ? 'socialPublishingError' : undefined
                     }
                   />
                   {settings.credentialConfigured && (
@@ -375,7 +453,16 @@ const ChannelForm: React.FC = () => {
         </div>
       </Form>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        onExited={() => {
+          if (focusAfterModalClose.current) {
+            focusAfterModalClose.current = false;
+            focusFirstError();
+          }
+        }}
+      >
         <Modal.Header closeButton>
           <Modal.Title>{isEditMode ? 'Confirm Edit' : 'Confirm Create'}</Modal.Title>
         </Modal.Header>
@@ -393,9 +480,20 @@ const ChannelForm: React.FC = () => {
               </>
             )}
           </p>
-          {!isEditMode && (
+          <p className="text-break">
+            <strong>YouTube Channel ID:</strong>{' '}
+            {isEditMode && yTChannelId.trim() !== entity?.yTChannelId ? (
+              <>
+                <s>{entity?.yTChannelId}</s> -&gt; {yTChannelId}
+              </>
+            ) : (
+              yTChannelId
+            )}
+          </p>
+          {isEditMode && yTChannelId.trim() !== entity?.yTChannelId && (
             <p>
-              <strong>YouTube Channel ID:</strong> {yTChannelId}
+              Changing this ID affects future YouTube scans only. It does not move channel
+              ownership, existing content or history, or upload OAuth credentials.
             </p>
           )}
         </Modal.Body>

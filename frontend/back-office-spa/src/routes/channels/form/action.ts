@@ -13,8 +13,6 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   const publicBaseUrl = normalizePublicBaseUrl(
     typeof values.publicBaseUrl === 'string' ? values.publicBaseUrl : ''
   );
-  const youTubeStudioUrl =
-    typeof values.youTubeStudioUrl === 'string' ? values.youTubeStudioUrl.trim() : '';
   const googleAnalyticsUrl =
     typeof values.googleAnalyticsUrl === 'string' ? values.googleAnalyticsUrl.trim() : '';
   const isSHIT = values.isSHIT === 'true';
@@ -30,6 +28,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
   }
 
   if (!id && !yTChannelId) {
+    errors['yTChannelId'] = 'YouTube Channel ID cannot be empty';
+  }
+  if (id && typeof values.yTChannelId === 'string' && !yTChannelId) {
     errors['yTChannelId'] = 'YouTube Channel ID cannot be empty';
   }
 
@@ -52,9 +53,9 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         channelId: id,
         channelName,
         shortLinkUrl,
+        ...(typeof values.yTChannelId === 'string' ? { yTChannelId } : {}),
         ...(typeof values.publicBaseUrl === 'string' ? { publicBaseUrl } : {}),
-        youTubeStudioUrl,
-        googleAnalyticsUrl,
+        ...(typeof values.googleAnalyticsUrl === 'string' ? { googleAnalyticsUrl } : {}),
         socials: socials ?? [],
         socialPublishing,
         ...(typeof values.isSHIT === 'string' ? { isSHIT } : {}),
@@ -70,6 +71,7 @@ export default async function action({ request, params }: ActionFunctionArgs) {
         yTChannelId,
         shortLinkUrl,
         publicBaseUrl,
+        googleAnalyticsUrl,
         isSHIT,
         socials: socials ?? [],
         socialPublishing,

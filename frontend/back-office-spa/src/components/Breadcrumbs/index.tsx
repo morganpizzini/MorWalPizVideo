@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Await, Link, useLocation, useMatches } from 'react-router';
-import type { BlogPostAdmin } from '@morwalpizvideo/models';
+import type { BlogPostAdmin, Channel } from '@morwalpizvideo/models';
 import { Breadcrumb, Button } from 'react-bootstrap';
 import './index.css'; // Assuming you have a global CSS file for styles
 interface BreadcrumbsProps {
@@ -16,6 +16,10 @@ interface BlogBreadcrumbHandle {
   breadcrumb: BlogBreadcrumb;
 }
 
+interface ChannelBreadcrumbHandle {
+  channelBreadcrumb: (channel: Channel | undefined) => string;
+}
+
 function isBlogBreadcrumbHandle(handle: unknown): handle is BlogBreadcrumbHandle {
   return (
     typeof handle === 'object' &&
@@ -25,7 +29,22 @@ function isBlogBreadcrumbHandle(handle: unknown): handle is BlogBreadcrumbHandle
   );
 }
 
+function isChannelBreadcrumbHandle(handle: unknown): handle is ChannelBreadcrumbHandle {
+  return (
+    typeof handle === 'object' &&
+    handle !== null &&
+    'channelBreadcrumb' in handle &&
+    typeof handle.channelBreadcrumb === 'function'
+  );
+}
+
 function getBlogPostPromise(data: unknown): Promise<BlogPostAdmin> | undefined {
+  if (typeof data !== 'object' || data === null || !('data' in data)) return undefined;
+  const resolvedData = data.data;
+  return resolvedData instanceof Promise ? resolvedData : undefined;
+}
+
+function getChannelPromise(data: unknown): Promise<Channel> | undefined {
   if (typeof data !== 'object' || data === null || !('data' in data)) return undefined;
   const resolvedData = data.data;
   return resolvedData instanceof Promise ? resolvedData : undefined;
@@ -64,12 +83,37 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customLabels = {}, toggleSide
   const blogMatch = matches.find(match => isBlogBreadcrumbHandle(match.handle));
   const blogHandle =
     blogMatch && isBlogBreadcrumbHandle(blogMatch.handle) ? blogMatch.handle : undefined;
+  const channelMatch = matches.find(match => isChannelBreadcrumbHandle(match.handle));
+  const channelHandle =
+    channelMatch && isChannelBreadcrumbHandle(channelMatch.handle)
+      ? channelMatch.handle
+      : undefined;
   const lastMatchData = matches[matches.length - 1]?.data;
   const flatEntity =
     lastMatchData && typeof lastMatchData === 'object' && !Array.isArray(lastMatchData)
       ? (lastMatchData as Record<string, string>)
       : undefined;
   const getEntityName = (segment: string, index: number): React.ReactNode => {
+    if (
+      index === 1 &&
+      segment !== 'create' &&
+      segment !== 'edit' &&
+      channelMatch &&
+      channelHandle
+    ) {
+      const channel = getChannelPromise(channelMatch.data);
+      if (channel) {
+        const breadcrumb = channelHandle.channelBreadcrumb;
+        return (
+          <Suspense fallback="Channel">
+            <Await resolve={channel} errorElement="Channel">
+              {(entity: Channel) => breadcrumb(entity)}
+            </Await>
+          </Suspense>
+        );
+      }
+      return 'Channel';
+    }
     if (
       index === 1 &&
       segment !== 'create' &&

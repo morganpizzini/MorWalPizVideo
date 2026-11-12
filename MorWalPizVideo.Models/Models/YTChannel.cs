@@ -11,6 +11,18 @@ namespace MorWalPizVideo.Server.Models
         [property: DataMember][property: BsonElement("channelName")] string ChannelName) : BaseEntity
     {
         [DataMember]
+        [BsonElement("yTChannelId")]
+        [BsonDefaultValue(null)]
+        [BsonIgnoreIfNull]
+        [JsonPropertyName("yTChannelId")]
+        public string? YTChannelId { get; init; }
+
+        [BsonIgnore]
+        [JsonIgnore]
+        [IgnoreDataMember]
+        public string EffectiveYTChannelId => string.IsNullOrWhiteSpace(YTChannelId) ? ChannelId : YTChannelId;
+
+        [DataMember]
         [BsonElement("socials")]
         public List<ChannelSocial>? Socials { get; init; } = [];
         [DataMember]

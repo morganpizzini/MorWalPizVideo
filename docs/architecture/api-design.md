@@ -127,6 +127,17 @@ BackOffice `GET /api/channels/accessible` establishes the caller's accessible-ch
 
 Channel administration itself (`GET`/`PUT`/`DELETE /api/channels/{id}`) is not a channel-scoped resource: it is authorized by role or ownership of the channel identified in the route, and does not require or consult `X-Channel-Id`. A non-owner/non-admin request returns `404` regardless of the header.
 
+Channel contracts distinguish the Mongo document `id`, stable tenant `channelId`,
+and editable external `yTChannelId`. Channel administration continues to route
+and authorize by stable `channelId`; changing the YouTube binding does not
+reassign ownership, API-key scope, content, or history. Legacy records without
+`yTChannelId` project `channelId` as their effective YouTube binding. Manual
+channel input errors return Validation Problem Details with field-keyed errors.
+Channel create/update/delete normally return `204`; failed cache invalidation
+after a committed mutation returns `200` with warning details. Logo upload
+returns its updated channel data, while logo deletion normally returns `204`
+and returns warning details on cache degradation.
+
 The effective impersonated target controls channel and content authorization. API keys carry a persisted channel binding and cannot impersonate. Administrative compilation and short-link management is scoped, while public compilation URL resolution is anonymous and global; public cache keys therefore use the URL, not the administrative channel.
 
 Affiliate catalog endpoints follow the same scope contract:

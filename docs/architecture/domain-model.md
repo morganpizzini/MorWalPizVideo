@@ -32,6 +32,17 @@ Target boundary:
 
 Owns channel identity and legacy embedded video/idea information. Short links are not owned or read from this aggregate. The relationship between content video references and channel ownership must have one canonical representation.
 
+`Id` is the Mongo document identifier; `ChannelId` is the stable tenant key used
+for ownership, authorization, route identity, API-key binding, and channel-owned
+content. Optional `YTChannelId` is the external YouTube binding and may change
+without changing tenant identity. `EffectiveYTChannelId` falls back to
+`ChannelId` for legacy records with no external binding. Stored-channel YouTube
+scans use that effective binding while continuing to attribute ownership and
+history to `ChannelId`. The shared channel projection derives
+`YouTubeStudioUrl` from the effective binding; the legacy persisted Studio URL
+is not authoritative. Analytics updates preserve omitted/null input and use a
+blank value to explicitly clear the stored URL.
+
 `PublicBaseUrl` (`publicBaseUrl` in BSON/JSON) is the optional public website
 origin, separate from `ShortLinkUrl`. Missing BSON fields default to an empty
 string through an explicit BSON default. Channel create/update accepts only

@@ -54,6 +54,7 @@ Excluded:
 23. [Editorial production cards](adr/ADR-019-editorial-production-cards.md)
 24. [BackOffice AI prompt orchestration](adr/ADR-020-backoffice-ai-prompt-orchestration.md)
 25. [VideoImporter channel settings](adr/ADR-021-video-importer-channel-settings.md)
+26. [Stable channel identity and YouTube binding](adr/ADR-026-stable-channel-identity-and-youtube-binding.md)
 
 ## Architectural Baseline
 
