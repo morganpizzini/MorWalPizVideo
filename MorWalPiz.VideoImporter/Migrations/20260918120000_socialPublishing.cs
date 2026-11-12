@@ -1,9 +1,13 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using MorWalPiz.VideoImporter.Data;
 
 #nullable disable
 
 namespace MorWalPiz.VideoImporter.Migrations;
 
+[DbContext(typeof(AppDbContext))]
+[Migration("20260918120000_socialPublishing")]
 public partial class socialPublishing : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

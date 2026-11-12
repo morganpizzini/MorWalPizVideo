@@ -76,7 +76,7 @@ InsightScanner is a .NET 10 WPF application that scans external sources and subm
 
 ## Testing Gaps
 
-Neither WPF application has a complete automated suite. Prioritize tests for configuration binding, migrations, tenant isolation, contract serialization, retry/cancellation behavior, and fake external providers before UI automation.
+Neither WPF application has a complete automated suite. VideoImporter now has a regression test that upgrades a database from the previous migration and loads tenants with the new channel column. Continue prioritizing tenant isolation, contract serialization, retry/cancellation behavior, and fake external providers before UI automation.
 
 ## Desktop Slice 8 Verification (2026-10-01)
 
