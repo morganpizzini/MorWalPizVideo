@@ -1123,3 +1123,27 @@ The command emitted existing package vulnerability and nullable-analysis warning
 test or compile failures remain in the focused scope. HTTP-level account/CSRF
 integration, Mongo concurrency/fault-injection, and frontend exposure of these newly
 available routes remain downstream release work and were not changed here.
+
+## Workshop login session verification fix (2026-11-13)
+
+`frontend/shooter-workshop.client/src/auth/AuthProvider.tsx` now commits the
+authenticated session returned by `loginPublicAccount` directly instead of issuing
+an immediate second session read. This prevents a stale or racing anonymous session
+request from overwriting a successful login before the protected Workshop routes
+load. The existing account transport remains unchanged: cookies and CSRF are still
+owned by `accountApiService`.
+
+Validation:
+
+```text
+cd frontend && yarn workspace shooter-workshop.client test
+  Passed: 1 test file, 1 test
+
+cd frontend && yarn workspace shooter-workshop.client build
+  Passed: TypeScript and Vite production build
+
+node .github/skills/impeccable/scripts/detect.mjs --json \
+  frontend/shooter-workshop.client/src/auth/AuthProvider.tsx \
+  frontend/shooter-workshop.client/src/routes/pages.tsx
+  Passed: no UI detector findings
+```

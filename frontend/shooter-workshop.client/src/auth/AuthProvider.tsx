@@ -51,8 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login: async (request) => {
         try {
-          await loginPublicAccount(request);
-          return await refresh();
+          const next = await loginPublicAccount(request);
+          setSession(next);
+          setError(null);
+          setLoading(false);
+          return next.authenticated;
         } catch (requestError) {
           setError(getPublicAccountErrorMessage(requestError));
           return false;
