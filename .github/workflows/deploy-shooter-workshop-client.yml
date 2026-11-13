@@ -60,7 +60,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     needs: validate
-
+    permissions:
+      contents: read
+      checks: write
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,7 +103,7 @@ jobs:
         with:
           app-name: ${{ vars.WORKSHOP_CLIENT_APP_NAME }}
           images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          
+
       - name: Azure logout
         if: always()
         run: az logout
