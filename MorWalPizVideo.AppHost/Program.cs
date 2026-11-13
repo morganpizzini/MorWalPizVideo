@@ -17,6 +17,16 @@ builder.AddJavaScriptApp("morwalpizvideo", "../frontend", "dev:morwalpizvideo-cl
     .WithHttpEndpoint(port: 5174, env: "PORT")
     .InGroup(frontendGroup);
 
+// The local Workshop browser origin is http://localhost:5179; production uses only
+// https://workshop.morwalpiz.com in the ServerAPI credentialed CORS policy.
+builder.AddJavaScriptApp("shooter-workshop", "../frontend", "dev:shooter-workshop-client")
+    .WithReference(frontoffice)
+    .WaitFor(frontoffice)
+    .WithEnvironment("ASPNETCORE_URLS", frontoffice.GetEndpoint("https"))
+    .WithEnvironment("BROWSER", "none")
+    .WithHttpEndpoint(port: 5179, env: "PORT")
+    .InGroup(frontendGroup);
+
 builder.AddJavaScriptApp("ask", "../frontend", "dev:ask-client")
     .WithReference(frontoffice)
     .WaitFor(frontoffice)

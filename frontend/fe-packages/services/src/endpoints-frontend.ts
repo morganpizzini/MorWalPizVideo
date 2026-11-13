@@ -52,6 +52,22 @@ const PUBLIC_ACCOUNT_CSRF = "api/v1/account/csrf";
 const PUBLIC_ACCOUNT_PROFILE = "api/v1/profile";
 const PUBLIC_BLOG_INTERACTIONS = `${baseEndpoint}/blog/{slug}/interactions`;
 
+// Account-owned Shooter Workshop API. Keep these paths isolated from the
+// public/admin transports; workshopService uses accountApiService exclusively.
+const WORKSHOP = "api/v1/workshop";
+const WORKSHOP_FIREARMS = `${WORKSHOP}/firearms`;
+const WORKSHOP_FIREARM_DETAIL = `${WORKSHOP_FIREARMS}/{firearmId}`;
+const WORKSHOP_COMPONENT_DEFINITIONS = `${WORKSHOP}/components/definitions`;
+const WORKSHOP_COMPONENTS = `${WORKSHOP}/components`;
+const WORKSHOP_MAINTENANCE = `${WORKSHOP}/maintenance`;
+const WORKSHOP_RECIPES = `${WORKSHOP}/recipes`;
+const WORKSHOP_AMMUNITION = `${WORKSHOP}/ammunition`;
+const WORKSHOP_SHOOTING = `${WORKSHOP}/sessions`;
+const WORKSHOP_SHOOTING_CORRECT = `${WORKSHOP_SHOOTING}/shooting/correct`;
+const WORKSHOP_DASHBOARD = `${WORKSHOP}/dashboard`;
+const WORKSHOP_HISTORY = `${WORKSHOP}/history`;
+const WORKSHOP_RECONCILIATION = `${WORKSHOP}/reconciliation`;
+
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
 
@@ -100,6 +116,19 @@ export default {
   PUBLIC_ACCOUNT_CSRF,
   PUBLIC_ACCOUNT_PROFILE,
   PUBLIC_BLOG_INTERACTIONS,
+  WORKSHOP,
+  WORKSHOP_FIREARMS,
+  WORKSHOP_FIREARM_DETAIL,
+  WORKSHOP_COMPONENT_DEFINITIONS,
+  WORKSHOP_COMPONENTS,
+  WORKSHOP_MAINTENANCE,
+  WORKSHOP_RECIPES,
+  WORKSHOP_AMMUNITION,
+  WORKSHOP_SHOOTING,
+  WORKSHOP_SHOOTING_CORRECT,
+  WORKSHOP_DASHBOARD,
+  WORKSHOP_HISTORY,
+  WORKSHOP_RECONCILIATION,
   CONFIGURATION_STREAM,
   QUICK_LINKS,
   QUICK_LINKS_DETAIL,

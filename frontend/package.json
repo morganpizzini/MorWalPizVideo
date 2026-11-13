@@ -12,6 +12,7 @@
     "morwalpiz-shop.client",
     "shooting-ita-frontend",
     "shooting-range.client",
+    "shooter-workshop.client",
     "shoot-recorder",
     "FreezerAnalysis.spa"
   ],
@@ -26,6 +27,7 @@
     "install:all": "yarn install",
     "dev:back-office-spa": "yarn build:shared && yarn workspace back-office-spa dev",
     "dev:morwalpizvideo-client": "yarn build:shared && yarn workspace morwalpizvideo.client dev",
+    "dev:shooter-workshop-client": "yarn build:shared && yarn workspace shooter-workshop.client dev",
     "dev:ask-client": "yarn build:shared && yarn workspace ask.client dev",
     "dev:morwalpiz-shop-client": "yarn build:shared && yarn workspace morwalpiz-shop.client dev",
     "dev:shoot-recorder": "yarn workspace shoot-recorder dev",

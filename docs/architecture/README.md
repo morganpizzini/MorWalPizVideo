@@ -55,6 +55,7 @@ Excluded:
 24. [BackOffice AI prompt orchestration](adr/ADR-020-backoffice-ai-prompt-orchestration.md)
 25. [VideoImporter channel settings](adr/ADR-021-video-importer-channel-settings.md)
 26. [Stable channel identity and YouTube binding](adr/ADR-026-stable-channel-identity-and-youtube-binding.md)
+27. [Shooter Workshop functional baseline](shooter-workshop.md)
 
 ## Architectural Baseline
 

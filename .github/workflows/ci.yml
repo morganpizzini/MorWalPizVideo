@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shoot-recorder, freezer-analysis.spa, '@morwalpizvideo/services']
+        workspace: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shooter-workshop.client, shoot-recorder, freezer-analysis.spa, '@morwalpizvideo/services']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -164,6 +164,10 @@ jobs:
             context: ./frontend
             file: ./frontend/shooting-range.client/Dockerfile
             noCache: true
+          - name: Shooter Workshop SPA
+            context: ./frontend
+            file: ./frontend/shooter-workshop.client/Dockerfile
+            noCache: true
           - name: FreezerAnalysis SPA
             context: ./frontend
             file: ./frontend/FreezerAnalysis.spa/Dockerfile
@@ -189,7 +193,7 @@ jobs:
     
     strategy:
       matrix:
-        app: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shoot-recorder, freezer-analysis.spa]
+        app: [back-office-spa, ask.client, morwalpizvideo.client, shooting-ita-frontend, shooting-range.client, shooter-workshop.client, shoot-recorder, freezer-analysis.spa]
     
     steps:
       - name: Checkout code
@@ -212,7 +216,7 @@ jobs:
 
       - name: Build ${{ matrix.app }}
         working-directory: frontend
-        run: if [ "${{ matrix.app }}" = "back-office-spa" ] || [ "${{ matrix.app }}" = "shoot-recorder" ] || [ "${{ matrix.app }}" = "freezer-analysis.spa" ]; then yarn workspace ${{ matrix.app }} build; else yarn workspace ${{ matrix.app }} build:all; fi
+        run: if [ "${{ matrix.app }}" = "back-office-spa" ] || [ "${{ matrix.app }}" = "shooter-workshop.client" ] || [ "${{ matrix.app }}" = "shoot-recorder" ] || [ "${{ matrix.app }}" = "freezer-analysis.spa" ]; then yarn workspace ${{ matrix.app }} build; else yarn workspace ${{ matrix.app }} build:all; fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

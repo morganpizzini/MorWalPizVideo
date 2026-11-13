@@ -54,6 +54,30 @@ cache helper, including when compensation cannot remove the persisted append.
 
 ServerAPI public accounts are a separate Domain-owned boundary backed by `PublicAccount` and `PublicAccountSession` collections. The dedicated cookie scheme revalidates the hashed session token and account security version on each authenticated request. Controllers expose only Contracts DTOs; registration, login, profile mutation, and logout require CSRF validation, while existing anonymous content and push routes remain unchanged.
 
+## Shooter Workshop boundary
+
+The Workshop is an additive ServerAPI/Domain feature under `/api/v1/workshop`. It
+uses the existing public-account cookie scheme, derives ownership from the
+`ClaimTypes.NameIdentifier` claim, applies CSRF validation to unsafe account calls,
+and keeps all repository queries account-filtered. It does not reuse BackOffice
+RBAC, API keys, channel scope, or the BackOffice SPA.
+
+Workshop commands append complete immutable operation bundles and rebuild the affected
+firearm, physical-component, ammunition-stock, and allocation projections with
+optimistic revisions. The ledger is authoritative; projections are disposable and
+reconciliation repairs projections without modifying historical facts. The operation
+service owns cross-document invariants, idempotency, correction links, projection
+status, and bounded replay. MongoDB transaction support is not assumed.
+
+Workshop feature-owned index definitions are verified and included in the repository's
+existing central operational index manifest. BackOffice's involvement is limited to
+that operational audit/apply surface; it has no Workshop controller, service,
+repository, authorization, UI, or product workflow. This is an unavoidable
+central-index coupling, not a product dependency. The Workshop definitions are
+converted into the executable `MongoIndexOperationsService.Manifest`; they remain
+manual reviewed operations and are not part of the limited startup blog-index
+bootstrap.
+
 ## FreezerAnalysis API
 
 `FreezerAnalysis.Api` is an independent .NET 10 host for the FreezerAnalysis application. It composes the existing `IPublicAccountService` against the platform account database and uses the separate `FreezerAnalysis:ApplicationDatabaseName` for feature collections. Startup rejects missing or colliding database configuration. Its `freezer_account_session` cookie is host-only and distinct from ServerAPI's account cookie; users authenticate independently at this host rather than relying on cross-host cookie sharing. Unsafe account/session requests require the feature's CSRF cookie/header pair.

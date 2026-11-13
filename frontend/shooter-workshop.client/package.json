@@ -1,0 +1,30 @@
+{
+  "name": "shooter-workshop.client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "dev": "vite",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@morwalpiz/layout": "1.0.0",
+    "@morwalpizvideo/models": "1.0.0",
+    "@morwalpizvideo/services": "1.0.0",
+    "bootstrap": "^5.3.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-router": "^7.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "sass": "1.77.6",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vitest": "3.2.6"
+  }
+}

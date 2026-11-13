@@ -15,6 +15,7 @@ using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -67,7 +68,7 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
     options.AddPolicy("public-account",
-        policy => policy.WithOrigins("https://morwalpiz.com", "https://www.morwalpiz.com")
+        policy => policy.WithOrigins("https://morwalpiz.com", "https://www.morwalpiz.com", "https://workshop.morwalpiz.com")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -202,6 +203,8 @@ else
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+builder.Services.AddScoped<WorkshopService>();
+builder.Services.AddScoped<WorkshopReconciliationService>();
 builder.Services.AddScoped<BlogInteractionService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISurveyService, SurveyService>();
@@ -239,6 +242,7 @@ if (enableMock)
     builder.Services.AddScoped<ICustomFormRepository, CustomFormMockRepository>();
     builder.Services.AddScoped<ICustomFormResponseRepository, CustomFormResponseMockRepository>();
     builder.Services.AddScoped<ISurveyRepository, SurveyMockRepository>();
+    builder.Services.AddScoped<IWorkshopRepository, WorkshopMockRepository>();
     builder.Services.AddScoped<IAskCampaignRepository, AskCampaignMockRepository>();
     builder.Services.AddScoped<IAskSubmissionRepository, AskSubmissionMockRepository>();
     builder.Services.AddScoped<IAskReactionRepository, AskReactionMockRepository>();
@@ -317,6 +321,7 @@ else
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<INewsletterEmailService, SmtpNewsletterEmailService>();
     builder.Services.AddScoped<ISurveyRepository, SurveyRepository>();
+    builder.Services.AddScoped<IWorkshopRepository, WorkshopRepository>();
     // Shop repositories (Production)
     builder.Services.AddScoped<IDigitalProductRepository, DigitalProductRepository>();
     builder.Services.AddScoped<IDigitalProductCategoryRepository, DigitalProductCategoryRepository>();

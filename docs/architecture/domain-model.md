@@ -122,6 +122,29 @@ and includes only application preferences, languages/disclaimers, and
 value-based publish schedules. The local SQLite rows are a recoverable cache,
 not the durable authority. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
 
+### Shooter Workshop roots and projections
+
+Workshop owns independent account-scoped roots for firearms, physical-component
+definitions/instances, installations, maintenance events, recipe versions, production
+sessions, ammunition batches, allocations, shooting sessions, and reconciliation
+status. An immutable operation ledger stores the complete typed effect bundle for
+each accepted command, including correction links, idempotency identity, schema
+version, effective/recorded timestamps, installation snapshots, and batch references.
+
+Firearm rounds, physical-component rounds, batch stock, and allocation availability
+are separate rebuildable projections. No projection is the source of another
+projection. A session stores bounded usage segments and explicit untracked ammunition;
+`known batch consumption + untracked ammunition = session total`. Reconciliation
+replays each aggregate stream from ledger facts and repairs projections only.
+Historical corrections append compensating/replacement facts rather than rewriting
+the original record. Optimistic revisions and account/aggregate/idempotency indexes
+protect concurrent commands.
+
+The feature's stable index definitions remain owned by Workshop persistence/domain
+code. The existing BackOffice index manifest may audit/apply those definitions as an
+operational-only coupling; BackOffice does not own any Workshop aggregate, ledger,
+projection, command, or product behavior.
+
 ## Value Object Opportunities
 
 - Normalized email address.

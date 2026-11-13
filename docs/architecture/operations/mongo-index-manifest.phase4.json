@@ -279,6 +279,67 @@
       },
       "unique": false,
       "notes": "Supports metadata-only prompt lifecycle audit queries."
+    },
+    {
+      "key": "operations.account_idempotency.unique",
+      "collection": "workshopOperations",
+      "name": "ux_workshop_operations_account_idempotency",
+      "keys": {
+        "accountId": 1,
+        "clientIdempotencyKey": 1
+      },
+      "unique": true,
+      "notes": "Workshop operation idempotency boundary. Audit duplicate account/key pairs before approved apply."
+    },
+    {
+      "key": "operations.account_aggregate_order",
+      "collection": "workshopOperations",
+      "name": "ix_workshop_operations_account_aggregate_order",
+      "keys": {
+        "accountId": 1,
+        "deltas.aggregateKind": 1,
+        "deltas.aggregateId": 1,
+        "effectiveAt": 1,
+        "recordedAt": 1
+      },
+      "unique": false,
+      "notes": "Bounds account-owned ledger replay by aggregate and deterministic event order."
+    },
+    {
+      "key": "installations.account_component_active",
+      "collection": "workshopComponentInstallations",
+      "name": "ix_workshop_installations_account_component_active",
+      "keys": {
+        "accountId": 1,
+        "componentId": 1,
+        "removedAt": 1
+      },
+      "unique": false,
+      "notes": "Supports account/component installation interval and active-state queries."
+    },
+    {
+      "key": "batches.account_recipe_date",
+      "collection": "workshopAmmoBatches",
+      "name": "ix_workshop_batches_account_recipe_date",
+      "keys": {
+        "accountId": 1,
+        "recipeId": 1,
+        "productionDate": -1
+      },
+      "unique": false,
+      "notes": "Supports account-owned batch lookup by recipe and production date."
+    },
+    {
+      "key": "activities.account_date_type",
+      "collection": "workshopActivities",
+      "name": "ix_workshop_activities_account_date_type",
+      "keys": {
+        "accountId": 1,
+        "effectiveAt": -1,
+        "type": 1
+      },
+      "unique": false,
+      "notes": "Supports bounded account activity history ordering and filtering."
     }
   ],
   "removals": [

@@ -13,6 +13,8 @@ flowchart LR
     FreezerSpa -->|Credentialed CORS + CSRF| FreezerAPI[Azure: FreezerAnalysis API]
     Shooter[Range user] -->|HTTPS| ShootingClient[Azure App Service: Shooting Range SSR client]
     ShootingClient -->|Credentialed CORS + CSRF| ShootingAPI[Shooting Range API]
+    WorkshopUser[Workshop user] -->|HTTPS| Workshop[https://workshop.morwalpiz.com]
+    Workshop -->|Credentialed CORS + CSRF| API
     Follower[Follower] -->|HTTPS| Shorts[shorts.morwalpiz.com / ShortLinks]
     API --> Mongo[(MongoDB)]
     BO --> Mongo
@@ -34,6 +36,9 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - `https://morwalpiz-admin.azurewebsites.net`: BackOffice API; credentialed CORS accepts only the BackOffice SPA origin.
 - FreezerAnalysis API and SPA hosts are environment-managed Azure Web Apps; the SPA receives the API origin through `VITE_FREEZER_API_BASE_URL` at image build time.
 - `https://shorts.morwalpiz.com`: branded redirects.
+- `https://workshop.morwalpiz.com`: dedicated private Shooter Workshop SPA origin.
+  Production credentialed CORS admits exactly this origin; no concrete runtime API
+  value is committed here.
 - Shooting Range client and API hosts are environment-managed Azure App Services; the client receives the API origin through runtime `API_BASE_URL`.
 
 The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
@@ -58,14 +63,25 @@ Aspire AppHost starts:
 - BackOffice and BackOffice SPA.
 - ShortLinks.
 - Shooting Range API and client.
+- Shooter Workshop client at the explicit `http://localhost:5179` endpoint, connected
+  to ServerAPI for local account/API proxying.
 
 It does not provision MongoDB, Key Vault, Shooting ITA, or either WPF application. Developers supply those dependencies or use mocks/fakes.
 
-Local development keeps the relative `/api` Vite proxy and Development credentialed CORS behavior. The production public frontend continues to call ServerAPI directly, while only the BackOffice SPA uses credentialed cross-origin calls to the BackOffice API.
+Local development keeps the relative `/api` Vite proxy and Development credentialed CORS behavior. The Workshop client uses its explicit `http://localhost:5179` origin; production uses only `https://workshop.morwalpiz.com` in the ServerAPI credentialed CORS allow-list. The production public frontend continues to call ServerAPI directly, while only the BackOffice SPA uses credentialed cross-origin calls to the BackOffice API.
 
 ## CI Baseline
 
-Current central CI builds six active frontend applications (including their existing SSR builds), five backend hosts, both Windows clients, and Aspire AppHost. It executes the existing backend/YouTubeUtilities, seven frontend workspace suites and two Windows desktop suites, plus clean Buildx builds of all five API Dockerfiles and five active SPA images without pushing them. Deployment workflows use the shared local composite action to push images after their validation gates. Jobs fail on errors; frontend/desktop test gates reject empty collections. Matrix `fail-fast: false` collects independent failures; it does not permit failure.
+Current central CI builds the active frontend applications plus the Workshop delivery
+path, five backend hosts, both Windows clients, and Aspire AppHost. It executes the
+existing backend/YouTubeUtilities, frontend workspace suites (including
+`shooter-workshop.client`) and two Windows desktop suites, plus clean Buildx builds of
+all five API Dockerfiles and the staged Workshop SPA image without pushing it.
+Deployment workflows use the shared local composite action to push images after their
+validation gates. Jobs fail on errors; frontend/desktop test gates reject empty
+collections. Matrix `fail-fast: false` collects independent failures; it does not
+permit failure. Delivery wiring does not claim that Workshop product implementation is
+complete.
 
 FreezerAnalysis Chromium dependency installation is pinned to Ubuntu 24.04, which is supported by its Playwright version. Its Node image supplies Yarn directly. Linux test-result publishers do not create PR comments, while Windows test jobs upload TRX reports as artifacts because the publisher action requires a Linux runner.
 
@@ -88,6 +104,7 @@ Required improvements for active surfaces:
 | YouTubeUtilities | Existing xUnit suite | Both publishing APIs retain tests and dependency path filters | PASS: 6 passed, 0 failed, 0 skipped |
 | AppHost | Existing .NET 10 build | Local orchestration, not a production deployable | Not rerun in this slice |
 | Shared models/services/layout | `yarn --cwd frontend build:shared` in dependency order | Required before active frontend checks | PASS |
+| Shooter Workshop | `shooter-workshop.client` CI test/build matrix entry; staged SPA image and dedicated workflow | Image-only staging after nonempty client tests/build; deployment remains disabled pending complete acceptance, exact-origin browser proof, and host configuration | Implementation and delivery wiring present; production/release evidence remains open |
 | Shared services | `yarn --cwd frontend workspace @morwalpizvideo/services test --passWithNoTests=false` | Admin/Ask/public-video workflows also execute this suite | PASS: 2 files, 18 tests; config collects `src/**/*.test.ts`, including transport tests |
 | BackOffice SPA | `yarn --cwd frontend workspace back-office-spa test --passWithNoTests=false`; checked `build` | Test job and checked build required via `needs: test` before image/publish | Tests PASS: 63 files, 290 tests; full typecheck remains a failed gate, not replaced by `build-uncheck` |
 | Ask | `yarn --cwd frontend workspace ask.client test --passWithNoTests=false`; `build:all` | Tests/shared transport/checked client+SSR build before Azure login | FAIL: 1 file, 2 passed/2 failed; existing SSR error-propagation failures |

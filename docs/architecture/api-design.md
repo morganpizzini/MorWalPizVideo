@@ -12,6 +12,20 @@ The [API consistency audit](api-consistency-audit.md) records remaining contract
 
 Public account endpoints are versioned under `/api/v1`: registration, session creation/restoration/logout, CSRF acquisition, and safe profile read/update. They use a dedicated cookie scheme and exact credentialed CORS policy; they do not alter the anonymous public API contract or protect existing public pages.
 
+Shooter Workshop endpoints are implemented as an additive versioned surface under
+`/api/v1/workshop`. They
+use explicit DTOs and account-derived ownership for dashboard projections, equipment,
+component installation, maintenance, recipes, production, allocation, shooting,
+history, corrections, and reconciliation. The API never accepts an owner account ID
+as authority from a request body or query.
+
+Every protected Workshop controller uses the dedicated public-account scheme. Unsafe
+requests require the existing account CSRF cookie/header pair. Production credentialed
+CORS admits exactly `https://workshop.morwalpiz.com`; local Aspire development is
+served from the explicit `http://localhost:5179` Workshop endpoint under the
+Development CORS policy. BackOffice authentication and channel-scope headers are not
+part of this contract.
+
 BackOffice AI prompt operations use the additive versioned
 `/api/v1/ai/workflows` surface. It exposes explicit DTOs for prompt definitions,
 immutable revision history, consented evaluation cases, baseline/candidate
@@ -35,6 +49,11 @@ Authenticated administrative commands and queries. Default authorization is appr
 ### ServerAPI
 
 Anonymous public projections and narrowly approved public interactions. Public access is explicit rather than inherited accidentally from development authentication.
+
+The Workshop is a private ServerAPI surface, not a BackOffice surface. Its command
+responses expose projection status and recoverable reconciliation state instead of
+claiming success after only a partial projection update. Conflict responses cover
+optimistic revision failures and idempotency-key payload mismatches.
 
 ### ShortLinks
 

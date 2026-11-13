@@ -27,6 +27,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-023](adr/ADR-023-container-image-staging.md) | Stage container images in ACR while Azure Web App deployment remains skipped | Accepted; partially superseded by ADR-024 |
 | [ADR-024](adr/ADR-024-dual-api-deployment-staging.md) | Retain package deployments for BackOffice API, ServerAPI, and ShortLinks during image staging | Accepted; supersedes ADR-023 for these three APIs |
 | [ADR-026](adr/ADR-026-stable-channel-identity-and-youtube-binding.md) | Keep channel tenancy stable while allowing its external YouTube binding to change | Accepted |
+| [ADR-027](adr/ADR-027-shooter-workshop-immutable-ledger-reconciliation.md) | Use an immutable Workshop operation ledger with independently rebuildable projections and reconciliation | Accepted for the Workshop delivery baseline |
 
 ## ADR Process
 

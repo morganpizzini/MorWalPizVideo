@@ -51,6 +51,30 @@ export {
   updatePublicProfile,
   logoutPublicAccount,
 } from "./publicAccountService";
+export {
+  getWorkshopFirearms,
+  createWorkshopFirearm,
+  updateWorkshopFirearm,
+  archiveWorkshopFirearm,
+  getWorkshopComponentDefinitions,
+  createWorkshopComponentDefinition,
+  getWorkshopComponents,
+  createWorkshopComponent,
+  recordWorkshopMaintenance,
+  getWorkshopRecipes,
+  createWorkshopRecipe,
+  getWorkshopBatches,
+  recordWorkshopProduction,
+  recordWorkshopShooting,
+  allocateWorkshopAmmunition,
+  releaseWorkshopAllocation,
+  reallocateWorkshopAmmunition,
+  correctWorkshopShooting,
+  getWorkshopDashboard,
+  getWorkshopHistory,
+  getWorkshopReconciliation,
+  rebuildWorkshopProjections,
+} from "./workshopService";
 
 // Export individual HTTP methods
 export {

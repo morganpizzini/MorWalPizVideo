@@ -1,0 +1,95 @@
+name: Deploy Shooter Workshop Client
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/shooter-workshop.client/**'
+      - 'frontend/fe-packages/**'
+      - 'frontend/package.json'
+      - 'frontend/yarn.lock'
+      - 'frontend/shooter-workshop.client/Dockerfile'
+      - 'frontend/shooter-workshop.client/nginx.conf'
+      - '.github/actions/build-container-image/**'
+      - '.github/workflows/deploy-shooter-workshop-client.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: shooter-workshop-client
+  NODE_VERSION: '22.x'
+
+jobs:
+  validate:
+    name: Validate Shooter Workshop Client
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        working-directory: frontend
+        run: yarn build:shared
+
+      - name: Test Shooter Workshop client
+        working-directory: frontend
+        run: yarn workspace shooter-workshop.client test --passWithNoTests=false
+
+      - name: Build Shooter Workshop client
+        working-directory: frontend
+        run: yarn workspace shooter-workshop.client build
+
+  build-and-push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-container-image
+        with:
+          context: ./frontend
+          file: ./frontend/shooter-workshop.client/Dockerfile
+          push: true
+          buildArgs: |
+            VITE_API_BASE_URL=${{ vars.WORKSHOP_API_BASE_URL }}
+          tags: |
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cacheFrom: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cacheTo: type=registry,ref=${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+      # Image-only staging is the repository-wide deployment posture. Re-enable
+      # after the Workshop host, runtime configuration, and release evidence exist.
+      - name: Deploy to Azure Web App
+        if: false
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.WORKSHOP_CLIENT_APP_NAME }}
+          images: ${{ vars.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

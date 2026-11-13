@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
@@ -264,7 +265,13 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.PublicAccountSessions,
             Name: "ix_publicaccountsessions_expiresat_ttl",
             Keys: new BsonDocument("expiresAt", 1),
-            ExpireAfter: TimeSpan.Zero)
+            ExpireAfter: TimeSpan.Zero),
+        .. WorkshopMongoIndexes.Manifest.Select(index => new MongoIndexManifestEntry(
+            index.Key,
+            index.Collection,
+            index.Name,
+            index.Keys,
+            index.Unique))
     ];
 
     internal static readonly IReadOnlyList<MongoIndexRemovalEntry> RemovalManifest =

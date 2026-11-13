@@ -121,5 +121,21 @@
         public const string FreezerArtifacts = "freezerArtifacts";
         public const string FreezerParameterCandidates = "freezerParameterCandidates";
         public const string FreezerParameterAdoptions = "freezerParameterAdoptions";
+
+        // Shooter Workshop collections. All documents are account-owned.
+        public const string WorkshopFirearms = "workshopFirearms";
+        public const string WorkshopComponentDefinitions = "workshopComponentDefinitions";
+        public const string WorkshopComponentInstances = "workshopComponentInstances";
+        public const string WorkshopComponentInstallations = "workshopComponentInstallations";
+        public const string WorkshopMaintenanceEvents = "workshopMaintenanceEvents";
+        public const string WorkshopRecipes = "workshopRecipes";
+        public const string WorkshopRecipeVersions = "workshopRecipeVersions";
+        public const string WorkshopProductionSessions = "workshopProductionSessions";
+        public const string WorkshopAmmoBatches = "workshopAmmoBatches";
+        public const string WorkshopAmmoAllocations = "workshopAmmoAllocations";
+        public const string WorkshopShootingSessions = "workshopShootingSessions";
+        public const string WorkshopOperations = "workshopOperations";
+        public const string WorkshopActivities = "workshopActivities";
+        public const string WorkshopReconciliation = "workshopReconciliation";
     }
 }

@@ -90,6 +90,29 @@ means no single-video target; only responses with the field absent use the old
 ID-equality rule during rolling deployment. No new route or authentication
 requirement is introduced.
 
+## Shooter Workshop
+
+`frontend/shooter-workshop.client` is the implemented separate React/Vite workspace and
+deployment unit for the private Workshop application. Its canonical browser origin is explicitly
+`https://workshop.morwalpiz.com/`, mounted at `/`; it is not a route or runtime state
+extension of `morwalpizvideo.client`. The workspace consumes
+`@morwalpizvideo/models`, `@morwalpizvideo/services`, and `@morwalpiz/layout` and must
+not import app-local public-client source.
+
+Workshop API calls use the existing public-account transport: HttpOnly cookie
+credentials and the account CSRF contract, without BackOffice bearer, API-key, or
+channel context. All domain routes are protected by restored public-account session
+state; login, registration, legal, and session bootstrap are the anonymous exceptions.
+The application owns its route loaders/actions, reconciliation indicators, and domain
+workflows locally. It does not add Workshop product behavior to the BackOffice SPA.
+
+The client is a client-rendered private SPA. Its static container uses the existing
+frontend Buildx/image-staging convention and receives the API origin through deployment
+configuration rather than a committed URL. Local Aspire wiring exposes the Workshop
+client explicitly at `http://localhost:5179` and points its development API proxy at
+the ServerAPI HTTPS endpoint. Production account CORS must admit only the exact
+`https://workshop.morwalpiz.com` origin.
+
 The public Quick Links route `/quick-links/:url` is a standalone exception to
 the public `Root` shell: it renders the configured page title and ordered link
 destinations without site navigation, header, or footer. Its shared

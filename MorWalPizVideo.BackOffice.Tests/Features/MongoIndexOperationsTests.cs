@@ -7,6 +7,7 @@ using MorWalPizVideo.BackOffice.Authentication;
 using MorWalPizVideo.BackOffice.Controllers;
 using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.Workshop;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
 
@@ -82,6 +83,18 @@ public sealed class MongoIndexOperationsTests
         Assert.Equal("normalizedEmail", email.Keys.GetElement(0).Name);
         Assert.Equal("expiresAt", sessions.Keys.GetElement(0).Name);
         Assert.Equal(TimeSpan.Zero, sessions.ExpireAfter);
+    }
+
+    [Fact]
+    public void Workshop_feature_manifest_is_included_in_the_central_operations_manifest()
+    {
+        Assert.All(WorkshopMongoIndexes.Manifest, index =>
+            Assert.Contains(MongoIndexOperationsService.Manifest, manifestEntry =>
+                manifestEntry.Key == index.Key &&
+                manifestEntry.Name == index.Name &&
+                manifestEntry.Collection == index.Collection &&
+                manifestEntry.Keys.Equals(index.Keys) &&
+                manifestEntry.Unique == index.Unique));
     }
 
     [Fact]

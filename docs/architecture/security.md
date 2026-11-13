@@ -8,6 +8,7 @@
 | BackOffice SPA to BackOffice | Authenticated administrator |
 | WPF tools to BackOffice | Authenticated API-key client |
 | Public apps to ServerAPI | Explicit anonymous public routes; host-owned authenticated fallback for undecorated endpoints |
+| Shooter Workshop to ServerAPI | Authenticated public-account cookie with CSRF; exact production origin `https://workshop.morwalpiz.com` |
 | Shooting Range client to Shooting Range API | Current-state revocable cookie sessions; anonymous registration/domain cutover still blocked |
 | BackOffice to ServerAPI | Authenticated internal service call |
 | Followers to ShortLinks | Anonymous untrusted input |
@@ -93,6 +94,28 @@ ServerAPI public accounts are separate from BackOffice `User`/RBAC and the on-ho
 The browser session uses an HttpOnly, Secure, `SameSite=None` cookie. ServerAPI stores only the session-token hash and revalidates current session/account state. Unsafe account requests require the matching CSRF header/cookie pair. Credentialed CORS is restricted to the two canonical MorWalPiz origins and applies only to account endpoints; ordinary public APIs and anonymous Web Push retain `credentials: omit`.
 
 Production activation is blocked: `GET https://morwalpiz-serverapi.azurewebsites.net/api/v1/account/csrf` currently returns `401`, while current controller metadata and in-process endpoint tests allow it anonymously. Verify the deployed ServerAPI revision and App Service/gateway authentication before changing application authorization. Do not weaken the host fallback policy to compensate for release skew or pre-application authentication.
+
+### Shooter Workshop account boundary
+
+Workshop is private to the authenticated public account. Every identifier lookup and
+mutation derives the account ID from the public-account claim and applies ownership
+filters; caller-supplied owner IDs are not authoritative. Workshop unsafe calls use
+the existing CSRF cookie/header pair, and the client never sends BackOffice bearer,
+API-key, or channel-context credentials.
+
+The production CORS allow-list must contain exactly
+`https://workshop.morwalpiz.com` for credentialed Workshop account calls; it must not
+be broadened to a wildcard or a path expression. Local AppHost serves the client
+from the explicit `http://localhost:5179` endpoint and relies on the existing
+Development CORS behavior. A release gate must prove login/session restoration,
+CSRF-protected mutation, logout, denied-origin behavior, and cross-account concealment
+from the real Workshop origin.
+
+Workshop notes, recipe values, account email, and firearm-identifying free text are
+excluded from logs and telemetry. Operation IDs, event types, aggregate kinds,
+projection status, reconciliation mismatch kind, and durations are safe correlation
+metadata. The immutable ledger and projection repair path are account-scoped and
+must never be exposed through BackOffice product workflows.
 
 ### Shared Transport Isolation
 
