@@ -88,7 +88,6 @@ jobs:
       # Image-only staging is the repository-wide deployment posture. Re-enable
       # after the Workshop host, runtime configuration, and release evidence exist.
       - name: Deploy to Azure Web App
-        if: false
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.WORKSHOP_CLIENT_APP_NAME }}
