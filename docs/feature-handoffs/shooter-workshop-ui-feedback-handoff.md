@@ -1,5 +1,11 @@
 # Shooter Workshop UI Feedback Handoff
 
+> **Component decisions superseded:** The accepted user-check corrections in
+> [Shooter Workshop component feedback handoff](./shooter-workshop-component-feedback-handoff.md)
+> replace this document's definition-owned compatibility tags, required immediate
+> firearm installation, and deferred component edit/archive assumptions. Unrelated
+> sections of this handoff remain applicable.
+
 ## Outcome
 
 Refine the existing private Shooter Workshop application so component, firearm,

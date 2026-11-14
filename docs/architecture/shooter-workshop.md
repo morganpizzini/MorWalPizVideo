@@ -15,6 +15,8 @@
 
 **Implementation analysis:** [Shooter Workshop architecture handoff](../feature-handoffs/shooter-workshop-handoff.md).
 
+**Accepted component correction:** [Shooter Workshop component feedback handoff](../feature-handoffs/shooter-workshop-component-feedback-handoff.md).
+
 ---
 
 ## Implementation status
@@ -35,6 +37,13 @@ values are read compatibly with two-decimal validation for new recipes; and acti
 records carry additive summary metadata. The Workshop SPA exposes the compatible
 component, recipe, maintenance, shooting, history, initial-round, and safe-return-path
 flows without introducing browser-authored installation attribution.
+
+Subsequent user checks corrected the component ownership target: definitions are
+category-like records, while manufacturer, model, compatibility tags, tracking mode,
+and service threshold belong to physical component instances. Firearm installation is
+optional when a physical component is created. The current implementation described
+above remains source evidence, but it is not the accepted target for the Components
+route; the focused component feedback handoff owns the transition.
 
 This status is implementation evidence, not release approval. Full domain acceptance
 coverage, exact-origin browser authentication proof, duplicate/index audit and apply
@@ -249,16 +258,17 @@ A definition is a template used to create physical component instances.
 |---|---|---|---|
 | Id | ObjectId | Yes | Internal identifier |
 | Name | String | Yes | Component name |
-| Manufacturer | String | No | Manufacturer |
-| Model | String | No | Component model |
 | Description | String | No | Description |
-| DefaultServiceInterval | Number | No | Default user-defined interval |
-| TrackingMode | Enum | Yes | Counter, Interval or Manual |
 | Notes | String | No | Additional information |
+| Archived | Boolean | Yes | Hidden from new physical-component selection while retained for existing references |
+| Revision | Number | Yes | Optimistic-concurrency revision |
 
 The catalogue must be customizable by each user.
 
 Users can create their own definitions without depending on a predefined global catalogue.
+
+Manufacturer, model, compatibility, tracking mode and service threshold are facts
+about a physical item and must not be inherited from the definition.
 
 ## 4.2 Physical Component Inventory
 
@@ -281,13 +291,16 @@ All three reference the same component definition but maintain independent usage
 | Id | ObjectId | Yes | Internal identifier |
 | DefinitionId | ObjectId | Yes | Component definition reference |
 | IdentificationNote | String | No | User-defined identification |
-| Manufacturer | String | No | Optional override |
-| Model | String | No | Optional override |
+| Manufacturer | String | No | Physical component manufacturer |
+| Model | String | No | Physical component model |
+| CompatibilityTags | String[] | No | User-defined firearm/platform compatibility labels |
 | TotalRounds | Number | Yes | Accumulated usage |
 | ServiceInterval | Number | No | Instance-specific interval |
 | TrackingMode | Enum | Yes | Counter, Interval or Manual |
 | Status | Enum | Yes | Inventory, Installed, Maintenance, Retired |
+| Archived | Boolean | Yes | Inventory-list archive state, separate from retirement |
 | Notes | String | No | Personal notes |
+| Revision | Number | Yes | Optimistic-concurrency revision |
 | CreatedAt | Date | Yes | Creation date |
 
 The component instance must be independent of any firearm.
@@ -365,9 +378,8 @@ Maintenance management provides an overview of component condition and historica
 
 ## 5.1 Maintenance Intervals
 
-Each component instance can have its own service interval.
-
-The component definition can provide a default interval, but the physical instance can override it.
+Each component instance can have its own service interval. Component definitions do
+not provide tracking or interval defaults.
 
 Illustrative user-defined examples:
 
@@ -795,17 +807,24 @@ The component area must provide two distinct views:
 
 **Catalogue**
 - Component definitions.
-- Default tracking configuration.
-- Default service interval.
+- Category description and notes.
+- Edit, archive and guarded delete actions.
 
 **My Inventory**
 - Physical component instances.
 - Identification notes.
+- Manufacturer, model and compatibility tags.
+- Tracking mode and instance-specific service interval.
 - Accumulated rounds.
 - Current status.
 - Installation information.
+- Edit, archive and guarded delete actions.
 
 The user must be able to navigate from a component definition to all its physical instances.
+
+A physical component can be created without a firearm and remain as a spare in
+inventory. Hard deletion is allowed only for pristine records with no historical
+references; otherwise the user must archive the record.
 
 ## 12.4 Maintenance
 
