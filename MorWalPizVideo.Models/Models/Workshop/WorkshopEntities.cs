@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MorWalPizVideo.Server.Models;
+using MorWalPizVideo.Models.Models.Serializers;
 
 namespace MorWalPizVideo.Models.Models.Workshop;
 
@@ -37,6 +38,7 @@ public sealed record ComponentDefinition : BaseEntity
     [BsonElement("defaultServiceInterval")] public long? DefaultServiceInterval { get; init; }
     [BsonElement("trackingMode")] public WorkshopTrackingMode TrackingMode { get; init; }
     [BsonElement("notes")] public string? Notes { get; init; }
+    [BsonElement("compatibilityTags")] public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
     [BsonElement("archived")] public bool Archived { get; init; }
 }
 
@@ -80,7 +82,7 @@ public sealed record MaintenanceEvent : BaseEntity
 }
 
 public sealed record RecipeSnapshot(
-    string Name, string Caliber, string? Oal, decimal? BulletWeight, string? BulletForm,
+    string Name, string Caliber, [property: BsonSerializer(typeof(TolerantDecimalStringSerializer))] string? Oal, decimal? BulletWeight, string? BulletForm,
     string? Drawing, string? Primer, string? Powder, decimal? PowderWeight, string? Notes,
     long Version = 1);
 
@@ -89,7 +91,7 @@ public sealed record AmmoRecipe : BaseEntity
     [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
     [BsonElement("name")] public string Name { get; init; } = string.Empty;
     [BsonElement("caliber")] public string Caliber { get; init; } = string.Empty;
-    [BsonElement("oal")] public string? Oal { get; init; }
+    [BsonElement("oal"), BsonSerializer(typeof(TolerantDecimalStringSerializer))] public string? Oal { get; init; }
     [BsonElement("bulletWeight")] public decimal? BulletWeight { get; init; }
     [BsonElement("bulletForm")] public string? BulletForm { get; init; }
     [BsonElement("drawing")] public string? Drawing { get; init; }
@@ -195,6 +197,8 @@ public sealed record WorkshopActivity : BaseEntity
     [BsonElement("type")] public WorkshopOperationType Type { get; init; }
     [BsonElement("effectiveAt")] public DateTime EffectiveAt { get; init; }
     [BsonElement("sourceEntityIds")] public IReadOnlyList<string> SourceEntityIds { get; init; } = [];
+    [BsonElement("summary")] public string? Summary { get; init; }
+    [BsonElement("entityLabel")] public string? EntityLabel { get; init; }
 }
 
 public sealed record WorkshopReconciliationState : BaseEntity

@@ -2,13 +2,15 @@ import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type {
   WorkshopComponentDefinition,
+  WorkshopFirearm,
   WorkshopPhysicalComponent,
 } from "@morwalpizvideo/models";
 import {
-  createWorkshopComponent,
+  createAndInstallWorkshopComponent,
   createWorkshopComponentDefinition,
   getWorkshopComponentDefinitions,
   getWorkshopComponents,
+  getWorkshopFirearms,
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
@@ -18,6 +20,7 @@ export default function Components() {
   const { t } = useI18n();
   const definitions = useResource(getWorkshopComponentDefinitions);
   const inventory = useResource(getWorkshopComponents);
+  const firearms = useResource(getWorkshopFirearms);
   return (
     <div>
       <PageTitle
@@ -26,11 +29,18 @@ export default function Components() {
       />
       <div className="detail-grid">
         <ResourceState resource={definitions}>
-          {(items) => <Catalogue items={items} />}
+          {(items) => (
+            <Catalogue             items={items} onSaved={definitions.reload} />
+          )}
         </ResourceState>
         <ResourceState resource={inventory}>
           {(items) => (
-            <Inventory items={items} definitions={definitions.value ?? []} />
+            <Inventory
+              items={items}
+              definitions={definitions.value ?? []}
+              firearms={firearms.value ?? []}
+              onSaved={inventory.reload}
+            />
           )}
         </ResourceState>
       </div>
@@ -38,10 +48,17 @@ export default function Components() {
   );
 }
 
-function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
+function Catalogue({
+  items,
+  onSaved,
+}: {
+  items: WorkshopComponentDefinition[];
+  onSaved: () => void;
+}) {
   const { t } = useI18n();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
+  const [tags, setTags] = useState("");
   return (
     <section className="panel">
       <div className="section-heading">
@@ -61,8 +78,15 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
             await createWorkshopComponentDefinition({
               name,
               trackingMode: "Counter",
+              compatibilityTags: tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean),
             });
             setShowForm(false);
+            setName("");
+            setTags("");
+            onSaved();
           }}
         >
           <label>
@@ -71,6 +95,14 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label>
+            {t("Compatibility tags")}
+            <input
+              value={tags}
+              placeholder={t("Comma-separated tags")}
+              onChange={(event) => setTags(event.target.value)}
             />
           </label>
         </WorkshopForm>
@@ -84,6 +116,9 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
                 <small>
                   {item.manufacturer ?? t("No manufacturer")} · {t(item.trackingMode)}{" "}
                   · {t("interval {value}", { value: item.defaultServiceInterval ?? t("not set") })}
+                  {item.compatibilityTags.length
+                    ? ` · ${item.compatibilityTags.join(", ")}`
+                    : ""}
                 </small>
               </span>
               <span className="badge">
@@ -102,28 +137,58 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
 function Inventory({
   items,
   definitions,
+  firearms,
+  onSaved,
 }: {
   items: WorkshopPhysicalComponent[];
   definitions: WorkshopComponentDefinition[];
+  firearms: WorkshopFirearm[];
+  onSaved: () => void;
 }) {
   const { culture, t } = useI18n();
   const [definitionId, setDefinitionId] = useState("");
+  const [firearmId, setFirearmId] = useState("");
   const [note, setNote] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const normalizedFilter = tagFilter.trim().toLowerCase();
+  const visibleItems = normalizedFilter
+    ? items.filter((item) => {
+        const definition = definitions.find(
+          (candidate) => candidate.id === item.definitionId,
+        );
+        return definition?.compatibilityTags.some(
+          (tag) => tag.toLowerCase() === normalizedFilter,
+        );
+      })
+    : items;
   return (
     <section className="panel">
       <div className="section-heading">
         <h2>{t("My inventory")}</h2>
       </div>
+      <label>
+        {t("Filter by compatibility tag")}
+        <input
+          value={tagFilter}
+          onChange={(event) => setTagFilter(event.target.value)}
+          placeholder={t("e.g. CZ")}
+        />
+      </label>
       <WorkshopForm
         title="Add physical component"
         submitLabel="Add component"
         onSubmit={async () => {
-          await createWorkshopComponent({
+          await createAndInstallWorkshopComponent({
             definitionId,
+            firearmId,
+            installedAt: new Date().toISOString(),
             identificationNote: note,
+            idempotencyKey: crypto.randomUUID(),
           });
           setDefinitionId("");
+          setFirearmId("");
           setNote("");
+          onSaved();
         }}
       >
         <label>
@@ -142,6 +207,21 @@ function Inventory({
           </select>
         </label>
         <label>
+          {t("Firearm")}
+          <select
+            required
+            value={firearmId}
+            onChange={(event) => setFirearmId(event.target.value)}
+          >
+            <option value="">{t("Select firearm")}</option>
+            {firearms.filter((firearm) => !firearm.archived).map((firearm) => (
+              <option key={firearm.id} value={firearm.id}>
+                {firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           {t("Identification note")}
           <input
             value={note}
@@ -149,9 +229,9 @@ function Inventory({
           />
         </label>
       </WorkshopForm>
-      {items.length ? (
+      {visibleItems.length ? (
         <ul className="compact-list">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <li key={item.id}>
               <span>
                 <strong>
@@ -169,7 +249,9 @@ function Inventory({
           ))}
         </ul>
       ) : (
-        <EmptyState title={t("No physical components")} />
+        <EmptyState
+          title={items.length ? t("No components match this tag") : t("No physical components")}
+        />
       )}
     </section>
   );

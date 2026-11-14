@@ -26,7 +26,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         try
         {
             return Ok(await service.CreateFirearmAsync(AccountId(), new(request.Manufacturer, request.Model, request.Caliber,
-                request.Category, request.Nickname, request.PurchaseDate, request.Notes), ct));
+                request.Category, request.Nickname, request.PurchaseDate, request.Notes, request.InitialRounds), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
@@ -69,7 +69,8 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         try
         {
             return Ok(await service.CreateComponentDefinitionAsync(AccountId(), new(request.Name, request.Manufacturer,
-                request.Model, request.Description, request.DefaultServiceInterval, request.TrackingMode, request.Notes), ct));
+                request.Model, request.Description, request.DefaultServiceInterval, request.TrackingMode, request.Notes,
+                request.CompatibilityTags), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
@@ -128,6 +129,22 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
                 request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode, request.Notes), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+    }
+
+    [HttpPost("components/install")]
+    public async Task<IActionResult> CreateAndInstall(CreateAndInstallWorkshopComponentRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try
+        {
+            var result = await service.CreateAndInstallComponentAsync(AccountId(), new(
+                request.DefinitionId, request.FirearmId, request.IdentificationNote, request.Manufacturer,
+                request.Model, request.ServiceInterval, request.TrackingMode, request.Notes,
+                request.InstalledAt, request.InstallationNotes, request.IdempotencyKey), ct);
+            return Ok(new CreateAndInstallWorkshopComponentResponse(result.Component, result.Installation));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
 
     [HttpGet("recipes")]

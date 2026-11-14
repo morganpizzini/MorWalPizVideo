@@ -8,14 +8,18 @@ using MorWalPizVideo.Models.Models.Workshop;
 namespace MorWalPizVideo.Domain.Workshop;
 
 public sealed record WorkshopFirearmCommand(string Manufacturer, string Model, string Caliber, string? Category,
-    string? Nickname, DateTime? PurchaseDate, string? Notes);
+    string? Nickname, DateTime? PurchaseDate, string? Notes, long InitialRounds = 0);
 public sealed record WorkshopUpdateFirearmCommand(string Manufacturer, string Model, string Caliber, string? Category,
     string? Nickname, DateTime? PurchaseDate, string? Notes, long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopArchiveFirearmCommand(long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopComponentDefinitionCommand(string Name, string? Manufacturer, string? Model,
-    string? Description, long? DefaultServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes);
+    string? Description, long? DefaultServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes,
+    IReadOnlyList<string>? CompatibilityTags = null);
 public sealed record WorkshopComponentCommand(string DefinitionId, string? IdentificationNote, string? Manufacturer,
     string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes);
+public sealed record WorkshopCreateAndInstallCommand(string DefinitionId, string FirearmId, string? IdentificationNote,
+    string? Manufacturer, string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
+    DateTime InstalledAt, string? InstallationNotes, string IdempotencyKey);
 public sealed record WorkshopInstallCommand(string ComponentId, string FirearmId, DateTime InstalledAt,
     string? InstallationNotes, string IdempotencyKey);
 public sealed record WorkshopRemoveCommand(string InstallationId, DateTime RemovedAt,
@@ -92,8 +96,11 @@ public sealed class WorkshopService(
     public async Task<ComponentInstallation> InstallComponentAsync(string accountId, WorkshopInstallCommand command,
         CancellationToken ct = default)
     {
-        _ = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
+        var firearm = await repository.GetAsync<Firearm>(
+            DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
             ?? throw new WorkshopValidationException("Firearm was not found.");
+        if (firearm.Archived)
+            throw new WorkshopValidationException("Archived firearms cannot receive components.");
         var component = await repository.GetAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, command.ComponentId, ct)
             ?? throw new WorkshopValidationException("Component was not found.");
         if (component.Status == WorkshopComponentStatus.Retired)
@@ -111,6 +118,7 @@ public sealed class WorkshopService(
                        DbCollections.WorkshopComponentInstallations, accountId, installationId, ct)
                    ?? throw new WorkshopConflictException("The idempotent installation could not be recovered.");
         }
+
         var installations = await repository.ListAsync<ComponentInstallation>(
             DbCollections.WorkshopComponentInstallations, accountId, ct);
         if (installations.Any(x => x.ComponentId == command.ComponentId && x.RemovedAt is null))
@@ -139,6 +147,56 @@ public sealed class WorkshopService(
                 component with { Status = WorkshopComponentStatus.Installed, Revision = component.Revision + 1 },
                 accountId, component.Revision, ct);
         return installation;
+    }
+
+    public async Task<(ComponentInstance Component, ComponentInstallation Installation)> CreateAndInstallComponentAsync(
+        string accountId, WorkshopCreateAndInstallCommand command, CancellationToken ct = default)
+    {
+        _ = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
+            ?? throw new WorkshopValidationException("Firearm was not found.");
+        var definition = await repository.GetAsync<ComponentDefinition>(
+            DbCollections.WorkshopComponentDefinitions, accountId, command.DefinitionId, ct)
+            ?? throw new WorkshopValidationException("Component definition was not found.");
+        var componentId = StableId(accountId, command.IdempotencyKey, "component");
+        var installationId = StableId(accountId, command.IdempotencyKey, "installation");
+        var payload = JsonSerializer.Serialize(command);
+        var expectedHash = PayloadHash(WorkshopOperationType.ComponentInstalled, [],
+            [componentId, installationId, command.DefinitionId, command.FirearmId], payload, null);
+        var existing = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
+        if (existing is not null && existing.PayloadHash != expectedHash)
+            throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+        var component = await repository.GetAsync<ComponentInstance>(
+            DbCollections.WorkshopComponentInstances, accountId, componentId, ct);
+        if (component is null)
+        {
+            component = new ComponentInstance
+            {
+                Id = componentId, AccountId = accountId, DefinitionId = definition.Id,
+                IdentificationNote = Trim(command.IdentificationNote),
+                Manufacturer = Trim(command.Manufacturer) ?? definition.Manufacturer,
+                Model = Trim(command.Model) ?? definition.Model,
+                ServiceInterval = command.ServiceInterval ?? definition.DefaultServiceInterval,
+                TrackingMode = command.TrackingMode ?? definition.TrackingMode,
+                Status = WorkshopComponentStatus.Installed, Notes = Trim(command.Notes), CreationDateTime = Now()
+            };
+            await repository.AddAsync(DbCollections.WorkshopComponentInstances, component, ct);
+        }
+        var installation = await repository.GetAsync<ComponentInstallation>(
+            DbCollections.WorkshopComponentInstallations, accountId, installationId, ct);
+        if (installation is null)
+        {
+            installation = new ComponentInstallation
+            {
+                Id = installationId, AccountId = accountId, ComponentId = component.Id,
+                FirearmId = command.FirearmId, InstalledAt = command.InstalledAt,
+                InstallationNotes = Trim(command.InstallationNotes), CreationDateTime = Now()
+            };
+            await repository.AddAsync(DbCollections.WorkshopComponentInstallations, installation, ct);
+        }
+        if (existing is null)
+            await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ComponentInstalled,
+                command.InstalledAt, [], [componentId, installationId, command.DefinitionId, command.FirearmId], payload, ct);
+        return (component, installation);
     }
 
     public async Task<ComponentInstallation> RemoveComponentAsync(string accountId, WorkshopRemoveCommand command,
@@ -190,8 +248,8 @@ public sealed class WorkshopService(
     public async Task<MaintenanceEvent> RecordMaintenanceAsync(string accountId, WorkshopMaintenanceCommand command,
         CancellationToken ct = default)
     {
-        if (command.FirearmId is null && command.ComponentId is null)
-            throw new WorkshopValidationException("A firearm or component is required.");
+        if ((command.FirearmId is null) == (command.ComponentId is null))
+            throw new WorkshopValidationException("Exactly one firearm or component is required.");
         if (command.FirearmId is not null)
             _ = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
                 ?? throw new WorkshopValidationException("Firearm was not found.");
@@ -211,13 +269,22 @@ public sealed class WorkshopService(
         var maintenance = await repository.GetAsync<MaintenanceEvent>(
             DbCollections.WorkshopMaintenanceEvents, accountId, eventId, ct);
         if (maintenance is not null) return maintenance;
+        var operations = await repository.ListAsync<WorkshopOperation>(
+            DbCollections.WorkshopOperations, accountId, ct);
+        var targetKind = command.FirearmId is not null ? WorkshopAggregateKind.Firearm : WorkshopAggregateKind.Component;
+        var targetId = command.FirearmId ?? command.ComponentId!;
+        var derivedRoundCount = operations
+            .Where(x => x.EffectiveAt <= command.Date)
+            .SelectMany(x => x.Deltas)
+            .Where(x => x.AggregateKind == targetKind && x.AggregateId == targetId)
+            .Sum(x => x.RoundsDelta);
         var result = await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.MaintenanceRecorded,
             command.Date, [], [command.FirearmId ?? string.Empty, command.ComponentId ?? string.Empty],
             payload, ct);
         maintenance = new MaintenanceEvent
         {
             Id = eventId, AccountId = accountId, FirearmId = command.FirearmId, ComponentId = command.ComponentId,
-            EventType = command.EventType, Date = command.Date, RoundCountAtEvent = command.RoundCountAtEvent,
+            EventType = command.EventType, Date = command.Date, RoundCountAtEvent = derivedRoundCount,
             Description = command.Description.Trim(), Notes = Trim(command.Notes), CreationDateTime = Now()
         };
         if (!result.Idempotent || existingOperation is not null)
@@ -231,7 +298,7 @@ public sealed class WorkshopService(
         var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, recipeId, ct)
             ?? throw new WorkshopValidationException("Recipe was not found.");
         if (recipe.Version != expectedVersion) throw new WorkshopConflictException("Recipe changed. Reload before updating.");
-        var next = snapshot with { Version = recipe.Version + 1 };
+        var next = NormalizeRecipe(snapshot) with { Version = recipe.Version + 1 };
         var result = await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.RecipeUpdated, Now(),
             [], [recipeId], JsonSerializer.Serialize(next), ct);
         if (!result.Idempotent)
@@ -274,6 +341,7 @@ public sealed class WorkshopService(
         RequireText(command.Manufacturer, "Manufacturer", 120);
         RequireText(command.Model, "Model", 120);
         RequireText(command.Caliber, "Caliber", 80);
+        if (command.InitialRounds < 0) throw new WorkshopValidationException("Initial rounds cannot be negative.");
         var firearm = new Firearm
         {
             Id = NewId(), AccountId = accountId, Manufacturer = command.Manufacturer.Trim(),
@@ -282,7 +350,15 @@ public sealed class WorkshopService(
             CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopFirearms, firearm, ct);
-        await RecordActivityAsync(accountId, WorkshopOperationType.FirearmCreated, firearm.Id, ct);
+        if (command.InitialRounds > 0)
+        {
+            await CommitAsync(accountId, $"firearm-created:{firearm.Id}", WorkshopOperationType.FirearmCreated,
+                firearm.CreationDateTime, [new(WorkshopAggregateKind.Firearm, firearm.Id, RoundsDelta: command.InitialRounds)],
+                [firearm.Id], JsonSerializer.Serialize(command), ct);
+            firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, firearm.Id, ct) ?? firearm;
+        }
+        else
+            await RecordActivityAsync(accountId, WorkshopOperationType.FirearmCreated, firearm.Id, ct);
         return firearm;
     }
 
@@ -363,6 +439,7 @@ public sealed class WorkshopService(
             Id = NewId(), AccountId = accountId, Name = command.Name.Trim(), Manufacturer = Trim(command.Manufacturer),
             Model = Trim(command.Model), Description = Trim(command.Description), DefaultServiceInterval = command.DefaultServiceInterval,
             TrackingMode = command.TrackingMode, Notes = Trim(command.Notes), CreationDateTime = Now()
+            , CompatibilityTags = NormalizeTags(command.CompatibilityTags)
         };
         await repository.AddAsync(DbCollections.WorkshopComponentDefinitions, definition, ct);
         await RecordActivityAsync(accountId, WorkshopOperationType.ComponentDefinitionCreated, definition.Id, ct);
@@ -390,6 +467,7 @@ public sealed class WorkshopService(
     {
         RequireText(snapshot.Name, "Name", 160);
         RequireText(snapshot.Caliber, "Caliber", 80);
+        snapshot = NormalizeRecipe(snapshot);
         var recipe = new AmmoRecipe
         {
             Id = NewId(), AccountId = accountId, Name = snapshot.Name.Trim(), Caliber = snapshot.Caliber.Trim(),
@@ -415,33 +493,29 @@ public sealed class WorkshopService(
         var consumed = command.ConsumptionRecords.Sum(x => x.Quantity);
         if (consumed + command.UntrackedAmmunition != command.TotalRounds)
             throw new WorkshopValidationException("Known consumption plus untracked ammunition must equal total rounds.");
-        if (command.UsageSegments.Sum(x => x.Quantity) != command.TotalRounds)
-            throw new WorkshopValidationException("Usage segments must equal total rounds.");
         if (command.ConsumptionRecords.Any(x => x.Quantity <= 0))
             throw new WorkshopValidationException("Consumption quantities must be positive.");
         if (command.ConsumptionRecords.Any(x => x.BatchId is null && x.AllocationId is not null))
             throw new WorkshopValidationException("An allocation requires its ammunition batch.");
-        if (command.UsageSegments.Any(x => x.Quantity <= 0))
-            throw new WorkshopValidationException("Usage segment quantities must be positive.");
+        var activeInstallations = (await repository.ListAsync<ComponentInstallation>(
+                DbCollections.WorkshopComponentInstallations, accountId, ct))
+            .Where(x => x.FirearmId == firearm.Id && x.InstalledAt <= command.Date &&
+                        (x.RemovedAt is null || x.RemovedAt > command.Date))
+            .ToArray();
         var knownBatchConsumption = command.ConsumptionRecords.Where(x => x.BatchId is not null)
             .GroupBy(x => x.BatchId!, StringComparer.Ordinal)
             .ToArray();
 
         var deltas = new List<WorkshopDelta> { new(WorkshopAggregateKind.Firearm, firearm.Id, RoundsDelta: command.TotalRounds) };
-        foreach (var segment in command.UsageSegments)
+        foreach (var installation in activeInstallations)
         {
-            var installation = await repository.GetAsync<ComponentInstallation>(
-                DbCollections.WorkshopComponentInstallations, accountId, segment.InstallationId, ct);
-            if (installation is null || installation.ComponentId != segment.ComponentId ||
-                installation.FirearmId != firearm.Id || installation.InstalledAt > command.Date ||
-                installation.RemovedAt <= command.Date)
-                throw new WorkshopValidationException("A usage segment does not reference the component installation active at the session date.");
             _ = await repository.GetAsync<ComponentInstance>(
-                DbCollections.WorkshopComponentInstances, accountId, segment.ComponentId, ct)
+                DbCollections.WorkshopComponentInstances, accountId, installation.ComponentId, ct)
                 ?? throw new WorkshopValidationException("A usage segment references an unknown component.");
-            deltas.Add(new(WorkshopAggregateKind.Component, segment.ComponentId, RoundsDelta: segment.Quantity,
-                ComponentId: segment.ComponentId, InstallationId: segment.InstallationId));
+            deltas.Add(new(WorkshopAggregateKind.Component, installation.ComponentId, RoundsDelta: command.TotalRounds,
+                ComponentId: installation.ComponentId, InstallationId: installation.Id));
         }
+        var derivedSegments = activeInstallations.Select(x => new ShootingUsageSegment(x.ComponentId, x.Id, command.TotalRounds)).ToArray();
         foreach (var batchGroup in knownBatchConsumption)
         {
             var batch = await repository.GetAsync<AmmoBatch>(DbCollections.WorkshopAmmoBatches, accountId, batchGroup.Key, ct)
@@ -470,7 +544,7 @@ public sealed class WorkshopService(
             {
                 Id = NewId(), AccountId = accountId, FirearmId = command.FirearmId, Date = command.Date,
                 TotalRounds = command.TotalRounds, Notes = Trim(command.Notes), ConsumptionRecords = command.ConsumptionRecords,
-                UsageSegments = command.UsageSegments, UntrackedAmmunition = command.UntrackedAmmunition,
+                UsageSegments = derivedSegments, UntrackedAmmunition = command.UntrackedAmmunition,
                 CreationDateTime = Now()
             }, ct);
         }
@@ -673,6 +747,9 @@ public sealed class WorkshopService(
         var result = await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ShootingCorrected,
             Now(), allDeltas, sourceIds, JsonSerializer.Serialize(command), ct, original.Id);
         if (!result.Idempotent && command.Replacement is not null)
+        {
+            var replacementInstallations = await ActiveInstallationsAsync(accountId, command.Replacement.FirearmId,
+                command.Replacement.Date, ct);
             await repository.AddAsync(DbCollections.WorkshopShootingSessions, new ShootingSession
             {
                 Id = StableId(accountId, command.IdempotencyKey, "corrected-shooting"),
@@ -680,10 +757,12 @@ public sealed class WorkshopService(
                 Date = command.Replacement.Date, TotalRounds = command.Replacement.TotalRounds,
                 Notes = Trim(command.Replacement.Notes),
                 ConsumptionRecords = command.Replacement.ConsumptionRecords,
-                UsageSegments = command.Replacement.UsageSegments,
+                UsageSegments = replacementInstallations.Select(x =>
+                    new ShootingUsageSegment(x.ComponentId, x.Id, command.Replacement.TotalRounds)).ToArray(),
                 UntrackedAmmunition = command.Replacement.UntrackedAmmunition,
                 CorrectionOfId = original.Id, CreationDateTime = Now()
             }, ct);
+        }
         return result;
     }
 
@@ -695,11 +774,9 @@ public sealed class WorkshopService(
         CancellationToken ct)
     {
         if (command.TotalRounds <= 0 ||
-            command.ConsumptionRecords.Sum(x => x.Quantity) + command.UntrackedAmmunition != command.TotalRounds ||
-            command.UsageSegments.Sum(x => x.Quantity) != command.TotalRounds)
+            command.ConsumptionRecords.Sum(x => x.Quantity) + command.UntrackedAmmunition != command.TotalRounds)
             throw new WorkshopValidationException("Replacement shooting quantities are inconsistent.");
         if (command.ConsumptionRecords.Any(x => x.Quantity <= 0) ||
-            command.UsageSegments.Any(x => x.Quantity <= 0) ||
             command.ConsumptionRecords.Any(x => x.BatchId is null && x.AllocationId is not null))
             throw new WorkshopValidationException("Replacement shooting quantities are invalid.");
         var replay = WorkshopReplay.Rebuild(
@@ -714,16 +791,15 @@ public sealed class WorkshopService(
         {
             new(WorkshopAggregateKind.Firearm, command.FirearmId, RoundsDelta: command.TotalRounds)
         };
-        foreach (var segment in command.UsageSegments)
+        var activeInstallations = (await repository.ListAsync<ComponentInstallation>(
+                DbCollections.WorkshopComponentInstallations, accountId, ct))
+            .Where(x => x.FirearmId == command.FirearmId && x.InstalledAt <= command.Date &&
+                        (x.RemovedAt is null || x.RemovedAt > command.Date))
+            .ToArray();
+        foreach (var installation in activeInstallations)
         {
-            var installation = await repository.GetAsync<ComponentInstallation>(
-                DbCollections.WorkshopComponentInstallations, accountId, segment.InstallationId, ct);
-            if (installation is null || installation.ComponentId != segment.ComponentId ||
-                installation.FirearmId != command.FirearmId || installation.InstalledAt > command.Date ||
-                installation.RemovedAt <= command.Date)
-                throw new WorkshopValidationException("Replacement segment has no matching historical installation.");
-            deltas.Add(new(WorkshopAggregateKind.Component, segment.ComponentId,
-                RoundsDelta: segment.Quantity, ComponentId: segment.ComponentId, InstallationId: segment.InstallationId));
+            deltas.Add(new(WorkshopAggregateKind.Component, installation.ComponentId,
+                RoundsDelta: command.TotalRounds, ComponentId: installation.ComponentId, InstallationId: installation.Id));
         }
         foreach (var batchGroup in command.ConsumptionRecords.Where(x => x.BatchId is not null)
                      .GroupBy(x => x.BatchId!, StringComparer.Ordinal))
@@ -839,13 +915,47 @@ public sealed class WorkshopService(
         await repository.AddAsync(DbCollections.WorkshopActivities, new WorkshopActivity
         {
             Id = NewId(), AccountId = accountId, OperationId = operation?.Id ?? sourceId, Type = type,
-            EffectiveAt = operation?.EffectiveAt ?? Now(), SourceEntityIds = [sourceId], CreationDateTime = Now()
+            EffectiveAt = operation?.EffectiveAt ?? Now(), SourceEntityIds = operation?.SourceEntityIds ?? [sourceId],
+            Summary = ActivitySummary(type), EntityLabel = sourceId, CreationDateTime = Now()
         }, ct);
     }
 
     private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;
+    private async Task<IReadOnlyList<ComponentInstallation>> ActiveInstallationsAsync(
+        string accountId, string firearmId, DateTime at, CancellationToken ct) =>
+        (await repository.ListAsync<ComponentInstallation>(
+            DbCollections.WorkshopComponentInstallations, accountId, ct))
+        .Where(x => x.FirearmId == firearmId && x.InstalledAt <= at &&
+                    (x.RemovedAt is null || x.RemovedAt > at)).ToArray();
     private static string NewId() => ObjectId.GenerateNewId().ToString();
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static RecipeSnapshot NormalizeRecipe(RecipeSnapshot snapshot)
+    {
+        var oal = snapshot.Oal;
+        if (!string.IsNullOrWhiteSpace(oal))
+        {
+            oal = oal.Trim();
+            if (!decimal.TryParse(oal, System.Globalization.NumberStyles.AllowLeadingSign |
+                    System.Globalization.NumberStyles.AllowDecimalPoint,
+                    System.Globalization.CultureInfo.InvariantCulture, out var value))
+                throw new WorkshopValidationException("OAL must be a decimal value.");
+            if (decimal.Round(value, 2) != value)
+                throw new WorkshopValidationException("OAL must have at most two fractional digits.");
+            oal = value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return snapshot with { Oal = oal };
+    }
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags) =>
+        (tags ?? []).Select(Trim).Where(x => x is not null).Select(x => x!.ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).Where(x => x.Length <= 80).ToArray();
+    private static string ActivitySummary(WorkshopOperationType type) => type switch
+    {
+        WorkshopOperationType.ComponentInstalled => "Component installed",
+        WorkshopOperationType.ComponentRemoved => "Component removed",
+        WorkshopOperationType.ShootingRecorded => "Shooting session recorded",
+        WorkshopOperationType.MaintenanceRecorded => "Maintenance recorded",
+        _ => type.ToString()
+    };
     private static void RequireAccount(string value) { if (string.IsNullOrWhiteSpace(value)) throw new WorkshopValidationException("Account is required."); }
     private static void RequireText(string? value, string name, int max)
     {

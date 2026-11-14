@@ -11,6 +11,7 @@ public class CreateWorkshopFirearmRequest
     [StringLength(120)] public string? Category { get; init; }
     [StringLength(120)] public string? Nickname { get; init; }
     public DateTime? PurchaseDate { get; init; }
+    [Range(0, long.MaxValue)] public long InitialRounds { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
 }
 
@@ -35,9 +36,10 @@ public sealed class CreateWorkshopComponentDefinitionRequest
     [Range(1, long.MaxValue)] public long? DefaultServiceInterval { get; init; }
     public WorkshopTrackingMode TrackingMode { get; init; } = WorkshopTrackingMode.Counter;
     [StringLength(4000)] public string? Notes { get; init; }
+    public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
 }
 
-public sealed class CreateWorkshopComponentRequest
+public class CreateWorkshopComponentRequest
 {
     [Required] public string DefinitionId { get; init; } = string.Empty;
     [StringLength(500)] public string? IdentificationNote { get; init; }
@@ -47,6 +49,18 @@ public sealed class CreateWorkshopComponentRequest
     public WorkshopTrackingMode? TrackingMode { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
 }
+
+public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopComponentRequest
+{
+    [Required] public string FirearmId { get; init; } = string.Empty;
+    public DateTime InstalledAt { get; init; }
+    [StringLength(1000)] public string? InstallationNotes { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed record CreateAndInstallWorkshopComponentResponse(
+    ComponentInstance Component,
+    ComponentInstallation Installation);
 
 public sealed class InstallWorkshopComponentRequest
 {

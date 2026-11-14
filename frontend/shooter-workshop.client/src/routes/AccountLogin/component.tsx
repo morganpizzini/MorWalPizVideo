@@ -1,11 +1,28 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { useI18n } from "../../i18n";
+
+const workshopOrigin = "https://workshop.local";
+
+export function getSafeReturnPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/";
+  }
+
+  try {
+    const url = new URL(value, workshopOrigin);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 export default function AccountLogin() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -21,7 +38,10 @@ export default function AccountLogin() {
           onSubmit={(event) => {
             event.preventDefault();
             void login({ identifier, password }).then((ok) => {
-              if (ok) void navigate("/");
+              if (ok) {
+                const returnUrl = new URLSearchParams(location.search).get("returnUrl");
+                void navigate(getSafeReturnPath(returnUrl), { replace: true });
+              }
               else setMessage(t("Sign-in was not accepted."));
             });
           }}

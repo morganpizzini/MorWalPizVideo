@@ -79,6 +79,7 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
     manufacturer: "",
     model: "",
     caliber: "",
+    initialRounds: 0,
     nickname: "",
     category: "",
     notes: "",
@@ -112,6 +113,17 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
           </label>
         ))}
       </div>
+      <label>
+        {t("Initial rounds")}
+        <input
+          type="number"
+          min="0"
+          value={form.initialRounds ?? 0}
+          onChange={(event) =>
+            setForm({ ...form, initialRounds: Number(event.target.value) })
+          }
+        />
+      </label>
       <label>
         {t("Notes")}
         <textarea

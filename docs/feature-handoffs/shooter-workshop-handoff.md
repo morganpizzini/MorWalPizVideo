@@ -1,5 +1,18 @@
 # Shooter Workshop Architecture Handoff
 
+## Active Follow-up
+
+The 2026-11-14 component, firearm, maintenance, recipe, shooting, history, and
+account-session feedback is planned in
+[`shooter-workshop-ui-feedback-handoff.md`](./shooter-workshop-ui-feedback-handoff.md).
+That focused handoff governs the next implementation batch while this document remains
+the broader Workshop delivery baseline.
+
+The bounded refinement implementation is now integrated across the Workshop backend,
+shared frontend contracts, SPA routes, and account navigation. The focused handoff
+records the exact delivered capabilities, validation, and remaining deployment/read
+projection work.
+
 ## Outcome
 
 ## Verification follow-up — 2026-11-13

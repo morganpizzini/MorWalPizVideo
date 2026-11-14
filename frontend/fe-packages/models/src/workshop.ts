@@ -22,6 +22,7 @@ export interface CreateWorkshopFirearmRequest {
   manufacturer: string;
   model: string;
   caliber: string;
+  initialRounds?: number;
   category?: string | null;
   nickname?: string | null;
   purchaseDate?: string | null;
@@ -47,6 +48,7 @@ export interface WorkshopComponentDefinition {
   defaultServiceInterval?: number | null;
   trackingMode: WorkshopTrackingMode;
   notes?: string | null;
+  compatibilityTags: string[];
   archived: boolean;
 }
 
@@ -58,6 +60,47 @@ export interface CreateWorkshopComponentDefinitionRequest {
   defaultServiceInterval?: number | null;
   trackingMode: WorkshopTrackingMode;
   notes?: string | null;
+  compatibilityTags?: string[];
+}
+
+export interface CreateAndInstallWorkshopComponentRequest
+  extends CreateWorkshopPhysicalComponentRequest {
+  firearmId: string;
+  installedAt: string;
+  installationNotes?: string | null;
+  idempotencyKey: string;
+}
+
+export interface InstallWorkshopComponentRequest {
+  componentId: string;
+  firearmId: string;
+  installedAt: string;
+  installationNotes?: string | null;
+  idempotencyKey: string;
+}
+
+export interface RemoveWorkshopComponentRequest {
+  removedAt: string;
+  removalNotes?: string | null;
+  idempotencyKey: string;
+  revision: number;
+}
+
+export interface WorkshopComponentInstallation {
+  id: string;
+  accountId: string;
+  componentId: string;
+  firearmId: string;
+  installedAt: string;
+  removedAt?: string | null;
+  installationNotes?: string | null;
+  removalNotes?: string | null;
+  revision: number;
+}
+
+export interface CreateAndInstallWorkshopComponentResponse {
+  component: WorkshopPhysicalComponent;
+  installation: WorkshopComponentInstallation;
 }
 
 export interface WorkshopPhysicalComponent {
@@ -231,6 +274,8 @@ export interface WorkshopActivity {
   type: string;
   effectiveAt: string;
   sourceEntityIds: string[];
+  summary?: string | null;
+  entityLabel?: string | null;
 }
 
 export interface WorkshopReconciliationStatus {

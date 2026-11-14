@@ -5,6 +5,10 @@ import {
   reallocateWorkshopAmmunition,
   correctWorkshopShooting,
   getWorkshopBatches,
+  createAndInstallWorkshopComponent,
+  installWorkshopComponent,
+  removeWorkshopComponent,
+  createWorkshopComponentDefinition,
   recordWorkshopMaintenance,
   recordWorkshopProduction,
   recordWorkshopShooting,
@@ -250,5 +254,55 @@ describe("Workshop account transport", () => {
         replacementShooting: { totalRounds: 50 },
         idempotencyKey: "correction-key",
       });
+    });
+
+    it("uses the compatibility and installation command routes with account CSRF", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) =>
+          Promise.resolve(
+            String(input).endsWith("/csrf")
+              ? Response.json({ token: "component-csrf" })
+              : Response.json({ component: { id: "component-1" }, installation: { id: "installation-1" } }),
+          ),
+        );
+        vi.stubGlobal("fetch", fetchMock);
+
+        await createWorkshopComponentDefinition({
+          name: "Trigger",
+          trackingMode: "Counter",
+          compatibilityTags: ["9mm", "pistol"],
+        });
+        await createAndInstallWorkshopComponent({
+          definitionId: "definition-1",
+          firearmId: "firearm-1",
+          installedAt: "2026-11-14T00:00:00Z",
+          idempotencyKey: "create-install-key",
+        });
+        await installWorkshopComponent({
+          componentId: "component-1",
+          firearmId: "firearm-1",
+          installedAt: "2026-11-14T00:00:00Z",
+          idempotencyKey: "install-key",
+        });
+        await removeWorkshopComponent("installation/1", {
+          removedAt: "2026-11-14T01:00:00Z",
+          revision: 1,
+          idempotencyKey: "remove-key",
+        });
+
+        expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject({
+          compatibilityTags: ["9mm", "pistol"],
+        });
+        expect(String(fetchMock.mock.calls[2][0])).toBe(
+          "/api/v1/workshop/components/install",
+        );
+        expect(String(fetchMock.mock.calls[3][0])).toBe(
+          "/api/v1/workshop/components/installations",
+        );
+        expect(String(fetchMock.mock.calls[4][0])).toBe(
+          "/api/v1/workshop/components/installations/installation%2F1/remove",
+        );
+        expect(new Headers(fetchMock.mock.calls[4][1]?.headers).get("X-CSRF-TOKEN")).toBe(
+          "component-csrf",
+        );
+    });
   });
-});

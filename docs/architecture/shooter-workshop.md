@@ -26,11 +26,23 @@ Mongo index definitions are included in the executable central operations manife
 reviewed audit/apply. They are intentionally not part of the limited startup
 blog-index bootstrap.
 
+The 2026-11-14 refinement batch is now represented in source: component-definition
+compatibility tags are normalized and persisted; component creation can atomically
+converge with installation through an idempotent command; maintenance counters are
+derived from the ledger; shooting attribution is derived for every installation active
+at the session date; initial firearm rounds are ledger-backed; legacy and canonical OAL
+values are read compatibly with two-decimal validation for new recipes; and activity
+records carry additive summary metadata. The Workshop SPA exposes the compatible
+component, recipe, maintenance, shooting, history, initial-round, and safe-return-path
+flows without introducing browser-authored installation attribution.
+
 This status is implementation evidence, not release approval. Full domain acceptance
 coverage, exact-origin browser authentication proof, duplicate/index audit and apply
 evidence, Azure custom-domain/TLS/runtime configuration, and complete operational
 rollback evidence remain open. BackOffice remains operational index governance only;
-it has no Workshop product behavior or ownership.
+it has no Workshop product behavior or ownership. Installation-specific read
+projections, definition tag editing, recipe editing, and deployed same-origin browser
+proof remain follow-up work explicitly tracked in the delivery handoff.
 
 # Architectural Direction and Delivery Baseline
 

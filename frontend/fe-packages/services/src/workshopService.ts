@@ -1,6 +1,9 @@
 import type {
   CreateWorkshopAllocationRequest,
   CreateWorkshopComponentDefinitionRequest,
+  CreateAndInstallWorkshopComponentRequest,
+  InstallWorkshopComponentRequest,
+  RemoveWorkshopComponentRequest,
   CreateWorkshopFirearmRequest,
   UpdateWorkshopFirearmRequest,
   ArchiveWorkshopFirearmRequest,
@@ -18,6 +21,8 @@ import type {
   WorkshopFirearm,
   WorkshopOperationContract,
   WorkshopPhysicalComponent,
+  WorkshopComponentInstallation,
+  CreateAndInstallWorkshopComponentResponse,
   WorkshopRecipe,
   WorkshopReconciliationStatus,
   WorkshopMaintenanceEvent,
@@ -65,6 +70,11 @@ export const createWorkshopComponentDefinition = (
 ): Promise<WorkshopComponentDefinition> =>
   request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENT_DEFINITIONS, body));
 
+export const createAndInstallWorkshopComponent = (
+  body: CreateAndInstallWorkshopComponentRequest,
+): Promise<CreateAndInstallWorkshopComponentResponse> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENT_INSTALL, body));
+
 export const getWorkshopComponents = (): Promise<WorkshopPhysicalComponent[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_COMPONENTS));
 
@@ -72,6 +82,20 @@ export const createWorkshopComponent = (
   body: CreateWorkshopPhysicalComponentRequest,
 ): Promise<WorkshopPhysicalComponent> =>
   request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENTS, body));
+
+export const installWorkshopComponent = (
+  body: InstallWorkshopComponentRequest,
+): Promise<WorkshopComponentInstallation> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENT_INSTALLATIONS, body));
+
+export const removeWorkshopComponent = (
+  installationId: string,
+  body: RemoveWorkshopComponentRequest,
+): Promise<WorkshopComponentInstallation> =>
+  request(accountApiService.post(
+    `${frontendEndpoints.WORKSHOP_COMPONENT_INSTALLATIONS}/${encodeURIComponent(installationId)}/remove`,
+    body,
+  ));
 
 export const recordWorkshopMaintenance = (
   body: CreateWorkshopMaintenanceRequest,

@@ -90,6 +90,84 @@ public sealed class WorkshopServiceTests
         Assert.Equal(first.Operation.Id, retry.Operation.Id);
     }
 
+    [Fact]
+    public async Task Shooting_derives_rounds_for_every_component_active_at_session_time()
+    {
+        var (service, scenario, firearm) = CreateService();
+        scenario.Add(DbCollections.WorkshopComponentDefinitions, new ComponentDefinition
+        {
+            Id = "definition-1", AccountId = "account-1", Name = "Optic"
+        });
+        foreach (var id in new[] { "component-1", "component-2" })
+        {
+            scenario.Add(DbCollections.WorkshopComponentInstances, new ComponentInstance
+            {
+                Id = id, AccountId = "account-1", DefinitionId = "definition-1"
+            });
+            scenario.Add(DbCollections.WorkshopComponentInstallations, new ComponentInstallation
+            {
+                Id = $"installation-{id}", AccountId = "account-1", ComponentId = id,
+                FirearmId = firearm.Id, InstalledAt = DateTime.UtcNow.AddDays(-1)
+            });
+        }
+
+        var result = await service.RecordShootingAsync("account-1",
+            new(firearm.Id, DateTime.UtcNow, 40, null, [], 40, [], "shoot-derived"));
+
+        Assert.Equal(40, result.Operation.Deltas.Single(x => x.AggregateKind == WorkshopAggregateKind.Firearm).RoundsDelta);
+        Assert.Equal(2, result.Operation.Deltas.Count(x => x.AggregateKind == WorkshopAggregateKind.Component));
+        Assert.All(result.Operation.Deltas.Where(x => x.AggregateKind == WorkshopAggregateKind.Component),
+            delta => Assert.Equal(40, delta.RoundsDelta));
+    }
+
+    [Fact]
+    public async Task Create_and_install_is_recoverable_and_normalizes_definition_tags()
+    {
+        var (service, scenario, firearm) = CreateService();
+        var definition = await service.CreateComponentDefinitionAsync("account-1",
+            new("Sight", null, null, null, null, WorkshopTrackingMode.Counter, null, [" CZ ", "cz", "Tanfoglio"]));
+
+        var command = new WorkshopCreateAndInstallCommand(definition.Id, firearm.Id, "serial", null, null,
+            null, null, null, DateTime.UtcNow, null, "create-install-1");
+        var first = await service.CreateAndInstallComponentAsync("account-1", command);
+        var retry = await service.CreateAndInstallComponentAsync("account-1", command);
+
+        Assert.Equal(first.Component.Id, retry.Component.Id);
+        Assert.Equal(first.Installation.Id, retry.Installation.Id);
+        Assert.Equal(["cz", "tanfoglio"], scenario.Read<ComponentDefinition>(
+            DbCollections.WorkshopComponentDefinitions).Single().CompatibilityTags);
+        Assert.Single(scenario.Read<ComponentInstallation>(DbCollections.WorkshopComponentInstallations));
+    }
+
+    [Fact]
+    public async Task Recipe_writes_canonicalize_oal_and_reject_precision_beyond_two_digits()
+    {
+        var (service, _, _) = CreateService();
+
+        var recipe = await service.CreateRecipeAsync("account-1",
+            new("9mm", "9x19", "1.230", null, null, null, null, null, null, null));
+
+        Assert.Equal("1.23", recipe.Oal);
+        await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeAsync("account-1",
+            new("invalid", "9x19", "1.234", null, null, null, null, null, null, null)));
+    }
+
+    [Fact]
+    public async Task Initial_firearm_rounds_are_recorded_in_the_ledger_projection()
+    {
+        var (service, scenario, _) = CreateService();
+
+        var firearm = await service.CreateFirearmAsync("account-1",
+            new("Maker", "New", "9mm", null, null, null, null, 125));
+
+        Assert.Equal(125, firearm.TotalRounds);
+        var stored = scenario.Read<Firearm>(DbCollections.WorkshopFirearms).Single(x => x.Id == firearm.Id);
+        Assert.Equal(125, stored.TotalRounds);
+        var operation = scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations).Single();
+        Assert.Equal(125, operation.Deltas.Single().RoundsDelta);
+        Assert.Equal(WorkshopOperationType.FirearmCreated, operation.OperationType);
+    }
+
     private static (WorkshopService Service, FakeScenario Scenario, Firearm Firearm) CreateService()
     {
         var scenario = new FakeScenario();

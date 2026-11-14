@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { PageTitle } from "@morwalpiz/layout";
-import type { WorkshopFirearm } from "@morwalpizvideo/models";
+import type {
+  WorkshopConsumptionRequest,
+  WorkshopFirearm,
+} from "@morwalpizvideo/models";
 import {
   correctWorkshopShooting,
   getWorkshopFirearms,
@@ -16,8 +19,7 @@ export default function ShootingSessions() {
     firearmId: "",
     rounds: "0",
     untracked: "0",
-    consumption: "[]",
-    usage: "[]",
+    consumptionRecords: [] as WorkshopConsumptionRequest[],
   });
   return (
     <div>
@@ -38,8 +40,8 @@ export default function ShootingSessions() {
                   date: new Date().toISOString(),
                   totalRounds,
                   untrackedAmmunition: Number(form.untracked),
-                  consumptionRecords: JSON.parse(form.consumption),
-                  usageSegments: JSON.parse(form.usage),
+                  consumptionRecords: form.consumptionRecords.filter((record) => record.quantity > 0),
+                  usageSegments: [],
                   idempotencyKey: crypto.randomUUID(),
                 });
               }}
@@ -90,24 +92,10 @@ export default function ShootingSessions() {
                   />
                 </label>
               </div>
-              <label>
-                {t("Consumption records JSON")}
-                <textarea
-                  value={form.consumption}
-                  onChange={(event) =>
-                    setForm({ ...form, consumption: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                {t("Usage segments JSON")}
-                <textarea
-                  value={form.usage}
-                  onChange={(event) =>
-                    setForm({ ...form, usage: event.target.value })
-                  }
-                />
-              </label>
+              <ShootingConsumptionFields
+                records={form.consumptionRecords}
+                onChange={(consumptionRecords) => setForm({ ...form, consumptionRecords })}
+              />
             </WorkshopForm>
             <ShootingCorrectionForm
               firearms={items.filter((firearm) => !firearm.archived)}
@@ -116,6 +104,67 @@ export default function ShootingSessions() {
         )}
       </ResourceState>
     </div>
+  );
+}
+
+function ShootingConsumptionFields({
+  records,
+  onChange,
+}: {
+  records: WorkshopConsumptionRequest[];
+  onChange: (records: WorkshopConsumptionRequest[]) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <fieldset>
+      <legend>{t("Ammunition records")}</legend>
+      {records.map((record, index) => (
+        <div className="form-grid" key={index}>
+          <label>
+            {t("Batch ID")}
+            <input
+              value={record.batchId ?? ""}
+              onChange={(event) => {
+                const next = [...records];
+                next[index] = { ...record, batchId: event.target.value || null };
+                onChange(next);
+              }}
+            />
+          </label>
+          <label>
+            {t("Allocation ID")}
+            <input
+              value={record.allocationId ?? ""}
+              onChange={(event) => {
+                const next = [...records];
+                next[index] = { ...record, allocationId: event.target.value || null };
+                onChange(next);
+              }}
+            />
+          </label>
+          <label>
+            {t("Quantity")}
+            <input
+              type="number"
+              min="1"
+              required
+              value={record.quantity || ""}
+              onChange={(event) => {
+                const next = [...records];
+                next[index] = { ...record, quantity: Number(event.target.value) };
+                onChange(next);
+              }}
+            />
+          </label>
+          <button type="button" className="button button-quiet" onClick={() => onChange(records.filter((_, itemIndex) => itemIndex !== index))}>
+            {t("Remove")}
+          </button>
+        </div>
+      ))}
+      <button type="button" className="button button-quiet" onClick={() => onChange([...records, { quantity: 0 }])}>
+        + {t("Ammunition record")}
+      </button>
+    </fieldset>
   );
 }
 

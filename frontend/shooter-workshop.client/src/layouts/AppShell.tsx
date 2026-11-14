@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
 import { LanguageSelector } from "../components/LanguageSelector";
@@ -15,11 +15,13 @@ export default function AppShell() {
   const { loading, session, error, logout } = useWorkshopAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   useEffect(() => {
     if (!loading && !session.authenticated) {
-      void navigate(`/account/login?returnUrl=${encodeURIComponent(location.pathname)}`, { replace: true });
+      const returnUrl = `${location.pathname}${location.search}${location.hash}`;
+      void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
     }
-  }, [loading, navigate, session.authenticated]);
+  }, [loading, location.hash, location.pathname, location.search, navigate, session.authenticated]);
   if (loading) return <LoadingState label={t("Restoring your account session…")} />;
   if (!session.authenticated) {
     return <LoadingState label={error ?? t("Redirecting to account login…")} />;
