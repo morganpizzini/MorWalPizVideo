@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
+import { LanguageSelector } from "../../components/LanguageSelector";
+import { useI18n } from "../../i18n";
 export default function AccountLogin() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -10,23 +13,21 @@ export default function AccountLogin() {
   return (
     <main className="account-page">
       <div className="account-card">
-        <p className="eyebrow">Private workspace</p>
-        <h1>Sign in to Workshop</h1>
-        <p>
-          Use your existing MorWalPiz account. Workshop requests stay on the
-          account cookie transport.
-        </p>
+        <LanguageSelector />
+        <p className="eyebrow">{t("Private workspace")}</p>
+        <h1>{t("Sign in to Workshop")}</h1>
+        <p>{t("Use your existing MorWalPiz account. Workshop requests stay on the account cookie transport.")}</p>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             void login({ identifier, password }).then((ok) => {
               if (ok) void navigate("/");
-              else setMessage("Sign-in was not accepted.");
+              else setMessage(t("Sign-in was not accepted."));
             });
           }}
         >
           <label>
-            Username or email
+            {t("Username or email")}
             <input
               required
               value={identifier}
@@ -34,7 +35,7 @@ export default function AccountLogin() {
             />
           </label>
           <label>
-            Password
+            {t("Password")}
             <input
               required
               type="password"
@@ -47,7 +48,7 @@ export default function AccountLogin() {
               {message}
             </p>
           )}
-          <button className="button button-primary">Sign in</button>
+          <button className="button button-primary">{t("Sign in")}</button>
         </form>
       </div>
     </main>

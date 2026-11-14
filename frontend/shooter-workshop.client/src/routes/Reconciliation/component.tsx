@@ -4,26 +4,29 @@ import {
   rebuildWorkshopProjections,
 } from "@morwalpizvideo/services";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { formatDateTime } from "../../i18n-formatters";
 export default function Reconciliation() {
+  const { culture, t } = useI18n();
   const resource = useResource(getWorkshopReconciliation);
   return (
     <ResourceState resource={resource}>
       {(status) => (
         <div>
           <PageTitle
-            title="Integrity and reconciliation"
-            subtitle="Projection state is returned by the canonical reconciliation endpoint."
+            title={t("Integrity and reconciliation")}
+            subtitle={t("Projection state is returned by the canonical reconciliation endpoint.")}
           />
           <section
             className={`panel projection projection-${status.state.toLowerCase()}`}
           >
-            <h2>{status.state}</h2>
+            <h2>{t(status.state)}</h2>
             <p>
               {status.mismatchCount
-                ? `${status.mismatchCount} mismatches detected.`
-                : "No mismatches reported."}
+                ? t("{count} mismatches detected.", { count: status.mismatchCount })
+                : t("No mismatches reported.")}
             </p>
-            <p>Last run: {new Date(status.lastRunAt).toLocaleString()}</p>
+            <p>{t("Last run: {date}", { date: formatDateTime(status.lastRunAt, culture) })}</p>
             {status.mismatches.length > 0 && (
               <ul>
                 {status.mismatches.map((mismatch) => (
@@ -37,7 +40,7 @@ export default function Reconciliation() {
                 void rebuildWorkshopProjections().then(resource.reload)
               }
             >
-              Rebuild projections
+              {t("Rebuild projections")}
             </button>
           </section>
         </div>

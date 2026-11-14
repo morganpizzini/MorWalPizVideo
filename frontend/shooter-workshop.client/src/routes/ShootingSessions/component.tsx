@@ -8,7 +8,9 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
 export default function ShootingSessions() {
+  const { t } = useI18n();
   const firearms = useResource(getWorkshopFirearms);
   const [form, setForm] = useState({
     firearmId: "",
@@ -20,8 +22,8 @@ export default function ShootingSessions() {
   return (
     <div>
       <PageTitle
-        title="Shooting sessions"
-        subtitle="Record new sessions or correct an operation without rewriting history."
+        title={t("Shooting sessions")}
+        subtitle={t("Record new sessions or correct an operation without rewriting history.")}
       />
       <ResourceState resource={firearms}>
         {(items) => (
@@ -43,7 +45,7 @@ export default function ShootingSessions() {
               }}
             >
               <label>
-                Firearm
+                {t("Firearm")}
                 <select
                   required
                   value={form.firearmId}
@@ -51,7 +53,7 @@ export default function ShootingSessions() {
                     setForm({ ...form, firearmId: event.target.value })
                   }
                 >
-                  <option value="">Select firearm</option>
+                  <option value="">{t("Select firearm")}</option>
                   {items
                     .filter((firearm) => !firearm.archived)
                     .map((firearm) => (
@@ -64,7 +66,7 @@ export default function ShootingSessions() {
               </label>
               <div className="form-grid">
                 <label>
-                  Total rounds
+                  {t("Total rounds")}
                   <input
                     type="number"
                     min="1"
@@ -76,7 +78,7 @@ export default function ShootingSessions() {
                   />
                 </label>
                 <label>
-                  Untracked ammunition
+                  {t("Untracked ammunition")}
                   <input
                     type="number"
                     min="0"
@@ -89,7 +91,7 @@ export default function ShootingSessions() {
                 </label>
               </div>
               <label>
-                Consumption records JSON
+                {t("Consumption records JSON")}
                 <textarea
                   value={form.consumption}
                   onChange={(event) =>
@@ -98,7 +100,7 @@ export default function ShootingSessions() {
                 />
               </label>
               <label>
-                Usage segments JSON
+                {t("Usage segments JSON")}
                 <textarea
                   value={form.usage}
                   onChange={(event) =>
@@ -118,6 +120,7 @@ export default function ShootingSessions() {
 }
 
 function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
+  const { t } = useI18n();
   const [operationId, setOperationId] = useState("");
   const [firearmId, setFirearmId] = useState("");
   const [rounds, setRounds] = useState("0");
@@ -142,7 +145,7 @@ function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
       }}
     >
       <label>
-        Original operation ID
+        {t("Original operation ID")}
         <input
           required
           value={operationId}
@@ -151,13 +154,13 @@ function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
       </label>
       <div className="form-grid">
         <label>
-          Correct firearm
+          {t("Correct firearm")}
           <select
             required
             value={firearmId}
             onChange={(event) => setFirearmId(event.target.value)}
           >
-            <option value="">Select firearm</option>
+            <option value="">{t("Select firearm")}</option>
             {firearms.map((firearm) => (
               <option value={firearm.id} key={firearm.id}>
                 {firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}
@@ -166,7 +169,7 @@ function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
           </select>
         </label>
         <label>
-          Correct total rounds
+          {t("Correct total rounds")}
           <input
             type="number"
             min="1"
@@ -176,10 +179,7 @@ function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
           />
         </label>
       </div>
-      <small>
-        A correction appends a compensating operation; the original remains in
-        history.
-      </small>
+      <small>{t("A correction appends a compensating operation; the original remains in history.")}</small>
     </WorkshopForm>
   );
 }

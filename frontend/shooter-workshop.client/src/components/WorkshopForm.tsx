@@ -31,10 +31,10 @@ export function WorkshopForm({
   };
   return (
     <form className="panel form-panel" onSubmit={submit}>
-      <h2>{title}</h2>
+      <h2>{t(title)}</h2>
       {children}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="button button-primary" disabled={pending}>{pending ? t("Saving…") : submitLabel}</button>
+      <button className="button button-primary" disabled={pending}>{pending ? t("Saving…") : t(submitLabel)}</button>
     </form>
   );
 }

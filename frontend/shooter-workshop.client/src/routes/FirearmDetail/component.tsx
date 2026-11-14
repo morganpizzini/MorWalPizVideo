@@ -12,7 +12,10 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, Stat, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { formatNumber } from "../../i18n-formatters";
 export default function FirearmDetail() {
+  const { culture, t } = useI18n();
   const { id = "" } = useParams();
   const resource = useResource(getWorkshopFirearms);
   const [editing, setEditing] = useState(false);
@@ -23,8 +26,8 @@ export default function FirearmDetail() {
         if (!firearm)
           return (
             <EmptyState
-              title="Firearm not found"
-              message="The record may be archived or belong to another account."
+              title={t("Firearm not found")}
+              message={t("The record may be archived or belong to another account.")}
             />
           );
         return (
@@ -33,12 +36,12 @@ export default function FirearmDetail() {
               title={
                 firearm.nickname || `${firearm.manufacturer} ${firearm.model}`
               }
-              subtitle={`${firearm.caliber} · ${firearm.archived ? "archived" : "active"}`}
+              subtitle={`${firearm.caliber} · ${t(firearm.archived ? "archived" : "active")}`}
             />
             <div className="stats-grid">
               <Stat
                 label="Total rounds"
-                value={firearm.totalRounds.toLocaleString()}
+                value={formatNumber(firearm.totalRounds, culture)}
               />
               <Stat label="Revision" value={firearm.revision} />
               <Stat label="Account record" value={firearm.id} />
@@ -46,12 +49,12 @@ export default function FirearmDetail() {
             {!firearm.archived && (
               <section className="panel">
                 <div className="section-heading">
-                  <h2>Manage firearm</h2>
+                  <h2>{t("Manage firearm")}</h2>
                   <button
                     className="button button-quiet"
                     onClick={() => setEditing(!editing)}
                   >
-                    {editing ? "Cancel" : "Edit details"}
+                    {t(editing ? "Cancel" : "Edit details")}
                   </button>
                 </div>
                 {editing && (
@@ -73,18 +76,15 @@ export default function FirearmDetail() {
                     resource.reload();
                   }}
                 >
-                  Archive firearm
+                  {t("Archive firearm")}
                 </button>
               </section>
             )}
             <section className="panel">
-              <h2>Related workflows</h2>
-              <p>
-                Record a session against this firearm or correct a previously
-                recorded operation.
-              </p>
+              <h2>{t("Related workflows")}</h2>
+              <p>{t("Record a session against this firearm or correct a previously recorded operation.")}</p>
               <Link className="button button-quiet" to="/sessions/shooting">
-                Record session
+                {t("Record session")}
               </Link>
             </section>
           </div>
@@ -101,6 +101,7 @@ function FirearmEditForm({
   firearm: WorkshopFirearm;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<CreateWorkshopFirearmRequest>({
     manufacturer: firearm.manufacturer,
     model: firearm.model,
@@ -126,7 +127,7 @@ function FirearmEditForm({
           ["manufacturer", "model", "caliber", "nickname", "category"] as const
         ).map((field) => (
           <label key={field}>
-            {field}
+            {t(field)}
             <input
               required={
                 field === "manufacturer" ||
@@ -142,7 +143,7 @@ function FirearmEditForm({
         ))}
       </div>
       <label>
-        Notes
+        {t("Notes")}
         <textarea
           value={form.notes ?? ""}
           onChange={(event) => setForm({ ...form, notes: event.target.value })}

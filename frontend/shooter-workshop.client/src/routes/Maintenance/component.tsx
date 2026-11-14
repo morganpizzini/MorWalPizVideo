@@ -7,12 +7,15 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { formatNumber, localDateInputValue } from "../../i18n-formatters";
 export default function Maintenance() {
+  const { culture, t } = useI18n();
   const inventory = useResource(getWorkshopComponents);
   const [form, setForm] = useState<CreateWorkshopMaintenanceRequest>({
     componentId: null,
     eventType: "Inspection",
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateInputValue(),
     description: "",
     roundCountAtEvent: null,
     idempotencyKey: "",
@@ -22,8 +25,8 @@ export default function Maintenance() {
       {(items) => (
         <div>
           <PageTitle
-            title="Maintenance"
-            subtitle="Component projections and service intervals."
+            title={t("Maintenance")}
+            subtitle={t("Component projections and service intervals.")}
           />
           <section className="panel">
             <WorkshopForm
@@ -38,7 +41,7 @@ export default function Maintenance() {
               }}
             >
               <label>
-                Component
+                {t("Component")}
                 <select
                   required
                   value={form.componentId ?? ""}
@@ -49,17 +52,17 @@ export default function Maintenance() {
                     })
                   }
                 >
-                  <option value="">Select component</option>
+                  <option value="">{t("Select component")}</option>
                   {items.map((item) => (
                     <option value={item.id} key={item.id}>
-                      {item.id} · {item.status}
+                      {item.id} · {t(item.status)}
                     </option>
                   ))}
                 </select>
               </label>
               <div className="form-grid">
                 <label>
-                  Event type
+                  {t("Event type")}
                   <select
                     value={form.eventType}
                     onChange={(event) =>
@@ -70,17 +73,17 @@ export default function Maintenance() {
                       })
                     }
                   >
-                    <option value="Inspection">Inspection</option>
-                    <option value="Cleaning">Cleaning</option>
+                    <option value="Inspection">{t("Inspection")}</option>
+                    <option value="Cleaning">{t("Cleaning")}</option>
                     <option value="ComponentMaintenance">
-                      Component maintenance
+                      {t("Component maintenance")}
                     </option>
-                    <option value="Replacement">Replacement</option>
-                    <option value="General">General</option>
+                    <option value="Replacement">{t("Replacement")}</option>
+                    <option value="General">{t("General")}</option>
                   </select>
                 </label>
                 <label>
-                  Date
+                  {t("Date")}
                   <input
                     type="date"
                     required
@@ -92,7 +95,7 @@ export default function Maintenance() {
                 </label>
               </div>
               <label>
-                Round count
+                {t("Round count")}
                 <input
                   type="number"
                   min="0"
@@ -108,7 +111,7 @@ export default function Maintenance() {
                 />
               </label>
               <label>
-                Description
+                {t("Description")}
                 <textarea
                   required
                   value={form.description}
@@ -125,16 +128,16 @@ export default function Maintenance() {
                     <span>
                       <strong>{item.id}</strong>
                       <small>
-                        {item.totalRounds.toLocaleString()} rounds · interval{" "}
-                        {item.serviceInterval ?? "manual"}
+                        {formatNumber(item.totalRounds, culture)} {t("rounds")} ·{" "}
+                        {t("interval {value}", { value: item.serviceInterval ?? t("manual") })}
                       </small>
                     </span>
-                    <span className="badge">{item.status}</span>
+                    <span className="badge">{t(item.status)}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <EmptyState title="No tracked components" />
+              <EmptyState title={t("No tracked components")} />
             )}
           </section>
         </div>

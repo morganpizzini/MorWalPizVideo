@@ -9,6 +9,11 @@ vi.mock("@morwalpizvideo/services", () => ({
 vi.mock("../../auth/AuthProvider", () => ({ useWorkshopAuth: () => ({ session: { authenticated: false } }) }));
 
 import { FeedbackProvider } from "./FeedbackProvider";
+import { I18nProvider } from "../../i18n";
+
+function renderFeedback(children: React.ReactNode) {
+  return render(<I18nProvider><FeedbackProvider>{children}</FeedbackProvider></I18nProvider>);
+}
 
 describe("Workshop feedback modal", () => {
   beforeEach(() => {
@@ -18,7 +23,7 @@ describe("Workshop feedback modal", () => {
   afterEach(() => cleanup());
 
   it("traps focus, makes the page inert, and restores focus on cancel", async () => {
-    render(<FeedbackProvider><button type="button">Page action</button></FeedbackProvider>);
+    renderFeedback(<button type="button">Page action</button>);
     const launcher = screen.getByRole("button", { name: "Report an issue" });
     launcher.focus();
     fireEvent.click(launcher);
@@ -32,7 +37,7 @@ describe("Workshop feedback modal", () => {
 
   it("retains a failed draft for retry and reports malformed receipts", async () => {
     submitFeedback.mockRejectedValueOnce(new Error("network"));
-    render(<FeedbackProvider><span>Page</span></FeedbackProvider>);
+    renderFeedback(<span>Page</span>);
     fireEvent.click(screen.getByRole("button", { name: "Report an issue" }));
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Something broke" } });
     fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));

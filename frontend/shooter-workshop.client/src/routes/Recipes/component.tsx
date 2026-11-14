@@ -7,7 +7,9 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
 export default function Recipes() {
+  const { t } = useI18n();
   const resource = useResource(getWorkshopRecipes);
   const [showForm, setShowForm] = useState(false);
   return (
@@ -15,14 +17,14 @@ export default function Recipes() {
       {(items) => (
         <div>
           <PageTitle
-            title="Ammunition recipes"
-            subtitle="Recipe fields match the server snapshot contract."
+            title={t("Ammunition recipes")}
+            subtitle={t("Recipe fields match the server snapshot contract.")}
           />
           <button
             className="button button-primary"
             onClick={() => setShowForm(!showForm)}
           >
-            + New recipe
+            + {t("New recipe")}
           </button>
           {showForm && (
             <RecipeForm
@@ -42,13 +44,13 @@ export default function Recipes() {
                   </div>
                   <h2>{recipe.name}</h2>
                   <p>
-                    {recipe.powder ?? "Powder not set"} · {recipe.status}
+                    {recipe.powder ?? t("Powder not set")} · {t(recipe.status)}
                   </p>
                 </article>
               ))}
             </div>
           ) : (
-            <EmptyState title="No recipes yet" />
+            <EmptyState title={t("No recipes yet")} />
           )}
         </div>
       )}
@@ -57,6 +59,7 @@ export default function Recipes() {
 }
 
 function RecipeForm({ onSaved }: { onSaved: () => void }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<CreateWorkshopRecipeRequest>({
     name: "",
     caliber: "",
@@ -80,7 +83,7 @@ function RecipeForm({ onSaved }: { onSaved: () => void }) {
     >
       <div className="form-grid">
         <label>
-          Name
+          {t("Name")}
           <input
             required
             value={form.name}
@@ -88,7 +91,7 @@ function RecipeForm({ onSaved }: { onSaved: () => void }) {
           />
         </label>
         <label>
-          Caliber
+          {t("Caliber")}
           <input
             required
             value={form.caliber}
@@ -98,7 +101,7 @@ function RecipeForm({ onSaved }: { onSaved: () => void }) {
           />
         </label>
         <label>
-          Powder
+          {t("Powder")}
           <input
             value={form.powder ?? ""}
             onChange={(event) =>
@@ -107,7 +110,7 @@ function RecipeForm({ onSaved }: { onSaved: () => void }) {
           />
         </label>
         <label>
-          Powder weight
+          {t("Powder weight")}
           <input
             type="number"
             value={form.powderWeight ?? ""}
@@ -123,7 +126,7 @@ function RecipeForm({ onSaved }: { onSaved: () => void }) {
         </label>
       </div>
       <label>
-        Notes
+        {t("Notes")}
         <textarea
           value={form.notes ?? ""}
           onChange={(event) => setForm({ ...form, notes: event.target.value })}

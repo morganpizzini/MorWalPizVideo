@@ -1,17 +1,19 @@
 import { PageTitle } from "@morwalpiz/layout";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
+import { useI18n } from "../../i18n";
 export default function AccountProfile() {
   const { session } = useWorkshopAuth();
+  const { t } = useI18n();
   return (
     <div>
-      <PageTitle title="Account" subtitle="Shared MorWalPiz account identity" />
+      <PageTitle title={t("Account")} subtitle={t("Shared MorWalPiz account identity")} />
       <section className="panel">
         <dl className="definition-list">
-          <dt>Username</dt>
+          <dt>{t("Username")}</dt>
           <dd>{session.account?.username}</dd>
-          <dt>Email</dt>
+          <dt>{t("Email")}</dt>
           <dd>{session.account?.email}</dd>
-          <dt>Display name</dt>
+          <dt>{t("Display name")}</dt>
           <dd>{session.account?.displayName}</dd>
         </dl>
       </section>

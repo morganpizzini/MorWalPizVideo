@@ -17,7 +17,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       <strong>{t("Could not load this workspace.")}</strong>
       <p>{message}</p>
       {onRetry && <button className="button button-quiet" onClick={onRetry}>{t("Try again")}</button>}
-      <button className="button button-quiet" onClick={() => open("workshop.error-state")}>Report this problem</button>
+      <button className="button button-quiet" onClick={() => open("workshop.error-state")}>{t("Report this problem")}</button>
     </div>
   );
 }

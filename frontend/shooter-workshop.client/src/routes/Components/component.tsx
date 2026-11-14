@@ -12,14 +12,17 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { formatNumber } from "../../i18n-formatters";
 export default function Components() {
+  const { t } = useI18n();
   const definitions = useResource(getWorkshopComponentDefinitions);
   const inventory = useResource(getWorkshopComponents);
   return (
     <div>
       <PageTitle
-        title="Components"
-        subtitle="Catalogue definitions and independent physical inventory."
+        title={t("Components")}
+        subtitle={t("Catalogue definitions and independent physical inventory.")}
       />
       <div className="detail-grid">
         <ResourceState resource={definitions}>
@@ -36,17 +39,18 @@ export default function Components() {
 }
 
 function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
+  const { t } = useI18n();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   return (
     <section className="panel">
       <div className="section-heading">
-        <h2>Catalogue</h2>
+        <h2>{t("Catalogue")}</h2>
         <button
           className="button button-quiet"
           onClick={() => setShowForm(!showForm)}
         >
-          + Definition
+          + {t("Definition")}
         </button>
       </div>
       {showForm && (
@@ -62,7 +66,7 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
           }}
         >
           <label>
-            Name
+            {t("Name")}
             <input
               required
               value={name}
@@ -78,18 +82,18 @@ function Catalogue({ items }: { items: WorkshopComponentDefinition[] }) {
               <span>
                 <strong>{item.name}</strong>
                 <small>
-                  {item.manufacturer ?? "No manufacturer"} · {item.trackingMode}{" "}
-                  · interval {item.defaultServiceInterval ?? "not set"}
+                  {item.manufacturer ?? t("No manufacturer")} · {t(item.trackingMode)}{" "}
+                  · {t("interval {value}", { value: item.defaultServiceInterval ?? t("not set") })}
                 </small>
               </span>
               <span className="badge">
-                {item.archived ? "archived" : "active"}
+                {t(item.archived ? "archived" : "active")}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <EmptyState title="Catalogue is empty" />
+        <EmptyState title={t("Catalogue is empty")} />
       )}
     </section>
   );
@@ -102,12 +106,13 @@ function Inventory({
   items: WorkshopPhysicalComponent[];
   definitions: WorkshopComponentDefinition[];
 }) {
+  const { culture, t } = useI18n();
   const [definitionId, setDefinitionId] = useState("");
   const [note, setNote] = useState("");
   return (
     <section className="panel">
       <div className="section-heading">
-        <h2>My inventory</h2>
+        <h2>{t("My inventory")}</h2>
       </div>
       <WorkshopForm
         title="Add physical component"
@@ -122,13 +127,13 @@ function Inventory({
         }}
       >
         <label>
-          Definition
+          {t("Definition")}
           <select
             required
             value={definitionId}
             onChange={(event) => setDefinitionId(event.target.value)}
           >
-            <option value="">Select definition</option>
+            <option value="">{t("Select definition")}</option>
             {definitions.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -137,7 +142,7 @@ function Inventory({
           </select>
         </label>
         <label>
-          Identification note
+          {t("Identification note")}
           <input
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -155,16 +160,16 @@ function Inventory({
                   )?.name ?? item.definitionId}
                 </strong>
                 <small>
-                  {item.identificationNote || "No identification note"} ·{" "}
-                  {item.totalRounds.toLocaleString()} rounds
+                  {item.identificationNote || t("No identification note")} ·{" "}
+                  {formatNumber(item.totalRounds, culture)} {t("rounds")}
                 </small>
               </span>
-              <span className="status">{item.status}</span>
+              <span className="status">{t(item.status)}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <EmptyState title="No physical components" />
+        <EmptyState title={t("No physical components")} />
       )}
     </section>
   );

@@ -9,7 +9,9 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
 export default function Allocation() {
+  const { t } = useI18n();
   const batches = useResource(getWorkshopBatches);
   const firearms = useResource(getWorkshopFirearms);
   const [form, setForm] = useState({
@@ -23,8 +25,8 @@ export default function Allocation() {
   return (
     <div>
       <PageTitle
-        title="Ammunition allocation"
-        subtitle="Allocate, release, or move stock between firearms."
+        title={t("Ammunition allocation")}
+        subtitle={t("Allocate, release, or move stock between firearms.")}
       />
       <ResourceState resource={batches}>
         {(batchItems) => (
@@ -45,7 +47,7 @@ export default function Allocation() {
                   }}
                 >
                   <label>
-                    Batch
+                    {t("Batch")}
                     <select
                       required
                       value={form.batchId}
@@ -53,16 +55,16 @@ export default function Allocation() {
                         setForm({ ...form, batchId: event.target.value })
                       }
                     >
-                      <option value="">Select batch</option>
+                      <option value="">{t("Select batch")}</option>
                       {batchItems.map((batch) => (
                         <option value={batch.id} key={batch.id}>
-                          {batch.id} · {batch.onHandQuantity} on hand
+                          {batch.id} · {t("{count} on hand", { count: batch.onHandQuantity })}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label>
-                    Firearm
+                    {t("Firearm")}
                     <select
                       required
                       value={form.firearmId}
@@ -70,7 +72,7 @@ export default function Allocation() {
                         setForm({ ...form, firearmId: event.target.value })
                       }
                     >
-                      <option value="">Select firearm</option>
+                      <option value="">{t("Select firearm")}</option>
                       {firearmItems
                         .filter((firearm) => !firearm.archived)
                         .map((firearm) => (
@@ -82,7 +84,7 @@ export default function Allocation() {
                     </select>
                   </label>
                   <label>
-                    Quantity
+                    {t("Quantity")}
                     <input
                       type="number"
                       min="1"
@@ -94,7 +96,7 @@ export default function Allocation() {
                     />
                   </label>
                   <label>
-                    Notes
+                    {t("Notes")}
                     <textarea
                       value={form.notes}
                       onChange={(event) =>
@@ -116,7 +118,7 @@ export default function Allocation() {
                     }}
                   >
                     <label>
-                      Allocation ID
+                      {t("Allocation ID")}
                       <input
                         required
                         value={allocationId}
@@ -126,7 +128,7 @@ export default function Allocation() {
                       />
                     </label>
                     <label>
-                      Current revision
+                      {t("Current revision")}
                       <input
                         type="number"
                         min="0"
@@ -136,7 +138,7 @@ export default function Allocation() {
                       />
                     </label>
                     <label>
-                      Quantity
+                      {t("Quantity")}
                       <input
                         type="number"
                         min="1"
@@ -161,7 +163,7 @@ export default function Allocation() {
                     }}
                   >
                     <label>
-                      Source allocation ID
+                      {t("Source allocation ID")}
                       <input
                         required
                         value={allocationId}
@@ -171,7 +173,7 @@ export default function Allocation() {
                       />
                     </label>
                     <label>
-                      Destination firearm
+                      {t("Destination firearm")}
                       <select
                         required
                         value={form.firearmId}
@@ -179,7 +181,7 @@ export default function Allocation() {
                           setForm({ ...form, firearmId: event.target.value })
                         }
                       >
-                        <option value="">Select firearm</option>
+                        <option value="">{t("Select firearm")}</option>
                         {firearmItems
                           .filter((firearm) => !firearm.archived)
                           .map((firearm) => (
@@ -191,7 +193,7 @@ export default function Allocation() {
                       </select>
                     </label>
                     <label>
-                      Quantity
+                      {t("Quantity")}
                       <input
                         type="number"
                         min="1"

@@ -6,19 +6,22 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { localDateInputValue } from "../../i18n-formatters";
 export default function Production() {
+  const { t } = useI18n();
   const recipes = useResource(getWorkshopRecipes);
   const [form, setForm] = useState({
     recipeId: "",
     quantityProduced: "0",
-    productionDate: new Date().toISOString().slice(0, 10),
+    productionDate: localDateInputValue(),
     notes: "",
   });
   return (
     <div>
       <PageTitle
-        title="Production sessions"
-        subtitle="POST /api/v1/workshop/ammunition/production creates a batch."
+        title={t("Production sessions")}
+        subtitle={t("POST /api/v1/workshop/ammunition/production creates a batch.")}
       />
       <ResourceState resource={recipes}>
         {(items) => (
@@ -36,7 +39,7 @@ export default function Production() {
             }}
           >
             <label>
-              Recipe
+              {t("Recipe")}
               <select
                 required
                 value={form.recipeId}
@@ -44,7 +47,7 @@ export default function Production() {
                   setForm({ ...form, recipeId: event.target.value })
                 }
               >
-                <option value="">Select recipe</option>
+                <option value="">{t("Select recipe")}</option>
                 {items.map((recipe) => (
                   <option value={recipe.id} key={recipe.id}>
                     {recipe.name} · {recipe.caliber}
@@ -54,7 +57,7 @@ export default function Production() {
             </label>
             <div className="form-grid">
               <label>
-                Quantity
+                {t("Quantity")}
                 <input
                   type="number"
                   min="1"
@@ -66,7 +69,7 @@ export default function Production() {
                 />
               </label>
               <label>
-                Date
+                {t("Date")}
                 <input
                   type="date"
                   required
@@ -78,7 +81,7 @@ export default function Production() {
               </label>
             </div>
             <label>
-              Notes
+              {t("Notes")}
               <textarea
                 value={form.notes}
                 onChange={(event) =>

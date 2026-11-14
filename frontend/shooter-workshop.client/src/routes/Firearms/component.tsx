@@ -8,7 +8,10 @@ import {
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
+import { useI18n } from "../../i18n";
+import { formatNumber } from "../../i18n-formatters";
 export default function Firearms() {
+  const { culture, t } = useI18n();
   const resource = useResource(getWorkshopFirearms);
   const [showForm, setShowForm] = useState(false);
   return (
@@ -16,14 +19,14 @@ export default function Firearms() {
       {(items) => (
         <div>
           <PageTitle
-            title="My firearms"
-            subtitle={`${items.length} account-owned records`}
+            title={t("My firearms")}
+            subtitle={t("{count} account-owned records", { count: items.length })}
           />
           <button
             className="button button-primary"
             onClick={() => setShowForm(!showForm)}
           >
-            + Register firearm
+            + {t("Register firearm")}
           </button>
           {showForm && (
             <FirearmForm
@@ -44,7 +47,7 @@ export default function Firearms() {
                   <div className="record-card-top">
                     <span className="eyebrow">{firearm.caliber}</span>
                     <span className="badge">
-                      {firearm.archived ? "archived" : "active"}
+                      {t(firearm.archived ? "archived" : "active")}
                     </span>
                   </div>
                   <h2>
@@ -54,14 +57,14 @@ export default function Firearms() {
                   <p>
                     {firearm.manufacturer} {firearm.model}
                   </p>
-                  <strong>{firearm.totalRounds.toLocaleString()} rounds</strong>
+                  <strong>{formatNumber(firearm.totalRounds, culture)} {t("rounds")}</strong>
                 </Link>
               ))}
             </div>
           ) : (
             <EmptyState
-              title="No firearms registered"
-              message="Add a firearm to connect sessions, components and allocations."
+              title={t("No firearms registered")}
+              message={t("Add a firearm to connect sessions, components and allocations.")}
             />
           )}
         </div>
@@ -71,6 +74,7 @@ export default function Firearms() {
 }
 
 function FirearmForm({ onSaved }: { onSaved: () => void }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<CreateWorkshopFirearmRequest>({
     manufacturer: "",
     model: "",
@@ -93,7 +97,7 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
           ["manufacturer", "model", "caliber", "nickname", "category"] as const
         ).map((field) => (
           <label key={field}>
-            {field}
+            {t(field)}
             <input
               required={
                 field === "manufacturer" ||
@@ -109,7 +113,7 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
         ))}
       </div>
       <label>
-        Notes
+        {t("Notes")}
         <textarea
           value={form.notes ?? ""}
           onChange={(event) => setForm({ ...form, notes: event.target.value })}

@@ -559,11 +559,40 @@ Validation completed:
 
 Known residual scope:
 
-- The large domain page module still contains additional English literals and raw
-  domain labels in less frequently used forms and tables. Those should be migrated
-  through the same provider/mapping boundary before bilingual release certification.
 - Browser visual checks at desktop, compact width, keyboard navigation, and 200% zoom
   were not run in this environment.
 - Server-authored free-form validation/reconciliation details remain untranslated by
   design; stable API problem codes would be needed for complete server-message
   localization. Response: NO
+
+## Implementation Update — 2026-11-14 (route localization regression)
+
+The page-body localization regression is fixed. The route split that followed the
+initial localization delivery moved page content out of `routes/pages.tsx` into
+per-route components and reintroduced hardcoded English labels. The current route
+components now consume `useI18n`, while shared form titles, submit labels, statistics,
+states, activity text, and feedback controls translate through their owning reusable
+components.
+
+Additional behavior completed:
+
+- Changing the language selector now immediately updates authenticated page titles,
+  subtitles, form labels, actions, table headings, empty states, statuses, and account
+  profile labels, not only the persistent header.
+- The anonymous login screen again exposes the same language selector and translated
+  copy.
+- Displayed counts, reconciliation timestamps, and current local date defaults use the
+  selected culture helpers without changing API values.
+- Route, authentication, API, persistence, and account contracts remain unchanged.
+
+Validation completed:
+
+- `cd frontend && yarn workspace shooter-workshop.client test --run` — passed,
+  4 test files and 8 tests, including an immediate page-label language-switch
+  regression.
+- `cd frontend && yarn workspace shooter-workshop.client build` — passed.
+
+Residual scope:
+
+- Server-authored free-form errors remain culture-neutral/untranslated by design.
+- Browser visual checks remain deferred; no layout or styling was changed by this fix.

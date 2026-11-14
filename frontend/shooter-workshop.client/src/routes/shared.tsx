@@ -49,16 +49,17 @@ export function Stat({
   label: string;
   value: string | number;
 }) {
+  const { t } = useI18n();
   return (
     <div className="stat">
-      <span>{label}</span>
+      <span>{t(label)}</span>
       <strong>{value}</strong>
     </div>
   );
 }
 
 export function ActivityList({ items }: { items: WorkshopActivity[] }) {
-  const { culture } = useI18n();
+  const { culture, t } = useI18n();
   return (
     <ul className="activity-list">
       {items.map((item) => (
@@ -66,7 +67,7 @@ export function ActivityList({ items }: { items: WorkshopActivity[] }) {
           <span className="activity-dot" />
           <div>
             <strong>{item.type}</strong>
-            <p>Operation {item.operationId}</p>
+            <p>{t("Operation {id}", { id: item.operationId })}</p>
           </div>
           <time>{formatDate(item.effectiveAt, culture)}</time>
         </li>
