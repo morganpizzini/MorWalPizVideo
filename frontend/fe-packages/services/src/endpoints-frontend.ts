@@ -50,6 +50,7 @@ const PUBLIC_ACCOUNT_SESSION = "api/v1/account/session";
 const PUBLIC_ACCOUNT_LOGOUT = "api/v1/account/sessions/current";
 const PUBLIC_ACCOUNT_CSRF = "api/v1/account/csrf";
 const PUBLIC_ACCOUNT_PROFILE = "api/v1/profile";
+const PUBLIC_FEEDBACK = "api/v1/feedback";
 const PUBLIC_BLOG_INTERACTIONS = `${baseEndpoint}/blog/{slug}/interactions`;
 
 // Account-owned Shooter Workshop API. Keep these paths isolated from the
@@ -115,6 +116,7 @@ export default {
   PUBLIC_ACCOUNT_LOGOUT,
   PUBLIC_ACCOUNT_CSRF,
   PUBLIC_ACCOUNT_PROFILE,
+  PUBLIC_FEEDBACK,
   PUBLIC_BLOG_INTERACTIONS,
   WORKSHOP,
   WORKSHOP_FIREARMS,

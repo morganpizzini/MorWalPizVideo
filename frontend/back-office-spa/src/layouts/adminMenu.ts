@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   WandSparkles,
+  MessageSquareWarning,
   Tags,
   Tv,
   Users,
@@ -45,6 +46,18 @@ export const dashboardMenuItem: AdminMenuItem = {
 };
 
 export const adminMenuGroups: AdminMenuGroup[] = [
+  {
+    id: 'platform',
+    label: 'Platform',
+    items: [
+      {
+        label: 'Feedback',
+        path: '/feedback',
+        permissions: [permissions.feedback.view, permissions.feedback.manage],
+        icon: MessageSquareWarning,
+      },
+    ],
+  },
   {
     id: 'publishing',
     label: 'Publishing',

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NavigationItemType } from '@morwalpizvideo/models';
 import { saveNavigation } from '@morwalpizvideo/services';
+import { createFormRequest } from '@/test/request-fixtures';
 import action, { validateNavigation } from './action';
 
 vi.mock('@morwalpizvideo/services', () => ({ saveNavigation: vi.fn() }));
@@ -32,10 +33,11 @@ describe('navigation action', () => {
       { type: NavigationItemType.Internal, targetUrl: '/first', displayText: 'First', column: 0, displayOrder: 0 },
       { type: NavigationItemType.External, targetUrl: 'https://example.test', displayText: 'Second', column: 0, displayOrder: 1 },
     ], footerItems: [] };
-    const formData = new FormData();
-    formData.set('navigation', JSON.stringify(navigation));
-
-    await action({ request: new Request('http://localhost/navigation', { method: 'PUT', body: formData }) });
+    await action({
+      request: createFormRequest('http://localhost/navigation', {
+        navigation: JSON.stringify(navigation),
+      }, 'PUT'),
+    });
 
     expect(saveNavigation).toHaveBeenCalledWith(navigation);
   });

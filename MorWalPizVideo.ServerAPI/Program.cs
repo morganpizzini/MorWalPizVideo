@@ -15,6 +15,7 @@ using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.Feedback;
 using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
@@ -113,6 +114,15 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("public-feedback", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"feedback:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
     options.AddPolicy("public-blog-interactions", context => RateLimitPartition.GetFixedWindowLimiter(
         $"public-blog-interactions:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
         _ => new FixedWindowRateLimiterOptions
@@ -203,6 +213,7 @@ else
 builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<WorkshopService>();
 builder.Services.AddScoped<WorkshopReconciliationService>();
 builder.Services.AddScoped<BlogInteractionService>();
@@ -257,6 +268,7 @@ if (enableMock)
     builder.Services.AddScoped<IUserRequestRepository, UserRequestMockRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
+    builder.Services.AddScoped<IFeedbackRepository, FeedbackMockRepository>();
     builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionMockRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterMockRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateMockRepository>();
@@ -313,6 +325,7 @@ else
     builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();
+    builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
     builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionRepository>();
     builder.Services.AddScoped<INewsletterRepository, NewsletterRepository>();
     builder.Services.AddScoped<INewsletterTemplateRepository, NewsletterTemplateRepository>();

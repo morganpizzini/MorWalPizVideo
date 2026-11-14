@@ -22,6 +22,7 @@ using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain; // Assicurati che questo using sia presente
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.Feedback;
 using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Domain.Push;
@@ -216,6 +217,7 @@ else
 }
 builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 builder.Services.AddScoped<IPublicAccountService, PublicAccountService>();
+builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<BlogInteractionService>();
 builder.Services.AddScoped<VideoImporterChannelSettingsService>();
 builder.Services.AddScoped<DashboardQuickActionsService>();
@@ -501,6 +503,7 @@ if (enableMock)
     builder.Services.AddSingleton<INewsletterEmailService>(provider => provider.GetRequiredService<SmtpMockService>());
     builder.Services.AddScoped<IPushSubscriptionRepository, PushSubscriptionMockRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountMockRepository>();
+    builder.Services.AddScoped<IFeedbackRepository, FeedbackMockRepository>();
     builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionMockRepository>();
     builder.Services.AddScoped<IPushAudienceRepository, PushAudienceMockRepository>();
     builder.Services.AddScoped<IPushNotificationTemplateRepository, PushNotificationTemplateMockRepository>();
@@ -554,6 +557,7 @@ else
 
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();
+    builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
     builder.Services.AddScoped<IBlogInteractionRepository, BlogInteractionRepository>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();

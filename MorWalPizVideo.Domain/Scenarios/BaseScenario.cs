@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using MongoDB.Bson;
 using MorWalPizVideo.Models.Models;
+using FeedbackModel = MorWalPizVideo.Models.Models.Feedback;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.Domain.Scenarios;
@@ -30,6 +31,7 @@ public abstract class BaseScenario : IMockScenario
         collections.Clear();
         Initialize();
         Set("auditEvents", Array.Empty<AuditEvent>());
+        Set("feedback", Array.Empty<FeedbackModel>());
         MockScenarioValidator.Validate(this);
     }
 

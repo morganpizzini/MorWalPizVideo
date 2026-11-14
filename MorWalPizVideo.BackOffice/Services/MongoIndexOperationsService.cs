@@ -266,6 +266,28 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Name: "ix_publicaccountsessions_expiresat_ttl",
             Keys: new BsonDocument("expiresAt", 1),
             ExpireAfter: TimeSpan.Zero),
+        new(
+            Key: "feedback.requestid.unique",
+            Collection: DbCollections.Feedback,
+            Name: "ux_feedback_requestid",
+            Keys: new BsonDocument("requestId", 1),
+            Unique: true),
+        new(
+            Key: "feedback.createdat_desc",
+            Collection: DbCollections.Feedback,
+            Name: "ix_feedback_creationdatetime_desc",
+            Keys: new BsonDocument { { "creationDateTime", -1 }, { "_id", -1 } }),
+        new(
+            Key: "feedback.status_application_created_desc",
+            Collection: DbCollections.Feedback,
+            Name: "ix_feedback_status_application_creationdatetime_desc",
+            Keys: new BsonDocument { { "status", 1 }, { "application", 1 }, { "creationDateTime", -1 }, { "_id", -1 } }),
+        new(
+            Key: "feedback.expiresat.ttl",
+            Collection: DbCollections.Feedback,
+            Name: "ix_feedback_expiresat_ttl",
+            Keys: new BsonDocument("expiresAtUtc", 1),
+            ExpireAfter: TimeSpan.Zero),
         .. WorkshopMongoIndexes.Manifest.Select(index => new MongoIndexManifestEntry(
             index.Key,
             index.Collection,

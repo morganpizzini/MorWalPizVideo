@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { endpoints, post } from '@morwalpizvideo/services';
+import { createFormRequest } from '@/test/request-fixtures';
 import action from './action';
 
 vi.mock('@morwalpizvideo/services', () => ({
@@ -9,10 +10,9 @@ vi.mock('@morwalpizvideo/services', () => ({
 
 describe('translate video action', () => {
   it('posts the API string-list contract', async () => {
-    const formData = new FormData();
-    formData.append('videoIds', 'video-one');
-    formData.append('videoIds', ' video-two ');
-    const request = new Request('http://localhost/videos/translate', { method: 'POST', body: formData });
+    const request = createFormRequest('http://localhost/videos/translate', {
+      videoIds: ['video-one', ' video-two '],
+    });
 
     await action({ request });
 

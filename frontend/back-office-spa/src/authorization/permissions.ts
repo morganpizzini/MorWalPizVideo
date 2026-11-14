@@ -9,6 +9,7 @@ export const permissions = {
     permissionsManage: 'users.permissions.manage',
   },
   publicAccounts: { view: 'publicaccounts.view' },
+  feedback: { view: 'feedback.view', manage: 'feedback.manage' },
   blogInteractions: {
     view: 'blog.interactions.view',
     moderate: 'blog.comments.moderate',
@@ -135,6 +136,9 @@ export function getRoutePermissions(path: string, action: boolean): readonly str
       permissions.blogInteractions.view,
       permissions.blogInteractions.accessManage,
     ];
+  if (module === 'feedback') return action
+    ? [permissions.feedback.manage]
+    : [permissions.feedback.view, permissions.feedback.manage];
   if (module === 'blog-interactions')
     return [permissions.blogInteractions.view, permissions.blogInteractions.moderate];
   if (module === 'my-channel') return [permissions.backoffice.access];

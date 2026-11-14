@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSponsorWithImage, updateSponsorWithImage } from '@morwalpizvideo/services';
 import type { ActionFunctionArgs } from 'react-router';
+import { createFormRequest } from '@/test/request-fixtures';
 import action from './action';
 
 vi.mock('@morwalpizvideo/services', () => ({
@@ -14,10 +15,10 @@ interface SponsorServiceResult {
 }
 
 const makeRequest = () => {
-  const formData = new FormData();
-  formData.set('title', 'Sponsor');
-  formData.set('url', 'https://example.test');
-  return new Request('http://localhost/sponsors/create', { method: 'POST', body: formData });
+  return createFormRequest('http://localhost/sponsors/create', {
+    title: 'Sponsor',
+    url: 'https://example.test',
+  });
 };
 
 const makeActionArgs = (params: ActionFunctionArgs['params']): ActionFunctionArgs => {

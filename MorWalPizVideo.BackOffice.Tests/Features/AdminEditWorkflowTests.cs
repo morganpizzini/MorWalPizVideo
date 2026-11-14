@@ -464,7 +464,7 @@ public sealed class AdminEditWorkflowTests : IClassFixture<VideoReferenceWebAppl
     var stored = (await _factory.QuickLinksRepository!.GetItemsAsync()).Single(link => link.Url == slug);
     var detail = await client.GetFromJsonAsync<QuickLinksContract>($"/api/QuickLinks/{stored.Id}");
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.Equal(QuickLinkKind.YouTube, stored.Links.Single().Kind);
     Assert.Equal(QuickLinkKind.YouTube, detail!.Links.Single().Kind);
   }

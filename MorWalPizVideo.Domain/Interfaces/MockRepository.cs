@@ -1,5 +1,6 @@
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Interfaces;
+using MorWalPizVideo.Domain.Feedback;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
 using MorWalPizVideo.Server.Models;
@@ -769,6 +770,45 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             if (session is not null)
                 scenario.Replace(DbCollections.PublicAccountSessions, session with { RevokedAt = revokedAt });
             return Task.CompletedTask;
+        }
+    }
+
+    public sealed class FeedbackMockRepository(IMockScenario scenario)
+        : BaseMockRepository<Feedback>(scenario, DbCollections.Feedback), IFeedbackRepository
+    {
+        public async Task<Feedback?> GetAsync(string id, DateTime now, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.Id == id && item.ExpiresAtUtc > now)).FirstOrDefault();
+        public async Task<Feedback?> FindByRequestIdAsync(string requestId, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.RequestId == requestId)).FirstOrDefault();
+        public Task<Feedback> AddAsync(Feedback feedback, CancellationToken cancellationToken = default)
+        {
+            lock (scenario)
+            {
+                if (scenario.Read<Feedback>(DbCollections.Feedback).Any(item => item.RequestId == feedback.RequestId))
+                    throw new FeedbackDuplicateRequestException();
+                return AddItemAsync(feedback);
+            }
+        }
+        public async Task<IReadOnlyList<Feedback>> ListAsync(FeedbackStatus? status, string? application, int page, int pageSize, DateTime now, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.ExpiresAtUtc > now && (!status.HasValue || item.Status == status) &&
+                (string.IsNullOrWhiteSpace(application) || item.Application == application)))
+            .OrderByDescending(item => item.CreationDateTime).ThenByDescending(item => item.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToArray();
+        public async Task<long> CountAsync(FeedbackStatus? status, string? application, DateTime now, CancellationToken cancellationToken = default) =>
+            (await GetItemsAsync(item => item.ExpiresAtUtc > now && (!status.HasValue || item.Status == status) &&
+                (string.IsNullOrWhiteSpace(application) || item.Application == application))).Count;
+        public async Task<bool> UpdateStatusAsync(string id, FeedbackStatus status, long expectedRevision, DateTime updatedAtUtc, string? actorId, string? actorUsername, CancellationToken cancellationToken = default)
+        {
+            var item = (await GetItemsAsync(candidate => candidate.Id == id && candidate.ExpiresAtUtc > updatedAtUtc)).FirstOrDefault();
+            if (item is null || item.Revision != expectedRevision) return false;
+            await UpdateItemAsync(item with { Status = status, UpdatedAtUtc = updatedAtUtc, UpdatedByAccountId = actorId, UpdatedByUsername = actorUsername, Revision = item.Revision + 1 });
+            return true;
+        }
+        public async Task<bool> DeleteAsync(string id, DateTime now, CancellationToken cancellationToken = default)
+        {
+            var exists = await GetAsync(id, now, cancellationToken) is not null;
+            if (exists) await DeleteItemAsync(id);
+            return exists;
         }
     }
 

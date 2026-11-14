@@ -42,6 +42,9 @@ const BLOG_POST_DETAIL = `${BLOG_POSTS}/{id}`;
 const BLOG = `${baseEndpoint}/blog`;
 const BLOG_DETAIL = `${BLOG}/{slug}`;
 const PUBLIC_ACCOUNTS = `${baseEndpoint}/publicaccounts`;
+const FEEDBACK = "api/v1/feedback";
+const FEEDBACK_DETAIL = `${FEEDBACK}/{feedbackId}`;
+const FEEDBACK_STATUS = `${FEEDBACK_DETAIL}/status`;
 const PUBLIC_ACCOUNT_INTERACTIONS = `${baseEndpoint}/blog-interactions/accounts/{accountId}`;
 const PUBLIC_ACCOUNT_PORTAL_ACCESS = `${PUBLIC_ACCOUNT_INTERACTIONS}/access`;
 const BLOG_INTERACTION_COMMENTS = `${baseEndpoint}/blog-interactions/comments`;
@@ -223,6 +226,9 @@ export default {
   BLOG,
   BLOG_DETAIL,
   PUBLIC_ACCOUNTS,
+  FEEDBACK,
+  FEEDBACK_DETAIL,
+  FEEDBACK_STATUS,
   PUBLIC_ACCOUNT_INTERACTIONS,
   PUBLIC_ACCOUNT_PORTAL_ACCESS,
   BLOG_INTERACTION_COMMENTS,

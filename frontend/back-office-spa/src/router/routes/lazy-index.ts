@@ -54,6 +54,15 @@ const routeDefinitions: RouteConfig[] = [
     errorElement: createErrorElement(),
   }),
   feature('profile', () => import('../../routes/profile'), { errorElement: createErrorElement() }),
+  {
+    path: 'feedback',
+    Component: Outlet,
+    errorElement: createErrorElement(),
+    children: [
+      indexFeature('', () => import('../../routes/feedback/index')),
+      feature(':id', () => import('../../routes/feedback/detail')),
+    ],
+  },
   feature('dashboard-actions', () => import('../../routes/dashboardActions'), {
     errorElement: createErrorElement(),
   }),

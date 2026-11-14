@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPage, updatePage } from '@morwalpizvideo/services';
+import { createFormRequest } from '@/test/request-fixtures';
 import action from './action';
 
 vi.mock('@morwalpizvideo/services', () => ({
@@ -12,19 +13,15 @@ describe('page form action', () => {
 
   it('sends the selected Draft status and HTML content when creating a page', async () => {
     vi.mocked(createPage).mockResolvedValue({ id: 'page-1' } as never);
-    const formData = new FormData();
-    formData.set('title', ' Draft page ');
-    formData.set('url', 'draft-page');
-    formData.set('status', '0');
-    formData.set(
-      'content',
-      '<div class="page-columns"><div class="page-column"><p>Draft</p></div></div>'
-    );
-    formData.set('thumbnailUrl', ' thumbnail ');
-    formData.set('videoId', ' video ');
-
     const result = await action({
-      request: new Request('http://localhost/pages/create', { method: 'POST', body: formData }),
+      request: createFormRequest('http://localhost/pages/create', {
+        title: ' Draft page ',
+        url: 'draft-page',
+        status: '0',
+        content: '<div class="page-columns"><div class="page-column"><p>Draft</p></div></div>',
+        thumbnailUrl: ' thumbnail ',
+        videoId: ' video ',
+      }),
       params: {},
     });
 
@@ -42,16 +39,12 @@ describe('page form action', () => {
 
   it('sends Published status when updating a page', async () => {
     vi.mocked(updatePage).mockResolvedValue({ id: 'page-1' } as never);
-    const formData = new FormData();
-    formData.set('title', 'Published page');
-    formData.set('url', 'published-page');
-    formData.set('status', '1');
-    formData.set('content', '<p>Published</p>');
-
     await action({
-      request: new Request('http://localhost/pages/page-1/edit', {
-        method: 'POST',
-        body: formData,
+      request: createFormRequest('http://localhost/pages/page-1/edit', {
+        title: 'Published page',
+        url: 'published-page',
+        status: '1',
+        content: '<p>Published</p>',
       }),
       params: { id: 'page-1' },
     });
@@ -63,11 +56,8 @@ describe('page form action', () => {
   });
 
   it('rejects missing title and URL before calling the API', async () => {
-    const formData = new FormData();
-    formData.set('status', '1');
-
     const result = await action({
-      request: new Request('http://localhost/pages/create', { method: 'POST', body: formData }),
+      request: createFormRequest('http://localhost/pages/create', { status: '1' }),
       params: {},
     });
 

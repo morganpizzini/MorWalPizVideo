@@ -8,7 +8,9 @@ function renderRoute(loader: () => unknown, Component: React.ComponentType) {
     [{ path: '/', loader, Component: createAsyncRouteComponent(Component) }],
     { initialEntries: ['/'] }
   );
-  return render(<RouterProvider router={router} />);
+  router.initialize();
+  render(<RouterProvider router={router} />);
+  return router;
 }
 
 describe('async route data boundary', () => {
@@ -17,36 +19,47 @@ describe('async route data boundary', () => {
       return <div>{useAsyncValue() as string}</div>;
     }
 
-    renderRoute(() => deferRouteData(Promise.resolve('resolved')), RouteComponent);
-
-    await waitFor(() => expect(screen.getByText('resolved')).toBeInTheDocument());
+    const router = renderRoute(() => deferRouteData(Promise.resolve('resolved')), RouteComponent);
+    try {
+      await waitFor(() => expect(screen.getByText('resolved')).toBeInTheDocument());
+    } finally {
+      router.dispose();
+    }
   });
 
-  it('renders a pending state while route data is unresolved', () => {
+  it('renders a pending state while route data is unresolved', async () => {
     const pending = new Promise<unknown>(() => undefined);
 
-    renderRoute(
+    const router = renderRoute(
       () => deferRouteData(pending),
       () => <div>ready</div>
     );
 
-    expect(screen.queryByText('ready')).not.toBeInTheDocument();
-    return waitFor(() => {
-      const status = screen.getByRole('status');
-      expect(status).toHaveAttribute('aria-live', 'polite');
-      expect(status).toHaveTextContent('Page content is loading');
-      expect(status).not.toHaveTextContent('Loading page...');
-    });
+    try {
+      expect(screen.queryByText('ready')).not.toBeInTheDocument();
+      await waitFor(() => {
+        const status = screen.getByRole('status');
+        expect(status).toHaveAttribute('aria-live', 'polite');
+        expect(status).toHaveTextContent('Page content is loading');
+        expect(status).not.toHaveTextContent('Loading page...');
+      });
+    } finally {
+      router.dispose();
+    }
   });
 
   it('renders the shared error state when route data rejects', async () => {
     const rejected = Promise.reject(new Error('Request failed'));
     rejected.catch(() => undefined);
-    renderRoute(
+    const router = renderRoute(
       () => deferRouteData(rejected),
       () => <div>ready</div>
     );
 
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Request failed'));
+    try {
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Request failed'));
+    } finally {
+      router.dispose();
+    }
   });
 });

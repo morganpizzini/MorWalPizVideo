@@ -96,6 +96,15 @@ export type {
   WorkshopDashboard,
 } from "./workshop";
 export type {
+  FeedbackStatus,
+  FeedbackContextRequest,
+  SubmitFeedbackRequest,
+  FeedbackReceipt,
+  FeedbackItem,
+  FeedbackPage,
+  UpdateFeedbackStatusRequest,
+} from "./feedback";
+export type {
   BlogInteractionSummary,
   BlogComment,
   BlogCommentPage,

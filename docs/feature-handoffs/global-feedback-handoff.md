@@ -1,6 +1,6 @@
 # Global bug and feedback reporting handoff
 
-Status: Proposed; awaiting user review. No application changes or runtime validation performed.
+Status: Implementation complete; production activation remains gated by operational review.
 Source inspection: 2026-11-14.
 
 ## Outcome
@@ -55,13 +55,67 @@ Verified in current source:
 | [Public-account endpoint tests](../../MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs), [ServerAPI factory](../../MorWalPizVideo.BackOffice.Tests/Infrastructure/ServerApiWebApplicationFactory.cs), and [BackOffice factory](../../MorWalPizVideo.BackOffice.Tests/Infrastructure/BackOfficeWebApplicationFactory.cs) provide the existing API test seams. | Reuse the mixed-host test project; no new backend test project. |
 | [ServerAPI project](../../MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj), [BackOffice project](../../MorWalPizVideo.BackOffice/MorWalPizVideo.BackOffice.csproj), and [test project](../../MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj) target .NET 10 and reference the established shared projects. | Shared DTOs belong in MorWalPiz.Contracts, not a newly invented contracts project or an API-to-API reference. |
 
-No existing general feedback controller was found in the inspected APIs.
+The initial implementation now includes dedicated feedback controllers in both
+APIs; the post-implementation review below supersedes the earlier absence finding.
 The [architecture guide](../architecture/README.md),
 [frontend guide](../architecture/frontend.md),
 [security guide](../architecture/security.md),
 [Workshop baseline](../architecture/shooter-workshop.md), and
 [accounts feature record](../features/accounts-and-channels.md) were consulted.
 Documentation-only production gates were not treated as fresh deployment proof.
+
+### Post-implementation review findings
+
+The implementation preserves the intended global ownership boundary: no feedback
+entity, DTO, repository, route, or transport is channel-owned, and account-mode
+submission strips authorization/channel headers. The following defects must be
+resolved before production activation:
+
+1. **High — admin transport errors are success-shaped.** The four management
+   helpers cast admin transport envelopes without `requireSuccessfulResponse`.
+   A failed list can crash rendering, a failed status update can replace the
+   report with an error envelope, and a failed delete can still navigate away.
+2. **High — idempotency is incomplete.** Replay equality compares only description
+   and reporter account. Reusing a request ID with changed page, component,
+   application, release, or browser context is incorrectly accepted.
+3. **High — expired reports remain directly readable/mutable.** List/count hide
+   expiry, but detail/status/delete do not enforce it before Mongo TTL deletion.
+4. **High — mock uniqueness does not model Mongo uniqueness.** Concurrent mock
+   submissions can create duplicate request IDs, preventing the normal API test
+   infrastructure from proving the production invariant.
+5. **Medium — privacy/audit policy is incomplete.** Neither controller marks
+   responses no-store, and status changes do not persist the effective staff actor.
+6. **Medium — receipt validation is incomplete.** A receipt missing required
+   `receivedAtUtc` is accepted.
+7. **Medium — Workshop modal hardening is incomplete.** Background inertness,
+   robust focus recovery, assertive errors, retained drafts, stale-success-timer
+   cancellation, error differentiation, and the serialized 16 KiB budget are not
+   implemented or DOM-tested.
+8. **Medium — BackOffice management is below the established route standard.**
+   It lacks application filtering, pagination controls, loader/action ownership,
+   mutation pending states, retryable in-page failures, and safe failed-delete
+   behavior.
+9. **Low/operational — query indexes and limiter topology are incomplete.**
+   Status/application compound indexes are absent; trusted proxy and effective
+   multi-replica rate limiting require deployment evidence.
+
+### BackOffice SPA failure classification
+
+The historical result was 14 failures. The feature introduced one navigation
+catalog count failure, which is already corrected by the current 34-item
+assertion. The archived JUnit report from that earlier run contained **416 tests
+and 13 failures**; all 13 were outside feedback code and have since been repaired:
+
+| Failures | Existing suites | Evidence-based cause and required preservation |
+| ---: | --- | --- |
+| 3 | `src/router/asyncData.test.tsx` | The memory router remains at its hydration boundary. Initialize/settle the router explicitly while preserving resolved, pending, and error assertions. |
+| 1 | `src/components/ToastNotification/index.test.tsx` | Real navigation remains on the explicit loading fallback. Fix the route test helper; retain the navigation/toast assertion. |
+| 9 | navigation, insights/news, pages/form, sponsors/form, and videos/translate action tests | `request.formData()` receives incompatible Request/FormData implementations under jsdom. Introduce one shared test request/form-data fixture and keep all business assertions unchanged. |
+
+Do not lower expected route/menu counts, remove hydration assertions, skip tests,
+or convert rejected/error envelopes into successful defaults. The exact upstream
+Node/jsdom/undici regression is not proven statically; implementation must
+diagnose the active runtime before choosing the narrow fixture correction.
 
 ## Proposed Design
 
@@ -345,13 +399,24 @@ New names describe the bounded feature, not permission to reorganize unrelated c
   [permissions](../../frontend/back-office-spa/src/authorization/permissions.ts),
   and [adminMenu](../../frontend/back-office-spa/src/layouts/adminMenu.ts):
   global inbox/detail and capability-aware navigation.
+- [BackOffice test setup](../../frontend/back-office-spa/src/test/setup.ts),
+  [async data tests](../../frontend/back-office-spa/src/router/asyncData.test.tsx),
+  [toast navigation tests](../../frontend/back-office-spa/src/components/ToastNotification/index.test.tsx),
+  [navigation action tests](../../frontend/back-office-spa/src/routes/navigation/action.test.ts),
+  [insights news action tests](../../frontend/back-office-spa/src/routes/insights/news/action.test.ts),
+  [page form action tests](../../frontend/back-office-spa/src/routes/pages/form/action.test.ts),
+  [sponsor form action tests](../../frontend/back-office-spa/src/routes/sponsors/form/action.test.ts),
+  and [video translation action tests](../../frontend/back-office-spa/src/routes/videos/translate/action.test.ts):
+  align the Request/FormData and router lifecycle test harness without weakening
+  behavior.
 - [AdminSidebar tests](../../frontend/back-office-spa/src/layouts/AdminSidebar.test.tsx),
   [permission-expansion tests](../../MorWalPizVideo.BackOffice.Tests/Features/AuthorizationPermissionExpanderTests.cs),
+  [admin controller metadata tests](../../MorWalPizVideo.BackOffice.Tests/Features/AdminRouteAuthorizationMetadataTests.cs),
   [host containment tests](../../MorWalPizVideo.BackOffice.Tests/Features/HostSecurityContainmentTests.cs),
   and [index tests](../../MorWalPizVideo.BackOffice.Tests/Features/MongoIndexOperationsTests.cs):
   focused additions for the changed boundaries.
 
-### Add
+### Add Or Complete
 
 - MorWalPizVideo.Models/Models/Feedback.cs: report aggregate and status.
 - MorWalPiz.Contracts/Contracts/FeedbackContracts.cs: dedicated public/admin DTOs.
@@ -362,11 +427,15 @@ New names describe the bounded feature, not permission to reorganize unrelated c
 - MorWalPizVideo.BackOffice/Controllers/FeedbackController.cs: management only.
 - frontend/fe-packages/models/src/feedback.ts: typed DTOs.
 - frontend/fe-packages/services/src/feedbackService.ts and adjacent tests:
-  intake/admin helpers with isolated clients.
+  intake/admin helpers with isolated clients, strict success-envelope handling,
+  complete receipt validation, and transport isolation coverage.
 - frontend/shooter-workshop.client/src/components/feedback/: provider/host,
   dialog, context capture helper, and focused tests.
 - frontend/back-office-spa/src/routes/feedback/: inbox/detail route modules,
-  loader/action behavior, and tests following the active lazy-route convention.
+  loader/action behavior, filtering, pagination, pending/conflict/delete states,
+  and tests following the active lazy-route convention.
+- frontend/back-office-spa/src/test/: one shared Request/FormData fixture only if
+  runtime diagnosis confirms the mismatch; do not add per-test polyfills.
 - MorWalPizVideo.BackOffice.Tests/Features/: focused Feedback-named service,
   endpoint, and repository tests, using existing factories/scenarios.
 
@@ -478,46 +547,71 @@ New names describe the bounded feature, not permission to reorganize unrelated c
 
 ## Implementation Roadmap
 
-1. **Approve boundary and policy.** Confirm the reporting application scope,
-   list-versus-likes interpretation, anonymous support, and 90-day retention.
-   Record accepted decisions here and in the proposed feedback ADR.
-   Gate: no remaining architectural scope or destructive-retention ambiguity.
-2. **Add model/contracts and persistence.** Owners: Models, Contracts, Domain,
-   shared TypeScript models. Implement the global aggregate, bounded DTOs,
-   focused repository/service, concurrency-safe idempotency, revision checks,
-   expiry filtering, and scenario-backed mock parity.
-   Gate: focused validation/retry/concurrency/expiry tests; no channel references.
-3. **Expose the two API boundaries.** Owners: ServerAPI and BackOffice controllers/
-   composition, permission keys/expansion, index manifest. Add optional verified
-   identity, anonymous CSRF, rate/body limits, management permissions, no-store,
-   and safe telemetry. Do not add API-to-API calls.
-   Gate: endpoint/auth/CSRF/permission/isolation tests and reviewed index definitions.
-4. **Add transport helpers.** Owners: shared services/endpoints/exports.
-   Add typed account-intake and admin-management helpers using existing clients.
-   Gate: exact methods/URLs/envelopes, host resolution, explicit failures, CSRF,
-   no bearer/channel leakage, and no wait on channel readiness.
-5. **Integrate Workshop reporting.** Owners: bootstrap, local feedback components,
-   States/pages, narrow styles/test setup. Add global host, one-field dialog,
-   frozen privacy-safe context, contextual open hook, complete async states,
-   attribution warning, and bounded retry behavior.
-   Gate: reporting works on login and representative nested/loading/error routes,
-   component keys reach the request, and unsaved Workshop forms remain unchanged.
-6. **Integrate BackOffice management.** Owners: feature route modules, lazy manifest,
-   permission mapping, and admin menu. Add inbox/detail/status/delete and explicit
-   conflict/revalidation behavior without channel-driven data loading.
-   Gate: read-only/manage/denied/zero-channel tests and no list changes on channel switch.
-7. **Validate and prepare release.** Run the smallest relevant service/domain/API/
-   component tests first, then owning builds and affected shared-package consumers.
-   Follow shared build ordering and serial .NET output rules in the
-   [test runbook](../architecture/testing.md). Complete Impeccable hardening and
-   real browser/shared-Mongo checks. Record actual files, checks, results, unresolved
-   release risks, and operational approvals here.
-   Gate: end-to-end acceptance below and focused independent review.
-8. **Roll out in dependency order.** Apply only approved indexes/policy, release
-   APIs and explicit staff grants, then SPA management and Workshop reporting.
-   Watch intake failures, duplicates, denied writes, and attribution outcomes.
-   Gate: known test report can be submitted, inspected, triaged, and removed
-   without a selected channel.
+1. **Restore the BackOffice SPA baseline.** Owners: BackOffice test setup and
+   affected tests only. Diagnose the active Request/FormData implementations,
+   introduce one shared form-request fixture, and migrate the nine failing action
+   tests without changing assertions. Explicitly initialize/settle the memory
+   router used by async-data and toast navigation tests while preserving pending,
+   resolved, error, and real-navigation behavior.
+   Gate: the unchanged full 416-test suite passes with no skips and the 34-item
+   feedback navigation assertion remains.
+2. **Make feedback transport fail closed.** Owner: shared services. Apply
+   `requireSuccessfulResponse` to list/detail/status/delete, validate the complete
+   intake receipt including authoritative time, and define deletion success only
+   for the expected successful response.
+   Gate: focused transport tests prove methods/URLs/bodies, account CSRF, admin
+   cookie mode, no bearer/channel header, no channel-readiness wait, error-envelope
+   rejection, 204 deletion, and malformed-receipt rejection.
+3. **Complete Domain and repository invariants.** Owners: Models and Domain.
+   Compare a normalized complete submission fingerprint on both replay paths;
+   preserve immutable receipt/expiry/status fields; enforce expiry on detail,
+   status, and delete; make mock request-ID uniqueness atomic and equivalent to
+   Mongo; record the effective staff actor on status changes if the accepted audit
+   contract remains in scope.
+   Gate: deterministic service/repository tests cover exact replay, changed
+   context conflict, concurrent uniqueness, stale revision, expiry-before-TTL,
+   deletion, and Mongo/mock parity.
+4. **Harden both API boundaries.** Owners: ServerAPI, BackOffice, Contracts, and
+   mixed backend tests. Add no-store, complete body/metadata bounds, safe structured
+   outcome logging, actor propagation, and missing compound index definitions.
+   Extend authorization implication, controller metadata, index, endpoint, and
+   cross-host tests.
+   Gate: CSRF, optional verified identity, permission split, no public reads,
+   no admin create, no channel scope, replay/conflict, expiry, request limits,
+   no-store, and deliberately shared-store lifecycle tests pass.
+5. **Harden Workshop as an Operate-mode refinement.** Owners: Workshop-local
+   provider/styles/test setup. Add only the test dependencies needed for local
+   jsdom/Testing Library coverage; keep existing node tests in their current
+   environment. Use the incumbent visual system, not a redesign. Correct
+   background inertness, focus containment/recovery, Escape and focus return,
+   retained drafts, timer cancellation, pending dismissal prevention, serialized
+   body budget, and actionable 400/403/409/429/network/server errors.
+   Gate: login/domain/error-route availability, one editable field, frozen
+   component context, success/failure/retry lifecycle, safe escaped text, 360px,
+   200% zoom, keyboard-only, and reduced-motion checks.
+6. **Bring BackOffice management to the maintained data-route pattern.** Owners:
+   feedback route modules and focused UI tests. Move reads/mutations to
+   loaders/actions/fetchers, add application/status filters and pagination,
+   loading/empty/retry states, pending controls, conflict recovery, and failed
+   delete preservation. Keep it global and independent of channel selection.
+   Gate: view/manage/denied/manage-all, direct route guards, zero-channel access,
+   channel-switch independence, pagination/filtering, status conflict, and delete
+   failure tests pass.
+7. **Run progressively broader validation.** Build shared packages in order;
+   run focused new tests, complete shared-service and Workshop suites, the full
+   BackOffice SPA suite, checked SPA builds, then one serial backend build and
+   relevant `--no-build` category filters from the
+   [test runbook](../architecture/testing.md). Update this handoff with exact fresh
+   results; historical JUnit files are not current proof.
+   Gate: no affected suite is red and no empty test selection passes.
+8. **Complete operational gates and roll out.** Audit/apply unique and query
+   indexes before writes; keep TTL unapplied until retention approval. Verify
+   same-database configuration, exact Workshop origin, cookie/CSRF behavior,
+   trusted proxy handling, effective aggregate rate limit, explicit staff grants,
+   and one real report lifecycle. Release APIs first, BackOffice second, Workshop
+   intake last.
+   Gate: a known anonymous and authenticated report can be submitted, retrieved,
+   triaged, and deleted without a selected channel.
 
 An independent post-validation review by MorWalPiz Code Reviewer is recommended
 because anonymous intake, personal diagnostic data, and two authentication
@@ -598,3 +692,189 @@ These are review decisions, not implementation choices to make silently:
 3. Confirm anonymous reporting and **90-day expiry including unresolved reports**;
    name the owner approving privacy notice, access grants, and backup retention
    before production activation.
+
+## Implementation Status
+
+The initial end-to-end implementation is present in the repository:
+
+- Workshop mounts a global feedback provider above routing, so the launcher is
+  available on login, routed pages, and error states. The modal accepts only a
+  description and submits automatically captured page, component, browser,
+  viewport, language, timezone, online-state, and request-id context.
+- ServerAPI exposes anonymous-capable `POST /api/v1/feedback`, validates the
+  request and CSRF token, optionally attributes a verified PublicAccount
+  identity, rate-limits intake, and provides duplicate-safe request handling.
+- The shared Models, Contracts, and Domain layers contain the channel-independent
+  feedback document, repository implementations, validation, expiry, and
+  optimistic status handling. No `channelId` or channel header is required.
+- BackOffice exposes protected list, detail, status, and delete operations and
+  the BackOffice SPA includes permission-filtered navigation, inbox, and detail
+  routes. `feedback.manage` implies `feedback.view`.
+- Mongo index definitions cover unique request ids, creation ordering, and the
+  proposed expiry field. Applying the TTL index remains gated on retention
+  approval.
+
+The initial implementation gaps and the historical 14-failure result have now
+been addressed in source and focused validation. The checked-in historical JUnit
+artifact remains an archive only; it is superseded by the fresh full-suite result
+below and must not be used as current pass/fail evidence.
+
+## Backend implementation update (roadmap steps 2–4)
+
+Implemented on 2026-11-14 for the backend/domain/API scope only:
+
+- Feedback documents now persist a normalized full-submission SHA-256 fingerprint
+  and status-change actor identity (`UpdatedByAccountId`/`UpdatedByUsername`).
+  Replay matching uses that fingerprint on both the initial lookup and the
+  concurrent unique-request race path; the mock repository performs the same
+  request-ID uniqueness check atomically.
+- Detail, status mutation, and deletion all apply the expiry predicate before
+  returning or mutating a document. Status updates remain revision-checked and
+  preserve the original receipt, status, and expiry while recording the
+  effective authenticated staff actor.
+- Submission metadata is validated against the declared bounds without silent
+  truncation. Operational outcomes log only structured request identifiers and
+  result categories; submission payload values are not logged.
+- Public and BackOffice feedback controllers declare `no-store`; the BackOffice
+  contract includes status actor metadata. The index manifest now includes the
+  status/application/creation ordering compound index in addition to the unique
+  request-ID, creation ordering, and TTL definitions.
+
+Files changed for this update: `MorWalPizVideo.Models/Models/Feedback.cs`,
+`MorWalPiz.Contracts/Contracts/FeedbackContracts.cs`,
+`MorWalPizVideo.Domain/Feedback/FeedbackService.cs`,
+`MorWalPizVideo.Domain/Interfaces/IRepository.cs`,
+`MorWalPizVideo.Domain/Interfaces/Repository.cs`,
+`MorWalPizVideo.Domain/Interfaces/MockRepository.cs`,
+`MorWalPizVideo.ServerAPI/Controllers/FeedbackController.cs`,
+`MorWalPizVideo.BackOffice/Controllers/FeedbackController.cs`, and
+`MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs`.
+
+Historical validation before the contract-aligned test correction: the
+`AdminEditWorkflowTests.QuickLinks_create_persists_and_returns_the_additive_youtube_kind`
+test expected `OK` while the controller correctly returned `NoContent`. The test
+now asserts `204 NoContent`; the current full backend result is recorded below.
+Two pre-existing Calendar Mongo tests remain skipped by their existing setup.
+
+## Roadmap step 1 update: BackOffice SPA test harness
+
+Implemented on 2026-11-14 within the BackOffice SPA test harness and existing
+failing tests only:
+
+- Added `src/test/request-fixtures.ts`, a shared URL-encoded form request
+  fixture. This avoids passing jsdom's `FormData` implementation to Node's
+  `Request` while preserving each action's submitted values and repeated keys.
+- Updated the failing sponsor, navigation, page, insight-news, and video
+  translation action tests to use that fixture.
+- Updated `src/test/setup.ts` to normalize router-created requests when jsdom's
+  `AbortSignal` is passed to Node's `Request`.
+- Explicitly initialized and disposed memory routers in the async route tests,
+  and initialized the toast navigation router before settling its assertions.
+  Pending, resolved, rejected, toast, navigation, and action assertions remain
+  unchanged.
+
+Validation:
+
+- Focused run: `cd frontend/back-office-spa && yarn vitest run
+  src/router/asyncData.test.tsx src/components/ToastNotification/index.test.tsx
+  src/routes/sponsors/form/action.test.ts src/routes/navigation/action.test.ts
+  src/routes/pages/form/action.test.ts src/routes/insights/news/action.test.ts
+  src/routes/videos/translate/action.test.ts --reporter=verbose
+  --passWithNoTests=false` — **7 files passed, 15 tests passed**.
+- Full run: `cd frontend/back-office-spa && yarn vitest run --reporter=verbose
+  --passWithNoTests=false` — **88 files passed**.
+
+No feedback production implementation or backend files were changed for this
+roadmap step. The full run still emits existing jsdom CSS parse diagnostics and
+the intentional sponsor exception log, but has no failing tests.
+
+## Backend feedback regression coverage update
+
+Added `MorWalPizVideo.BackOffice.Tests/Features/FeedbackEndpointTests.cs`
+using the existing ServerAPI and BackOffice WebApplicationFactory/mock-scenario
+patterns. The focused coverage verifies:
+
+- anonymous intake is CSRF-protected, accepts a valid anonymous submission, and
+  emits no-store response metadata;
+- authenticated public-account intake reports authenticated attribution and
+  accepts an exact replay while rejecting a changed context payload under the
+  same request ID;
+- `feedback.view` permits reading while `feedback.manage` is required for
+  status and deletion;
+- stale status revisions return conflict, successful status changes return
+  no-store, and deletion returns 204;
+- management reads remain global when an unrelated `X-Channel-Id` is supplied;
+- expired feedback is hidden from detail, status, and delete operations.
+
+Validation:
+
+```text
+dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj
+  --no-restore
+  --filter 'FullyQualifiedName~FeedbackEndpointTests|FullyQualifiedName~BackOfficeFeedbackEndpointTests'
+```
+
+Result: 5 passed, 0 failed, 0 skipped. The existing package vulnerability and
+unrelated compiler warnings remain warnings only. No fixture blocker required
+weakening an assertion.
+
+## Frontend feedback hardening update
+
+Implemented on 2026-11-14:
+
+- Shared feedback management helpers now reject non-success transport envelopes,
+  and intake receipts require an ID, authoritative receipt time, and boolean
+  attribution state.
+- Workshop feedback now preserves retry drafts, clears identity-sensitive state
+  on session changes, enforces the serialized 16 KiB request budget, differentiates
+  offline/throttle/session/general failures, restores focus, traps focus, makes
+  the application content inert, and cleans up success timers. Workshop-local
+  jsdom/Testing Library coverage verifies the modal behavior.
+- BackOffice feedback list management now uses route-owned loading, status and
+  application filters, pagination, pending/retry states, and a safe empty state.
+  Detail mutations expose pending states, preserve failed deletion, and provide
+  a reload path for optimistic-revision conflicts.
+- The BackOffice jsdom compatibility harness now preserves router abort
+  cancellation rather than discarding signals, with a dedicated cancellation
+  regression test.
+
+Focused validation:
+
+- Shared feedback transport: 5 passed.
+- Workshop feedback DOM tests: 2 passed.
+- BackOffice feedback route tests: 3 passed.
+- BackOffice request cancellation setup test: passed.
+
+## Final validation update
+
+Fresh integrated validation completed on 2026-11-14:
+
+- Shared frontend packages (`models`, `services`, `layout`) build successfully.
+- Shared services: **10 test files, 89 tests passed**.
+- Workshop: **3 test files, 7 tests passed**. This includes the new jsdom setup
+  and feedback modal accessibility/draft tests.
+- BackOffice SPA: **419 tests across 88 test files passed with no failures**. The historical
+  navigation-count failure and the 13 unrelated jsdom/router failures are no
+  longer present. The run still emits existing `TimeoutNaNWarning`, jsdom CSS
+  diagnostics, and the intentional sponsor exception log.
+- Workshop production build passed.
+- BackOffice SPA production build passed.
+- Backend Release build passed with existing ImageSharp vulnerability warnings
+  and unrelated nullable warnings.
+- Full backend test project: **747 passed, 2 skipped, 0 failed, 749 total**.
+- Focused feedback backend tests: **5 passed, 0 skipped, 0 failed**.
+- The QuickLinks test now correctly asserts the controller's intentional
+  `204 NoContent` response and its focused test passes.
+
+Remaining release gates are operational rather than unimplemented code:
+
+- Real-browser desktop/mobile validation, including exact origin cookies/CSRF,
+  focus behavior, 200% zoom, reduced motion, and denied-origin behavior.
+- Proof that deployed ServerAPI and BackOffice use the same intended database.
+- Review and application of unique/query indexes before accepting writes.
+- Retention/privacy approval before applying the destructive 90-day TTL index,
+  including backup-retention review.
+- Trusted proxy configuration and effective aggregate rate limiting across
+  replicas.
+- Explicit production staff permission grants and one known-report lifecycle
+  through the deployed origins.

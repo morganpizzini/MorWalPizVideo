@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n";
+import { useFeedback } from "./feedback/FeedbackProvider";
 
 export function LoadingState({ label }: { label?: string }) {
   const { t } = useI18n();
@@ -9,12 +10,14 @@ export function LoadingState({ label }: { label?: string }) {
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const { t } = useI18n();
+  const { open } = useFeedback();
   const message = error instanceof Error ? error.message : t("The request could not be completed.");
   return (
     <div className="state state-error" role="alert">
       <strong>{t("Could not load this workspace.")}</strong>
       <p>{message}</p>
       {onRetry && <button className="button button-quiet" onClick={onRetry}>{t("Try again")}</button>}
+      <button className="button button-quiet" onClick={() => open("workshop.error-state")}>Report this problem</button>
     </div>
   );
 }

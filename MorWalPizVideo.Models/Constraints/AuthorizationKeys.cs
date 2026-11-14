@@ -13,6 +13,8 @@ public static class AuthorizationPermissionKeys
   public const string UsersDelete = "users.delete";
   public const string UsersPermissionsManage = "users.permissions.manage";
   public const string PublicAccountsView = "publicaccounts.view";
+  public const string FeedbackView = "feedback.view";
+  public const string FeedbackManage = "feedback.manage";
   public const string BlogInteractionsView = "blog.interactions.view";
   public const string BlogCommentsModerate = "blog.comments.moderate";
   public const string PortalAccessManage = "portalaccess.manage";

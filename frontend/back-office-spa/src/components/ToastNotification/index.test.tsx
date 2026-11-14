@@ -61,6 +61,7 @@ describe('ToastProvider', () => {
       { initialEntries: ['/pages/new'] }
     );
     try {
+      router.initialize();
       const { container } = render(
         <StrictMode>
           <RouterProvider router={router} />

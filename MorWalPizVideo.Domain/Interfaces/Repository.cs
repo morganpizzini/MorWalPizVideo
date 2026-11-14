@@ -1155,6 +1155,45 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             database.GetCollection<PublicAccountSession>(DbCollections.PublicAccountSessions);
     }
 
+    public sealed class FeedbackRepository(IMongoDatabase database)
+        : BaseRepository<Feedback>(database, DbCollections.Feedback), IFeedbackRepository
+    {
+        public Task<Feedback?> GetAsync(string id, DateTime now, CancellationToken cancellationToken = default) =>
+            _collection.Find(item => item.Id == id && item.ExpiresAtUtc > now).FirstOrDefaultAsync(cancellationToken);
+        public Task<Feedback?> FindByRequestIdAsync(string requestId, CancellationToken cancellationToken = default) =>
+            _collection.Find(item => item.RequestId == requestId).FirstOrDefaultAsync(cancellationToken);
+        public Task<Feedback> AddAsync(Feedback feedback, CancellationToken cancellationToken = default) => AddItemAsync(feedback);
+
+        public async Task<IReadOnlyList<Feedback>> ListAsync(FeedbackStatus? status, string? application, int page, int pageSize, DateTime now, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Feedback>.Filter.Gt(item => item.ExpiresAtUtc, now);
+            if (status.HasValue) filter &= Builders<Feedback>.Filter.Eq(item => item.Status, status.Value);
+            if (!string.IsNullOrWhiteSpace(application)) filter &= Builders<Feedback>.Filter.Eq(item => item.Application, application);
+            return await _collection.Find(filter).SortByDescending(item => item.CreationDateTime).ThenByDescending(item => item.Id)
+                .Skip((page - 1) * pageSize).Limit(pageSize).ToListAsync(cancellationToken);
+        }
+
+        public Task<long> CountAsync(FeedbackStatus? status, string? application, DateTime now, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Feedback>.Filter.Gt(item => item.ExpiresAtUtc, now);
+            if (status.HasValue) filter &= Builders<Feedback>.Filter.Eq(item => item.Status, status.Value);
+            if (!string.IsNullOrWhiteSpace(application)) filter &= Builders<Feedback>.Filter.Eq(item => item.Application, application);
+            return _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        }
+
+        public async Task<bool> UpdateStatusAsync(string id, FeedbackStatus status, long expectedRevision, DateTime updatedAtUtc, string? actorId, string? actorUsername, CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Feedback>.Filter.And(Builders<Feedback>.Filter.Eq(item => item.Id, id), Builders<Feedback>.Filter.Eq(item => item.Revision, expectedRevision), Builders<Feedback>.Filter.Gt(item => item.ExpiresAtUtc, updatedAtUtc));
+            var result = await _collection.UpdateOneAsync(filter, Builders<Feedback>.Update.Set(item => item.Status, status)
+                .Set(item => item.UpdatedAtUtc, updatedAtUtc).Set(item => item.UpdatedByAccountId, actorId)
+                .Set(item => item.UpdatedByUsername, actorUsername).Inc(item => item.Revision, 1), cancellationToken: cancellationToken);
+            return result.ModifiedCount == 1;
+        }
+
+        public async Task<bool> DeleteAsync(string id, DateTime now, CancellationToken cancellationToken = default) =>
+            (await _collection.DeleteOneAsync(item => item.Id == id && item.ExpiresAtUtc > now, cancellationToken)).DeletedCount == 1;
+    }
+
     public class UserRepository : BaseRepository<User>, IUserRepository
     {
         public UserRepository(IMongoDatabase database) : base(database, DbCollections.Users)

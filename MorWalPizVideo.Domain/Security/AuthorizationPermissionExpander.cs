@@ -12,6 +12,10 @@ public static class AuthorizationPermissionExpander
           AuthorizationPermissionKeys.BackofficeAccess,
           AuthorizationPermissionKeys.BackofficeImpersonate
         ],
+        [AuthorizationPermissionKeys.FeedbackManage] =
+        [
+          AuthorizationPermissionKeys.FeedbackView
+        ],
         [AuthorizationPermissionKeys.UsersManage] =
         [
           AuthorizationPermissionKeys.UsersView,

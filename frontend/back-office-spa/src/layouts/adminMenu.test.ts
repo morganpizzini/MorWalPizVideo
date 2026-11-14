@@ -8,7 +8,7 @@ describe('back-office navigation catalog', () => {
     const items = adminMenuGroups.flatMap(group => group.items);
     const paths = [...items, dashboardMenuItem].map(item => item.path);
 
-    expect(paths).toHaveLength(33);
+    expect(paths).toHaveLength(34);
     expect(new Set(paths).size).toBe(paths.length);
     expect(new Set(adminMenuGroups.map(group => group.id)).size).toBe(adminMenuGroups.length);
     expect(adminMenuGroups.every(group => group.items.length <= 8)).toBe(true);

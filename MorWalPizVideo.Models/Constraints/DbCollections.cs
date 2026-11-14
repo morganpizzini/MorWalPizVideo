@@ -106,6 +106,7 @@
         public const string BlogComments = "blogComments";
         public const string BlogReactions = "blogReactions";
         public const string BlogPortalAccess = "blogPortalAccess";
+        public const string Feedback = "feedback";
 
         public const string FreezerMatches = "freezerMatches";
         public const string FreezerMatchRevisions = "freezerMatchRevisions";

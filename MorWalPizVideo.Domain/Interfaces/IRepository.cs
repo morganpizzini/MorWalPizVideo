@@ -27,6 +27,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<PublicAccountSession?> FindActiveSessionAsync(string tokenHash, DateTime now, CancellationToken cancellationToken = default);
         Task RevokeSessionAsync(string tokenHash, DateTime revokedAt, CancellationToken cancellationToken = default);
     }
+    public interface IFeedbackRepository
+    {
+        Task<Feedback?> GetAsync(string id, DateTime now, CancellationToken cancellationToken = default);
+        Task<Feedback?> FindByRequestIdAsync(string requestId, CancellationToken cancellationToken = default);
+        Task<Feedback> AddAsync(Feedback feedback, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<Feedback>> ListAsync(FeedbackStatus? status, string? application, int page, int pageSize, DateTime now, CancellationToken cancellationToken = default);
+        Task<long> CountAsync(FeedbackStatus? status, string? application, DateTime now, CancellationToken cancellationToken = default);
+        Task<bool> UpdateStatusAsync(string id, FeedbackStatus status, long expectedRevision, DateTime updatedAtUtc, string? actorId, string? actorUsername, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(string id, DateTime now, CancellationToken cancellationToken = default);
+    }
     public interface IYouTubeContentRepository : IRepository<YouTubeContent>
     {
         Task<bool> UpdateMutableFieldsAsync(YouTubeContent entity);

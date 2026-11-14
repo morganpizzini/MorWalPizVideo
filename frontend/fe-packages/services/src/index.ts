@@ -52,6 +52,13 @@ export {
   logoutPublicAccount,
 } from "./publicAccountService";
 export {
+  submitFeedback,
+  getFeedbackPage,
+  getFeedback,
+  updateFeedbackStatus,
+  deleteFeedback,
+} from "./feedbackService";
+export {
   getWorkshopFirearms,
   createWorkshopFirearm,
   updateWorkshopFirearm,
