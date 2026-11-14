@@ -495,3 +495,34 @@ description and notes remain separate for compatibility, and the UI label is
 A restore workflow, field consolidation, or terminology change requires separate user
 approval.
 
+## Implementation Status
+
+Implemented in the current worktree:
+
+- Added Components route `loader.ts` and `action.ts`; initial definitions, inventory,
+  and firearms load concurrently, while mutations are dispatched through React Router
+  fetchers and trigger normal route revalidation.
+- Reworked the Components UI to make both forms explicit show/hide disclosures,
+  move compatibility filtering above the inventory list, make firearm selection
+  optional for spare parts, and expose edit/archive/delete controls.
+- Added physical compatibility tags and archive state, definition/component revision
+  support, guarded account-scoped deletion, and optional-firearm create-and-install
+  handling in Models, Contracts, Domain, repository, and ServerAPI.
+- Preserved legacy definition fields and the existing `/components/install` endpoint
+  for rollout compatibility; new UI writes physical tracking/manufacturer/model/tags
+  and does not send definition-level configuration.
+- Added the required Italian UI strings for the new component controls and states.
+
+Validation completed:
+
+- `dotnet build MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~WorkshopServiceTests"` — 7 passed
+- `cd frontend && yarn workspace shooter-workshop.client build`
+- `cd frontend && yarn workspace shooter-workshop.client test --run src/routes/config.test.tsx`
+
+Residual rollout risk: the existing legacy definition documents may still contain
+manufacturer, tracking, interval, and compatibility fields. They remain tolerated
+but are no longer used by new physical-component writes. A production data audit and
+non-destructive backfill for physical tags remain operational follow-up work.
+

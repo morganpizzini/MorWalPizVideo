@@ -17,6 +17,8 @@ public interface IWorkshopRepository
         where T : BaseEntity;
     Task<bool> ReplaceAsync<T>(string collection, T item, string accountId, long? expectedRevision = null,
         CancellationToken cancellationToken = default) where T : BaseEntity;
+    Task<bool> DeleteAsync<T>(string collection, string accountId, string id, long? expectedRevision = null,
+        CancellationToken cancellationToken = default) where T : BaseEntity;
     Task<WorkshopOperation?> FindOperationAsync(string accountId, string idempotencyKey, CancellationToken cancellationToken = default);
     Task<WorkshopOperation?> GetOperationAsync(string accountId, string operationId, CancellationToken cancellationToken = default);
     Task AddOperationAsync(WorkshopOperation operation, CancellationToken cancellationToken = default);
@@ -51,6 +53,17 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
         if (expectedRevision.HasValue)
             filter &= Builders<T>.Filter.Eq("revision", expectedRevision.Value);
         return (await database.GetCollection<T>(collection).ReplaceOneAsync(filter, item, cancellationToken: cancellationToken)).ModifiedCount == 1;
+    }
+
+    public async Task<bool> DeleteAsync<T>(string collection, string accountId, string id, long? expectedRevision = null,
+        CancellationToken cancellationToken = default) where T : BaseEntity
+    {
+        var filter = Builders<T>.Filter.And(
+            Builders<T>.Filter.Eq("accountId", accountId),
+            Builders<T>.Filter.Eq("_id", id));
+        if (expectedRevision.HasValue)
+            filter &= Builders<T>.Filter.Eq("revision", expectedRevision.Value);
+        return (await database.GetCollection<T>(collection).DeleteOneAsync(filter, cancellationToken)).DeletedCount == 1;
     }
 
     public Task<WorkshopOperation?> FindOperationAsync(string accountId, string idempotencyKey, CancellationToken cancellationToken = default) =>
@@ -108,6 +121,19 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
             var old = scenario.Read<T>(collection).FirstOrDefault(x => x.Id == item.Id && ReadAccountId(x) == accountId);
             if (old is null || expectedRevision.HasValue && ReadRevision(old) != expectedRevision.Value) return Task.FromResult(false);
             scenario.Replace(collection, item);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> DeleteAsync<T>(string collection, string accountId, string id, long? expectedRevision = null,
+        CancellationToken cancellationToken = default) where T : BaseEntity
+    {
+        lock (gate)
+        {
+            var old = scenario.Read<T>(collection).FirstOrDefault(x => x.Id == id && ReadAccountId(x) == accountId);
+            if (old is null || expectedRevision.HasValue && ReadRevision(old) != expectedRevision.Value)
+                return Task.FromResult(false);
+            scenario.Delete<T>(collection, id);
             return Task.FromResult(true);
         }
     }
@@ -172,6 +198,7 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
         value switch
         {
             Firearm x => x.Revision,
+            ComponentDefinition x => x.Revision,
             ComponentInstance x => x.Revision,
             ComponentInstallation x => x.Revision,
             AmmoBatch x => x.Revision,

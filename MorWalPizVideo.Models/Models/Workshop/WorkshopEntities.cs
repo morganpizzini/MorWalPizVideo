@@ -9,7 +9,7 @@ public enum WorkshopTrackingMode { Counter, Interval, Manual }
 public enum WorkshopComponentStatus { Inventory, Installed, Maintenance, Retired }
 public enum WorkshopRecipeStatus { Active, Archived }
 public enum WorkshopMaintenanceEventType { Inspection, Cleaning, ComponentMaintenance, Replacement, CounterAdjustment, General }
-public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentCreated, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted }
+public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted }
 public enum WorkshopAggregateKind { Firearm, Component, Batch, Allocation }
 public enum WorkshopProjectionState { Current, Pending, Inconsistent }
 
@@ -40,6 +40,7 @@ public sealed record ComponentDefinition : BaseEntity
     [BsonElement("notes")] public string? Notes { get; init; }
     [BsonElement("compatibilityTags")] public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
     [BsonElement("archived")] public bool Archived { get; init; }
+    [BsonElement("revision")] public long Revision { get; init; }
 }
 
 public sealed record ComponentInstance : BaseEntity
@@ -49,10 +50,12 @@ public sealed record ComponentInstance : BaseEntity
     [BsonElement("identificationNote")] public string? IdentificationNote { get; init; }
     [BsonElement("manufacturer")] public string? Manufacturer { get; init; }
     [BsonElement("model")] public string? Model { get; init; }
+    [BsonElement("compatibilityTags")] public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
     [BsonElement("totalRounds")] public long TotalRounds { get; init; }
     [BsonElement("serviceInterval")] public long? ServiceInterval { get; init; }
     [BsonElement("trackingMode")] public WorkshopTrackingMode TrackingMode { get; init; }
     [BsonElement("status")] public WorkshopComponentStatus Status { get; init; }
+    [BsonElement("archived")] public bool Archived { get; init; }
     [BsonElement("notes")] public string? Notes { get; init; }
     [BsonElement("revision")] public long Revision { get; init; }
 }

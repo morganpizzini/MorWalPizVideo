@@ -16,10 +16,18 @@ public sealed record WorkshopComponentDefinitionCommand(string Name, string? Man
     string? Description, long? DefaultServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes,
     IReadOnlyList<string>? CompatibilityTags = null);
 public sealed record WorkshopComponentCommand(string DefinitionId, string? IdentificationNote, string? Manufacturer,
-    string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes);
-public sealed record WorkshopCreateAndInstallCommand(string DefinitionId, string FirearmId, string? IdentificationNote,
+    string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
+    IReadOnlyList<string>? CompatibilityTags = null);
+public sealed record WorkshopCreateAndInstallCommand(string DefinitionId, string? FirearmId, string? IdentificationNote,
     string? Manufacturer, string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
-    DateTime InstalledAt, string? InstallationNotes, string IdempotencyKey);
+    DateTime InstalledAt, string? InstallationNotes, string IdempotencyKey,
+    IReadOnlyList<string>? CompatibilityTags = null);
+public sealed record WorkshopUpdateComponentDefinitionCommand(string Name, string? Description, string? Notes, long ExpectedRevision, string IdempotencyKey);
+public sealed record WorkshopArchiveComponentDefinitionCommand(long ExpectedRevision, string IdempotencyKey);
+public sealed record WorkshopUpdateComponentCommand(string? IdentificationNote, string? Manufacturer, string? Model,
+    long? ServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes, IReadOnlyList<string>? CompatibilityTags,
+    long ExpectedRevision, string IdempotencyKey);
+public sealed record WorkshopArchiveComponentCommand(long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopInstallCommand(string ComponentId, string FirearmId, DateTime InstalledAt,
     string? InstallationNotes, string IdempotencyKey);
 public sealed record WorkshopRemoveCommand(string InstallationId, DateTime RemovedAt,
@@ -152,8 +160,14 @@ public sealed class WorkshopService(
     public async Task<(ComponentInstance Component, ComponentInstallation Installation)> CreateAndInstallComponentAsync(
         string accountId, WorkshopCreateAndInstallCommand command, CancellationToken ct = default)
     {
-        _ = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
-            ?? throw new WorkshopValidationException("Firearm was not found.");
+        Firearm? firearm = null;
+        if (!string.IsNullOrWhiteSpace(command.FirearmId))
+        {
+            firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
+                ?? throw new WorkshopValidationException("Firearm was not found.");
+            if (firearm.Archived)
+                throw new WorkshopValidationException("Archived firearms cannot receive components.");
+        }
         var definition = await repository.GetAsync<ComponentDefinition>(
             DbCollections.WorkshopComponentDefinitions, accountId, command.DefinitionId, ct)
             ?? throw new WorkshopValidationException("Component definition was not found.");
@@ -173,29 +187,31 @@ public sealed class WorkshopService(
             {
                 Id = componentId, AccountId = accountId, DefinitionId = definition.Id,
                 IdentificationNote = Trim(command.IdentificationNote),
-                Manufacturer = Trim(command.Manufacturer) ?? definition.Manufacturer,
-                Model = Trim(command.Model) ?? definition.Model,
-                ServiceInterval = command.ServiceInterval ?? definition.DefaultServiceInterval,
-                TrackingMode = command.TrackingMode ?? definition.TrackingMode,
-                Status = WorkshopComponentStatus.Installed, Notes = Trim(command.Notes), CreationDateTime = Now()
+                Manufacturer = Trim(command.Manufacturer),
+                Model = Trim(command.Model),
+                ServiceInterval = ValidateInterval(command.ServiceInterval, command.TrackingMode ?? WorkshopTrackingMode.Counter),
+                TrackingMode = command.TrackingMode ?? WorkshopTrackingMode.Counter,
+                CompatibilityTags = NormalizeTags(command.CompatibilityTags),
+                Status = firearm is null ? WorkshopComponentStatus.Inventory : WorkshopComponentStatus.Installed,
+                Notes = Trim(command.Notes), CreationDateTime = Now()
             };
             await repository.AddAsync(DbCollections.WorkshopComponentInstances, component, ct);
         }
         var installation = await repository.GetAsync<ComponentInstallation>(
             DbCollections.WorkshopComponentInstallations, accountId, installationId, ct);
-        if (installation is null)
+        if (firearm is not null && installation is null)
         {
             installation = new ComponentInstallation
             {
                 Id = installationId, AccountId = accountId, ComponentId = component.Id,
-                FirearmId = command.FirearmId, InstalledAt = command.InstalledAt,
+                FirearmId = command.FirearmId!, InstalledAt = command.InstalledAt,
                 InstallationNotes = Trim(command.InstallationNotes), CreationDateTime = Now()
             };
             await repository.AddAsync(DbCollections.WorkshopComponentInstallations, installation, ct);
         }
-        if (existing is null)
+        if (firearm is not null && existing is null)
             await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ComponentInstalled,
-                command.InstalledAt, [], [componentId, installationId, command.DefinitionId, command.FirearmId], payload, ct);
+                command.InstalledAt, [], [componentId, installationId, command.DefinitionId, command.FirearmId!], payload, ct);
         return (component, installation);
     }
 
@@ -436,10 +452,11 @@ public sealed class WorkshopService(
         RequireText(command.Name, "Name", 160);
         var definition = new ComponentDefinition
         {
-            Id = NewId(), AccountId = accountId, Name = command.Name.Trim(), Manufacturer = Trim(command.Manufacturer),
-            Model = Trim(command.Model), Description = Trim(command.Description), DefaultServiceInterval = command.DefaultServiceInterval,
-            TrackingMode = command.TrackingMode, Notes = Trim(command.Notes), CreationDateTime = Now()
-            , CompatibilityTags = NormalizeTags(command.CompatibilityTags)
+            Id = NewId(), AccountId = accountId, Name = command.Name.Trim(),
+            Manufacturer = Trim(command.Manufacturer), Model = Trim(command.Model),
+            Description = Trim(command.Description), DefaultServiceInterval = command.DefaultServiceInterval,
+            TrackingMode = command.TrackingMode, Notes = Trim(command.Notes),
+            CompatibilityTags = NormalizeTags(command.CompatibilityTags), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopComponentDefinitions, definition, ct);
         await RecordActivityAsync(accountId, WorkshopOperationType.ComponentDefinitionCreated, definition.Id, ct);
@@ -453,14 +470,100 @@ public sealed class WorkshopService(
         var component = new ComponentInstance
         {
             Id = NewId(), AccountId = accountId, DefinitionId = command.DefinitionId,
-            IdentificationNote = Trim(command.IdentificationNote), Manufacturer = Trim(command.Manufacturer) ?? definition.Manufacturer,
-            Model = Trim(command.Model) ?? definition.Model, ServiceInterval = command.ServiceInterval ?? definition.DefaultServiceInterval,
-            TrackingMode = command.TrackingMode ?? definition.TrackingMode, Status = WorkshopComponentStatus.Inventory,
+            IdentificationNote = Trim(command.IdentificationNote), Manufacturer = Trim(command.Manufacturer),
+            Model = Trim(command.Model), ServiceInterval = ValidateInterval(command.ServiceInterval, command.TrackingMode ?? WorkshopTrackingMode.Counter),
+            TrackingMode = command.TrackingMode ?? WorkshopTrackingMode.Counter,
+            CompatibilityTags = NormalizeTags(command.CompatibilityTags), Status = WorkshopComponentStatus.Inventory,
             Notes = Trim(command.Notes), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopComponentInstances, component, ct);
         await RecordActivityAsync(accountId, WorkshopOperationType.ComponentCreated, component.Id, ct);
         return component;
+    }
+
+    public async Task<ComponentDefinition> UpdateComponentDefinitionAsync(string accountId, string id,
+        WorkshopUpdateComponentDefinitionCommand command, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component definition was not found.");
+        RequireText(command.Name, "Name", 160);
+        if (current.Revision != command.ExpectedRevision)
+            throw new WorkshopConflictException("Component definition changed. Reload before updating.");
+        var updated = current with { Name = command.Name.Trim(), Description = Trim(command.Description), Notes = Trim(command.Notes), Revision = current.Revision + 1 };
+        if (!await repository.ReplaceAsync(DbCollections.WorkshopComponentDefinitions, updated, accountId, current.Revision, ct))
+            throw new WorkshopConflictException("Component definition changed while updating it.");
+        return updated;
+    }
+
+    public async Task<ComponentDefinition> ArchiveComponentDefinitionAsync(string accountId, string id,
+        WorkshopArchiveComponentDefinitionCommand command, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component definition was not found.");
+        if (current.Revision != command.ExpectedRevision)
+            throw new WorkshopConflictException("Component definition changed. Reload before archiving.");
+        return await repository.ReplaceAsync(DbCollections.WorkshopComponentDefinitions,
+            current with { Archived = true, Revision = current.Revision + 1 }, accountId, current.Revision, ct)
+            ? current with { Archived = true, Revision = current.Revision + 1 }
+            : throw new WorkshopConflictException("Component definition changed while archiving it.");
+    }
+
+    public async Task<ComponentInstance> UpdateComponentAsync(string accountId, string id,
+        WorkshopUpdateComponentCommand command, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component was not found.");
+        if (current.Revision != command.ExpectedRevision)
+            throw new WorkshopConflictException("Component changed. Reload before updating.");
+        var updated = current with
+        {
+            IdentificationNote = Trim(command.IdentificationNote), Manufacturer = Trim(command.Manufacturer),
+            Model = Trim(command.Model), ServiceInterval = ValidateInterval(command.ServiceInterval, command.TrackingMode),
+            TrackingMode = command.TrackingMode, CompatibilityTags = NormalizeTags(command.CompatibilityTags),
+            Notes = Trim(command.Notes), Revision = current.Revision + 1
+        };
+        if (!await repository.ReplaceAsync(DbCollections.WorkshopComponentInstances, updated, accountId, current.Revision, ct))
+            throw new WorkshopConflictException("Component changed while updating it.");
+        return updated;
+    }
+
+    public async Task<ComponentInstance> ArchiveComponentAsync(string accountId, string id,
+        WorkshopArchiveComponentCommand command, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component was not found.");
+        if (current.Status == WorkshopComponentStatus.Installed)
+            throw new WorkshopValidationException("Remove the component before archiving it.");
+        if (current.Revision != command.ExpectedRevision)
+            throw new WorkshopConflictException("Component changed. Reload before archiving.");
+        var updated = current with { Archived = true, Revision = current.Revision + 1 };
+        if (!await repository.ReplaceAsync(DbCollections.WorkshopComponentInstances, updated, accountId, current.Revision, ct))
+            throw new WorkshopConflictException("Component changed while archiving it.");
+        return updated;
+    }
+
+    public async Task DeleteComponentDefinitionAsync(string accountId, string id, long revision, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component definition was not found.");
+        if ((await repository.ListAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, ct)).Any(x => x.DefinitionId == id))
+            throw new WorkshopConflictException("This definition is referenced by physical components. Archive it instead.");
+        if (current.Revision != revision || !await repository.DeleteAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, id, revision, ct))
+            throw new WorkshopConflictException("Component definition changed. Reload before deleting it.");
+    }
+
+    public async Task DeleteComponentAsync(string accountId, string id, long revision, CancellationToken ct = default)
+    {
+        var current = await repository.GetAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, id, ct)
+            ?? throw new WorkshopValidationException("Component was not found.");
+        var installations = await repository.ListAsync<ComponentInstallation>(DbCollections.WorkshopComponentInstallations, accountId, ct);
+        var maintenance = await repository.ListAsync<MaintenanceEvent>(DbCollections.WorkshopMaintenanceEvents, accountId, ct);
+        var operations = await repository.ListAsync<WorkshopOperation>(DbCollections.WorkshopOperations, accountId, ct);
+        if (installations.Any(x => x.ComponentId == id) || maintenance.Any(x => x.ComponentId == id) ||
+            operations.Any(x => x.SourceEntityIds.Contains(id) || x.Deltas.Any(delta => delta.AggregateId == id)))
+            throw new WorkshopConflictException("This component has history. Archive it instead.");
+        if (current.Revision != revision || !await repository.DeleteAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, id, revision, ct))
+            throw new WorkshopConflictException("Component changed. Reload before deleting it.");
     }
 
     public async Task<AmmoRecipe> CreateRecipeAsync(string accountId, RecipeSnapshot snapshot, CancellationToken ct = default)
@@ -948,6 +1051,14 @@ public sealed class WorkshopService(
     private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags) =>
         (tags ?? []).Select(Trim).Where(x => x is not null).Select(x => x!.ToLowerInvariant())
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).Where(x => x.Length <= 80).ToArray();
+    private static long? ValidateInterval(long? value, WorkshopTrackingMode mode)
+    {
+        if (mode == WorkshopTrackingMode.Interval && (!value.HasValue || value <= 0))
+            throw new WorkshopValidationException("Maximum rounds is required for interval tracking.");
+        if (mode != WorkshopTrackingMode.Interval && value.HasValue)
+            throw new WorkshopValidationException("Maximum rounds is only valid for interval tracking.");
+        return value;
+    }
     private static string ActivitySummary(WorkshopOperationType type) => type switch
     {
         WorkshopOperationType.ComponentInstalled => "Component installed",

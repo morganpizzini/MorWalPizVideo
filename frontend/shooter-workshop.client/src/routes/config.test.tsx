@@ -23,5 +23,8 @@ describe("Workshop route configuration", () => {
       "account/profile",
       "*",
     ]);
+    const componentsRoute = shellRoute?.children?.find((route) => route.path === "components");
+    expect(componentsRoute?.loader).toBeTypeOf("function");
+    expect(componentsRoute?.action).toBeTypeOf("function");
   });
 });

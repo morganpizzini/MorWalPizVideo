@@ -75,6 +75,35 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
 
+    [HttpPut("components/definitions/{definitionId}")]
+    public async Task<IActionResult> UpdateDefinition(string definitionId, UpdateWorkshopComponentDefinitionRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { return Ok(await service.UpdateComponentDefinitionAsync(AccountId(), definitionId,
+            new(request.Name, request.Description, request.Notes, request.Revision, request.IdempotencyKey), ct)); }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("components/definitions/{definitionId}/archive")]
+    public async Task<IActionResult> ArchiveDefinition(string definitionId, ArchiveWorkshopComponentDefinitionRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { return Ok(await service.ArchiveComponentDefinitionAsync(AccountId(), definitionId,
+            new(request.Revision, request.IdempotencyKey), ct)); }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpDelete("components/definitions/{definitionId}")]
+    public async Task<IActionResult> DeleteDefinition(string definitionId, DeleteWorkshopComponentDefinitionRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { await service.DeleteComponentDefinitionAsync(AccountId(), definitionId, request.Revision, ct); return NoContent(); }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
     [HttpGet("components")]
     public async Task<IActionResult> Components(CancellationToken ct) =>
         Ok(await service.GetComponentsAsync(AccountId(), ct));
@@ -83,11 +112,8 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Install(InstallWorkshopComponentRequest request, CancellationToken ct)
     {
         if (!HasCsrf()) return Forbid();
-        try
-        {
-            return Ok(await service.InstallComponentAsync(AccountId(), new(request.ComponentId, request.FirearmId,
-                request.InstalledAt, request.InstallationNotes, request.IdempotencyKey), ct));
-        }
+        try { return Ok(await service.InstallComponentAsync(AccountId(), new(request.ComponentId, request.FirearmId,
+            request.InstalledAt, request.InstallationNotes, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
@@ -96,11 +122,8 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Remove(string installationId, RemoveWorkshopComponentRequest request, CancellationToken ct)
     {
         if (!HasCsrf()) return Forbid();
-        try
-        {
-            return Ok(await service.RemoveComponentAsync(AccountId(), new(installationId, request.RemovedAt,
-                request.RemovalNotes, request.Revision, request.IdempotencyKey), ct));
-        }
+        try { return Ok(await service.RemoveComponentAsync(AccountId(), new(installationId, request.RemovedAt,
+            request.RemovalNotes, request.Revision, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
@@ -109,12 +132,9 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Maintenance(RecordWorkshopMaintenanceRequest request, CancellationToken ct)
     {
         if (!HasCsrf()) return Forbid();
-        try
-        {
-            return Ok(await service.RecordMaintenanceAsync(AccountId(), new(request.FirearmId, request.ComponentId,
-                request.EventType, request.Date, request.RoundCountAtEvent, request.Description, request.Notes,
-                request.IdempotencyKey), ct));
-        }
+        try { return Ok(await service.RecordMaintenanceAsync(AccountId(), new(request.FirearmId, request.ComponentId,
+            request.EventType, request.Date, request.RoundCountAtEvent, request.Description, request.Notes,
+            request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
@@ -123,11 +143,9 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> CreateComponent(CreateWorkshopComponentRequest request, CancellationToken ct)
     {
         if (!HasCsrf()) return Forbid();
-        try
-        {
-            return Ok(await service.CreateComponentAsync(AccountId(), new(request.DefinitionId, request.IdentificationNote,
-                request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode, request.Notes), ct));
-        }
+        try { return Ok(await service.CreateComponentAsync(AccountId(), new(request.DefinitionId, request.IdentificationNote,
+            request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode, request.Notes,
+            request.CompatibilityTags), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
 
@@ -137,12 +155,41 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         if (!HasCsrf()) return Forbid();
         try
         {
-            var result = await service.CreateAndInstallComponentAsync(AccountId(), new(
-                request.DefinitionId, request.FirearmId, request.IdentificationNote, request.Manufacturer,
-                request.Model, request.ServiceInterval, request.TrackingMode, request.Notes,
-                request.InstalledAt, request.InstallationNotes, request.IdempotencyKey), ct);
+            var result = await service.CreateAndInstallComponentAsync(AccountId(), new(request.DefinitionId, request.FirearmId,
+                request.IdentificationNote, request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode,
+                request.Notes, request.InstalledAt, request.InstallationNotes, request.IdempotencyKey, request.CompatibilityTags), ct);
             return Ok(new CreateAndInstallWorkshopComponentResponse(result.Component, result.Installation));
         }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPut("components/{componentId}")]
+    public async Task<IActionResult> UpdateComponent(string componentId, UpdateWorkshopComponentRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { return Ok(await service.UpdateComponentAsync(AccountId(), componentId, new(request.IdentificationNote,
+            request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode ?? WorkshopTrackingMode.Counter,
+            request.Notes, request.CompatibilityTags, request.Revision, request.IdempotencyKey), ct)); }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("components/{componentId}/archive")]
+    public async Task<IActionResult> ArchiveComponent(string componentId, ArchiveWorkshopComponentRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { return Ok(await service.ArchiveComponentAsync(AccountId(), componentId,
+            new(request.Revision, request.IdempotencyKey), ct)); }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpDelete("components/{componentId}")]
+    public async Task<IActionResult> DeleteComponent(string componentId, DeleteWorkshopComponentRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return Forbid();
+        try { await service.DeleteComponentAsync(AccountId(), componentId, request.Revision, ct); return NoContent(); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }

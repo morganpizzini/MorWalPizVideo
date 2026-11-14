@@ -39,6 +39,27 @@ public sealed class CreateWorkshopComponentDefinitionRequest
     public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
 }
 
+public sealed class UpdateWorkshopComponentDefinitionRequest
+{
+    [Required, StringLength(160)] public string Name { get; init; } = string.Empty;
+    [StringLength(2000)] public string? Description { get; init; }
+    [StringLength(4000)] public string? Notes { get; init; }
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class ArchiveWorkshopComponentDefinitionRequest
+{
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class DeleteWorkshopComponentDefinitionRequest
+{
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
 public class CreateWorkshopComponentRequest
 {
     [Required] public string DefinitionId { get; init; } = string.Empty;
@@ -48,19 +69,38 @@ public class CreateWorkshopComponentRequest
     [Range(1, long.MaxValue)] public long? ServiceInterval { get; init; }
     public WorkshopTrackingMode? TrackingMode { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
+    public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
 }
 
 public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopComponentRequest
 {
-    [Required] public string FirearmId { get; init; } = string.Empty;
+    public string? FirearmId { get; init; }
     public DateTime InstalledAt { get; init; }
     [StringLength(1000)] public string? InstallationNotes { get; init; }
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
+public sealed class UpdateWorkshopComponentRequest : CreateWorkshopComponentRequest
+{
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class ArchiveWorkshopComponentRequest
+{
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class DeleteWorkshopComponentRequest
+{
+    [Range(0, long.MaxValue)] public long Revision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
 public sealed record CreateAndInstallWorkshopComponentResponse(
     ComponentInstance Component,
-    ComponentInstallation Installation);
+    ComponentInstallation? Installation);
 
 public sealed class InstallWorkshopComponentRequest
 {

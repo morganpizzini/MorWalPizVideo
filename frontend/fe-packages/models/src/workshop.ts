@@ -50,22 +50,39 @@ export interface WorkshopComponentDefinition {
   notes?: string | null;
   compatibilityTags: string[];
   archived: boolean;
+  revision: number;
 }
 
 export interface CreateWorkshopComponentDefinitionRequest {
   name: string;
+  description?: string | null;
+  notes?: string | null;
+  /** Legacy fields are accepted for rollout compatibility but ignored by new writes. */
   manufacturer?: string | null;
   model?: string | null;
-  description?: string | null;
   defaultServiceInterval?: number | null;
-  trackingMode: WorkshopTrackingMode;
-  notes?: string | null;
+  trackingMode?: WorkshopTrackingMode;
   compatibilityTags?: string[];
+}
+
+export interface UpdateWorkshopComponentDefinitionRequest extends CreateWorkshopComponentDefinitionRequest {
+  revision: number;
+  idempotencyKey: string;
+}
+
+export interface ArchiveWorkshopComponentDefinitionRequest {
+  revision: number;
+  idempotencyKey: string;
+}
+
+export interface DeleteWorkshopComponentDefinitionRequest {
+  revision: number;
+  idempotencyKey: string;
 }
 
 export interface CreateAndInstallWorkshopComponentRequest
   extends CreateWorkshopPhysicalComponentRequest {
-  firearmId: string;
+  firearmId?: string | null;
   installedAt: string;
   installationNotes?: string | null;
   idempotencyKey: string;
@@ -110,12 +127,14 @@ export interface WorkshopPhysicalComponent {
   identificationNote?: string | null;
   manufacturer?: string | null;
   model?: string | null;
+  compatibilityTags: string[];
   totalRounds: number;
   serviceInterval?: number | null;
-  trackingMode: WorkshopTrackingMode;
+  trackingMode?: WorkshopTrackingMode;
   status: "Inventory" | "Installed" | "Maintenance" | "Retired";
   notes?: string | null;
   revision: number;
+  archived: boolean;
 }
 
 export interface CreateWorkshopMaintenanceRequest {
@@ -147,8 +166,24 @@ export interface CreateWorkshopPhysicalComponentRequest {
   manufacturer?: string | null;
   model?: string | null;
   serviceInterval?: number | null;
-  trackingMode?: WorkshopTrackingMode | null;
+  trackingMode: WorkshopTrackingMode;
+  compatibilityTags?: string[];
   notes?: string | null;
+}
+
+export interface UpdateWorkshopPhysicalComponentRequest extends CreateWorkshopPhysicalComponentRequest {
+  revision: number;
+  idempotencyKey: string;
+}
+
+export interface ArchiveWorkshopPhysicalComponentRequest {
+  revision: number;
+  idempotencyKey: string;
+}
+
+export interface DeleteWorkshopPhysicalComponentRequest {
+  revision: number;
+  idempotencyKey: string;
 }
 
 export interface WorkshopRecipe {

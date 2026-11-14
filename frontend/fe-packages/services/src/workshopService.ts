@@ -1,6 +1,9 @@
 import type {
   CreateWorkshopAllocationRequest,
   CreateWorkshopComponentDefinitionRequest,
+  UpdateWorkshopComponentDefinitionRequest,
+  ArchiveWorkshopComponentDefinitionRequest,
+  DeleteWorkshopComponentDefinitionRequest,
   CreateAndInstallWorkshopComponentRequest,
   InstallWorkshopComponentRequest,
   RemoveWorkshopComponentRequest,
@@ -9,6 +12,9 @@ import type {
   ArchiveWorkshopFirearmRequest,
   CreateWorkshopMaintenanceRequest,
   CreateWorkshopPhysicalComponentRequest,
+  UpdateWorkshopPhysicalComponentRequest,
+  ArchiveWorkshopPhysicalComponentRequest,
+  DeleteWorkshopPhysicalComponentRequest,
   CreateWorkshopProductionRequest,
   CreateWorkshopRecipeRequest,
   CreateWorkshopShootingRequest,
@@ -70,6 +76,30 @@ export const createWorkshopComponentDefinition = (
 ): Promise<WorkshopComponentDefinition> =>
   request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENT_DEFINITIONS, body));
 
+export const updateWorkshopComponentDefinition = (
+  definitionId: string,
+  body: UpdateWorkshopComponentDefinitionRequest,
+): Promise<WorkshopComponentDefinition> =>
+  request(accountApiService.put(
+    frontendEndpoints.WORKSHOP_COMPONENT_DEFINITION_DETAIL.replace("{definitionId}", encodeURIComponent(definitionId)), body,
+  ));
+
+export const archiveWorkshopComponentDefinition = (
+  definitionId: string,
+  body: ArchiveWorkshopComponentDefinitionRequest,
+): Promise<WorkshopComponentDefinition> =>
+  request(accountApiService.post(
+    `${frontendEndpoints.WORKSHOP_COMPONENT_DEFINITION_DETAIL.replace("{definitionId}", encodeURIComponent(definitionId))}/archive`, body,
+  ));
+
+export const deleteWorkshopComponentDefinition = (
+  definitionId: string,
+  body: DeleteWorkshopComponentDefinitionRequest,
+): Promise<void> =>
+  request(accountApiService.Delete(
+    frontendEndpoints.WORKSHOP_COMPONENT_DEFINITION_DETAIL.replace("{definitionId}", encodeURIComponent(definitionId)), body,
+  ));
+
 export const createAndInstallWorkshopComponent = (
   body: CreateAndInstallWorkshopComponentRequest,
 ): Promise<CreateAndInstallWorkshopComponentResponse> =>
@@ -82,6 +112,30 @@ export const createWorkshopComponent = (
   body: CreateWorkshopPhysicalComponentRequest,
 ): Promise<WorkshopPhysicalComponent> =>
   request(accountApiService.post(frontendEndpoints.WORKSHOP_COMPONENTS, body));
+
+export const updateWorkshopComponent = (
+  componentId: string,
+  body: UpdateWorkshopPhysicalComponentRequest,
+): Promise<WorkshopPhysicalComponent> =>
+  request(accountApiService.put(
+    frontendEndpoints.WORKSHOP_COMPONENT_DETAIL.replace("{componentId}", encodeURIComponent(componentId)), body,
+  ));
+
+export const archiveWorkshopComponent = (
+  componentId: string,
+  body: ArchiveWorkshopPhysicalComponentRequest,
+): Promise<WorkshopPhysicalComponent> =>
+  request(accountApiService.post(
+    `${frontendEndpoints.WORKSHOP_COMPONENT_DETAIL.replace("{componentId}", encodeURIComponent(componentId))}/archive`, body,
+  ));
+
+export const deleteWorkshopComponent = (
+  componentId: string,
+  body: DeleteWorkshopPhysicalComponentRequest,
+): Promise<void> =>
+  request(accountApiService.Delete(
+    frontendEndpoints.WORKSHOP_COMPONENT_DETAIL.replace("{componentId}", encodeURIComponent(componentId)), body,
+  ));
 
 export const installWorkshopComponent = (
   body: InstallWorkshopComponentRequest,
