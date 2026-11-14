@@ -1,17 +1,20 @@
 import { Link } from "react-router";
 import type { ReactNode } from "react";
+import { useI18n } from "../i18n";
 
-export function LoadingState({ label = "Loading workshop data…" }: { label?: string }) {
-  return <p className="state state-loading" role="status">{label}</p>;
+export function LoadingState({ label }: { label?: string }) {
+  const { t } = useI18n();
+  return <p className="state state-loading" role="status">{label ?? t("Loading workshop data…")}</p>;
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  const message = error instanceof Error ? error.message : "The request could not be completed.";
+  const { t } = useI18n();
+  const message = error instanceof Error ? error.message : t("The request could not be completed.");
   return (
     <div className="state state-error" role="alert">
-      <strong>Could not load this workspace.</strong>
+      <strong>{t("Could not load this workspace.")}</strong>
       <p>{message}</p>
-      {onRetry && <button className="button button-quiet" onClick={onRetry}>Try again</button>}
+      {onRetry && <button className="button button-quiet" onClick={onRetry}>{t("Try again")}</button>}
     </div>
   );
 }
@@ -26,5 +29,6 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
 }
 
 export function ConflictState({ message = "Another operation changed this record. Reload before saving again." }: { message?: string }) {
-  return <div className="state state-conflict" role="alert"><strong>Conflict detected</strong><p>{message}</p><Link className="button button-quiet" to="">Reload</Link></div>;
+  const { t } = useI18n();
+  return <div className="state state-conflict" role="alert"><strong>{t("Conflict detected")}</strong><p>{message === "Another operation changed this record. Reload before saving again." ? t(message) : message}</p><Link className="button button-quiet" to="">{t("Reload")}</Link></div>;
 }

@@ -9,7 +9,6 @@ import Sponsors from './sponsors/Component';
 import Calendar from './calendar/Component';
 import SponsorVideo from './system/sponsors-video';
 import Index from './home/Component';
-import Compilations from './compilations/Component';
 import CustomForm from './customForms/Component';
 import matchLoader from './matches/loader';
 import homeLoader, { homeShouldRevalidate } from './home/loader';
@@ -19,7 +18,6 @@ import sponsorsLoader from './sponsors/loader';
 import sponsorsAction from './sponsors/action';
 import calendarLoader from './calendar/loader';
 import streamLoader from './stream/loader';
-import compilationsLoader from './compilations/loader';
 import customFormLoader from './customForms/loader';
 import CookiePolicy from './system/cookie-policy';
 import Privacy from './system/privacy';
@@ -39,6 +37,7 @@ import { BlogList, BlogArticle, blogLoader, articleLoader } from './blog';
 import Gallery from './gallery/Component';
 import galleryLoader from './gallery/loader';
 import { Login, Profile, Register } from './account/Components';
+import { Component as Compilations, loader as compilationsLoader } from './compilations';
 
 export const routes: RouteObject[] = [
   {

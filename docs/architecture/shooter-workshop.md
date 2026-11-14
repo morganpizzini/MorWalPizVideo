@@ -736,6 +736,17 @@ The dashboard should prioritize actionable information over decorative statistic
 
 The application should use a dashboard-oriented layout with persistent navigation.
 
+### Culture and localization
+
+The client supports Italian (`it-IT`) as the fallback/default culture and English
+(`en-GB`) as the secondary culture. On first load, the browser resolves the culture
+from its language preferences by primary language subtag; unsupported or unavailable
+preferences fall back to Italian. An explicit user selection is persisted only in
+browser-local Workshop storage and takes effect immediately on both login and
+authenticated surfaces. Routes, API payloads, account contracts, and stored domain
+values remain culture-neutral. Dates and numbers are formatted at the client
+presentation boundary using the selected culture.
+
 ## Main navigation
 
 | Navigation item | Main screen |

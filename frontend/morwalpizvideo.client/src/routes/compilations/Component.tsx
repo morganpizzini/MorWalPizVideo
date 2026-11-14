@@ -2,20 +2,13 @@ import { useLoaderData } from 'react-router';
 import '../matches/style.scss';
 import SEO from '@utils/seo';
 import { trackPageView } from '../../analytics/consent';
-import { VideoPlayer } from '@morwalpiz/layout';
+import { CompilationVideo } from './components';
+import type loader from './loader';
 
-interface CompVideo {
-  youtubeId: string;
-  title: string;
-}
-interface Compilation {
-  title: string;
-  description?: string;
-  videos?: CompVideo[];
-}
+export type CompilationRouteData = Awaited<ReturnType<typeof loader>>;
 
 export default function Compilations() {
-  const { compilation } = useLoaderData() as { compilation: Compilation };
+  const { compilation } = useLoaderData() as CompilationRouteData;
   if (typeof window !== 'undefined') {
     trackPageView('compilation', '/compilations/:id');
   }
@@ -38,17 +31,8 @@ export default function Compilations() {
         <hr />
 
         <div id="video-container" className="row">
-          {compilation.videos?.map((video: CompVideo) => (
-            <div key={video.youtubeId} className="col-6 mb-3">
-              <div className="video-block border rounded">
-                <div className="video-thumbnail">
-                  <VideoPlayer youtubeId={video.youtubeId} height="180px" />
-                </div>
-                <div className="video-details">
-                  <div className="video-title">{video.title}</div>
-                </div>
-              </div>
-            </div>
+          {compilation.videos.map((video) => (
+            <CompilationVideo key={video.youtubeId} video={video} />
           ))}
         </div>
       </div>

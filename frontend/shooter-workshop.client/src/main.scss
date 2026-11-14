@@ -37,6 +37,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .desktop-nav a { padding: .55rem .65rem; color: var(--workshop-secondary); font-size: .8rem; font-weight: 700; border-radius: 6px; }
 .desktop-nav a.active, .desktop-nav a:hover { background: var(--workshop-elevated); color: var(--workshop-accent); }
 .header-account { display: flex; align-items: center; gap: .75rem; white-space: nowrap; font-size: .8rem; }
+.language-selector { display: inline-flex; align-items: center; gap: .35rem; margin: 0; color: var(--workshop-secondary); font-size: .72rem; }
+.language-selector select { width: auto; min-width: 4.5rem; padding: .35rem .45rem; font-size: .75rem; }
 .workshop-main { width: min(100% - 2rem, 1440px); margin: 0 auto; padding: clamp(1.5rem, 4vw, 3rem) 0 5rem; }
 .mwp-page-title { margin-bottom: 1.8rem; }
 .mwp-page-title__heading { font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 800; letter-spacing: -.04em; }

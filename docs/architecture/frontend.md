@@ -113,6 +113,14 @@ client explicitly at `http://localhost:5179` and points its development API prox
 the ServerAPI HTTPS endpoint. Production account CORS must admit only the exact
 `https://workshop.morwalpiz.com` origin.
 
+Workshop localization is client-owned. The supported cultures are `it-IT` and
+`en-GB`; the browser resolves the first visit from its language preferences and falls
+back to Italian. An explicit selection is stored in browser-local Workshop storage and
+does not roam with the public account. Culture state is mounted above authentication
+and routing, so the anonymous login surface and authenticated shell share the same
+selection. API routes, DTOs, timestamps, account contracts, and authorization remain
+culture-neutral; locale-aware formatting is presentation-only.
+
 The public Quick Links route `/quick-links/:url` is a standalone exception to
 the public `Root` shell: it renders the configured page title and ordered link
 destinations without site navigation, header, or footer. Its shared

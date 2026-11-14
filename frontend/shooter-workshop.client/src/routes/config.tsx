@@ -1,21 +1,19 @@
 import { Navigate, type RouteObject } from "react-router";
 import AppShell from "../layouts/AppShell";
-import {
-  AccountLogin,
-  AccountProfile,
-  Allocation,
-  Ammunition,
-  Components,
-  Dashboard,
-  FirearmDetail,
-  Firearms,
-  History,
-  Maintenance,
-  Production,
-  Recipes,
-  Reconciliation,
-  ShootingSessions,
-} from "./pages";
+import { Component as AccountLogin } from "./AccountLogin";
+import { Component as AccountProfile } from "./AccountProfile";
+import { Component as Allocation } from "./Allocation";
+import { Component as Ammunition } from "./Ammunition";
+import { Component as Components } from "./Components";
+import { Component as Dashboard } from "./Dashboard";
+import { Component as FirearmDetail } from "./FirearmDetail";
+import { Component as Firearms } from "./Firearms";
+import { Component as History } from "./History";
+import { Component as Maintenance } from "./Maintenance";
+import { Component as Production } from "./Production";
+import { Component as Recipes } from "./Recipes";
+import { Component as Reconciliation } from "./Reconciliation";
+import { Component as ShootingSessions } from "./ShootingSessions";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
