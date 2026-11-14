@@ -1,6 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
 
 const { submitFeedback } = vi.hoisted(() => ({ submitFeedback: vi.fn() }));
 vi.mock("@morwalpizvideo/services", () => ({

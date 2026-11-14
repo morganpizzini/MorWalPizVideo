@@ -19,8 +19,9 @@ Make the Shooter Workshop container build deterministic by declaring the test to
 Keep production compilation behavior unchanged and make the owning workspace self-contained:
 
 1. Add `@testing-library/react` to the Shooter Workshop development dependencies, aligned with the existing React 19-compatible repository version.
-2. Add `jsdom` to the Shooter Workshop development dependencies because Vitest names that environment.
-3. Regenerate the committed Yarn Classic lockfile through the workspace package manager.
+2. Add `@testing-library/dom` to the Shooter Workshop development dependencies because Yarn Classic does not install the React Testing Library peer dependency in the reduced Docker workspace.
+3. Add `jsdom` to the Shooter Workshop development dependencies because Vitest names that environment.
+4. Regenerate the committed Yarn Classic lockfile through the workspace package manager.
 
 Excluding `*.test.tsx` from `tsconfig.app.json` is not recommended for this incident. It would make the image build pass without repairing the undeclared test dependency and would reduce build-time type checking of tests.
 
@@ -122,6 +123,7 @@ None identified.
 Implemented on 2026-11-14:
 
 - Added `@testing-library/react` (`^16.3.2`) to the Shooter Workshop development dependencies.
+- Added `@testing-library/dom` (`^10.0.0`) because `@testing-library/react` re-exports `fireEvent`, `screen`, and `waitFor` from that peer dependency.
 - Added `jsdom` (`^26.0.0`) to the Shooter Workshop development dependencies.
 - Refreshed `frontend/yarn.lock` with Yarn Classic.
 - Left the Dockerfile and TypeScript inclusion rules unchanged.
