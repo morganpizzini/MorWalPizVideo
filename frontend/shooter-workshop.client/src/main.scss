@@ -29,16 +29,24 @@ button, input, select, textarea { font: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--workshop-accent); outline-offset: 3px; }
 
 .workshop-shell { min-height: 100vh; }
-.workshop-header { display: flex; align-items: center; gap: 1.5rem; min-height: 4.5rem; padding: .8rem clamp(1rem, 3vw, 3rem); border-bottom: 1px solid var(--workshop-border); background: rgba(16, 16, 16, .97); position: sticky; top: 0; z-index: 4; }
+.workshop-header { display: grid; gap: .6rem; min-height: 5.8rem; padding: .75rem clamp(1rem, 3vw, 3rem) .55rem; border-bottom: 1px solid var(--workshop-border); background: rgba(16, 16, 16, .97); position: sticky; top: 0; z-index: 4; }
+.workshop-header-top, .workshop-header-navigation { display: flex; align-items: center; min-width: 0; }
+.workshop-header-top { justify-content: space-between; gap: 1rem; }
 .brand { color: var(--workshop-text); font-size: 1.2rem; font-weight: 800; white-space: nowrap; }
 .brand span:last-child { color: var(--workshop-secondary); font-size: .75rem; font-weight: 600; margin-left: .3rem; text-transform: uppercase; letter-spacing: .12em; }
 .brand-mark { display: inline-grid; place-items: center; width: 2rem; height: 2rem; margin-right: .25rem; border-radius: 50%; background: var(--workshop-accent); color: var(--workshop-bg); }
-.desktop-nav { display: flex; flex: 1; justify-content: center; flex-wrap: wrap; gap: .25rem; }
+.workshop-header-navigation { position: relative; min-width: 0; }
+.desktop-nav { display: flex; flex: 1; justify-content: space-between; min-width: 0; overflow-x: auto; gap: .35rem; padding: .1rem 2rem .25rem 0; scrollbar-color: var(--workshop-muted) transparent; scrollbar-width: thin; }
+.desktop-nav::-webkit-scrollbar { height: .3rem; }.desktop-nav::-webkit-scrollbar-thumb { background: var(--workshop-muted); border-radius: 99px; }
 .desktop-nav a { padding: .55rem .65rem; color: var(--workshop-secondary); font-size: .8rem; font-weight: 700; border-radius: 6px; }
 .desktop-nav a.active, .desktop-nav a:hover { background: var(--workshop-elevated); color: var(--workshop-accent); }
-.header-account { display: flex; align-items: center; gap: .75rem; white-space: nowrap; font-size: .8rem; }
-.language-selector { display: inline-flex; align-items: center; gap: .35rem; margin: 0; color: var(--workshop-secondary); font-size: .72rem; }
-.language-selector select { width: auto; min-width: 4.5rem; padding: .35rem .45rem; font-size: .75rem; }
+.nav-scroll-hint { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: 0 0 auto; margin-left: -.25rem; border-radius: 50%; background: var(--workshop-elevated); color: var(--workshop-accent); font-size: 1.1rem; pointer-events: none; }
+.header-account { display: flex; align-items: center; gap: .45rem; white-space: nowrap; font-size: .8rem; }
+.language-selector { position: relative; display: inline-flex; align-items: center; justify-content: center; margin: 0; color: var(--workshop-secondary); }
+.language-selector:has(select:focus-visible) { outline: 2px solid var(--workshop-accent); outline-offset: 3px; border-radius: 7px; }
+.language-selector select { position: absolute; inset: 0; width: 100%; min-width: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.icon-button { width: 2.5rem; min-width: 2.5rem; height: 2.5rem; padding: .55rem; }
+.icon-button svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .workshop-main { width: min(100% - 2rem, 1440px); margin: 0 auto; padding: clamp(1.5rem, 4vw, 3rem) 0 5rem; }
 .install-prompt { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.15rem; border: 1px solid var(--workshop-accent); border-radius: var(--workshop-radius); background: var(--workshop-surface); }
 .install-prompt h2 { margin: 0; color: var(--workshop-accent); font-size: 1rem; }
@@ -102,5 +110,5 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 .feedback-context { overflow-wrap: anywhere; padding: .65rem; border-radius: 6px; background: var(--workshop-elevated); }
 .feedback-message { color: var(--workshop-accent); font-weight: 700; }.feedback-message-error { color: var(--workshop-error); }.feedback-message-success { color: var(--workshop-success); }
 .feedback-actions { display: flex; justify-content: flex-end; gap: .6rem; }
-@media (max-width: 900px) { .workshop-header { flex-wrap: wrap; }.desktop-nav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }.dashboard-grid, .detail-grid, .components-grid { grid-template-columns: 1fr; } }
-@media (max-width: 560px) { .workshop-main { width: min(100% - 1.5rem, 1440px); }.header-account { margin-left: auto; }.header-account > a { display: none; }.install-reopen { padding-inline: .55rem; font-size: .72rem; }.install-prompt { align-items: stretch; flex-direction: column; }.install-prompt__actions { width: 100%; }.install-prompt__actions .button { flex: 1 1 8rem; }.stats-grid, .form-grid, .recipe-detail-grid { grid-template-columns: 1fr; }.activity-list time { display: none; }.definition-list { grid-template-columns: 1fr; gap: .2rem; }.definition-list dd { margin-bottom: .8rem; }.recipe-detail-wide { grid-column: auto; } }
+@media (max-width: 900px) { .desktop-nav { justify-content: flex-start; }.dashboard-grid, .detail-grid, .components-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .workshop-main { width: min(100% - 1.5rem, 1440px); }.header-account-link { display: none; }.desktop-nav { justify-content: flex-start; }.nav-scroll-hint { width: 1.6rem; height: 1.6rem; }.install-prompt { align-items: stretch; flex-direction: column; }.install-prompt__actions { width: 100%; }.install-prompt__actions .button { flex: 1 1 8rem; }.stats-grid, .form-grid, .recipe-detail-grid { grid-template-columns: 1fr; }.activity-list time { display: none; }.definition-list { grid-template-columns: 1fr; gap: .2rem; }.definition-list dd { margin-bottom: .8rem; }.recipe-detail-wide { grid-column: auto; } }
