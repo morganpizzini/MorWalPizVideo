@@ -63,6 +63,12 @@ the domain only as compatibility infrastructure. Physical collection cleanup and
 removal of legacy command code require deployed-client and data-retention evidence,
 so they are intentionally outside this implementation.
 
+The shooting form refinement also removes the editable total-round input. The
+displayed total is calculated from the selected recipe quantities and untracked
+quantity; recipe choices are populated from non-archived recipes, ammunition rows
+keep removal inline with the quantity field, and the submit action is right-aligned
+with deliberate top spacing.
+
 ## Current Evidence
 
 - `MorWalPizVideo.Models/Models/Workshop/WorkshopEntities.cs` defines

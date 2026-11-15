@@ -25,9 +25,10 @@ export default function ShootingSessions() {
     Promise.all([getWorkshopFirearms(), getWorkshopRecipes(), getWorkshopShootingSessions()]),
   );
   const [firearmId, setFirearmId] = useState("");
-  const [rounds, setRounds] = useState("0");
   const [untracked, setUntracked] = useState("0");
   const [records, setRecords] = useState<RecipeRow[]>([]);
+  const trackedRounds = records.reduce((sum, record) => sum + Math.max(0, record.quantity), 0);
+  const totalRounds = trackedRounds + Math.max(0, Number(untracked) || 0);
 
   return (
     <div>
@@ -42,7 +43,7 @@ export default function ShootingSessions() {
                 await recordWorkshopShooting({
                   firearmId,
                   date: new Date().toISOString(),
-                  totalRounds: Number(rounds),
+                  totalRounds,
                   untrackedAmmunition: Number(untracked),
                   ammunitionRecords: records
                     .filter((record) => record.recipeId && record.quantity > 0)
@@ -63,8 +64,8 @@ export default function ShootingSessions() {
                 </select>
               </label>
               <div className="form-grid">
-                <label>{t("Total rounds")}<input type="number" min="1" required value={rounds} onChange={(event) => setRounds(event.target.value)} /></label>
                 <label>{t("Untracked ammunition")}<input type="number" min="0" required value={untracked} onChange={(event) => setUntracked(event.target.value)} /></label>
+                <div className="calculated-field"><span>{t("Total rounds")}</span><strong>{totalRounds}</strong></div>
               </div>
               <AmmunitionFields records={records} recipes={recipes} onChange={setRecords} />
             </WorkshopForm>
@@ -90,13 +91,13 @@ function AmmunitionFields({
     <fieldset>
       <legend>{t("Ammunition records")}</legend>
       {records.map((record, index) => (
-        <div className="form-grid" key={record.key}>
+        <div className="shooting-ammunition-row" key={record.key}>
           <label>{t("Recipe")}
             <select required value={record.recipeId} onChange={(event) => {
               const next = [...records]; next[index] = { ...record, recipeId: event.target.value }; onChange(next);
             }}>
               <option value="">{t("Select recipe")}</option>
-              {recipes.filter((recipe) => recipe.status === "Active").map((recipe) => <option value={recipe.id} key={recipe.id}>{recipe.name} · {recipe.caliber}</option>)}
+              {recipes.filter((recipe) => recipe.status.toLowerCase() !== "archived").map((recipe) => <option value={recipe.id} key={recipe.id}>{recipe.name} · {recipe.caliber}</option>)}
             </select>
           </label>
           <label>{t("Quantity")}<input type="number" min="1" required value={record.quantity || ""} onChange={(event) => {
