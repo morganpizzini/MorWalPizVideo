@@ -21,6 +21,8 @@ import { action as ammunitionAction } from "./Ammunition/action";
 import { loader as ammunitionLoader } from "./Ammunition/loader";
 import { action as recipesAction } from "./Recipes/action";
 import { loader as recipesLoader } from "./Recipes/loader";
+import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
+import { action as firearmDetailAction } from "./FirearmDetail/action";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
@@ -37,7 +39,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <Dashboard /> },
       { path: "firearms", element: <Firearms /> },
-      { path: "firearms/:id", element: <FirearmDetail /> },
+      { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
       { path: "maintenance", element: <Maintenance /> },
       { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },

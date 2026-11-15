@@ -1,0 +1,14 @@
+import { getWorkshopFirearmDetail } from "@morwalpizvideo/services";
+import type { LoaderFunctionArgs } from "react-router";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const firearmId = params.id;
+  if (!firearmId) throw new Response("Not found", { status: 404 });
+  const url = new URL(request.url);
+  return getWorkshopFirearmDetail(firearmId, {
+    maintenancePage: Number(url.searchParams.get("maintenancePage") ?? 1),
+    shootingPage: Number(url.searchParams.get("shootingPage") ?? 1),
+  });
+}
+
+export type FirearmDetailLoaderData = Awaited<ReturnType<typeof loader>>;

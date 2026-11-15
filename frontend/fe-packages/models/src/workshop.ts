@@ -1,6 +1,7 @@
 /** TypeScript contracts matching ServerAPI's WorkshopController JSON surface. */
 
 export type WorkshopTrackingMode = "Counter" | "Interval" | "Manual";
+export type WorkshopMaintenanceEventType = "Inspection" | "Cleaning" | "ComponentMaintenance" | "Replacement" | "CounterAdjustment" | "General" | "Malfunction";
 export type WorkshopProjectionState = "Current" | "Pending" | "Inconsistent";
 
 export interface WorkshopFirearm {
@@ -140,7 +141,7 @@ export interface WorkshopPhysicalComponent {
 export interface CreateWorkshopMaintenanceRequest {
   firearmId?: string | null;
   componentId?: string | null;
-  eventType: "Inspection" | "Cleaning" | "ComponentMaintenance" | "Replacement" | "CounterAdjustment" | "General";
+  eventType: WorkshopMaintenanceEventType;
   date: string;
   roundCountAtEvent?: number | null;
   description: string;
@@ -336,4 +337,51 @@ export interface WorkshopDashboard {
   allocatedRounds: number;
   recentActivityCount: number;
   projectionState: WorkshopProjectionState;
+}
+
+export interface WorkshopComponentCondition {
+  component: WorkshopPhysicalComponent;
+  definition: WorkshopComponentDefinition;
+  installation: WorkshopComponentInstallation;
+}
+
+export interface WorkshopRoundHistoryPoint {
+  effectiveAt: string;
+  delta: number;
+  cumulativeRounds: number;
+  operationId: string;
+}
+
+export interface WorkshopShootingSession {
+  session: {
+    id: string;
+    accountId: string;
+    firearmId: string;
+    date: string;
+    totalRounds: number;
+    notes?: string | null;
+    consumptionRecords: WorkshopConsumptionRequest[];
+    usageSegments: WorkshopUsageSegmentRequest[];
+    untrackedAmmunition: number;
+    correctionOfId?: string | null;
+  };
+  superseded: boolean;
+}
+
+export interface WorkshopHistoryPage<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface WorkshopFirearmDetail {
+  firearm: WorkshopFirearm;
+  components: WorkshopComponentCondition[];
+  maintenance: WorkshopHistoryPage<WorkshopMaintenanceEvent>;
+  shooting: WorkshopHistoryPage<WorkshopShootingSession>;
+  roundHistory: WorkshopRoundHistoryPoint[];
+  replacementCandidates: WorkshopPhysicalComponent[];
+  projectionState: WorkshopProjectionState;
+  malfunctionCount: number;
 }

@@ -19,6 +19,24 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Firearms(CancellationToken ct) =>
         Ok(await service.GetFirearmsAsync(AccountId(), ct));
 
+    [HttpGet("firearms/{firearmId}/detail")]
+    public async Task<IActionResult> FirearmDetail(string firearmId, [FromQuery] int maintenancePage = 1,
+        [FromQuery] int shootingPage = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
+    {
+        var detail = await service.GetFirearmDetailAsync(AccountId(), firearmId, maintenancePage, shootingPage, pageSize, ct);
+        if (detail is null) return NotFound();
+        var shooting = detail.Shooting;
+        return Ok(new WorkshopFirearmDetailContract(
+            detail.Firearm,
+            detail.Components.Select(x => new WorkshopComponentConditionContract(x.Component, x.Definition, x.Installation)).ToArray(),
+            new(detail.Maintenance, maintenancePage, Math.Clamp(pageSize, 1, 100), false),
+            new(shooting.Select(x => new WorkshopShootingSessionContract(x, false)).ToArray(), shootingPage,
+                Math.Clamp(pageSize, 1, 100), false),
+            detail.RoundHistory.Select(x => new WorkshopRoundHistoryPointContract(x.EffectiveAt, x.Delta, x.CumulativeRounds, x.OperationId)).ToArray(),
+            detail.ReplacementCandidates, detail.ProjectionState,
+            detail.Maintenance.Count(x => x.EventType == WorkshopMaintenanceEventType.Malfunction)));
+    }
+
     [HttpPost("firearms")]
     public async Task<IActionResult> CreateFirearm(CreateWorkshopFirearmRequest request, CancellationToken ct)
     {

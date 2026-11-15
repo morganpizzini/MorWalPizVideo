@@ -31,6 +31,7 @@
 | Shooting Range cancellation/rescheduling | Real usage may require users to release or move bookings | Lower operator workload | Medium | Future, evidence required | Undefined policy and booking races |
 | Shooting Range schedule administration | Operators may need UI control of bays, closures, and periods | Less direct database administration | Medium | Future, evidence required | Premature complexity in the POC |
 | Shooting Range notifications/waitlists/reporting | Mature usage may need communication and capacity insight | Better attendance and utilization | High | Future, evidence required | Privacy, delivery, retention, and operational cost |
+| Shooter Workshop firearm operational status | Active/archived and historical maintenance or malfunction events cannot truthfully represent needs-attention, out-of-service, or resolved-malfunction state | User-managed, auditable firearm condition without inferring mechanical safety from history | Medium | Future, separate design approval | Safety-adjacent wording, unresolved-state lifecycle, permissions, and migration semantics |
 
 ## Recommendation Principles
 

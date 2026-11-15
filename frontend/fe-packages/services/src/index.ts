@@ -60,6 +60,7 @@ export {
 } from "./feedbackService";
 export {
   getWorkshopFirearms,
+  getWorkshopFirearmDetail,
   createWorkshopFirearm,
   updateWorkshopFirearm,
   archiveWorkshopFirearm,

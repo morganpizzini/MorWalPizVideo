@@ -49,6 +49,15 @@ public sealed record WorkshopDashboardData(int FirearmCount, int ComponentCount,
     int ComponentsAtOrAboveInterval, long TotalProducedRounds, long AvailableRounds, long AllocatedRounds,
     int RecentActivityCount, WorkshopProjectionState ProjectionState);
 public sealed record WorkshopOperationResult(WorkshopOperation Operation, bool Idempotent);
+public sealed record WorkshopFirearmDetailData(
+    Firearm Firearm,
+    IReadOnlyList<(ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation)> Components,
+    IReadOnlyList<MaintenanceEvent> Maintenance,
+    IReadOnlyList<ShootingSession> Shooting,
+    IReadOnlyList<WorkshopRoundHistoryPointData> RoundHistory,
+    IReadOnlyList<ComponentInstance> ReplacementCandidates,
+    WorkshopProjectionState ProjectionState);
+public sealed record WorkshopRoundHistoryPointData(DateTime EffectiveAt, long Delta, long CumulativeRounds, string OperationId);
 
 public sealed class WorkshopValidationException(string message) : Exception(message);
 public sealed class WorkshopConflictException(string message) : Exception(message);
@@ -63,6 +72,66 @@ public sealed class WorkshopService(
 
     public Task<IReadOnlyList<ComponentDefinition>> GetComponentDefinitionsAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, ct);
+
+    public async Task<WorkshopFirearmDetailData?> GetFirearmDetailAsync(
+        string accountId, string firearmId, int maintenancePage = 1, int shootingPage = 1,
+        int pageSize = 15, CancellationToken ct = default)
+    {
+        var firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, firearmId, ct);
+        if (firearm is null) return null;
+
+        var components = await GetComponentsAsync(accountId, ct);
+        var definitions = await GetComponentDefinitionsAsync(accountId, ct);
+        var installations = await repository.ListAsync<ComponentInstallation>(
+            DbCollections.WorkshopComponentInstallations, accountId, ct);
+        var current = installations.Where(x => x.FirearmId == firearmId && x.RemovedAt is null)
+            .Join(components, x => x.ComponentId, x => x.Id, (installation, component) => (installation, component))
+            .Join(definitions, x => x.component.DefinitionId, x => x.Id,
+                (x, definition) => (x.component, definition, x.installation))
+            .ToArray();
+
+        var maintenance = (await repository.ListAsync<MaintenanceEvent>(
+                DbCollections.WorkshopMaintenanceEvents, accountId, ct))
+            .Where(x => x.FirearmId == firearmId ||
+                x.ComponentId is not null && installations.Any(i =>
+                    i.FirearmId == firearmId && i.ComponentId == x.ComponentId &&
+                    i.InstalledAt <= x.Date && (i.RemovedAt is null || x.Date <= i.RemovedAt)))
+            .OrderByDescending(x => x.Date).ThenByDescending(x => x.Id)
+            .ToArray();
+        var shooting = (await repository.ListAsync<ShootingSession>(
+                DbCollections.WorkshopShootingSessions, accountId, ct))
+            .Where(x => x.FirearmId == firearmId)
+            .OrderByDescending(x => x.Date).ThenByDescending(x => x.Id)
+            .ToArray();
+        var superseded = shooting.Where(x => x.CorrectionOfId is not null)
+            .Select(x => x.CorrectionOfId!).ToHashSet(StringComparer.Ordinal);
+        var operations = (await repository.ListAsync<WorkshopOperation>(
+                DbCollections.WorkshopOperations, accountId, ct))
+            .Where(x => x.Deltas.Any(d => d.AggregateKind == WorkshopAggregateKind.Firearm &&
+                d.AggregateId == firearmId))
+            .OrderBy(x => x.EffectiveAt).ThenBy(x => x.RecordedAt).ThenBy(x => x.Id)
+            .ToArray();
+        long cumulative = 0;
+        var roundHistory = operations.Select(operation =>
+        {
+            var delta = operation.Deltas.Where(d => d.AggregateKind == WorkshopAggregateKind.Firearm &&
+                d.AggregateId == firearmId).Sum(d => d.RoundsDelta);
+            cumulative += delta;
+            return new WorkshopRoundHistoryPointData(operation.EffectiveAt, delta, cumulative, operation.Id);
+        }).ToArray();
+        var candidates = components.Where(x => x.Status == WorkshopComponentStatus.Inventory && !x.Archived)
+            .Where(x => current.All(c => c.component.Id != x.Id || c.component.DefinitionId == x.DefinitionId))
+            .ToArray();
+        var state = (await repository.GetReconciliationAsync(accountId, ct))?.State ?? WorkshopProjectionState.Current;
+        var size = Math.Clamp(pageSize, 1, 100);
+        return new(
+            firearm,
+            current.Select(x => (x.component, x.definition, x.installation)).ToArray(),
+            maintenance.Skip((Math.Clamp(maintenancePage, 1, 10000) - 1) * size).Take(size).ToArray(),
+            shooting.Skip((Math.Clamp(shootingPage, 1, 10000) - 1) * size)
+                .Take(size).ToArray(),
+            roundHistory, candidates, state);
+    }
 
     public Task<IReadOnlyList<ComponentInstance>> GetComponentsAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, ct);

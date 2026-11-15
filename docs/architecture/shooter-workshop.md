@@ -84,6 +84,23 @@ in the current scope. Its only possible impact is repository-wide operational
 infrastructure, particularly the existing central MongoDB index manifest; that does not
 make BackOffice part of the Workshop product flow.
 
+## Firearm detail status surface
+
+The authenticated Workshop route `/firearms/:id` owns a typed
+`GET /api/v1/workshop/firearms/{id}/detail` read. The account-scoped projection
+includes the firearm record, currently installed components with definitions and
+installation metadata, maintenance events correlated to component installation
+intervals, shooting sessions, immutable firearm round-history points, replacement
+inventory candidates, malfunction count, and reconciliation state. The route renders
+factual history only; it does not infer mechanical safety or resolution state.
+
+Maintenance and malfunction recording use the existing maintenance-event model;
+`Malfunction` is an additive event value. The detail route also provides
+pre-targeted shooting, maintenance/malfunction, and archive actions while retaining
+the existing account transport, CSRF, idempotency, and server validation rules.
+Component swapping remains a separate follow-up until the durable multi-document
+convergence command is delivered.
+
 ## Critical architectural risk: counter reconciliation
 
 **Firearm rounds, physical-component rounds and ammunition stock are three related but

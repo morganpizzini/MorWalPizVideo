@@ -68,6 +68,7 @@ export type {
 export type {
   WorkshopProjectionState,
   WorkshopTrackingMode,
+  WorkshopMaintenanceEventType,
   WorkshopFirearm,
   CreateWorkshopFirearmRequest,
   UpdateWorkshopFirearmRequest,
@@ -106,6 +107,11 @@ export type {
   WorkshopActivity,
   WorkshopReconciliationStatus,
   WorkshopDashboard,
+  WorkshopComponentCondition,
+  WorkshopRoundHistoryPoint,
+  WorkshopShootingSession,
+  WorkshopHistoryPage,
+  WorkshopFirearmDetail,
 } from "./workshop";
 export type {
   FeedbackStatus,

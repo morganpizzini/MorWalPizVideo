@@ -8,8 +8,8 @@ namespace MorWalPizVideo.Models.Models.Workshop;
 public enum WorkshopTrackingMode { Counter, Interval, Manual }
 public enum WorkshopComponentStatus { Inventory, Installed, Maintenance, Retired }
 public enum WorkshopRecipeStatus { Active, Archived }
-public enum WorkshopMaintenanceEventType { Inspection, Cleaning, ComponentMaintenance, Replacement, CounterAdjustment, General }
-public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted }
+public enum WorkshopMaintenanceEventType { Inspection, Cleaning, ComponentMaintenance, Replacement, CounterAdjustment, General, Malfunction }
+public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted, ComponentSwapped }
 public enum WorkshopAggregateKind { Firearm, Component, Batch, Allocation }
 public enum WorkshopProjectionState { Current, Pending, Inconsistent }
 

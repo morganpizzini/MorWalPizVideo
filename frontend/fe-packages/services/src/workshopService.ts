@@ -34,6 +34,7 @@ import type {
   WorkshopReconciliationStatus,
   WorkshopMaintenanceEvent,
   WorkshopDashboard,
+  WorkshopFirearmDetail,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
 import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
@@ -45,6 +46,20 @@ async function request<T>(operation: Promise<unknown>): Promise<T> {
 /** Every Workshop call intentionally uses accountApiService (cookie + CSRF). */
 export const getWorkshopFirearms = (): Promise<WorkshopFirearm[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_FIREARMS));
+
+export const getWorkshopFirearmDetail = (
+  firearmId: string,
+  options: { maintenancePage?: number; shootingPage?: number; pageSize?: number } = {},
+): Promise<WorkshopFirearmDetail> => {
+  const query = new URLSearchParams({
+    maintenancePage: String(options.maintenancePage ?? 1),
+    shootingPage: String(options.shootingPage ?? 1),
+    pageSize: String(options.pageSize ?? 15),
+  });
+  return request(accountApiService.get(
+    `${frontendEndpoints.WORKSHOP_FIREARM_DETAIL_READ.replace("{firearmId}", encodeURIComponent(firearmId))}?${query}`,
+  ));
+};
 
 export const createWorkshopFirearm = (
   body: CreateWorkshopFirearmRequest,

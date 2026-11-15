@@ -258,3 +258,25 @@ public sealed record WorkshopDashboardContract(
     int FirearmCount, int ComponentCount, long TotalFirearmRounds,
     int ComponentsAtOrAboveInterval, long TotalProducedRounds, long AvailableRounds,
     long AllocatedRounds, int RecentActivityCount, WorkshopProjectionState ProjectionState);
+
+public sealed record WorkshopComponentConditionContract(
+    ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation);
+
+public sealed record WorkshopRoundHistoryPointContract(
+    DateTime EffectiveAt, long Delta, long CumulativeRounds, string OperationId);
+
+public sealed record WorkshopShootingSessionContract(
+    ShootingSession Session, bool Superseded);
+
+public sealed record WorkshopHistoryPageContract<T>(
+    IReadOnlyList<T> Items, int Page, int PageSize, bool HasMore);
+
+public sealed record WorkshopFirearmDetailContract(
+    Firearm Firearm,
+    IReadOnlyList<WorkshopComponentConditionContract> Components,
+    WorkshopHistoryPageContract<MaintenanceEvent> Maintenance,
+    WorkshopHistoryPageContract<WorkshopShootingSessionContract> Shooting,
+    IReadOnlyList<WorkshopRoundHistoryPointContract> RoundHistory,
+    IReadOnlyList<ComponentInstance> ReplacementCandidates,
+    WorkshopProjectionState ProjectionState,
+    int MalfunctionCount);
