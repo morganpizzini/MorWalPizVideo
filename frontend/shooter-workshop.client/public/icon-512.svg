@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">MorWalPiz Workshop</title>
+  <rect width="512" height="512" rx="86" fill="#101010"/>
+  <circle cx="256" cy="256" r="154" fill="#ffff36"/>
+  <path d="M154 352V160h45l57 76 57-76h45v192h-45V235l-57 78-57-78v117h-45Z" fill="#101010"/>
+</svg>

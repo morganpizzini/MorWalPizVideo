@@ -3,7 +3,9 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
 import { LanguageSelector } from "../components/LanguageSelector";
+import InstallPrompt from "../components/InstallPrompt";
 import { useI18n } from "../i18n";
+import { useInstallPrompt } from "../services/installPrompt";
 
 const navigation = [
   ["Dashboard", "/"], ["Firearms", "/firearms"], ["Components", "/components"],
@@ -14,6 +16,7 @@ const navigation = [
 export default function AppShell() {
   const { loading, session, error, logout } = useWorkshopAuth();
   const { t } = useI18n();
+  const { canInstall, installed, reopen } = useInstallPrompt();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -36,10 +39,18 @@ export default function AppShell() {
         <div className="header-account">
           <LanguageSelector />
           <NavLink to="/account/profile">{session.account?.displayName ?? session.account?.username ?? t("Account")}</NavLink>
+          {canInstall && !installed ? (
+            <button className="button button-quiet install-reopen" onClick={reopen}>
+              {t("Install app")}
+            </button>
+          ) : null}
           <button className="button button-quiet" onClick={() => void logout().then(() => navigate("/account/login"))}>{t("Sign out")}</button>
         </div>
       </header>
-      <main className="workshop-main"><Outlet /></main>
+      <main className="workshop-main">
+        <InstallPrompt />
+        <Outlet />
+      </main>
     </div>
   );
 }

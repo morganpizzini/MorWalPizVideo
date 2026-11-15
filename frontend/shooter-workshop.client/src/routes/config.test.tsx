@@ -26,5 +26,8 @@ describe("Workshop route configuration", () => {
     const componentsRoute = shellRoute?.children?.find((route) => route.path === "components");
     expect(componentsRoute?.loader).toBeTypeOf("function");
     expect(componentsRoute?.action).toBeTypeOf("function");
+    const productionRoute = shellRoute?.children?.find((route) => route.path === "production");
+    expect(productionRoute?.loader).toBeTypeOf("function");
+    expect(productionRoute?.action).toBeTypeOf("function");
   });
 });

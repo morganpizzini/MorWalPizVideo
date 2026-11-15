@@ -37,7 +37,7 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
     public Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
         where T : BaseEntity =>
         database.GetCollection<T>(collection)
-            .Find(Builders<T>.Filter.And(Builders<T>.Filter.Eq("accountId", accountId), Builders<T>.Filter.Eq("_id", id)))
+            .Find(Builders<T>.Filter.And(Builders<T>.Filter.Eq("accountId", accountId), Builders<T>.Filter.Eq(entity => entity.Id, id)))
             .FirstOrDefaultAsync(cancellationToken);
 
     public Task AddAsync<T>(string collection, T item, CancellationToken cancellationToken = default)
@@ -49,7 +49,7 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
     {
         var filter = Builders<T>.Filter.And(
             Builders<T>.Filter.Eq("accountId", accountId),
-            Builders<T>.Filter.Eq("_id", item.Id));
+            Builders<T>.Filter.Eq(entity => entity.Id, item.Id));
         if (expectedRevision.HasValue)
             filter &= Builders<T>.Filter.Eq("revision", expectedRevision.Value);
         return (await database.GetCollection<T>(collection).ReplaceOneAsync(filter, item, cancellationToken: cancellationToken)).ModifiedCount == 1;
@@ -60,7 +60,7 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
     {
         var filter = Builders<T>.Filter.And(
             Builders<T>.Filter.Eq("accountId", accountId),
-            Builders<T>.Filter.Eq("_id", id));
+            Builders<T>.Filter.Eq(entity => entity.Id, id));
         if (expectedRevision.HasValue)
             filter &= Builders<T>.Filter.Eq("revision", expectedRevision.Value);
         return (await database.GetCollection<T>(collection).DeleteOneAsync(filter, cancellationToken)).DeletedCount == 1;

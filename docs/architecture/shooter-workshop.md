@@ -38,6 +38,13 @@ records carry additive summary metadata. The Workshop SPA exposes the compatible
 component, recipe, maintenance, shooting, history, initial-round, and safe-return-path
 flows without introducing browser-authored installation attribution.
 
+The Workshop SPA is also installable as a PWA. The client exposes a root-scoped
+manifest and dedicated application icons, captures the browser installation prompt
+before router bootstrap, and renders a localized installation invitation only inside
+the authenticated shell. Its service worker is lifecycle-only: it does not intercept
+requests or cache account/API data, and it does not add Push or background
+synchronization behavior.
+
 Subsequent user checks corrected the component ownership target: definitions are
 category-like records, while manufacturer, model, compatibility tags, tracking mode,
 and service threshold belong to physical component instances. Firearm installation is
@@ -770,6 +777,22 @@ browser-local Workshop storage and takes effect immediately on both login and
 authenticated surfaces. Routes, API payloads, account contracts, and stored domain
 values remain culture-neutral. Dates and numbers are formatted at the client
 presentation boundary using the selected culture.
+
+### Route data and mutation ownership
+
+The Workshop client uses React Router data routes as the boundary for server state.
+Each route-owned read belongs in a colocated `loader.ts`; each route-owned form
+mutation belongs in a colocated `action.ts`. The route manifest registers those
+functions, components consume loader data through React Router, and forms submit
+through fetchers so pending, validation, success, and revalidation state remain owned
+by the router. Route components must not replace this flow with effect-driven API
+loading or direct service calls from submit callbacks. Component state remains
+appropriate for transient disclosure, filtering, and other presentation-only state.
+
+The production route loads the current account's recipes through its loader and sends
+the selected recipe identifier, production date, quantity, notes, and a per-submission
+idempotency key through its action. The action delegates transport to the shared
+Workshop service; the component does not create a second API client or mutation path.
 
 ## Main navigation
 

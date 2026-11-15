@@ -6,7 +6,14 @@ import { AuthProvider } from "./auth/AuthProvider";
 import { FeedbackProvider } from "./components/feedback/FeedbackProvider";
 import { routes } from "./routes/config";
 import { I18nProvider } from "./i18n";
+import "./services/installPrompt";
 import "./main.scss";
+
+if ("serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("/workshop-sw.js", { scope: "/" }).catch(error => {
+    console.error("Unable to register the Workshop service worker", error);
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

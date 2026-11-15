@@ -16,6 +16,8 @@ import { Component as Reconciliation } from "./Reconciliation";
 import { Component as ShootingSessions } from "./ShootingSessions";
 import { loader as componentsLoader } from "./Components/loader";
 import { action as componentsAction } from "./Components/action";
+import { loader as productionLoader } from "./Production/loader";
+import { action as productionAction } from "./Production/action";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
@@ -31,7 +33,7 @@ export const routes: RouteObject[] = [
       { path: "ammunition", element: <Ammunition /> },
       { path: "ammunition/allocations", element: <Allocation /> },
       { path: "recipes", element: <Recipes /> },
-      { path: "production", element: <Production /> },
+      { path: "production", element: <Production />, loader: productionLoader, action: productionAction },
       { path: "sessions/shooting", element: <ShootingSessions /> },
       { path: "history", element: <History /> },
       { path: "integrity", element: <Reconciliation /> },

@@ -106,12 +106,34 @@ state; login, registration, legal, and session bootstrap are the anonymous excep
 The application owns its route loaders/actions, reconciliation indicators, and domain
 workflows locally. It does not add Workshop product behavior to the BackOffice SPA.
 
+Workshop route modules must keep server reads and mutations at the React Router
+boundary. Register route-owned reads through a colocated `loader.ts`, register
+route-owned mutations through a colocated `action.ts`, and export both through the
+route's `index.ts` when the route manifest consumes that barrel. Components consume
+loader data with React Router hooks and submit mutations with `useFetcher` and
+`fetcher.Form` or `fetcher.submit`; they must not start API reads from render effects
+or call Workshop mutation services directly from form callbacks. Keep local component
+state only for ephemeral presentation state that is not part of the submitted form.
+Actions own conversion from `FormData` to the shared service request contract,
+including one idempotency key per user submission, and return structured success or
+validation data for accessible feedback. Successful fetcher mutations use normal
+route revalidation rather than a second component-owned reload path.
+
 The client is a client-rendered private SPA. Its static container uses the existing
 frontend Buildx/image-staging convention and receives the API origin through deployment
 configuration rather than a committed URL. Local Aspire wiring exposes the Workshop
 client explicitly at `http://localhost:5179` and points its development API proxy at
 the ServerAPI HTTPS endpoint. Production account CORS must admit only the exact
 `https://workshop.morwalpiz.com` origin.
+
+The Workshop client is installable as a PWA. Its same-origin
+`manifest.webmanifest`, application icons, and lifecycle-only
+`workshop-sw.js` are served from the static root; the worker does not intercept
+requests, cache authenticated/API responses, handle Push, or perform background
+synchronization. The browser `beforeinstallprompt` event is captured before router
+bootstrap, while the localized installation invitation and reopen control render
+only inside the authenticated Workshop shell. Unsupported browsers retain their
+native installation affordances without a custom prompt.
 
 Workshop localization is client-owned. The supported cultures are `it-IT` and
 `en-GB`; the browser resolves the first visit from its language preferences and falls

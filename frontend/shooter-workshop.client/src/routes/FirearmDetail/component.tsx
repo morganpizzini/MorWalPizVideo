@@ -47,7 +47,7 @@ export default function FirearmDetail() {
               <Stat label="Account record" value={firearm.id} />
             </div>
             {!firearm.archived && (
-              <section className="panel">
+              <section className="panel my-3">
                 <div className="section-heading">
                   <h2>{t("Manage firearm")}</h2>
                   <button

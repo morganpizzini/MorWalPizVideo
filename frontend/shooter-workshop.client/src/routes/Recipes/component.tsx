@@ -41,7 +41,7 @@ export default function Recipes() {
             />
           )}
           {items.length ? (
-            <div className="card-grid">
+            <div className="card-grid mt-3">
               {items.map((recipe) => (
                 <article
                   className="record-card"
