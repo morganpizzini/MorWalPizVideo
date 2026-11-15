@@ -29,12 +29,12 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         return Ok(new WorkshopFirearmDetailContract(
             detail.Firearm,
             detail.Components.Select(x => new WorkshopComponentConditionContract(x.Component, x.Definition, x.Installation)).ToArray(),
-            new(detail.Maintenance, maintenancePage, Math.Clamp(pageSize, 1, 100), false),
-            new(shooting.Select(x => new WorkshopShootingSessionContract(x, false)).ToArray(), shootingPage,
-                Math.Clamp(pageSize, 1, 100), false),
+            new(detail.Maintenance, maintenancePage, Math.Clamp(pageSize, 1, 100), detail.MaintenanceHasMore),
+            new(shooting.Select(x => new WorkshopShootingSessionContract(x.Session, x.Superseded)).ToArray(), shootingPage,
+                Math.Clamp(pageSize, 1, 100), detail.ShootingHasMore),
             detail.RoundHistory.Select(x => new WorkshopRoundHistoryPointContract(x.EffectiveAt, x.Delta, x.CumulativeRounds, x.OperationId)).ToArray(),
             detail.ReplacementCandidates, detail.ProjectionState,
-            detail.Maintenance.Count(x => x.EventType == WorkshopMaintenanceEventType.Malfunction)));
+            detail.MalfunctionCount));
     }
 
     [HttpPost("firearms")]
@@ -44,7 +44,8 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         try
         {
             return Ok(await service.CreateFirearmAsync(AccountId(), new(request.Manufacturer, request.Model, request.Caliber,
-                request.Category, request.Nickname, request.PurchaseDate, request.Notes, request.InitialRounds), ct));
+                request.Category, request.Nickname, request.PurchaseDate, request.Notes, request.InitialRounds,
+                request.IdempotencyKey), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
@@ -57,7 +58,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         {
             return Ok(await service.UpdateFirearmAsync(AccountId(), firearmId,
                 new(request.Manufacturer, request.Model, request.Caliber, request.Category, request.Nickname,
-                    request.PurchaseDate, request.Notes, request.Revision, request.IdempotencyKey), ct));
+                    request.PurchaseDate, request.Notes, request.Revision, request.IdempotencyKey ?? string.Empty), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -313,6 +314,25 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
             dashboard.TotalFirearmRounds, dashboard.ComponentsAtOrAboveInterval, dashboard.TotalProducedRounds,
             dashboard.AvailableRounds, dashboard.RecentActivityCount,
             dashboard.ProjectionState));
+    }
+
+    [HttpGet("analytics")]
+    public async Task<IActionResult> Analytics([FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        CancellationToken ct)
+    {
+        var end = to ?? DateTime.UtcNow;
+        var start = from ?? end.AddDays(-30);
+        try
+        {
+            var analytics = await service.GetAnalyticsAsync(AccountId(), start, end, ct);
+            return Ok(new WorkshopAnalyticsContract(analytics.From, analytics.To, analytics.ShootingRounds,
+                analytics.ShootingSessions, analytics.TrackedRounds, analytics.UntrackedRounds,
+                analytics.ProducedRounds, analytics.AvailableRounds, analytics.MaintenanceEvents,
+                analytics.MalfunctionEvents, analytics.CorrectionCount, analytics.ProjectionState,
+                analytics.Buckets.Select(x => new WorkshopAnalyticsBucketContract(x.Date, x.ShootingRounds,
+                    x.ProducedRounds, x.ShootingSessions)).ToArray()));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
 
     [HttpGet("history")]

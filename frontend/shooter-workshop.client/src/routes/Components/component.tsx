@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useFetcher, useLoaderData } from "react-router";
+import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { EmptyState, PageTitle } from "@morwalpiz/layout";
 import type { WorkshopComponentDefinition, WorkshopPhysicalComponent, WorkshopTrackingMode } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
@@ -11,12 +11,14 @@ type ActionFetcher = ReturnType<typeof useFetcher<typeof action>>;
 
 export default function Components() {
   const { definitions, inventory, firearms, installations } = useLoaderData() as ComponentsLoaderData;
+  const [searchParams] = useSearchParams();
+  const contextFirearmId = searchParams.get("firearmId") ?? "";
   return (
     <div>
       <PageTitle title="Components" subtitle="Catalogue definitions and independent physical inventory." />
       <div className="components-grid">
         <Catalogue items={definitions} />
-        <Inventory items={inventory} definitions={definitions} firearms={firearms} installations={installations} />
+        <Inventory items={inventory} definitions={definitions} firearms={firearms} installations={installations} contextFirearmId={contextFirearmId} />
       </div>
     </div>
   );
@@ -115,9 +117,9 @@ function ManagementAction({ fetcher, intent, item, label, destructive = false }:
   );
 }
 
-function Inventory({ items, definitions, firearms, installations }: { items: WorkshopPhysicalComponent[]; definitions: WorkshopComponentDefinition[]; firearms: ComponentsLoaderData["firearms"]; installations: ComponentsLoaderData["installations"] }) {
+function Inventory({ items, definitions, firearms, installations, contextFirearmId }: { items: WorkshopPhysicalComponent[]; definitions: WorkshopComponentDefinition[]; firearms: ComponentsLoaderData["firearms"]; installations: ComponentsLoaderData["installations"]; contextFirearmId: string }) {
   const { culture, t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(contextFirearmId));
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const fetcher = useFetcher<typeof action>();
@@ -133,7 +135,8 @@ function Inventory({ items, definitions, firearms, installations }: { items: Wor
   return (
     <section className="panel">
       <div className="section-heading"><h2>{t("My inventory")}</h2><DisclosureButton open={open} onClick={() => setOpen((value) => !value)} label={t("Add physical component")} /></div>
-      {open && <ComponentForm fetcher={fetcher} definitions={definitions} firearms={firearms} />}
+      {contextFirearmId && <p className="status-note">{t("Select a component below to install it on the selected firearm, or add a new spare part.")}</p>}
+      {open && <ComponentForm fetcher={fetcher} definitions={definitions} firearms={firearms} initialFirearmId={contextFirearmId} />}
       <div className="filter-row">
         <span className="filter-label">{t("Filter by compatibility tag")}</span>
         <div className="tag-list" aria-label={t("Filter by compatibility tag")}>
@@ -153,7 +156,7 @@ function Inventory({ items, definitions, firearms, installations }: { items: Wor
       </div>
       <ActionError fetcher={fetcher} />
       {visible.length ? <ul className="compact-list">{visible.map((item) => editing === item.id ? (
-        <ComponentEdit key={item.id} item={item} definitions={definitions} firearms={firearms} installation={installations.find((installation) => installation.componentId === item.id)} fetcher={fetcher} onCancel={() => setEditing(null)} />
+        <ComponentEdit key={item.id} item={item} definitions={definitions} firearms={firearms} installation={installations.find((installation) => installation.componentId === item.id)} initialFirearmId={contextFirearmId} fetcher={fetcher} onCancel={() => setEditing(null)} />
       ) : (
         <li key={item.id}>
           <span>
@@ -168,7 +171,7 @@ function Inventory({ items, definitions, firearms, installations }: { items: Wor
             })()}
           </span>
           <span className="record-actions"><span className="badge">{t(item.archived ? "archived" : item.status)}</span>
-            {!item.archived && <button className="button button-quiet" type="button" onClick={() => setEditing(item.id)}>{t("Edit")}</button>}
+            {!item.archived && <button className="button button-quiet" type="button" onClick={() => setEditing(item.id)}>{contextFirearmId && item.status === "Inventory" ? t("Install on firearm") : t("Edit")}</button>}
             {!item.archived && <ManagementAction fetcher={fetcher} intent="archive-component" item={item} label={t("Archive")} />}
             <ManagementAction fetcher={fetcher} intent="delete-component" item={item} label={t("Delete")} destructive />
           </span>
@@ -178,10 +181,10 @@ function Inventory({ items, definitions, firearms, installations }: { items: Wor
   );
 }
 
-function ComponentForm({ fetcher, definitions, firearms, item, installation }: { fetcher: ActionFetcher; definitions: WorkshopComponentDefinition[]; firearms: ComponentsLoaderData["firearms"]; item?: WorkshopPhysicalComponent; installation?: ComponentsLoaderData["installations"][number] }) {
+function ComponentForm({ fetcher, definitions, firearms, item, installation, initialFirearmId = "" }: { fetcher: ActionFetcher; definitions: WorkshopComponentDefinition[]; firearms: ComponentsLoaderData["firearms"]; item?: WorkshopPhysicalComponent; installation?: ComponentsLoaderData["installations"][number]; initialFirearmId?: string }) {
   const { t } = useI18n();
   const [trackingMode, setTrackingMode] = useState<WorkshopTrackingMode>(item?.trackingMode ?? "Counter");
-  const [firearmId, setFirearmId] = useState(installation?.firearmId ?? "");
+  const [firearmId, setFirearmId] = useState(installation?.firearmId ?? initialFirearmId);
   const [tags, setTags] = useState(item?.compatibilityTags ?? []);
   const [tagInput, setTagInput] = useState("");
   const addTag = () => {
@@ -222,6 +225,6 @@ function ComponentForm({ fetcher, definitions, firearms, item, installation }: {
   );
 }
 
-function ComponentEdit({ item, definitions, firearms, installation, fetcher, onCancel }: { item: WorkshopPhysicalComponent; definitions: WorkshopComponentDefinition[]; firearms: ComponentsLoaderData["firearms"]; installation?: ComponentsLoaderData["installations"][number]; fetcher: ActionFetcher; onCancel: () => void }) {
-  return <li><ComponentForm item={item} definitions={definitions} firearms={firearms} installation={installation} fetcher={fetcher} /><button className="button button-quiet" type="button" onClick={onCancel}>Cancel</button></li>;
+function ComponentEdit({ item, definitions, firearms, installation, initialFirearmId, fetcher, onCancel }: { item: WorkshopPhysicalComponent; definitions: ComponentsLoaderData["definitions"]; firearms: ComponentsLoaderData["firearms"]; installation?: ComponentsLoaderData["installations"][number]; initialFirearmId?: string; fetcher: ActionFetcher; onCancel: () => void }) {
+  return <li><ComponentForm item={item} definitions={definitions} firearms={firearms} installation={installation} initialFirearmId={initialFirearmId} fetcher={fetcher} /><button className="button button-quiet" type="button" onClick={onCancel}>Cancel</button></li>;
 }

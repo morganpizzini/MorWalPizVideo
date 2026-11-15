@@ -1,23 +1,24 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useFetcher, useLoaderData } from "react-router";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { CreateWorkshopFirearmRequest } from "@morwalpizvideo/models";
-import {
-  createWorkshopFirearm,
-  getWorkshopFirearms,
-} from "@morwalpizvideo/services";
-import { WorkshopForm } from "../../components/WorkshopForm";
-import { ResourceState, useResource } from "../shared";
+import type { action } from "./action";
+import type { FirearmsLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
+
 export default function Firearms() {
   const { culture, t } = useI18n();
-  const resource = useResource(getWorkshopFirearms);
+  const { firearms: items } = useLoaderData() as FirearmsLoaderData;
   const [showForm, setShowForm] = useState(false);
+  const fetcher = useFetcher<typeof action>();
+  const succeeded = fetcher.state === "idle" && fetcher.data?.ok;
+  useEffect(() => {
+    if (succeeded) setShowForm(false);
+  }, [succeeded]);
+
   return (
-    <ResourceState resource={resource}>
-      {(items) => (
-        <div>
+    <div>
           <PageTitle
             title={t("My firearms")}
             subtitle={t("{count} account-owned records", { count: items.length })}
@@ -29,12 +30,7 @@ export default function Firearms() {
             + {t("Register firearm")}
           </button>
           {showForm && (
-            <FirearmForm
-              onSaved={() => {
-                setShowForm(false);
-                resource.reload();
-              }}
-            />
+            <FirearmForm fetcher={fetcher} />
           )}
           {items.length ? (
             <div className="card-grid mt-3">
@@ -67,13 +63,11 @@ export default function Firearms() {
               message={t("Add a firearm to connect sessions, components and allocations.")}
             />
           )}
-        </div>
-      )}
-    </ResourceState>
+    </div>
   );
 }
 
-function FirearmForm({ onSaved }: { onSaved: () => void }) {
+function FirearmForm({ fetcher }: { fetcher: ReturnType<typeof useFetcher<typeof action>> }) {
   const { t } = useI18n();
   const [form, setForm] = useState<CreateWorkshopFirearmRequest>({
     manufacturer: "",
@@ -83,16 +77,12 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
     nickname: "",
     category: "",
     notes: "",
+    idempotencyKey: crypto.randomUUID(),
   });
   return (
-    <WorkshopForm
-      title="Register firearm"
-      submitLabel="Save firearm"
-      onSubmit={async () => {
-        await createWorkshopFirearm(form);
-        onSaved();
-      }}
-    >
+    <fetcher.Form method="post" className="panel form-panel">
+      <input type="hidden" name="idempotencyKey" value={form.idempotencyKey} />
+      <h2>{t("Register firearm")}</h2>
       <div className="form-grid">
         {(
           ["manufacturer", "model", "caliber", "nickname", "category"] as const
@@ -100,6 +90,7 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
           <label key={field}>
             {t(field)}
             <input
+              name={field}
               required={
                 field === "manufacturer" ||
                 field === "model" ||
@@ -116,6 +107,7 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
       <label>
         {t("Initial rounds")}
         <input
+          name="initialRounds"
           type="number"
           min="0"
           value={form.initialRounds ?? 0}
@@ -127,10 +119,17 @@ function FirearmForm({ onSaved }: { onSaved: () => void }) {
       <label>
         {t("Notes")}
         <textarea
+          name="notes"
           value={form.notes ?? ""}
           onChange={(event) => setForm({ ...form, notes: event.target.value })}
         />
       </label>
-    </WorkshopForm>
+      {fetcher.state === "idle" && fetcher.data && !fetcher.data.ok && (
+        <p className="form-error" role="alert">{fetcher.data.error}</p>
+      )}
+      <button className="button button-primary" disabled={fetcher.state !== "idle"}>
+        {fetcher.state === "submitting" ? t("Saving…") : t("Save firearm")}
+      </button>
+    </fetcher.Form>
   );
 }

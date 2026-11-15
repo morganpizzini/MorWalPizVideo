@@ -28,7 +28,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     });
   }
   if (intent === "shooting") {
-    return redirect("/sessions/shooting");
+    return redirect(`/sessions/shooting?firearmId=${encodeURIComponent(firearmId)}`);
   }
   if (intent === "archive") {
     return archiveWorkshopFirearm(firearmId, {
@@ -45,6 +45,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       nickname: value(form, "nickname"),
       notes: value(form, "notes"),
       revision: Number(value(form, "revision") ?? 0),
+      idempotencyKey,
     });
   }
   throw new Error("Unsupported firearm detail action.");

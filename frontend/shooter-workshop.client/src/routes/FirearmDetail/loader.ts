@@ -8,6 +8,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   return getWorkshopFirearmDetail(firearmId, {
     maintenancePage: Number(url.searchParams.get("maintenancePage") ?? 1),
     shootingPage: Number(url.searchParams.get("shootingPage") ?? 1),
+    pageSize: Number(url.searchParams.get("pageSize") ?? 15),
   });
 }
 

@@ -200,6 +200,7 @@ public sealed record WorkshopActivity : BaseEntity
     [BsonElement("operationId")] public string OperationId { get; init; } = string.Empty;
     [BsonElement("type")] public WorkshopOperationType Type { get; init; }
     [BsonElement("effectiveAt")] public DateTime EffectiveAt { get; init; }
+    [BsonElement("recordedAt")] public DateTime? RecordedAt { get; init; }
     [BsonElement("sourceEntityIds")] public IReadOnlyList<string> SourceEntityIds { get; init; } = [];
     [BsonElement("summary")] public string? Summary { get; init; }
     [BsonElement("entityLabel")] public string? EntityLabel { get; init; }

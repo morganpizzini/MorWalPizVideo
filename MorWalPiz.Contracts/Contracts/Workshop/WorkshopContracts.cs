@@ -13,12 +13,12 @@ public class CreateWorkshopFirearmRequest
     public DateTime? PurchaseDate { get; init; }
     [Range(0, long.MaxValue)] public long InitialRounds { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
+    [StringLength(80)] public string? IdempotencyKey { get; init; }
 }
 
 public sealed class UpdateWorkshopFirearmRequest : CreateWorkshopFirearmRequest
 {
     [Range(0, long.MaxValue)] public long Revision { get; init; }
-    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
 public sealed class ArchiveWorkshopFirearmRequest
@@ -257,6 +257,16 @@ public sealed record WorkshopDashboardContract(
     int FirearmCount, int ComponentCount, long TotalFirearmRounds,
     int ComponentsAtOrAboveInterval, long TotalProducedRounds, long AvailableRounds,
     int RecentActivityCount, WorkshopProjectionState ProjectionState);
+
+public sealed record WorkshopAnalyticsBucketContract(
+    DateTime Date, long ShootingRounds, long ProducedRounds, int ShootingSessions);
+
+public sealed record WorkshopAnalyticsContract(
+    DateTime From, DateTime To, long ShootingRounds, int ShootingSessions,
+    long TrackedRounds, long UntrackedRounds, long ProducedRounds,
+    long AvailableRounds, int MaintenanceEvents, int MalfunctionEvents,
+    int CorrectionCount, WorkshopProjectionState ProjectionState,
+    IReadOnlyList<WorkshopAnalyticsBucketContract> Buckets);
 
 public sealed record WorkshopComponentConditionContract(
     ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation);

@@ -1,13 +1,14 @@
-import { Form, Link, useLoaderData } from "react-router";
+import { Form, Link, useLoaderData, useSearchParams } from "react-router";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopComponentCondition, WorkshopFirearmDetail } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
-import { formatDate, formatNumber } from "../../i18n-formatters";
+import { formatDate, formatNumber, localDateTimeInputValue } from "../../i18n-formatters";
 import { Stat } from "../shared";
 
 export default function FirearmDetail() {
   const { culture, t } = useI18n();
   const detail = useLoaderData() as WorkshopFirearmDetail;
+  const [searchParams] = useSearchParams();
   if (!detail?.firearm) {
     return <EmptyState title={t("Firearm not found")} message={t("The record may be archived or belong to another account.")} />;
   }
@@ -40,12 +41,17 @@ export default function FirearmDetail() {
         {detail.components.length === 0 ? <p>{t("No components installed.")}</p> : (
           <div className="detail-list">{detail.components.map((item) => <ComponentRow key={item.installation.id} item={item} />)}</div>
         )}
+        <Link className="button button-quiet" to={`/components?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Install, swap, or detach a component")}</Link>
       </section>
       {!firearm.archived && <section className="panel firearm-actions">
         <div className="section-heading"><h2>{t("Record activity")}</h2><form method="post"><input type="hidden" name="intent" value="archive" /><input type="hidden" name="revision" value={firearm.revision} /><button className="button button-quiet" type="submit">{t("Archive firearm")}</button></form></div>
         <div className="form-grid">
-          <Form method="post"><input type="hidden" name="intent" value="shooting" /><label>{t("Rounds")}<input name="totalRounds" type="number" min="1" required /></label><label>{t("Notes")}<input name="notes" /></label><button className="button" type="submit">{t("Record session")}</button></Form>
-          <Form method="post"><input type="hidden" name="intent" value="maintenance" /><label>{t("Event type")}<select name="eventType" defaultValue="General"><option value="General">{t("General")}</option><option value="Malfunction">{t("Malfunction")}</option><option value="Cleaning">{t("Cleaning")}</option><option value="Inspection">{t("Inspection")}</option></select></label><label>{t("Description")}<input name="description" required /></label><button className="button" type="submit">{t("Save event")}</button></Form>
+          <div className="form-panel">
+            <h3>{t("Shooting")}</h3>
+            <p>{t("Use the recipe-aware flow so ammunition and component history remain traceable.")}</p>
+            <Link className="button" to={`/sessions/shooting?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Record session")}</Link>
+          </div>
+          <Form method="post"><input type="hidden" name="intent" value="maintenance" /><label>{t("Event type")}<select name="eventType" defaultValue="General"><option value="General">{t("General")}</option><option value="Malfunction">{t("Malfunction")}</option><option value="Cleaning">{t("Cleaning")}</option><option value="Inspection">{t("Inspection")}</option></select></label><label>{t("Effective date and time")}<input name="date" type="datetime-local" defaultValue={localDateTimeInputValue()} required /></label><label>{t("Description")}<input name="description" required /></label><button className="button" type="submit">{t("Save event")}</button></Form>
         </div>
       </section>}
       <section className="panel">
@@ -53,15 +59,33 @@ export default function FirearmDetail() {
         {detail.maintenance.items.length === 0 ? <p>{t("No maintenance recorded.")}</p> : (
           <ul className="timeline">{detail.maintenance.items.map((event) => <li key={event.id} className={event.eventType === "Malfunction" ? "timeline-alert" : ""}><strong>{t(event.eventType)}</strong><time>{formatDate(event.date, culture)}</time><p>{event.description}</p>{event.notes && <small>{event.notes}</small>}</li>)}</ul>
         )}
+        <HistoryPager kind="maintenance" page={detail.maintenance.page} hasMore={detail.maintenance.hasMore} searchParams={searchParams} />
       </section>
       <section className="panel">
-        <div className="section-heading"><h2>{t("Shooting history")}</h2><Link className="button button-quiet" to="/sessions/shooting">{t("Record session")}</Link></div>
+        <div className="section-heading"><h2>{t("Shooting history")}</h2><Link className="button button-quiet" to={`/sessions/shooting?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Record session")}</Link></div>
         {detail.shooting.items.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : (
-          <ul className="timeline">{detail.shooting.items.map(({ session }) => <li key={session.id}><strong>{formatNumber(session.totalRounds, culture)} {t("rounds")}</strong><time>{formatDate(session.date, culture)}</time>{session.notes && <p>{session.notes}</p>}</li>)}</ul>
+          <ul className="timeline">{detail.shooting.items.map(({ session, superseded }) => <li key={session.id} className={superseded ? "timeline-muted" : ""}><strong>{formatNumber(session.totalRounds, culture)} {t("rounds")}{superseded && ` · ${t("superseded")}`}</strong><time>{formatDate(session.date, culture)}</time>{session.notes && <p>{session.notes}</p>}</li>)}</ul>
         )}
+        <HistoryPager kind="shooting" page={detail.shooting.page} hasMore={detail.shooting.hasMore} searchParams={searchParams} />
       </section>
     </div>
   );
+}
+
+function HistoryPager({ kind, page, hasMore, searchParams }: { kind: "maintenance" | "shooting"; page: number; hasMore: boolean; searchParams: URLSearchParams }) {
+  const { t } = useI18n();
+  const makeUrl = (nextPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set(`${kind}Page`, String(nextPage));
+    return `?${params.toString()}`;
+  };
+  return (page > 1 || hasMore) ? (
+    <nav className="record-actions" aria-label={t(`${kind} history pages`)}>
+      {page > 1 && <Link className="button button-quiet" to={makeUrl(page - 1)}>{t("Previous")}</Link>}
+      <span>{t("Page {value}", { value: page })}</span>
+      {hasMore && <Link className="button button-quiet" to={makeUrl(page + 1)}>{t("Next")}</Link>}
+    </nav>
+  ) : null;
 }
 
 function ComponentRow({ item }: { item: WorkshopComponentCondition }) {

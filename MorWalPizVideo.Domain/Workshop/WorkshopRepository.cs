@@ -11,6 +11,9 @@ public interface IWorkshopRepository
 {
     Task<IReadOnlyList<T>> ListAsync<T>(string collection, string accountId, CancellationToken cancellationToken = default)
         where T : BaseEntity;
+    Task<IReadOnlyList<T>> ListByDateAsync<T>(string collection, string accountId, string dateField,
+        DateTime fromInclusive, DateTime toExclusive, CancellationToken cancellationToken = default)
+        where T : BaseEntity;
     Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
         where T : BaseEntity;
     Task AddAsync<T>(string collection, T item, CancellationToken cancellationToken = default)
@@ -21,6 +24,8 @@ public interface IWorkshopRepository
         CancellationToken cancellationToken = default) where T : BaseEntity;
     Task<WorkshopOperation?> FindOperationAsync(string accountId, string idempotencyKey, CancellationToken cancellationToken = default);
     Task<WorkshopOperation?> GetOperationAsync(string accountId, string operationId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WorkshopOperation>> ListOperationsByTypeAsync(string accountId,
+        WorkshopOperationType operationType, CancellationToken cancellationToken = default);
     Task AddOperationAsync(WorkshopOperation operation, CancellationToken cancellationToken = default);
     Task<WorkshopReconciliationState?> GetReconciliationAsync(string accountId, CancellationToken cancellationToken = default);
     Task SaveReconciliationAsync(WorkshopReconciliationState state, CancellationToken cancellationToken = default);
@@ -32,6 +37,16 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
         where T : BaseEntity =>
         await database.GetCollection<T>(collection)
             .Find(Builders<T>.Filter.Eq("accountId", accountId))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<T>> ListByDateAsync<T>(string collection, string accountId, string dateField,
+        DateTime fromInclusive, DateTime toExclusive, CancellationToken cancellationToken = default)
+        where T : BaseEntity =>
+        await database.GetCollection<T>(collection)
+            .Find(Builders<T>.Filter.And(
+                Builders<T>.Filter.Eq("accountId", accountId),
+                Builders<T>.Filter.Gte(dateField, fromInclusive),
+                Builders<T>.Filter.Lt(dateField, toExclusive)))
             .ToListAsync(cancellationToken);
 
     public Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
@@ -76,6 +91,12 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
             .Find(x => x.AccountId == accountId && x.Id == operationId)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<WorkshopOperation>> ListOperationsByTypeAsync(string accountId,
+        WorkshopOperationType operationType, CancellationToken cancellationToken = default) =>
+        await database.GetCollection<WorkshopOperation>(DbCollections.WorkshopOperations)
+            .Find(x => x.AccountId == accountId && x.OperationType == operationType)
+            .ToListAsync(cancellationToken);
+
     public Task AddOperationAsync(WorkshopOperation operation, CancellationToken cancellationToken = default) =>
         database.GetCollection<WorkshopOperation>(DbCollections.WorkshopOperations)
             .InsertOneAsync(operation, cancellationToken: cancellationToken);
@@ -99,6 +120,19 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
         where T : BaseEntity
     {
         lock (gate) return Task.FromResult<IReadOnlyList<T>>(scenario.Read<T>(collection).Where(x => ReadAccountId(x) == accountId).ToArray());
+    }
+
+    public Task<IReadOnlyList<T>> ListByDateAsync<T>(string collection, string accountId, string dateField,
+        DateTime fromInclusive, DateTime toExclusive, CancellationToken cancellationToken = default)
+        where T : BaseEntity
+    {
+        lock (gate)
+        {
+            var items = scenario.Read<T>(collection).Where(x => ReadAccountId(x) == accountId)
+                .Where(x => ReadDate(x, dateField) is { } date && date >= fromInclusive && date < toExclusive)
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<T>>(items);
+        }
     }
 
     public Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
@@ -145,6 +179,11 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
     public Task<WorkshopOperation?> GetOperationAsync(string accountId, string operationId, CancellationToken cancellationToken = default) =>
         Task.FromResult(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations)
             .FirstOrDefault(x => x.AccountId == accountId && x.Id == operationId));
+
+    public Task<IReadOnlyList<WorkshopOperation>> ListOperationsByTypeAsync(string accountId,
+        WorkshopOperationType operationType, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<WorkshopOperation>>(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations)
+            .Where(x => x.AccountId == accountId && x.OperationType == operationType).ToArray());
 
     public Task AddOperationAsync(WorkshopOperation operation, CancellationToken cancellationToken = default)
     {
@@ -203,6 +242,18 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
             ComponentInstallation x => x.Revision,
             AmmoBatch x => x.Revision,
             AmmoAllocation x => x.Revision,
+            _ => null
+        };
+
+    private static DateTime? ReadDate<T>(T value, string dateField) where T : BaseEntity =>
+        (value, dateField) switch
+        {
+            (WorkshopOperation x, "effectiveAt") => x.EffectiveAt,
+            (WorkshopActivity x, "effectiveAt") => x.EffectiveAt,
+            (ShootingSession x, "date") => x.Date,
+            (ProductionSession x, "productionDate") => x.ProductionDate,
+            (AmmoBatch x, "productionDate") => x.ProductionDate,
+            (MaintenanceEvent x, "date") => x.Date,
             _ => null
         };
 }

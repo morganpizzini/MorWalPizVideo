@@ -88,6 +88,7 @@ export {
   getWorkshopShootingSessions,
   correctWorkshopShooting,
   getWorkshopDashboard,
+  getWorkshopAnalytics,
   getWorkshopHistory,
   getWorkshopReconciliation,
   rebuildWorkshopProjections,

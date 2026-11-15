@@ -33,6 +33,7 @@ import type {
   WorkshopDashboard,
   WorkshopFirearmDetail,
   WorkshopShootingSessionRecord,
+  WorkshopAnalytics,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
 import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
@@ -213,6 +214,11 @@ export const correctWorkshopShooting = (
 
 export const getWorkshopDashboard = (): Promise<WorkshopDashboard> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_DASHBOARD));
+
+export const getWorkshopAnalytics = (from: string, to: string): Promise<WorkshopAnalytics> => {
+  const query = new URLSearchParams({ from, to });
+  return request(accountApiService.get(`${frontendEndpoints.WORKSHOP_ANALYTICS}?${query}`));
+};
 
 export const getWorkshopHistory = (): Promise<WorkshopActivity[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_HISTORY));

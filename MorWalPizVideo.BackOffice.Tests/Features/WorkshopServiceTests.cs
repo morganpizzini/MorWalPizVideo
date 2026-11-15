@@ -199,6 +199,73 @@ public sealed class WorkshopServiceTests
         Assert.Equal(WorkshopOperationType.FirearmCreated, operation.OperationType);
     }
 
+    [Fact]
+    public async Task Firearm_creation_retry_returns_the_original_projection()
+    {
+        var (service, scenario, _) = CreateService();
+        var command = new WorkshopFirearmCommand("Maker", "Retry", "9mm", null, null, null, null, 25, "create-firearm-1");
+
+        var first = await service.CreateFirearmAsync("account-1", command);
+        var retry = await service.CreateFirearmAsync("account-1", command);
+
+        Assert.Equal(first.Id, retry.Id);
+        Assert.Single(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations));
+        Assert.Single(scenario.Read<Firearm>(DbCollections.WorkshopFirearms), x => x.Id == first.Id);
+    }
+
+    [Fact]
+    public async Task Analytics_reports_tracked_and_untracked_rounds_for_the_requested_period()
+    {
+        var (service, scenario, firearm) = CreateService();
+        var date = DateTime.UtcNow.AddDays(-2);
+        scenario.Add(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "analytics-recipe", AccountId = "account-1", Name = "Practice", Caliber = "9mm"
+        });
+        scenario.Add(DbCollections.WorkshopAmmoBatches, new AmmoBatch
+        {
+            Id = "analytics-batch", AccountId = "account-1", RecipeId = "analytics-recipe",
+            ProductionDate = date.AddDays(-1), ProducedQuantity = 100, OnHandQuantity = 100
+        });
+        await service.RecordShootingAsync("account-1",
+            new(firearm.Id, date, 40, "practice", [new("analytics-recipe", 30)], 10, [], "analytics-shoot-1"));
+
+        var analytics = await service.GetAnalyticsAsync("account-1", date.AddDays(-1), date.AddDays(1));
+
+        Assert.Equal(40, analytics.ShootingRounds);
+        Assert.Equal(30, analytics.TrackedRounds);
+        Assert.Equal(10, analytics.UntrackedRounds);
+        Assert.Equal(1, analytics.ShootingSessions);
+        Assert.Equal(40, analytics.Buckets.Single(bucket => bucket.ShootingRounds == 40).ShootingRounds);
+    }
+
+    [Fact]
+    public async Task Analytics_rejects_periods_longer_than_one_year()
+    {
+        var (service, _, _) = CreateService();
+
+        await Assert.ThrowsAsync<WorkshopValidationException>(() =>
+            service.GetAnalyticsAsync("account-1", DateTime.UtcNow.AddDays(-367), DateTime.UtcNow));
+    }
+
+    [Fact]
+    public async Task Analytics_excludes_a_session_corrected_after_the_selected_period()
+    {
+        var (service, _, firearm) = CreateService();
+        var date = DateTime.UtcNow.AddDays(-2);
+        var shooting = await service.RecordShootingAsync("account-1",
+            new(firearm.Id, date, 20, null, [], 20, [], "analytics-correction-shoot"));
+
+        await service.CorrectShootingAsync("account-1",
+            new(shooting.Operation.Id, null, "analytics-correction"));
+
+        var analytics = await service.GetAnalyticsAsync("account-1", date.AddDays(-1), date.AddDays(1));
+
+        Assert.Equal(0, analytics.ShootingRounds);
+        Assert.Equal(0, analytics.ShootingSessions);
+        Assert.Equal(0, analytics.CorrectionCount);
+    }
+
     private static (WorkshopService Service, FakeScenario Scenario, Firearm Firearm) CreateService()
     {
         var scenario = new FakeScenario();

@@ -841,6 +841,17 @@ recipe form exposes the complete editable recipe snapshot, while the detail dial
 uses a responsive two-column field grid and supports editing active recipes without
 rewriting historical production snapshots.
 
+The Dashboard, Shooting Sessions, Maintenance, History, Firearms, and Reconciliation
+routes load their account-scoped read models through colocated loaders. Their
+mutations are owned by colocated actions and submitted through fetchers, including
+shooting corrections, maintenance events, firearm creation, and projection rebuilds.
+Successful submissions use normal route revalidation. The Dashboard loader requests
+bounded analytics periods from the authenticated Workshop API; analytics are derived
+from immutable operations and historical facts, include reconciliation state, and are
+not cached by the PWA or shared output caching. Firearm detail pagination preserves
+independent maintenance and shooting cursors, and corrected shooting sessions remain
+visible with a superseded label.
+
 ## Main navigation
 
 | Navigation item | Main screen |

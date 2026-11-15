@@ -22,6 +22,16 @@ import { action as recipesAction } from "./Recipes/action";
 import { loader as recipesLoader } from "./Recipes/loader";
 import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
 import { action as firearmDetailAction } from "./FirearmDetail/action";
+import { loader as dashboardLoader } from "./Dashboard/loader";
+import { loader as shootingSessionsLoader } from "./ShootingSessions/loader";
+import { action as shootingSessionsAction } from "./ShootingSessions/action";
+import { loader as maintenanceLoader } from "./Maintenance/loader";
+import { action as maintenanceAction } from "./Maintenance/action";
+import { loader as historyLoader } from "./History/loader";
+import { loader as firearmsLoader } from "./Firearms/loader";
+import { action as firearmsAction } from "./Firearms/action";
+import { loader as reconciliationLoader } from "./Reconciliation/loader";
+import { action as reconciliationAction } from "./Reconciliation/action";
 import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
 
 export const routes: RouteObject[] = [
@@ -41,17 +51,17 @@ export const routes: RouteObject[] = [
       </FeedbackProvider>
     ),
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: "firearms", element: <Firearms /> },
+      { index: true, element: <Dashboard />, loader: dashboardLoader },
+      { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction },
       { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
-      { path: "maintenance", element: <Maintenance /> },
+      { path: "maintenance", element: <Maintenance />, loader: maintenanceLoader, action: maintenanceAction },
       { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
       { path: "recipes", element: <Recipes />, loader: recipesLoader, action: recipesAction },
       { path: "production", element: <Navigate to="/ammunition" replace /> },
-      { path: "sessions/shooting", element: <ShootingSessions /> },
-      { path: "history", element: <History /> },
-      { path: "integrity", element: <Reconciliation /> },
+      { path: "sessions/shooting", element: <ShootingSessions />, loader: shootingSessionsLoader, action: shootingSessionsAction },
+      { path: "history", element: <History />, loader: historyLoader },
+      { path: "integrity", element: <Reconciliation />, loader: reconciliationLoader, action: reconciliationAction },
       { path: "account/profile", element: <AccountProfile /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],

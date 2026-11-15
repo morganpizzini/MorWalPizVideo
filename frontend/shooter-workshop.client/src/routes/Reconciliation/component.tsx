@@ -1,17 +1,15 @@
 import { PageTitle } from "@morwalpiz/layout";
-import {
-  getWorkshopReconciliation,
-  rebuildWorkshopProjections,
-} from "@morwalpizvideo/services";
-import { ResourceState, useResource } from "../shared";
+import { useFetcher, useLoaderData } from "react-router";
+import type { action } from "./action";
+import type { ReconciliationLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatDateTime } from "../../i18n-formatters";
+
 export default function Reconciliation() {
   const { culture, t } = useI18n();
-  const resource = useResource(getWorkshopReconciliation);
+  const { status } = useLoaderData() as ReconciliationLoaderData;
+  const fetcher = useFetcher<typeof action>();
   return (
-    <ResourceState resource={resource}>
-      {(status) => (
         <div>
           <PageTitle
             title={t("Integrity and reconciliation")}
@@ -36,15 +34,15 @@ export default function Reconciliation() {
             )}
             <button
               className="button button-primary"
-              onClick={() =>
-                void rebuildWorkshopProjections().then(resource.reload)
-              }
+              onClick={() => fetcher.submit({}, { method: "post" })}
+              disabled={fetcher.state !== "idle"}
             >
-              {t("Rebuild projections")}
+              {fetcher.state === "submitting" ? t("Rebuilding…") : t("Rebuild projections")}
             </button>
+            {fetcher.state === "idle" && fetcher.data && !fetcher.data.ok && (
+              <p className="form-error" role="alert">{fetcher.data.error}</p>
+            )}
           </section>
         </div>
-      )}
-    </ResourceState>
   );
 }

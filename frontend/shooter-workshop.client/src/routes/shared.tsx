@@ -3,7 +3,7 @@ import { EmptyState } from "@morwalpiz/layout";
 import type { WorkshopActivity } from "@morwalpizvideo/models";
 import { ErrorState, LoadingState } from "../components/States";
 import { useI18n } from "../i18n";
-import { formatDate } from "../i18n-formatters";
+import { formatDate, formatDateTime } from "../i18n-formatters";
 
 export function useResource<T>(load: () => Promise<T>) {
   const [value, setValue] = useState<T | null>(null);
@@ -135,6 +135,10 @@ export function ActivityList({ items }: { items: WorkshopActivity[] }) {
                     ? item.operationId
                     : t("not set"),
               })}
+            </small>
+            <small>
+              {t("Effective {date}", { date: formatDateTime(item.effectiveAt, culture) })}
+              {item.recordedAt && ` · ${t("recorded {date}", { date: formatDateTime(item.recordedAt, culture) })}`}
             </small>
           </div>
           <time>{formatDate(item.effectiveAt, culture)}</time>

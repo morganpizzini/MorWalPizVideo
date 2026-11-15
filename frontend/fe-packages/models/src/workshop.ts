@@ -28,10 +28,12 @@ export interface CreateWorkshopFirearmRequest {
   nickname?: string | null;
   purchaseDate?: string | null;
   notes?: string | null;
+  idempotencyKey?: string;
 }
 
 export interface UpdateWorkshopFirearmRequest extends CreateWorkshopFirearmRequest {
   revision: number;
+  idempotencyKey: string;
 }
 
 export interface ArchiveWorkshopFirearmRequest {
@@ -317,6 +319,7 @@ export interface WorkshopActivity {
   operationId: string;
   type: string;
   effectiveAt: string;
+  recordedAt?: string | null;
   sourceEntityIds: string[];
   summary?: string | null;
   entityLabel?: string | null;
@@ -338,6 +341,29 @@ export interface WorkshopDashboard {
   availableRounds: number;
   recentActivityCount: number;
   projectionState: WorkshopProjectionState;
+}
+
+export interface WorkshopAnalyticsBucket {
+  date: string;
+  shootingRounds: number;
+  producedRounds: number;
+  shootingSessions: number;
+}
+
+export interface WorkshopAnalytics {
+  from: string;
+  to: string;
+  shootingRounds: number;
+  shootingSessions: number;
+  trackedRounds: number;
+  untrackedRounds: number;
+  producedRounds: number;
+  availableRounds: number;
+  maintenanceEvents: number;
+  malfunctionEvents: number;
+  correctionCount: number;
+  projectionState: WorkshopProjectionState;
+  buckets: WorkshopAnalyticsBucket[];
 }
 
 export interface WorkshopComponentCondition {

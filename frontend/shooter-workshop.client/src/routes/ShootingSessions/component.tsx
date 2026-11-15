@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { PageTitle } from "@morwalpiz/layout";
 import type {
   WorkshopConsumptionRequest,
@@ -6,73 +7,87 @@ import type {
   WorkshopRecipe,
   WorkshopShootingSessionRecord,
 } from "@morwalpizvideo/models";
-import {
-  correctWorkshopShooting,
-  getWorkshopFirearms,
-  getWorkshopRecipes,
-  getWorkshopShootingSessions,
-  recordWorkshopShooting,
-} from "@morwalpizvideo/services";
-import { WorkshopForm } from "../../components/WorkshopForm";
-import { ResourceState, useResource } from "../shared";
+import type { action } from "./action";
 import { useI18n } from "../../i18n";
+import { formatDateTime, localDateTimeInputValue } from "../../i18n-formatters";
+import { useWorkshopAuth } from "../../auth/AuthProvider";
+import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
 
 type RecipeRow = WorkshopConsumptionRequest & { key: string };
 
 export default function ShootingSessions() {
   const { t } = useI18n();
-  const resource = useResource(() =>
-    Promise.all([getWorkshopFirearms(), getWorkshopRecipes(), getWorkshopShootingSessions()]),
-  );
-  const [firearmId, setFirearmId] = useState("");
+  const { session } = useWorkshopAuth();
+  const [searchParams] = useSearchParams();
+  const fetcher = useFetcher<typeof action>();
+  const { firearms, recipes, sessions } = useLoaderData() as {
+    firearms: WorkshopFirearm[];
+    recipes: WorkshopRecipe[];
+    sessions: WorkshopShootingSessionRecord[];
+  };
+  const [firearmId, setFirearmId] = useState(searchParams.get("firearmId") ?? "");
+  const [effectiveAt, setEffectiveAt] = useState(localDateTimeInputValue());
+  const [notes, setNotes] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [untracked, setUntracked] = useState("0");
   const [records, setRecords] = useState<RecipeRow[]>([]);
+  const processedResult = useRef<unknown>(null);
   const trackedRounds = records.reduce((sum, record) => sum + Math.max(0, record.quantity), 0);
   const totalRounds = trackedRounds + Math.max(0, Number(untracked) || 0);
+  useEffect(() => {
+    if (fetcher.state !== "idle" || !fetcher.data?.ok || fetcher.data.intent !== "record" ||
+        fetcher.data === processedResult.current) return;
+    processedResult.current = fetcher.data;
+    if (session.account?.id && firearmId && records[0]?.recipeId) {
+      const preferences = readWorkshopPreferences(session.account.id);
+      writeWorkshopPreferences(session.account.id, {
+        ...preferences,
+        lastRecipeByFirearm: { ...preferences.lastRecipeByFirearm, [firearmId]: records[0].recipeId },
+      });
+    }
+    setIdempotencyKey(crypto.randomUUID());
+    setNotes("");
+    setRecords([]);
+    setUntracked("0");
+    setEffectiveAt(localDateTimeInputValue());
+  }, [fetcher.state, fetcher.data, session.account?.id, firearmId, records]);
 
   return (
     <div>
       <PageTitle title={t("Shooting sessions")} subtitle={t("Record sessions and correct them inline without rewriting history.")} />
-      <ResourceState resource={resource}>
-        {([firearms, recipes, sessions]) => (
-          <>
-            <WorkshopForm
-              title="Record shooting"
-              submitLabel="Record session"
-              onSubmit={async () => {
-                await recordWorkshopShooting({
-                  firearmId,
-                  date: new Date().toISOString(),
-                  totalRounds,
-                  untrackedAmmunition: Number(untracked),
-                  ammunitionRecords: records
-                    .filter((record) => record.recipeId && record.quantity > 0)
-                    .map(({ key: _key, ...record }) => record),
-                  usageSegments: [],
-                  idempotencyKey: crypto.randomUUID(),
-                });
-                resource.reload();
-              }}
-            >
-              <label>
-                {t("Firearm")}
-                <select required value={firearmId} onChange={(event) => setFirearmId(event.target.value)}>
-                  <option value="">{t("Select firearm")}</option>
-                  {firearms.filter((firearm) => !firearm.archived).map((firearm) => (
-                    <option value={firearm.id} key={firearm.id}>{firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}</option>
-                  ))}
-                </select>
-              </label>
-              <div className="form-grid">
-                <label>{t("Untracked ammunition")}<input type="number" min="0" required value={untracked} onChange={(event) => setUntracked(event.target.value)} /></label>
-                <div className="calculated-field"><span>{t("Total rounds")}</span><strong>{totalRounds}</strong></div>
-              </div>
-              <AmmunitionFields records={records} recipes={recipes} onChange={setRecords} />
-            </WorkshopForm>
-            <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onReload={resource.reload} />
-          </>
+      <fetcher.Form method="post" className="panel form-panel">
+        <input type="hidden" name="intent" value="record" />
+        <input type="hidden" name="totalRounds" value={totalRounds} />
+        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+        <input type="hidden" name="ammunitionRecords" value={JSON.stringify(records
+          .filter((record) => record.recipeId && record.quantity > 0)
+          .map(({ key: _key, ...record }) => record))} />
+        <input type="hidden" name="usageSegments" value="[]" />
+        <h2>{t("Record shooting")}</h2>
+        <label>
+          {t("Firearm")}
+          <select required name="firearmId" value={firearmId} onChange={(event) => setFirearmId(event.target.value)}>
+            <option value="">{t("Select firearm")}</option>
+            {firearms.filter((firearm) => !firearm.archived).map((firearm) => (
+              <option value={firearm.id} key={firearm.id}>{firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}</option>
+            ))}
+          </select>
+        </label>
+        <div className="form-grid">
+          <label>{t("Effective date and time")}<input name="date" type="datetime-local" required value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} /></label>
+          <label>{t("Untracked ammunition")}<input name="untrackedAmmunition" type="number" min="0" required value={untracked} onChange={(event) => setUntracked(event.target.value)} /></label>
+          <div className="calculated-field"><span>{t("Total rounds")}</span><strong>{totalRounds}</strong></div>
+        </div>
+        <label>{t("Notes")}<input name="notes" value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+        <AmmunitionFields records={records} recipes={recipes} onChange={setRecords} />
+        {fetcher.state === "idle" && fetcher.data && !fetcher.data.ok && (
+          <p className="form-error" role="alert">{fetcher.data.error}</p>
         )}
-      </ResourceState>
+        <button className="button button-primary" disabled={fetcher.state !== "idle"}>
+          {fetcher.state === "submitting" ? t("Saving…") : t("Record session")}
+        </button>
+      </fetcher.Form>
+      <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} />
     </div>
   );
 }
@@ -115,12 +130,10 @@ function ShootingHistory({
   sessions,
   firearms,
   recipes,
-  onReload,
 }: {
   sessions: WorkshopShootingSessionRecord[];
   firearms: WorkshopFirearm[];
   recipes: WorkshopRecipe[];
-  onReload: () => void;
 }) {
   const { t } = useI18n();
   const labels = useMemo(() => new Map(firearms.map((firearm) => [firearm.id, firearm.nickname || `${firearm.manufacturer} ${firearm.model}`])), [firearms]);
@@ -128,7 +141,7 @@ function ShootingHistory({
     <section className="panel">
       <div className="section-heading"><h2>{t("Recent shooting sessions")}</h2></div>
       {sessions.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : sessions.map((session) => (
-        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} onReload={onReload} />
+        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} />
       ))}
     </section>
   );
@@ -138,15 +151,14 @@ function ShootingRow({
   record,
   recipes,
   firearmLabel,
-  onReload,
 }: {
   record: WorkshopShootingSessionRecord;
   recipes: WorkshopRecipe[];
   firearmLabel: string;
-  onReload: () => void;
 }) {
-  const { t } = useI18n();
+  const { culture, t } = useI18n();
   const { session } = record;
+  const fetcher = useFetcher<typeof action>();
   const [editing, setEditing] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
     session.consumptionRecords.reduce<Record<string, number>>((result, item) => {
@@ -155,41 +167,40 @@ function ShootingRow({
     }, {}),
   );
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (fetcher.state !== "idle" || !fetcher.data) return;
+    if (fetcher.data.ok) setEditing(false);
+    else setError(fetcher.data.error);
+  }, [fetcher.state, fetcher.data]);
   const editable = Boolean(session.operationId) && !record.superseded && !session.correctionOfId;
   const trackedTotal = Object.values(quantities).reduce((sum, quantity) => sum + Math.max(0, quantity), 0);
   const correctedTotal = trackedTotal + session.untrackedAmmunition;
-  const save = async (nextQuantities = quantities) => {
+  const save = (nextQuantities = quantities) => {
     if (!session.operationId) return;
     const nextTrackedTotal = Object.values(nextQuantities).reduce((sum, quantity) => sum + Math.max(0, quantity), 0);
     const nextTotal = nextTrackedTotal + session.untrackedAmmunition;
     if (nextTotal === 0 && !window.confirm(t("Delete this shooting session? Its audit history will be retained."))) return;
-    try {
-      setError("");
-      await correctWorkshopShooting({
-        originalOperationId: session.operationId,
-        replacementShooting: nextTotal === 0 ? null : {
-          firearmId: session.firearmId,
-          date: session.date,
-          totalRounds: nextTotal,
-          untrackedAmmunition: session.untrackedAmmunition,
-          ammunitionRecords: Object.entries(nextQuantities)
-            .filter(([, quantity]) => quantity > 0)
-            .map(([recipeId, quantity]) => ({ recipeId, quantity })),
-          usageSegments: [],
-          idempotencyKey: crypto.randomUUID(),
-        },
+    setError("");
+    fetcher.submit({
+      intent: "correct",
+      originalOperationId: session.operationId,
+      replacementShooting: nextTotal === 0 ? "" : JSON.stringify({
+        firearmId: session.firearmId,
+        date: session.date,
+        totalRounds: nextTotal,
+        untrackedAmmunition: session.untrackedAmmunition,
+        ammunitionRecords: Object.entries(nextQuantities)
+          .filter(([, quantity]) => quantity > 0)
+          .map(([recipeId, quantity]) => ({ recipeId, quantity })),
+        usageSegments: [],
         idempotencyKey: crypto.randomUUID(),
-      });
-      setEditing(false);
-      onReload();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("The request could not be completed."));
-    }
-
+      }),
+      idempotencyKey: crypto.randomUUID(),
+    }, { method: "post" });
   };
   return (
     <article className="detail-list-item">
-      <div><strong>{firearmLabel}</strong><span>{new Date(session.date).toLocaleDateString()}</span></div>
+      <div><strong>{firearmLabel}</strong><span>{formatDateTime(session.date, culture)}</span></div>
       {editing ? (
         <fieldset>
           <legend>{t("Correct ammunition quantities")}</legend>
@@ -210,7 +221,7 @@ function ShootingRow({
       ) : <strong>{session.totalRounds} {t("rounds")}</strong>}
       <div className="button-row">
         {editing ? <>
-          <button type="button" className="button" onClick={() => void save()}>{t("Save")}</button>
+          <button type="button" className="button" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
           <button type="button" className="button button-quiet" onClick={() => setEditing(false)}>{t("Cancel")}</button>
         </> : editable && <>
           <button type="button" className="button button-quiet" onClick={() => {

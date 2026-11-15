@@ -111,6 +111,8 @@ export type {
   WorkshopShootingSession,
   WorkshopHistoryPage,
   WorkshopFirearmDetail,
+  WorkshopAnalyticsBucket,
+  WorkshopAnalytics,
 } from "./workshop";
 export type {
   FeedbackStatus,
