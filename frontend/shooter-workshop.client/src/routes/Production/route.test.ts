@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { WorkshopRecipe } from "@morwalpizvideo/models";
 import { getWorkshopRecipes, recordWorkshopProduction } from "@morwalpizvideo/services";
 import { action } from "./action";
 import { loader } from "./loader";
@@ -8,7 +9,17 @@ vi.mock("@morwalpizvideo/services", () => ({
   recordWorkshopProduction: vi.fn(),
 }));
 
-const recipes = [{ id: "recipe-1", name: "Practice", caliber: "9x19" }];
+const recipes = [
+  {
+    id: "recipe-1",
+    accountId: "account-1",
+    name: "Practice",
+    caliber: "9x19",
+    status: "Active",
+    version: 1,
+    updatedAt: "2026-11-15T00:00:00Z",
+  },
+] satisfies WorkshopRecipe[];
 
 beforeEach(() => {
   vi.clearAllMocks();
