@@ -106,6 +106,7 @@ export default function AccountLogin() {
       title={t("Sign in to Workshop")}
       submitLabel={t("Sign in")}
       pendingLabel={t("Signing in…")}
+      submitClassName="button button-primary"
       onSubmit={submit}
       error={error}
       message={
@@ -114,21 +115,21 @@ export default function AccountLogin() {
           : undefined
       }
       warning={
-        sessionWarning
+        sessionWarning && !registrationSuccess
           ? t("Account created, but the session could not be verified. Sign in to continue.")
           : undefined
       }
       pending={pending}
       header={
-        <>
-          <LanguageSelector />
+        <div className="account-header">
           <p className="eyebrow">{t("Private workspace")}</p>
-          <p>
+          <LanguageSelector />
+          <p className="account-subtitle">
             {t(
               "Use your existing MorWalPiz account. Workshop requests stay on the account cookie transport.",
             )}
           </p>
-        </>
+        </div>
       }
       footer={
         <p>

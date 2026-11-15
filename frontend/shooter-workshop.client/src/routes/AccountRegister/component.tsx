@@ -102,19 +102,20 @@ export default function AccountRegister() {
       title={t("Create your Workshop account")}
       submitLabel={t("Create account")}
       pendingLabel={t("Creating account…")}
+      submitClassName="button button-primary"
       onSubmit={submit}
       error={error}
       pending={pending}
       header={
-        <>
-          <LanguageSelector />
+        <div className="account-header">
           <p className="eyebrow">{t("Private workspace")}</p>
-          <p>
+          <LanguageSelector />
+          <p className="account-subtitle">
             {t(
               "Create one MorWalPiz account to use Workshop and keep your equipment history connected.",
             )}
           </p>
-        </>
+        </div>
       }
       footer={
         <p>

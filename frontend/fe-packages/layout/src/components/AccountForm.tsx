@@ -4,6 +4,7 @@ export interface AccountFormProps {
   title: string;
   submitLabel: string;
   pendingLabel?: string;
+  submitClassName?: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   error?: string;
   message?: string;
@@ -18,6 +19,7 @@ export function AccountForm({
   title,
   submitLabel,
   pendingLabel = "Submitting…",
+  submitClassName = "btn btn-primary",
   onSubmit,
   error,
   message,
@@ -50,7 +52,7 @@ export function AccountForm({
                 {warning}
               </div>
             )}
-            <button type="submit" className="btn btn-primary mt-4" disabled={pending}>
+            <button type="submit" className={`${submitClassName} mt-4`} disabled={pending}>
               {pending ? pendingLabel : submitLabel}
             </button>
             {footer}
