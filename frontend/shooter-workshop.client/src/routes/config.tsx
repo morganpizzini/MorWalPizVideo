@@ -23,6 +23,7 @@ import { action as recipesAction } from "./Recipes/action";
 import { loader as recipesLoader } from "./Recipes/loader";
 import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
 import { action as firearmDetailAction } from "./FirearmDetail/action";
+import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
@@ -35,7 +36,11 @@ export const routes: RouteObject[] = [
   },
   {
     path: "/",
-    element: <AppShell />,
+    element: (
+      <FeedbackProvider>
+        <AppShell />
+      </FeedbackProvider>
+    ),
     children: [
       { index: true, element: <Dashboard /> },
       { path: "firearms", element: <Firearms /> },

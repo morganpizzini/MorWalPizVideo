@@ -32,7 +32,7 @@ public sealed class PublicAccountController(
 
     [HttpPost("accounts")]
     [AllowAnonymous]
-    [EnableRateLimiting("public-account-auth")]
+    [EnableRateLimiting("public-account-register")]
     public async Task<ActionResult<PublicAccountSessionContract>> Register(
         PublicAccountRegistrationRequest request,
         CancellationToken cancellationToken)
@@ -64,7 +64,7 @@ public sealed class PublicAccountController(
 
     [HttpPost("account/sessions")]
     [AllowAnonymous]
-    [EnableRateLimiting("public-account-auth")]
+    [EnableRateLimiting("public-account-login")]
     public async Task<ActionResult<PublicAccountSessionContract>> Login(
         PublicAccountLoginRequest request,
         CancellationToken cancellationToken)

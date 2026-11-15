@@ -14,6 +14,11 @@ The account transport is isolated from the anonymous public transport and BackOf
 
 ## Consequences
 
-Registration, login, session restore, profile update, and logout are additive endpoints. Unique normalized username/email indexes and a session expiry TTL index are source-managed through the existing Mongo index operations. Push subscriptions remain browser-scoped and are not linked to accounts.
+Registration, login, session restore, profile update, and logout are additive endpoints. Unique normalized username/email indexes and a session expiry TTL index are source-managed through the existing Mongo index operations. Registration and login have separate fixed-window IP rate-limit policies, with registration intentionally stricter. Push subscriptions remain browser-scoped and are not linked to accounts.
+
+The Workshop production SPA uses a same-origin `/api/` reverse proxy to keep the
+public-account cookie first-party to `workshop.morwalpiz.com`. The direct
+credentialed API origin remains an explicitly configured rollback/diagnostic mode;
+neither mode permits JavaScript-readable session tokens.
 
 Production still requires exact-origin browser evidence, persistent Data Protection key storage, duplicate audits, approved index application, and deployment telemetry before this decision is considered operationally complete.

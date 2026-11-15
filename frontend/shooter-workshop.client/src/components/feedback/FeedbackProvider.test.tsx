@@ -4,9 +4,15 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const { submitFeedback } = vi.hoisted(() => ({ submitFeedback: vi.fn() }));
 vi.mock("@morwalpizvideo/services", () => ({
   submitFeedback,
-  ApiResponseError: class ApiResponseError extends Error {},
+  ApiResponseError: class ApiResponseError extends Error {
+    status?: number;
+    constructor(response: { status?: number }) {
+      super();
+      this.status = response.status;
+    }
+  },
 }));
-vi.mock("../../auth/AuthProvider", () => ({ useWorkshopAuth: () => ({ session: { authenticated: false } }) }));
+vi.mock("../../auth/AuthProvider", () => ({ useWorkshopAuth: () => ({ session: { authenticated: true } }) }));
 
 import { FeedbackProvider } from "./FeedbackProvider";
 import { I18nProvider } from "../../i18n";
@@ -41,9 +47,18 @@ describe("Workshop feedback modal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Report an issue" }));
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Something broke" } });
     fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
-    expect((await screen.findByRole("alert")).textContent).toContain("Unable to send feedback");
+    expect((await screen.findByRole("alert")).textContent).toContain("feedback service is unavailable");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(screen.getByRole("button", { name: "Report an issue" }));
     expect((screen.getByLabelText("Description") as HTMLTextAreaElement).value).toBe("Something broke");
+  });
+
+  it("does not describe an API failure as an internet outage", async () => {
+    submitFeedback.mockRejectedValueOnce(new (await import("@morwalpizvideo/services")).ApiResponseError({ status: 503 }));
+    renderFeedback(<span>Page</span>);
+    fireEvent.click(screen.getByRole("button", { name: "Report an issue" }));
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Something broke" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("feedback service is unavailable");
   });
 });

@@ -14,7 +14,7 @@ flowchart LR
     Shooter[Range user] -->|HTTPS| ShootingClient[Azure App Service: Shooting Range SSR client]
     ShootingClient -->|Credentialed CORS + CSRF| ShootingAPI[Shooting Range API]
     WorkshopUser[Workshop user] -->|HTTPS| Workshop[https://workshop.morwalpiz.com]
-    Workshop -->|Credentialed CORS + CSRF| API
+    Workshop -->|Same-origin /api proxy + CSRF| API
     Follower[Follower] -->|HTTPS| Shorts[shorts.morwalpiz.com / ShortLinks]
     API --> Mongo[(MongoDB)]
     BO --> Mongo
@@ -37,8 +37,9 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 - FreezerAnalysis API and SPA hosts are environment-managed Azure Web Apps; the SPA receives the API origin through `VITE_FREEZER_API_BASE_URL` at image build time.
 - `https://shorts.morwalpiz.com`: branded redirects.
 - `https://workshop.morwalpiz.com`: dedicated private Shooter Workshop SPA origin.
-  Production credentialed CORS admits exactly this origin; no concrete runtime API
-  value is committed here.
+  Production uses the image's same-origin `/api/` proxy to ServerAPI; direct
+  credentialed CORS remains a controlled rollback/diagnostic path and admits exactly
+  this origin when enabled.
 - Shooting Range client and API hosts are environment-managed Azure App Services; the client receives the API origin through runtime `API_BASE_URL`.
 
 The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
@@ -68,7 +69,7 @@ Aspire AppHost starts:
 
 It does not provision MongoDB, Key Vault, Shooting ITA, or either WPF application. Developers supply those dependencies or use mocks/fakes.
 
-Local development keeps the relative `/api` Vite proxy and Development credentialed CORS behavior. The Workshop client uses its explicit `http://localhost:5179` origin; production uses only `https://workshop.morwalpiz.com` in the ServerAPI credentialed CORS allow-list. The production public frontend continues to call ServerAPI directly, while only the BackOffice SPA uses credentialed cross-origin calls to the BackOffice API.
+Local development keeps the relative `/api` Vite proxy and Development credentialed CORS behavior. The Workshop client uses its explicit `http://localhost:5179` origin; production uses the same-origin `/api/` proxy and retains `https://workshop.morwalpiz.com` in the ServerAPI credentialed CORS allow-list for controlled rollback and browser diagnostics. The production public frontend continues to call ServerAPI directly, while only the BackOffice SPA uses credentialed cross-origin calls to the BackOffice API.
 
 ## CI Baseline
 

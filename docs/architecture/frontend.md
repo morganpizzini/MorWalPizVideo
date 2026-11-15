@@ -207,7 +207,10 @@ instead of treating them as catalog DTOs. Request DTOs contain no channel id.
 
 - Runtime Docker injection: `window.ENV.VITE_API_BASE_URL`.
 - Vite build-time fallback: `VITE_API_BASE_URL`.
-- Relative paths are development-only through Vite proxying.
+- Relative paths are development-only through Vite proxying for the public client.
+- The Workshop production image builds the SPA with a relative API base and proxies
+  `/api/` through its nginx ingress to the environment-owned ServerAPI upstream,
+  keeping account/session cookies first-party to `workshop.morwalpiz.com`.
 - The Aruba deployment must publish the Azure ServerAPI base URL.
 
 Shop configuration differences remain frozen compatibility debt; no alignment change is authorized while the hold applies.

@@ -153,7 +153,16 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       if (!navigator.onLine) setMessage(t("You appear to be offline. Reconnect and try again."));
       else if (error instanceof ApiResponseError && error.status === 429) setMessage(t("Too many reports. Please wait a moment and try again."));
       else if (error instanceof ApiResponseError && error.status === 403) setMessage(t("Your session expired. Refresh the page and try again."));
-      else setMessage(t("Unable to send feedback. Check your connection and try again."));
+      else if (
+        error instanceof ApiResponseError &&
+        error.status !== undefined &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
+        setMessage(t("The report could not be accepted. Check the details and try again."));
+      } else {
+        setMessage(t("The feedback service is unavailable. Try again shortly."));
+      }
     } finally {
       setPending(false);
     }
@@ -163,10 +172,12 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   return (
     <FeedbackContext.Provider value={value}>
       <div ref={appContentRef} data-feedback-app-content>{children}</div>
-      <button type="button" className="feedback-launcher" onClick={() => launch()}>
-        {t("Report an issue")}
-      </button>
-      {open ? (
+      {session.authenticated ? (
+        <button type="button" className="feedback-launcher" onClick={() => launch()}>
+          {t("Report an issue")}
+        </button>
+      ) : null}
+      {session.authenticated && open ? (
         <div className="feedback-backdrop" role="presentation" onMouseDown={event => {
           if (event.target === event.currentTarget) close();
         }}>

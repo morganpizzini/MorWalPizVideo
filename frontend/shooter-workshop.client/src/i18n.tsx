@@ -249,7 +249,8 @@ const italian: Record<string, string> = {
   "You appear to be offline. Reconnect and try again.": "Sembra che tu sia offline. Riconnettiti e riprova.",
   "Too many reports. Please wait a moment and try again.": "Troppe segnalazioni. Attendi un momento e riprova.",
   "Your session expired. Refresh the page and try again.": "La sessione è scaduta. Aggiorna la pagina e riprova.",
-  "Unable to send feedback. Check your connection and try again.": "Impossibile inviare la segnalazione. Controlla la connessione e riprova.",
+  "The report could not be accepted. Check the details and try again.": "La segnalazione non è stata accettata. Controlla i dati e riprova.",
+  "The feedback service is unavailable. Try again shortly.": "Il servizio di segnalazione non è disponibile. Riprova tra poco.",
   "The dashboard response was empty.": "La risposta della dashboard era vuota.",
 };
 

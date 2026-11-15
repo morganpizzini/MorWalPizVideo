@@ -526,3 +526,533 @@ Residual risks:
   shared presentation change.
 - Existing unrelated dirty-worktree changes were preserved.
 
+## Post-implementation defect investigation (2026-11-15)
+
+### Outcome
+
+Correct the two reported Workshop account-surface defects and harden public account
+creation against automated account spam:
+
+1. registration repeatedly returns the security-request-expired message;
+2. the global Report an issue launcher appears on login and registration and its
+   submission can fail with connection-oriented copy;
+3. public registration has some security controls, but its current abuse protection is
+   not sufficient for unrestricted production self-service registration.
+
+The registration and feedback failures have a credible shared mechanism: both use the
+account transport, both require the CSRF response token plus its matching cookie, and
+the production Workshop artifact is configured to call a separate API site directly.
+Modern third-party-cookie policy can therefore allow the CSRF response while
+withholding the cookie required by the subsequent POST. Repeated page reloads cannot
+repair a browser policy decision.
+
+This is an Impeccable **Operate** hardening refinement, not a redesign. Preserve the
+current account form, copy hierarchy, visual system, and public-account boundary.
+
+Assumptions:
+
+- `https://workshop.morwalpiz.com` is the browser-facing Workshop origin.
+- ServerAPI remains the owner of public account registration and feedback intake.
+- A production same-origin `/api` route is the accepted transport direction already
+  recorded in the Workshop UI feedback handoff.
+- Email verification, account recovery, and account deletion remain outside this
+  defect slice unless the product owner separately approves them.
+
+Implementation boundary: establish same-origin Workshop API transport, hide feedback
+outside the authenticated Workshop shell, correct error classification, and add
+registration-specific abuse controls using existing repository infrastructure. Stop
+before redesigning account UI, changing Workshop domain behavior, or adding a new
+identity system.
+
+### Current Evidence
+
+Verified facts:
+
+- `frontend/shooter-workshop.client/src/routes/AccountRegister/component.tsx` calls
+  `registerPublicAccount`. A `403` is mapped by
+  `frontend/fe-packages/services/src/publicAccountService.ts` to the reported
+  security-request-expired message.
+- `registerPublicAccount` first gets `api/v1/account/csrf`, then posts
+  `api/v1/accounts` with `X-CSRF-TOKEN`.
+- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs` returns `403` when
+  `PublicAccountSecurity.HasValidCsrf` cannot match the header to the
+  `public_account_csrf` cookie.
+- `MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs` creates a
+  host-only, HttpOnly, Secure, `SameSite=None` production cookie. The browser must
+  still accept and return that cookie; CORS alone cannot override third-party-cookie
+  blocking.
+- `frontend/shooter-workshop.client/Dockerfile` bakes `VITE_API_BASE_URL` into the
+  client image. The deployment workflow supplies `WORKSHOP_API_BASE_URL`, while
+  `frontend/shooter-workshop.client/nginx.conf` serves only static SPA files and has no
+  `/api` reverse proxy. Production therefore supports a direct cross-site browser/API
+  topology.
+- The existing Workshop UI feedback handoff already identifies third-party-cookie
+  withholding as a high-risk session failure and accepts a same-origin Workshop
+  `/api` route as the target correction.
+- `frontend/shooter-workshop.client/src/main.tsx` places `FeedbackProvider` outside the
+  router. `FeedbackProvider` always renders the launcher, so the button is
+  unconditionally present on login, registration, and legal routes. This defect is
+  confirmed from source and does not depend on deployment.
+- Feedback submission uses `accountApiService` and
+  `MorWalPizVideo.ServerAPI/Controllers/FeedbackController.cs` enforces the same CSRF
+  header/cookie match. It can therefore fail through the same cookie path as
+  registration.
+- `FeedbackProvider` reports an explicit offline message only when
+  `navigator.onLine` is false. Other fetch/CORS failures fall through to
+  "check your connection" copy, which can incorrectly imply local connectivity is the
+  cause.
+- In-process account and feedback endpoint tests prove cookie/CSRF behavior with an
+  HTTP client's cookie container. They do not exercise the deployed Workshop origin,
+  browser third-party-cookie policy, production preflight, or the image's baked API
+  base URL.
+- No ServerAPI test currently proves the exact Workshop-origin credentialed preflight.
+
+Evidence-ranked cause assessment:
+
+1. **High confidence:** the direct cross-site API topology allows the CSRF cookie to be
+   withheld, producing the repeatable registration `403`; the same topology affects
+   feedback. This matches an already documented Workshop session risk. Exact deployed
+   cookie rejection still requires browser evidence.
+2. **Confirmed independent defect:** feedback is mounted globally rather than under
+   the authenticated shell.
+3. **Lower-probability deployment alternative:** stale ServerAPI/gateway authorization
+   or CORS configuration can also block the CSRF flow. Architecture documentation
+   records prior deployed/source skew for the anonymous CSRF endpoint. The release
+   investigation must capture the actual CSRF GET, preflight, cookie storage reason,
+   and POST before changing application authorization.
+
+Current registration security posture:
+
+- Positive controls:
+  - CSRF header/cookie matching;
+  - fixed-window rate limiting at 10 combined registration/login requests per five
+    minutes per observed remote IP by default;
+  - server-side validation and legal acknowledgement;
+  - normalized username/email checks plus unique MongoDB indexes;
+  - PBKDF2-SHA256 password hashing with a random 32-byte salt and constant-time
+    verification;
+  - HttpOnly session cookies and server-side hashed session tokens.
+- Gaps:
+  - CSRF prevents cross-site request forgery; it is not proof that the caller is human.
+  - There is no CAPTCHA/challenge on account creation.
+  - Registration and login share one limiter, allowing account creation traffic to
+    consume login capacity.
+  - The limiter is process-local and resets on restart; it is not coordinated across
+    scaled ServerAPI instances.
+  - ServerAPI does not explicitly configure trusted forwarded-header processing before
+    rate limiting. A reverse proxy can therefore collapse users into one proxy IP, or
+    an unsafe forwarding configuration could trust spoofed client addresses.
+  - There is no email verification, disposable-email policy, account-creation
+    monitoring, or cleanup/quarantine state for abusive inactive accounts.
+  - No test proves a `429` registration boundary.
+
+Conclusion: no direct account-takeover flaw was found in this trace, but registration
+is only **partially protected** and should not be described as spam-resistant in its
+current state.
+
+### Proposed Design
+
+#### Same-origin Workshop account transport
+
+Expose ServerAPI through `https://workshop.morwalpiz.com/api/...` at the Workshop
+ingress/nginx layer. Build the production SPA with a relative API base so account,
+feedback, session, and Workshop requests are first-party from the browser's
+perspective.
+
+The `/api/` location must:
+
+- proxy only to the environment-owned ServerAPI upstream;
+- preserve method, body, status, and required response headers;
+- forward host, scheme, and a trustworthy client-address chain;
+- never fall back to `index.html`;
+- never log cookie, CSRF, authorization, password, or feedback body values;
+- expose a deployment/readiness failure when the upstream is absent rather than
+  returning SPA content.
+
+Keep the current direct ServerAPI origin temporarily available as a rollback target,
+but do not use JavaScript-readable tokens or weaken CSRF/CORS as a workaround.
+
+Before rollout, capture browser network evidence for:
+
+- CSRF GET status and response origin;
+- `Set-Cookie` acceptance or browser rejection reason;
+- credentialed preflight headers;
+- registration POST request cookie/header presence and response status.
+
+This confirms the mechanism and distinguishes browser cookie policy from stale
+gateway authorization.
+
+#### Feedback visibility and failure semantics
+
+Move `FeedbackProvider` from the application root to the authenticated route layout
+that owns `AppShell`. Login, registration, and legal redirects stay outside that
+layout, so neither the launcher nor feedback dialog can render there. Keep
+`ErrorState` consumers inside the provider.
+
+Feedback error copy must distinguish:
+
+- browser-confirmed offline;
+- rate limit;
+- CSRF/security rejection;
+- validation/conflict;
+- API unavailable or request blocked.
+
+Do not label every fetch/CORS/API failure as "no internet." Preserve the failed draft
+for retry, but do not retry automatically.
+
+#### Registration abuse controls
+
+Use layered controls rather than treating any one mechanism as sufficient:
+
+1. Split `public-account-register` from `public-account-login`. Give registration a
+   lower, independently configurable limit. Preserve generic conflict responses so
+   username/email availability is not disclosed more precisely.
+2. Establish trusted client-IP resolution before the rate limiter. Trust only the
+   configured Workshop/API proxy boundary; never accept arbitrary forwarded addresses.
+3. Reuse the existing `IRecaptchaService` and named `HttpClient` for a dedicated
+   `public_account_register` action. Add a short-lived challenge token to the shared
+   registration request contract. Production fails closed when verification or its
+   required configuration is unavailable; Development/Test use the existing fake.
+4. Apply the challenge and registration limiter to the shared ServerAPI registration
+   endpoint, so Workshop and the public client cannot bypass each other's policy.
+5. Emit privacy-safe counters for accepted, validation-rejected, challenge-rejected,
+   conflict, rate-limited, and server-failed registration attempts. Do not log email,
+   username, password, challenge token, CSRF token, session cookie, or raw client IP.
+6. Add an operator alert based on sustained challenge failures, `429` rates, and
+   unusual successful-account volume. The exact threshold belongs to deployment
+   configuration, not source.
+
+Email verification would further limit useful spam accounts, but it changes account
+state, login policy, email delivery, recovery, persistence, and user experience. It is
+not required for this defect slice and needs a separate approved design if CAPTCHA
+plus registration-specific throttling proves insufficient.
+
+#### UX direction
+
+Impeccable mode remains **Operate**. Use `harden` for truthful failure states and
+route-appropriate controls; use `audit` for keyboard, focus, responsive, and error
+announcement verification. This is refinement, not redesign.
+
+Minimum visual evidence:
+
+- login and registration at desktop and 360 px with no feedback launcher;
+- authenticated shell at the same sizes with the launcher present;
+- registration challenge unavailable, rate-limited, security-rejected, field-error,
+  and successful pending states;
+- feedback offline, API unavailable, `403`, and `429` states with distinct copy.
+
+### Impacted Projects
+
+- `frontend/shooter-workshop.client` — same-origin production transport, route-scoped
+  feedback provider, registration challenge, error copy, and focused tests.
+- `frontend/morwalpizvideo.client` — coordinated registration challenge because it
+  uses the same ServerAPI contract; no visual redesign.
+- `frontend/fe-packages/models` — additive registration challenge token.
+- `frontend/fe-packages/services` — preserve account transport behavior and test the
+  revised request; no new API client.
+- `MorWalPiz.Contracts` — additive registration request field and validation.
+- `MorWalPizVideo.ServerAPI` — registration-specific limiter, trusted proxy handling,
+  challenge verification, telemetry, and exact-origin tests.
+- `MorWalPizVideo.Domain` — verify only; account creation, normalization, hashing, and
+  session issuance remain unchanged.
+- `MorWalPizVideo.Models` — verify only; no account schema change.
+- `MorWalPizVideo.MvcHelpers` — verify only; CSRF/cookie contract remains unchanged.
+- `MorWalPizVideo.BackOffice.Tests` — ServerAPI registration, CAPTCHA, limiter, CORS,
+  and feedback regression coverage.
+- `MorWalPizVideo.AppHost` — verify local relative proxy behavior; no production
+  topology ownership.
+- Workshop deployment workflow/container — production same-origin proxy and public
+  site-key/upstream configuration.
+- BackOffice API/SPA, ShortLinks, Shooting Range, FreezerAnalysis, VideoImporter,
+  InsightScanner, shop, Shooting ITA, TelePrompter, and stage designer — not
+  applicable to product behavior.
+
+### Impacted Files
+
+#### Modify
+
+- `frontend/shooter-workshop.client/src/main.tsx` — remove the unconditional global
+  feedback mount and add the registration challenge provider at the narrowest shared
+  client boundary.
+- `frontend/shooter-workshop.client/src/routes/config.tsx` — place
+  `FeedbackProvider` around the authenticated `AppShell` route only.
+- `frontend/shooter-workshop.client/src/routes/AccountRegister/component.tsx` — obtain
+  one registration challenge token per explicit submission and preserve current
+  pending/error/session behavior.
+- `frontend/shooter-workshop.client/src/routes/AccountRegister/component.test.tsx` —
+  prove challenge, single submission, and truthful error states.
+- `frontend/shooter-workshop.client/src/components/feedback/FeedbackProvider.tsx` —
+  retain draft behavior while separating offline, API, security, validation, and
+  throttling failures.
+- `frontend/shooter-workshop.client/src/components/feedback/FeedbackProvider.test.tsx`
+  — cover the revised status mapping.
+- `frontend/shooter-workshop.client/src/routes/config.test.tsx` — prove the launcher
+  is absent on login/register/legal routes and available under the authenticated
+  shell.
+- `frontend/shooter-workshop.client/src/i18n.tsx` — route-appropriate challenge and
+  failure copy.
+- `frontend/shooter-workshop.client/package.json` and `frontend/yarn.lock` — add only
+  the already established reCAPTCHA client integration needed by Workshop.
+- `frontend/shooter-workshop.client/nginx.conf` or its container template — explicit
+  `/api/` upstream proxy before SPA fallback.
+- `frontend/shooter-workshop.client/Dockerfile` — production-relative API build and
+  environment-owned proxy/site-key inputs.
+- `.github/workflows/deploy-shooter-workshop-client.yml` — provide non-secret
+  production build/runtime configuration and add a same-origin smoke gate.
+- `frontend/morwalpizvideo.client/src/routes/account/Components.tsx` — supply the same
+  registration challenge to the shared endpoint.
+- `frontend/morwalpizvideo.client/src/routes/account/Components.test.tsx` — preserve
+  public registration behavior under the additive contract.
+- `frontend/fe-packages/models/src/publicAccount.ts` — additive challenge token.
+- `frontend/fe-packages/services/src/publicAccountService.ts` and its tests — transport
+  the revised request without changing CSRF/session semantics.
+- `MorWalPiz.Contracts/Contracts/PublicAccountContracts.cs` — validate the challenge
+  token as part of registration input.
+- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs` — verify the
+  registration challenge before Domain account creation.
+- `MorWalPizVideo.ServerAPI/Program.cs` — separate registration/login limiters,
+  trusted forwarded-header policy, and privacy-safe registration metrics.
+- `MorWalPizVideo.ServerAPI/appsettings.json` and environment-specific non-secret
+  configuration — explicit limiter defaults and trusted-proxy configuration shape;
+  never add deployed values or secrets.
+- `MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs` — challenge,
+  `429`, no account persistence on rejection, and existing CSRF/session behavior.
+- `MorWalPizVideo.BackOffice.Tests/Features/FeedbackEndpointTests.cs` — regression
+  coverage through the unchanged CSRF contract.
+
+#### Add
+
+- A focused ServerAPI production-CORS/preflight test for
+  `https://workshop.morwalpiz.com` covering account registration and feedback headers.
+- A production-like browser test in the established Workshop test area for CSRF GET,
+  registration POST, cookie acceptance, session restoration, feedback submission, and
+  denied origins through the same-origin route.
+
+#### Generated/Migration
+
+None. No MongoDB, EF, or persisted account document migration is required.
+
+#### Documentation
+
+- `docs/feature-handoffs/shared-account-registration-handoff.md` — this defect and
+  abuse-hardening addendum.
+- `docs/feature-handoffs/shooter-workshop-ui-feedback-handoff.md` — update actual
+  same-origin delivery evidence after implementation.
+- `docs/architecture/security.md` — record registration challenge/throttling and
+  Workshop first-party cookie transport.
+- `docs/architecture/deployment.md` — replace the direct Workshop credentialed-CORS
+  browser edge with the same-origin `/api` proxy path.
+- `docs/architecture/frontend.md` — distinguish Workshop's same-origin production
+  account transport from the public client's deployment.
+- `docs/architecture/adr/ADR-018-public-account-boundary.md` — record the shared
+  registration abuse policy because it changes the account boundary contract.
+- `docs/features/accounts-and-channels.md` — add delivered evidence and residual
+  release gates.
+
+#### Verify Only
+
+- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`
+- `MorWalPizVideo.Domain/Security/PasswordHashing.cs`
+- `MorWalPizVideo.Domain/Interfaces/Repository.cs`
+- `MorWalPizVideo.Models/Models/PublicAccount.cs`
+- `MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs`
+- `MorWalPizVideo.MvcHelpers/Authentication/PublicAccountAuthentication.cs`
+- `MorWalPizVideo.ServerAPI/Services/IRecaptchaService.cs`
+- `MorWalPizVideo.ServerAPI/Services/RecaptchaService.cs`
+- `MorWalPizVideo.AppHost/Program.cs`
+
+### Impact Matrix
+
+| Area | Impact |
+|---|---|
+| Backend/API | Registration adds a challenge token and dedicated limiter; feedback API contract remains unchanged. |
+| Frontend/UI | Feedback launcher becomes authenticated-shell-only; registration adds invisible challenge acquisition and truthful errors. |
+| Database/Data | No schema change. Rejected challenge/rate-limited attempts must create no account or session. |
+| Contracts/Models | Additive registration request field in .NET and TypeScript; coordinated client/API release required. |
+| Authentication/Authorization | Preserve HttpOnly session, double-submit CSRF, anonymous registration/feedback, and account-owned Workshop authorization. |
+| Validation | CAPTCHA is server-authoritative; existing identity, password, legal, and field validation remains authoritative. |
+| Cache | CSRF/session remain no-store. Proxy must not cache account, feedback, or Workshop API responses. |
+| Configuration/Secrets | Reuse protected reCAPTCHA secret; add only non-secret site key, limits, proxy trust, and upstream settings through environment configuration. |
+| Logging/Telemetry | Add outcome counters only; exclude identity, credentials, cookies, CSRF/challenge tokens, free text, and raw IP. |
+| Background Jobs | Not applicable. |
+| Deployment/Operations | Same-origin proxy must precede switching the SPA to relative API paths; challenge config and browser smoke proof are release gates. |
+| Backward Compatibility | Old clients cannot register after the API requires a challenge. Deploy both active registration clients in the same compatibility window or gate enforcement. |
+
+### Reuse Opportunities
+
+- Reuse `accountApiService`, existing CSRF acquisition, and status-aware
+  `ApiResponseError`; do not add an application-local fetch wrapper.
+- Reuse `IRecaptchaService`, `HttpClientNames.Recaptcha`, the mock implementation, and
+  the public client's existing reCAPTCHA provider integration.
+- Reuse the existing `public-feedback` limiter pattern while keeping registration and
+  login in separate policies.
+- Reuse `FeedbackProvider` and move its ownership boundary rather than duplicating the
+  modal.
+- Reuse the accepted Workshop same-origin proxy decision and existing local Vite
+  `/api` proxy.
+- Reuse unique normalized account indexes and current generic conflict response.
+
+### Risks
+
+| Rank | Cause and affected surface | Mitigation | Verification signal |
+|---|---|---|---|
+| High | Same-origin proxy incorrectly falls through to the SPA or drops cookies/headers. | Define `/api/` before SPA fallback, preserve status/headers, fail closed on missing upstream. | Browser sees API JSON/status, matching CSRF cookie/header, and restored session after reload. |
+| High | CAPTCHA enforcement deploys before both clients can send a token. | Coordinate both clients and API; use a short explicit rollout gate if artifacts cannot deploy atomically. | Workshop and public registration pass; old payload is rejected only after both clients are live. |
+| High | Forwarded IP trust is too broad, allowing spoofed partitions, or absent, collapsing users behind a proxy. | Trust only known proxy/network boundaries and test direct/spoofed/forwarded cases. | Limiter keys distinct clients correctly and ignores untrusted forwarding. |
+| Medium | Process-local rate limits can be bypassed across instances/restarts. | Keep edge throttling as the production-wide control and app limiting as defense in depth; move to shared state only if scale requires it. | Multi-instance smoke/load evidence reaches the configured aggregate threshold. |
+| Medium | reCAPTCHA outage blocks legitimate registration. | Fail closed with truthful retry copy and monitor provider failures; do not create accounts on uncertain verification. | Simulated provider failure creates no account/session and displays a non-connectivity-specific message. |
+| Medium | Moving feedback provider breaks `useFeedback` consumers. | Place it around the complete authenticated `AppShell`, not individual pages. | Every authenticated ErrorState can open feedback; anonymous routes render without the launcher. |
+| Medium | Error copy still misdiagnoses CORS/API failures as offline. | Base messages on browser offline state and structured status; use neutral unavailable copy for fetch failures. | Tests distinguish offline, fetch failure, `403`, `409`, and `429`. |
+| Low | Challenge scripts affect account-page performance or privacy expectations. | Load only for registration-capable surfaces and retain required privacy disclosure. | No challenge script on authenticated Workshop routes; legal disclosure is visible on registration. |
+
+Independent post-validation review is warranted because the slice changes production
+routing, trusted proxy handling, registration abuse controls, CSRF/cookie transport,
+and a shared public contract.
+
+### Technical Debt
+
+- Public account password hashing uses PBKDF2-SHA256 with 100,000 iterations. It uses
+  strong random salts and constant-time verification, but the work factor should be
+  reviewed against current organizational guidance. A versioned rehash-on-login
+  migration is separate from the spam fix and does not block this slice.
+- Email verification and compromised/disposable-email controls are absent. They do
+  not block the immediate layered anti-automation fix; add them only through a
+  separate account-state and email-delivery design.
+- The public client still uses a direct cross-site ServerAPI topology. That broader
+  account-cookie risk is documented and must not be silently folded into the Workshop
+  proxy patch.
+- The Workshop client has no dedicated `PRODUCT.md` or `DESIGN.md`. Continue using the
+  documented public visual authority for this refinement; document the finished
+  Workshop system separately after acceptance.
+
+### Implementation Roadmap
+
+1. Capture the failing production browser transaction and record CSRF GET, preflight,
+   cookie acceptance/rejection, and registration POST evidence without recording token
+   values.
+2. Add regression tests for launcher visibility, feedback status mapping, exact
+   Workshop-origin preflight, challenge rejection, and registration `429` behavior.
+3. Establish the same-origin `/api` proxy and trusted forwarded-header boundary. Prove
+   API failures never return the SPA shell.
+4. Switch the Workshop production client to relative account/API paths while retaining
+   the local Vite proxy and a controlled direct-origin rollback.
+5. Move feedback ownership to the authenticated route layout and revise error copy.
+6. Add the shared registration challenge contract in .NET and TypeScript, then update
+   both active registration clients.
+7. Verify the challenge in ServerAPI before Domain account/session creation and split
+   login from registration rate limiting.
+8. Add privacy-safe registration outcome metrics and production alerting.
+9. Apply the Impeccable `harden` and `audit` checks to anonymous and authenticated
+   route states without visual redesign.
+10. Deploy in dependency order: proxy/trust readiness, compatible API rollout gate,
+    both clients, enforcement activation, browser smoke proof, documentation update.
+
+Stop when the two reported defects are fixed, registration has challenge plus
+registration-specific throttling, and deployed browser evidence passes. Email
+verification, password-hash migration, and broader public-client transport changes
+require separate approval.
+
+### Testing Strategy
+
+- **Unit/component:** Workshop registration challenge unavailable/success, single
+  submit, field errors, `403`, `409`, `429`, and provider failure; feedback visibility
+  and error classifications.
+- **Route:** login, registration, and legal routes have no feedback launcher;
+  authenticated shell routes retain it.
+- **Service/contract:** registration payload includes challenge token while preserving
+  CSRF, credentials, no-store behavior, and structured errors.
+- **Backend behavior:** missing/invalid challenge, missing CSRF, valid registration,
+  duplicate identity, registration limit, login independence, and no persisted
+  account/session on rejected attempts.
+- **CORS/proxy security:** exact Workshop origin allowed where direct rollback is
+  retained; unsupported origin denied; untrusted forwarded address ignored; trusted
+  proxy address honored.
+- **Integration:** mock reCAPTCHA success/failure/timeout and deterministic rate-limit
+  windows.
+- **Browser end to end:** Workshop registration, session restore, hard reload,
+  authenticated feedback, anonymous-route launcher absence, blocked third-party
+  cookies, narrow mobile layout, keyboard navigation, and browser zoom.
+- **Operational:** verify registration outcome metrics contain no PII or secret/token
+  material and alerts trigger from synthetic non-production traffic.
+
+### Migration And Rollback
+
+- **MongoDB:** no schema migration or backfill. Existing accounts, sessions, unique
+  indexes, and TTL index remain valid.
+- **SQLite:** not applicable.
+- **API contract:** additive request field but behaviorally required once enforcement
+  activates. Use a short compatibility gate or coordinated deployment so both clients
+  can send it before rejection is enabled.
+- **Authentication/CSRF:** same contract; browser routing changes from cross-site to
+  first-party. Do not alter token storage, HttpOnly, Secure, revocation, or legal
+  evidence.
+- **Rate limiting:** introduce new policy names and limits without reusing shared
+  login buckets. Rollback may restore previous policy selection but must not disable
+  all throttling.
+- **Configuration:** proxy upstream, trusted proxy/network, public site key, limiter
+  values, and challenge secret availability are deployment prerequisites. Missing
+  required production settings fail readiness/enforcement rather than silently
+  accepting registration.
+- **Deployment order:** provision and verify same-origin proxy; deploy API support;
+  deploy both clients; activate required challenge; monitor; retire the direct
+  Workshop browser/API path only after rollback evidence.
+- **Rollback:** switch Workshop temporarily to the verified direct API origin and roll
+  back client/API artifacts together. Keep CSRF and current account/session security.
+  Accounts created during the rollout remain valid and must not be deleted as part of
+  code rollback.
+- **Recovery:** if abuse protection blocks legitimate traffic, adjust
+  environment-owned limits or disable challenge enforcement through the approved
+  rollout gate while retaining CSRF and throttling; never bypass validation with a
+  client-only fallback.
+
+### Open Questions
+
+- What trusted proxy/network values and edge rate-limiting capability are available
+  for the production Workshop ingress? This determines whether aggregate throttling
+  is enforced at nginx, Azure ingress, or a shared limiter.
+- Can the public client and Workshop client be deployed in the same compatibility
+  window as the ServerAPI registration contract? If not, an explicit temporary
+  enforcement gate is required.
+- Is Google reCAPTCHA approved for the Workshop registration privacy posture, or must
+  the existing provider be replaced through a separate architecture decision?
+
+### Delivered implementation record (2026-11-15)
+
+Implemented:
+
+- Moved Workshop `FeedbackProvider` from the application root to the authenticated
+  `AppShell` route element. Login, registration, and legal routes no longer render
+  the Report an issue launcher.
+- Distinguished feedback API-unavailable/validation failures from browser-confirmed
+  offline failures without changing draft retention or automatic-retry behavior.
+- Added a production Workshop nginx template that proxies `/api/` to the
+  environment-owned ServerAPI upstream. The SPA build now uses relative API paths,
+  while the upstream remains a Docker/workflow build input. The obsolete static-only
+  nginx configuration was removed.
+- Split the shared ServerAPI account throttle into independent registration and login
+  policies. Registration defaults to five attempts per observed IP per ten minutes;
+  login defaults to ten attempts per five minutes and retains the old
+  `PublicAccount:RateLimit` configuration as a fallback.
+- Updated security, frontend, deployment, and ADR documentation for the first-party
+  Workshop cookie transport and separate account throttles.
+
+Validation:
+
+- `yarn --cwd frontend workspace shooter-workshop.client test --passWithNoTests=false --run src/components/feedback/FeedbackProvider.test.tsx src/routes/config.test.tsx src/routes/AccountRegister/component.test.tsx` — 6 tests passed.
+- `yarn --cwd frontend workspace shooter-workshop.client build` — passed.
+- `dotnet build MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~PublicAccountEndpointTests|FullyQualifiedName~FeedbackEndpointTests"` — 9 tests passed.
+
+Remaining release gates:
+
+- The proxy must be built and deployed with a real environment-owned
+  `VITE_API_BASE_URL` upstream; the client image intentionally fails its final stage
+  when that value is absent.
+- A real HTTPS browser test must confirm CSRF cookie acceptance, registration,
+  hard-reload session restoration, authenticated feedback, and API error responses.
+- CAPTCHA/human verification, distributed/edge throttling, and email verification were
+  not introduced in this patch. Registration is better throttled but is not yet
+  demonstrably spam-resistant across multiple instances or automated clients.
+- Existing ImageSharp dependency vulnerability warnings were emitted by the backend
+  test restore and are unrelated to this change.
+

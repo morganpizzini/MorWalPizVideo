@@ -105,12 +105,25 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
-    options.AddPolicy("public-account-auth", context => RateLimitPartition.GetFixedWindowLimiter(
-        $"public-account:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+    options.AddPolicy("public-account-register", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"public-account-register:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = builder.Configuration.GetValue("PublicAccount:RateLimit:PermitLimit", 10),
-            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("PublicAccount:RateLimit:WindowMinutes", 5)),
+            PermitLimit = builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:PermitLimit", 5),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:WindowMinutes", 10)),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("public-account-login", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"public-account-login:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue(
+                "PublicAccount:LoginRateLimit:PermitLimit",
+                builder.Configuration.GetValue("PublicAccount:RateLimit:PermitLimit", 10)),
+            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue(
+                "PublicAccount:LoginRateLimit:WindowMinutes",
+                builder.Configuration.GetValue("PublicAccount:RateLimit:WindowMinutes", 5))),
             QueueLimit = 0,
             AutoReplenishment = true
         }));
