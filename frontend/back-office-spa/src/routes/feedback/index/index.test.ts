@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { getFeedbackPage } = vi.hoisted(() => ({ getFeedbackPage: vi.fn() }));
 vi.mock('@morwalpizvideo/services', () => ({ getFeedbackPage }));
 
-import { loader } from './index';
+import loader from './loader';
 
 describe('feedback management loader', () => {
   beforeEach(() => getFeedbackPage.mockReset());

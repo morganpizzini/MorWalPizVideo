@@ -1,25 +1,12 @@
 import { Alert, Form, Table } from 'react-bootstrap';
-import { Link, useLoaderData, useNavigate, useNavigation, useRevalidator } from 'react-router';
-import { getFeedbackPage } from '@morwalpizvideo/services';
+import { Link, useLoaderData, useLocation, useNavigate, useNavigation, useRevalidator } from 'react-router';
 import type { FeedbackPage, FeedbackStatus } from '@morwalpizvideo/models';
 
 const statuses: FeedbackStatus[] = ['New', 'Reviewing', 'Resolved', 'Dismissed'];
 
-export async function loader({ request }: { request: Request }) {
-  const url = new URL(request.url);
-  const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
-  const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get('pageSize') ?? 20)));
-  if (!Number.isInteger(page) || !Number.isInteger(pageSize)) throw new Response('Invalid pagination', { status: 400 });
-  return getFeedbackPage(
-    (url.searchParams.get('status') as FeedbackStatus | null) || undefined,
-    url.searchParams.get('application') || undefined,
-    page,
-    pageSize,
-  );
-}
-
 export default function FeedbackPageView() {
   const page = useLoaderData() as FeedbackPage;
+  const location = useLocation();
   const navigate = useNavigate();
   const navigation = useNavigation();
   const revalidator = useRevalidator();
@@ -33,6 +20,7 @@ export default function FeedbackPageView() {
     if (key !== 'page') next.delete('page');
     navigate(`?${next.toString()}`);
   };
+
   return <main>
     <div className="d-flex justify-content-between align-items-center mb-3">
       <div><h1 className="h3 mb-1">Feedback</h1><p className="text-secondary mb-0">Global reports from the public applications.</p></div>

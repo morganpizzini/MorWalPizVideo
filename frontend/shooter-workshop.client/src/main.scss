@@ -47,6 +47,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .language-selector select { position: absolute; inset: 0; width: 100%; min-width: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
 .icon-button { width: 2.5rem; min-width: 2.5rem; height: 2.5rem; padding: .55rem; }
 .icon-button svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.header-account > .icon-button svg { width: 1.4rem; height: 1.4rem; stroke-width: 2; }
 .workshop-main { width: min(100% - 2rem, 1440px); margin: 0 auto; padding: clamp(1.5rem, 4vw, 3rem) 0 5rem; }
 .install-prompt { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.15rem; border: 1px solid var(--workshop-accent); border-radius: var(--workshop-radius); background: var(--workshop-surface); }
 .install-prompt h2 { margin: 0; color: var(--workshop-accent); font-size: 1rem; }
