@@ -39,7 +39,7 @@ describe("Production route data functions", () => {
         productionDate: "2026-11-15",
         quantityProduced: "250",
         notes: "range session",
-      }),
+      }).toString(),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({ ok: true });
@@ -60,7 +60,7 @@ describe("Production route data functions", () => {
         recipeId: "",
         productionDate: "2026-11-15",
         quantityProduced: "0",
-      }),
+      }).toString(),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({
@@ -79,7 +79,7 @@ describe("Production route data functions", () => {
         recipeId: "recipe-1",
         productionDate: "2026-11-15",
         quantityProduced: "250",
-      }),
+      }).toString(),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({
