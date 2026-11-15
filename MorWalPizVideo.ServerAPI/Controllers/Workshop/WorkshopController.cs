@@ -275,7 +275,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         try
         {
             var result = await service.RecordShootingAsync(AccountId(), new(request.FirearmId, request.Date, request.TotalRounds,
-                request.Notes, request.ConsumptionRecords.Select(x => new ShootingConsumption(x.BatchId, x.Quantity, x.AllocationId)).ToArray(),
+                request.Notes, request.AmmunitionRecords.Select(x => new ShootingRecipeConsumption(x.RecipeId, x.Quantity)).ToArray(),
                 request.UntrackedAmmunition, request.UsageSegments.Select(x => new ShootingUsageSegment(x.ComponentId, x.InstallationId, x.Quantity)).ToArray(),
                 request.IdempotencyKey), ct);
             return Ok(ToContract(result));
@@ -284,47 +284,10 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
 
-    [HttpPost("ammunition/allocations")]
-    public async Task<IActionResult> Allocate(AllocateWorkshopAmmoRequest request, CancellationToken ct)
-    {
-        if (!HasCsrf()) return Forbid();
-        try
-        {
-            var result = await service.AllocateAsync(AccountId(),
-                new(request.BatchId, request.FirearmId, request.Quantity, request.Notes, request.IdempotencyKey), ct);
-            return Ok(ToContract(result));
-        }
-        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
-        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
-    }
-
-    [HttpPost("ammunition/allocations/{allocationId}/release")]
-    public async Task<IActionResult> Release(string allocationId, ReleaseWorkshopAllocationRequest request, CancellationToken ct)
-    {
-        if (!HasCsrf()) return Forbid();
-        try
-        {
-            var result = await service.ReleaseAllocationAsync(AccountId(),
-                new(allocationId, request.Quantity, request.Revision, request.IdempotencyKey), ct);
-            return Ok(ToContract(result));
-        }
-        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
-        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
-    }
-
-    [HttpPost("ammunition/allocations/reallocate")]
-    public async Task<IActionResult> Reallocate(ReallocateWorkshopAmmoRequest request, CancellationToken ct)
-    {
-        if (!HasCsrf()) return Forbid();
-        try
-        {
-            var result = await service.ReallocateAsync(AccountId(),
-                new(request.SourceAllocationId, request.DestinationFirearmId, request.Quantity, request.IdempotencyKey), ct);
-            return Ok(ToContract(result));
-        }
-        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
-        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
-    }
+    [HttpGet("sessions/shooting")]
+    public async Task<IActionResult> ShootingSessions(CancellationToken ct) =>
+        Ok((await service.GetShootingSessionsAsync(AccountId(), ct))
+            .Select(x => new WorkshopShootingSessionReadContract(x.Session, x.Superseded)));
 
     [HttpPost("sessions/shooting/correct")]
     public async Task<IActionResult> CorrectShooting(CorrectWorkshopOperationRequest request, CancellationToken ct)
@@ -333,7 +296,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         try
         {
             var replacement = request.ReplacementShooting;
-            var command = replacement is null ? null : ToShootingCommand(replacement);
+            var command = replacement is null ? null : ToShootingCommand(replacement, true);
             var result = await service.CorrectShootingAsync(AccountId(),
                 new(request.OriginalOperationId, command, request.IdempotencyKey), ct);
             return Ok(ToContract(result));
@@ -348,7 +311,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         var dashboard = await service.GetDashboardAsync(AccountId(), ct);
         return Ok(new WorkshopDashboardContract(dashboard.FirearmCount, dashboard.ComponentCount,
             dashboard.TotalFirearmRounds, dashboard.ComponentsAtOrAboveInterval, dashboard.TotalProducedRounds,
-            dashboard.AvailableRounds, dashboard.AllocatedRounds, dashboard.RecentActivityCount,
+            dashboard.AvailableRounds, dashboard.RecentActivityCount,
             dashboard.ProjectionState));
     }
 
@@ -381,9 +344,11 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         new(result.Operation.Id, result.Operation.OperationType, result.Operation.EffectiveAt,
             result.Operation.RecordedAt, result.Operation.ContributionDigest);
 
-    private static WorkshopShootingCommand ToShootingCommand(RecordWorkshopShootingRequest request) =>
-        new(request.FirearmId, request.Date, request.TotalRounds, request.Notes,
-            request.ConsumptionRecords.Select(x => new ShootingConsumption(x.BatchId, x.Quantity, x.AllocationId)).ToArray(),
+    private static WorkshopShootingCommand ToShootingCommand(RecordWorkshopShootingRequest request, bool deriveTotal = false) =>
+        new(request.FirearmId, request.Date,
+            deriveTotal ? request.AmmunitionRecords.Sum(x => x.Quantity) + request.UntrackedAmmunition : request.TotalRounds,
+            request.Notes,
+            request.AmmunitionRecords.Select(x => new ShootingRecipeConsumption(x.RecipeId, x.Quantity)).ToArray(),
             request.UntrackedAmmunition,
             request.UsageSegments.Select(x => new ShootingUsageSegment(x.ComponentId, x.InstallationId, x.Quantity)).ToArray(),
             request.IdempotencyKey);

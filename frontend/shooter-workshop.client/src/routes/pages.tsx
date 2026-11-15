@@ -6,7 +6,6 @@ export { Component as Maintenance } from "./Maintenance";
 export { Component as Recipes } from "./Recipes";
 export { Component as Ammunition } from "./Ammunition";
 export { Component as ShootingSessions } from "./ShootingSessions";
-export { Component as Allocation } from "./Allocation";
 export { Component as History } from "./History";
 export { Component as Reconciliation } from "./Reconciliation";
 export { Component as AccountLogin } from "./AccountLogin";

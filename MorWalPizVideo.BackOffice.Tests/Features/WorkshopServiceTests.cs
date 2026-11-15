@@ -121,6 +121,37 @@ public sealed class WorkshopServiceTests
     }
 
     [Fact]
+    public async Task Shooting_consumes_selected_recipe_batches_oldest_first()
+    {
+        var (service, scenario, firearm) = CreateService();
+        scenario.Add(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "recipe-1", AccountId = "account-1", Name = "Practice", Caliber = "9mm"
+        });
+        scenario.Add(DbCollections.WorkshopAmmoBatches, new AmmoBatch
+        {
+            Id = "newer", AccountId = "account-1", RecipeId = "recipe-1",
+            ProductionDate = DateTime.UtcNow.AddDays(-1), ProducedQuantity = 100, OnHandQuantity = 100
+        });
+        scenario.Add(DbCollections.WorkshopAmmoBatches, new AmmoBatch
+        {
+            Id = "older", AccountId = "account-1", RecipeId = "recipe-1",
+            ProductionDate = DateTime.UtcNow.AddDays(-2), ProducedQuantity = 25, OnHandQuantity = 25
+        });
+
+        var result = await service.RecordShootingAsync("account-1",
+            new(firearm.Id, DateTime.UtcNow, 40, null,
+                [new ShootingRecipeConsumption("recipe-1", 40)], 0, [], "shoot-fifo"));
+
+        var consumption = scenario.Read<ShootingSession>(DbCollections.WorkshopShootingSessions).Single().ConsumptionRecords;
+        Assert.Equal([("older", 25L), ("newer", 15L)],
+            consumption.Select(x => (x.BatchId, x.Quantity)).ToArray());
+        Assert.Equal(result.Operation.Id, scenario.Read<ShootingSession>(
+            DbCollections.WorkshopShootingSessions).Single().OperationId);
+        Assert.Equal(-25, result.Operation.Deltas.Single(x => x.AggregateId == "older").StockDelta);
+    }
+
+    [Fact]
     public async Task Create_and_install_is_recoverable_and_normalizes_definition_tags()
     {
         var (service, scenario, firearm) = CreateService();

@@ -21,7 +21,6 @@ describe("Workshop route configuration", () => {
       "components",
       "maintenance",
       "ammunition",
-      "ammunition/allocations",
       "recipes",
       "production",
       "sessions/shooting",

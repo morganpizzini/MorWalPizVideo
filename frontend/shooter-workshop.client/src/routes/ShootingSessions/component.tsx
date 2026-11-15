@@ -1,105 +1,74 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageTitle } from "@morwalpiz/layout";
 import type {
   WorkshopConsumptionRequest,
   WorkshopFirearm,
+  WorkshopRecipe,
+  WorkshopShootingSessionRecord,
 } from "@morwalpizvideo/models";
 import {
   correctWorkshopShooting,
   getWorkshopFirearms,
+  getWorkshopRecipes,
+  getWorkshopShootingSessions,
   recordWorkshopShooting,
 } from "@morwalpizvideo/services";
 import { WorkshopForm } from "../../components/WorkshopForm";
 import { ResourceState, useResource } from "../shared";
 import { useI18n } from "../../i18n";
+
+type RecipeRow = WorkshopConsumptionRequest & { key: string };
+
 export default function ShootingSessions() {
   const { t } = useI18n();
-  const firearms = useResource(getWorkshopFirearms);
-  const [form, setForm] = useState({
-    firearmId: "",
-    rounds: "0",
-    untracked: "0",
-    consumptionRecords: [] as WorkshopConsumptionRequest[],
-  });
+  const resource = useResource(() =>
+    Promise.all([getWorkshopFirearms(), getWorkshopRecipes(), getWorkshopShootingSessions()]),
+  );
+  const [firearmId, setFirearmId] = useState("");
+  const [rounds, setRounds] = useState("0");
+  const [untracked, setUntracked] = useState("0");
+  const [records, setRecords] = useState<RecipeRow[]>([]);
+
   return (
     <div>
-      <PageTitle
-        title={t("Shooting sessions")}
-        subtitle={t("Record new sessions or correct an operation without rewriting history.")}
-      />
-      <ResourceState resource={firearms}>
-        {(items) => (
+      <PageTitle title={t("Shooting sessions")} subtitle={t("Record sessions and correct them inline without rewriting history.")} />
+      <ResourceState resource={resource}>
+        {([firearms, recipes, sessions]) => (
           <>
             <WorkshopForm
               title="Record shooting"
               submitLabel="Record session"
               onSubmit={async () => {
-                const totalRounds = Number(form.rounds);
                 await recordWorkshopShooting({
-                  firearmId: form.firearmId,
+                  firearmId,
                   date: new Date().toISOString(),
-                  totalRounds,
-                  untrackedAmmunition: Number(form.untracked),
-                  consumptionRecords: form.consumptionRecords.filter((record) => record.quantity > 0),
+                  totalRounds: Number(rounds),
+                  untrackedAmmunition: Number(untracked),
+                  ammunitionRecords: records
+                    .filter((record) => record.recipeId && record.quantity > 0)
+                    .map(({ key: _key, ...record }) => record),
                   usageSegments: [],
                   idempotencyKey: crypto.randomUUID(),
                 });
+                resource.reload();
               }}
             >
               <label>
                 {t("Firearm")}
-                <select
-                  required
-                  value={form.firearmId}
-                  onChange={(event) =>
-                    setForm({ ...form, firearmId: event.target.value })
-                  }
-                >
+                <select required value={firearmId} onChange={(event) => setFirearmId(event.target.value)}>
                   <option value="">{t("Select firearm")}</option>
-                  {items
-                    .filter((firearm) => !firearm.archived)
-                    .map((firearm) => (
-                      <option value={firearm.id} key={firearm.id}>
-                        {firearm.nickname ||
-                          `${firearm.manufacturer} ${firearm.model}`}
-                      </option>
-                    ))}
+                  {firearms.filter((firearm) => !firearm.archived).map((firearm) => (
+                    <option value={firearm.id} key={firearm.id}>{firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}</option>
+                  ))}
                 </select>
               </label>
               <div className="form-grid">
-                <label>
-                  {t("Total rounds")}
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={form.rounds}
-                    onChange={(event) =>
-                      setForm({ ...form, rounds: event.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  {t("Untracked ammunition")}
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={form.untracked}
-                    onChange={(event) =>
-                      setForm({ ...form, untracked: event.target.value })
-                    }
-                  />
-                </label>
+                <label>{t("Total rounds")}<input type="number" min="1" required value={rounds} onChange={(event) => setRounds(event.target.value)} /></label>
+                <label>{t("Untracked ammunition")}<input type="number" min="0" required value={untracked} onChange={(event) => setUntracked(event.target.value)} /></label>
               </div>
-              <ShootingConsumptionFields
-                records={form.consumptionRecords}
-                onChange={(consumptionRecords) => setForm({ ...form, consumptionRecords })}
-              />
+              <AmmunitionFields records={records} recipes={recipes} onChange={setRecords} />
             </WorkshopForm>
-            <ShootingCorrectionForm
-              firearms={items.filter((firearm) => !firearm.archived)}
-            />
+            <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onReload={resource.reload} />
           </>
         )}
       </ResourceState>
@@ -107,128 +76,156 @@ export default function ShootingSessions() {
   );
 }
 
-function ShootingConsumptionFields({
+function AmmunitionFields({
   records,
+  recipes,
   onChange,
 }: {
-  records: WorkshopConsumptionRequest[];
-  onChange: (records: WorkshopConsumptionRequest[]) => void;
+  records: RecipeRow[];
+  recipes: WorkshopRecipe[];
+  onChange: (records: RecipeRow[]) => void;
 }) {
   const { t } = useI18n();
   return (
     <fieldset>
       <legend>{t("Ammunition records")}</legend>
       {records.map((record, index) => (
-        <div className="form-grid" key={index}>
-          <label>
-            {t("Batch ID")}
-            <input
-              value={record.batchId ?? ""}
-              onChange={(event) => {
-                const next = [...records];
-                next[index] = { ...record, batchId: event.target.value || null };
-                onChange(next);
-              }}
-            />
+        <div className="form-grid" key={record.key}>
+          <label>{t("Recipe")}
+            <select required value={record.recipeId} onChange={(event) => {
+              const next = [...records]; next[index] = { ...record, recipeId: event.target.value }; onChange(next);
+            }}>
+              <option value="">{t("Select recipe")}</option>
+              {recipes.filter((recipe) => recipe.status === "Active").map((recipe) => <option value={recipe.id} key={recipe.id}>{recipe.name} · {recipe.caliber}</option>)}
+            </select>
           </label>
-          <label>
-            {t("Allocation ID")}
-            <input
-              value={record.allocationId ?? ""}
-              onChange={(event) => {
-                const next = [...records];
-                next[index] = { ...record, allocationId: event.target.value || null };
-                onChange(next);
-              }}
-            />
-          </label>
-          <label>
-            {t("Quantity")}
-            <input
-              type="number"
-              min="1"
-              required
-              value={record.quantity || ""}
-              onChange={(event) => {
-                const next = [...records];
-                next[index] = { ...record, quantity: Number(event.target.value) };
-                onChange(next);
-              }}
-            />
-          </label>
-          <button type="button" className="button button-quiet" onClick={() => onChange(records.filter((_, itemIndex) => itemIndex !== index))}>
-            {t("Remove")}
-          </button>
+          <label>{t("Quantity")}<input type="number" min="1" required value={record.quantity || ""} onChange={(event) => {
+            const next = [...records]; next[index] = { ...record, quantity: Number(event.target.value) }; onChange(next);
+          }} /></label>
+          <button type="button" className="button button-quiet" onClick={() => onChange(records.filter((_, itemIndex) => itemIndex !== index))}>{t("Remove")}</button>
         </div>
       ))}
-      <button type="button" className="button button-quiet" onClick={() => onChange([...records, { quantity: 0 }])}>
-        + {t("Ammunition record")}
-      </button>
+      <button type="button" className="button button-quiet" onClick={() => onChange([...records, { key: crypto.randomUUID(), recipeId: "", quantity: 0 }])}>+ {t("Ammunition record")}</button>
     </fieldset>
   );
 }
 
-function ShootingCorrectionForm({ firearms }: { firearms: WorkshopFirearm[] }) {
+function ShootingHistory({
+  sessions,
+  firearms,
+  recipes,
+  onReload,
+}: {
+  sessions: WorkshopShootingSessionRecord[];
+  firearms: WorkshopFirearm[];
+  recipes: WorkshopRecipe[];
+  onReload: () => void;
+}) {
   const { t } = useI18n();
-  const [operationId, setOperationId] = useState("");
-  const [firearmId, setFirearmId] = useState("");
-  const [rounds, setRounds] = useState("0");
+  const labels = useMemo(() => new Map(firearms.map((firearm) => [firearm.id, firearm.nickname || `${firearm.manufacturer} ${firearm.model}`])), [firearms]);
   return (
-    <WorkshopForm
-      title="Correct shooting operation"
-      submitLabel="Record correction"
-      onSubmit={async () => {
-        await correctWorkshopShooting({
-          originalOperationId: operationId,
-          replacementShooting: {
-            firearmId,
-            date: new Date().toISOString(),
-            totalRounds: Number(rounds),
-            untrackedAmmunition: Number(rounds),
-            consumptionRecords: [],
-            usageSegments: [],
-            idempotencyKey: crypto.randomUUID(),
-          },
+    <section className="panel">
+      <div className="section-heading"><h2>{t("Recent shooting sessions")}</h2></div>
+      {sessions.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : sessions.map((session) => (
+        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} onReload={onReload} />
+      ))}
+    </section>
+  );
+}
+
+function ShootingRow({
+  record,
+  recipes,
+  firearmLabel,
+  onReload,
+}: {
+  record: WorkshopShootingSessionRecord;
+  recipes: WorkshopRecipe[];
+  firearmLabel: string;
+  onReload: () => void;
+}) {
+  const { t } = useI18n();
+  const { session } = record;
+  const [editing, setEditing] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, number>>(() =>
+    session.consumptionRecords.reduce<Record<string, number>>((result, item) => {
+      if (item.recipeId) result[item.recipeId] = (result[item.recipeId] ?? 0) + item.quantity;
+      return result;
+    }, {}),
+  );
+  const [error, setError] = useState("");
+  const editable = Boolean(session.operationId) && !record.superseded && !session.correctionOfId;
+  const trackedTotal = Object.values(quantities).reduce((sum, quantity) => sum + Math.max(0, quantity), 0);
+  const correctedTotal = trackedTotal + session.untrackedAmmunition;
+  const save = async (nextQuantities = quantities) => {
+    if (!session.operationId) return;
+    const nextTrackedTotal = Object.values(nextQuantities).reduce((sum, quantity) => sum + Math.max(0, quantity), 0);
+    const nextTotal = nextTrackedTotal + session.untrackedAmmunition;
+    if (nextTotal === 0 && !window.confirm(t("Delete this shooting session? Its audit history will be retained."))) return;
+    try {
+      setError("");
+      await correctWorkshopShooting({
+        originalOperationId: session.operationId,
+        replacementShooting: nextTotal === 0 ? null : {
+          firearmId: session.firearmId,
+          date: session.date,
+          totalRounds: nextTotal,
+          untrackedAmmunition: session.untrackedAmmunition,
+          ammunitionRecords: Object.entries(nextQuantities)
+            .filter(([, quantity]) => quantity > 0)
+            .map(([recipeId, quantity]) => ({ recipeId, quantity })),
+          usageSegments: [],
           idempotencyKey: crypto.randomUUID(),
-        });
-      }}
-    >
-      <label>
-        {t("Original operation ID")}
-        <input
-          required
-          value={operationId}
-          onChange={(event) => setOperationId(event.target.value)}
-        />
-      </label>
-      <div className="form-grid">
-        <label>
-          {t("Correct firearm")}
-          <select
-            required
-            value={firearmId}
-            onChange={(event) => setFirearmId(event.target.value)}
-          >
-            <option value="">{t("Select firearm")}</option>
-            {firearms.map((firearm) => (
-              <option value={firearm.id} key={firearm.id}>
-                {firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t("Correct total rounds")}
-          <input
-            type="number"
-            min="1"
-            required
-            value={rounds}
-            onChange={(event) => setRounds(event.target.value)}
-          />
-        </label>
+        },
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setEditing(false);
+      onReload();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t("The request could not be completed."));
+    }
+
+  };
+  return (
+    <article className="detail-list-item">
+      <div><strong>{firearmLabel}</strong><span>{new Date(session.date).toLocaleDateString()}</span></div>
+      {editing ? (
+        <fieldset>
+          <legend>{t("Correct ammunition quantities")}</legend>
+          {Object.entries(quantities).map(([recipeId, quantity]) => (
+            <label key={recipeId}>
+              {recipes.find((recipe) => recipe.id === recipeId)?.name ?? recipeId}
+              <input
+                type="number"
+                min="0"
+                value={quantity}
+                onChange={(event) => setQuantities((current) => ({ ...current, [recipeId]: Number(event.target.value) }))}
+              />
+            </label>
+          ))}
+          <p>{t("Untracked ammunition")}: {session.untrackedAmmunition} ({t("unchanged")})</p>
+          <strong>{t("Total rounds")}: {correctedTotal}</strong>
+        </fieldset>
+      ) : <strong>{session.totalRounds} {t("rounds")}</strong>}
+      <div className="button-row">
+        {editing ? <>
+          <button type="button" className="button" onClick={() => void save()}>{t("Save")}</button>
+          <button type="button" className="button button-quiet" onClick={() => setEditing(false)}>{t("Cancel")}</button>
+        </> : editable && <>
+          <button type="button" className="button button-quiet" onClick={() => {
+            setQuantities(session.consumptionRecords.reduce<Record<string, number>>((result, item) => {
+              if (item.recipeId) result[item.recipeId] = (result[item.recipeId] ?? 0) + item.quantity;
+              return result;
+            }, {}));
+            setEditing(true);
+          }}>{t("Edit")}</button>
+          <button type="button" className="button button-quiet" onClick={() => {
+            setQuantities({});
+            void save({});
+          }}>{t("Delete")}</button>
+        </>}
       </div>
-      <small>{t("A correction appends a compensating operation; the original remains in history.")}</small>
-    </WorkshopForm>
+      {error && <p role="alert">{error}</p>}
+    </article>
   );
 }

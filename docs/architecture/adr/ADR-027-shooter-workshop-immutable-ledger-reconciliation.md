@@ -49,6 +49,24 @@ stored projection. Repair replaces projections only; it never edits, deletes, or
 reinterprets ledger facts. Historical correction appends a complete compensating
 bundle and, where needed, a complete replacement bundle linked to the original.
 
+The browser expresses known ammunition consumption as recipe ID and quantity. The
+Domain resolves that intent against account-owned ammunition batches in ascending
+production-date order, using batch ID as a stable tie-breaker, and persists the
+resolved batch facts in the operation and shooting-session read document. Batch and
+allocation IDs are not user-entered authoritative inputs. The Workshop UI exposes
+correction inline: a positive save appends reversal plus replacement facts, while
+delete or a confirmed zero quantity appends only the reversal. Original ledger facts
+and audit history remain immutable.
+
+Allocation/reservation is retired from the accepted current product model. Recipe and
+batch stock are not firearm-specific, and current availability is total batch on-hand
+quantity. New operations do not emit allocation aggregates or allocation IDs. Legacy
+allocation operation types, delta fields, digests, and correction reversal remain
+read-compatible until deployed retention evidence permits a separate physical
+contraction. Inline positive correction supplies explicit per-recipe quantities,
+preserves original untracked ammunition unchanged, and derives total rounds rather
+than redistributing recipes proportionally.
+
 Recipe snapshots and accepted session segment attribution are persisted with their
 operation facts. Replay never derives historical component attribution from the
 current installation. For a shooting session:

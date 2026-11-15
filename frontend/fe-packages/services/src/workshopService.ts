@@ -1,5 +1,4 @@
 import type {
-  CreateWorkshopAllocationRequest,
   CreateWorkshopComponentDefinitionRequest,
   UpdateWorkshopComponentDefinitionRequest,
   ArchiveWorkshopComponentDefinitionRequest,
@@ -20,8 +19,6 @@ import type {
   UpdateWorkshopRecipeRequest,
   CreateWorkshopShootingRequest,
   CorrectWorkshopShootingRequest,
-  ReleaseWorkshopAllocationRequest,
-  ReallocateWorkshopAmmunitionRequest,
   WorkshopActivity,
   WorkshopAmmunitionBatch,
   WorkshopComponentDefinition,
@@ -35,6 +32,7 @@ import type {
   WorkshopMaintenanceEvent,
   WorkshopDashboard,
   WorkshopFirearmDetail,
+  WorkshopShootingSessionRecord,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
 import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
@@ -205,24 +203,8 @@ export const recordWorkshopShooting = (
 ): Promise<WorkshopOperationContract> =>
   request(accountApiService.post(`${frontendEndpoints.WORKSHOP_SHOOTING}/shooting`, body));
 
-export const allocateWorkshopAmmunition = (
-  body: CreateWorkshopAllocationRequest,
-): Promise<WorkshopOperationContract> =>
-  request(accountApiService.post(`${frontendEndpoints.WORKSHOP_AMMUNITION}/allocations`, body));
-
-export const releaseWorkshopAllocation = (
-  allocationId: string,
-  body: ReleaseWorkshopAllocationRequest,
-): Promise<WorkshopOperationContract> =>
-  request(accountApiService.post(
-    `${frontendEndpoints.WORKSHOP_AMMUNITION}/allocations/${encodeURIComponent(allocationId)}/release`,
-    body,
-  ));
-
-export const reallocateWorkshopAmmunition = (
-  body: ReallocateWorkshopAmmunitionRequest,
-): Promise<WorkshopOperationContract> =>
-  request(accountApiService.post(`${frontendEndpoints.WORKSHOP_AMMUNITION}/allocations/reallocate`, body));
+export const getWorkshopShootingSessions = (): Promise<WorkshopShootingSessionRecord[]> =>
+  request(accountApiService.get(frontendEndpoints.WORKSHOP_SHOOTING_READ));
 
 export const correctWorkshopShooting = (
   body: CorrectWorkshopShootingRequest,

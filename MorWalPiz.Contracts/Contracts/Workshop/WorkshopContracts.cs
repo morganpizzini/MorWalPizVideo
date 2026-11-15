@@ -204,9 +204,8 @@ public sealed class ReallocateWorkshopAmmoRequest
 
 public sealed class WorkshopConsumptionRequest
 {
-    public string? BatchId { get; init; }
+    [Required] public string RecipeId { get; init; } = string.Empty;
     [Range(1, long.MaxValue)] public long Quantity { get; init; }
-    public string? AllocationId { get; init; }
 }
 
 public sealed class WorkshopUsageSegmentRequest
@@ -222,7 +221,7 @@ public sealed class RecordWorkshopShootingRequest
     public DateTime Date { get; init; }
     [Range(1, long.MaxValue)] public long TotalRounds { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
-    public IReadOnlyList<WorkshopConsumptionRequest> ConsumptionRecords { get; init; } = [];
+    public IReadOnlyList<WorkshopConsumptionRequest> AmmunitionRecords { get; init; } = [];
     // Unknown ammunition is explicit; it is never inferred from a missing batch.
     [Range(0, long.MaxValue)] public long UntrackedAmmunition { get; init; }
     public IReadOnlyList<WorkshopUsageSegmentRequest> UsageSegments { get; init; } = [];
@@ -257,7 +256,7 @@ public sealed record WorkshopPageContract<T>(IReadOnlyList<T> Items, int Page, i
 public sealed record WorkshopDashboardContract(
     int FirearmCount, int ComponentCount, long TotalFirearmRounds,
     int ComponentsAtOrAboveInterval, long TotalProducedRounds, long AvailableRounds,
-    long AllocatedRounds, int RecentActivityCount, WorkshopProjectionState ProjectionState);
+    int RecentActivityCount, WorkshopProjectionState ProjectionState);
 
 public sealed record WorkshopComponentConditionContract(
     ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation);
@@ -266,6 +265,9 @@ public sealed record WorkshopRoundHistoryPointContract(
     DateTime EffectiveAt, long Delta, long CumulativeRounds, string OperationId);
 
 public sealed record WorkshopShootingSessionContract(
+    ShootingSession Session, bool Superseded);
+
+public sealed record WorkshopShootingSessionReadContract(
     ShootingSession Session, bool Superseded);
 
 public sealed record WorkshopHistoryPageContract<T>(

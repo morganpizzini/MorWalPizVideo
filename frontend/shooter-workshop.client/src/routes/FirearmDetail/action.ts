@@ -1,10 +1,9 @@
 import {
   archiveWorkshopFirearm,
   recordWorkshopMaintenance,
-  recordWorkshopShooting,
   updateWorkshopFirearm,
 } from "@morwalpizvideo/services";
-import type { ActionFunctionArgs } from "react-router";
+import { redirect, type ActionFunctionArgs } from "react-router";
 
 const value = (form: FormData, key: string) => {
   const result = form.get(key);
@@ -29,16 +28,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     });
   }
   if (intent === "shooting") {
-    return recordWorkshopShooting({
-      firearmId,
-      date: value(form, "date") ?? new Date().toISOString(),
-      totalRounds: Number(value(form, "totalRounds") ?? 0),
-      notes: value(form, "notes"),
-      consumptionRecords: [],
-      untrackedAmmunition: Number(value(form, "totalRounds") ?? 0),
-      usageSegments: [],
-      idempotencyKey,
-    });
+    return redirect("/sessions/shooting");
   }
   if (intent === "archive") {
     return archiveWorkshopFirearm(firearmId, {

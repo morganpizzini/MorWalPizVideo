@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  allocateWorkshopAmmunition,
-  releaseWorkshopAllocation,
-  reallocateWorkshopAmmunition,
   correctWorkshopShooting,
   getWorkshopBatches,
   createAndInstallWorkshopComponent,
@@ -105,8 +102,8 @@ describe("Workshop account transport", () => {
       totalRounds: 150,
       notes: "mixed consumption",
       untrackedAmmunition: 50,
-      consumptionRecords: [
-        { batchId: "batch-1", allocationId: "allocation-1", quantity: 100 },
+      ammunitionRecords: [
+        { recipeId: "recipe-1", quantity: 100 },
       ],
       usageSegments: [
         { componentId: "component-1", installationId: "installation-1", quantity: 150 },
@@ -120,42 +117,12 @@ describe("Workshop account transport", () => {
     );
     expect(body).toMatchObject({
       untrackedAmmunition: 50,
-      consumptionRecords: [
-        { batchId: "batch-1", allocationId: "allocation-1", quantity: 100 },
+      ammunitionRecords: [
+        { recipeId: "recipe-1", quantity: 100 },
       ],
       usageSegments: [
         { componentId: "component-1", installationId: "installation-1", quantity: 150 },
       ],
-    });
-  });
-
-  it("uses the canonical allocation route and sends optional notes", async () => {
-    const fetchMock = vi.fn((input: RequestInfo | URL) =>
-      Promise.resolve(
-        String(input).endsWith("/csrf")
-          ? Response.json({ token: "allocation-csrf" })
-          : Response.json({ id: "operation-3" }),
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await allocateWorkshopAmmunition({
-      batchId: "batch-1",
-      firearmId: "firearm-1",
-      quantity: 200,
-      notes: "training allocation",
-      idempotencyKey: "allocation-key",
-    });
-
-    expect(String(fetchMock.mock.calls[1][0])).toBe(
-      "/api/v1/workshop/ammunition/allocations",
-    );
-    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
-      batchId: "batch-1",
-      firearmId: "firearm-1",
-      quantity: 200,
-      notes: "training allocation",
-      idempotencyKey: "allocation-key",
     });
   });
 
@@ -188,40 +155,6 @@ describe("Workshop account transport", () => {
     });
   });
 
-    it("supports allocation release and reallocation commands with encoded identifiers", async () => {
-      const fetchMock = vi.fn((input: RequestInfo | URL) =>
-        Promise.resolve(
-          String(input).endsWith("/csrf")
-            ? Response.json({ token: "allocation-change-csrf" })
-            : Response.json({ id: "operation-4" }),
-        ),
-      );
-      vi.stubGlobal("fetch", fetchMock);
-
-      await releaseWorkshopAllocation("allocation/1", {
-        quantity: 20,
-        revision: 3,
-        idempotencyKey: "release-key",
-      });
-      await reallocateWorkshopAmmunition({
-        sourceAllocationId: "allocation/1",
-        destinationFirearmId: "firearm-2",
-        quantity: 10,
-        idempotencyKey: "reallocate-key",
-      });
-
-      expect(String(fetchMock.mock.calls[1][0])).toBe(
-        "/api/v1/workshop/ammunition/allocations/allocation%2F1/release",
-      );
-      expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject({
-        quantity: 20,
-        revision: 3,
-      });
-      expect(String(fetchMock.mock.calls[2][0])).toBe(
-        "/api/v1/workshop/ammunition/allocations/reallocate",
-      );
-    });
-
     it("posts a shooting correction to the append-only correction route", async () => {
       const fetchMock = vi.fn((input: RequestInfo | URL) =>
         Promise.resolve(
@@ -239,7 +172,7 @@ describe("Workshop account transport", () => {
           date: "2026-11-13T00:00:00Z",
           totalRounds: 50,
           untrackedAmmunition: 50,
-          consumptionRecords: [],
+          ammunitionRecords: [],
           usageSegments: [],
           idempotencyKey: "replacement-key",
         },

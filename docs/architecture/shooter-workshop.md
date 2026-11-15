@@ -45,6 +45,24 @@ the authenticated shell. Its service worker is lifecycle-only: it does not inter
 requests or cache account/API data, and it does not add Push or background
 synchronization behavior.
 
+The shooting-session workflow now accepts recipe quantities rather than browser-authored
+batch or allocation IDs. ServerAPI resolves each recipe quantity into deterministic
+oldest-production-date-first batch facts before appending the immutable operation. New
+shooting-session documents retain the resolved recipe and batch evidence plus their
+ledger operation ID. The authenticated shooting route lists those sessions and uses
+inline positive corrections or confirmed zero/delete corrections; correction operations
+remain compensating ledger facts and are never physically deleted.
+
+**Accepted target — allocation removal:** Ammunition allocations/reservations are not
+part of the current Workshop product model. Recipes describe ammunition and batches
+carry on-hand stock; neither is associated with a firearm before consumption.
+Availability is total batch on-hand stock. New commands and projections must not create
+or depend on allocation records. Historical allocation-bearing operations remain
+readable and replayable during the compatibility migration and are never rewritten.
+Inline correction edits explicit recipe quantities, derives total rounds on the
+server, and preserves the original untracked-ammunition quantity unchanged. See the
+[allocation removal handoff](../feature-handoffs/shooter-workshop-allocation-removal-handoff.md).
+
 Subsequent user checks corrected the component ownership target: definitions are
 category-like records, while manufacturer, model, compatibility tags, tracking mode,
 and service threshold belong to physical component instances. Firearm installation is

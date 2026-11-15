@@ -4,7 +4,6 @@ import AccountLegalRedirect from "./AccountLegalRedirect";
 import { Component as AccountLogin } from "./AccountLogin";
 import { Component as AccountRegister } from "./AccountRegister";
 import { Component as AccountProfile } from "./AccountProfile";
-import { Component as Allocation } from "./Allocation";
 import { Component as Ammunition } from "./Ammunition";
 import { Component as Components } from "./Components";
 import { Component as Dashboard } from "./Dashboard";
@@ -48,7 +47,6 @@ export const routes: RouteObject[] = [
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
       { path: "maintenance", element: <Maintenance /> },
       { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
-      { path: "ammunition/allocations", element: <Allocation /> },
       { path: "recipes", element: <Recipes />, loader: recipesLoader, action: recipesAction },
       { path: "production", element: <Navigate to="/ammunition" replace /> },
       { path: "sessions/shooting", element: <ShootingSessions /> },

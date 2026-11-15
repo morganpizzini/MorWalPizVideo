@@ -153,7 +153,7 @@ public sealed record AmmoAllocation : BaseEntity
     public long ActiveQuantity => Quantity - ConsumedQuantity - ReleasedQuantity;
 }
 
-public sealed record ShootingConsumption(string? BatchId, long Quantity, string? AllocationId);
+public sealed record ShootingConsumption(string? BatchId, long Quantity, string? AllocationId, string? RecipeId = null);
 public sealed record ShootingUsageSegment(string ComponentId, string InstallationId, long Quantity);
 
 public sealed record ShootingSession : BaseEntity
@@ -167,6 +167,7 @@ public sealed record ShootingSession : BaseEntity
     [BsonElement("usageSegments")] public IReadOnlyList<ShootingUsageSegment> UsageSegments { get; init; } = [];
     [BsonElement("untrackedAmmunition")] public long UntrackedAmmunition { get; init; }
     [BsonElement("correctionOfId")] public string? CorrectionOfId { get; init; }
+    [BsonElement("operationId")] public string? OperationId { get; init; }
 }
 
 public sealed record WorkshopDelta(

@@ -259,31 +259,33 @@ export interface CreateWorkshopProductionRequest {
   idempotencyKey: string;
 }
 
-export interface CreateWorkshopAllocationRequest {
-  batchId: string;
-  firearmId: string;
-  quantity: number;
-  notes?: string | null;
-  idempotencyKey: string;
-}
-
-export interface ReleaseWorkshopAllocationRequest {
-  quantity: number;
-  revision: number;
-  idempotencyKey: string;
-}
-
-export interface ReallocateWorkshopAmmunitionRequest {
-  sourceAllocationId: string;
-  destinationFirearmId: string;
-  quantity: number;
-  idempotencyKey: string;
-}
-
 export interface WorkshopConsumptionRequest {
+  recipeId: string;
+  quantity: number;
+}
+
+export interface WorkshopResolvedConsumption {
   batchId?: string | null;
+  recipeId?: string | null;
   quantity: number;
   allocationId?: string | null;
+}
+
+export interface WorkshopShootingSessionRecord {
+  session: {
+    id: string;
+    accountId: string;
+    operationId?: string | null;
+    firearmId: string;
+    date: string;
+    totalRounds: number;
+    notes?: string | null;
+    consumptionRecords: WorkshopResolvedConsumption[];
+    usageSegments: WorkshopUsageSegmentRequest[];
+    untrackedAmmunition: number;
+    correctionOfId?: string | null;
+  };
+  superseded: boolean;
 }
 
 export interface WorkshopUsageSegmentRequest {
@@ -297,7 +299,7 @@ export interface CreateWorkshopShootingRequest {
   date: string;
   totalRounds: number;
   notes?: string | null;
-  consumptionRecords: WorkshopConsumptionRequest[];
+  ammunitionRecords: WorkshopConsumptionRequest[];
   untrackedAmmunition: number;
   usageSegments: WorkshopUsageSegmentRequest[];
   idempotencyKey: string;
@@ -334,7 +336,6 @@ export interface WorkshopDashboard {
   componentsAtOrAboveInterval: number;
   totalProducedRounds: number;
   availableRounds: number;
-  allocatedRounds: number;
   recentActivityCount: number;
   projectionState: WorkshopProjectionState;
 }
