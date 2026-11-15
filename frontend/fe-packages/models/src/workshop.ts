@@ -209,6 +209,12 @@ export type CreateWorkshopRecipeRequest = Omit<
   "id" | "accountId" | "status" | "version" | "updatedAt"
 >;
 
+export interface UpdateWorkshopRecipeRequest
+  extends CreateWorkshopRecipeRequest {
+  version: number;
+  idempotencyKey: string;
+}
+
 export interface WorkshopAmmunitionBatch {
   id: string;
   accountId: string;

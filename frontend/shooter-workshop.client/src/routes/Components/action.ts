@@ -5,6 +5,8 @@ import {
   createWorkshopComponentDefinition,
   deleteWorkshopComponent,
   deleteWorkshopComponentDefinition,
+  installWorkshopComponent,
+  removeWorkshopComponent,
   updateWorkshopComponent,
   updateWorkshopComponentDefinition,
 } from "@morwalpizvideo/services";
@@ -15,7 +17,7 @@ const text = (form: FormData, key: string) => {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 };
 const required = (form: FormData, key: string) => text(form, key) ?? "";
-const revision = (form: FormData) => Number(form.get("revision") ?? 0);
+const revision = (form: FormData, key = "revision") => Number(form.get(key) ?? 0);
 const tags = (form: FormData) =>
   required(form, "compatibilityTags")
     .split(",")
@@ -79,6 +81,28 @@ export async function action({ request }: ActionFunctionArgs) {
         revision: revision(form),
         idempotencyKey,
       });
+      {
+        const existingFirearmId = text(form, "existingFirearmId");
+        const firearmId = text(form, "firearmId");
+        if (existingFirearmId !== firearmId) {
+          const installationId = text(form, "installationId");
+          if (installationId) {
+            await removeWorkshopComponent(installationId, {
+              removedAt: new Date().toISOString(),
+              revision: revision(form, "installationRevision"),
+              idempotencyKey: crypto.randomUUID(),
+            });
+          }
+          if (firearmId) {
+            await installWorkshopComponent({
+              componentId: id,
+              firearmId,
+              installedAt: new Date().toISOString(),
+              idempotencyKey: crypto.randomUUID(),
+            });
+          }
+        }
+      }
       break;
     case "archive-component":
       await archiveWorkshopComponent(id, { revision: revision(form), idempotencyKey });

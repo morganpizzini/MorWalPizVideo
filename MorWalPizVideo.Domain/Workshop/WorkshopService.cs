@@ -67,6 +67,13 @@ public sealed class WorkshopService(
     public Task<IReadOnlyList<ComponentInstance>> GetComponentsAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, ct);
 
+    public async Task<IReadOnlyList<ComponentInstallation>> GetComponentInstallationsAsync(
+        string accountId, CancellationToken ct = default) =>
+        (await repository.ListAsync<ComponentInstallation>(
+            DbCollections.WorkshopComponentInstallations, accountId, ct))
+        .Where(x => x.RemovedAt is null)
+        .ToArray();
+
     public Task<IReadOnlyList<AmmoRecipe>> GetRecipesAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, ct);
 

@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { AccountForm } from '@morwalpiz/layout';
 import {
   getPublicProfile,
   getPublicAccountErrorMessage,
@@ -373,53 +374,3 @@ export function Profile() {
   );
 }
 
-function AccountForm({
-  title,
-  submitLabel,
-  onSubmit,
-  error,
-  message,
-  warning,
-  pending = false,
-  children,
-}: {
-  title: string;
-  submitLabel: string;
-  onSubmit: (event: FormEvent) => void;
-  error: string;
-  message?: string;
-  warning?: string;
-  pending?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <main className="account-page">
-      <section className="account-card card card-no-float mx-auto">
-        <div className="card-body">
-          <h1>{title}</h1>
-          <form onSubmit={onSubmit}>
-            {children}
-            {error && (
-              <div className="alert alert-danger mt-3" role="alert">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div className="alert alert-success mt-3" role="status">
-                {message}
-              </div>
-            )}
-            {warning && (
-              <div className="alert alert-warning mt-3" role="status">
-                {warning}
-              </div>
-            )}
-            <button type="submit" className="btn btn-primary mt-4" disabled={pending}>
-              {pending ? 'Invio in corso…' : submitLabel}
-            </button>
-          </form>
-        </div>
-      </section>
-    </main>
-  );
-}

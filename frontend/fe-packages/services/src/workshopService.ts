@@ -17,6 +17,7 @@ import type {
   DeleteWorkshopPhysicalComponentRequest,
   CreateWorkshopProductionRequest,
   CreateWorkshopRecipeRequest,
+  UpdateWorkshopRecipeRequest,
   CreateWorkshopShootingRequest,
   CorrectWorkshopShootingRequest,
   ReleaseWorkshopAllocationRequest,
@@ -108,6 +109,9 @@ export const createAndInstallWorkshopComponent = (
 export const getWorkshopComponents = (): Promise<WorkshopPhysicalComponent[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_COMPONENTS));
 
+export const getWorkshopComponentInstallations = (): Promise<WorkshopComponentInstallation[]> =>
+  request(accountApiService.get(frontendEndpoints.WORKSHOP_COMPONENT_INSTALLATIONS));
+
 export const createWorkshopComponent = (
   body: CreateWorkshopPhysicalComponentRequest,
 ): Promise<WorkshopPhysicalComponent> =>
@@ -163,6 +167,15 @@ export const createWorkshopRecipe = (
   body: CreateWorkshopRecipeRequest,
 ): Promise<WorkshopRecipe> =>
   request(accountApiService.post(frontendEndpoints.WORKSHOP_RECIPES, body));
+
+export const updateWorkshopRecipe = (
+  recipeId: string,
+  body: UpdateWorkshopRecipeRequest,
+): Promise<WorkshopRecipe> =>
+  request(accountApiService.put(
+    `${frontendEndpoints.WORKSHOP_RECIPES}/${encodeURIComponent(recipeId)}`,
+    body,
+  ));
 
 export const getWorkshopBatches = (): Promise<WorkshopAmmunitionBatch[]> =>
   request(accountApiService.get(`${frontendEndpoints.WORKSHOP_AMMUNITION}/batches`));

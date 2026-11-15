@@ -1,6 +1,8 @@
 import { Navigate, type RouteObject } from "react-router";
 import AppShell from "../layouts/AppShell";
+import AccountLegalRedirect from "./AccountLegalRedirect";
 import { Component as AccountLogin } from "./AccountLogin";
+import { Component as AccountRegister } from "./AccountRegister";
 import { Component as AccountProfile } from "./AccountProfile";
 import { Component as Allocation } from "./Allocation";
 import { Component as Ammunition } from "./Ammunition";
@@ -10,17 +12,25 @@ import { Component as FirearmDetail } from "./FirearmDetail";
 import { Component as Firearms } from "./Firearms";
 import { Component as History } from "./History";
 import { Component as Maintenance } from "./Maintenance";
-import { Component as Production } from "./Production";
 import { Component as Recipes } from "./Recipes";
 import { Component as Reconciliation } from "./Reconciliation";
 import { Component as ShootingSessions } from "./ShootingSessions";
 import { loader as componentsLoader } from "./Components/loader";
 import { action as componentsAction } from "./Components/action";
-import { loader as productionLoader } from "./Production/loader";
-import { action as productionAction } from "./Production/action";
+import { action as ammunitionAction } from "./Ammunition/action";
+import { loader as ammunitionLoader } from "./Ammunition/loader";
+import { action as recipesAction } from "./Recipes/action";
+import { loader as recipesLoader } from "./Recipes/loader";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
+  { path: "/account/register", element: <AccountRegister /> },
+  { path: "/privacy", element: <AccountLegalRedirect path="/privacy" /> },
+  { path: "/terms", element: <AccountLegalRedirect path="/terms" /> },
+  {
+    path: "/cookie-policy",
+    element: <AccountLegalRedirect path="/cookie-policy" />,
+  },
   {
     path: "/",
     element: <AppShell />,
@@ -30,10 +40,10 @@ export const routes: RouteObject[] = [
       { path: "firearms/:id", element: <FirearmDetail /> },
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
       { path: "maintenance", element: <Maintenance /> },
-      { path: "ammunition", element: <Ammunition /> },
+      { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
       { path: "ammunition/allocations", element: <Allocation /> },
-      { path: "recipes", element: <Recipes /> },
-      { path: "production", element: <Production />, loader: productionLoader, action: productionAction },
+      { path: "recipes", element: <Recipes />, loader: recipesLoader, action: recipesAction },
+      { path: "production", element: <Navigate to="/ammunition" replace /> },
       { path: "sessions/shooting", element: <ShootingSessions /> },
       { path: "history", element: <History /> },
       { path: "integrity", element: <Reconciliation /> },

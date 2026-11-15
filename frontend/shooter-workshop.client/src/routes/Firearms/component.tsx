@@ -37,7 +37,7 @@ export default function Firearms() {
             />
           )}
           {items.length ? (
-            <div className="card-grid">
+            <div className="card-grid mt-3">
               {items.map((firearm) => (
                 <Link
                   className="record-card"

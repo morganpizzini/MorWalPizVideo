@@ -92,6 +92,7 @@ export type {
   WorkshopRecipe,
   WorkshopRecipeSnapshot,
   CreateWorkshopRecipeRequest,
+  UpdateWorkshopRecipeRequest,
   WorkshopOperationContract,
   CreateWorkshopProductionRequest,
   WorkshopAmmunitionBatch,

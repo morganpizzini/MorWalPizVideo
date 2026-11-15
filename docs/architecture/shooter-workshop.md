@@ -57,8 +57,10 @@ coverage, exact-origin browser authentication proof, duplicate/index audit and a
 evidence, Azure custom-domain/TLS/runtime configuration, and complete operational
 rollback evidence remain open. BackOffice remains operational index governance only;
 it has no Workshop product behavior or ownership. Installation-specific read
-projections, definition tag editing, recipe editing, and deployed same-origin browser
-proof remain follow-up work explicitly tracked in the delivery handoff.
+projections and deployed same-origin browser proof remain open. Recipe editing is
+implemented through the account-owned, versioned Workshop PUT route; recipe search,
+filters, archive, duplicate, production history, and version-history UI remain
+follow-up work explicitly tracked in the delivery handoff.
 
 # Architectural Direction and Delivery Baseline
 
@@ -789,10 +791,20 @@ by the router. Route components must not replace this flow with effect-driven AP
 loading or direct service calls from submit callbacks. Component state remains
 appropriate for transient disclosure, filtering, and other presentation-only state.
 
-The production route loads the current account's recipes through its loader and sends
-the selected recipe identifier, production date, quantity, notes, and a per-submission
-idempotency key through its action. The action delegates transport to the shared
-Workshop service; the component does not create a second API client or mutation path.
+The Ammunition route loads the current account's recipes and produced batches through
+its loader. Its production form sends the selected recipe identifier, production date,
+quantity, notes, and a per-submission idempotency key through the route action. The
+action delegates transport to the shared Workshop service; the component does not
+create a second API client or mutation path. The form appears above the batch list,
+and successful fetcher submissions use normal route revalidation so the new batch is
+shown without a component-owned reload. The former `/production` URL redirects to
+`/ammunition` for compatibility.
+
+The Recipes route loads the current account's recipes through `Recipes/loader.ts` and
+submits create and versioned update intents through `Recipes/action.ts`. Its shared
+recipe form exposes the complete editable recipe snapshot, while the detail dialog
+uses a responsive two-column field grid and supports editing active recipes without
+rewriting historical production snapshots.
 
 ## Main navigation
 
@@ -865,7 +877,8 @@ Users must be able to open the component detail and access its complete maintena
 
 ## 12.5 Ammunition
 
-Ammunition inventory overview.
+Ammunition inventory and production overview. The production form appears above the
+produced-batches list so recording stock and reviewing its result are one workflow.
 
 Include:
 - Available stock.

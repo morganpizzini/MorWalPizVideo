@@ -10,7 +10,7 @@ import { useInstallPrompt } from "../services/installPrompt";
 const navigation = [
   ["Dashboard", "/"], ["Firearms", "/firearms"], ["Components", "/components"],
   ["Maintenance", "/maintenance"], ["Ammunition", "/ammunition"], ["Recipes", "/recipes"],
-  ["Production", "/production"], ["Shooting sessions", "/sessions/shooting"], ["History", "/history"],
+  ["Shooting sessions", "/sessions/shooting"], ["History", "/history"],
 ] as const;
 
 export default function AppShell() {

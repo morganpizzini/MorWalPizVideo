@@ -108,6 +108,10 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Components(CancellationToken ct) =>
         Ok(await service.GetComponentsAsync(AccountId(), ct));
 
+    [HttpGet("components/installations")]
+    public async Task<IActionResult> Installations(CancellationToken ct) =>
+        Ok(await service.GetComponentInstallationsAsync(AccountId(), ct));
+
     [HttpPost("components/installations")]
     public async Task<IActionResult> Install(InstallWorkshopComponentRequest request, CancellationToken ct)
     {

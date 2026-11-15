@@ -19,6 +19,7 @@ export { VideoPlayer } from "./components/VideoPlayer.js";
 export { CustomFormRenderer } from "./components/CustomFormRenderer.js";
 export { QuickLinksRenderer } from "./components/QuickLinksRenderer.js";
 export { QuickLinkKindIcon } from "./components/QuickLinkKindIcon.js";
+export { AccountForm } from "./components/AccountForm.js";
 
 // Utils
 export {
@@ -67,3 +68,4 @@ export type { VideoPlayerProps } from "./components/VideoPlayer.js";
 export type { CustomFormRendererProps } from "./components/CustomFormRenderer.js";
 export type { QuickLinksRendererProps } from "./components/QuickLinksRenderer.js";
 export type { QuickLinkKindIconProps } from "./components/QuickLinkKindIcon.js";
+export type { AccountFormProps } from "./components/AccountForm.js";

@@ -61,7 +61,7 @@ export default function Dashboard() {
             <strong>{t("Create recipe")}</strong>
             <span>{t("Capture the immutable recipe snapshot.")}</span>
           </Link>
-          <Link className="quick-action" to="/production">
+          <Link className="quick-action" to="/ammunition">
             <strong>{t("Record production")}</strong>
             <span>{t("Create stock from a recipe.")}</span>
           </Link>

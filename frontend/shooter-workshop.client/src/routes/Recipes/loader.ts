@@ -4,4 +4,4 @@ export async function loader() {
   return { recipes: await getWorkshopRecipes() };
 }
 
-export type ProductionLoaderData = Awaited<ReturnType<typeof loader>>;
+export type RecipesLoaderData = Awaited<ReturnType<typeof loader>>;

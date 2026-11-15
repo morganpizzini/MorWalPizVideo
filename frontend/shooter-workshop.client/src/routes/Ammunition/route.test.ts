@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkshopRecipe } from "@morwalpizvideo/models";
-import { getWorkshopRecipes, recordWorkshopProduction } from "@morwalpizvideo/services";
+import type { WorkshopAmmunitionBatch, WorkshopRecipe } from "@morwalpizvideo/models";
+import {
+  getWorkshopBatches,
+  getWorkshopRecipes,
+  recordWorkshopProduction,
+} from "@morwalpizvideo/services";
 import { action } from "./action";
 import { loader } from "./loader";
 
 vi.mock("@morwalpizvideo/services", () => ({
+  getWorkshopBatches: vi.fn(),
   getWorkshopRecipes: vi.fn(),
   recordWorkshopProduction: vi.fn(),
 }));
@@ -21,19 +26,34 @@ const recipes = [
   },
 ] satisfies WorkshopRecipe[];
 
+const batches = [
+  {
+    id: "batch-1",
+    accountId: "account-1",
+    recipeId: "recipe-1",
+    recipeSnapshot: { name: "Practice", caliber: "9x19", version: 1 },
+    productionSessionId: "production-1",
+    productionDate: "2026-11-15T00:00:00Z",
+    producedQuantity: 250,
+    onHandQuantity: 250,
+    revision: 0,
+  },
+] satisfies WorkshopAmmunitionBatch[];
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("crypto", { randomUUID: () => "production-key" });
 });
 
-describe("Production route data functions", () => {
-  it("loads the account recipes", async () => {
+describe("Ammunition route data functions", () => {
+  it("loads recipes and batches", async () => {
     vi.mocked(getWorkshopRecipes).mockResolvedValue(recipes);
+    vi.mocked(getWorkshopBatches).mockResolvedValue(batches);
 
-    await expect(loader()).resolves.toEqual({ recipes });
+    await expect(loader()).resolves.toEqual({ recipes, batches });
   });
 
-  it("submits the selected recipe through the shared production service", async () => {
+  it("submits production through the shared service", async () => {
     vi.mocked(recordWorkshopProduction).mockResolvedValue({
       id: "operation-1",
       operationType: "ProductionRecorded",
@@ -42,7 +62,7 @@ describe("Production route data functions", () => {
       contributionDigest: "digest",
     });
 
-    const request = new Request("https://workshop.local/production", {
+    const request = new Request("https://workshop.local/ammunition", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -50,7 +70,7 @@ describe("Production route data functions", () => {
         productionDate: "2026-11-15",
         quantityProduced: "250",
         notes: "range session",
-      }).toString(),
+      }),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({ ok: true });
@@ -64,14 +84,14 @@ describe("Production route data functions", () => {
   });
 
   it("rejects invalid form data without submitting", async () => {
-    const request = new Request("https://workshop.local/production", {
+    const request = new Request("https://workshop.local/ammunition", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         recipeId: "",
         productionDate: "2026-11-15",
         quantityProduced: "0",
-      }).toString(),
+      }),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({
@@ -83,14 +103,14 @@ describe("Production route data functions", () => {
 
   it("returns service failures as form feedback", async () => {
     vi.mocked(recordWorkshopProduction).mockRejectedValue(new Error("Recipe was not found."));
-    const request = new Request("https://workshop.local/production", {
+    const request = new Request("https://workshop.local/ammunition", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         recipeId: "recipe-1",
         productionDate: "2026-11-15",
         quantityProduced: "250",
-      }).toString(),
+      }),
     });
 
     await expect(action({ request } as never)).resolves.toEqual({
