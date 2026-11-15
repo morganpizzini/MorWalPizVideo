@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node.js for source guard
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26'
 
       - name: Run source-safe secret and artifact guard
         run: node scripts/secret-artifact-guard.mjs --tracked
@@ -62,7 +62,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
 
@@ -202,7 +202,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
 

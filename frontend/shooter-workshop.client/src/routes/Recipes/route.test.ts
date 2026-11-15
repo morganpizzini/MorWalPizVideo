@@ -30,7 +30,7 @@ const request = (values: Record<string, string>) =>
   new Request("https://workshop.local/recipes", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(values),
+    body: new URLSearchParams(values).toString(),
   });
 
 beforeEach(() => {
