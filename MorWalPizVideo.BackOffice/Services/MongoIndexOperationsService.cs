@@ -267,6 +267,11 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Keys: new BsonDocument("expiresAt", 1),
             ExpireAfter: TimeSpan.Zero),
         new(
+            Key: "publicaccountsessions.tokenhash",
+            Collection: DbCollections.PublicAccountSessions,
+            Name: "ix_publicaccountsessions_tokenhash",
+            Keys: new BsonDocument("tokenHash", 1)),
+        new(
             Key: "feedback.requestid.unique",
             Collection: DbCollections.Feedback,
             Name: "ux_feedback_requestid",

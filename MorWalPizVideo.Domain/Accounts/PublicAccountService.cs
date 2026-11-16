@@ -8,7 +8,10 @@ using MorWalPizVideo.Server.Services.Interfaces;
 
 namespace MorWalPizVideo.Domain.Accounts;
 
-public sealed record PublicAccountAuthenticationResult(PublicAccount Account, string SessionToken);
+public sealed record PublicAccountAuthenticationResult(
+    PublicAccount Account,
+    string SessionToken,
+    DateTime SessionExpiresAtUtc);
 
 public sealed record PublicAccountRegistrationCommand(
     string Username,
@@ -17,7 +20,10 @@ public sealed record PublicAccountRegistrationCommand(
     string DisplayName,
     bool TermsAccepted,
     bool PrivacyNoticeAcknowledged);
-public sealed record PublicAccountLoginCommand(string Identifier, string Password);
+public sealed record PublicAccountLoginCommand(
+    string Identifier,
+    string Password,
+    bool RememberMe = false);
 public sealed record PublicAccountProfileUpdateCommand(string DisplayName, string Email);
 
 public sealed record PublicAccountSessionResult(PublicAccount Account, string TokenHash);
@@ -35,6 +41,7 @@ public interface IPublicAccountService
 public sealed class PublicAccountService(IPublicAccountRepository repository) : IPublicAccountService
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(8);
+    private static readonly TimeSpan PersistentSessionLifetime = TimeSpan.FromDays(30);
     public const string TermsVersion = "2026-10-27";
     public const string PrivacyNoticeVersion = "2026-10-27";
 
@@ -70,7 +77,7 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             PrivacyNoticeAcknowledgedAtUtc = DateTime.UtcNow
         };
         await repository.AddAccountAsync(account, cancellationToken);
-        return await CreateSessionAsync(account, cancellationToken);
+        return await CreateSessionAsync(account, false, cancellationToken);
     }
 
     public async Task<PublicAccountAuthenticationResult?> LoginAsync(
@@ -91,7 +98,7 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             !PasswordHashing.VerifyPassword(request.Password, account.PasswordHash, account.Salt))
             return null;
 
-        return await CreateSessionAsync(account, cancellationToken);
+        return await CreateSessionAsync(account, request.RememberMe, cancellationToken);
     }
 
     public async Task<PublicAccountSessionResult?> ValidateSessionAsync(
@@ -149,19 +156,22 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
 
     private async Task<PublicAccountAuthenticationResult> CreateSessionAsync(
         PublicAccount account,
+        bool rememberMe,
         CancellationToken cancellationToken)
     {
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        var sessionExpiresAtUtc = DateTime.UtcNow.Add(
+            rememberMe ? PersistentSessionLifetime : SessionLifetime);
         await repository.AddSessionAsync(new PublicAccountSession
         {
             Id = ObjectId.GenerateNewId().ToString(),
             AccountId = account.Id,
             TokenHash = HashToken(token),
             SecurityVersion = account.SecurityVersion,
-            ExpiresAt = DateTime.UtcNow.Add(SessionLifetime),
+            ExpiresAt = sessionExpiresAtUtc,
             CreationDateTime = DateTime.UtcNow
         }, cancellationToken);
-        return new PublicAccountAuthenticationResult(account, token);
+        return new PublicAccountAuthenticationResult(account, token, sessionExpiresAtUtc);
     }
 
     public static string HashToken(string token) =>

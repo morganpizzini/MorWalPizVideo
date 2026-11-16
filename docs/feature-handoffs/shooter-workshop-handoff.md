@@ -21,6 +21,49 @@ projection work.
 
 ## Outcome
 
+## Verification follow-up — 2026-11-16 persistent Workshop login
+
+Workshop login now includes an opt-in "Remember me for 30 days" checkbox. The
+unchecked path retains the eight-hour server session and session cookie. The checked
+path creates a thirty-day server session and sets the same HttpOnly account cookie with
+an explicit expiry. Tokens remain server-issued cookies and are never stored in
+frontend storage.
+
+Changed files:
+
+- `MorWalPiz.Contracts/Contracts/PublicAccountContracts.cs`
+- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs`
+- `frontend/fe-packages/models/src/publicAccount.ts`
+- `frontend/shooter-workshop.client/src/routes/AccountLogin/component.tsx`
+- `docs/architecture/shooter-workshop.md`
+
+Validation completed:
+
+- ServerAPI and FreezerAnalysis API Release builds — passed.
+- Shared models/services builds — passed.
+- Public account service tests — 6 passed.
+- Workshop login route tests — 3 passed.
+- Workshop production build — passed.
+- Persistent-cookie endpoint test — passed.
+
+## Verification follow-up — 2026-11-16 public account session lookup index
+
+Added the operational `tokenHash` index to the existing public-account Mongo index
+manifest. The expiry TTL index remains separate; authorization still checks expiry and
+revocation directly, so TTL cleanup is not relied on for correctness.
+
+Changed files:
+
+- `MorWalPizVideo.BackOffice/Services/MongoIndexOperationsService.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/MongoIndexOperationsTests.cs`
+- `docs/architecture/security.md`
+
+Validation completed:
+
+- Public-account Mongo index manifest test — passed.
+
 ## Verification follow-up — 2026-11-16 CSRF multi-tab recovery
 
 Workshop account CSRF handling now supports multiple browser tabs. The account CSRF

@@ -76,6 +76,7 @@ public sealed class MongoIndexOperationsTests
         var username = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccounts.normalizedusername.unique");
         var email = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccounts.normalizedemail.unique");
         var sessions = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccountsessions.expiresat.ttl");
+        var sessionTokens = MongoIndexOperationsService.Manifest.Single(item => item.Key == "publicaccountsessions.tokenhash");
 
         Assert.True(username.Unique);
         Assert.Equal("normalizedUsername", username.Keys.GetElement(0).Name);
@@ -83,6 +84,9 @@ public sealed class MongoIndexOperationsTests
         Assert.Equal("normalizedEmail", email.Keys.GetElement(0).Name);
         Assert.Equal("expiresAt", sessions.Keys.GetElement(0).Name);
         Assert.Equal(TimeSpan.Zero, sessions.ExpireAfter);
+        Assert.Equal("tokenHash", sessionTokens.Keys.GetElement(0).Name);
+        Assert.Null(sessionTokens.ExpireAfter);
+        Assert.False(sessionTokens.Unique);
     }
 
     [Fact]

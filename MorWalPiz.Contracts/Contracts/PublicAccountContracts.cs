@@ -30,6 +30,8 @@ public sealed record PublicAccountLoginRequest
 
     [Required, StringLength(128)]
     public string Password { get; init; } = string.Empty;
+
+    public bool RememberMe { get; init; }
 }
 
 public sealed record PublicAccountProfileUpdateRequest

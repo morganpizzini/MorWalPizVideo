@@ -60,7 +60,7 @@ public sealed class PublicAccountController(
                 cancellationToken);
             if (result is null)
                 return ValidationProblem("The account details are not valid.");
-            SetSessionCookie(result.SessionToken);
+            SetSessionCookie(result.SessionToken, result.SessionExpiresAtUtc, persistent: false);
             return Ok(ToSessionContract(result.Account));
         }
         catch (PublicAccountConflictException)
@@ -80,10 +80,11 @@ public sealed class PublicAccountController(
             return CsrfFailure();
 
         var result = await accountService.LoginAsync(
-            new PublicAccountLoginCommand(request.Identifier, request.Password), cancellationToken);
+            new PublicAccountLoginCommand(request.Identifier, request.Password, request.RememberMe),
+            cancellationToken);
         if (result is null)
             return Unauthorized(new ProblemDetails { Title = "Invalid account credentials." });
-        SetSessionCookie(result.SessionToken);
+        SetSessionCookie(result.SessionToken, result.SessionExpiresAtUtc, request.RememberMe);
         return Ok(ToSessionContract(result.Account));
     }
 
@@ -113,10 +114,13 @@ public sealed class PublicAccountController(
         return NoContent();
     }
 
-    private void SetSessionCookie(string token) => Response.Cookies.Append(
-        PublicAccountSecurity.SessionCookie,
-        token,
-        PublicAccountSecurity.CreateCookieOptions(IsSecureCookie()));
+    private void SetSessionCookie(string token, DateTime expiresAtUtc, bool persistent)
+    {
+        var options = PublicAccountSecurity.CreateCookieOptions(IsSecureCookie());
+        if (persistent)
+            options.Expires = new DateTimeOffset(expiresAtUtc, TimeSpan.Zero);
+        Response.Cookies.Append(PublicAccountSecurity.SessionCookie, token, options);
+    }
 
     private bool IsSecureCookie() => !environment.IsDevelopment() && !environment.IsEnvironment("Test");
     private ObjectResult CsrfFailure() => new(new ProblemDetails

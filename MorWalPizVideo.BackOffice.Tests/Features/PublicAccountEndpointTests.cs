@@ -76,6 +76,50 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
     }
 
     [Fact]
+    public async Task Login_with_remember_me_sets_a_persistent_session_cookie()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var request = new PublicAccountRegistrationRequest
+        {
+            Username = $"user{Guid.NewGuid():N}"[..12],
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Password = "A-strong-password-123",
+            DisplayName = "Remembered User",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
+        };
+        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
+        {
+            Content = JsonContent.Create(request)
+        };
+        registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+        await client.SendAsync(registration);
+
+        using var logout = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/account/sessions/current");
+        logout.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+        await client.SendAsync(logout);
+
+        csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        using var login = new HttpRequestMessage(HttpMethod.Post, "/api/v1/account/sessions")
+        {
+            Content = JsonContent.Create(new PublicAccountLoginRequest
+            {
+                Identifier = request.Username,
+                Password = request.Password,
+                RememberMe = true
+            })
+        };
+        login.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+        var response = await client.SendAsync(login);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(
+            response.Headers.GetValues("Set-Cookie"),
+            cookie => cookie.Contains("expires=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Profile_requires_account_session_and_logout_revokes_it()
     {
         using var anonymous = factory.CreateClient();

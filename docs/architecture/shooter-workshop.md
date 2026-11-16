@@ -45,6 +45,11 @@ the authenticated shell. Its service worker is lifecycle-only: it does not inter
 requests or cache account/API data, and it does not add Push or background
 synchronization behavior.
 
+Workshop account login keeps the existing HttpOnly cookie transport. An unchecked
+login creates an eight-hour server session and a browser session cookie; selecting
+“Remember me” creates a thirty-day server session and a persistent cookie. The
+session token is never exposed to frontend JavaScript or stored in browser storage.
+
 The shooting-session workflow now accepts recipe quantities rather than browser-authored
 batch or allocation IDs. ServerAPI resolves each recipe quantity into deterministic
 oldest-production-date-first batch facts before appending the immutable operation. New

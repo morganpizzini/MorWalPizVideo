@@ -10,6 +10,7 @@ export interface PublicAccountRegistrationRequest {
 export interface PublicAccountLoginRequest {
   identifier: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface PublicAccountProfileUpdateRequest {

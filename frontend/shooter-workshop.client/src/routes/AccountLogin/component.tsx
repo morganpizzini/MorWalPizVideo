@@ -54,6 +54,7 @@ export default function AccountLogin() {
   const location = useLocation();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrorMap, setFieldErrorMap] = useState<Record<string, string[]>>({});
   const [pending, setPending] = useState(false);
@@ -83,7 +84,7 @@ export default function AccountLogin() {
     setFieldErrorMap({});
     setPending(true);
     try {
-      if (await login({ identifier, password })) {
+      if (await login({ identifier, password, rememberMe })) {
         void navigate(returnPath, { replace: true });
       } else {
         setError(t("Sign-in was not accepted."));
@@ -176,6 +177,15 @@ export default function AccountLogin() {
           id="workshop-password-errors"
           errors={fieldErrors(fieldErrorMap, "Password")}
         />
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(event) => setRememberMe(event.target.checked)}
+        />
+        {" "}
+        {t("Remember me for 30 days")}
       </label>
     </AccountForm>
   );
