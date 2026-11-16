@@ -30,6 +30,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         var withoutCsrf = await client.PostAsJsonAsync("/api/v1/accounts", request);
         var csrfResponse = await client.GetAsync("/api/v1/account/csrf");
         var csrf = await csrfResponse.Content.ReadFromJsonAsync<PublicAccountCsrfContract>();
+        var repeatedCsrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
         using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
         {
             Content = JsonContent.Create(request)
@@ -46,6 +47,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         Assert.Equal("no-store", sessionResponse.Headers.CacheControl?.ToString());
         Assert.NotNull(csrf);
         Assert.False(string.IsNullOrWhiteSpace(csrf.Token));
+        Assert.Equal(csrf.Token, repeatedCsrf!.Token);
         Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
         Assert.True(session!.Authenticated);
         Assert.Equal(request.Email, session.Account!.Email);

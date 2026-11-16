@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { accountApiService } from "@morwalpizvideo/services";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
 import { LanguageSelector } from "../components/LanguageSelector";
@@ -37,6 +38,13 @@ export default function AppShell() {
       void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
     }
   }, [loading, location.hash, location.pathname, location.search, navigate, session.authenticated]);
+  useEffect(() => {
+    accountApiService.setUnauthorizedHandler(() => {
+      const returnUrl = `${location.pathname}${location.search}${location.hash}`;
+      void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
+    });
+    return () => accountApiService.setUnauthorizedHandler(() => undefined);
+  }, [location.hash, location.pathname, location.search, navigate]);
   if (loading) return <LoadingState label={t("Restoring your account session…")} />;
   if (!session.authenticated) {
     return <LoadingState label={error ?? t("Redirecting to account login…")} />;
@@ -49,11 +57,11 @@ export default function AppShell() {
           <div className="header-account">
             <LanguageSelector />
             <NavLink className="header-account-link" to="/account/profile">{session.account?.displayName ?? session.account?.username ?? t("Account")}</NavLink>
-          {canInstall && !installed ? (
+            {canInstall && !installed ? (
               <button className="button button-quiet icon-button" onClick={reopen} aria-label={t("Install app")} title={t("Install app")}>
                 <HeaderIcon name="download" />
               </button>
-          ) : null}
+            ) : null}
             <button className="button button-quiet icon-button" onClick={() => void logout().then(() => navigate("/account/login"))} aria-label={t("Sign out")} title={t("Sign out")}>
               <HeaderIcon name="logout" />
             </button>
@@ -63,7 +71,6 @@ export default function AppShell() {
           <nav className="desktop-nav" aria-label={t("Workshop navigation")}>
             {navigation.map(([label, path]) => <NavLink key={path} to={path} end={path === "/"}>{t(label)}</NavLink>)}
           </nav>
-          <span className="nav-scroll-hint" aria-hidden="true">→</span>
         </div>
       </header>
       <main className="workshop-main">

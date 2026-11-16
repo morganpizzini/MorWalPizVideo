@@ -22,11 +22,18 @@ public sealed class PublicAccountController(
     public ActionResult<PublicAccountCsrfContract> GetCsrf()
     {
         Response.Headers.CacheControl = "no-store";
-        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        Response.Cookies.Append(
+        var hasExistingToken = Request.Cookies.TryGetValue(
             PublicAccountSecurity.CsrfCookie,
-            token,
-            PublicAccountSecurity.CreateCookieOptions(IsSecureCookie()));
+            out var existingToken) &&
+            !string.IsNullOrWhiteSpace(existingToken);
+        var token = hasExistingToken
+            ? existingToken!
+            : Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        if (!hasExistingToken)
+            Response.Cookies.Append(
+                PublicAccountSecurity.CsrfCookie,
+                token,
+                PublicAccountSecurity.CreateCookieOptions(IsSecureCookie()));
         return Ok(new PublicAccountCsrfContract { Token = token });
     }
 
@@ -38,7 +45,7 @@ public sealed class PublicAccountController(
         CancellationToken cancellationToken)
     {
         if (!PublicAccountSecurity.HasValidCsrf(Request))
-            return StatusCode(StatusCodes.Status403Forbidden);
+            return CsrfFailure();
 
         try
         {
@@ -70,7 +77,7 @@ public sealed class PublicAccountController(
         CancellationToken cancellationToken)
     {
         if (!PublicAccountSecurity.HasValidCsrf(Request))
-            return StatusCode(StatusCodes.Status403Forbidden);
+            return CsrfFailure();
 
         var result = await accountService.LoginAsync(
             new PublicAccountLoginCommand(request.Identifier, request.Password), cancellationToken);
@@ -99,7 +106,7 @@ public sealed class PublicAccountController(
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         if (!PublicAccountSecurity.HasValidCsrf(Request))
-            return StatusCode(StatusCodes.Status403Forbidden);
+            return CsrfFailure();
         if (Request.Cookies.TryGetValue(PublicAccountSecurity.SessionCookie, out var token))
             await accountService.RevokeSessionAsync(token, cancellationToken);
         Response.Cookies.Delete(PublicAccountSecurity.SessionCookie, PublicAccountSecurity.CreateCookieOptions(IsSecureCookie()));
@@ -112,6 +119,13 @@ public sealed class PublicAccountController(
         PublicAccountSecurity.CreateCookieOptions(IsSecureCookie()));
 
     private bool IsSecureCookie() => !environment.IsDevelopment() && !environment.IsEnvironment("Test");
+    private ObjectResult CsrfFailure() => new(new ProblemDetails
+    {
+        Status = StatusCodes.Status403Forbidden,
+        Title = "The CSRF token is invalid",
+        Extensions = { ["code"] = "csrf_invalid" }
+    })
+    { StatusCode = StatusCodes.Status403Forbidden };
 
     private static PublicAccountSessionContract ToSessionContract(MorWalPizVideo.Models.Models.PublicAccount account) =>
         new() { Authenticated = true, Account = new PublicAccountSummaryContract

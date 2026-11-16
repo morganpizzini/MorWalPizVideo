@@ -42,7 +42,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("firearms")]
     public async Task<IActionResult> CreateFirearm(CreateWorkshopFirearmRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             return Ok(await service.CreateFirearmAsync(AccountId(), new(request.Manufacturer, request.Model, request.Caliber,
@@ -55,7 +55,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPut("firearms/{firearmId}")]
     public async Task<IActionResult> UpdateFirearm(string firearmId, UpdateWorkshopFirearmRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             return Ok(await service.UpdateFirearmAsync(AccountId(), firearmId,
@@ -69,7 +69,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("firearms/{firearmId}/archive")]
     public async Task<IActionResult> ArchiveFirearm(string firearmId, ArchiveWorkshopFirearmRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             return Ok(await service.ArchiveFirearmAsync(AccountId(), firearmId,
@@ -86,7 +86,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/definitions")]
     public async Task<IActionResult> CreateDefinition(CreateWorkshopComponentDefinitionRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             return Ok(await service.CreateComponentDefinitionAsync(AccountId(), new(request.Name, request.Manufacturer,
@@ -99,7 +99,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPut("components/definitions/{definitionId}")]
     public async Task<IActionResult> UpdateDefinition(string definitionId, UpdateWorkshopComponentDefinitionRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.UpdateComponentDefinitionAsync(AccountId(), definitionId,
             new(request.Name, request.Description, request.Notes, request.Revision, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -109,7 +109,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/definitions/{definitionId}/archive")]
     public async Task<IActionResult> ArchiveDefinition(string definitionId, ArchiveWorkshopComponentDefinitionRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.ArchiveComponentDefinitionAsync(AccountId(), definitionId,
             new(request.Revision, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -119,7 +119,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpDelete("components/definitions/{definitionId}")]
     public async Task<IActionResult> DeleteDefinition(string definitionId, DeleteWorkshopComponentDefinitionRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { await service.DeleteComponentDefinitionAsync(AccountId(), definitionId, request.Revision, ct); return NoContent(); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -136,7 +136,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/installations")]
     public async Task<IActionResult> Install(InstallWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.InstallComponentAsync(AccountId(), new(request.ComponentId, request.FirearmId,
             request.InstalledAt, request.InstallationNotes, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -146,7 +146,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/installations/{installationId}/remove")]
     public async Task<IActionResult> Remove(string installationId, RemoveWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.RemoveComponentAsync(AccountId(), new(installationId, request.RemovedAt,
             request.RemovalNotes, request.Revision, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -156,7 +156,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("maintenance")]
     public async Task<IActionResult> Maintenance(RecordWorkshopMaintenanceRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.RecordMaintenanceAsync(AccountId(), new(request.FirearmId, request.ComponentId,
             request.EventType, request.Date, request.RoundCountAtEvent, request.Description, request.Notes,
             request.IdempotencyKey), ct)); }
@@ -167,7 +167,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components")]
     public async Task<IActionResult> CreateComponent(CreateWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.CreateComponentAsync(AccountId(), new(request.DefinitionId, request.IdentificationNote,
             request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode, request.Notes,
             request.CompatibilityTags), ct)); }
@@ -177,7 +177,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/install")]
     public async Task<IActionResult> CreateAndInstall(CreateAndInstallWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             var result = await service.CreateAndInstallComponentAsync(AccountId(), new(request.DefinitionId, request.FirearmId,
@@ -192,7 +192,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPut("components/{componentId}")]
     public async Task<IActionResult> UpdateComponent(string componentId, UpdateWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.UpdateComponentAsync(AccountId(), componentId, new(request.IdentificationNote,
             request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode ?? WorkshopTrackingMode.Counter,
             request.Notes, request.CompatibilityTags, request.Revision, request.IdempotencyKey), ct)); }
@@ -203,7 +203,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("components/{componentId}/archive")]
     public async Task<IActionResult> ArchiveComponent(string componentId, ArchiveWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.ArchiveComponentAsync(AccountId(), componentId,
             new(request.Revision, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -213,7 +213,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpDelete("components/{componentId}")]
     public async Task<IActionResult> DeleteComponent(string componentId, DeleteWorkshopComponentRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { await service.DeleteComponentAsync(AccountId(), componentId, request.Revision, ct); return NoContent(); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -232,7 +232,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("recipes")]
     public async Task<IActionResult> CreateRecipe(WorkshopRecipeRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.CreateRecipeAsync(AccountId(), Snapshot(request), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
@@ -240,7 +240,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPut("recipes/{recipeId}")]
     public async Task<IActionResult> UpdateRecipe(string recipeId, UpdateWorkshopRecipeRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             return Ok(await service.UpdateRecipeAsync(AccountId(), recipeId, request.Version, Snapshot(request),
@@ -253,7 +253,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("recipes/{recipeId}/archive")]
     public async Task<IActionResult> ArchiveRecipe(string recipeId, ArchiveWorkshopRecipeRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.ArchiveRecipeAsync(AccountId(), recipeId, request.Version, request.IdempotencyKey, ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -266,7 +266,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("ammunition/production")]
     public async Task<IActionResult> Produce(RecordWorkshopProductionRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             var result = await service.RecordProductionAsync(AccountId(),
@@ -280,7 +280,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("sessions/shooting")]
     public async Task<IActionResult> Shoot(RecordWorkshopShootingRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             var result = await service.RecordShootingAsync(AccountId(), new(request.FirearmId, request.Date, request.TotalRounds,
@@ -301,7 +301,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("sessions/shooting/correct")]
     public async Task<IActionResult> CorrectShooting(CorrectWorkshopOperationRequest request, CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         try
         {
             var replacement = request.ReplacementShooting;
@@ -385,13 +385,17 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     [HttpPost("reconciliation/rebuild")]
     public async Task<IActionResult> Rebuild(CancellationToken ct)
     {
-        if (!HasCsrf()) return Forbid();
+        if (!HasCsrf()) return CsrfFailure();
         var result = await service.ReconcileAsync(AccountId(), true, ct);
         return Ok(new WorkshopReconciliationContract(result.State.ToString(), result.Mismatches.Count, result.CompletedAt, result.Mismatches));
     }
 
     private string AccountId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("Authenticated account claim is missing.");
     private bool HasCsrf() => PublicAccountSecurity.HasValidCsrf(Request);
+    private IActionResult CsrfFailure() => Problem(
+        statusCode: StatusCodes.Status403Forbidden,
+        title: "The CSRF token is invalid.",
+        extensions: new Dictionary<string, object?> { ["code"] = "csrf_invalid" });
     private static RecipeSnapshot Snapshot(WorkshopRecipeRequest request) =>
         new(request.Name, request.Caliber, request.Oal, request.BulletWeight, request.BulletForm, request.Drawing,
             request.Primer, request.Powder, request.PowderWeight, request.Notes);

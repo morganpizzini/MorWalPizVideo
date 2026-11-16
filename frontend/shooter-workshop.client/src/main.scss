@@ -117,7 +117,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .record-detail { color: var(--workshop-accent); }
 .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1.5rem 0 1rem; padding: .8rem 0; border-top: 1px solid var(--workshop-border); border-bottom: 1px solid var(--workshop-border); }
 .filter-label { color: var(--workshop-secondary); font-size: .78rem; font-weight: 700; }
-.tag-list { display: flex; flex: 1 1 12rem; flex-wrap: wrap; gap: .45rem; align-items: center; }
+.tag-list { display: flex; flex: 1 1 5rem; flex-wrap: wrap; gap: .45rem; align-items: center; }
 .tag-pill { padding: .3rem .6rem; border: 1px solid var(--workshop-border); border-radius: 999px; background: var(--workshop-elevated); color: var(--workshop-secondary); cursor: pointer; font-size: .75rem; font-weight: 800; }
 .tag-pill:hover, .tag-pill-active { border-color: var(--workshop-accent); color: var(--workshop-accent); }
 .table-wrap { overflow-x: auto; border: 1px solid var(--workshop-border); border-radius: var(--workshop-radius); background: var(--workshop-surface); }

@@ -21,6 +21,27 @@ projection work.
 
 ## Outcome
 
+## Verification follow-up — 2026-11-16 CSRF multi-tab recovery
+
+Workshop account CSRF handling now supports multiple browser tabs. The account CSRF
+endpoint reuses an existing cookie instead of rotating it on every token request.
+Workshop mutations return a machine-readable `csrf_invalid` 403 response, and the
+shared account transport refreshes the token and retries that mutation once. This
+preserves normal authorization failures and prevents duplicate retries.
+
+Changed files:
+
+- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs`
+- `frontend/fe-packages/services/src/apiTransport.ts`
+- `frontend/fe-packages/services/src/apiTransport.test.ts`
+- `MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs`
+
+Validation completed:
+
+- `cd frontend && yarn workspace @morwalpizvideo/services test --run src/apiTransport.test.ts` — 3 passed.
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed, with existing package vulnerability warnings.
+
 ## Verification follow-up — 2026-11-13
 
 The Workshop baseline received focused correctness fixes for replacement shooting
@@ -42,6 +63,21 @@ Validation completed:
 The broader Workshop acceptance scope remains incomplete: firearm edit/archive and
 allocation release/reallocation and shooting-correction user flows are not yet
 exposed by the SPA.
+
+## Verification follow-up — 2026-11-16
+
+The shooting-session ammunition-record form now accepts both string and numeric
+recipe status values from the ServerAPI enum compatibility converter. This prevents
+the add-record interaction from calling `toLowerCase()` on a numeric status while
+still excluding archived recipes.
+
+Changed file:
+
+- `frontend/shooter-workshop.client/src/routes/ShootingSessions/component.tsx`
+
+Validation completed:
+
+- `cd frontend && yarn workspace shooter-workshop.client build` — passed.
 
 Deliver a new private React application for personal firearm, physical-component,
 maintenance, ammunition and shooting-history management. It is a standalone Yarn

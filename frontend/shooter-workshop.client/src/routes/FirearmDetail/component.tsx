@@ -38,7 +38,7 @@ export default function FirearmDetail() {
         <Stat label="Malfunctions" value={detail.malfunctionCount} />
         <Stat label="Installed components" value={detail.components.length} />
       </div>
-      <section className="panel firearm-round-history">
+      <section className="panel firearm-round-history mt-3">
         <div className="section-heading"><h2>{t("Round history")}</h2><strong>{formatNumber(firearm.totalRounds, culture)} {t("rounds")}</strong></div>
         {points.length === 0 ? <p>{t("No round history recorded.")}</p> : (
           <svg className="round-chart" viewBox="0 0 640 160" role="img" aria-label={t("Cumulative round history")}>

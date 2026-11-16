@@ -128,7 +128,7 @@ function AmmunitionFields({
               const next = [...records]; next[index] = { ...record, recipeId: event.target.value }; onChange(next);
             }}>
               <option value="">{t("Select recipe")}</option>
-              {recipes.filter((recipe) => recipe.status.toLowerCase() !== "archived").map((recipe) => <option value={recipe.id} key={recipe.id}>{recipe.name} · {recipe.caliber}</option>)}
+              {recipes.filter((recipe) => !isArchivedRecipe(recipe.status)).map((recipe) => <option value={recipe.id} key={recipe.id}>{recipe.name} · {recipe.caliber}</option>)}
             </select>
           </label>
           <label>{t("Quantity")}<input type="number" min="1" required value={record.quantity || ""} onChange={(event) => {
@@ -140,6 +140,11 @@ function AmmunitionFields({
       <button type="button" className="button button-quiet" onClick={() => onChange([...records, { key: crypto.randomUUID(), recipeId: "", quantity: 0 }])}>+ {t("Ammunition record")}</button>
     </fieldset>
   );
+}
+
+function isArchivedRecipe(status: WorkshopRecipe["status"]) {
+  const normalizedStatus = String(status).toLowerCase();
+  return normalizedStatus === "archived" || normalizedStatus === "1";
 }
 
 function ShootingHistory({

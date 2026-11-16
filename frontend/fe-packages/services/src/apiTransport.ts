@@ -920,6 +920,7 @@ export function createApiClient({
     extraHeaders?: Record<string, string>,
     skipAccessibleChannelsCoalescing = false,
     cache?: RequestCache,
+    csrfRetry = false,
   ): Promise<any> {
     if (
       !skipAccessibleChannelsCoalescing &&
@@ -1088,6 +1089,39 @@ export function createApiClient({
               !Array.isArray(payload.errors)
                 ? (payload.errors as Record<string, unknown>)
                 : undefined;
+            const csrfInvalid =
+              response.status === 403 && payload.code === "csrf_invalid";
+            if (csrfInvalid && !csrfRetry && isUnsafeMethod) {
+              resetCsrfToken();
+              const refreshedCsrfToken = await getCsrfToken(requestBaseUrl);
+              return call(
+                url,
+                method,
+                body,
+                overrideHeaderEnv,
+                query,
+                downloadFile,
+                isFormData,
+                responseOptions,
+                extraHeaders
+                  ? { ...extraHeaders, "X-CSRF-TOKEN": refreshedCsrfToken }
+                  : undefined,
+                skipAccessibleChannelsCoalescing,
+                cache,
+                true,
+              );
+            }
+            const isAccountAuthenticationRequest =
+              /^\/?api\/v1\/(?:accounts(?:\/|$)|account\/(?:csrf|session|sessions)$)/i.test(
+                url.split("?")[0],
+              );
+            if (
+              onUnauthorized &&
+              !isAccountAuthenticationRequest &&
+              !csrfInvalid
+            ) {
+              onUnauthorized();
+            }
 
             return {
               errors,
