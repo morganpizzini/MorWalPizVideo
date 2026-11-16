@@ -21,7 +21,7 @@ permissions:
 
 env:
   IMAGE_NAME: shooter-workshop-client
-  NODE_VERSION: '22.x'
+  NODE_VERSION: '26.x'
 
 jobs:
   validate:

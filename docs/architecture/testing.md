@@ -22,7 +22,7 @@ Do not use a historical `TestResults` artifact as current pass/fail evidence.
   `net10.0-windows` and enable WPF. Run them on Windows with the required
   Windows desktop runtime.
 - Frontend tests require Node.js `>=18.0.0` and Yarn Classic `1.22.22`.
-  Central CI uses Node 22; the BackOffice SPA deployment workflow uses Node
+  Central CI uses Node 26; the BackOffice SPA deployment workflow uses Node
   20. Run frontend commands from the repository root; `--cwd frontend`
   selects the Yarn workspace root.
 - Install frontend dependencies with the committed lockfile before testing:

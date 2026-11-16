@@ -19,7 +19,7 @@ permissions:
 
 env:
   IMAGE_NAME: shooting-range-client
-  NODE_VERSION: '22.x'
+  NODE_VERSION: '26.x'
 
 jobs:
   validate:

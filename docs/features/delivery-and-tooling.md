@@ -25,7 +25,7 @@ ServerAPI retains post-package anonymous account bootstrap smoke.
 
 Open: exact production-environment federation/identity, Web App rights, registry
 pull, SHA/runtime responsiveness. Node action-runtime deprecations are separate
-from Node 22 application test setup. Reverting auth does not undo deployment;
+from Node 26 application test setup. Reverting auth does not undo deployment;
 recover the prior immutable image/package through the approved release path.
 
 ## Test runner timeout
@@ -71,7 +71,7 @@ rollback remain gates; build success alone would not prove them.
 
 Recorded Dockerfile/workflow implementation, not image/performance qualification:
 
-- Node 22 Alpine two-stage SSR/runtime retained. Manifest-first frozen Yarn;
+- Node 26 Alpine two-stage SSR/runtime retained. Manifest-first frozen Yarn;
   models -> services -> layout copied/built separately; no forced reinstall;
   locked app-specific Yarn/npm mounts.
 - ACR remains remote layer cache; no added gha/cache-mount export mechanism.

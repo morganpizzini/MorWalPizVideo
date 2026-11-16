@@ -129,7 +129,7 @@ API Dockerfiles use SDK/runtime .NET 10, copy transitive project manifests befor
 
 Frontend containers use each application's established runtime/build-time configuration. The shop client's existing runtime injection is retained but receives no active evolution while the hold applies.
 
-The public MorWalPizVideo client container uses Node 22 Alpine, Buildx, and the existing Azure Container Registry BuildKit cache reference. Its Dockerfile uses builder-local locked Yarn/npm cache mounts and dependency-ordered shared-package layers; the deployment workflow retains the SHA/latest image tags, ACR cache import/export, and deployment by immutable SHA. The ACR cache provides cross-run BuildKit layer reuse; the builder-local package mounts are not treated as a cross-run cache backend. The workflow uses `docker/build-push-action@v6`. ServerAPI Docker caching remains on hold and is not implied by this client path.
+The public MorWalPizVideo client container uses Node 26 Alpine, Buildx, and the existing Azure Container Registry BuildKit cache reference. Its Dockerfile uses builder-local locked Yarn/npm cache mounts and dependency-ordered shared-package layers; the deployment workflow retains the SHA/latest image tags, ACR cache import/export, and deployment by immutable SHA. The ACR cache provides cross-run BuildKit layer reuse; the builder-local package mounts are not treated as a cross-run cache backend. The workflow uses `docker/build-push-action@v6`. ServerAPI Docker caching remains on hold and is not implied by this client path.
 
 ## Release Order
 

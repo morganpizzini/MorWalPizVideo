@@ -135,7 +135,7 @@ az ad app federated-credential create \
 
 ### 5. Create Azure Web Apps for Frontend (Containers)
 
-The Shooting Range client is an SSR Node 22 container built from `frontend/shooting-range.client/Dockerfile`. It listens on port `5177` and receives the API origin at runtime through the `API_BASE_URL` App Service setting. The workflow publishes only the immutable `${GITHUB_SHA}` image; `latest` is intentionally not required for rollback safety.
+The Shooting Range client is an SSR Node 26 container built from `frontend/shooting-range.client/Dockerfile`. It listens on port `5177` and receives the API origin at runtime through the `API_BASE_URL` App Service setting. The workflow publishes only the immutable `${GITHUB_SHA}` image; `latest` is intentionally not required for rollback safety.
 
 #### Shooting Range Client
 ```bash
