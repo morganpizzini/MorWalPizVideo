@@ -178,13 +178,12 @@ export default function AccountLogin() {
           errors={fieldErrors(fieldErrorMap, "Password")}
         />
       </label>
-      <label>
+      <label className="remember-me">
         <input
           type="checkbox"
           checked={rememberMe}
           onChange={(event) => setRememberMe(event.target.checked)}
         />
-        {" "}
         {t("Remember me for 30 days")}
       </label>
     </AccountForm>

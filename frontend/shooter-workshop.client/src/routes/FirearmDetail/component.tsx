@@ -49,11 +49,10 @@ export default function FirearmDetail() {
         {detail.projectionState !== "Current" && <p className="status-note">{t("Projection state")}: {t(detail.projectionState)}</p>}
       </section>
       <section className="panel">
-        <div className="section-heading"><h2>{t("Installed components")}</h2><Link className="button button-quiet" to="/components">{t("Manage components")}</Link></div>
+        <div className="section-heading"><h2>{t("Installed components")}</h2><Link className="button button-quiet" to={`/components?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Install, swap, or detach a component")}</Link></div>
         {detail.components.length === 0 ? <p>{t("No components installed.")}</p> : (
           <div className="detail-list">{detail.components.map((item) => <ComponentRow key={item.installation.id} item={item} />)}</div>
         )}
-        <Link className="button button-quiet" to={`/components?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Install, swap, or detach a component")}</Link>
       </section>
       {!firearm.archived && <section className="panel firearm-actions">
         <div className="section-heading"><h2>{t("Record activity")}</h2><form method="post"><input type="hidden" name="intent" value="archive" /><input type="hidden" name="revision" value={firearm.revision} /><button className="button button-quiet" type="submit">{t("Archive firearm")}</button></form></div>
@@ -105,8 +104,8 @@ function ComponentRow({ item }: { item: WorkshopComponentCondition }) {
   const interval = item.component.trackingMode === "Interval" ? item.component.serviceInterval : null;
   const percentage = interval && interval > 0 ? item.component.totalRounds / interval * 100 : null;
   const state = percentage === null ? null : percentage >= 100 ? "overdue" : percentage >= 90 ? "attention" : percentage >= 70 ? "due soon" : "within interval";
-  return <article className="detail-list-item">
-    <div><strong>{item.definition.name}</strong><span>{item.component.identificationNote || t("No identification note")}</span></div>
+  return <article className="detail-list-item mb-2">
+    <div><strong>{item.definition.name}</strong><span className="ms-3">{item.component.identificationNote}</span></div>
     <span>{formatNumber(item.component.totalRounds, culture)} {t("rounds")}</span>
     {percentage !== null && <div className={`interval-meter interval-${state?.replace(" ", "-")}`} role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(percentage, 100)} aria-label={`${state}: ${percentage.toFixed(1)}%`}><span style={{ width: `${Math.min(percentage, 100)}%` }} /></div>}
   </article>;
