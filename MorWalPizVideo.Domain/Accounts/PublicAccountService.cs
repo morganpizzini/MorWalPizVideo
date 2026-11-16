@@ -159,7 +159,7 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
         bool rememberMe,
         CancellationToken cancellationToken)
     {
-        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         var sessionExpiresAtUtc = DateTime.UtcNow.Add(
             rememberMe ? PersistentSessionLifetime : SessionLifetime);
         await repository.AddSessionAsync(new PublicAccountSession

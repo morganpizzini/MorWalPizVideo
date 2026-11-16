@@ -120,6 +120,39 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
     }
 
     [Fact]
+    public async Task Registration_issues_a_cookie_safe_session_token_that_restores_immediately()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var request = new PublicAccountRegistrationRequest
+        {
+            Username = $"user{Guid.NewGuid():N}"[..12],
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Password = "A-strong-password-123",
+            DisplayName = "Cookie Safe User",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
+        };
+        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
+        {
+            Content = JsonContent.Create(request)
+        };
+        registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+
+        var registered = await client.SendAsync(registration);
+        var sessionCookie = registered.Headers.GetValues("Set-Cookie")
+            .Single(cookie => cookie.StartsWith("public_account_session=", StringComparison.Ordinal));
+        var sessionCookieValue = sessionCookie.Split(';', 2)[0]
+            ["public_account_session=".Length..];
+        var session = await client.GetFromJsonAsync<PublicAccountSessionContract>("/api/v1/account/session");
+
+        Assert.Equal(64, sessionCookieValue.Length);
+        Assert.All(sessionCookieValue, character => Assert.True(char.IsAsciiHexDigit(character)));
+        Assert.True(session!.Authenticated);
+        Assert.Equal(request.Email, session.Account!.Email);
+    }
+
+    [Fact]
     public async Task Profile_requires_account_session_and_logout_revokes_it()
     {
         using var anonymous = factory.CreateClient();

@@ -21,6 +21,25 @@ projection work.
 
 ## Outcome
 
+## Verification follow-up — 2026-11-16 cookie-safe account session tokens
+
+New public-account sessions now use a 256-bit hexadecimal opaque token instead of
+standard Base64. This avoids reserved-character percent encoding across the Workshop
+nginx proxy and ASP.NET cookie transport while preserving server-side hash-only
+storage, revocation, expiry, and entropy. Existing cookies are not migrated and require
+one new login.
+
+Changed files:
+
+- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs`
+- `docs/architecture/security.md`
+
+Validation completed:
+
+- Cookie-safe immediate session-restoration endpoint test added; execution was
+  unavailable in the current tool environment.
+
 ## Verification follow-up — 2026-11-16 persistent Workshop login
 
 Workshop login now includes an opt-in "Remember me for 30 days" checkbox. The
