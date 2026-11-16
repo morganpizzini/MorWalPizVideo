@@ -170,7 +170,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.CreateComponentAsync(AccountId(), new(request.DefinitionId, request.IdentificationNote,
             request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode, request.Notes,
-            request.CompatibilityTags), ct)); }
+            request.CompatibilityTags, request.InitialRounds, request.IdempotencyKey), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
 
@@ -182,7 +182,8 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         {
             var result = await service.CreateAndInstallComponentAsync(AccountId(), new(request.DefinitionId, request.FirearmId,
                 request.IdentificationNote, request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode,
-                request.Notes, request.InstalledAt, request.InstallationNotes, request.IdempotencyKey, request.CompatibilityTags), ct);
+                request.Notes, request.InstalledAt, request.InstallationNotes, request.IdempotencyKey, request.CompatibilityTags,
+                request.InitialRounds), ct);
             return Ok(new CreateAndInstallWorkshopComponentResponse(result.Component, result.Installation));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -195,7 +196,7 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         if (!HasCsrf()) return CsrfFailure();
         try { return Ok(await service.UpdateComponentAsync(AccountId(), componentId, new(request.IdentificationNote,
             request.Manufacturer, request.Model, request.ServiceInterval, request.TrackingMode ?? WorkshopTrackingMode.Counter,
-            request.Notes, request.CompatibilityTags, request.Revision, request.IdempotencyKey), ct)); }
+            request.Notes, request.CompatibilityTags, request.Revision, request.IdempotencyKey, request.TotalRounds), ct)); }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }

@@ -170,11 +170,14 @@ export interface CreateWorkshopPhysicalComponentRequest {
   model?: string | null;
   serviceInterval?: number | null;
   trackingMode: WorkshopTrackingMode;
+  initialRounds?: number;
   compatibilityTags?: string[];
   notes?: string | null;
+  idempotencyKey?: string;
 }
 
 export interface UpdateWorkshopPhysicalComponentRequest extends CreateWorkshopPhysicalComponentRequest {
+  totalRounds?: number | null;
   revision: number;
   idempotencyKey: string;
 }

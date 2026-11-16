@@ -6,7 +6,8 @@ import { ActivityList, getActivityTitle } from "./shared";
 describe("workshop activity presentation", () => {
   it("maps string and numeric operation types to readable titles", () => {
     expect(getActivityTitle("ShootingRecorded")).toBe("Shooting session recorded");
-    expect(getActivityTitle(16)).toBe("Shooting session recorded");
+    expect(getActivityTitle(22)).toBe("Shooting session recorded");
+    expect(getActivityTitle(11)).toBe("Component installed");
   });
 
   it("uses safe fallbacks and keeps the operation ID secondary", () => {

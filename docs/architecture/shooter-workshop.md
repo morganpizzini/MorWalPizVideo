@@ -157,6 +157,14 @@ because one visible counter changed: it succeeds only when the authoritative eve
 durable and all affected projections have either been updated or are explicitly marked
 for recoverable reconciliation.
 
+Physical-component creation accepts an optional non-negative initial round count. A
+nonzero value is recorded as a component aggregate delta in the immutable operation
+ledger; `ComponentInstance.TotalRounds` is only the replayed projection. Updating a
+component may append a signed correction delta when the requested current total differs
+from the projection, subject to the expected revision and idempotency key. Omitting the
+value or submitting the existing total leaves historical usage unchanged. Existing
+documents remain compatible because no new persisted field is required.
+
 The complete replay invariant and fault-injection tests defined in the architecture
 handoff are release gates. This is the highest-risk architectural concern in the
 application and takes precedence over dashboard and presentation work.

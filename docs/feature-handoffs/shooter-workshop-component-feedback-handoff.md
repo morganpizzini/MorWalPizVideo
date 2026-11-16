@@ -2,527 +2,553 @@
 
 ## Outcome
 
-Align the Shooter Workshop Components route with the accepted user-check feedback:
-load initial route data through React Router `loader.ts`, submit all mutations through
-fetchers backed by `action.ts`, correct the definition-versus-physical-instance data
-ownership, support optional firearm installation, and add edit/archive/delete
-management for both catalogue definitions and physical inventory.
+Refine the implemented Shooter Workshop Components route around three follow-up needs:
 
-This is an Impeccable **Operate** refinement of the existing interface, not a visual
-redesign. The implementation boundary is the Components route and its directly
-required Workshop contracts, API behavior, persistence compatibility, tests, and
-documentation. Unrelated Workshop routes and general component-system refactoring are
-out of scope.
+1. allow a physical component to start with a non-negative round count, defaulting to
+   zero;
+2. make `?firearmId=<id>` actually filter inventory and add an equivalent firearm
+   filter to the inventory view;
+3. replace the simultaneous Catalogue/Inventory columns with Inventory-first tabbed
+   sections, move both create forms into accessible modals, and add independent text
+   search to each section.
 
-Assumptions resolved from the feedback:
+This is an Impeccable **Operate** refinement of the incumbent black/white/yellow
+interface, not a redesign. The narrow Impeccable planning command is `shape`; eventual
+implementation should also apply `harden`, `adapt`, and `audit` to this route.
 
-- A component definition is a user-owned category/template. Its editable business
-  fields are name, description, and notes.
-- Manufacturer, model, compatibility tags, tracking mode, and service threshold
-  ("max rounds" in the feedback) belong to each physical component.
-- A physical component may remain an uninstalled spare. Selecting a firearm during
-  creation is optional and creates an installation only when supplied.
-- Archive is the normal reversible lifecycle action. Hard delete is offered only for
-  pristine records with no historical references.
-- Existing `ServiceInterval` remains the technical contract name for the user-facing
-  maximum-round/service-threshold value.
+The implementation boundary is the Components route, its directly required Workshop
+contracts and Domain behavior for round initialization, focused tests, styles,
+translations, and owning documentation. It excludes unrelated Workshop routes,
+server-side list filtering, a general modal/tab framework, and changes to existing
+component usage history.
+
+Assumptions resolved for implementation:
+
+- On create, the user-facing field is **Initial round count**, defaults to `0`, and
+  establishes the component counter through the immutable Workshop ledger.
+- On edit, the same control represents **Current round count**. A changed value is a
+  ledger-backed correction to the requested total, not a rewrite of the historical
+  initial event. Metadata-only edits leave the total unchanged.
+- `?firearmId=<id>` means “show physical components currently installed on this
+  firearm.” It selects the Inventory section, applies the firearm filter, and
+  preselects that firearm if the add modal is later opened. It does not open the modal
+  automatically.
+- The inventory firearm filter offers all active firearms plus **Uninstalled**.
+  “All firearms” clears `firearmId`; a selected firearm stores its ID in the query
+  string so direct links and browser navigation remain meaningful.
+- Catalogue search matches definition name, description, and notes. Inventory search
+  matches definition name, identification note, manufacturer, model, compatibility
+  tags, firearm name, and visible status labels.
+- Archived records remain subject to the route's existing visibility policy; this
+  change does not add a new archived-record toggle.
 
 ## Current Evidence
 
-- `frontend/shooter-workshop.client/src/routes/Components/component.tsx` calls
-  `useResource` three times during render for definitions, inventory, and firearms.
-  The route has no `loader.ts` or `action.ts`, and
-  `frontend/shooter-workshop.client/src/routes/config.tsx` registers only an element.
-- Both current forms call shared service mutations directly. No Workshop route uses
-  React Router `useLoaderData` or `useFetcher`, and
-  `frontend/shooter-workshop.client/src/components/WorkshopForm.tsx` owns its own
-  asynchronous submission state.
-- The physical-component form always calls
-  `createAndInstallWorkshopComponent`, marks firearm selection as required, and posts
-  `definitionId`, `firearmId`, installation time, identification note, and an
-  idempotency key. The reported `Firearm was not found.` response originates from the
-  same-account lookup in
-  `MorWalPizVideo.Domain/Workshop/WorkshopService.cs`.
-- Static inspection does not prove why a visibly selected firearm is rejected.
-  `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs` maps
-  `request.FirearmId` directly into the command, and the frontend sends the selected
-  state value. A request/response regression test must establish whether the failure
-  is an empty/stale client value, account mismatch, route-action serialization issue,
-  or server ownership defect before the error is considered fixed.
-- `ComponentDefinition` currently persists manufacturer, model,
-  `DefaultServiceInterval`, `TrackingMode`, notes, compatibility tags, and archived
-  state. It has no revision. `ComponentInstance` already owns manufacturer, model,
-  `ServiceInterval`, `TrackingMode`, status, notes, and revision, but has no
-  compatibility tags or independent archived flag.
-- `WorkshopService.CreateComponentAsync` currently inherits omitted physical values
-  from the definition. That behavior conflicts with the corrected category-like
-  definition model.
-- The API exposes create/list only for definitions and physical components.
-  Update/archive/delete endpoints and service methods do not exist. The Workshop
-  repository supports account-scoped list/get/add/replace but has no account-scoped
-  delete primitive.
-- The immutable ledger and installation history require retired or historically used
-  physical components to remain resolvable. The functional baseline explicitly says
-  retired components remain in historical records.
-- The current compatibility filter reads tags from each item's definition and is
-  rendered before the physical-component form. The accepted feedback moves tag
-  ownership to physical components and places the filter immediately above the
-  inventory list, after the collapsible add form.
-- `WorkshopComponentDefinition`, create requests, service functions, endpoint
-  constants, and account-transport tests live in the shared frontend models/services
-  packages, so API changes must remain synchronized across those packages and the
-  standalone Workshop application.
+- `frontend/shooter-workshop.client/src/routes/Components/component.tsx` reads
+  `firearmId` through `useSearchParams`, but uses it only to open the physical form,
+  preselect a firearm, adjust instructional copy, and change row-action wording.
+  Inventory filtering currently uses compatibility tags only.
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/component.tsx` already
+  creates `/components?firearmId=<encoded id>`, so the broken behavior is in the
+  Components route's interpretation rather than link generation.
+- `frontend/shooter-workshop.client/src/routes/Components/loader.ts` loads definitions,
+  components, firearms, and installations concurrently. It does not inspect the
+  request URL.
+- `frontend/fe-packages/services/src/workshopService.ts` and
+  `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs` expose an
+  account-wide component list with no firearm query. Existing loaded installations
+  already provide enough data for client-side firearm filtering, so an API filter is
+  unnecessary.
+- `frontend/shooter-workshop.client/src/routes/Components/component.tsx` renders
+  Catalogue and Inventory simultaneously in `.components-grid`. Both add forms are
+  inline disclosure regions, both collections are compact lists, and neither has text
+  search.
+- `frontend/shooter-workshop.client/src/main.scss` provides the current component grid,
+  compact-list, form, button, table, backdrop, and dialog styles. The grid collapses
+  below 900px.
+- `frontend/shooter-workshop.client/src/components/feedback/FeedbackProvider.tsx` and
+  `frontend/shooter-workshop.client/src/routes/Recipes/component.tsx` are the local
+  modal precedents. They implement `role="dialog"`, modal labelling, initial and return
+  focus, Escape handling, backdrop close, focus trapping, and inert background
+  behavior.
+- No local tab implementation exists. Bootstrap is installed, but this application
+  primarily uses app-local React state and styles for equivalent interactions.
+- `frontend/shooter-workshop.client/src/routes/History/component.tsx` is the nearest
+  precedent for preserving and updating URL search parameters.
+- `frontend/shooter-workshop.client/src/routes/Components/action.ts`,
+  `frontend/fe-packages/models/src/workshop.ts`,
+  `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs`, and
+  `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` do not accept an initial-round
+  value for a physical component.
+- `MorWalPizVideo.Models/Models/Workshop/WorkshopEntities.cs` already persists
+  non-nullable `ComponentInstance.TotalRounds`; omitted values currently become zero.
+  No new MongoDB field is required.
+- `MorWalPizVideo.Domain/Workshop/WorkshopReplay.cs` reconstructs component totals from
+  immutable operation deltas. Writing a nonzero document total without a matching
+  operation would be detected as inconsistent and may be overwritten.
+- The firearm flow in `frontend/shooter-workshop.client/src/routes/Firearms/`,
+  `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs`, and
+  `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` is the verified precedent:
+  initial rounds default to zero, require a non-negative integer, and are recorded as
+  a ledger delta.
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` updates physical metadata through
+  revision-checked replacement while preserving `TotalRounds`. A component round
+  correction therefore needs explicit Domain orchestration rather than direct
+  replacement.
+- `frontend/shooter-workshop.client/src/routes/config.test.tsx` checks route
+  registration only. No direct Components route UI test currently exists.
+- `frontend/fe-packages/services/src/workshopService.test.ts` covers component route
+  selection and CSRF, but not round initialization.
+- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs` covers firearm
+  initial-round ledger behavior and component lifecycle behavior, but not physical
+  component initial rounds or edit-time correction.
+- No app-local `PRODUCT.md`, `DESIGN.md`, or Impeccable surface brief exists beneath
+  `frontend/shooter-workshop.client`; the shipped route and
+  `docs/architecture/shooter-workshop.md` are the incumbent visual and product truth.
 
 ## Proposed Design
 
-### Route data and mutations
+### Round-count contract and invariant
 
-Add route-local `loader.ts` and `action.ts` beside the Components route. The loader
-fetches definitions, physical components, and firearms concurrently and returns one
-typed route-data object. `component.tsx` consumes it through `useLoaderData`; it must
-not initiate initial network reads through effects or `useResource`.
+Extend physical-component creation with optional `initialRounds`, defaulting to zero.
+Validate it as an integer in the inclusive range from zero to the platform's signed
+64-bit maximum at the route action, API contract, and Domain boundary. The Domain
+boundary remains authoritative.
 
-The action accepts a required, allow-listed `intent` and dispatches definition or
-physical-component create, update, archive, or delete operations. Each form uses its
-own `useFetcher` instance so pending/error state is local and catalogue actions do not
-block inventory actions. Return typed validation/problem details for expected API
-errors and let unexpected failures reach the route error boundary; do not convert
-failures into successful empty results.
+Creation must persist the component and record a component-aggregate operation delta
+for a nonzero initial value using the same idempotency envelope as the physical create.
+The operation and projection must not be able to diverge on retry. Zero requires no
+material delta but still produces a component whose projected total is zero.
 
-Use fetcher forms or `fetcher.submit`, not direct service calls from the component.
-On a successful action, rely on React Router revalidation to rerun the loader and
-refresh all three datasets. Preserve form values and keep the form open on failure;
-reset and close only after that fetcher reports successful completion.
+Extend physical-component update with an optional requested `totalRounds`. The edit
+form starts with the current total. If the submitted total differs, Domain calculates
+the signed delta from the current persisted total and appends an immutable
+component-aggregate correction operation while applying metadata changes under the
+same expected revision and idempotency boundary. If the value is unchanged or omitted,
+no round operation is created. Direct assignment of `TotalRounds` without a ledger
+operation is prohibited.
 
-### Corrected data ownership
+Round-count correction does not rewrite, delete, or relabel historical maintenance,
+installation, or usage events. The activity/operation description should distinguish
+initialization from a later manual correction without logging free-form component
+notes.
 
-Reduce `ComponentDefinition` to category data: name, description, notes, archive
-state, revision, account ownership, identity, and timestamps. New definition writes
-must not accept manufacturer, model, tracking mode, service interval, or compatibility
-tags.
+### Inventory firearm filtering
 
-Make `ComponentInstance` the owner of manufacturer, model, compatibility tags,
-tracking mode, service interval, lifecycle status, notes, revision, and a distinct
-`Archived` flag. Keep `Status` for inventory/installation/maintenance/retirement
-semantics; archive must not be represented by `Retired`, because hiding a record and
-retiring a physical item are different user decisions.
+Keep the account-wide component, firearm, and installation reads unchanged. Build a
+route-local component-to-current-installation lookup from loader data, then filter in
+this order:
 
-Physical-component create and edit validation is:
+1. selected firearm or Uninstalled;
+2. selected compatibility tags;
+3. normalized text query.
 
-- definition: required, active, same account;
-- identification note, manufacturer, model, notes: optional and length bounded;
-- compatibility tags: optional, trimmed, normalized consistently, de-duplicated
-  case-insensitively, and count/length bounded;
-- tracking mode: required;
-- service interval: required and positive only for `Interval`; null for `Counter` and
-  `Manual`;
-- firearm: optional, but when supplied must be active and owned by the same account.
+Use the URL's `firearmId` as the selected firearm filter. Validate it against loaded
+firearms:
 
-Do not inherit manufacturer, model, tracking mode, interval, or compatibility tags
-from the definition. The physical form is authoritative for those values.
+- a valid ID applies the filter and selects Inventory;
+- the reserved Uninstalled value applies the uninstalled predicate;
+- a missing value means All firearms;
+- an unknown or inaccessible ID must not silently produce a misleading empty view:
+  clear the invalid filter from the URL and show the route-standard feedback message.
 
-### Create spare or create-and-install
+Changing the firearm control updates only the `firearmId` parameter while preserving
+unrelated parameters. Clearing it preserves the user's text and compatibility filters,
+which remain route-local UI state. Browser Back/Forward must restore the firearm
+selection because it is URL-owned.
 
-Use one canonical idempotent physical-component create command with optional
-`firearmId`, `installedAt`, and installation notes. Without a firearm, it creates an
-`Inventory` component only. With a firearm, it atomically creates both the component
-and installation and returns the component plus nullable installation result.
+The add-physical-component modal uses the current valid firearm filter as its initial
+firearm value. Changing the modal selection does not mutate the list filter. Direct
+navigation with `firearmId` no longer opens the modal.
 
-Keep the existing `/components/install` endpoint during a compatibility window for
-already deployed clients, but move this route to the canonical create endpoint.
-Both paths must share the same Domain orchestration rather than duplicate validation.
-The create command must reject an archived definition or firearm and must recover
-idempotently from partial projection persistence.
+### Inventory-first sections
 
-The regression for the reported firearm failure must submit the same firearm ID
-returned by the route loader under the same authenticated account and assert
-successful creation/installation. Add negative cases for blank, missing,
-cross-account, and archived firearm IDs. The user-visible error must identify the
-invalid selected firearm without exposing account existence.
+Replace the simultaneous two-column grid with a full-width section switcher:
 
-### Edit, archive, and delete lifecycle
+- **Inventory** is first and selected by default;
+- **Catalogue** is second;
+- both controls are equal-width, visually prominent buttons at the top of the route;
+- only the selected panel is rendered as visible content.
 
-Add revision-checked, idempotent update and archive commands for definitions and
-physical components. Archive keeps records readable for history, excludes them from
-new component/installation selectors, and can be shown when the user chooses to view
-archived records. Archive must not silently remove an active installation; the API
-rejects archiving an installed component until it is removed.
+Implement this as an accessible tab set because the controls switch between two
+peer panels in place. The tab list requires selected state, tab/panel relationships,
+Left/Right arrow navigation, Home/End navigation, and logical focus management.
+Mouse, touch, and keyboard activation must produce the same selected panel. A valid
+`firearmId` always selects Inventory. Tab state does not need a URL parameter.
 
-Hard delete is deliberately constrained:
+Each panel header contains its title, result count, and one primary action:
+`+ Add physical component` for Inventory and `+ New component definition` for
+Catalogue. Opening either action presents a modal using the established Feedback/
+Recipes accessibility behavior. Create success closes and resets only that modal;
+validation or transport failure keeps it open with values, errors, and focus context
+preserved. Edit continues to use the same form in modal mode with create/edit-specific
+title, submit label, and round-count label.
 
-- a definition can be deleted only when no physical component references it;
-- a physical component can be deleted only when it has never been installed, has no
-  maintenance event, no ledger delta/operation reference, and no other historical
-  reference;
-- delete is account-scoped and revision-checked;
-- a conflict returns a clear instruction to archive instead;
-- deletion must never cascade into immutable operations, installations, maintenance,
-  or activity history.
+Use the existing table styles for wide screens and a deliberate stacked-row treatment
+at narrow widths. Do not reproduce desktop columns as an overflowing miniature table.
+Row actions remain keyboard reachable and retain the established archive/delete
+confirmations.
 
-Extend `IWorkshopRepository` with the smallest account-scoped, revision-aware delete
-primitive needed by these rules, implemented consistently for MongoDB and the mock
-scenario. Domain code performs reference checks before repository deletion. Do not
-expose a generic unguarded delete service.
+### Search behavior
 
-### Components route UX
+Give each panel an independently labelled search input directly above its table.
+Search is immediate, client-side, case-insensitive, whitespace-trimmed, and
+diacritic-tolerant. It must not issue network requests.
 
-Keep the existing two-panel catalogue/inventory layout and incumbent visual system.
-Both "New component definition" and "Add physical component" use explicit show/hide
-buttons with accurate expanded state, `aria-expanded`, and stable control
-relationships.
+Catalogue search covers name, description, and notes. Inventory search covers the
+fields listed in Outcome plus the resolved current firearm label. Search combines with
+firearm and compatibility filters rather than replacing them.
 
-Definition cards/rows show category information and active/archived state only. Each
-row exposes edit, archive, and delete actions; destructive actions require a
-confirmation that explains when archive is safer. Physical inventory rows expose the
-same management actions and show definition name, identification, manufacturer/model,
-compatibility tags, tracking mode/threshold, accumulated rounds, installation status,
-and archive state.
+Each panel distinguishes:
 
-Place the compatibility-tag filter directly above the inventory list and below the
-collapsible add form. Filter against each physical component's tags, case
-insensitively. Keep filter state while fetcher mutations revalidate data and provide a
-clear action plus an explicit no-match state.
+- no records exist;
+- records exist but no row matches current filters;
+- data is loading or an action is pending;
+- a request failed.
 
-The physical form labels the firearm as optional and explains that leaving it blank
-adds a spare part to inventory. Hide installation-time fields when no firearm is
-selected. Tracking mode controls whether the service-threshold field is shown and
-required. All controls, actions, errors, confirmation copy, and status labels require
-Italian translations in the existing i18n dictionary.
+The no-match state identifies active filters and offers a clear-filters action scoped
+to that panel. Search terms survive route revalidation and modal open/close during the
+current route lifetime.
 
 ### Impeccable workflow
 
-This is an established **Operate** surface and a refinement, not a redesign. Preserve
-the owning application's black/white/yellow visual language and existing panel,
-button, form, badge, and list conventions. During implementation, use Impeccable
-`shape` only to confirm the final management-action hierarchy, then `harden` for
-error/destructive/empty states, `adapt` for the two-panel layout on narrow screens,
-and `audit` for accessible disclosure controls, labels, focus, keyboard operation,
-and contrast.
+This is an established **Operate** surface and a refinement. Preserve the incumbent
+visual language and use `shape` to settle the tab, filter, table, and modal hierarchy
+before implementation. Apply `harden` to invalid query values, validation failures,
+long translated content, empty/no-match states, and destructive actions; `adapt` to
+desktop and narrow layouts; and `audit` to tabs, dialogs, focus, labels, contrast, and
+keyboard operation.
 
-Minimum visual evidence is the Components route at desktop and narrow mobile widths
-with both forms collapsed and expanded, edit mode, archived rows, a filtered
-no-result state, a server validation error, and destructive confirmation. Do not
-create a replacement visual world.
+Minimum visual evidence is the route at desktop and mobile widths showing both
+selected sections, each modal, create and edit modes, an active firearm deep-link
+filter, combined filters, long content, a no-match state, and a server validation
+error. This work must not introduce a replacement visual world.
 
 ## Impacted Projects
 
-- **MorWalPizVideo.Models** — correct persisted ownership, revisions, archive state,
-  operation types, and tolerant legacy fields.
-- **MorWalPizVideo.Domain** — validation, idempotent commands, guarded deletion,
-  persistence orchestration, and mock/Mongo repository behavior.
-- **MorWalPiz.Contracts** — create/update/archive/delete request and response
-  contracts.
-- **MorWalPizVideo.ServerAPI** — authenticated, CSRF-protected account-scoped
-  component endpoints.
-- **MorWalPizVideo.BackOffice.Tests** — focused Workshop Domain/API behavior tests;
-  this project currently owns Workshop backend tests despite its name.
-- **frontend/fe-packages/models** — synchronized TypeScript contracts.
-- **frontend/fe-packages/services** — endpoint constants and typed account transport
-  functions.
-- **frontend/shooter-workshop.client** — route loader/action, fetcher-based UI,
-  translations, component-route tests, responsive/accessibility refinement.
-- **MorWalPizVideo.AppHost / deployment surfaces** — verify only; no topology,
-  configuration, or secret change is expected.
-- **MorWalPizVideo.BackOffice, ShootingRange, VideoImporter, other SPAs** — not
-  impacted; they do not consume Workshop component contracts.
+- **MorWalPizVideo.Models** — verify existing component totals and operation aggregate
+  types; no persistence shape change is expected.
+- **MorWalPizVideo.Domain** — ledger-backed initialization and edit-time correction,
+  revision/idempotency handling, and replay consistency.
+- **MorWalPiz.Contracts** — additive create/update round-count request properties.
+- **MorWalPizVideo.ServerAPI** — map and validate the additive contract fields through
+  existing authenticated, CSRF-protected routes.
+- **MorWalPizVideo.BackOffice.Tests** — focused Domain/API behavior and replay tests.
+- **frontend/fe-packages/models** — synchronized additive request properties.
+- **frontend/fe-packages/services** — verify serialization of additive values; no new
+  endpoint is required.
+- **frontend/shooter-workshop.client** — tabbed layout, modals, searches, firearm
+  query filtering, round-count controls, translations, styles, and component tests.
+- **MorWalPizVideo.AppHost and deployment surfaces** — verify only; no topology,
+  configuration, secret, or host change is expected.
+- **Other APIs, SPAs, Shooting Range, VideoImporter, and BackOffice UI** — not
+  impacted; no direct Workshop component-contract consumers were found.
 
 ## Impacted Files
 
 ### Modify
 
-- `MorWalPizVideo.Models/Models/Workshop/WorkshopEntities.cs` — move template fields
-  out of new definition behavior, add physical compatibility/archive data, definition
-  revision, and lifecycle operation types.
-- `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs` — align create and
-  management request DTOs with corrected ownership and optional installation.
-- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` — canonical create,
-  update/archive/delete commands, validation, idempotency, and reference guards.
-- `MorWalPizVideo.Domain/Workshop/WorkshopRepository.cs` — account/revision-scoped
-  guarded delete support in Mongo and mock implementations.
-- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs` — expose the
-  management routes and keep CSRF/auth/problem response behavior consistent.
-- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs` — Domain
-  lifecycle, data-ownership, idempotency, and guarded-delete coverage.
-- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopReplayTests.cs` — verify archived
-  or legacy component changes do not break replay/history when applicable.
-- `frontend/fe-packages/models/src/workshop.ts` — corrected entities and request
-  shapes.
-- `frontend/fe-packages/services/src/endpoints-frontend.ts` — detail/archive endpoint
-  constants.
-- `frontend/fe-packages/services/src/workshopService.ts` — typed CRUD and canonical
-  create transport functions.
-- `frontend/fe-packages/services/src/workshopService.test.ts` — URL, payload, CSRF,
-  optional-firearm, and identifier-encoding tests.
-- `frontend/shooter-workshop.client/src/routes/Components/index.ts` — export route
-  component, loader, and action.
-- `frontend/shooter-workshop.client/src/routes/Components/component.tsx` — consume
-  loader data, use fetchers, correct forms/list/actions/filter placement.
-- `frontend/shooter-workshop.client/src/routes/config.tsx` — attach loader and action
-  to the Components route.
-- `frontend/shooter-workshop.client/src/routes/config.test.tsx` — assert the route
-  owns its loader/action as well as its path.
-- `frontend/shooter-workshop.client/src/i18n.tsx` — all new/changed UI strings.
-- `docs/architecture/shooter-workshop.md` — corrected target component ownership and
-  lifecycle behavior.
-- `docs/feature-handoffs/shooter-workshop-ui-feedback-handoff.md` — mark the earlier
-  definition-tag/create-and-install assumptions as superseded by this accepted
-  feedback.
+- `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs` — add bounded
+  create/update round-count inputs.
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` — create initial component
+  delta and revision-safe update correction.
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs` — map the
+  additive request fields to Domain commands.
+- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs` — initialization,
+  correction, retry, and invalid-value coverage.
+- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopReplayTests.cs` — verify initialized
+  and corrected component totals replay consistently if this is the existing replay
+  test owner.
+- `frontend/fe-packages/models/src/workshop.ts` — synchronize additive create/update
+  request fields.
+- `frontend/fe-packages/services/src/workshopService.test.ts` — assert zero, nonzero,
+  and update payload serialization.
+- `frontend/shooter-workshop.client/src/routes/Components/component.tsx` — section
+  tabs, modal forms, firearm/text filtering, tables, and round-count controls.
+- `frontend/shooter-workshop.client/src/routes/Components/action.ts` — parse, default,
+  validate, and submit create/update round values.
+- `frontend/shooter-workshop.client/src/main.scss` — full-width switcher, panel,
+  toolbar, modal, responsive table/row, and no-match presentation.
+- `frontend/shooter-workshop.client/src/i18n.tsx` — labels, help, filter states,
+  modal titles, counts, errors, and accessible names.
+- `docs/architecture/shooter-workshop.md` — record ledger-backed physical component
+  initialization/correction and Inventory/Catalogue interaction behavior.
+- `docs/feature-handoffs/shooter-workshop-component-feedback-handoff.md` — keep actual
+  implementation, validation, and residual risks current.
 
 ### Add
 
-- `frontend/shooter-workshop.client/src/routes/Components/loader.ts` — typed concurrent
-  initial data read.
-- `frontend/shooter-workshop.client/src/routes/Components/action.ts` — allow-listed
-  mutation dispatcher and typed action results.
-- Component-route test files following the application's existing Vitest/Testing
-  Library naming convention — loader/action and user-interaction coverage.
+- `frontend/shooter-workshop.client/src/routes/Components/component.test.tsx` — direct
+  route interaction coverage using the existing Vitest/Testing Library conventions.
+- Add an action-focused test beside the Components route only if the existing
+  component test cannot exercise form parsing and returned validation results without
+  over-coupling to React Router internals.
 
 ### Generated/Migration
 
-- No EF migration or generated client is involved.
-- Add an idempotent MongoDB backfill owned by the repository's existing operations
-  process only if deployed data contains definition-level compatibility tags. It
-  copies normalized tags to existing physical instances that do not yet have their
-  own tags and initializes missing revision/archive fields. It must not overwrite
-  already populated physical tags.
+None. `ComponentInstance.TotalRounds` and component operation deltas already exist.
+No EF migration, MongoDB backfill, generated client, or data rewrite is required.
 
 ### Documentation
 
-- This handoff is the implementation source of truth for the accepted component
-  feedback.
-- The functional baseline and earlier UI-feedback handoff require the targeted
-  corrections listed above.
+- This handoff is the editable implementation source of truth for the follow-up.
+- The Shooter Workshop architecture guide receives the durable behavior after
+  implementation.
 
 ### Verify Only
 
-- `frontend/shooter-workshop.client/package.json` — React Router 7 already supports
-  route loaders/actions/fetchers; no dependency change is expected.
-- `frontend/shooter-workshop.client/src/components/WorkshopForm.tsx` — reuse only if
-  it can become a presentational/fetcher-aware form without breaking other routes;
-  otherwise keep route-local forms and do not broaden this task.
-- `MorWalPizVideo.AppHost` and deployment workflows — confirm no runtime wiring
-  change.
+- `MorWalPizVideo.Models/Models/Workshop/WorkshopEntities.cs` — existing total and
+  operation types are sufficient.
+- `MorWalPizVideo.Domain/Workshop/WorkshopReplay.cs` — existing component-delta replay
+  remains authoritative.
+- `MorWalPizVideo.Domain/Workshop/WorkshopRepository.cs` — no new query is needed.
+- `frontend/shooter-workshop.client/src/routes/Components/loader.ts` — existing four
+  datasets are sufficient.
+- `frontend/fe-packages/services/src/workshopService.ts` and
+  `frontend/fe-packages/services/src/endpoints-frontend.ts` — existing routes remain
+  sufficient.
+- `frontend/shooter-workshop.client/src/components/feedback/FeedbackProvider.tsx` and
+  `frontend/shooter-workshop.client/src/routes/Recipes/component.tsx` — behavioral
+  modal references; do not couple route state to either feature.
+- `frontend/shooter-workshop.client/package.json`,
+  `frontend/shooter-workshop.client/Dockerfile`, deployment workflows, and
+  `MorWalPizVideo.AppHost/Program.cs` — no dependency or runtime wiring change.
 
 ## Impact Matrix
 
 | Area | Impact |
 |---|---|
-| Backend/API | Add canonical optional-install create and revision/idempotency-aware definition/component management endpoints. Preserve the legacy create-and-install route temporarily. |
-| Frontend/UI | Route loader/action architecture, independent fetchers, corrected forms, row actions, disclosure controls, and relocated filter. |
-| Database/Data | Additive physical tags/archive and definition revision; tolerant reads plus optional idempotent backfill. Guarded hard delete only for unreferenced records. |
-| Contracts/Models | Breaking semantic correction: definition fields shrink; physical component owns tracking/manufacturer/tags. Coordinate backend and shared TypeScript packages in one release. |
-| Authentication/Authorization | Existing public-account cookie scheme, account scoping, and CSRF remain mandatory for every mutation. Cross-account records remain indistinguishable from missing records. |
-| Validation | Domain is authoritative for ownership, active state, tracking/interval consistency, tags, revisions, archive, and delete eligibility. Client mirrors only for immediate guidance. |
-| Cache | Not applicable. Workshop account reads are not output-cached and no shared cache tags are used. React Router revalidation refreshes browser route data. |
-| Configuration/Secrets | Not applicable. No new setting, credential, connection string, or feature flag is required. |
-| Logging/Telemetry | Preserve structured request telemetry. Add structured conflict/validation context without logging component notes, cookies, or account secrets. |
-| Background Jobs | Not required. Any one-time Mongo backfill uses the established operational migration process, not Hangfire. |
-| Deployment/Operations | Deploy backend compatibility first, then shared frontend packages and Workshop SPA. Run/audit backfill before removing legacy definition-tag reads. |
-| Backward Compatibility | Existing documents must deserialize safely. Legacy `/components/install` remains available during the frontend rollout. Old definitions may retain ignored legacy fields until cleanup is separately approved. |
+| Backend/API | Add optional round values to existing physical create/update requests. No list endpoint or route changes. |
+| Frontend/UI | Inventory-first accessible tabs, modal create/edit forms, firearm and text filters, responsive tables, and count/empty states. |
+| Database/Data | No schema or backfill. Nonzero initialization and corrections must be represented by immutable component operation deltas. |
+| Contracts/Models | Additive nullable/optional request properties; existing response and persisted entity shapes remain unchanged. |
+| Authentication/Authorization | Existing PublicAccount authentication, account scoping, CSRF, and cross-account not-found behavior remain unchanged. |
+| Validation | Non-negative integer/64-bit bounds at client and contract boundaries; Domain verifies requested correction against the current revision and total. |
+| Cache | Not applicable. Workshop reads are not output-cached; route state revalidates through React Router. |
+| Configuration/Secrets | Not applicable. No setting, credential, connection string, or feature flag is added. |
+| Logging/Telemetry | Record structured initialization/correction outcomes and conflicts without notes, cookies, or sensitive account data. |
+| Background Jobs | Not applicable. No asynchronous migration or scheduled work is needed. |
+| Deployment/Operations | Backend additive support must deploy before the SPA starts sending the fields; no infrastructure change. |
+| Backward Compatibility | Old clients omit the optional fields and preserve current zero/create and unchanged/update behavior. Existing documents replay unchanged. |
 
 ## Reuse Opportunities
 
-- Reuse the Firearm update/archive pattern in `WorkshopService` for revision checks,
-  idempotency hashing, conflicts, and account ownership.
-- Reuse `NormalizeTags` for physical compatibility tags rather than introducing a
-  second normalization rule.
-- Reuse `accountApiService` and `requireSuccessfulResponse`; all component mutations
-  must retain cookie credentials and CSRF acquisition.
-- Reuse the current route's catalogue/inventory composition, layout classes,
-  `PageTitle`, `EmptyState`, badges, and i18n utilities.
-- Reuse React Router's automatic loader revalidation after fetcher actions instead of
-  retaining manual resource reload callbacks.
-- Reuse existing Workshop mock scenarios and WebApplicationFactory authentication/
-  CSRF patterns for API behavior tests.
+- Reuse the firearm initial-round validation and ledger-delta pattern for physical
+  component initialization.
+- Reuse existing component aggregate operations and replay rather than adding a second
+  counter source.
+- Reuse revision and idempotency behavior already present in physical component
+  mutations.
+- Reuse the loaded installations to resolve current firearm ownership; do not add a
+  second API query.
+- Reuse History's URL search-parameter update pattern.
+- Reuse Feedback and Recipes modal accessibility behavior, extracting a shared
+  route-local dialog helper only if duplication would otherwise be material.
+- Reuse existing table, form, button, badge, empty-state, fetcher, and i18n patterns.
+- Reuse account API transport and existing component endpoints.
 
 ## Risks
 
-- **High — historical data loss:** unrestricted delete could orphan installation,
-  maintenance, ledger, or activity history. Mitigate with Domain reference checks,
-  account/revision constraints, no cascades, and tests proving referenced records
-  return conflict.
-- **High — semantic migration mismatch:** backend and frontend may disagree while
-  fields move from definitions to physical instances. Mitigate with additive backend
-  deployment, tolerant reads, backfill, compatibility endpoint window, and contract
-  tests.
-- **Medium — reported firearm failure persists:** changing form architecture without
-  reproducing the actual same-account request can mask rather than fix the defect.
-  Mitigate with an authenticated API regression using a loader-returned firearm ID
-  and browser/component test asserting the submitted form data.
-- **Medium — lost edits during revalidation:** multiple fetchers can reset local state
-  if success/error transitions are not scoped. Mitigate with per-row/per-form
-  fetchers and success-specific reset tests.
-- **Medium — archive/status ambiguity:** treating archive as `Retired` would corrupt
-  physical lifecycle meaning. Mitigate with an explicit archived field and separate
-  validation/display.
-- **Medium — stale legacy tags:** copying definition tags can create misleading
-  physical compatibility. Mitigate with non-overwriting backfill, user-editable
-  physical tags, audit counts, and a rollback snapshot.
-- **Low — responsive action clutter:** three actions per row can overwhelm narrow
-  layouts. Mitigate with an accessible action group/menu that preserves keyboard
-  visibility and destructive distinction.
-- **Low — external services:** none are involved; component workflows use only the
-  account API and MongoDB.
+- **High — counter projection corruption:** directly replacing `TotalRounds` would
+  disagree with replay. Mitigation: ledger-only initialization/correction and replay
+  tests. Verification signal: persisted projection equals replay after create, edit,
+  and retry.
+- **High — duplicate correction on retry:** a retried update could append the same
+  delta twice. Mitigation: include the requested total in the existing idempotency
+  hash and commit correction once per operation key. Verification signal: repeated
+  requests leave one effective delta and one final total.
+- **Medium — concurrent usage versus edit correction:** rounds can change between form
+  load and submit. Mitigation: expected revision/current-total validation and a
+  conflict requiring refresh instead of applying a stale delta. Verification signal:
+  stale edits return conflict and preserve the newer total.
+- **Medium — misleading firearm filter:** unknown query IDs could look like a valid
+  empty inventory. Mitigation: validate against loader-owned firearms, clear invalid
+  values, and notify the user. Verification signal: invalid deep links recover to All
+  firearms with feedback.
+- **Medium — filter disagreement:** installed state can change after loader data is
+  read. Mitigation: derive from current installation records and rely on action
+  revalidation. Verification signal: install/remove actions immediately move rows to
+  the correct filtered result.
+- **Medium — modal data loss:** fetcher revalidation or validation failure could reset
+  fields. Mitigation: close/reset only on confirmed success and test retained values.
+  Verification signal: server errors keep modal, values, and focus context.
+- **Low — tab/table accessibility regression:** custom controls can be mouse-only or
+  overflow on mobile. Mitigation: ARIA tab keyboard model, modal focus tests, and
+  responsive stacked rows. Verification signal: keyboard-only and narrow viewport
+  evidence passes.
+- **Low — external-service risk:** none; this flow uses only ServerAPI and MongoDB.
 
 ## Technical Debt
 
-- The Components route currently follows the same `useResource`/direct-mutation
-  pattern as other Workshop routes. Convert only this route now; a broad route-data
-  migration is non-blocking and deferred.
-- `WorkshopForm` combines presentation, request execution, and error mapping. Do not
-  redesign every form. Adapt it narrowly only if compatibility is preserved;
-  otherwise use route-local fetcher forms.
-- Persistence entities are returned directly by several Workshop endpoints. Dedicated
-  response DTOs are desirable, but this task should add only the contracts needed to
-  prevent definition/instance ambiguity.
-- The repository lacks a delete primitive. Add the constrained capability required
-  here, not a broad generic CRUD abstraction exposed above Domain policy.
-- The earlier UI-feedback handoff encoded definition-owned compatibility and required
-  immediate installation. This feedback supersedes only those component decisions;
-  its unrelated accepted work remains intact.
+- The frontend type for create-and-install currently declares `installation` as
+  non-nullable while the backend permits null for a spare. This is directly adjacent
+  contract debt but not required for the requested behavior; correct it only if the
+  touched create flow otherwise requires an unsafe assertion.
+- `Components/action.ts` does not consistently translate expected transport problems
+  into typed action errors. Modal value retention depends on predictable errors, so
+  narrow correction for component intents is in scope; a cross-route error framework
+  is deferred.
+- Most current physical form fields are uncontrolled. Do not convert unrelated forms,
+  but the modal must own enough state to preserve values and distinguish create/edit
+  round labels reliably.
+- No reusable tab implementation exists. Keep the implementation local until a second
+  equivalent surface proves shared ownership.
+- Catalogue and Inventory are currently compact lists despite the user's table
+  terminology. Converting only this route to responsive tables is in scope; broad
+  list/table standardization is deferred.
+- Archived-definition selection validation remains a known gap. It should not be
+  hidden by this UI work, but fixing the Domain rule requires separate approval unless
+  a new test proves it blocks the requested create behavior.
 
 ## Implementation Roadmap
 
-1. **Lock regression behavior and compatibility rules.** Add backend tests that
-   reproduce create-with-loader-firearm, create-spare, cross-account/missing/archived
-   firearm rejection, and current legacy document reads. Gate: tests fail for the
-   intended missing behavior and distinguish the reported error's source.
-2. **Correct persistence and contracts additively.** Add physical tags/archive,
-   definition revision, corrected request DTOs, canonical optional-install response,
-   and new operation types. Retain tolerant legacy fields for reads. Gate: old
-   documents deserialize and new contract validation rejects invalid tracking/interval
-   combinations.
-3. **Implement Domain lifecycle policy.** Add canonical idempotent create, update,
-   archive, restore if product-confirmed, and guarded delete methods; remove definition
-   inheritance for new physical writes. Extend repository deletion narrowly. Gate:
-   service tests prove revision conflicts, idempotent retries, no partial duplicate
-   installation, and no deletion of referenced history.
-4. **Expose compatible account API endpoints.** Add CSRF-protected update/archive/
-   delete routes and move canonical creation to optional installation while retaining
-   legacy `/install`. Gate: authenticated integration tests cover status/problem
-   shapes, account isolation, CSRF, and identifier routing.
-5. **Synchronize shared frontend packages.** Update TypeScript models, endpoint
-   constants, service methods, and transport tests. Gate: shared package type-checks
-   and service tests prove exact payloads and optional firearm omission.
-6. **Add Components loader and action.** Fetch the three datasets concurrently,
-   implement allow-listed intents, map expected API errors, and attach both to route
-   configuration. Gate: loader/action unit tests and route-configuration test pass.
-7. **Refine the Components UI.** Replace `useResource` reads/direct mutation calls
-   with `useLoaderData` and independent fetchers; implement corrected fields,
-   optional firearm, both show/hide controls, edit/archive/delete actions, and filter
-   placement. Gate: component tests cover spare creation, installed creation,
-   successful revalidation, retained values/errors on failure, and destructive
-   confirmations.
-8. **Complete localization and visual hardening.** Add Italian copy and run the
-   Impeccable Operate refinement checks described above. Gate: keyboard-only
-   disclosure/actions, labelled errors, focus behavior, mobile layout, archived
-   visibility, and filter empty state have captured evidence.
-9. **Migrate and deploy safely.** Deploy backend compatibility, audit/backfill legacy
-   tags and defaults, then deploy shared packages and SPA. Gate: production-like
-   smoke tests create one spare and one installed component, edit/archive/delete only
-   eligible records, and confirm loader revalidation.
-10. **Update durable documentation.** Reconcile this handoff and the functional
-    baseline with actual files, validation, migration evidence, and residual risks.
-    Stop after this component scope; do not migrate unrelated Workshop routes.
+1. **Establish regression tests for round invariants.** Add failing Domain tests for
+   zero-default creation, nonzero initialization, replay, idempotent retry, unchanged
+   edit, correction up/down, negative/overflow rejection, and stale revision conflict.
+   Gate: tests distinguish ledger-backed behavior from direct total assignment.
+2. **Add the compatible round contract.** Extend backend and shared TypeScript
+   create/update requests without changing responses or persisted entities. Gate: old
+   payloads remain valid and invalid numeric values fail at the owning boundary.
+3. **Implement Domain initialization and correction.** Record nonzero initial and
+   edit-time deltas atomically/idempotently with physical mutations. Gate: projected
+   totals equal replay after retries and correction conflicts preserve newer data.
+4. **Map existing API routes.** Pass the additive fields through the controller while
+   retaining authentication, CSRF, account ownership, and current problem shapes.
+   Gate: focused API behavior proves omitted, zero, nonzero, and stale values.
+5. **Synchronize the route action and transport tests.** Parse create/edit values,
+   default create to zero, preserve unchanged edits, and serialize exact payloads.
+   Gate: action/service tests cover field omission, bounds, and expected errors.
+6. **Shape the Inventory-first interaction.** Apply the Impeccable `shape` direction
+   to tabs, toolbars, tables, filters, and modal hierarchy without changing the visual
+   world. Gate: the agreed desktop and mobile structure resolves all controls and
+   states before detailed styling.
+7. **Implement query-owned firearm filtering.** Derive installation lookup from loader
+   data, synchronize the firearm select with `firearmId`, handle Uninstalled/invalid
+   values, preserve unrelated parameters, and stop auto-opening the add form. Gate:
+   direct link and Back/Forward component tests select Inventory and show exact rows.
+8. **Move create/edit forms into accessible modals.** Reuse the local dialog behavior,
+   add create/edit round controls, and preserve values/errors/focus. Gate: keyboard,
+   Escape, backdrop, initial/return focus, pending, success, and failure tests pass.
+9. **Add independent searches and responsive tables.** Compose firearm, compatibility,
+   and text predicates; add counts, empty/no-match states, clear actions, and mobile
+   rows. Gate: combined filter tests and desktop/mobile visual evidence pass.
+10. **Complete localization, accessibility, and documentation.** Add all translated
+    copy, apply Impeccable `harden`, `adapt`, and `audit`, and update this handoff plus
+    the architecture guide with actual behavior and evidence. Stop at this component
+    scope.
+11. **Deploy in compatibility order.** Release backend additive support before shared
+    packages and the Workshop SPA, then smoke-test deep linking, create at zero and
+    nonzero, edit correction, replay consistency, searches, and modal flows.
 
-An independent post-validation review is warranted because this changes persistence
-semantics, destructive operations, account isolation, and a multi-package API
-contract. The user may select `MorWalPiz Code Reviewer` after implementation.
+An independent post-validation review is warranted because the change touches an
+immutable counter ledger, idempotency/concurrency, URL behavior, and custom accessible
+tabs/dialogs. The user may select `MorWalPiz Code Reviewer` after implementation.
 
 ## Testing Strategy
 
-- **Domain/unit — `MorWalPizVideo.BackOffice.Tests`:** corrected ownership, tag
-  normalization, tracking/interval validation, spare versus installed creation,
-  idempotent retries, revisions, archive restrictions, and every guarded-delete
-  reference type.
-- **API/integration — `MorWalPizVideo.BackOffice.Tests`:** loader-equivalent reads
-  followed by same-account mutations, missing/cross-account resources, archived
-  selectors, CSRF rejection, malformed intents/DTOs, concurrency conflict, and legacy
-  endpoint compatibility.
-- **Repository/Mongo behavior:** account-scoped revision delete, race between reference
-  check and delete, mock parity, legacy BSON fields, and idempotent backfill.
-- **Shared service contract — `frontend/fe-packages/services`:** exact routes,
-  encoded IDs, CSRF headers, create payload with and without firearm, update/archive/
-  delete payloads, and ProblemDetails propagation.
-- **Route loader/action — Workshop SPA:** concurrent successful load, one rejected
-  dependency, allow-listed intents, malformed form data, typed error response, and
-  successful revalidation.
-- **Component — Workshop SPA:** show/hide buttons, required definition, optional
-  firearm explanation, conditional threshold, edit prefill, independent pending
-  states, archive/delete confirmation, conflict guidance, filter location/behavior,
-  archived display, and translated accessible names.
-- **Security:** no cross-account probing, CSRF on every mutation including delete,
-  no user-entered notes/tags in logs, and no ability to delete referenced history.
-- **Migration:** dry-run counts, copy-only-empty physical tags, rerun idempotency,
-  mixed old/new document reads, rollback snapshot, and no mutation of ledger facts.
-- **End-to-end:** authenticate, navigate directly to `/components`, observe loader
-  data, create a spare, create an installed component from a loader-returned firearm,
-  edit both record types, archive eligible records, reject ineligible deletion, delete
-  pristine records, filter inventory, and hard reload.
+- **Domain/unit — `MorWalPizVideo.BackOffice.Tests`:** default zero, maximum valid
+  value, negative/overflow rejection, nonzero initialization, correction up/down,
+  unchanged update, stale revision, idempotent retry, and operation description/type.
+- **Replay — `MorWalPizVideo.BackOffice.Tests`:** create and correction deltas rebuild
+  the same component total; metadata-only edits do not affect replay.
+- **API/integration — `MorWalPizVideo.BackOffice.Tests`:** omitted/additive fields,
+  model validation, account isolation, CSRF, stale update conflict, and existing
+  clients without round values.
+- **Shared service contract — `frontend/fe-packages/services`:** exact create/update
+  payloads for zero, nonzero, unchanged, and corrected totals with existing CSRF
+  behavior.
+- **Route action — Workshop SPA:** defaulting, integer/bounds validation, typed server
+  error propagation, retained values, and successful revalidation.
+- **Component — Workshop SPA:** Inventory default, Catalogue selection, full keyboard
+  tab behavior, valid/invalid/Uninstalled firearm query values, Back/Forward, combined
+  firearm/tag/text filtering, per-section search scope, clear filters, result counts,
+  and no-record/no-match distinctions.
+- **Modal/accessibility — Workshop SPA:** accessible names/descriptions, focus trap,
+  initial/return focus, Escape/backdrop behavior, create/edit labels, pending state,
+  validation focus, retained data, and no background interaction.
+- **Responsive/visual:** desktop and narrow mobile for both panels, long values,
+  translated copy, active filters, stacked rows, both modals, errors, and empty states.
+- **Security:** no cross-account firearm filtering or counter update, CSRF on create/
+  update, no sensitive form content in logs, and invalid query IDs do not disclose
+  firearm existence.
+- **End-to-end:** enter from firearm detail, verify filtered inventory, open the add
+  modal with that firearm preselected, create a nonzero component, correct its total,
+  confirm replay-derived display, switch/search Catalogue, and hard reload the URL.
 
 ## Migration And Rollback
 
-Use an additive MongoDB compatibility window. New fields default safely when absent:
-definition revision `0`, physical compatibility tags empty, and physical archived
-`false`. Continue reading legacy definition fields while the backfill and frontend
-rollout complete, but stop writing them from new definition commands.
+No MongoDB or SQLite migration is required. Existing `TotalRounds` and operation
+deltas support the behavior, and old documents remain valid. There is no backfill:
+historical components retain their current ledger-derived totals.
 
-If deployed definitions contain compatibility tags, snapshot/audit affected accounts
-and run an idempotent backfill that copies normalized tags only to physical components
-whose own tag list is absent or empty. Manufacturer/tracking/interval legacy defaults
-must not be bulk-copied without separate user approval because the feedback establishes
-instance-specific ownership and an automatic copy could assert inaccurate physical
-facts.
+The API change is additive. Deploy Contracts/Domain/ServerAPI first, then shared
+frontend models/services, then the Workshop SPA. Old clients omit the fields and keep
+current behavior. New clients must not deploy before the backend accepts them.
 
-Deployment order is Models/Domain/Contracts/ServerAPI first, operational backfill
-second, shared frontend packages third, Workshop SPA last. Monitor validation/conflict
-rates for component create/update and specifically the firearm-not-found response.
-Keep `/components/install` until telemetry confirms no old client dependency.
+Monitor component create/update validation failures, revision conflicts, idempotency
+replays, and reconciliation mismatches. A reconciliation mismatch is a release blocker
+because it indicates projection/ledger divergence.
 
-Rollback the SPA first to the prior client while the additive backend remains
-compatible. Roll back backend code only while retaining additive BSON fields; MongoDB
-does not require removing unknown fields. Restore data from the migration snapshot if
-the tag backfill is wrong. Hard deletes cannot be undone without backup, which is why
-the first release must enforce pristine-only deletion and operational backups. No
-SQLite, cache, auth, secret, or deployment-topology migration is required.
+Rollback the SPA first; the additive backend remains compatible. Backend rollback is
+safe only after confirming no new client still sends the additive fields. Operations
+already recorded for initialization/correction are valid immutable facts and must not
+be deleted during rollback; reverting the UI does not revert those user-requested
+totals. No cache, auth, secret, background-job, configuration, or deployment-topology
+migration is involved.
 
 ## Open Questions
 
-None blocking. This handoff resolves the remaining delivery choices as follows:
-archive is one-way in this scope (matching existing firearm behavior), definition
-description and notes remain separate for compatibility, and the UI label is
-"Maximum rounds" with supporting text explaining that it is the service threshold.
-A restore workflow, field consolidation, or terminology change requires separate user
-approval.
+None blocking. The plan resolves the ambiguous phrases as follows:
+
+- create uses **Initial round count**;
+- edit uses **Current round count** and appends a ledger correction when changed;
+- firearm filtering means currently installed on the selected firearm, with an
+  explicit Uninstalled option;
+- the two wide controls are accessible tabs, Inventory is default, and tab selection
+  is not persisted in the URL;
+- text matching uses the documented visible fields and combines with existing
+  inventory filters.
+
+Any request to rewrite historical counter events, filter by mere firearm
+compatibility instead of current installation, or introduce server-side list queries
+is a separate architectural decision.
 
 ## Implementation Status
 
 Implemented in the current worktree:
 
-- Added Components route `loader.ts` and `action.ts`; initial definitions, inventory,
-  and firearms load concurrently, while mutations are dispatched through React Router
-  fetchers and trigger normal route revalidation.
-- Reworked the Components UI to make both forms explicit show/hide disclosures,
-  move compatibility filtering above the inventory list, make firearm selection
-  optional for spare parts, and expose edit/archive/delete controls.
-- Added physical compatibility tags and archive state, definition/component revision
-  support, guarded account-scoped deletion, and optional-firearm create-and-install
-  handling in Models, Contracts, Domain, repository, and ServerAPI.
-- Preserved legacy definition fields and the existing `/components/install` endpoint
-  for rollout compatibility; new UI writes physical tracking/manufacturer/model/tags
-  and does not send definition-level configuration.
-- Added the required Italian UI strings for the new component controls and states.
+- Added optional `InitialRounds` to physical-component creation and optional
+  `TotalRounds` to updates across Contracts, Domain, ServerAPI, and shared frontend
+  models.
+- Recorded nonzero component initialization and edit-time round corrections as
+  immutable component ledger deltas. Direct projection assignment is not used.
+- Added focused Domain tests for component initialization and round correction.
+- Reworked the Components route to use Inventory-first accessible tabs, modal create/
+  edit forms, firearm filtering synchronized with `?firearmId=`, an Uninstalled option,
+  per-section text search, compatibility-tag filtering, result counts, responsive
+  tables, and no-result states.
+- Added initial/current round controls to the physical-component form, defaulting create
+  to zero and retaining edit values through fetcher failure.
+- Added the required Italian labels and route-local responsive/modal/tab styles.
+- Updated the Shooter Workshop architecture guide with the component counter invariant.
 
 Validation completed:
 
-- `dotnet build MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
-- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
-- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~WorkshopServiceTests"` — 7 passed
-- `cd frontend && yarn workspace shooter-workshop.client build`
-- `cd frontend && yarn workspace shooter-workshop.client test --run src/routes/config.test.tsx`
+- `dotnet build MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~WorkshopServiceTests"` — 14 passed.
+- `yarn --cwd frontend workspace shooter-workshop.client build` — passed; Vite emitted the existing chunk-size warning.
+- `yarn --cwd frontend workspace shooter-workshop.client test --run src/routes/config.test.tsx` — 2 passed.
+- Scoped `git diff --check` — passed.
 
-Residual rollout risk: the existing legacy definition documents may still contain
-manufacturer, tracking, interval, and compatibility fields. They remain tolerated
-but are no longer used by new physical-component writes. A production data audit and
-non-destructive backfill for physical tags remain operational follow-up work.
+Residual risks:
 
+- No browser screenshot/e2e run was available in this environment, so visual evidence
+  for narrow tables, focus trapping, and direct-link interaction remains a follow-up.
+- The route still uses the established account-wide loader and client-side filtering;
+  no server-side firearm query was introduced.
+- Backend test builds report pre-existing NuGet audit warnings for the pinned
+  `SixLabors.ImageSharp` package and unrelated nullable warnings. They were not changed
+  as part of this feature.
+- Existing user changes in `Dashboard/component.tsx`, `ShootingSessions/component.tsx`,
+  and the pre-existing Components worktree edits were preserved.

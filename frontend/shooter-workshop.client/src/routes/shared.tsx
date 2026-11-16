@@ -63,7 +63,13 @@ const operationTitles: Record<string, string> = {
   FirearmUpdated: "Firearm details updated",
   FirearmArchived: "Firearm archived",
   ComponentDefinitionCreated: "Component definition created",
+  ComponentDefinitionUpdated: "Component definition updated",
+  ComponentDefinitionArchived: "Component definition archived",
+  ComponentDefinitionDeleted: "Component definition deleted",
   ComponentCreated: "Component added",
+  ComponentUpdated: "Component updated",
+  ComponentArchived: "Component archived",
+  ComponentDeleted: "Component deleted",
   ComponentInstalled: "Component installed",
   ComponentRemoved: "Component removed",
   MaintenanceRecorded: "Maintenance recorded",
@@ -78,6 +84,7 @@ const operationTitles: Record<string, string> = {
   ShootingRecorded: "Shooting session recorded",
   ShootingCorrected: "Shooting session corrected",
   StockAdjusted: "Stock adjusted",
+  ComponentSwapped: "Component swapped",
 };
 
 const numericOperationTypes = [
@@ -85,7 +92,13 @@ const numericOperationTypes = [
   "FirearmUpdated",
   "FirearmArchived",
   "ComponentDefinitionCreated",
+  "ComponentDefinitionUpdated",
+  "ComponentDefinitionArchived",
+  "ComponentDefinitionDeleted",
   "ComponentCreated",
+  "ComponentUpdated",
+  "ComponentArchived",
+  "ComponentDeleted",
   "ComponentInstalled",
   "ComponentRemoved",
   "MaintenanceRecorded",
@@ -100,6 +113,7 @@ const numericOperationTypes = [
   "ShootingRecorded",
   "ShootingCorrected",
   "StockAdjusted",
+  "ComponentSwapped",
 ] as const;
 
 function operationTypeName(type: unknown): string | null {
@@ -118,30 +132,34 @@ export function getActivityTitle(type: unknown): string {
   return name ? operationTitles[name] : "Workshop activity";
 }
 
-export function ActivityList({ items }: { items: WorkshopActivity[] }) {
+export function ActivityList({ items, compact = false }: { items: WorkshopActivity[]; compact?: boolean }) {
   const { culture, t } = useI18n();
   return (
-    <ul className="activity-list">
+    <ul className={`activity-list${compact ? " activity-list-compact" : ""}`}>
       {items.map((item) => (
         <li key={item.id}>
           <span className="activity-dot" />
           <div>
             <strong>{getActivityTitle(item.type)}</strong>
-            <p>{t("Activity recorded")}</p>
-            <small>
-              {t("Operation {id}", {
-                id:
-                  typeof item.operationId === "string" && item.operationId.trim()
-                    ? item.operationId
-                    : t("not set"),
-              })}
-            </small>
-            <small>
-              {t("Effective {date}", { date: formatDateTime(item.effectiveAt, culture) })}
-              {item.recordedAt && ` · ${t("recorded {date}", { date: formatDateTime(item.recordedAt, culture) })}`}
-            </small>
+            {item.entityLabel ? <p>{item.entityLabel}</p> : !compact ? <p>{t("Activity recorded")}</p> : null}
+            {!compact ? (
+              <>
+                <small>
+                  {t("Operation {id}", {
+                    id:
+                      typeof item.operationId === "string" && item.operationId.trim()
+                        ? item.operationId
+                        : t("not set"),
+                  })}
+                </small>
+                <small>
+                  {t("Effective {date}", { date: formatDateTime(item.effectiveAt, culture) })}
+                  {item.recordedAt && ` · ${t("recorded {date}", { date: formatDateTime(item.recordedAt, culture) })}`}
+                </small>
+              </>
+            ) : null}
           </div>
-          <time>{formatDate(item.effectiveAt, culture)}</time>
+          <time dateTime={item.effectiveAt}>{compact ? formatDateTime(item.effectiveAt, culture) : formatDate(item.effectiveAt, culture)}</time>
         </li>
       ))}
     </ul>

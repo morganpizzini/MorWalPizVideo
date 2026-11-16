@@ -119,7 +119,7 @@ export default function Dashboard() {
           <Stat label="Malfunctions" value={data.analytics.malfunctionEvents} />
         </div>
         {data.analytics.projectionState !== "Current" && (
-          <p className="status-note" role="status">{t("Projection state")}: {t(data.analytics.projectionState)}</p>
+          <p className="status-note mt-2" role="status">{t("Projection state")}: {t(data.analytics.projectionState)}</p>
         )}
         {data.analytics.buckets.length ? (
           <div className="table-scroll">
@@ -153,7 +153,6 @@ export default function Dashboard() {
             <button className="button button-primary" type="button" onClick={saveGoal}>{t("Set goal")}</button>
           </div>
         )}
-        <p className="form-hint">{t("Goals stay on this signed-in account and do not send reminders.")}</p>
       </section>
       <section className="panel">
         <div className="section-heading"><h2>{t("Quick actions")}</h2></div>
@@ -167,7 +166,7 @@ export default function Dashboard() {
       </section>
       <section className="panel">
         <div className="section-heading"><h2>{t("Recent activity")}</h2><Link to="/history">{t("View history")}</Link></div>
-        {data.history.length ? <ActivityList items={data.history.slice(0, 10)} /> : <EmptyState title={t("No activity yet")} message={t("Your first operation will appear here.")} />}
+        {data.history.length ? <ActivityList compact items={data.history.slice(0, 10)} /> : <EmptyState title={t("No activity yet")} message={t("Your first operation will appear here.")} />}
       </section>
     </div>
   );

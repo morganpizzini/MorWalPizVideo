@@ -68,8 +68,10 @@ public class CreateWorkshopComponentRequest
     [StringLength(120)] public string? Model { get; init; }
     [Range(1, long.MaxValue)] public long? ServiceInterval { get; init; }
     public WorkshopTrackingMode? TrackingMode { get; init; }
+    [Range(0, long.MaxValue)] public long InitialRounds { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
     public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
+    [StringLength(80)] public string? IdempotencyKey { get; init; }
 }
 
 public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopComponentRequest
@@ -82,6 +84,7 @@ public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopCom
 
 public sealed class UpdateWorkshopComponentRequest : CreateWorkshopComponentRequest
 {
+    [Range(0, long.MaxValue)] public long? TotalRounds { get; init; }
     [Range(0, long.MaxValue)] public long Revision { get; init; }
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }

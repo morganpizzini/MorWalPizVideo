@@ -23,6 +23,18 @@ const tags = (form: FormData) =>
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+const nonNegativeNumber = (form: FormData, key: string, fallback = 0) => {
+  const raw = form.get(key);
+  if (raw === null || raw === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${key} must be a non-negative integer.`);
+  return value;
+};
+const optionalNonNegativeNumber = (form: FormData, key: string) => {
+  const raw = form.get(key);
+  if (raw === null || raw === "") return null;
+  return nonNegativeNumber(form, key);
+};
 
 export async function action({ request }: ActionFunctionArgs) {
   const form = await request.formData();
@@ -65,6 +77,7 @@ export async function action({ request }: ActionFunctionArgs) {
         trackingMode: required(form, "trackingMode") as "Counter" | "Interval" | "Manual",
         compatibilityTags: tags(form),
         notes: text(form, "notes"),
+        initialRounds: nonNegativeNumber(form, "initialRounds"),
         idempotencyKey,
       });
       break;
@@ -78,6 +91,7 @@ export async function action({ request }: ActionFunctionArgs) {
         trackingMode: required(form, "trackingMode") as "Counter" | "Interval" | "Manual",
         compatibilityTags: tags(form),
         notes: text(form, "notes"),
+        totalRounds: optionalNonNegativeNumber(form, "totalRounds"),
         revision: revision(form),
         idempotencyKey,
       });

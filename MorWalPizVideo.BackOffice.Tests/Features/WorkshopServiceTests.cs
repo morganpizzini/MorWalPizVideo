@@ -9,6 +9,20 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 public sealed class WorkshopServiceTests
 {
     [Fact]
+    public async Task Activities_store_human_readable_entity_labels_instead_of_ids()
+    {
+        var (service, scenario, _) = CreateService();
+
+        await service.CreateComponentDefinitionAsync("account-1",
+            new("Competition trigger", "Timney", "Alpha", null, 5000, WorkshopTrackingMode.Interval, null));
+
+        var activity = scenario.Read<WorkshopActivity>(DbCollections.WorkshopActivities).Single();
+
+        Assert.Equal("Competition trigger", activity.EntityLabel);
+        Assert.DoesNotContain(activity.EntityLabel, activity.SourceEntityIds);
+    }
+
+    [Fact]
     public async Task Firearm_edit_and_archive_use_revision_checks_and_are_idempotent()
     {
         var (service, scenario, firearm) = CreateService();
@@ -197,6 +211,41 @@ public sealed class WorkshopServiceTests
         var operation = scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations).Single();
         Assert.Equal(125, operation.Deltas.Single().RoundsDelta);
         Assert.Equal(WorkshopOperationType.FirearmCreated, operation.OperationType);
+    }
+
+    [Fact]
+    public async Task Initial_component_rounds_are_recorded_in_the_ledger_projection()
+    {
+        var (service, scenario, firearm) = CreateService();
+        var definition = await service.CreateComponentDefinitionAsync("account-1",
+            new("Barrel", null, null, null, null, WorkshopTrackingMode.Counter, null));
+        var component = await service.CreateAndInstallComponentAsync("account-1",
+            new(definition.Id, firearm.Id, null, null, null, null, WorkshopTrackingMode.Counter,
+                null, DateTime.UtcNow, null, "component-initial-1", InitialRounds: 35));
+
+        Assert.Equal(35, component.Component.TotalRounds);
+        var operation = scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations).Single(x =>
+            x.Deltas.Any(delta => delta.AggregateId == component.Component.Id && delta.RoundsDelta == 35));
+        Assert.Equal(35, operation.Deltas.Single(delta => delta.AggregateId == component.Component.Id).RoundsDelta);
+    }
+
+    [Fact]
+    public async Task Component_round_correction_appends_a_delta_and_updates_the_projection()
+    {
+        var (service, scenario, firearm) = CreateService();
+        var definition = await service.CreateComponentDefinitionAsync("account-1",
+            new("Barrel", null, null, null, null, WorkshopTrackingMode.Counter, null));
+        var created = await service.CreateAndInstallComponentAsync("account-1",
+            new(definition.Id, firearm.Id, null, null, null, null, WorkshopTrackingMode.Counter,
+                null, DateTime.UtcNow, null, "component-correction-create", InitialRounds: 10));
+
+        var updated = await service.UpdateComponentAsync("account-1", created.Component.Id,
+            new(null, null, null, null, WorkshopTrackingMode.Counter, null, null,
+                created.Component.Revision, "component-correction-update", 25));
+
+        Assert.Equal(25, updated.TotalRounds);
+        Assert.Contains(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations),
+            operation => operation.Deltas.Any(delta => delta.AggregateId == created.Component.Id && delta.RoundsDelta == 15));
     }
 
     [Fact]

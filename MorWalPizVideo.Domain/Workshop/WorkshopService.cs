@@ -17,16 +17,16 @@ public sealed record WorkshopComponentDefinitionCommand(string Name, string? Man
     IReadOnlyList<string>? CompatibilityTags = null);
 public sealed record WorkshopComponentCommand(string DefinitionId, string? IdentificationNote, string? Manufacturer,
     string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
-    IReadOnlyList<string>? CompatibilityTags = null);
+    IReadOnlyList<string>? CompatibilityTags = null, long InitialRounds = 0, string? IdempotencyKey = null);
 public sealed record WorkshopCreateAndInstallCommand(string DefinitionId, string? FirearmId, string? IdentificationNote,
     string? Manufacturer, string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
     DateTime InstalledAt, string? InstallationNotes, string IdempotencyKey,
-    IReadOnlyList<string>? CompatibilityTags = null);
+    IReadOnlyList<string>? CompatibilityTags = null, long InitialRounds = 0);
 public sealed record WorkshopUpdateComponentDefinitionCommand(string Name, string? Description, string? Notes, long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopArchiveComponentDefinitionCommand(long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopUpdateComponentCommand(string? IdentificationNote, string? Manufacturer, string? Model,
     long? ServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes, IReadOnlyList<string>? CompatibilityTags,
-    long ExpectedRevision, string IdempotencyKey);
+    long ExpectedRevision, string IdempotencyKey, long? TotalRounds = null);
 public sealed record WorkshopArchiveComponentCommand(long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopInstallCommand(string ComponentId, string FirearmId, DateTime InstalledAt,
     string? InstallationNotes, string IdempotencyKey);
@@ -340,6 +340,8 @@ public sealed class WorkshopService(
     public async Task<(ComponentInstance Component, ComponentInstallation Installation)> CreateAndInstallComponentAsync(
         string accountId, WorkshopCreateAndInstallCommand command, CancellationToken ct = default)
     {
+        if (command.InitialRounds < 0)
+            throw new WorkshopValidationException("Initial rounds cannot be negative.");
         Firearm? firearm = null;
         if (!string.IsNullOrWhiteSpace(command.FirearmId))
         {
@@ -354,8 +356,9 @@ public sealed class WorkshopService(
         var componentId = StableId(accountId, command.IdempotencyKey, "component");
         var installationId = StableId(accountId, command.IdempotencyKey, "installation");
         var payload = JsonSerializer.Serialize(command);
-        var expectedHash = PayloadHash(WorkshopOperationType.ComponentInstalled, [],
-            [componentId, installationId, command.DefinitionId, command.FirearmId], payload, null);
+        var sourceIds = new List<string> { componentId, installationId, command.DefinitionId };
+        if (command.FirearmId is not null) sourceIds.Add(command.FirearmId);
+        var expectedHash = PayloadHash(WorkshopOperationType.ComponentInstalled, [], sourceIds, payload, null);
         var existing = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
         if (existing is not null && existing.PayloadHash != expectedHash)
             throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
@@ -389,9 +392,17 @@ public sealed class WorkshopService(
             };
             await repository.AddAsync(DbCollections.WorkshopComponentInstallations, installation, ct);
         }
-        if (firearm is not null && existing is null)
+        if (existing is null)
+        {
             await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ComponentInstalled,
-                command.InstalledAt, [], [componentId, installationId, command.DefinitionId, command.FirearmId!], payload, ct);
+                command.InstalledAt, [], sourceIds, payload, ct);
+        }
+        if (command.InitialRounds > 0 && existing is null)
+            await CommitAsync(accountId, $"{command.IdempotencyKey}:rounds", WorkshopOperationType.ComponentCreated,
+                command.InstalledAt, [new(WorkshopAggregateKind.Component, componentId, RoundsDelta: command.InitialRounds)],
+                [componentId], JsonSerializer.Serialize(new { command.InitialRounds }), ct);
+        component = await repository.GetAsync<ComponentInstance>(
+            DbCollections.WorkshopComponentInstances, accountId, componentId, ct) ?? component;
         return (component, installation);
     }
 
@@ -646,12 +657,13 @@ public sealed class WorkshopService(
             CompatibilityTags = NormalizeTags(command.CompatibilityTags), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopComponentDefinitions, definition, ct);
-        await RecordActivityAsync(accountId, WorkshopOperationType.ComponentDefinitionCreated, definition.Id, ct);
+        await RecordActivityAsync(accountId, WorkshopOperationType.ComponentDefinitionCreated, definition.Id, definition.Name, ct);
         return definition;
     }
 
     public async Task<ComponentInstance> CreateComponentAsync(string accountId, WorkshopComponentCommand command, CancellationToken ct = default)
     {
+        if (command.InitialRounds < 0) throw new WorkshopValidationException("Initial rounds cannot be negative.");
         var definition = await repository.GetAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, command.DefinitionId, ct)
             ?? throw new WorkshopValidationException("Component definition was not found.");
         var component = new ComponentInstance
@@ -664,7 +676,13 @@ public sealed class WorkshopService(
             Notes = Trim(command.Notes), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopComponentInstances, component, ct);
-        await RecordActivityAsync(accountId, WorkshopOperationType.ComponentCreated, component.Id, ct);
+        var idempotencyKey = string.IsNullOrWhiteSpace(command.IdempotencyKey) ? $"component-created:{component.Id}" : command.IdempotencyKey;
+        await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.ComponentCreated,
+            component.CreationDateTime,
+            [new(WorkshopAggregateKind.Component, component.Id, RoundsDelta: command.InitialRounds)],
+            [component.Id], JsonSerializer.Serialize(command), ct);
+        component = await repository.GetAsync<ComponentInstance>(
+            DbCollections.WorkshopComponentInstances, accountId, component.Id, ct) ?? component;
         return component;
     }
 
@@ -702,6 +720,9 @@ public sealed class WorkshopService(
             ?? throw new WorkshopValidationException("Component was not found.");
         if (current.Revision != command.ExpectedRevision)
             throw new WorkshopConflictException("Component changed. Reload before updating.");
+        if (command.TotalRounds is < 0)
+            throw new WorkshopValidationException("Total rounds cannot be negative.");
+        var roundDelta = command.TotalRounds is null ? 0 : command.TotalRounds.Value - current.TotalRounds;
         var updated = current with
         {
             IdentificationNote = Trim(command.IdentificationNote), Manufacturer = Trim(command.Manufacturer),
@@ -709,6 +730,26 @@ public sealed class WorkshopService(
             TrackingMode = command.TrackingMode, CompatibilityTags = NormalizeTags(command.CompatibilityTags),
             Notes = Trim(command.Notes), Revision = current.Revision + 1
         };
+        if (roundDelta != 0)
+        {
+            var existing = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
+            var payload = JsonSerializer.Serialize(command);
+            var deltas = new[] { new WorkshopDelta(WorkshopAggregateKind.Component, id, roundDelta) };
+            var sourceIds = new[] { id };
+            var expectedHash = PayloadHash(WorkshopOperationType.ComponentUpdated, deltas, sourceIds, payload, null);
+            if (existing is not null)
+            {
+                if (existing.PayloadHash != expectedHash)
+                    throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+                return current;
+            }
+            await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ComponentUpdated,
+                Now(), deltas, sourceIds, payload, ct);
+            current = await repository.GetAsync<ComponentInstance>(
+                DbCollections.WorkshopComponentInstances, accountId, id, ct)
+                ?? throw new WorkshopConflictException("Component projection could not be recovered.");
+            updated = updated with { TotalRounds = current.TotalRounds, Revision = current.Revision + 1 };
+        }
         if (!await repository.ReplaceAsync(DbCollections.WorkshopComponentInstances, updated, accountId, current.Revision, ct))
             throw new WorkshopConflictException("Component changed while updating it.");
         return updated;
@@ -770,7 +811,7 @@ public sealed class WorkshopService(
         {
             Id = NewId(), AccountId = accountId, RecipeId = recipe.Id, Version = 1, Snapshot = snapshot with { Version = 1 }, CreationDateTime = Now()
         }, ct);
-        await RecordActivityAsync(accountId, WorkshopOperationType.RecipeCreated, recipe.Id, ct);
+        await RecordActivityAsync(accountId, WorkshopOperationType.RecipeCreated, recipe.Id, recipe.Name, ct);
         return recipe;
     }
 
@@ -1187,7 +1228,7 @@ public sealed class WorkshopService(
             return new(existing, true);
         }
         await ApplyProjectionAsync(accountId, deltas, ct);
-        await RecordActivityAsync(accountId, type, operation.Id, ct, operation);
+        await RecordActivityAsync(accountId, type, operation.Id, await ActivityLabelAsync(accountId, type, operation.SourceEntityIds, ct), ct, operation);
         return new(operation, false);
     }
 
@@ -1238,15 +1279,105 @@ public sealed class WorkshopService(
     }
 
     private async Task RecordActivityAsync(string accountId, WorkshopOperationType type, string sourceId,
-        CancellationToken ct, WorkshopOperation? operation = null)
+        string? entityLabel, CancellationToken ct, WorkshopOperation? operation = null)
     {
         await repository.AddAsync(DbCollections.WorkshopActivities, new WorkshopActivity
         {
             Id = NewId(), AccountId = accountId, OperationId = operation?.Id ?? sourceId, Type = type,
             EffectiveAt = operation?.EffectiveAt ?? Now(), RecordedAt = operation?.RecordedAt ?? Now(),
             SourceEntityIds = operation?.SourceEntityIds ?? [sourceId],
-            Summary = ActivitySummary(type), EntityLabel = sourceId, CreationDateTime = Now()
+            Summary = ActivitySummary(type), EntityLabel = entityLabel, CreationDateTime = Now()
         }, ct);
+    }
+
+    private async Task<string?> ActivityLabelAsync(string accountId, WorkshopOperationType type,
+        IReadOnlyList<string> sourceIds, CancellationToken ct)
+    {
+        var ids = sourceIds.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+        switch (type)
+        {
+            case WorkshopOperationType.FirearmCreated:
+            case WorkshopOperationType.FirearmUpdated:
+            case WorkshopOperationType.FirearmArchived:
+            case WorkshopOperationType.ShootingRecorded:
+                return await FirearmLabelAsync(accountId, ids.FirstOrDefault(), ct);
+            case WorkshopOperationType.ShootingCorrected:
+            case WorkshopOperationType.AllocationRecorded:
+                foreach (var id in ids)
+                {
+                    var firearmLabel = await FirearmLabelAsync(accountId, id, ct);
+                    if (firearmLabel is not null) return firearmLabel;
+                }
+                return null;
+            case WorkshopOperationType.ComponentCreated:
+            case WorkshopOperationType.ComponentUpdated:
+            case WorkshopOperationType.ComponentArchived:
+            case WorkshopOperationType.ComponentDeleted:
+            case WorkshopOperationType.ComponentInstalled:
+            case WorkshopOperationType.ComponentRemoved:
+                return await ComponentLabelAsync(accountId, ids, ct);
+            case WorkshopOperationType.MaintenanceRecorded:
+                return await FirearmLabelAsync(accountId, ids.FirstOrDefault(), ct)
+                    ?? await ComponentLabelAsync(accountId, ids, ct);
+            case WorkshopOperationType.RecipeCreated:
+            case WorkshopOperationType.RecipeUpdated:
+            case WorkshopOperationType.RecipeArchived:
+                return await RecipeLabelAsync(accountId, ids.FirstOrDefault(), ct);
+            case WorkshopOperationType.ProductionRecorded:
+                var batch = await repository.GetAsync<AmmoBatch>(
+                    DbCollections.WorkshopAmmoBatches, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
+                return batch?.RecipeSnapshot.Name;
+            case WorkshopOperationType.AllocationReleased:
+            case WorkshopOperationType.AllocationReallocated:
+                var allocation = await repository.GetAsync<AmmoAllocation>(
+                    DbCollections.WorkshopAmmoAllocations, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
+                return allocation is null
+                    ? null
+                    : await FirearmLabelAsync(accountId, allocation.FirearmId, ct);
+            default:
+                return null;
+        }
+    }
+
+    private async Task<string?> FirearmLabelAsync(string accountId, string? id, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        var firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, id, ct);
+        return firearm is null ? null : FormatFirearmLabel(firearm);
+    }
+
+    private async Task<string?> ComponentLabelAsync(string accountId, IReadOnlyList<string> ids, CancellationToken ct)
+    {
+        foreach (var id in ids)
+        {
+            var component = await repository.GetAsync<ComponentInstance>(
+                DbCollections.WorkshopComponentInstances, accountId, id, ct);
+            if (component is null) continue;
+            var definition = await repository.GetAsync<ComponentDefinition>(
+                DbCollections.WorkshopComponentDefinitions, accountId, component.DefinitionId, ct);
+            return FormatComponentLabel(component, definition);
+        }
+        return null;
+    }
+
+    private async Task<string?> RecipeLabelAsync(string accountId, string? id, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, id, ct);
+        return recipe?.Name;
+    }
+
+    private static string FormatFirearmLabel(Firearm firearm) =>
+        string.IsNullOrWhiteSpace(firearm.Nickname)
+            ? $"{firearm.Manufacturer} {firearm.Model}".Trim()
+            : firearm.Nickname;
+
+    private static string FormatComponentLabel(ComponentInstance component, ComponentDefinition? definition)
+    {
+        var instance = $"{component.Manufacturer} {component.Model}".Trim();
+        if (string.IsNullOrWhiteSpace(instance)) instance = component.IdentificationNote?.Trim() ?? string.Empty;
+        if (definition is null || string.IsNullOrWhiteSpace(instance)) return definition?.Name ?? instance;
+        return $"{definition.Name} — {instance}";
     }
 
     private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;

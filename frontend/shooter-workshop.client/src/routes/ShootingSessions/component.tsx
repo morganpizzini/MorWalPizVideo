@@ -225,7 +225,7 @@ function ShootingRow({
   };
   return (
     <article className="detail-list-item">
-      <div><strong>{firearmLabel}</strong><span>{formatDateTime(session.date, culture)}</span></div>
+      <div><strong>{firearmLabel}</strong>&nbsp;<span>{formatDateTime(session.date, culture)}</span></div>
       {editing ? (
         <fieldset>
           <legend>{t("Correct ammunition quantities")}</legend>
@@ -244,13 +244,13 @@ function ShootingRow({
           <strong>{t("Total rounds")}: {correctedTotal}</strong>
         </fieldset>
       ) : <strong>{session.totalRounds} {t("rounds")}</strong>}
-      <div className="button-row">
-        <button type="button" className="button button-quiet" onClick={() => onRepeat(record)}>{t("Repeat as draft")}</button>
+      <div className="button-row mt-2">
+        <button type="button" className="button button-quiet me-2" onClick={() => onRepeat(record)}>{t("Repeat as draft")}</button>
         {editing ? <>
-          <button type="button" className="button" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
-          <button type="button" className="button button-quiet" onClick={() => setEditing(false)}>{t("Cancel")}</button>
+          <button type="button" className="button me-2" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
+          <button type="button" className="button button-quiet me-2" onClick={() => setEditing(false)}>{t("Cancel")}</button>
         </> : editable && <>
-          <button type="button" className="button button-quiet" onClick={() => {
+            <button type="button" className="button button-quiet me-2" onClick={() => {
             setQuantities(session.consumptionRecords.reduce<Record<string, number>>((result, item) => {
               if (item.recipeId) result[item.recipeId] = (result[item.recipeId] ?? 0) + item.quantity;
               return result;
