@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EmptyState, PageTitle } from "@morwalpiz/layout";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
-import { useFetcher, useLoaderData } from "react-router";
+import { Link, useFetcher, useLoaderData } from "react-router";
 import { useI18n } from "../../i18n";
 import type { action } from "./action";
 import type { RecipesLoaderData } from "./loader";
@@ -278,6 +278,15 @@ function RecipeDetails({
                 >
                   {t("Edit")}
                 </button>
+              )}
+              {recipe.status === "Active" && (
+                <Link
+                  className="button button-primary"
+                  to={`/recipes/${encodeURIComponent(recipe.id)}/produce`}
+                  onClick={onClose}
+                >
+                  {t("Open production")}
+                </Link>
               )}
             </div>
           </>

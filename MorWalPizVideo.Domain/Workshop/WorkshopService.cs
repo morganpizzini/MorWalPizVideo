@@ -53,6 +53,7 @@ public sealed record WorkshopAnalyticsData(DateTime From, DateTime To, long Shoo
     long TrackedRounds, long UntrackedRounds, long ProducedRounds, long AvailableRounds,
     int MaintenanceEvents, int MalfunctionEvents, int CorrectionCount, WorkshopProjectionState ProjectionState,
     IReadOnlyList<WorkshopAnalyticsBucketData> Buckets);
+public sealed record WorkshopReportData(WorkshopAnalyticsData Analytics, IReadOnlyList<WorkshopActivity> Activities);
 public sealed record WorkshopOperationResult(WorkshopOperation Operation, bool Idempotent);
 sealed record WorkshopReplacementResolution(
     IReadOnlyList<WorkshopDelta> Deltas, IReadOnlyList<ShootingConsumption> ConsumptionRecords);
@@ -170,6 +171,14 @@ public sealed class WorkshopService(
     public Task<IReadOnlyList<AmmoRecipe>> GetRecipesAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, ct);
 
+    public async Task<AmmoRecipe?> GetActiveRecipeAsync(
+        string accountId, string recipeId, CancellationToken ct = default)
+    {
+        var recipe = await repository.GetAsync<AmmoRecipe>(
+           DbCollections.WorkshopRecipes, accountId, recipeId, ct);
+        return recipe?.Status == WorkshopRecipeStatus.Active ? recipe : null;
+    }
+
     public Task<IReadOnlyList<AmmoBatch>> GetBatchesAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<AmmoBatch>(DbCollections.WorkshopAmmoBatches, accountId, ct);
 
@@ -261,6 +270,15 @@ public sealed class WorkshopService(
             maintenance.Count(x => x.EventType == WorkshopMaintenanceEventType.Malfunction),
             correctionOperations.Count(x => x.CreationDateTime >= fromInclusive && x.CreationDateTime < toExclusive),
             reconciliationState?.State ?? WorkshopProjectionState.Current, buckets);
+    }
+
+    public async Task<WorkshopReportData> GetReportAsync(string accountId, DateTime fromInclusive,
+        DateTime toExclusive, CancellationToken ct = default)
+    {
+        var analytics = await GetAnalyticsAsync(accountId, fromInclusive, toExclusive, ct);
+        var activities = await repository.ListByDateAsync<WorkshopActivity>(
+            DbCollections.WorkshopActivities, accountId, "effectiveAt", fromInclusive, toExclusive, ct);
+        return new(analytics, activities.OrderBy(x => x.EffectiveAt).ThenBy(x => x.Id).ToArray());
     }
 
     public async Task<ComponentInstallation> InstallComponentAsync(string accountId, WorkshopInstallCommand command,
@@ -826,6 +844,8 @@ public sealed class WorkshopService(
         if (command.Quantity <= 0) throw new WorkshopValidationException("Produced quantity must be positive.");
         var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, command.RecipeId, ct)
             ?? throw new WorkshopValidationException("Recipe was not found.");
+        if (recipe.Status != WorkshopRecipeStatus.Active)
+            throw new WorkshopValidationException("Recipe was not found.");
         var snapshot = new RecipeSnapshot(recipe.Name, recipe.Caliber, recipe.Oal, recipe.BulletWeight, recipe.BulletForm,
             recipe.Drawing, recipe.Primer, recipe.Powder, recipe.PowderWeight, recipe.Notes, recipe.Version);
         var batchId = StableId(accountId, command.IdempotencyKey, "batch");

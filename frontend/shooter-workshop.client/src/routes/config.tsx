@@ -12,6 +12,7 @@ import { Component as Firearms } from "./Firearms";
 import { Component as History } from "./History";
 import { Component as Maintenance } from "./Maintenance";
 import { Component as Recipes } from "./Recipes";
+import { Component as RecipeProduction, RecipeProductionError } from "./RecipeProduction";
 import { Component as Reconciliation } from "./Reconciliation";
 import { Component as ShootingSessions } from "./ShootingSessions";
 import { loader as componentsLoader } from "./Components/loader";
@@ -32,6 +33,8 @@ import { loader as firearmsLoader } from "./Firearms/loader";
 import { action as firearmsAction } from "./Firearms/action";
 import { loader as reconciliationLoader } from "./Reconciliation/loader";
 import { action as reconciliationAction } from "./Reconciliation/action";
+import { action as recipeProductionAction } from "./RecipeProduction/action";
+import { loader as recipeProductionLoader } from "./RecipeProduction/loader";
 import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
 
 export const routes: RouteObject[] = [
@@ -58,6 +61,13 @@ export const routes: RouteObject[] = [
       { path: "maintenance", element: <Maintenance />, loader: maintenanceLoader, action: maintenanceAction },
       { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
       { path: "recipes", element: <Recipes />, loader: recipesLoader, action: recipesAction },
+      {
+        path: "recipes/:recipeId/produce",
+        element: <RecipeProduction />,
+        loader: recipeProductionLoader,
+        action: recipeProductionAction,
+        errorElement: <RecipeProductionError />,
+      },
       { path: "production", element: <Navigate to="/ammunition" replace /> },
       { path: "sessions/shooting", element: <ShootingSessions />, loader: shootingSessionsLoader, action: shootingSessionsAction },
       { path: "history", element: <History />, loader: historyLoader },

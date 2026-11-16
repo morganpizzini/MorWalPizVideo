@@ -12,6 +12,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const description = text(form, "description");
   const targetType = text(form, "targetType");
   const targetId = text(form, "targetId");
+  const idempotencyKey = text(form, "idempotencyKey");
   if (!date || !description || !targetId || (targetType !== "firearm" && targetType !== "component")) {
     return { ok: false as const, error: "Please review the maintenance form." };
   }
@@ -25,7 +26,7 @@ export async function action({ request }: ActionFunctionArgs) {
       roundCountAtEvent: null,
       description,
       notes: text(form, "notes") || null,
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: idempotencyKey || crypto.randomUUID(),
     });
     return { ok: true as const };
   } catch (error) {

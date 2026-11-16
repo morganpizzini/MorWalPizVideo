@@ -1,44 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Alert, Button, Form, Table } from 'react-bootstrap';
-import { Link } from 'react-router';
-import { getPublicAccountDirectory } from '@morwalpizvideo/services';
-import type {
-  PublicAccountDirectoryItem,
-  PublicAccountDirectoryPage,
-} from '@morwalpizvideo/models';
+import { Link, useLoaderData, useSearchParams } from 'react-router';
+import type { PublicAccountDirectoryItem } from '@morwalpizvideo/models';
+import type { PublicAccountsIndexData } from './loader';
 
 export default function PublicAccountsPage() {
-  const [page, setPage] = useState<PublicAccountDirectoryPage | null>(null);
-  const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
-  const [pageNumber, setPageNumber] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-    void getPublicAccountDirectory(query, pageNumber)
-      .then(result => {
-        if (active) setPage(result);
-      })
-      .catch(() => {
-        if (active) setError('Unable to load public accounts.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [pageNumber, query]);
+  const { page, error } = useLoaderData() as PublicAccountsIndexData;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
-    setPageNumber(1);
-    setQuery(search.trim());
+    setSearchParams({ ...(search.trim() ? { search: search.trim() } : {}), page: '1' });
   };
+
+  const pageNumber = page?.page ?? Number(searchParams.get('page') ?? '1');
 
   return (
     <main>
@@ -63,8 +39,7 @@ export default function PublicAccountsPage() {
           {error}
         </Alert>
       )}
-      {loading ? <p role="status">Loading accounts...</p> : null}
-      {!loading && !error && !page?.items.length ? <p>No public accounts found.</p> : null}
+      {!error && !page?.items.length ? <p>No public accounts found.</p> : null}
       {page?.items.length ? (
         <>
           <Table responsive hover className="align-middle">
@@ -102,7 +77,12 @@ export default function PublicAccountsPage() {
               <Button
                 variant="outline-secondary"
                 disabled={pageNumber <= 1}
-                onClick={() => setPageNumber(value => value - 1)}
+                onClick={() =>
+                  setSearchParams({
+                    ...Object.fromEntries(searchParams),
+                    page: String(pageNumber - 1),
+                  })
+                }
               >
                 Previous
               </Button>
@@ -110,7 +90,12 @@ export default function PublicAccountsPage() {
               <Button
                 variant="outline-secondary"
                 disabled={pageNumber * page.pageSize >= page.totalCount}
-                onClick={() => setPageNumber(value => value + 1)}
+                onClick={() =>
+                  setSearchParams({
+                    ...Object.fromEntries(searchParams),
+                    page: String(pageNumber + 1),
+                  })
+                }
               >
                 Next
               </Button>

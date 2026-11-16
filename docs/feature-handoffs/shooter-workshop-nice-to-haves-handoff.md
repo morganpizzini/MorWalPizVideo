@@ -1,6 +1,6 @@
 # Shooter Workshop Nice-to-Haves Handoff
 
-**Status:** Deferred product candidates. None of these items are part of the current six-point delivery slice.
+**Status:** Guided onboarding, repeatable capture drafts, saved history views, presentation-only goals, connectivity retry hardening, bounded report export, and the direct recipe QR-to-production flow are implemented. Notifications and reminders are intentionally excluded from the current product direction. Backup/import and persisted analytics rollups remain gated product work.
 
 **Owner:** Shooter Workshop product and architecture review.
 
@@ -31,6 +31,364 @@ The following remain prohibited:
 - community recipe sharing;
 - powder-charge recommendations, load safety validation, or ballistic advice;
 - inferred mechanical safety, unsafe-state, reliability, or replacement claims.
+
+## Delivery update — guided first-use onboarding
+
+The first sequenced candidate is now implemented as a presentation-only client
+flow for empty Workshop accounts. The dashboard shows an optional four-step
+guide for:
+
+1. registering a firearm;
+2. optionally adding a component;
+3. optionally creating a recipe; and
+4. recording a shooting session or ammunition production.
+
+Each step links to the existing canonical route and command flow. The guide does
+not introduce a wizard-specific write model, account-wide transaction, batch
+selection, ammunition allocation, or safety/load recommendation. It explains
+that tracked ammunition is resolved by the server and component intervals are
+user-entered records rather than safety advice.
+
+Skip, completion, and the current presentation step are stored in the existing
+account-keyed browser presentation preferences. Invalid preference values fall
+back to the active first step, and another account cannot read or change the
+preference state. Skipped users can reopen the guide while the workspace remains
+empty. The flow does not add API calls, persistent account data, service-worker
+caching, or offline mutation behavior.
+
+Implementation files:
+
+- `frontend/shooter-workshop.client/src/routes/Dashboard/OnboardingGuide.tsx`
+- `frontend/shooter-workshop.client/src/routes/Dashboard/component.tsx`
+- `frontend/shooter-workshop.client/src/services/workshopPreferences.ts`
+- `frontend/shooter-workshop.client/src/i18n.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+- `frontend/shooter-workshop.client/src/routes/Dashboard/OnboardingGuide.test.tsx`
+- `frontend/shooter-workshop.client/src/services/workshopPreferences.test.ts`
+
+Validation completed:
+
+- `yarn --cwd frontend workspace shooter-workshop.client test --passWithNoTests=false --run src/routes/Dashboard/OnboardingGuide.test.tsx src/services/workshopPreferences.test.ts` — 4 passed.
+- `yarn --cwd frontend workspace shooter-workshop.client test --passWithNoTests=false` — 36 passed.
+- `yarn --cwd frontend workspace shooter-workshop.client build` — passed.
+
+Visual browser capture was not available in this environment; the implementation
+uses the existing Workshop Operate visual system and responsive stylesheet
+breakpoints. A browser-sized review remains a follow-up validation item.
+
+## Delivery update — implementation slices across the backlog
+
+The broader backlog was mapped in parallel by independent capture-productivity,
+portability, and engagement/scaling workstreams. The following low-risk slices are
+now implemented without changing the Workshop ownership or immutable-operation
+boundaries:
+
+- **Repeat session draft:** Shooting history offers “Repeat as draft”. It copies
+  only the firearm, recorded recipe quantities, explicit untracked quantity, and
+  notes into the canonical shooting form. It creates a new effective time and
+  idempotency key and does not submit until the user confirms.
+- **Neutral maintenance templates:** The global maintenance form offers factual
+  Cleaning, Inspection, and General templates. They contain no certified interval,
+  safety conclusion, or recommendation.
+- **Connectivity-aware capture:** Global maintenance and firearm-detail inline
+  maintenance now retain the submitted idempotency key through uncertain-outcome
+  retries and rotate it only after a confirmed success. Validation failures remain
+  visible form errors; no mutation queue or service-worker sync was added.
+- **Saved history view Phase A:** History now uses the existing bounded
+  `page`, `pageSize`, and `type` API query parameters, URL-backed pagination/type
+  state, and validated account-keyed presentation preferences. It does not claim
+  unresolved cross-screen or “since last maintenance” semantics.
+- **Personal goals Phase A:** The dashboard supports one account-local target for
+  shooting or produced rounds in the selected analytics period. It is explicitly
+  presentation-only and sends no reminders. Notifications are outside the current
+  Workshop product direction.
+- **Bounded report export:** The authenticated Workshop API exposes a default
+  30-day, correction-aware JSON/CSV report directly from account-scoped reads.
+  Reports are bounded to one year, contain analytics and activity summaries, and
+  do not create persisted files or act as a backup.
+
+Implementation files additionally include:
+
+- `frontend/shooter-workshop.client/src/routes/ShootingSessions/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/Maintenance/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/Maintenance/action.ts`
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/action.ts`
+- `frontend/shooter-workshop.client/src/routes/History/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/History/loader.ts`
+- `frontend/shooter-workshop.client/src/routes/Maintenance/route.test.ts`
+- `frontend/fe-packages/services/src/workshopService.ts`
+- `frontend/fe-packages/services/src/endpoints-frontend.ts`
+- `frontend/fe-packages/services/src/workshopService.test.ts`
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs`
+- `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs`
+
+The following candidates remain intentionally gated rather than being represented
+by unsafe client-only substitutes:
+
+- **Spreadsheet import:** component/recipe idempotency and historical attribution
+  contracts are not uniform enough for a safe commit path.
+- **Portable backup:** requires a versioned complete package, integrity checks,
+  duplicate handling, idempotent import, rollback, and recovery ownership.
+- **Notifications and reminders:** intentionally excluded. Workshop is a utility
+  that reacts to the signed-in user's actions; it does not schedule recurring
+  engagement, maintenance or goal notifications.
+- **Recipe QR links:** use a direct authenticated link to one active recipe's
+  production page. No server-issued label token, revocation/regeneration workflow,
+  short-code namespace, scan tracking or print-service scope is required.
+- **Persisted analytics rollups:** requires representative performance evidence,
+  an ADR, replay equivalence proof, lag visibility, rebuild/rollback ownership,
+  and a recovery runbook.
+
+## Focused product decision — no Workshop notifications
+
+Workshop remains an on-demand utility. The user is not expected to create
+reminders, recurring actions or engagement schedules, so the application does not
+need notification consent, Web Push subscription handling, scheduled jobs,
+notification retention or notification audit data.
+
+The existing MorWalPizVideo and BackOffice Web Push implementation remains
+unchanged and outside Workshop. `ApplicationKey` already identifies an existing
+push consumer; no new Workshop `context` or application key is required.
+
+Reconsider notifications only through a separate product decision that introduces
+a concrete user-authored scheduled action. Maintenance thresholds, goals and
+inactive usage are not permission to add notifications implicitly.
+
+## Focused architecture decision — direct recipe QR links
+
+### Direct answer
+
+The QR is a normal authenticated link to one active recipe's production page. It
+does not need a server-issued token, short code, revocation lifecycle, scan audit
+or redirect service.
+
+1. Open an active recipe in Workshop.
+2. Display a QR for its canonical Workshop production-page URL.
+3. Allow the user to download the QR as an image or capture it with the operating
+   system's screenshot function.
+4. The user prints that image using their own tools and preferred physical format.
+5. Scanning opens the recipe-specific production page.
+6. The page displays every current recipe value needed for reloading reference.
+7. The page also provides the existing production inputs: quantity, production
+   date and optional batch notes.
+8. Submission creates a new ammunition production operation only after explicit
+   confirmation.
+
+The application does not own printer integration, label dimensions, print
+templates, printer compatibility or physical scan-distance certification.
+
+The recipe information displayed on the production page is:
+
+- name;
+- caliber;
+- OAL;
+- bullet weight;
+- bullet form;
+- drawing/trafilatura;
+- primer;
+- powder;
+- powder weight;
+- recipe notes;
+- status; and
+- current recipe version.
+
+Those values are read-only on this page. Recipe edits remain in the recipe
+management flow. The production form adds only the production-specific quantity,
+date and notes. The server continues to snapshot the current recipe values and
+version into the new production batch.
+
+### Canonical navigation and unavailable recipes
+
+Use a dedicated addressable route for production from one recipe, conceptually
+owned below the existing Recipes area. The route identifier is the existing
+application-generated recipe identifier and is a selector, not authorization.
+
+The route loader must call an authenticated, account-scoped active-recipe read:
+
+- an active recipe owned by the current account returns the complete current
+  recipe;
+- a missing recipe returns `404 Not Found`;
+- an archived/inactive recipe returns the same `404 Not Found`;
+- a recipe owned by another account returns the same `404 Not Found`; and
+- malformed identifiers return the same non-revealing result.
+
+There is no recovery picker on an invalid QR destination. Navigation ends on the
+normal localized Workshop 404 surface, as requested.
+
+The current API exposes a recipe collection but no account-scoped single-recipe
+read. The implementation therefore needs an active-only recipe detail endpoint and
+matching Domain/service method. It should reuse the existing account-filtered
+repository lookup rather than filtering a full recipe collection in the browser.
+
+The production command must repeat the active-recipe check at submission time. A
+recipe can be archived after the page loads; that race must not create production
+from an inactive recipe.
+
+### QR generation and download boundary
+
+Generate the QR in the Workshop client from the canonical recipe-production URL.
+The QR contains no recipe fields, account identity, notes or authorization token.
+It can be rendered to an image and offered through a normal download action.
+
+No server-side QR persistence is required. No QR image is uploaded or retained.
+The same recipe URL can generate the same functional QR again, and recipe edits do
+not require regeneration because the destination always loads the current active
+recipe version.
+
+The QR presentation should include:
+
+- the QR image;
+- recipe name and current version adjacent to, but not encoded inside, the QR;
+- the canonical Workshop origin so the user can recognize the destination;
+- a download-image action; and
+- accessible text identifying which recipe the QR opens.
+
+There is no application print button requirement. Browser screenshots and the
+downloaded image are sufficient; physical printing is user-owned.
+
+### Why existing QR and ShortLinks surfaces are not reused
+
+`MorWalPizVideo.BackOffice/Controllers/QRCodeController.cs` is an authenticated
+administrative binary renderer. Calling it from Workshop would cross the
+BackOffice boundary and add no ownership or navigation benefit. Its QRCoder
+dependency is implementation prior art only, not a reusable Workshop endpoint.
+
+`MorWalPizVideo.ShortLinks` provides globally addressable anonymous redirects,
+public code lookup and click tracking. The Workshop QR already contains its final
+authenticated destination, so an intermediate public redirect would add exposure,
+failure modes and operational ownership without user value.
+
+### Required backend behavior
+
+The focused backend change is an active recipe read, not a label subsystem:
+
+1. ServerAPI derives the public-account identifier from the authenticated claim.
+2. Domain loads the recipe by account and recipe identifier.
+3. Domain returns no result when the recipe is missing or not active.
+4. ServerAPI returns the complete recipe contract or `404`.
+5. Production submission reloads the same account-owned recipe and rejects it if
+   it is no longer active.
+
+No MongoDB collection, QR token, label entity, redirect record, scan record,
+revocation field, expiry field, rate-limit policy or migration is required.
+
+### Required frontend behavior
+
+The dedicated recipe-production page must:
+
+- be directly addressable and survive a hard reload;
+- restore the exact local destination after login;
+- display every recipe value listed above;
+- make recipe data read-only;
+- initialize a fresh production draft with date, quantity and notes;
+- create a fresh idempotency key for the new production submission and retain it
+  for uncertain-outcome retry according to existing capture rules;
+- show pending, success, validation and uncertain-network states;
+- return to the current page with the newly created production result visible or
+  provide the established safe navigation to Ammunition history; and
+- render the normal 404 route when the recipe cannot be resolved.
+
+Scanning or loading the route never creates a batch. Only the explicit production
+submission performs a mutation.
+
+### Implementation impact
+
+Expected existing files to modify:
+
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs` — account-scoped active
+  recipe read and active-state validation during production;
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs` —
+  authenticated single-recipe read returning `404` for missing, foreign or
+  inactive recipes;
+- `frontend/fe-packages/services/src/endpoints-frontend.ts` and
+  `frontend/fe-packages/services/src/workshopService.ts` — typed recipe-detail
+  transport through `accountApiService`;
+- `frontend/shooter-workshop.client/src/routes/config.tsx` — dedicated
+  recipe-production route and localized 404 behavior;
+- `frontend/shooter-workshop.client/src/routes/Recipes/component.tsx` — QR
+  display/download entry point for an active recipe;
+- `frontend/shooter-workshop.client/src/routes/RecipeProduction/` — loader, component and
+  action for current recipe information plus the production form;
+- Workshop localization and stylesheet files — complete recipe labels, responsive
+  read-only detail layout and QR download presentation;
+- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs` — active,
+  archived, missing and cross-account recipe behavior; and
+- focused Workshop route tests — deep-link load, complete value display, QR image
+  download, explicit submission and 404 cases.
+
+`MorWalPizVideo.Models/Models/ShortLink.cs`,
+`MorWalPizVideo.ShortLinks/Controllers/ShortLinkController.cs`,
+`MorWalPizVideo.BackOffice/Controllers/QRCodeController.cs` and BackOffice
+short-link routes are verify-only and remain unchanged.
+
+### Acceptance gates
+
+- The QR resolves directly to the canonical Workshop recipe-production page.
+- Signed-out navigation returns to that exact page after successful login.
+- The page displays every current recipe value, including version and notes.
+- Recipe values cannot be edited from the production form.
+- Missing, malformed, archived, deleted and foreign-account recipe identifiers all
+  produce the localized 404 surface.
+- A recipe archived between page load and submit cannot create a new batch.
+- Scanning and page loading perform no mutation.
+- Explicit submission uses the existing account, CSRF, idempotency and recipe
+  snapshot rules.
+- The downloaded QR image contains only the canonical Workshop URL.
+
+### Delivery update — direct recipe QR-to-production
+
+The direct QR flow is implemented. Active recipe cards now link to an
+account-scoped `/recipes/{recipeId}/produce` page. The API returns only the
+authenticated account's active recipe and returns `404` for missing, archived,
+malformed or foreign-account identifiers. The page displays the complete
+read-only recipe snapshot, generates the QR image in the browser, and provides
+an image download. Its production form reuses the existing CSRF-protected,
+idempotent production command; the service rechecks the recipe status before
+creating the batch.
+
+Implementation files:
+
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs`
+- `frontend/fe-packages/services/src/endpoints-frontend.ts`
+- `frontend/fe-packages/services/src/workshopService.ts`
+- `frontend/fe-packages/services/src/index.ts`
+- `frontend/shooter-workshop.client/src/routes/RecipeProduction/`
+- `frontend/shooter-workshop.client/src/routes/Recipes/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/config.tsx`
+- `frontend/shooter-workshop.client/src/i18n.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+- `frontend/shooter-workshop.client/package.json`
+- `frontend/yarn.lock`
+
+QR images, scan events, label tokens and printer configuration are not persisted.
+- No QR image, scan event, label token or printer configuration is persisted.
+- Existing recipe editing and general Ammunition production remain available and
+  unchanged.
+
+### Impeccable planning lens
+
+This is a refinement of the existing Workshop **Operate** interface, not a
+redesign. Workshop has no app-local `DESIGN.md`; implementation should preserve the
+functional dashboard treatment in `docs/architecture/shooter-workshop.md` and the
+brand tokens documented by `frontend/morwalpizvideo.client/DESIGN.md`.
+
+Before implementation, use the narrow `shape` workflow for the active-recipe
+detail, QR download and production form hierarchy. After implementation, use
+`harden` for expired sessions, hard reload, archived-between-load-and-submit,
+missing/foreign recipe 404 behavior, long localized recipe values, download
+failure and keyboard/screen-reader operation. Minimum visual evidence is desktop
+and narrow-mobile capture of the recipe-production page and QR download state.
+
+Validation for this broader slice:
+
+- `cd frontend && yarn workspace shooter-workshop.client test` — 38 tests passed across 14 files.
+- `cd frontend && yarn build:models && yarn build:services && yarn workspace shooter-workshop.client build` — passed.
+- `dotnet build MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed with existing package vulnerability warnings.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~WorkshopServiceTests"` — 12 passed.
 
 All candidates must preserve the accepted Workshop rules:
 
@@ -176,7 +534,7 @@ maintenance.”
 - Bounded analytics/history endpoints.
 - Stable filter semantics and localized labels.
 
-## Candidate 4 — Personal goals and reminders
+## Candidate 4 — Personal goals without reminders
 
 ### User value
 
@@ -196,8 +554,8 @@ Give users optional motivation to record consistently or organize maintenance.
 - No public ranking, social comparison, or competitive leaderboard.
 - Goals must not be presented as training prescription, health guidance, or safety
   advice.
-- Reminders require an explicit notification and retention decision. Do not silently
-  add email, push, or background jobs.
+- Goals remain visible only while the user is actively using Workshop. Do not add
+  email, push, scheduled jobs, recurring actions or inactivity engagement.
 - A goal must distinguish “not recorded” from “zero activity.”
 
 ### Acceptance evidence
@@ -205,12 +563,12 @@ Give users optional motivation to record consistently or organize maintenance.
 - A user can disable and delete a goal.
 - Missing data is shown as unknown rather than interpreted as zero.
 - Goal progress is derived from the same correction-aware analytics semantics.
-- Notification behavior is opt-in and auditable if introduced.
+- No notification subscription or scheduled delivery is created.
 
 ### Dependencies
 
 - Stable analytics summaries.
-- A separately approved notification/privacy design if reminders are added.
+- No notification dependency.
 
 ## Candidate 5 — Account export and personal backup
 
@@ -303,37 +661,52 @@ The importer must not fabricate those facts.
 - Versioned backup/import contract.
 - Privacy and file-retention decision.
 
-## Candidate 7 — Opaque QR or short-code labels
+## Candidate 7 — Direct recipe QR links
 
 ### User value
 
-Reduce selection effort when recording a component or batch in a workshop or at
-the range.
+Place a printed QR near the user's reloading equipment so scanning opens the exact
+active recipe and a fresh ammunition-production form without searching.
 
 ### Proposed behavior
 
-Scan a label containing only an opaque application identifier or short-lived lookup
-token. Scanning selects a form value; it does not authorize or save a mutation.
+The active recipe UI displays a QR containing the canonical authenticated Workshop
+URL for that recipe's dedicated production page. The user may download the QR as
+an image or capture it with a screenshot and then print it independently.
+
+Scanning displays all current recipe values and a production form for quantity,
+date and optional notes. It never saves automatically.
 
 ### Constraints
 
-- Never encode firearm descriptions, recipe details, account identity, or notes.
-- The server must re-check account ownership and current entity state after scanning.
-- Labels can be revoked or regenerated.
-- Mobile browsers must provide a keyboard/manual fallback.
-- Avoid short codes that are easily enumerable unless paired with ownership checks
-  and rate limits.
+- Encode only the canonical Workshop origin, route and application-generated
+  recipe identifier.
+- The recipe identifier selects a record but never authorizes access.
+- The server re-checks account ownership and active recipe status on page load and
+  production submission.
+- Missing, malformed, archived, deleted and foreign-account recipes return the same
+  localized `404 Not Found` result.
+- The page always displays the current recipe version; there is no immutable
+  historical-version production flow.
+- Recipe values are read-only on the production page.
+- Submission continues through the existing CSRF and idempotent production command.
+- Do not add server-issued tokens, short codes, redirect records, scan analytics,
+  revocation/regeneration, printer integration or application-owned print layouts.
 
 ### Acceptance evidence
 
-- A label from another account cannot reveal a record.
-- Scanning a retired or archived record gives a clear recoverable state.
-- Manual entry and keyboard navigation remain fully supported.
+- A direct scan survives hard reload and returns to the same destination after login.
+- The production page shows every current recipe value and the current version.
+- A QR for another account, archived recipe or missing recipe resolves to 404
+  without revealing why.
+- Scanning performs no mutation; explicit submit creates one production operation.
+- The downloaded image contains only the canonical authenticated URL.
 
 ### Dependencies
 
-- Stable entity identifiers and mobile capture flow.
-- Privacy review and rate-limit policy.
+- Account-scoped active recipe detail read.
+- Recipe-specific production route and login return-path preservation.
+- Client-side QR image rendering/download.
 
 ## Candidate 8 — Connectivity-aware capture without offline mutation queues
 
@@ -413,8 +786,9 @@ analytics source by default.
 3. Saved views, after analytics filters and bounded reads stabilize.
 4. Export report, after correction-aware analytics and privacy review.
 5. Spreadsheet import and portable backup, as separate compatibility projects.
-6. QR/short-code labels, after mobile capture behavior is proven.
-7. Goals/reminders, only after observed retention need and notification approval.
+6. Direct recipe QR links, after active-recipe detail and login return-path behavior
+   are proven.
+7. Presentation-only goals, with no notification or recurring-action expansion.
 8. Offline mutation queues and persisted analytics rollups last, each with a separate
    architectural decision and recovery proof.
 

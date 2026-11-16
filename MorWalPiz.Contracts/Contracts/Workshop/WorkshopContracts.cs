@@ -268,6 +268,14 @@ public sealed record WorkshopAnalyticsContract(
     int CorrectionCount, WorkshopProjectionState ProjectionState,
     IReadOnlyList<WorkshopAnalyticsBucketContract> Buckets);
 
+public sealed record WorkshopReportActivityContract(
+    string Id, string OperationId, WorkshopOperationType Type, DateTime EffectiveAt,
+    DateTime? RecordedAt, string? Summary, string? EntityLabel);
+
+public sealed record WorkshopReportContract(
+    WorkshopAnalyticsContract Analytics,
+    IReadOnlyList<WorkshopReportActivityContract> Activities);
+
 public sealed record WorkshopComponentConditionContract(
     ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation);
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type {
@@ -26,9 +26,15 @@ export default function Maintenance() {
     eventType: "Inspection",
     date: new Date().toISOString(),
     description: "",
-    idempotencyKey: "",
+    idempotencyKey: crypto.randomUUID(),
   });
+  const processedResult = useRef<unknown>(null);
   const localDateTime = localDateTimeInputValue(new Date(form.date));
+  useEffect(() => {
+    if (fetcher.state !== "idle" || !fetcher.data?.ok || fetcher.data === processedResult.current) return;
+    processedResult.current = fetcher.data;
+    setForm((current) => ({ ...current, idempotencyKey: crypto.randomUUID() }));
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <div>
@@ -36,6 +42,23 @@ export default function Maintenance() {
       <section className="panel">
         <fetcher.Form method="post" className="panel form-panel">
           <h2>{t("Record maintenance")}</h2>
+          <div className="template-row" aria-label={t("Neutral maintenance templates")}>
+            <span>{t("Templates")}</span>
+            {(["Cleaning", "Inspection", "General"] as const).map((template) => (
+              <button
+                type="button"
+                className="button button-quiet"
+                key={template}
+                onClick={() => setForm((current) => ({
+                  ...current,
+                  eventType: template,
+                  description: template === "Cleaning" ? t("Routine cleaning recorded.") : template === "Inspection" ? t("Routine inspection recorded.") : t("General maintenance recorded."),
+                }))}
+              >
+                {t(template)}
+              </button>
+            ))}
+          </div>
           <label>
             {t("Target")}
             <select
@@ -118,6 +141,7 @@ export default function Maintenance() {
             <textarea name="description" required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
           </label>
           <input type="hidden" name="notes" value={form.notes ?? ""} />
+          <input type="hidden" name="idempotencyKey" value={form.idempotencyKey} />
           {fetcher.state === "idle" && fetcher.data && !fetcher.data.ok && (
             <p className="form-error" role="alert">{fetcher.data.error}</p>
           )}

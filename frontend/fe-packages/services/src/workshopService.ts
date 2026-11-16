@@ -177,6 +177,11 @@ export const recordWorkshopMaintenance = (
 export const getWorkshopRecipes = (): Promise<WorkshopRecipe[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_RECIPES));
 
+export const getWorkshopRecipe = (recipeId: string): Promise<WorkshopRecipe> =>
+  request(accountApiService.get(
+    frontendEndpoints.WORKSHOP_RECIPE_DETAIL.replace("{recipeId}", encodeURIComponent(recipeId)),
+  ));
+
 export const createWorkshopRecipe = (
   body: CreateWorkshopRecipeRequest,
 ): Promise<WorkshopRecipe> =>
@@ -220,8 +225,16 @@ export const getWorkshopAnalytics = (from: string, to: string): Promise<Workshop
   return request(accountApiService.get(`${frontendEndpoints.WORKSHOP_ANALYTICS}?${query}`));
 };
 
-export const getWorkshopHistory = (): Promise<WorkshopActivity[]> =>
-  request(accountApiService.get(frontendEndpoints.WORKSHOP_HISTORY));
+export const getWorkshopHistory = (
+  options: { page?: number; pageSize?: number; type?: string } = {},
+): Promise<WorkshopActivity[]> => {
+  const query = new URLSearchParams();
+  if (options.page !== undefined) query.set("page", String(options.page));
+  if (options.pageSize !== undefined) query.set("pageSize", String(options.pageSize));
+  if (options.type) query.set("type", options.type);
+  const suffix = query.toString();
+  return request(accountApiService.get(`${frontendEndpoints.WORKSHOP_HISTORY}${suffix ? `?${suffix}` : ""}`));
+};
 
 export const getWorkshopReconciliation = (): Promise<WorkshopReconciliationStatus> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_RECONCILIATION));

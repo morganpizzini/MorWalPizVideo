@@ -9,6 +9,7 @@ import {
   recordWorkshopMaintenance,
   recordWorkshopProduction,
   recordWorkshopShooting,
+  getWorkshopHistory,
 } from "./workshopService";
 import { accountApiService } from "./apiTransport";
 
@@ -153,6 +154,17 @@ describe("Workshop account transport", () => {
       eventType: "Inspection",
       idempotencyKey: "maintenance-key",
     });
+  });
+
+  it("encodes bounded history filters as query parameters", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getWorkshopHistory({ page: 2, pageSize: 50, type: "ShootingRecorded" });
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "/api/v1/workshop/history?page=2&pageSize=50&type=ShootingRecorded",
+    );
   });
 
     it("posts a shooting correction to the append-only correction route", async () => {

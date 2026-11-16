@@ -1,11 +1,13 @@
 import { Link, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopAnalytics, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
 import { ActivityList, Stat } from "../shared";
 import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
-import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
+import { readWorkshopPreferences, writeWorkshopPreferences, type WorkshopPersonalGoal } from "../../services/workshopPreferences";
+import OnboardingGuide from "./OnboardingGuide";
 
 interface DashboardLoaderData {
   dashboard: WorkshopDashboard;
@@ -21,6 +23,20 @@ export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const data = useLoaderData() as DashboardLoaderData;
   const selectedDays = data.days;
+  const accountId = session.account?.id;
+  const preferences = accountId ? readWorkshopPreferences(accountId) : null;
+  const [goal, setGoal] = useState<WorkshopPersonalGoal | null>(() => preferences?.personalGoal ?? null);
+  const [goalKind, setGoalKind] = useState<WorkshopPersonalGoal["kind"]>(goal?.kind ?? "shootingRounds");
+  const [goalTarget, setGoalTarget] = useState(String(goal?.target ?? ""));
+  const emptyWorkspace = data.history.length === 0
+    && data.dashboard.firearmCount === 0
+    && data.dashboard.componentCount === 0
+    && data.analytics.shootingSessions === 0
+    && data.analytics.producedRounds === 0
+    && data.analytics.maintenanceEvents === 0;
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => Boolean(accountId && emptyWorkspace && preferences?.onboardingState === "active"),
+  );
   const setPeriod = (value: string) => {
     const days = Number(value) === 90 || Number(value) === 365 ? Number(value) : 30;
     if (session.account?.id) {
@@ -31,6 +47,23 @@ export default function Dashboard() {
     next.set("days", String(days));
     navigate(`/?${next.toString()}`);
   };
+  const saveGoal = () => {
+    const target = Number(goalTarget);
+    if (!accountId || !Number.isSafeInteger(target) || target <= 0 || target > 1_000_000_000) return;
+    const nextGoal = { kind: goalKind, target };
+    const nextPreferences = readWorkshopPreferences(accountId);
+    writeWorkshopPreferences(accountId, { ...nextPreferences, personalGoal: nextGoal });
+    setGoal(nextGoal);
+  };
+  const clearGoal = () => {
+    if (!accountId) return;
+    const nextPreferences = readWorkshopPreferences(accountId);
+    writeWorkshopPreferences(accountId, { ...nextPreferences, personalGoal: null });
+    setGoal(null);
+    setGoalTarget("");
+  };
+  const goalValue = goal?.kind === "producedRounds" ? data.analytics.producedRounds : data.analytics.shootingRounds;
+  const goalPercentage = goal ? Math.min(100, goalValue / goal.target * 100) : 0;
 
   return (
     <div>
@@ -38,6 +71,18 @@ export default function Dashboard() {
         title={t("Workshop dashboard")}
         subtitle={t("Account-owned equipment, stock and operation history.")}
       />
+      {showOnboarding && accountId ? (
+        <OnboardingGuide accountId={accountId} onDismiss={() => setShowOnboarding(false)} />
+      ) : null}
+      {!showOnboarding && emptyWorkspace && preferences?.onboardingState === "skipped" ? (
+        <section className="panel onboarding-reopen">
+          <div>
+            <h2>{t("Ready when you are")}</h2>
+            <p>{t("The setup guide is still available whenever you want a short path into the Workshop.")}</p>
+          </div>
+          <button className="button button-quiet" type="button" onClick={() => setShowOnboarding(true)}>{t("Show setup guide")}</button>
+        </section>
+      ) : null}
       <div className="dashboard-grid">
         <section className="panel dashboard-hero">
           <p className="eyebrow">{t("Operational overview")}</p>
@@ -92,6 +137,23 @@ export default function Dashboard() {
             </table>
           </div>
         ) : <p>{t("No recorded activity in this period.")}</p>}
+      </section>
+      <section className="panel personal-goal">
+        <div className="section-heading"><h2>{t("Personal goal")}</h2><span className="status-note">{t("Presentation-only")}</span></div>
+        {goal ? (
+          <>
+            <p>{t(goal.kind === "producedRounds" ? "Produce {target} rounds in this period." : "Shoot {target} rounds in this period.", { target: formatNumber(goal.target, culture) })}</p>
+            <div className="goal-track" role="progressbar" aria-valuemin={0} aria-valuemax={goal.target} aria-valuenow={Math.min(goalValue, goal.target)}><span style={{ width: `${goalPercentage}%` }} /></div>
+            <div className="section-heading"><strong>{formatNumber(goalValue, culture)} / {formatNumber(goal.target, culture)}</strong><button className="button button-quiet" type="button" onClick={clearGoal}>{t("Remove goal")}</button></div>
+          </>
+        ) : (
+          <div className="goal-form">
+            <label>{t("Goal type")}<select value={goalKind} onChange={(event) => setGoalKind(event.target.value as WorkshopPersonalGoal["kind"])}><option value="shootingRounds">{t("Shooting rounds")}</option><option value="producedRounds">{t("Produced rounds")}</option></select></label>
+            <label>{t("Target rounds")}<input type="number" min="1" max="1000000000" step="1" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} /></label>
+            <button className="button button-primary" type="button" onClick={saveGoal}>{t("Set goal")}</button>
+          </div>
+        )}
+        <p className="form-hint">{t("Goals stay on this signed-in account and do not send reminders.")}</p>
       </section>
       <section className="panel">
         <div className="section-heading"><h2>{t("Quick actions")}</h2></div>

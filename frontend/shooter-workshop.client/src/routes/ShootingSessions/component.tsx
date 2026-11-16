@@ -31,6 +31,7 @@ export default function ShootingSessions() {
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [untracked, setUntracked] = useState("0");
   const [records, setRecords] = useState<RecipeRow[]>([]);
+  const [draftNotice, setDraftNotice] = useState(false);
   const processedResult = useRef<unknown>(null);
   const trackedRounds = records.reduce((sum, record) => sum + Math.max(0, record.quantity), 0);
   const totalRounds = trackedRounds + Math.max(0, Number(untracked) || 0);
@@ -50,12 +51,26 @@ export default function ShootingSessions() {
     setRecords([]);
     setUntracked("0");
     setEffectiveAt(localDateTimeInputValue());
+    setDraftNotice(false);
   }, [fetcher.state, fetcher.data, session.account?.id, firearmId, records]);
+
+  const repeatSession = (record: WorkshopShootingSessionRecord) => {
+    setFirearmId(record.session.firearmId);
+    setEffectiveAt(localDateTimeInputValue());
+    setNotes(record.session.notes ?? "");
+    setUntracked(String(record.session.untrackedAmmunition));
+    setRecords(record.session.consumptionRecords
+      .filter((item) => item.recipeId && item.quantity > 0)
+      .map((item) => ({ key: crypto.randomUUID(), recipeId: item.recipeId ?? "", quantity: item.quantity })));
+    setIdempotencyKey(crypto.randomUUID());
+    setDraftNotice(true);
+    document.querySelector(".shooting-sessions-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div>
       <PageTitle title={t("Shooting sessions")} subtitle={t("Record sessions and correct them inline without rewriting history.")} />
-      <fetcher.Form method="post" className="panel form-panel">
+      <fetcher.Form method="post" className="panel form-panel shooting-sessions-form">
         <input type="hidden" name="intent" value="record" />
         <input type="hidden" name="totalRounds" value={totalRounds} />
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
@@ -80,6 +95,7 @@ export default function ShootingSessions() {
         </div>
         <label>{t("Notes")}<input name="notes" value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
         <AmmunitionFields records={records} recipes={recipes} onChange={setRecords} />
+        {draftNotice && <p className="status-note" role="status">{t("Repeated session loaded as a new unsaved draft.")}</p>}
         {fetcher.state === "idle" && fetcher.data && !fetcher.data.ok && (
           <p className="form-error" role="alert">{fetcher.data.error}</p>
         )}
@@ -87,7 +103,7 @@ export default function ShootingSessions() {
           {fetcher.state === "submitting" ? t("Saving…") : t("Record session")}
         </button>
       </fetcher.Form>
-      <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} />
+      <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onRepeat={repeatSession} />
     </div>
   );
 }
@@ -130,10 +146,12 @@ function ShootingHistory({
   sessions,
   firearms,
   recipes,
+  onRepeat,
 }: {
   sessions: WorkshopShootingSessionRecord[];
   firearms: WorkshopFirearm[];
   recipes: WorkshopRecipe[];
+  onRepeat: (record: WorkshopShootingSessionRecord) => void;
 }) {
   const { t } = useI18n();
   const labels = useMemo(() => new Map(firearms.map((firearm) => [firearm.id, firearm.nickname || `${firearm.manufacturer} ${firearm.model}`])), [firearms]);
@@ -141,7 +159,7 @@ function ShootingHistory({
     <section className="panel">
       <div className="section-heading"><h2>{t("Recent shooting sessions")}</h2></div>
       {sessions.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : sessions.map((session) => (
-        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} />
+        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} onRepeat={onRepeat} />
       ))}
     </section>
   );
@@ -151,10 +169,12 @@ function ShootingRow({
   record,
   recipes,
   firearmLabel,
+  onRepeat,
 }: {
   record: WorkshopShootingSessionRecord;
   recipes: WorkshopRecipe[];
   firearmLabel: string;
+  onRepeat: (record: WorkshopShootingSessionRecord) => void;
 }) {
   const { culture, t } = useI18n();
   const { session } = record;
@@ -220,6 +240,7 @@ function ShootingRow({
         </fieldset>
       ) : <strong>{session.totalRounds} {t("rounds")}</strong>}
       <div className="button-row">
+        <button type="button" className="button button-quiet" onClick={() => onRepeat(record)}>{t("Repeat as draft")}</button>
         {editing ? <>
           <button type="button" className="button" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
           <button type="button" className="button button-quiet" onClick={() => setEditing(false)}>{t("Cancel")}</button>

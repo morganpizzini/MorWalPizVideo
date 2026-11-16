@@ -1,14 +1,26 @@
-import { Form, Link, useLoaderData, useSearchParams } from "react-router";
+import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopComponentCondition, WorkshopFirearmDetail } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
 import { formatDate, formatNumber, localDateTimeInputValue } from "../../i18n-formatters";
 import { Stat } from "../shared";
+import type { action } from "./action";
 
 export default function FirearmDetail() {
   const { culture, t } = useI18n();
   const detail = useLoaderData() as WorkshopFirearmDetail;
   const [searchParams] = useSearchParams();
+  const maintenanceFetcher = useFetcher<typeof action>();
+  const [maintenanceKey, setMaintenanceKey] = useState(() => crypto.randomUUID());
+  const processedMaintenance = useRef<unknown>(null);
+  useEffect(() => {
+    if (maintenanceFetcher.state !== "idle" || !maintenanceFetcher.data || !("ok" in maintenanceFetcher.data) ||
+        !maintenanceFetcher.data.ok || maintenanceFetcher.data === processedMaintenance.current) return;
+    processedMaintenance.current = maintenanceFetcher.data;
+    setMaintenanceKey(crypto.randomUUID());
+  }, [maintenanceFetcher.state, maintenanceFetcher.data]);
+  const maintenanceResult = maintenanceFetcher.data && "ok" in maintenanceFetcher.data ? maintenanceFetcher.data : null;
   if (!detail?.firearm) {
     return <EmptyState title={t("Firearm not found")} message={t("The record may be archived or belong to another account.")} />;
   }
@@ -51,7 +63,7 @@ export default function FirearmDetail() {
             <p>{t("Use the recipe-aware flow so ammunition and component history remain traceable.")}</p>
             <Link className="button" to={`/sessions/shooting?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Record session")}</Link>
           </div>
-          <Form method="post"><input type="hidden" name="intent" value="maintenance" /><label>{t("Event type")}<select name="eventType" defaultValue="General"><option value="General">{t("General")}</option><option value="Malfunction">{t("Malfunction")}</option><option value="Cleaning">{t("Cleaning")}</option><option value="Inspection">{t("Inspection")}</option></select></label><label>{t("Effective date and time")}<input name="date" type="datetime-local" defaultValue={localDateTimeInputValue()} required /></label><label>{t("Description")}<input name="description" required /></label><button className="button" type="submit">{t("Save event")}</button></Form>
+          <maintenanceFetcher.Form method="post"><input type="hidden" name="intent" value="maintenance" /><input type="hidden" name="idempotencyKey" value={maintenanceKey} /><label>{t("Event type")}<select name="eventType" defaultValue="General"><option value="General">{t("General")}</option><option value="Malfunction">{t("Malfunction")}</option><option value="Cleaning">{t("Cleaning")}</option><option value="Inspection">{t("Inspection")}</option></select></label><label>{t("Effective date and time")}<input name="date" type="datetime-local" defaultValue={localDateTimeInputValue()} required /></label><label>{t("Description")}<input name="description" required /></label>{maintenanceFetcher.state === "idle" && maintenanceResult && !maintenanceResult.ok && <p className="form-error" role="alert">{maintenanceResult.error}</p>}<button className="button" type="submit" disabled={maintenanceFetcher.state !== "idle"}>{maintenanceFetcher.state === "submitting" ? t("Saving…") : t("Save event")}</button></maintenanceFetcher.Form>
         </div>
       </section>}
       <section className="panel">

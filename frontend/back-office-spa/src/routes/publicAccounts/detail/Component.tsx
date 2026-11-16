@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Alert, Button, Form, Table } from 'react-bootstrap';
-import { Link, useParams } from 'react-router';
+import { Link, useLoaderData, useParams } from 'react-router';
 import {
   getPublicAccountInteractions,
   updatePublicAccountPortalAccess,
@@ -9,17 +9,18 @@ import type { PublicAccountInteractionDetail } from '@morwalpizvideo/models';
 
 export default function PublicAccountDetailPage() {
   const { id = '' } = useParams();
-  const [detail, setDetail] = useState<PublicAccountInteractionDetail | null>(null);
+  const loadedDetail = useLoaderData() as PublicAccountInteractionDetail;
+  const [detail, setDetail] = useState<PublicAccountInteractionDetail | null>(loadedDetail);
   const [pageNumber, setPageNumber] = useState(1);
   const [commentsBlocked, setCommentsBlocked] = useState(false);
   const [portalAccessRevoked, setPortalAccessRevoked] = useState(false);
   const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -33,11 +34,11 @@ export default function PublicAccountDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, pageNumber]);
 
   useEffect(() => {
-    void load();
-  }, [id, pageNumber]);
+    if (pageNumber > 1) void load();
+  }, [load, pageNumber]);
 
   const updateAccess = async (event: FormEvent) => {
     event.preventDefault();

@@ -15,17 +15,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (!firearmId) throw new Response("Not found", { status: 404 });
   const form = await request.formData();
   const intent = value(form, "intent");
-  const idempotencyKey = crypto.randomUUID();
+  const idempotencyKey = value(form, "idempotencyKey") ?? crypto.randomUUID();
   if (intent === "maintenance") {
-    return recordWorkshopMaintenance({
-      firearmId,
-      eventType: (value(form, "eventType") ?? "General") as "Inspection",
-      date: value(form, "date") ?? new Date().toISOString(),
-      roundCountAtEvent: null,
-      description: value(form, "description") ?? "",
-      notes: value(form, "notes"),
-      idempotencyKey,
-    });
+    try {
+      await recordWorkshopMaintenance({
+        firearmId,
+        eventType: (value(form, "eventType") ?? "General") as "Inspection",
+        date: value(form, "date") ?? new Date().toISOString(),
+        roundCountAtEvent: null,
+        description: value(form, "description") ?? "",
+        notes: value(form, "notes"),
+        idempotencyKey,
+      });
+      return { ok: true as const, intent };
+    } catch (error) {
+      return { ok: false as const, intent, error: error instanceof Error ? error.message : "The request could not be completed." };
+    }
   }
   if (intent === "shooting") {
     return redirect(`/sessions/shooting?firearmId=${encodeURIComponent(firearmId)}`);

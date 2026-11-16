@@ -80,6 +80,7 @@ export {
   removeWorkshopComponent,
   recordWorkshopMaintenance,
   getWorkshopRecipes,
+  getWorkshopRecipe,
   createWorkshopRecipe,
   updateWorkshopRecipe,
   getWorkshopBatches,

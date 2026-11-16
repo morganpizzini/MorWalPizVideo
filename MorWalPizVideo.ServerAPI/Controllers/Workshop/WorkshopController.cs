@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Globalization;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -221,6 +223,12 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     public async Task<IActionResult> Recipes(CancellationToken ct) =>
         Ok(await service.GetRecipesAsync(AccountId(), ct));
 
+    [HttpGet("recipes/{recipeId}")]
+    public async Task<IActionResult> Recipe(string recipeId, CancellationToken ct) =>
+        await service.GetActiveRecipeAsync(AccountId(), recipeId, ct) is { } recipe
+            ? Ok(recipe)
+            : NotFound();
+
     [HttpPost("recipes")]
     public async Task<IActionResult> CreateRecipe(WorkshopRecipeRequest request, CancellationToken ct)
     {
@@ -340,6 +348,33 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
         [FromQuery] WorkshopOperationType? type = null, CancellationToken ct = default) =>
         Ok(await service.GetActivitiesAsync(AccountId(), page, pageSize, type, ct));
 
+    [HttpGet("report")]
+    public async Task<IActionResult> Report([FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] string? format = null, CancellationToken ct = default)
+    {
+        var end = to ?? DateTime.UtcNow;
+        var start = from ?? end.AddDays(-30);
+        try
+        {
+            var report = await service.GetReportAsync(AccountId(), start, end, ct);
+            if (string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase))
+                return File(Encoding.UTF8.GetBytes(ToCsv(report)), "text/csv",
+                    $"workshop-report-{start:yyyyMMdd}-{end:yyyyMMdd}.csv");
+
+            var analytics = report.Analytics;
+            return Ok(new WorkshopReportContract(
+                new(analytics.From, analytics.To, analytics.ShootingRounds, analytics.ShootingSessions,
+                    analytics.TrackedRounds, analytics.UntrackedRounds, analytics.ProducedRounds,
+                    analytics.AvailableRounds, analytics.MaintenanceEvents, analytics.MalfunctionEvents,
+                    analytics.CorrectionCount, analytics.ProjectionState,
+                    analytics.Buckets.Select(x => new WorkshopAnalyticsBucketContract(x.Date, x.ShootingRounds,
+                        x.ProducedRounds, x.ShootingSessions)).ToArray()),
+                report.Activities.Select(x => new WorkshopReportActivityContract(
+                    x.Id, x.OperationId, x.Type, x.EffectiveAt, x.RecordedAt, x.Summary, x.EntityLabel)).ToArray()));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+    }
+
     [HttpGet("reconciliation")]
     public async Task<IActionResult> Reconciliation(CancellationToken ct)
     {
@@ -363,6 +398,22 @@ public sealed class WorkshopController(WorkshopService service) : ControllerBase
     private static WorkshopOperationContract ToContract(WorkshopOperationResult result) =>
         new(result.Operation.Id, result.Operation.OperationType, result.Operation.EffectiveAt,
             result.Operation.RecordedAt, result.Operation.ContributionDigest);
+
+    private static string ToCsv(WorkshopReportData report)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("section,date,type,label,summary,shootingRounds,producedRounds,shootingSessions");
+        foreach (var bucket in report.Analytics.Buckets)
+            builder.AppendLine(string.Join(',', "analytics", Csv(bucket.Date.ToString("O", CultureInfo.InvariantCulture)),
+                string.Empty, string.Empty, string.Empty, bucket.ShootingRounds, bucket.ProducedRounds, bucket.ShootingSessions));
+        foreach (var activity in report.Activities)
+            builder.AppendLine(string.Join(',', "activity", Csv(activity.EffectiveAt.ToString("O", CultureInfo.InvariantCulture)),
+                Csv(activity.Type.ToString()), Csv(activity.EntityLabel), Csv(activity.Summary), string.Empty, string.Empty, string.Empty));
+        return builder.ToString();
+    }
+
+    private static string Csv(string? value) =>
+        $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 
     private static WorkshopShootingCommand ToShootingCommand(RecordWorkshopShootingRequest request, bool deriveTotal = false) =>
         new(request.FirearmId, request.Date,

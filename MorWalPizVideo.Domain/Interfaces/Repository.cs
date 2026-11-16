@@ -1088,8 +1088,6 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public sealed class PublicAccountRepository(IMongoDatabase database)
         : BaseRepository<PublicAccount>(database, DbCollections.PublicAccounts), IPublicAccountRepository
     {
-        internal static BsonDocument ListSortKeys => new() { { "username", 1 } };
-
         public Task<PublicAccount?> FindByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken = default) =>
             _collection.Find(item => item.NormalizedUsername == normalizedUsername).FirstOrDefaultAsync(cancellationToken);
 
@@ -1117,10 +1115,12 @@ namespace MorWalPizVideo.Server.Services.Interfaces
                 ? Builders<PublicAccount>.Filter.Empty
                 : Builders<PublicAccount>.Filter.Regex(item => item.Username, new BsonRegularExpression(Regex.Escape(search.Trim()), "i")) |
                   Builders<PublicAccount>.Filter.Regex(item => item.DisplayName, new BsonRegularExpression(Regex.Escape(search.Trim()), "i"));
-            return await _collection.Find(filter)
-                .Sort(new BsonDocumentSortDefinition<PublicAccount>(ListSortKeys))
+            var accounts = await _collection.Find(filter).ToListAsync(cancellationToken);
+            return accounts
+                .OrderBy(item => item.Username, StringComparer.OrdinalIgnoreCase)
                 .Skip((Math.Clamp(page, 1, 10000) - 1) * Math.Clamp(pageSize, 1, 50))
-                .Limit(Math.Clamp(pageSize, 1, 50)).ToListAsync(cancellationToken);
+                .Take(Math.Clamp(pageSize, 1, 50))
+                .ToArray();
         }
 
         public Task<long> CountAccountsAsync(string? search, CancellationToken cancellationToken = default)

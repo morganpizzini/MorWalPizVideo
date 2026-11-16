@@ -22,6 +22,7 @@ describe("Workshop route configuration", () => {
       "maintenance",
       "ammunition",
       "recipes",
+      "recipes/:recipeId/produce",
       "production",
       "sessions/shooting",
       "history",
