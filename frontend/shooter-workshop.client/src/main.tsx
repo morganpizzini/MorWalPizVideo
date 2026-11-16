@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
+import { accountApiService } from "@morwalpizvideo/services";
 import { AuthProvider } from "./auth/AuthProvider";
 import { routes } from "./routes/config";
 import { I18nProvider } from "./i18n";
@@ -13,6 +14,12 @@ if ("serviceWorker" in navigator) {
     console.error("Unable to register the Workshop service worker", error);
   });
 }
+
+accountApiService.setUnauthorizedHandler(() => {
+  if (window.location.pathname === "/account/login") return;
+  const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.replace(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { accountApiService } from "@morwalpizvideo/services";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
 import { LanguageSelector } from "../components/LanguageSelector";
@@ -38,13 +37,6 @@ export default function AppShell() {
       void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
     }
   }, [loading, location.hash, location.pathname, location.search, navigate, session.authenticated]);
-  useEffect(() => {
-    accountApiService.setUnauthorizedHandler(() => {
-      const returnUrl = `${location.pathname}${location.search}${location.hash}`;
-      void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
-    });
-    return () => accountApiService.setUnauthorizedHandler(() => undefined);
-  }, [location.hash, location.pathname, location.search, navigate]);
   if (loading) return <LoadingState label={t("Restoring your account session…")} />;
   if (!session.authenticated) {
     return <LoadingState label={error ?? t("Redirecting to account login…")} />;
