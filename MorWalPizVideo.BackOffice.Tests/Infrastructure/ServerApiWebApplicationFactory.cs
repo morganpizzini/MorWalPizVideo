@@ -30,6 +30,8 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
         Environment.SetEnvironmentVariable("FeatureManagement__EnableCache", "false");
         Environment.SetEnvironmentVariable("FeatureManagement__EnableOutputCache", "false");
         Environment.SetEnvironmentVariable("FeatureManagement__EnableCors", "false");
+        Environment.SetEnvironmentVariable("PublicAccount__RegistrationRateLimit__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("PublicAccount__LoginRateLimit__PermitLimit", "1000");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -49,6 +51,8 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
                 ["FeatureManagement:EnableCache"] = "false",
                 ["FeatureManagement:EnableOutputCache"] = "false",
                 ["FeatureManagement:EnableCors"] = "false",
+                ["PublicAccount:RegistrationRateLimit:PermitLimit"] = "1000",
+                ["PublicAccount:LoginRateLimit:PermitLimit"] = "1000",
                 ["YouTubeChannelId"] = PrimaryScenario.ChannelId
             });
         });
