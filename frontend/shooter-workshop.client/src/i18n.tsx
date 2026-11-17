@@ -11,6 +11,7 @@ const italian: Record<string, string> = {
   "Equipment": "Attrezzatura",
   "Open inventory": "Apri magazzino",
   "Manage firearms, physical inventory and component definitions.": "Gestisci armi, inventario fisico e definizioni dei componenti.",
+  "Inventory": "Inventario",
   "Equipment sections": "Sezioni attrezzatura",
   "Components": "Componenti",
   "Ammunition": "Munizioni",

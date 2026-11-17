@@ -75,7 +75,12 @@ MongoDB is externally managed by the project owner. Source must own index defini
 
 ## Caching
 
-Output cache accelerates public projections. Memory cache is process-local and must not be treated as distributed coherence. Cache registration, middleware, tags, and eviction contracts are deployed as one feature.
+Output cache accelerates explicitly opted-in public projections. The ServerAPI must
+not apply a global base policy: account/session/CSRF/profile reads are explicitly
+marked `NoStore`, and account-owned Workshop reads remain uncached unless an
+endpoint opts in with `[OutputCache]`. Memory cache is process-local and must not
+be treated as distributed coherence. Cache registration, middleware, tags, and
+eviction contracts are deployed as one feature.
 
 ## Jobs
 

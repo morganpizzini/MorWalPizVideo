@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain.Accounts;
@@ -19,6 +20,7 @@ public sealed class PublicAccountController(
 {
     [HttpGet("account/csrf")]
     [AllowAnonymous]
+    [OutputCache(NoStore = true)]
     public ActionResult<PublicAccountCsrfContract> GetCsrf()
     {
         Response.Headers.CacheControl = "no-store";
@@ -90,6 +92,7 @@ public sealed class PublicAccountController(
 
     [HttpGet("account/session")]
     [AllowAnonymous]
+    [OutputCache(NoStore = true)]
     public async Task<ActionResult<PublicAccountSessionContract>> Session(CancellationToken cancellationToken)
     {
         Response.Headers.CacheControl = "no-store";
@@ -148,6 +151,7 @@ public sealed class PublicAccountController(
 public sealed class PublicProfileController(IPublicAccountService accountService) : ControllerBase
 {
     [HttpGet]
+    [OutputCache(NoStore = true)]
     public async Task<ActionResult<PublicAccountSummaryContract>> Get(CancellationToken cancellationToken)
     {
         var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);

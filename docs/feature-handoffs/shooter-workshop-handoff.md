@@ -10,6 +10,33 @@ navigation. The durable functional record is
 This handoff remains only for its unresolved release certification, browser
 authentication, index, domain/TLS, and acceptance gates.
 
+## Verification follow-up — 2026-11-17 account CSRF output-cache isolation
+
+Removed the ServerAPI global output-cache base policy. Output caching remains
+enabled in production but is now opt-in through endpoint attributes, preventing
+unannotated account-owned Workshop reads from being cached. CSRF, account-session,
+and profile reads now carry explicit `NoStore` output-cache metadata in addition
+to their HTTP `no-store` headers where applicable. This prevents a cached CSRF
+JSON response from being served without its matching cookie when the Workshop SPA
+reaches ServerAPI through the public nginx/VNet boundary.
+
+Changed files:
+
+- `MorWalPizVideo.ServerAPI/Program.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/PublicAccountController.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs`
+- `docs/architecture/infrastructure.md`
+- `docs/features/accounts-and-channels.md`
+
+Validation:
+
+- `dotnet build MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed with existing ImageSharp vulnerability warnings.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --no-build --filter "FullyQualifiedName~PublicAccountEndpointTests"` — 7 passed.
+
+Deployment requirement: purge or restart existing ServerAPI output-cache instances
+after release so the previously cached CSRF object cannot remain available until
+its old expiry.
+
 ## Outcome
 
 ## Verification follow-up — 2026-11-16 cookie-safe account session tokens

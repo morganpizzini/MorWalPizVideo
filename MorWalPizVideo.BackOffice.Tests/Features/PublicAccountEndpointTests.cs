@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.OutputCaching;
 using MorWalPiz.Contracts.Contracts;
+using MorWalPizVideo.ServerAPI.Controllers;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -12,6 +14,27 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
     private readonly ServerApiWebApplicationFactory factory;
 
     public PublicAccountEndpointTests(ServerApiWebApplicationFactory factory) => this.factory = factory;
+
+    [Fact]
+    public void Account_reads_are_explicitly_excluded_from_output_cache()
+    {
+        var csrf = typeof(PublicAccountController).GetMethod(nameof(PublicAccountController.GetCsrf))!
+            .GetCustomAttributes(typeof(OutputCacheAttribute), inherit: false)
+            .Cast<OutputCacheAttribute>()
+            .Single();
+        var session = typeof(PublicAccountController).GetMethod(nameof(PublicAccountController.Session))!
+            .GetCustomAttributes(typeof(OutputCacheAttribute), inherit: false)
+            .Cast<OutputCacheAttribute>()
+            .Single();
+        var profile = typeof(PublicProfileController).GetMethod(nameof(PublicProfileController.Get))!
+            .GetCustomAttributes(typeof(OutputCacheAttribute), inherit: false)
+            .Cast<OutputCacheAttribute>()
+            .Single();
+
+        Assert.True(csrf.NoStore);
+        Assert.True(session.NoStore);
+        Assert.True(profile.NoStore);
+    }
 
     [Fact]
     public async Task Registration_requires_csrf_and_restores_session_without_locking_public_pages()

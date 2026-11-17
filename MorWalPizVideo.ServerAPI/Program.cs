@@ -188,11 +188,7 @@ builder.AddServiceDefaults();
 
 if (enableOutputCache)
 {
-    builder.Services.AddOutputCache(options =>
-    {
-        options.AddBasePolicy(builder =>
-            builder.Expire(TimeSpan.FromMinutes(10)));
-    });
+    builder.Services.AddOutputCache();
 }
 
 if (enableSwagger)

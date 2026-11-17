@@ -73,6 +73,9 @@ and must never restore endpoints ignoring retained restrictions.
   Normalize slashless paths so exact login/register do not acquire a second
   cached CSRF token overwriting the fresh header. Logout stays CSRF-protected.
   CSRF acquisition and session restore are no-store, including client cache bypass.
+  ServerAPI output caching is opt-in; CSRF, session, and profile reads carry
+  explicit `NoStore` metadata so a VNet-facing proxy cannot replay one account's
+  token response to another browser.
 - Return URLs are safe local paths, rejecting external/protocol-relative/auth
   loops. No wildcard credentialed CORS, JavaScript-readable session cookie,
   CSRF weakening, or bearer localStorage workaround.
