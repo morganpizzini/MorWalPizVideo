@@ -5,10 +5,17 @@ import type { ReconciliationLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatDateTime } from "../../i18n-formatters";
 import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function Reconciliation() {
   const { data } = useLoaderData() as DeferredRouteData<ReconciliationLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <ReconciliationContent data={resolved} />}</DeferredRoute>;
+  const { t } = useI18n();
+  return (
+    <div>
+      <PageTitle title={t("Integrity and reconciliation")} subtitle={t("Projection state is returned by the canonical reconciliation endpoint.")} />
+      <DeferredRoute data={data} fallback={<PanelSkeleton />}>{(resolved) => <ReconciliationContent data={resolved} />}</DeferredRoute>
+    </div>
+  );
 }
 
 function ReconciliationContent({ data }: { data: ReconciliationLoaderData }) {
@@ -16,11 +23,6 @@ function ReconciliationContent({ data }: { data: ReconciliationLoaderData }) {
   const { status } = data;
   const fetcher = useFetcher<typeof action>();
   return (
-        <div>
-          <PageTitle
-            title={t("Integrity and reconciliation")}
-            subtitle={t("Projection state is returned by the canonical reconciliation endpoint.")}
-          />
           <section
             className={`panel projection projection-${status.state.toLowerCase()}`}
           >
@@ -49,6 +51,5 @@ function ReconciliationContent({ data }: { data: ReconciliationLoaderData }) {
               <p className="form-error" role="alert">{fetcher.data.error}</p>
             )}
           </section>
-        </div>
   );
 }

@@ -3,24 +3,45 @@ import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopAnalytics, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
 import { ActivityList, DeferredRoute, Stat, type DeferredRouteData } from "../shared";
+import { ActivitySkeleton, MetricSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
+import type { DashboardLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences, type WorkshopPersonalGoal } from "../../services/workshopPreferences";
 
-interface DashboardLoaderData {
-  dashboard: WorkshopDashboard;
-  history: WorkshopActivity[];
-  analytics: WorkshopAnalytics;
-  days: 30 | 90 | 365;
-}
-
 export default function Dashboard() {
   const { data } = useLoaderData() as DeferredRouteData<DashboardLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <DashboardContent data={resolved} />}</DeferredRoute>;
+  const { t } = useI18n();
+  return (
+    <div>
+      <PageTitle title={t("Workshop dashboard")} subtitle={t("Account-owned equipment, stock and operation history.")} />
+      <section className="panel dashboard-hero">
+        <p className="eyebrow">{t("Operational overview")}</p>
+        <h2>{t("Every operation remains attributable.")}</h2>
+        <p>{t("Firearms, physical components, batches and shooting facts are kept independent by the API.")}</p>
+        <Link className="button button-primary" to="/sessions/shooting">{t("Record a shooting session")}</Link>
+      </section>
+      <section className="panel">
+        <div className="section-heading"><h2>{t("Quick actions")}</h2></div>
+        <div className="quick-actions">
+          <Link className="quick-action" to="/firearms"><strong>{t("Register firearm")}</strong><span>{t("Keep equipment counters independent.")}</span></Link>
+          <Link className="quick-action" to="/ammunition?tab=recipes"><strong>{t("Create recipe")}</strong><span>{t("Capture the immutable recipe snapshot.")}</span></Link>
+          <Link className="quick-action" to="/ammunition"><strong>{t("Record production")}</strong><span>{t("Create stock from a recipe.")}</span></Link>
+          <Link className="quick-action" to="/sessions/shooting?tab=maintenance"><strong>{t("Record maintenance")}</strong><span>{t("Keep service history factual and traceable.")}</span></Link>
+          <Link className="quick-action" to="/integrity"><strong>{t("Check integrity")}</strong><span>{t("Review reconciliation status.")}</span></Link>
+        </div>
+      </section>
+      <DeferredRoute data={data} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
+        {(resources) => <DeferredRoute data={Promise.all([resources.dashboard, resources.history, resources.analytics]).then(([dashboard, history, analytics]) => ({ dashboard, history, analytics, days: resources.days }))} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
+          {(resolved) => <DashboardContent data={resolved} />}
+        </DeferredRoute>}
+      </DeferredRoute>
+    </div>
+  );
 }
 
-function DashboardContent({ data }: { data: DashboardLoaderData }) {
+function DashboardContent({ data }: { data: { dashboard: WorkshopDashboard; history: WorkshopActivity[]; analytics: WorkshopAnalytics; days: 30 | 90 | 365 } }) {
   const { culture, t } = useI18n();
   const { session } = useWorkshopAuth();
   const navigate = useNavigate();
@@ -61,19 +82,7 @@ function DashboardContent({ data }: { data: DashboardLoaderData }) {
 
   return (
     <div>
-      <PageTitle
-        title={t("Workshop dashboard")}
-        subtitle={t("Account-owned equipment, stock and operation history.")}
-      />
       <div className="dashboard-grid">
-        <section className="panel dashboard-hero">
-          <p className="eyebrow">{t("Operational overview")}</p>
-          <h2>{t("Every operation remains attributable.")}</h2>
-          <p>{t("Firearms, physical components, batches and shooting facts are kept independent by the API.")}</p>
-          <Link className="button button-primary" to="/sessions/shooting">
-            {t("Record a shooting session")}
-          </Link>
-        </section>
         <section className="stats-grid">
           <Stat label="Active firearms" value={data.dashboard.firearmCount} />
           <Stat label="Firearm rounds" value={formatNumber(data.dashboard.totalFirearmRounds, culture)} />
@@ -135,16 +144,6 @@ function DashboardContent({ data }: { data: DashboardLoaderData }) {
             <button className="button button-primary" type="button" onClick={saveGoal}>{t("Set goal")}</button>
           </div>
         )}
-      </section>
-      <section className="panel">
-        <div className="section-heading"><h2>{t("Quick actions")}</h2></div>
-        <div className="quick-actions">
-          <Link className="quick-action" to="/firearms"><strong>{t("Register firearm")}</strong><span>{t("Keep equipment counters independent.")}</span></Link>
-          <Link className="quick-action" to="/ammunition?tab=recipes"><strong>{t("Create recipe")}</strong><span>{t("Capture the immutable recipe snapshot.")}</span></Link>
-          <Link className="quick-action" to="/ammunition"><strong>{t("Record production")}</strong><span>{t("Create stock from a recipe.")}</span></Link>
-          <Link className="quick-action" to="/sessions/shooting?tab=maintenance"><strong>{t("Record maintenance")}</strong><span>{t("Keep service history factual and traceable.")}</span></Link>
-          <Link className="quick-action" to="/integrity"><strong>{t("Check integrity")}</strong><span>{t("Review reconciliation status.")}</span></Link>
-        </div>
       </section>
       <section className="panel">
         <div className="section-heading"><h2>{t("Recent activity")}</h2><Link to="/history">{t("View history")}</Link></div>

@@ -7,10 +7,17 @@ import { formatDate, formatNumber, localDateTimeInputValue } from "../../i18n-fo
 import { DeferredRoute, Stat, type DeferredRouteData } from "../shared";
 import type { action } from "./action";
 import type { FirearmDetailLoaderData } from "./loader";
+import { DetailSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function FirearmDetail() {
   const { data } = useLoaderData() as DeferredRouteData<FirearmDetailLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <FirearmDetailContent detail={resolved} />}</DeferredRoute>;
+  const { t } = useI18n();
+  return (
+    <div className="firearm-detail">
+      <Link className="back-link" to="/firearms">← {t("Firearms")}</Link>
+      <DeferredRoute data={data} fallback={<DetailSkeleton />}>{(resolved) => <FirearmDetailContent detail={resolved} />}</DeferredRoute>
+    </div>
+  );
 }
 
 function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
@@ -34,8 +41,7 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
   const points = detail.roundHistory;
   const maxRounds = Math.max(...points.map((point) => point.cumulativeRounds), firearm.totalRounds, 1);
   return (
-    <div className="firearm-detail">
-      <Link className="back-link" to="/firearms">← {t("Firearms")}</Link>
+    <div>
       <PageTitle title={title} subtitle={`${firearm.caliber}${firearm.category ? ` · ${firearm.category}` : ""}`} />
       <div className="stats-grid">
         <Stat label="Total rounds" value={formatNumber(firearm.totalRounds, culture)} />

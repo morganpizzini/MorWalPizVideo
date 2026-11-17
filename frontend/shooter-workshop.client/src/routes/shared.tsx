@@ -34,13 +34,15 @@ export function DeferredRoute<T>({
   data,
   children,
   errorElement,
+  fallback,
 }: {
   data: Promise<T>;
   children: (value: T) => ReactNode;
   errorElement?: ReactNode;
+  fallback?: ReactNode;
 }) {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense fallback={fallback ?? <LoadingState />}>
       <Await resolve={data} errorElement={errorElement ?? <DeferredRouteError />}>
         {children}
       </Await>

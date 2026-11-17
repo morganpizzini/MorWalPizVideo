@@ -5,7 +5,7 @@ import { useFeedback } from "./feedback/FeedbackProvider";
 
 export function LoadingState({ label }: { label?: string }) {
   const { t } = useI18n();
-  return <p className="state state-loading" role="status">{label ?? t("Loading workshop data…")}</p>;
+  return <p className="state state-loading" role="status"><span className="loading-spinner" aria-hidden="true" />{label ?? t("Loading data…")}</p>;
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {

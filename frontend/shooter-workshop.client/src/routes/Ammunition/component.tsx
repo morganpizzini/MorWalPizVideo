@@ -2,19 +2,19 @@ import { PageTitle, TabbedWorkspace } from "@morwalpiz/layout";
 import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useI18n } from "../../i18n";
 import type { action } from "./action";
-import type { AmmunitionLoaderData } from "./loader";
+import type { AmmunitionLoaderResources } from "./loader";
 import Recipes from "../Recipes/component";
 import AmmunitionPanel from "./AmmunitionPanel";
 import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function Ammunition() {
-  const { data } = useLoaderData() as DeferredRouteData<AmmunitionLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <AmmunitionContent data={resolved} />}</DeferredRoute>;
+  const { data } = useLoaderData() as DeferredRouteData<AmmunitionLoaderResources>;
+  return <DeferredRoute data={data}>{(resources) => <AmmunitionContent resources={resources} />}</DeferredRoute>;
 }
 
-function AmmunitionContent({ data }: { data: AmmunitionLoaderData }) {
+function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources }) {
   const { t } = useI18n();
-  const { recipes, batches } = data;
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") === "recipes" ? "recipes" : "ammunition";
   const fetcher = useFetcher<typeof action>();
@@ -38,9 +38,9 @@ function AmmunitionContent({ data }: { data: AmmunitionLoaderData }) {
           {
             key: "ammunition",
             label: t("Ammunition"),
-            panel: <AmmunitionPanel recipes={recipes} batches={batches} fetcher={fetcher} />,
+            panel: <DeferredRoute data={Promise.all([resources.recipes, resources.batches])} fallback={<PanelSkeleton />} >{([recipes, batches]) => <AmmunitionPanel recipes={recipes} batches={batches} fetcher={fetcher} />}</DeferredRoute>,
           },
-          { key: "recipes", label: t("Recipes"), panel: <Recipes recipes={recipes} embedded /> },
+          { key: "recipes", label: t("Recipes"), panel: <DeferredRoute data={resources.recipes} fallback={<CardGridSkeleton />} >{(recipes) => <Recipes recipes={recipes} embedded />}</DeferredRoute> },
         ]}
       />
     </div>

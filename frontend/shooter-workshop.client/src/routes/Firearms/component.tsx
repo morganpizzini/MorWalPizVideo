@@ -3,25 +3,25 @@ import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { PageTitle, TabbedWorkspace, EmptyState } from "@morwalpiz/layout";
 import type { CreateWorkshopFirearmRequest } from "@morwalpizvideo/models";
 import type { action } from "./action";
-import type { EquipmentLoaderData } from "./loader";
+import type { EquipmentLoaderData, EquipmentLoaderResources } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
 import InventoryPanel from "./InventoryPanel";
 import CataloguePanel from "./CataloguePanel";
 import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function Firearms() {
-  const { data } = useLoaderData() as DeferredRouteData<EquipmentLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <FirearmsContent data={resolved} />}</DeferredRoute>;
+  const { data } = useLoaderData() as DeferredRouteData<EquipmentLoaderResources>;
+  return <DeferredRoute data={data}>{(resources) => <FirearmsContent resources={resources} />}</DeferredRoute>;
 }
 
-function FirearmsContent({ data }: { data: EquipmentLoaderData }) {
+function FirearmsContent({ resources }: { resources: EquipmentLoaderResources }) {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
   const activeTab = rawTab === "inventory" || rawTab === "catalogue" ? rawTab : "firearms";
   const firearmId = searchParams.get("firearmId") ?? "";
-  const validFirearm = firearmId === "__uninstalled" || data.firearms.some((firearm) => firearm.id === firearmId);
   const [showForm, setShowForm] = useState(false);
   const fetcher = useFetcher<typeof action>();
   const succeeded = fetcher.state === "idle" && fetcher.data?.ok;
@@ -36,14 +36,8 @@ function FirearmsContent({ data }: { data: EquipmentLoaderData }) {
       next.delete("tab");
       changed = true;
     }
-    if (firearmId && firearmId !== "__uninstalled" && !validFirearm) {
-      next.delete("firearmId");
-      changed = true;
-    }
-    if (changed) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [firearmId, rawTab, validFirearm, searchParams, setSearchParams]);
+    if (changed) setSearchParams(next, { replace: true });
+  }, [rawTab, searchParams, setSearchParams]);
 
   const selectTab = (key: string) => {
     const next = new URLSearchParams(searchParams);
@@ -63,13 +57,13 @@ function FirearmsContent({ data }: { data: EquipmentLoaderData }) {
             selectedKey={activeTab}
             onSelectedKeyChange={selectTab}
             tabs={[
-              { key: "firearms", label: t("Firearms"), panel: <FirearmsPanel items={data.firearms} showForm={showForm} onToggleForm={() => setShowForm(!showForm)} fetcher={fetcher} /> },
-              { key: "inventory", label: t("Inventory"), panel: <InventoryPanel inventory={data.inventory} definitions={data.definitions} firearms={data.firearms} installations={data.installations} firearmId={validFirearm ? firearmId : ""} onFirearmChange={(value) => {
+              { key: "firearms", label: t("Firearms"), panel: <DeferredRoute data={resources.firearms} fallback={<CardGridSkeleton />} >{(items) => <FirearmsPanel items={items} showForm={showForm} onToggleForm={() => setShowForm(!showForm)} fetcher={fetcher} />}</DeferredRoute> },
+              { key: "inventory", label: t("Inventory"), panel: <DeferredRoute data={Promise.all([resources.inventory, resources.definitions, resources.firearms, resources.installations])} fallback={<PanelSkeleton />} >{([inventory, definitions, firearms, installations]) => <InventoryPanel inventory={inventory} definitions={definitions} firearms={firearms} installations={installations} firearmId={firearmId} onFirearmChange={(value) => {
                 const next = new URLSearchParams(searchParams);
                 if (value) next.set("firearmId", value); else next.delete("firearmId");
                 setSearchParams(next);
-              }} /> },
-              { key: "catalogue", label: t("Catalogue"), panel: <CataloguePanel items={data.definitions} /> },
+              }} />}</DeferredRoute> },
+              { key: "catalogue", label: t("Catalogue"), panel: <DeferredRoute data={resources.definitions} fallback={<PanelSkeleton />} >{(items) => <CataloguePanel items={items} />}</DeferredRoute> },
             ]}
           />
     </div>

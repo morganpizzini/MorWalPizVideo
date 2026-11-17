@@ -7,6 +7,7 @@ import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
 import { frontendEndpoints } from "@morwalpizvideo/services";
 import type { HistoryLoaderData } from "./loader";
+import { ActivitySkeleton } from "../../components/loading/LoadingPrimitives";
 
 const historyTypes = [
   ["", "All activity"],
@@ -20,7 +21,16 @@ const historyTypes = [
 
 export default function History() {
   const { data } = useLoaderData() as DeferredRouteData<HistoryLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <HistoryContent data={resolved} />}</DeferredRoute>;
+  const { t } = useI18n();
+  return (
+    <div>
+      <div className="section-heading">
+        <PageTitle title={t("History")} subtitle={t("Account-filtered chronological activity from the controller.")} />
+        <a className="button button-quiet" href={`/${frontendEndpoints.WORKSHOP_REPORT}?format=csv`} download>{t("Download 30-day CSV")}</a>
+      </div>
+      <DeferredRoute data={data} fallback={<section className="panel"><ActivitySkeleton rows={8} /></section>}>{(resolved) => <HistoryContent data={resolved} />}</DeferredRoute>
+    </div>
+  );
 }
 
 function HistoryContent({ data }: { data: HistoryLoaderData }) {
@@ -56,10 +66,6 @@ function HistoryContent({ data }: { data: HistoryLoaderData }) {
   };
   return (
     <div>
-      <div className="section-heading">
-        <PageTitle title={t("History")} subtitle={t("Account-filtered chronological activity from the controller.")} />
-        <a className="button button-quiet" href={`/${frontendEndpoints.WORKSHOP_REPORT}?format=csv`} download>{t("Download 30-day CSV")}</a>
-      </div>
       <section className="panel history-toolbar">
         <label>
           {t("Activity view")}

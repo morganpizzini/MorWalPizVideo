@@ -26,12 +26,11 @@ describe("Equipment route data", () => {
     vi.mocked(getWorkshopComponents).mockResolvedValue([]);
     vi.mocked(getWorkshopComponentInstallations).mockResolvedValue([]);
 
-    await expect(loader().data).resolves.toEqual({
-      firearms: [],
-      definitions: [],
-      inventory: [],
-      installations: [],
-    });
+    const result = await loader().data;
+    await expect(result.firearms).resolves.toEqual([]);
+    await expect(result.definitions).resolves.toEqual([]);
+    await expect(result.inventory).resolves.toEqual([]);
+    await expect(result.installations).resolves.toEqual([]);
     expect(getWorkshopFirearms).toHaveBeenCalledTimes(1);
     expect(getWorkshopComponentDefinitions).toHaveBeenCalledTimes(1);
     expect(getWorkshopComponents).toHaveBeenCalledTimes(1);

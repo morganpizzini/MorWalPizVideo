@@ -90,7 +90,9 @@ describe("Ammunition route data functions", () => {
     vi.mocked(getWorkshopRecipes).mockResolvedValue(recipes);
     vi.mocked(getWorkshopBatches).mockResolvedValue(batches);
 
-    await expect(loader().data).resolves.toEqual({ recipes, batches });
+    const result = await loader().data;
+    await expect(result.recipes).resolves.toEqual(recipes);
+    await expect(result.batches).resolves.toEqual(batches);
   });
 
   it("submits production through the shared service", async () => {

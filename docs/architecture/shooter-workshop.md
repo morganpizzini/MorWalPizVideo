@@ -69,12 +69,12 @@ remain compensating ledger facts and are never physically deleted.
 
 Workshop route data uses React Router's deferred-data convention. Protected page
 loaders start their existing service requests and return raw promises without awaiting
-page data. Route components render their page boundary immediately and resolve the
-data-dependent content with React `Suspense` and React Router `Await`, using the
-existing Workshop loading, error, and account-transition states. React Router 7's
-removed `defer()` helper is not recreated; raw promises are the supported interface.
-Route actions, fetchers, and automatic loader revalidation remain the freshness owner
-after successful mutations.
+page data. Route components render their static chrome immediately and resolve each
+data-dependent region with React `Suspense` and React Router `Await`, using local
+table-row, card, activity, metric, panel, or detail skeletons rather than a generic
+whole-page loading message. React Router 7's removed `defer()` helper is not
+recreated; raw promises are the supported interface. Route actions, fetchers, and
+automatic loader revalidation remain the freshness owner after successful mutations.
 
 **Accepted target — allocation removal:** Ammunition allocations/reservations are not
 part of the current Workshop product model. Recipes describe ammunition and batches

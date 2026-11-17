@@ -7,11 +7,16 @@ export interface AmmunitionLoaderData {
   batches: Awaited<ReturnType<typeof getWorkshopBatches>>;
 }
 
+export interface AmmunitionLoaderResources {
+  recipes: ReturnType<typeof getWorkshopRecipes>;
+  batches: ReturnType<typeof getWorkshopBatches>;
+}
+
 export function loader() {
-  return deferRouteData(Promise.all([
-    getWorkshopRecipes(),
-    getWorkshopBatches(),
-  ]).then(([recipes, batches]): AmmunitionLoaderData => ({ recipes, batches })));
+  return deferRouteData<AmmunitionLoaderResources>({
+    recipes: getWorkshopRecipes(),
+    batches: getWorkshopBatches(),
+  });
 }
 
 export function ammunitionShouldRevalidate({

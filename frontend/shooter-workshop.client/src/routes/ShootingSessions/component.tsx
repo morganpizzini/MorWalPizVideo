@@ -14,13 +14,32 @@ import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
 import Maintenance from "../Maintenance/component";
 import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { ActivitySkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 import type { ShootingSessionsLoaderData } from "./loader";
 
 type RecipeRow = WorkshopConsumptionRequest & { key: string };
 
 export default function ShootingSessions() {
   const { data } = useLoaderData() as DeferredRouteData<ShootingSessionsLoaderData>;
-  return <DeferredRoute data={data}>{(resolved) => <ShootingSessionsContent data={resolved} />}</DeferredRoute>;
+  return <DeferredRoute data={data} fallback={<ShootingLoadingShell />}>{(resolved) => <ShootingSessionsContent data={resolved} />}</DeferredRoute>;
+}
+
+function ShootingLoadingShell() {
+  const { t } = useI18n();
+  return (
+    <div>
+      <PageTitle title={t("Shooting sessions")} subtitle={t("Record shooting sessions and maintain equipment history.")} />
+      <TabbedWorkspace
+        aria-label={t("Shooting workspace sections")}
+        selectedKey="shooting"
+        onSelectedKeyChange={() => undefined}
+        tabs={[
+          { key: "shooting", label: t("Shooting sessions"), panel: <><div className="section-heading workspace-action-heading"><span /><button className="button button-primary" type="button" disabled>+ {t("Record shooting")}</button></div><section className="panel"><ActivitySkeleton /></section></> },
+          { key: "maintenance", label: t("Maintenance"), panel: <PanelSkeleton /> },
+        ]}
+      />
+    </div>
+  );
 }
 
 function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData }) {
@@ -29,7 +48,6 @@ function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData })
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "maintenance" ? "maintenance" : "shooting");
   const fetcher = useFetcher<typeof action>();
-  const { firearms, recipes, sessions } = data;
   const [firearmId, setFirearmId] = useState(searchParams.get("firearmId") ?? "");
   const [effectiveAt, setEffectiveAt] = useState(localDateTimeInputValue());
   const [notes, setNotes] = useState("");
@@ -38,6 +56,7 @@ function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData })
   const [records, setRecords] = useState<RecipeRow[]>([]);
   const [draftNotice, setDraftNotice] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { firearms, recipes, sessions } = data;
   const processedResult = useRef<unknown>(null);
   const trackedRounds = records.reduce((sum, record) => sum + Math.max(0, record.quantity), 0);
   const totalRounds = trackedRounds + Math.max(0, Number(untracked) || 0);

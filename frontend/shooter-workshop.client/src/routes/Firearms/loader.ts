@@ -14,18 +14,20 @@ export interface EquipmentLoaderData {
   installations: Awaited<ReturnType<typeof getWorkshopComponentInstallations>>;
 }
 
+export interface EquipmentLoaderResources {
+  firearms: ReturnType<typeof getWorkshopFirearms>;
+  definitions: ReturnType<typeof getWorkshopComponentDefinitions>;
+  inventory: ReturnType<typeof getWorkshopComponents>;
+  installations: ReturnType<typeof getWorkshopComponentInstallations>;
+}
+
 export function loader() {
-  return deferRouteData(Promise.all([
-    getWorkshopFirearms(),
-    getWorkshopComponentDefinitions(),
-    getWorkshopComponents(),
-    getWorkshopComponentInstallations(),
-  ]).then(([firearms, definitions, inventory, installations]): EquipmentLoaderData => ({
-    firearms,
-    definitions,
-    inventory,
-    installations,
-  })));
+  return deferRouteData<EquipmentLoaderResources>({
+    firearms: getWorkshopFirearms(),
+    definitions: getWorkshopComponentDefinitions(),
+    inventory: getWorkshopComponents(),
+    installations: getWorkshopComponentInstallations(),
+  });
 }
 
 export function firearmsShouldRevalidate({

@@ -66,7 +66,7 @@ describe("deferred route data", () => {
       </I18nProvider>,
     );
 
-    expect(screen.getByRole("status").textContent).toContain("Loading workshop data…");
+    expect(screen.getByRole("status").textContent).toContain("Loading data…");
     expect(screen.queryByText("loaded")).toBeNull();
 
     await act(async () => {

@@ -7,6 +7,7 @@ import { useI18n } from "../../i18n";
 import type { action } from "./action";
 import type { RecipeProductionLoaderData } from "./loader";
 import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { DetailSkeleton } from "../../components/loading/LoadingPrimitives";
 
 const fields = [
   ["caliber", "Caliber"],
@@ -41,7 +42,7 @@ export function RecipeProductionError() {
 
 export default function RecipeProduction() {
   const { data } = useLoaderData() as DeferredRouteData<RecipeProductionLoaderData>;
-  return <DeferredRoute data={data} errorElement={<RecipeProductionError />}>{(resolved) => <RecipeProductionContent recipe={resolved} />}</DeferredRoute>;
+  return <DeferredRoute data={data} errorElement={<RecipeProductionError />} fallback={<DetailSkeleton />}>{(resolved) => <RecipeProductionContent recipe={resolved} />}</DeferredRoute>;
 }
 
 function RecipeProductionContent({ recipe }: { recipe: RecipeProductionLoaderData }) {
