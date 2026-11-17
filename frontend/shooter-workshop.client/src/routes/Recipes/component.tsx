@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Dialog, EmptyState, PageTitle } from "@morwalpiz/layout";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
-import { Link, useFetcher, useLoaderData } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { useI18n } from "../../i18n";
 import type { action } from "./action";
-import type { RecipesLoaderData } from "./loader";
 
 type RecipeFetcher = ReturnType<typeof useFetcher<typeof action>>;
 
@@ -20,9 +19,14 @@ const fields = [
   ["powderWeight", "Powder weight", "number", false],
 ] as const;
 
-export default function Recipes({ embedded = false }: { embedded?: boolean }) {
+export default function Recipes({
+  recipes,
+  embedded = false,
+}: {
+  recipes: WorkshopRecipe[];
+  embedded?: boolean;
+}) {
   const { t } = useI18n();
-  const { recipes } = useLoaderData() as RecipesLoaderData;
   const [showForm, setShowForm] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

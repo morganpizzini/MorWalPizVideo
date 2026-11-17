@@ -16,7 +16,7 @@ import { Component as ShootingSessions } from "./ShootingSessions";
 import { loader as componentsLoader } from "./Components/loader";
 import { action as componentsAction } from "./Components/action";
 import { action as ammunitionAction } from "./Ammunition/action";
-import { loader as ammunitionLoader } from "./Ammunition/loader";
+import { ammunitionShouldRevalidate, loader as ammunitionLoader } from "./Ammunition/loader";
 import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
 import { action as firearmDetailAction } from "./FirearmDetail/action";
 import { loader as dashboardLoader } from "./Dashboard/loader";
@@ -53,7 +53,13 @@ export const routes: RouteObject[] = [
       { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
       { path: "maintenance", element: <Navigate to="/sessions/shooting?tab=maintenance" replace /> },
-      { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
+      {
+        path: "ammunition",
+        element: <Ammunition />,
+        loader: ammunitionLoader,
+        action: ammunitionAction,
+        shouldRevalidate: ammunitionShouldRevalidate,
+      },
       { path: "recipes", element: <Navigate to="/ammunition?tab=recipes" replace /> },
       {
         path: "recipes/:recipeId/produce",

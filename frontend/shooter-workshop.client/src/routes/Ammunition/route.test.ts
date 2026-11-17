@@ -6,7 +6,7 @@ import {
   recordWorkshopProduction,
 } from "@morwalpizvideo/services";
 import { action } from "./action";
-import { loader } from "./loader";
+import { ammunitionShouldRevalidate, loader } from "./loader";
 
 vi.mock("@morwalpizvideo/services", () => ({
   getWorkshopBatches: vi.fn(),
@@ -46,6 +46,46 @@ beforeEach(() => {
 });
 
 describe("Ammunition route data functions", () => {
+  it("skips revalidation when only the selected tab changes", () => {
+    const args = {
+      currentUrl: new URL("https://workshop.local/ammunition?filter=active"),
+      nextUrl: new URL("https://workshop.local/ammunition?filter=active&tab=recipes"),
+      defaultShouldRevalidate: true,
+    } as Parameters<typeof ammunitionShouldRevalidate>[0];
+
+    expect(ammunitionShouldRevalidate(args)).toBe(false);
+    expect(
+      ammunitionShouldRevalidate({
+        ...args,
+        nextUrl: new URL("https://workshop.local/ammunition?filter=active"),
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps revalidation for non-tab changes and action refreshes", () => {
+    const args = {
+      currentUrl: new URL("https://workshop.local/ammunition?tab=recipes"),
+      nextUrl: new URL("https://workshop.local/ammunition?tab=recipes&filter=active"),
+      defaultShouldRevalidate: true,
+    } as Parameters<typeof ammunitionShouldRevalidate>[0];
+
+    expect(ammunitionShouldRevalidate(args)).toBe(true);
+    expect(
+      ammunitionShouldRevalidate({
+        ...args,
+        nextUrl: args.currentUrl,
+      }),
+    ).toBe(true);
+    expect(
+      ammunitionShouldRevalidate({
+        ...args,
+        currentUrl: new URL("https://workshop.local/ammunition"),
+        nextUrl: new URL("https://workshop.local/ammunition?tab=recipes"),
+        defaultShouldRevalidate: false,
+      }),
+    ).toBe(false);
+  });
+
   it("loads recipes and batches", async () => {
     vi.mocked(getWorkshopRecipes).mockResolvedValue(recipes);
     vi.mocked(getWorkshopBatches).mockResolvedValue(batches);
