@@ -10,8 +10,6 @@ import { Component as Dashboard } from "./Dashboard";
 import { Component as FirearmDetail } from "./FirearmDetail";
 import { Component as Firearms } from "./Firearms";
 import { Component as History } from "./History";
-import { Component as Maintenance } from "./Maintenance";
-import { Component as Recipes } from "./Recipes";
 import { Component as RecipeProduction, RecipeProductionError } from "./RecipeProduction";
 import { Component as Reconciliation } from "./Reconciliation";
 import { Component as ShootingSessions } from "./ShootingSessions";
@@ -19,15 +17,11 @@ import { loader as componentsLoader } from "./Components/loader";
 import { action as componentsAction } from "./Components/action";
 import { action as ammunitionAction } from "./Ammunition/action";
 import { loader as ammunitionLoader } from "./Ammunition/loader";
-import { action as recipesAction } from "./Recipes/action";
-import { loader as recipesLoader } from "./Recipes/loader";
 import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
 import { action as firearmDetailAction } from "./FirearmDetail/action";
 import { loader as dashboardLoader } from "./Dashboard/loader";
 import { loader as shootingSessionsLoader } from "./ShootingSessions/loader";
 import { action as shootingSessionsAction } from "./ShootingSessions/action";
-import { loader as maintenanceLoader } from "./Maintenance/loader";
-import { action as maintenanceAction } from "./Maintenance/action";
 import { loader as historyLoader } from "./History/loader";
 import { loader as firearmsLoader } from "./Firearms/loader";
 import { action as firearmsAction } from "./Firearms/action";
@@ -58,9 +52,9 @@ export const routes: RouteObject[] = [
       { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction },
       { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
       { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
-      { path: "maintenance", element: <Maintenance />, loader: maintenanceLoader, action: maintenanceAction },
+      { path: "maintenance", element: <Navigate to="/sessions/shooting?tab=maintenance" replace /> },
       { path: "ammunition", element: <Ammunition />, loader: ammunitionLoader, action: ammunitionAction },
-      { path: "recipes", element: <Recipes />, loader: recipesLoader, action: recipesAction },
+      { path: "recipes", element: <Navigate to="/ammunition?tab=recipes" replace /> },
       {
         path: "recipes/:recipeId/produce",
         element: <RecipeProduction />,

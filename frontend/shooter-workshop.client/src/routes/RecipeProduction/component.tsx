@@ -30,7 +30,7 @@ export function RecipeProductionError() {
     <div className="state state-error">
       <strong>{t(notFound ? "Recipe not found" : "Could not load this workspace.")}</strong>
       <p>{t(notFound ? "This recipe is no longer active or does not belong to this account." : "The request could not be completed.")}</p>
-      <Link className="button button-quiet" to="/recipes">{t("Back to recipes")}</Link>
+      <Link className="button button-quiet" to="/ammunition?tab=recipes">{t("Back to recipes")}</Link>
     </div>
   );
 }

@@ -41,7 +41,7 @@ export default function OnboardingGuide({ accountId, onDismiss }: OnboardingGuid
     {
       title: t("Create a recipe (optional)"),
       description: t("Save your own recipe record before recording production or tracked use."),
-      path: "/recipes",
+      path: "/ammunition?tab=recipes",
       action: t("Open recipes"),
     },
     {

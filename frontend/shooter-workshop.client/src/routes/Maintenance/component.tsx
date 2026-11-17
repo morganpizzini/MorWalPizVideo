@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
-import { PageTitle, EmptyState } from "@morwalpiz/layout";
+import { Dialog, PageTitle, EmptyState } from "@morwalpiz/layout";
 import type {
   CreateWorkshopMaintenanceRequest,
   WorkshopComponentDefinition,
@@ -11,7 +11,7 @@ import type { action } from "./action";
 import { useI18n } from "../../i18n";
 import { formatNumber, localDateTimeInputValue } from "../../i18n-formatters";
 
-export default function Maintenance() {
+export default function Maintenance({ embedded = false }: { embedded?: boolean }) {
   const { culture, t } = useI18n();
   const { firearms: firearmItems, definitions: definitionItems, inventory: items } = useLoaderData() as {
     firearms: WorkshopFirearm[];
@@ -20,6 +20,7 @@ export default function Maintenance() {
   };
   const fetcher = useFetcher<typeof action>();
   const [targetType, setTargetType] = useState<"firearm" | "component">("firearm");
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateWorkshopMaintenanceRequest>({
     firearmId: null,
     componentId: null,
@@ -34,14 +35,20 @@ export default function Maintenance() {
     if (fetcher.state !== "idle" || !fetcher.data?.ok || fetcher.data === processedResult.current) return;
     processedResult.current = fetcher.data;
     setForm((current) => ({ ...current, idempotencyKey: crypto.randomUUID() }));
+    setShowForm(false);
   }, [fetcher.state, fetcher.data]);
 
   return (
     <div>
-      <PageTitle title={t("Maintenance")} subtitle={t("Component projections and service intervals.")} />
+      {!embedded && <PageTitle title={t("Maintenance")} subtitle={t("Component projections and service intervals.")} />}
       <section className="panel">
+        <div className="section-heading workspace-action-heading">
+          <h2>{t("Maintenance")}</h2>
+          <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>+ {t("Record maintenance")}</button>
+        </div>
+        <Dialog open={showForm} title={t("Record maintenance")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
         <fetcher.Form method="post" className="panel form-panel">
-          <h2>{t("Record maintenance")}</h2>
+          <input type="hidden" name="intent" value="maintenance" />
           <div className="template-row" aria-label={t("Neutral maintenance templates")}>
             <span>{t("Templates")}</span>
             {(["Cleaning", "Inspection", "General"] as const).map((template) => (
@@ -149,6 +156,7 @@ export default function Maintenance() {
             {fetcher.state === "submitting" ? t("Saving…") : t("Save event")}
           </button>
         </fetcher.Form>
+        </Dialog>
         {items.length ? (
           <ul className="compact-list">
             {items.map((item) => (

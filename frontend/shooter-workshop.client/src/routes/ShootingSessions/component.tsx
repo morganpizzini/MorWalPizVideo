@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFetcher, useLoaderData, useSearchParams } from "react-router";
-import { PageTitle } from "@morwalpiz/layout";
+import { Dialog, PageTitle, TabbedWorkspace } from "@morwalpiz/layout";
 import type {
   WorkshopConsumptionRequest,
   WorkshopFirearm,
@@ -12,13 +12,15 @@ import { useI18n } from "../../i18n";
 import { formatDateTime, localDateTimeInputValue } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
+import Maintenance from "../Maintenance/component";
 
 type RecipeRow = WorkshopConsumptionRequest & { key: string };
 
 export default function ShootingSessions() {
   const { t } = useI18n();
   const { session } = useWorkshopAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "maintenance" ? "maintenance" : "shooting");
   const fetcher = useFetcher<typeof action>();
   const { firearms, recipes, sessions } = useLoaderData() as {
     firearms: WorkshopFirearm[];
@@ -32,11 +34,12 @@ export default function ShootingSessions() {
   const [untracked, setUntracked] = useState("0");
   const [records, setRecords] = useState<RecipeRow[]>([]);
   const [draftNotice, setDraftNotice] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const processedResult = useRef<unknown>(null);
   const trackedRounds = records.reduce((sum, record) => sum + Math.max(0, record.quantity), 0);
   const totalRounds = trackedRounds + Math.max(0, Number(untracked) || 0);
   useEffect(() => {
-    if (fetcher.state !== "idle" || !fetcher.data?.ok || fetcher.data.intent !== "record" ||
+    if (fetcher.state !== "idle" || !fetcher.data?.ok || !("intent" in fetcher.data) || fetcher.data.intent !== "record" ||
         fetcher.data === processedResult.current) return;
     processedResult.current = fetcher.data;
     if (session.account?.id && firearmId && records[0]?.recipeId) {
@@ -52,6 +55,7 @@ export default function ShootingSessions() {
     setUntracked("0");
     setEffectiveAt(localDateTimeInputValue());
     setDraftNotice(false);
+    setShowForm(false);
   }, [fetcher.state, fetcher.data, session.account?.id, firearmId, records]);
 
   const repeatSession = (record: WorkshopShootingSessionRecord) => {
@@ -64,12 +68,30 @@ export default function ShootingSessions() {
       .map((item) => ({ key: crypto.randomUUID(), recipeId: item.recipeId ?? "", quantity: item.quantity })));
     setIdempotencyKey(crypto.randomUUID());
     setDraftNotice(true);
-    document.querySelector(".shooting-sessions-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveTab("shooting");
+    setShowForm(true);
   };
 
   return (
     <div>
-      <PageTitle title={t("Shooting sessions")} subtitle={t("Record sessions and correct them inline without rewriting history.")} />
+      <PageTitle title={t("Shooting sessions")} subtitle={t("Record shooting sessions and maintain equipment history.")} />
+      <TabbedWorkspace
+        aria-label={t("Shooting workspace sections")}
+        selectedKey={activeTab}
+        onSelectedKeyChange={(key) => {
+          setActiveTab(key);
+          setSearchParams(key === "maintenance" ? { tab: key } : {});
+        }}
+        tabs={[
+          {
+            key: "shooting",
+            label: t("Shooting sessions"),
+            panel: <>
+      <div className="section-heading workspace-action-heading">
+        <span />
+        <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>+ {t("Record shooting")}</button>
+      </div>
+      <Dialog open={showForm} title={t("Record shooting")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
       <fetcher.Form method="post" className="panel form-panel shooting-sessions-form">
         <input type="hidden" name="intent" value="record" />
         <input type="hidden" name="totalRounds" value={totalRounds} />
@@ -78,7 +100,6 @@ export default function ShootingSessions() {
           .filter((record) => record.recipeId && record.quantity > 0)
           .map(({ key: _key, ...record }) => record))} />
         <input type="hidden" name="usageSegments" value="[]" />
-        <h2>{t("Record shooting")}</h2>
         <label>
           {t("Firearm")}
           <select required name="firearmId" value={firearmId} onChange={(event) => setFirearmId(event.target.value)}>
@@ -103,7 +124,13 @@ export default function ShootingSessions() {
           {fetcher.state === "submitting" ? t("Saving…") : t("Record session")}
         </button>
       </fetcher.Form>
+      </Dialog>
       <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onRepeat={repeatSession} />
+            </>,
+          },
+          { key: "maintenance", label: t("Maintenance"), panel: <Maintenance embedded /> },
+        ]}
+      />
     </div>
   );
 }

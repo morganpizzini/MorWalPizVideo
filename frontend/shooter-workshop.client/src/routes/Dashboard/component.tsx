@@ -158,9 +158,9 @@ export default function Dashboard() {
         <div className="section-heading"><h2>{t("Quick actions")}</h2></div>
         <div className="quick-actions">
           <Link className="quick-action" to="/firearms"><strong>{t("Register firearm")}</strong><span>{t("Keep equipment counters independent.")}</span></Link>
-          <Link className="quick-action" to="/recipes"><strong>{t("Create recipe")}</strong><span>{t("Capture the immutable recipe snapshot.")}</span></Link>
+          <Link className="quick-action" to="/ammunition?tab=recipes"><strong>{t("Create recipe")}</strong><span>{t("Capture the immutable recipe snapshot.")}</span></Link>
           <Link className="quick-action" to="/ammunition"><strong>{t("Record production")}</strong><span>{t("Create stock from a recipe.")}</span></Link>
-          <Link className="quick-action" to="/maintenance"><strong>{t("Record maintenance")}</strong><span>{t("Keep service history factual and traceable.")}</span></Link>
+          <Link className="quick-action" to="/sessions/shooting?tab=maintenance"><strong>{t("Record maintenance")}</strong><span>{t("Keep service history factual and traceable.")}</span></Link>
           <Link className="quick-action" to="/integrity"><strong>{t("Check integrity")}</strong><span>{t("Review reconciliation status.")}</span></Link>
         </div>
       </section>

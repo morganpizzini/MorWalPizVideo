@@ -9,8 +9,7 @@ import { useInstallPrompt } from "../services/installPrompt";
 
 const navigation = [
   ["Dashboard", "/"], ["Firearms", "/firearms"], ["Components", "/components"],
-  ["Maintenance", "/maintenance"], ["Ammunition", "/ammunition"], ["Recipes", "/recipes"],
-  ["Shooting sessions", "/sessions/shooting"], ["History", "/history"],
+  ["Ammunition", "/ammunition"], ["Shooting sessions", "/sessions/shooting"], ["History", "/history"],
 ] as const;
 
 type HeaderIcon = "globe" | "download" | "logout";

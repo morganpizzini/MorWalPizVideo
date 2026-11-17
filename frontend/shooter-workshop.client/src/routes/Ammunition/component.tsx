@@ -1,9 +1,10 @@
-import { EmptyState, PageTitle } from "@morwalpiz/layout";
-import { useFetcher, useLoaderData } from "react-router";
+import { EmptyState, PageTitle, TabbedWorkspace } from "@morwalpiz/layout";
+import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useI18n } from "../../i18n";
 import { formatNumber, localDateInputValue } from "../../i18n-formatters";
 import type { action } from "./action";
 import type { AmmunitionLoaderData } from "./loader";
+import Recipes from "../Recipes/component";
 
 type AmmunitionFetcher = ReturnType<typeof useFetcher<typeof action>>;
 
@@ -19,28 +20,41 @@ function ActionFeedback({ fetcher }: { fetcher: AmmunitionFetcher }) {
 export default function Ammunition() {
   const { culture, t } = useI18n();
   const { recipes, batches } = useLoaderData() as AmmunitionLoaderData;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "recipes" ? "recipes" : "ammunition";
   const fetcher = useFetcher<typeof action>();
 
   return (
     <div>
       <PageTitle
         title={t("Ammunition")}
-        subtitle={t("Produced batches and current on-hand stock.")}
+        subtitle={t("Manage ammunition production and recipes.")}
       />
-      <fetcher.Form method="post" className="panel form-panel">
+      <TabbedWorkspace
+        aria-label={t("Ammunition sections")}
+        selectedKey={activeTab}
+        onSelectedKeyChange={(key) => setSearchParams(key === "recipes" ? { tab: key } : {})}
+        tabs={[
+          {
+            key: "ammunition",
+            label: t("Ammunition"),
+            panel: <>
+      <fetcher.Form method="post" className="panel form-panel ammunition-production-form">
         <h2>{t("Record production")}</h2>
-        <label>
-          {t("Recipe")}
-          <select name="recipeId" required defaultValue="">
-            <option value="">{t("Select recipe")}</option>
-            {recipes.map((recipe) => (
-              <option value={recipe.id} key={recipe.id}>
-                {recipe.name} · {recipe.caliber}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="form-grid">
+        <div className="ammunition-production-grid">
+          <div className="ammunition-production-primary">
+            <label>
+              {t("Recipe")}
+              <select name="recipeId" required defaultValue="">
+                <option value="">{t("Select recipe")}</option>
+                {recipes.map((recipe) => (
+                  <option value={recipe.id} key={recipe.id}>
+                    {recipe.name} · {recipe.caliber}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-grid">
           <label>
             {t("Quantity")}
             <input type="number" min="1" required name="quantityProduced" defaultValue="0" />
@@ -49,11 +63,13 @@ export default function Ammunition() {
             {t("Date")}
             <input type="date" required name="productionDate" defaultValue={localDateInputValue()} />
           </label>
-        </div>
-        <label>
+            </div>
+          </div>
+          <label className="ammunition-production-notes">
           {t("Notes")}
           <textarea name="notes" />
-        </label>
+          </label>
+        </div>
         <ActionFeedback fetcher={fetcher} />
         <button className="button button-primary" disabled={fetcher.state !== "idle"}>
           {fetcher.state !== "idle" ? t("Saving…") : t("Create batch")}
@@ -92,6 +108,11 @@ export default function Ammunition() {
           <EmptyState title={t("No ammunition batches")} />
         )}
       </section>
+            </>,
+          },
+          { key: "recipes", label: t("Recipes"), panel: <Recipes embedded /> },
+        ]}
+      />
     </div>
   );
 }

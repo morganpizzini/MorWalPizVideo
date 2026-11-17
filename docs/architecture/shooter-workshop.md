@@ -840,21 +840,29 @@ loading or direct service calls from submit callbacks. Component state remains
 appropriate for transient disclosure, filtering, and other presentation-only state.
 
 The Ammunition route loads the current account's recipes and produced batches through
-its loader. Its production form sends the selected recipe identifier, production date,
-quantity, notes, and a per-submission idempotency key through the route action. The
-action delegates transport to the shared Workshop service; the component does not
-create a second API client or mutation path. The form appears above the batch list,
-and successful fetcher submissions use normal route revalidation so the new batch is
-shown without a component-owned reload. The former `/production` URL redirects to
-`/ammunition` for compatibility.
+its loader and presents Ammunition and Recipes as URL-selected tabs. Its production
+form sends the selected recipe identifier, production date, quantity, notes, and a
+per-submission idempotency key through the route action. The action also dispatches
+recipe create/update intents to the recipe action, preserving one route-owned
+mutation boundary. The component does not create a second API client or mutation
+path. The production form is full-width on desktop with recipe, quantity, and date
+in the first column and notes in the second; successful fetcher submissions use
+normal route revalidation. `/recipes` redirects to the Recipes tab and the former
+`/production` URL redirects to `/ammunition` for compatibility.
 
-The Recipes route loads the current account's recipes through `Recipes/loader.ts` and
-submits create and versioned update intents through `Recipes/action.ts`. Its shared
-recipe form exposes the complete editable recipe snapshot, while the detail dialog
-uses a responsive two-column field grid and supports editing active recipes without
-rewriting historical production snapshots.
+Recipe create/update intents remain implemented by `Recipes/action.ts`. New Recipe
+and recipe detail/edit forms use the shared layout Dialog, with successful creates
+closing the modal and failed submissions retaining the draft and error. The shared
+`TabbedWorkspace` and `Dialog` primitives are domain-neutral exports from
+`@morwalpiz/layout`; feature-specific routing, copy, and styling remain in this
+client.
 
-The Dashboard, Shooting Sessions, Maintenance, History, Firearms, and Reconciliation
+The Shooting Sessions route loads firearms, recipes, sessions, component definitions,
+and physical inventory once, then presents Shooting Sessions and Maintenance as
+URL-selected tabs. Shooting and maintenance creation forms use modal dialogs;
+Repeat as draft selects the shooting tab, generates a fresh idempotency key, and
+opens the populated shooting dialog. `/maintenance` redirects to the Maintenance
+tab. The Dashboard, History, Firearms, and Reconciliation
 routes load their account-scoped read models through colocated loaders. Their
 mutations are owned by colocated actions and submitted through fetchers, including
 shooting corrections, maintenance events, firearm creation, and projection rebuilds.

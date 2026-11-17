@@ -1,12 +1,20 @@
 import { recordWorkshopProduction } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
+import { action as recipesAction } from "../Recipes/action";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
 };
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action(args: ActionFunctionArgs) {
+  const { request } = args;
+  const actionRequest = request.clone();
+  const actionForm = await actionRequest.formData();
+  const intent = text(actionForm, "intent");
+  if (intent === "create" || intent === "update") {
+    return recipesAction(args);
+  }
   const form = await request.formData();
   const recipeId = text(form, "recipeId");
   const productionDate = text(form, "productionDate");

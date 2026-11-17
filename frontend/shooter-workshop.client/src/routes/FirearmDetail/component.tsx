@@ -66,7 +66,7 @@ export default function FirearmDetail() {
         </div>
       </section>}
       <section className="panel">
-        <div className="section-heading"><h2>{t("Maintenance history")}</h2><Link className="button button-quiet" to="/maintenance">{t("Record maintenance")}</Link></div>
+        <div className="section-heading"><h2>{t("Maintenance history")}</h2><Link className="button button-quiet" to="/sessions/shooting?tab=maintenance">{t("Record maintenance")}</Link></div>
         {detail.maintenance.items.length === 0 ? <p>{t("No maintenance recorded.")}</p> : (
           <ul className="timeline">{detail.maintenance.items.map((event) => <li key={event.id} className={event.eventType === "Malfunction" ? "timeline-alert" : ""}><strong>{t(event.eventType)}</strong><time>{formatDate(event.date, culture)}</time><p>{event.description}</p>{event.notes && <small>{event.notes}</small>}</li>)}</ul>
         )}
@@ -75,7 +75,7 @@ export default function FirearmDetail() {
       <section className="panel">
         <div className="section-heading"><h2>{t("Shooting history")}</h2><Link className="button button-quiet" to={`/sessions/shooting?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Record session")}</Link></div>
         {detail.shooting.items.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : (
-          <ul className="timeline">{detail.shooting.items.map(({ session, superseded }) => <li key={session.id} className={superseded ? "timeline-muted" : ""}><strong>{formatNumber(session.totalRounds, culture)} {t("rounds")}{superseded && ` · ${t("superseded")}`}</strong><time>{formatDate(session.date, culture)}</time>{session.notes && <p>{session.notes}</p>}</li>)}</ul>
+          <ul className="timeline">{detail.shooting.items.map(({ session, superseded }) => <li key={session.id} className={superseded ? "timeline-muted" : ""}><strong>{formatNumber(session.totalRounds, culture)} {t("rounds")}{superseded && ` · ${t("superseded")}`}</strong>&nbsp;<time>{formatDate(session.date, culture)}</time>{session.notes && <p>{session.notes}</p>}</li>)}</ul>
         )}
         <HistoryPager kind="shooting" page={detail.shooting.page} hasMore={detail.shooting.hasMore} searchParams={searchParams} />
       </section>

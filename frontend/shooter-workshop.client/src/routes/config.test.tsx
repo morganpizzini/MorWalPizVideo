@@ -40,12 +40,12 @@ describe("Workshop route configuration", () => {
     expect(productionRoute?.element).toBeTruthy();
     expect(productionRoute?.loader).toBeUndefined();
     expect(productionRoute?.action).toBeUndefined();
-    for (const path of ["firearms", "maintenance", "sessions/shooting", "history", "integrity"]) {
+    for (const path of ["firearms", "sessions/shooting", "history", "integrity"]) {
       const route = shellRoute?.children?.find((candidate) => candidate.path === path);
       expect(route?.loader, `${path} loader`).toBeTypeOf("function");
     }
     expect(shellRoute?.children?.find((route) => route.path === "firearms")?.action).toBeTypeOf("function");
-    expect(shellRoute?.children?.find((route) => route.path === "maintenance")?.action).toBeTypeOf("function");
+    expect(shellRoute?.children?.find((route) => route.path === "maintenance")?.element).toBeTruthy();
     expect(shellRoute?.children?.find((route) => route.path === "sessions/shooting")?.action).toBeTypeOf("function");
     expect(shellRoute?.children?.find((route) => route.path === "integrity")?.action).toBeTypeOf("function");
   });

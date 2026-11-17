@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { EmptyState, PageTitle } from "@morwalpiz/layout";
+import { useEffect, useState } from "react";
+import { Dialog, EmptyState, PageTitle } from "@morwalpiz/layout";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
 import { Link, useFetcher, useLoaderData } from "react-router";
 import { useI18n } from "../../i18n";
@@ -20,7 +20,7 @@ const fields = [
   ["powderWeight", "Powder weight", "number", false],
 ] as const;
 
-export default function Recipes() {
+export default function Recipes({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const { recipes } = useLoaderData() as RecipesLoaderData;
   const [showForm, setShowForm] = useState(false);
@@ -28,18 +28,19 @@ export default function Recipes() {
 
   return (
     <div>
-      <PageTitle
+      {!embedded && <PageTitle
         title={t("Ammunition recipes")}
         subtitle={t("Recipe fields match the server snapshot contract.")}
-      />
-      <button
-        className="button button-primary"
-        type="button"
-        onClick={() => setShowForm((value) => !value)}
-      >
-        + {t("New recipe")}
-      </button>
-      {showForm && <RecipeForm onSaved={() => setShowForm(false)} />}
+      />}
+      <div className="section-heading workspace-action-heading">
+        <span />
+        <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>
+          + {t("New recipe")}
+        </button>
+      </div>
+      <Dialog open={showForm} title={t("New recipe")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
+        <RecipeForm onSaved={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
+      </Dialog>
       {recipes.length ? (
         <div className="card-grid mt-3">
           {recipes.map((recipe) => (
@@ -168,75 +169,12 @@ function RecipeDetails({
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    previousFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const dialog = document.getElementById("recipe-details-dialog");
-      if (!dialog) return;
-      const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, [onClose]);
-
   if (!recipe) return null;
   const display = (value: string | number | null | undefined) =>
     value === null || value === undefined || value === "" ? t("Not set") : String(value);
 
   return (
-    <div
-      className="feedback-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        id="recipe-details-dialog"
-        className="feedback-dialog recipe-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="recipe-details-title"
-      >
-        <div className="section-heading">
-          <h2 id="recipe-details-title">{recipe.name}</h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className="button button-quiet"
-            onClick={onClose}
-          >
-            {t("Close")}
-          </button>
-        </div>
+    <Dialog open title={recipe.name} closeLabel={t("Close")} onClose={onClose} className="recipe-dialog">
         {editing ? (
           <RecipeForm
             recipe={recipe}
@@ -291,7 +229,6 @@ function RecipeDetails({
             </div>
           </>
         )}
-      </section>
-    </div>
+    </Dialog>
   );
 }

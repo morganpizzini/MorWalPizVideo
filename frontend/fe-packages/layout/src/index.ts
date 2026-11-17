@@ -5,6 +5,13 @@ export { AppShell } from "./components/AppShell.js";
 export { SiteHeader } from "./components/SiteHeader.js";
 export { SiteFooter } from "./components/SiteFooter.js";
 export { PageTitle } from "./components/PageTitle.js";
+export { TabbedWorkspace } from "./components/TabbedWorkspace.js";
+export type {
+  TabbedWorkspaceProps,
+  TabbedWorkspaceTab,
+} from "./components/TabbedWorkspace.js";
+export { Dialog } from "./components/Dialog.js";
+export type { DialogProps } from "./components/Dialog.js";
 
 // Pepperbox components (feature 002)
 export { EmptyState } from "./components/EmptyState.js";

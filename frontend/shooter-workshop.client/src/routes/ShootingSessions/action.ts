@@ -1,5 +1,6 @@
 import { correctWorkshopShooting, recordWorkshopShooting } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
+import { action as maintenanceAction } from "../Maintenance/action";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
@@ -16,7 +17,13 @@ function json<T>(form: FormData, key: string, fallback: T): T {
   }
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action(args: ActionFunctionArgs) {
+  const { request } = args;
+  const actionRequest = request.clone();
+  const actionForm = await actionRequest.formData();
+  if (text(actionForm, "intent") === "maintenance") {
+    return maintenanceAction(args);
+  }
   const form = await request.formData();
   const intent = text(form, "intent");
   try {
