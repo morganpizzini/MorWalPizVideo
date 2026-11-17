@@ -8,12 +8,12 @@ import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
 import InventoryPanel from "./InventoryPanel";
 import CataloguePanel from "./CataloguePanel";
-import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { DeferredRoute } from "../shared";
 import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function Firearms() {
-  const { data } = useLoaderData() as DeferredRouteData<EquipmentLoaderResources>;
-  return <DeferredRoute data={data}>{(resources) => <FirearmsContent resources={resources} />}</DeferredRoute>;
+  const resources = useLoaderData() as EquipmentLoaderResources;
+  return <FirearmsContent resources={resources} />;
 }
 
 function FirearmsContent({ resources }: { resources: EquipmentLoaderResources }) {
@@ -58,7 +58,7 @@ function FirearmsContent({ resources }: { resources: EquipmentLoaderResources })
             onSelectedKeyChange={selectTab}
             tabs={[
               { key: "firearms", label: t("Firearms"), panel: <DeferredRoute data={resources.firearms} fallback={<CardGridSkeleton />} >{(items) => <FirearmsPanel items={items} showForm={showForm} onToggleForm={() => setShowForm(!showForm)} fetcher={fetcher} />}</DeferredRoute> },
-              { key: "inventory", label: t("Inventory"), panel: <DeferredRoute data={Promise.all([resources.inventory, resources.definitions, resources.firearms, resources.installations])} fallback={<PanelSkeleton />} >{([inventory, definitions, firearms, installations]) => <InventoryPanel inventory={inventory} definitions={definitions} firearms={firearms} installations={installations} firearmId={firearmId} onFirearmChange={(value) => {
+              { key: "inventory", label: t("Inventory"), panel: <DeferredRoute data={resources.inventoryPanel} fallback={<PanelSkeleton />} >{([inventory, definitions, firearms, installations]) => <InventoryPanel inventory={inventory} definitions={definitions} firearms={firearms} installations={installations} firearmId={firearmId} onFirearmChange={(value) => {
                 const next = new URLSearchParams(searchParams);
                 if (value) next.set("firearmId", value); else next.delete("firearmId");
                 setSearchParams(next);

@@ -7,6 +7,16 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router"],
+          qrcode: ["qrcode"],
+        },
+      },
+    },
+  },
   server: {
     port: 5180,
     proxy: { "^/api": { target: "https://localhost:7140", secure: false } },

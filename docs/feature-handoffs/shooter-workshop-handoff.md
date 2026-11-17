@@ -10,6 +10,28 @@ navigation. The durable functional record is
 This handoff remains only for its unresolved release certification, browser
 authentication, index, domain/TLS, and acceptance gates.
 
+## Verification follow-up — 2026-11-17 stable Workshop tab resources
+
+The Firearms inventory and Ammunition production tab panels now receive their
+combined deferred resources from their route loaders. This avoids creating a new
+`Promise.all` during every Suspense render retry, which could prevent those tabs
+from settling after tab navigation. Existing individual loader resources remain
+available for the other panels and API behavior is unchanged.
+
+Changed files:
+
+- `frontend/shooter-workshop.client/src/routes/Firearms/loader.ts`
+- `frontend/shooter-workshop.client/src/routes/Firearms/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/Firearms/route.test.ts`
+- `frontend/shooter-workshop.client/src/routes/Ammunition/loader.ts`
+- `frontend/shooter-workshop.client/src/routes/Ammunition/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/Ammunition/route.test.ts`
+
+Validation:
+
+- `cd frontend && yarn workspace shooter-workshop.client test` — passed.
+- `cd frontend && yarn workspace shooter-workshop.client build` — passed.
+
 ## Verification follow-up — 2026-11-17 account CSRF output-cache isolation
 
 Removed the ServerAPI global output-cache base policy. Output caching remains

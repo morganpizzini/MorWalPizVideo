@@ -5,12 +5,12 @@ import type { action } from "./action";
 import type { AmmunitionLoaderResources } from "./loader";
 import Recipes from "../Recipes/component";
 import AmmunitionPanel from "./AmmunitionPanel";
-import { DeferredRoute, type DeferredRouteData } from "../shared";
+import { DeferredRoute } from "../shared";
 import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 
 export default function Ammunition() {
-  const { data } = useLoaderData() as DeferredRouteData<AmmunitionLoaderResources>;
-  return <DeferredRoute data={data}>{(resources) => <AmmunitionContent resources={resources} />}</DeferredRoute>;
+  const resources = useLoaderData() as AmmunitionLoaderResources;
+  return <AmmunitionContent resources={resources} />;
 }
 
 function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources }) {
@@ -38,7 +38,7 @@ function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources
           {
             key: "ammunition",
             label: t("Ammunition"),
-            panel: <DeferredRoute data={Promise.all([resources.recipes, resources.batches])} fallback={<PanelSkeleton />} >{([recipes, batches]) => <AmmunitionPanel recipes={recipes} batches={batches} fetcher={fetcher} />}</DeferredRoute>,
+            panel: <DeferredRoute data={resources.productionPanel} fallback={<PanelSkeleton />} >{([recipes, batches]) => <AmmunitionPanel recipes={recipes} batches={batches} fetcher={fetcher} />}</DeferredRoute>,
           },
           { key: "recipes", label: t("Recipes"), panel: <DeferredRoute data={resources.recipes} fallback={<CardGridSkeleton />} >{(recipes) => <Recipes recipes={recipes} embedded />}</DeferredRoute> },
         ]}

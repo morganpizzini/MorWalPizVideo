@@ -1,6 +1,5 @@
 import { getWorkshopBatches, getWorkshopRecipes } from "@morwalpizvideo/services";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
-import { deferRouteData } from "../shared";
 
 export interface AmmunitionLoaderData {
   recipes: Awaited<ReturnType<typeof getWorkshopRecipes>>;
@@ -10,13 +9,20 @@ export interface AmmunitionLoaderData {
 export interface AmmunitionLoaderResources {
   recipes: ReturnType<typeof getWorkshopRecipes>;
   batches: ReturnType<typeof getWorkshopBatches>;
+  productionPanel: Promise<[
+    Awaited<ReturnType<typeof getWorkshopRecipes>>,
+    Awaited<ReturnType<typeof getWorkshopBatches>>,
+  ]>;
 }
 
 export function loader() {
-  return deferRouteData<AmmunitionLoaderResources>({
-    recipes: getWorkshopRecipes(),
-    batches: getWorkshopBatches(),
-  });
+  const recipes = getWorkshopRecipes();
+  const batches = getWorkshopBatches();
+  return {
+    recipes,
+    batches,
+    productionPanel: Promise.all([recipes, batches]),
+  } satisfies AmmunitionLoaderResources;
 }
 
 export function ammunitionShouldRevalidate({

@@ -1,6 +1,5 @@
 import { getWorkshopAnalytics, getWorkshopDashboard, getWorkshopHistory } from "@morwalpizvideo/services";
 import type { LoaderFunctionArgs } from "react-router";
-import { deferRouteData } from "../shared";
 
 export interface DashboardLoaderData {
   dashboard: ReturnType<typeof getWorkshopDashboard>;
@@ -18,10 +17,10 @@ export function loader({ request }: LoaderFunctionArgs) {
   const days = daysFromRequest(request);
   const to = new Date();
   const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
-  return deferRouteData({
+  return {
     dashboard: getWorkshopDashboard(),
     history: getWorkshopHistory(),
     analytics: getWorkshopAnalytics(from.toISOString(), to.toISOString()),
     days,
-  });
+  } satisfies DashboardLoaderData;
 }

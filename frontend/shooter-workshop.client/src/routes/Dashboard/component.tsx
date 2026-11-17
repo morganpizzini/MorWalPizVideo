@@ -2,7 +2,7 @@ import { Link, useLoaderData, useNavigate, useSearchParams } from "react-router"
 import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopAnalytics, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
-import { ActivityList, DeferredRoute, Stat, type DeferredRouteData } from "../shared";
+import { ActivityList, DeferredRoute, Stat } from "../shared";
 import { ActivitySkeleton, MetricSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 import type { DashboardLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
@@ -11,7 +11,7 @@ import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences, type WorkshopPersonalGoal } from "../../services/workshopPreferences";
 
 export default function Dashboard() {
-  const { data } = useLoaderData() as DeferredRouteData<DashboardLoaderData>;
+  const data = useLoaderData() as DashboardLoaderData;
   const { t } = useI18n();
   return (
     <div>
@@ -27,15 +27,12 @@ export default function Dashboard() {
         <div className="quick-actions">
           <Link className="quick-action" to="/firearms"><strong>{t("Register firearm")}</strong><span>{t("Keep equipment counters independent.")}</span></Link>
           <Link className="quick-action" to="/ammunition?tab=recipes"><strong>{t("Create recipe")}</strong><span>{t("Capture the immutable recipe snapshot.")}</span></Link>
-          <Link className="quick-action" to="/ammunition"><strong>{t("Record production")}</strong><span>{t("Create stock from a recipe.")}</span></Link>
           <Link className="quick-action" to="/sessions/shooting?tab=maintenance"><strong>{t("Record maintenance")}</strong><span>{t("Keep service history factual and traceable.")}</span></Link>
           <Link className="quick-action" to="/integrity"><strong>{t("Check integrity")}</strong><span>{t("Review reconciliation status.")}</span></Link>
         </div>
       </section>
-      <DeferredRoute data={data} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
-        {(resources) => <DeferredRoute data={Promise.all([resources.dashboard, resources.history, resources.analytics]).then(([dashboard, history, analytics]) => ({ dashboard, history, analytics, days: resources.days }))} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
-          {(resolved) => <DashboardContent data={resolved} />}
-        </DeferredRoute>}
+      <DeferredRoute data={Promise.all([data.dashboard, data.history, data.analytics]).then(([dashboard, history, analytics]) => ({ dashboard, history, analytics, days: data.days }))} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
+        {(resolved) => <DashboardContent data={resolved} />}
       </DeferredRoute>
     </div>
   );
@@ -83,7 +80,7 @@ function DashboardContent({ data }: { data: { dashboard: WorkshopDashboard; hist
   return (
     <div>
       <div className="dashboard-grid">
-        <section className="stats-grid">
+        <section className="stats-grid dashboard-stats-grid">
           <Stat label="Active firearms" value={data.dashboard.firearmCount} />
           <Stat label="Firearm rounds" value={formatNumber(data.dashboard.totalFirearmRounds, culture)} />
           <Stat label="Physical components" value={data.dashboard.componentCount} />
