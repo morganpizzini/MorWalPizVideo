@@ -736,6 +736,40 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
             UpdateItemAsync(account);
 
+        public async Task UpdateProfileAsync(
+            string accountId,
+            string email,
+            string normalizedEmail,
+            string displayName,
+            CancellationToken cancellationToken = default)
+        {
+            var account = await GetAccountAsync(accountId, cancellationToken);
+            if (account is not null)
+                await UpdateItemAsync(account with
+                {
+                    Email = email,
+                    NormalizedEmail = normalizedEmail,
+                    DisplayName = displayName
+                });
+        }
+
+        public async Task<int> AdvanceWorkshopCapabilityGuideSeenVersionAsync(
+            string accountId,
+            int version,
+            CancellationToken cancellationToken = default)
+        {
+            var account = await GetAccountAsync(accountId, cancellationToken);
+            if (account is null)
+                return 0;
+            var updated = account with
+            {
+                WorkshopCapabilityGuideSeenVersion =
+                    Math.Max(account.WorkshopCapabilityGuideSeenVersion, version)
+            };
+            await UpdateItemAsync(updated);
+            return updated.WorkshopCapabilityGuideSeenVersion;
+        }
+
         public async Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var accounts = await GetItemsAsync(string.IsNullOrWhiteSpace(search)

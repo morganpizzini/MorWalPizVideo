@@ -5,10 +5,16 @@ import type { action } from "./action";
 import type { AmmunitionLoaderData } from "./loader";
 import Recipes from "../Recipes/component";
 import AmmunitionPanel from "./AmmunitionPanel";
+import { DeferredRoute, type DeferredRouteData } from "../shared";
 
 export default function Ammunition() {
+  const { data } = useLoaderData() as DeferredRouteData<AmmunitionLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <AmmunitionContent data={resolved} />}</DeferredRoute>;
+}
+
+function AmmunitionContent({ data }: { data: AmmunitionLoaderData }) {
   const { t } = useI18n();
-  const { recipes, batches } = useLoaderData() as AmmunitionLoaderData;
+  const { recipes, batches } = data;
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") === "recipes" ? "recipes" : "ammunition";
   const fetcher = useFetcher<typeof action>();

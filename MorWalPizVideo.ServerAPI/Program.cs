@@ -45,8 +45,6 @@ var enablePublicAccountRateLimit = builder.Configuration.IsFeatureEnabled(MyFeat
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
 
-var morWalPizCors = "MorWalPizPolicy";
-
 // Configure the CORS policy
 builder.Services.AddCors(options =>
 {
@@ -59,16 +57,16 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod();
         });
     }
-
-    options.AddPolicy(morWalPizCors,
-        builder =>
+    else
     {
-        builder.WithOrigins(
-            "https://morwalpiz.com",
-            "https://www.morwalpiz.com")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+        options.AddDefaultPolicy(policy =>
+            policy.WithOrigins(
+                    "https://morwalpiz.com",
+                    "https://www.morwalpiz.com")
+                .AllowAnyHeader()
+                .AllowAnyMethod());
+    }
+
     options.AddPolicy("public-account",
         policy => policy.WithOrigins("https://morwalpiz.com", "https://www.morwalpiz.com", "https://workshop.morwalpiz.com")
             .AllowAnyHeader()
@@ -540,14 +538,7 @@ app.UseHttpsRedirection();
 app.UseRateLimiter();
 
 // ADR-002 follow-up (TD-007): fail closed outside Development instead of falling back to an open policy.
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors();
-}
-else
-{
-    app.UseCors(morWalPizCors);
-}
+app.UseCors();
 
 // Add authentication and authorization middleware
 app.UseAuthentication();

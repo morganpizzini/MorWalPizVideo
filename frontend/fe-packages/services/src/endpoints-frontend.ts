@@ -77,6 +77,7 @@ const WORKSHOP_ANALYTICS = `${WORKSHOP}/analytics`;
 const WORKSHOP_HISTORY = `${WORKSHOP}/history`;
 const WORKSHOP_REPORT = `${WORKSHOP}/report`;
 const WORKSHOP_RECONCILIATION = `${WORKSHOP}/reconciliation`;
+const WORKSHOP_CAPABILITY_GUIDE_SEEN = `${WORKSHOP}/capability-guide/seen`;
 
 // Configuration
 const CONFIGURATION_STREAM = `${baseEndpoint}/configuration/stream`;
@@ -149,6 +150,7 @@ export default {
   WORKSHOP_HISTORY,
   WORKSHOP_REPORT,
   WORKSHOP_RECONCILIATION,
+  WORKSHOP_CAPABILITY_GUIDE_SEEN,
   CONFIGURATION_STREAM,
   QUICK_LINKS,
   QUICK_LINKS_DETAIL,

@@ -1109,6 +1109,32 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
             _collection.ReplaceOneAsync(item => item.Id == account.Id, account, cancellationToken: cancellationToken);
 
+        public Task UpdateProfileAsync(
+            string accountId,
+            string email,
+            string normalizedEmail,
+            string displayName,
+            CancellationToken cancellationToken = default) =>
+            _collection.UpdateOneAsync(
+                item => item.Id == accountId,
+                Builders<PublicAccount>.Update
+                    .Set(item => item.Email, email)
+                    .Set(item => item.NormalizedEmail, normalizedEmail)
+                    .Set(item => item.DisplayName, displayName),
+                cancellationToken: cancellationToken);
+
+        public async Task<int> AdvanceWorkshopCapabilityGuideSeenVersionAsync(
+            string accountId,
+            int version,
+            CancellationToken cancellationToken = default)
+        {
+            await _collection.UpdateOneAsync(
+                item => item.Id == accountId,
+                Builders<PublicAccount>.Update.Max(item => item.WorkshopCapabilityGuideSeenVersion, version),
+                cancellationToken: cancellationToken);
+            return (await GetAccountAsync(accountId, cancellationToken))!.WorkshopCapabilityGuideSeenVersion;
+        }
+
         public async Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var filter = string.IsNullOrWhiteSpace(search)

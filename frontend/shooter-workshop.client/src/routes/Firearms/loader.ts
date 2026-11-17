@@ -5,19 +5,28 @@ import {
   getWorkshopFirearms,
 } from "@morwalpizvideo/services";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
+import { deferRouteData } from "../shared";
 
-export async function loader() {
-  const [firearms, definitions, inventory, installations] = await Promise.all([
+export interface EquipmentLoaderData {
+  firearms: Awaited<ReturnType<typeof getWorkshopFirearms>>;
+  definitions: Awaited<ReturnType<typeof getWorkshopComponentDefinitions>>;
+  inventory: Awaited<ReturnType<typeof getWorkshopComponents>>;
+  installations: Awaited<ReturnType<typeof getWorkshopComponentInstallations>>;
+}
+
+export function loader() {
+  return deferRouteData(Promise.all([
     getWorkshopFirearms(),
     getWorkshopComponentDefinitions(),
     getWorkshopComponents(),
     getWorkshopComponentInstallations(),
-  ]);
-  return { firearms, definitions, inventory, installations };
+  ]).then(([firearms, definitions, inventory, installations]): EquipmentLoaderData => ({
+    firearms,
+    definitions,
+    inventory,
+    installations,
+  })));
 }
-
-export type FirearmsLoaderData = Awaited<ReturnType<typeof loader>>;
-export type EquipmentLoaderData = FirearmsLoaderData;
 
 export function firearmsShouldRevalidate({
   currentUrl,

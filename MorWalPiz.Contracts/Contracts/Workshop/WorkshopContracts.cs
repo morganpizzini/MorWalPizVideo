@@ -60,7 +60,7 @@ public sealed class DeleteWorkshopComponentDefinitionRequest
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
-public class CreateWorkshopComponentRequest
+public abstract class WorkshopComponentRequestBase
 {
     [Required] public string DefinitionId { get; init; } = string.Empty;
     [StringLength(500)] public string? IdentificationNote { get; init; }
@@ -71,10 +71,14 @@ public class CreateWorkshopComponentRequest
     [Range(0, long.MaxValue)] public long InitialRounds { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
     public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
+}
+
+public sealed class CreateWorkshopComponentRequest : WorkshopComponentRequestBase
+{
     [StringLength(80)] public string? IdempotencyKey { get; init; }
 }
 
-public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopComponentRequest
+public sealed class CreateAndInstallWorkshopComponentRequest : WorkshopComponentRequestBase
 {
     public string? FirearmId { get; init; }
     public DateTime InstalledAt { get; init; }
@@ -82,7 +86,7 @@ public sealed class CreateAndInstallWorkshopComponentRequest : CreateWorkshopCom
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
-public sealed class UpdateWorkshopComponentRequest : CreateWorkshopComponentRequest
+public sealed class UpdateWorkshopComponentRequest : WorkshopComponentRequestBase
 {
     [Range(0, long.MaxValue)] public long? TotalRounds { get; init; }
     [Range(0, long.MaxValue)] public long Revision { get; init; }

@@ -43,12 +43,24 @@ public sealed record PublicAccountProfileUpdateRequest
     public string Email { get; init; } = string.Empty;
 }
 
+public sealed record WorkshopCapabilityGuideSeenRequest
+{
+    [Range(1, 1)]
+    public int Version { get; init; }
+}
+
+public sealed record WorkshopCapabilityGuideSeenResponse
+{
+    public int EffectiveVersion { get; init; }
+}
+
 public sealed record PublicAccountSummaryContract
 {
     public string Id { get; init; } = string.Empty;
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;
+    public int WorkshopCapabilityGuideSeenVersion { get; init; }
 }
 
 public sealed record PublicAccountSessionContract

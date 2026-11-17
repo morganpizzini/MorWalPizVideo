@@ -32,6 +32,17 @@ account/provider/Interactions, and admin
 [publicAccounts](../../frontend/back-office-spa/src/routes/publicAccounts/) and
 [blogInteractions](../../frontend/back-office-spa/src/routes/blogInteractions/).
 
+### Workshop capability presentation marker
+
+`PublicAccount.WorkshopCapabilityGuideSeenVersion` is an additive,
+presentation-only field consumed by Shooter Workshop. New registrations persist
+version `0`; legacy documents with a missing field are read as version `1`.
+Workshop advances it monotonically through its authenticated,
+CSRF-protected `capability-guide/seen` endpoint. It never grants authorization,
+does not represent completion of account setup, and is omitted from no existing
+consumer's required behavior. Profile updates use targeted persistence so they
+cannot erase an independently advanced marker.
+
 Exploration values **not established as delivered guarantees**: comments 1-2000
 characters; 5/account/minute and 20/IP/minute; cursor default 20/max 50, batch 50;
 tombstone retention/pagination. Older text hiding approved comments for blocked

@@ -1,5 +1,32 @@
 # Shooter Workshop Capability Wizard Handoff
 
+**Status:** Implemented. The account marker, authenticated Workshop endpoint,
+shell-level modal, replay control, legacy compatibility behavior, and focused
+validation are complete. Same-origin proxy deployment remains an environment
+smoke-test responsibility.
+
+### Delivery record
+
+Implemented across Models, Contracts, Domain, ServerAPI, shared frontend models
+and services, and `frontend/shooter-workshop.client`. The old dashboard-only
+`OnboardingGuide` and its test were removed; `CapabilityWizard` now owns the
+four-step presentation from `AppShell`. The modal traps focus, supports Escape
+and backdrop dismissal, marks the shell content inert, links to canonical
+Workshop routes, and reports marker-save failures without silently treating them
+as success.
+
+Validation completed:
+
+- PublicAccount-focused backend tests: 11 passed.
+- Shared models, services, and Workshop client production builds: passed.
+- Workshop client test suite: 48 passed.
+- CapabilityWizard focused test: 2 passed.
+
+Not run in this environment: a deployed/container same-origin `/api` smoke test
+covering cookies, CSRF, marker persistence, and refresh. Browser-sized visual
+capture was also unavailable; the implementation uses the existing Workshop
+visual system and responsive breakpoints.
+
 ### Outcome
 
 Replace the existing dashboard-only setup guide with a wide, multi-step Shooter
@@ -15,9 +42,10 @@ Workshop guide was presented.
 
 Accepted decisions:
 
-- Existing accounts that predate activation are marked as having seen version
-  1 before the client is released. They are not interrupted and can use the
-  header replay button.
+- Existing account documents with no marker are interpreted as having seen
+  version 1. They are not interrupted and can use the header replay button.
+- New registrations explicitly start at version 0 and receive the automatic
+  guide the first time they reach the Workshop shell.
 - The server marker records that the automatic guide was presented, not that
   the user completed business setup.
 - Skip, close, completion, and manual replay remain presentation behavior; none
@@ -60,6 +88,16 @@ Accepted decisions:
   header controls, responsive behavior, and current onboarding/dialog styles.
 - ServerAPI already owns authenticated, account-scoped Workshop routes under
   `/api/v1/workshop`; writes use the PublicAccount cookie identity and CSRF.
+- `MorWalPizVideo.ServerAPI/Program.cs` already registers
+  `IPublicAccountService`, PublicAccount Mongo/mock repositories,
+  `WorkshopService`, the PublicAccount authentication scheme, controllers, and
+  the credentialed Workshop origin. The marker does not require a new service
+  registration, database connection, host, or authentication scheme.
+- `frontend/shooter-workshop.client/Dockerfile` builds the client with a
+  relative API base, and `nginx.conf.template` proxies same-origin `/api/`
+  requests to the configured ServerAPI origin. Production Workshop account
+  cookies and CSRF therefore flow through the first-party Workshop origin;
+  direct cross-origin CORS remains a controlled fallback/diagnostic path.
 
 ### Proposed Design
 
@@ -67,12 +105,14 @@ Accepted decisions:
 
 Add an integer PublicAccount field conceptually named
 `WorkshopCapabilityGuideSeenVersion`, serialized additively with a default of
-zero for missing legacy data.
+one for missing legacy data. Registration explicitly writes zero for newly
+created accounts.
 
 Use a version rather than a boolean or timestamp:
 
 - `0` means no server-recorded Workshop capability guide;
 - `1` means version 1 has been presented;
+- a missing field means a legacy account and is read as version 1;
 - future materially changed onboarding may increment the current guide version
   without redefining historical timestamps or adding another flag.
 
@@ -102,6 +142,15 @@ aggregate. The operation is monotonic and idempotent:
 Return the effective seen version so the client can update its in-memory session
 snapshot. Do not create a Workshop domain event, ledger operation, background
 job, or cache purge for this presentation marker.
+
+The current PublicAccount repository's `UpdateAccountAsync` performs a full
+document replacement. Do not use that method for the marker: add an atomic
+field-level advance operation so concurrent requests cannot downgrade the seen
+version. The existing profile update also performs a read/replace cycle; move
+its mutable profile fields to a targeted repository update in the same bounded
+change, or otherwise prove that a concurrent profile save cannot overwrite the
+new marker. This is required correctness work tightly coupled to adding an
+independently mutable account field.
 
 #### Automatic launch lifecycle
 
@@ -134,8 +183,9 @@ presentation and top-right replay are shell behavior.
 
 During the rollout compatibility window:
 
-- existing pre-activation accounts are backfilled to seen version 1;
-- new accounts created after the agreed activation cutoff remain at version 0;
+- legacy account documents missing the field read as seen version 1 without a
+  data rewrite;
+- registration explicitly persists version 0 for new accounts;
 - existing browser-local `onboardingState` and `onboardingStep` remain readable
   until the new client ships, but the new wizard does not use them as
   authoritative state;
@@ -215,7 +265,8 @@ closing.
   credentials and CSRF.
 - `frontend/shooter-workshop.client`: shell integration, modal, replay,
   localization, styling, and tests.
-- MongoDB operations: idempotent pre-activation PublicAccount backfill.
+- `frontend/shooter-workshop.client` container/proxy: same-origin `/api`
+  transport verification; no topology change.
 - Documentation: Workshop, account/data compatibility, and rollout records.
 - BackOffice SPA, public application UI, FreezerAnalysis UI, shared layout,
   AppHost topology, and deployment units are verify-only consumers or
@@ -230,8 +281,9 @@ closing.
 - `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`: expose a monotonic,
   account-owned mark-seen operation.
 - The existing PublicAccount repository interface and Mongo/mock
-  implementations under `MorWalPizVideo.Domain/Interfaces`: persist the
-  account update using the established account write path.
+  implementations under `MorWalPizVideo.Domain/Interfaces`: add an atomic,
+  monotonic marker update and a targeted profile update that cannot overwrite
+  independently mutable account fields.
 - `MorWalPiz.Contracts/Contracts/PublicAccountContracts.cs`: add the seen
   version to authenticated account summary and define the Workshop mark-seen
   request/response.
@@ -267,6 +319,7 @@ closing.
 Retire
 `frontend/shooter-workshop.client/src/routes/Dashboard/OnboardingGuide.tsx`
 after its factual content and route actions move to the shell-level component.
+This retirement is now complete.
 
 #### Add
 
@@ -277,17 +330,12 @@ after its factual content and route actions move to the shell-level component.
 - A focused backend endpoint test in
   `MorWalPizVideo.BackOffice.Tests/Features/` following current PublicAccount
   and Workshop authentication fixtures.
-- An operator-reviewed Mongo backfill record in the existing operations
-  documentation; add a source-owned migration utility only if current
-  operational tooling requires one.
 
 #### Generated/Migration
 
 - No EF migration.
-- MongoDB requires an idempotent data backfill for pre-activation
-  PublicAccounts. It sets seen version 1 only for accounts created before the
-  agreed activation cutoff and must be safe to audit and rerun.
-- Missing BSON fields remain readable as version 0 before backfill.
+- No MongoDB data backfill. Missing fields must deserialize as legacy version 1,
+  while the registration path explicitly persists version 0 for new accounts.
 - No index is required for a field read and updated only by account ID.
 
 #### Documentation
@@ -298,8 +346,6 @@ after its factual content and route actions move to the shell-level component.
   compatibility and shared-consumer impact.
 - `docs/architecture/domain-model.md`: PublicAccount presentation marker and
   non-authorization semantics.
-- `docs/architecture/mongo-operations.md`: cutoff, audit, apply, verification,
-  and recovery procedure for the backfill.
 - `docs/feature-handoffs/shooter-workshop-nice-to-haves-handoff.md`: supersede
   the inline browser-local guide delivery record with actual wizard behavior.
 - This handoff: append actual files, validation, migration evidence, and
@@ -315,6 +361,11 @@ after its factual content and route actions move to the shell-level component.
   behavior.
 - PublicAccount session cookie, CSRF, CORS, security version, legal
   acknowledgement, and expiry contracts remain unchanged.
+- `MorWalPizVideo.ServerAPI/Program.cs`: existing account/Workshop DI,
+  authentication, CORS, MongoDB, and controller registration remain sufficient.
+- `frontend/shooter-workshop.client/Dockerfile`,
+  `nginx.conf.template`, and `vite.config.ts`: preserve relative `/api`
+  production proxy and local development proxy behavior.
 - AppHost and deployment workflows require no topology or secret changes.
 
 ### Impact Matrix
@@ -323,22 +374,22 @@ after its factual content and route actions move to the shell-level component.
 |---|---|
 | Backend/API | Additive account summary field and one authenticated, CSRF-protected Workshop mark-seen write. |
 | Frontend/UI | Existing dashboard guide becomes a wide shell modal with top-right replay. |
-| Database/Data | Additive version field on PublicAccount plus cutoff-based idempotent backfill. |
+| Database/Data | Additive version field; missing legacy field reads as 1 and new registration explicitly writes 0. No backfill or index. |
 | Contracts/Models | Coordinated .NET and TypeScript additive account/endpoint contracts. |
 | Authentication/Authorization | Existing PublicAccount cookie identity only; marker never authorizes. |
 | Validation | Supported version bounds, monotonic update, current-account ownership, and explicit failure handling. |
 | Cache | No output/application cache; session snapshot updates locally after mutation. |
 | Configuration/Secrets | One source-owned current guide version; no secret or environment setting. |
 | Logging/Telemetry | Structured mutation failure/outcome without account PII or modal content. |
-| Background Jobs | Not applicable; synchronous idempotent account update and controlled backfill. |
-| Deployment/Operations | Backend/contracts, cutoff backfill, then client in dependency order. |
-| Backward Compatibility | Missing fields read as zero; pre-activation accounts are backfilled to one; consumers ignore additive data. |
+| Background Jobs | Not applicable; synchronous idempotent account update. |
+| Deployment/Operations | Backend/contracts before client; same-origin proxy smoke evidence required. |
+| Backward Compatibility | Missing fields read as 1, new registrations persist 0, and other consumers ignore additive data. |
 
 ### Reuse Opportunities
 
 - Reuse PublicAccount repository/service ownership and session-summary mapping.
-- Reuse Workshop authenticated controller, account identity, CSRF, CORS, and
-  account-mode frontend transport.
+- Reuse Workshop authenticated controller, account identity, CSRF, account-mode
+  frontend transport, and the production same-origin `/api` reverse proxy.
 - Reuse existing mock PublicAccount scenarios and WebApplicationFactory
   authentication tests.
 - Reuse `AppShell`, header icon pattern, existing canonical routes, current
@@ -348,11 +399,11 @@ after its factual content and route actions move to the shell-level component.
 
 ### Risks
 
-- **High — rollout marks the wrong population:** an incorrect cutoff could hide
-  the wizard from new accounts or interrupt old ones. Mitigation: record one UTC
-  activation cutoff, dry-run counts, make the backfill idempotent, and verify
-  samples on both sides. Signal: pre-cutoff accounts report version 1 and
-  post-cutoff registrations remain 0 before first Workshop presentation.
+- **High — legacy/default inversion:** the wrong serializer default could show
+  the wizard to every existing account or suppress it for new registrations.
+  Mitigation: missing BSON fields read as 1 and registration explicitly writes
+  0, with serialization and HTTP tests for both paths. Signal: an old fixture
+  returns 1 while a newly registered account returns 0.
 - **High — marker set without presentation:** marking before the modal renders
   could permanently suppress onboarding after a client failure. Mitigation:
   render/open first, then submit mark-seen; report mutation failure explicitly.
@@ -365,6 +416,15 @@ after its factual content and route actions move to the shell-level component.
   overwrite a newer version. Mitigation: server uses monotonic max semantics
   and rejects unsupported future versions. Signal: repeat/lower/concurrent
   endpoint tests retain the highest supported version.
+- **High — profile replacement loses the marker:** the existing profile
+  read/replace path can race an atomic guide update and restore an older value.
+  Mitigation: use targeted atomic updates for both the marker and mutable profile
+  fields. Signal: concurrent profile/guide tests preserve both changes.
+- **Medium — proxy-only deployment defect:** unit tests may pass while the
+  same-origin nginx path fails to forward cookies, CSRF headers, or the new
+  route. Mitigation: container/proxy browser smoke through `/api`, not only
+  direct ServerAPI tests. Signal: registration/session, mark-seen, refresh, and
+  replay succeed from the Workshop origin without direct cross-origin calls.
 - **Medium — persistence failure repeats onboarding:** failed writes may show
   the wizard on a later login. Mitigation: explicit retry state and no silent
   local success. Signal: failure test keeps server/session version unchanged.
@@ -395,48 +455,51 @@ after its factual content and route actions move to the shell-level component.
 
 1. **Add the compatible account contract.** Introduce the version field in the
    model, .NET/TypeScript summaries, mappings, mocks, and consumer tests. Gate:
-   missing-field accounts deserialize as zero and existing consumers pass.
+   missing-field accounts deserialize as one, new registrations persist zero,
+   and existing consumers pass.
 2. **Implement monotonic account persistence.** Add the Domain service/repository
-   operation and focused tests for current, repeat, lower, future, missing, and
-   concurrent updates. Gate: no downgrade or cross-account mutation is possible.
+   field-level operation, replace the conflicting profile full-document update
+   with targeted mutable-field persistence, and test current, repeat, lower,
+   future, missing, and concurrent updates. Gate: no downgrade, lost profile
+   change, marker loss, or cross-account mutation is possible.
 3. **Expose the Workshop mark-seen endpoint.** Reuse cookie authentication,
    account claims, CSRF, account-mode transport, no-store response behavior, and
    structured errors. Gate: authenticated success plus anonymous, CSRF,
    unsupported-version, inactive-account, and idempotency cases.
-4. **Prepare the rollout population.** Approve one UTC activation cutoff, audit
-   pre/post-cutoff counts, and apply the idempotent pre-activation version-1
-   backfill. Gate: recorded audit/apply evidence before client activation.
-5. **Build the capability modal.** Move/refine the four-step content into a
+4. **Build the capability modal.** Move/refine the four-step content into a
    controlled global component with full localization, canonical route actions,
    and accessible dialog behavior. Apply Impeccable `onboard` in Operate mode.
    Gate: component tests cover progression, replay, dismissal, focus, error/retry,
    and copy boundaries.
-6. **Integrate with AuthProvider and AppShell.** Auto-open from server version,
+5. **Integrate with AuthProvider and AppShell.** Auto-open from server version,
    mark only after presentation, update the in-memory session on success, reset
    on account change, and add top-right replay. Gate: registration, login, and
    restored sessions produce consistent behavior.
-7. **Retire dashboard-only onboarding.** Remove the empty-workspace panel and
+6. **Retire dashboard-only onboarding.** Remove the empty-workspace panel and
    browser-local reopen logic without changing dashboard data, goals, history,
    or recipe preferences.
-8. **Validate consumers and UX.** Run backend/shared/client focused tests, full
+7. **Validate transport, consumers, and UX.** Prove the new endpoint through
+   the Workshop container's same-origin `/api` proxy, then run
+   backend/shared/client focused tests, full
    Workshop and PublicAccount suites, shared package builds in dependency order,
    the Workshop production build, and browser evidence at 320, 375, 768, 1024,
    and 1440 px.
-9. **Document actual rollout.** Record cutoff, migration evidence, real files,
-   validation, deployed status, and residual risks. Stop without analytics,
+8. **Document actual rollout.** Record compatibility behavior, proxy evidence,
+   real files, validation, deployed status, and residual risks. Stop without analytics,
    feature-specific tours, a generic settings bag, or unrelated account fields.
 
 Because this change crosses shared identity, persistence, API contracts, and a
-data backfill, an independent post-validation review is warranted before
+production proxy boundary, an independent post-validation review is warranted before
 production activation.
 
 ### Testing Strategy
 
-- **Model/serialization:** missing BSON field defaults to zero; version
-  round-trip; no change to account security/legal fields.
+- **Model/serialization:** missing BSON field defaults to one; explicit new
+  account version zero and version round-trip; no change to account
+  security/legal fields.
 - **Domain/repository:** current-account update, idempotent repeat, lower-version
-  no-op, unsupported future rejection, concurrency, cancellation, missing and
-  inactive accounts.
+  no-op, unsupported future rejection, profile/marker concurrency,
+  cancellation, missing and inactive accounts.
 - **HTTP/security:** registration/login/session expose the additive version;
   mark-seen requires authenticated PublicAccount and CSRF; anonymous,
   cross-account, malformed, and unsupported requests fail explicitly; response
@@ -454,9 +517,11 @@ production activation.
   analytics, goals, history filters, recipes, and existing preferences remain.
 - **Dialog regression:** feedback and wizard never stack and leave no residual
   inert or `aria-hidden` state.
-- **Migration:** dry-run and apply counts around the UTC cutoff, rerun
-  idempotency, missing-field behavior, pre-cutoff version 1, and post-cutoff
-  version 0.
+- **Compatibility:** legacy missing-field fixture returns version 1; newly
+  registered account returns 0; no database rewrite is required.
+- **Proxy/integration:** run registration, session restoration, mark-seen,
+  CSRF failure, refresh, and manual replay through the container's same-origin
+  `/api` proxy with no direct ServerAPI origin dependency.
 - **Consumer/build:** PublicAccount endpoint suite, focused Workshop backend
   tests, shared models/services builds, full Workshop Vitest suite, and
   TypeScript/Vite production build.
@@ -466,25 +531,26 @@ production activation.
 
 ### Migration And Rollback
 
-MongoDB compatibility is additive. Missing seen-version fields read as zero.
-Before the new client is activated, run an idempotent backfill that sets version
-1 for PublicAccounts created before the approved UTC activation cutoff. New
-accounts at or after the cutoff remain zero until the Workshop presents version
-1 and the endpoint records it.
+MongoDB compatibility is additive and requires no data rewrite. Missing
+seen-version fields on historical documents read as version 1. The registration
+path explicitly writes version 0 for new accounts, which advances to version 1
+only after the Workshop renders the guide and the mark-seen request succeeds.
 
 Deployment order:
 
 1. deploy model/domain/contract/API support while the old client ignores it;
-2. audit and apply the cutoff-based backfill;
-3. deploy shared frontend packages and Workshop client;
-4. verify new registration, restored existing account, mutation, and replay;
-5. monitor endpoint failures and unexpected version-zero counts.
+2. verify legacy missing-field sessions return 1 and new registration returns 0;
+3. deploy shared frontend packages and the Workshop client/container;
+4. verify registration, restored existing account, mutation, refresh, and replay
+   through the production-equivalent same-origin `/api` proxy;
+5. monitor endpoint failures and unexpected version-zero accounts after guide
+   presentation.
 
 Rollback order is client first, then API/contracts if necessary. The additive
 field and version-1 values may remain safely in MongoDB. Do not roll values back
-to zero because that would re-trigger automatic onboarding. If the cutoff was
-wrong, stop client activation and correct the reviewed account set before
-continuing; code rollback alone cannot infer the intended population.
+to zero because that would re-trigger automatic onboarding. Preserve the
+legacy-missing-as-one rule through any rolling rollback so old binaries and old
+documents remain compatible.
 
 No EF, cache, auth-cookie, service-worker, secret, or topology migration is
 required.

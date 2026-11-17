@@ -28,6 +28,7 @@ import { action as reconciliationAction } from "./Reconciliation/action";
 import { action as recipeProductionAction } from "./RecipeProduction/action";
 import { loader as recipeProductionLoader } from "./RecipeProduction/loader";
 import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
+import { DeferredRouteError } from "./shared";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
@@ -45,6 +46,7 @@ export const routes: RouteObject[] = [
         <AppShell />
       </FeedbackProvider>
     ),
+    errorElement: <DeferredRouteError />,
     children: [
       { index: true, element: <Dashboard />, loader: dashboardLoader },
       { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction, shouldRevalidate: firearmsShouldRevalidate },

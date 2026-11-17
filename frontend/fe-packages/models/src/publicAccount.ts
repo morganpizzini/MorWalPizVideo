@@ -23,6 +23,7 @@ export interface PublicAccountSummary {
   username: string;
   email: string;
   displayName: string;
+  workshopCapabilityGuideSeenVersion?: number;
 }
 
 export interface PublicAccountSession {

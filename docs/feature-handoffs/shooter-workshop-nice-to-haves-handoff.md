@@ -1,6 +1,6 @@
 # Shooter Workshop Nice-to-Haves Handoff
 
-**Status:** Guided onboarding, repeatable capture drafts, saved history views, presentation-only goals, connectivity retry hardening, bounded report export, and the direct recipe QR-to-production flow are implemented. Notifications and reminders are intentionally excluded from the current product direction. Backup/import and persisted analytics rollups remain gated product work.
+**Status:** Guided onboarding, repeatable capture drafts, saved history views, presentation-only goals, connectivity retry hardening, bounded report export, and the direct recipe QR-to-production flow are implemented. The original dashboard-only onboarding has been superseded by the account-backed Workshop capability wizard described below. Notifications and reminders are intentionally excluded from the current product direction. Backup/import and persisted analytics rollups remain gated product work.
 
 **Owner:** Shooter Workshop product and architecture review.
 
@@ -32,11 +32,11 @@ The following remain prohibited:
 - powder-charge recommendations, load safety validation, or ballistic advice;
 - inferred mechanical safety, unsafe-state, reliability, or replacement claims.
 
-## Delivery update — guided first-use onboarding
+## Delivery update — guided first-use onboarding (superseded)
 
-The first sequenced candidate is now implemented as a presentation-only client
-flow for empty Workshop accounts. The dashboard shows an optional four-step
-guide for:
+The original dashboard-only presentation flow has been retired. Its four-step
+content is now implemented as a shell-level capability wizard available on every
+authenticated Workshop route:
 
 1. registering a firearm;
 2. optionally adding a component;
@@ -49,28 +49,35 @@ selection, ammunition allocation, or safety/load recommendation. It explains
 that tracked ammunition is resolved by the server and component intervals are
 user-entered records rather than safety advice.
 
-Skip, completion, and the current presentation step are stored in the existing
-account-keyed browser presentation preferences. Invalid preference values fall
-back to the active first step, and another account cannot read or change the
-preference state. Skipped users can reopen the guide while the workspace remains
-empty. The flow does not add API calls, persistent account data, service-worker
-caching, or offline mutation behavior.
+New registrations start with an account-backed
+`WorkshopCapabilityGuideSeenVersion` of `0`, so the wizard opens when the
+authenticated shell is first reached. Legacy account documents missing the field
+are treated as version `1` and are not interrupted. The top-right Guide control
+always reopens the wizard. Skip and completion persist version `1` through the
+authenticated, CSRF-protected Workshop endpoint; closing without persistence
+leaves the automatic first-use presentation eligible to return. The marker is
+monotonic and does not authorize or imply completion of domain setup.
 
 Implementation files:
 
-- `frontend/shooter-workshop.client/src/routes/Dashboard/OnboardingGuide.tsx`
+- `frontend/shooter-workshop.client/src/components/CapabilityWizard.tsx`
+- `frontend/shooter-workshop.client/src/components/CapabilityWizard.test.tsx`
 - `frontend/shooter-workshop.client/src/routes/Dashboard/component.tsx`
-- `frontend/shooter-workshop.client/src/services/workshopPreferences.ts`
+- `frontend/shooter-workshop.client/src/layouts/AppShell.tsx`
+- `frontend/shooter-workshop.client/src/auth/AuthProvider.tsx`
 - `frontend/shooter-workshop.client/src/i18n.tsx`
 - `frontend/shooter-workshop.client/src/main.scss`
-- `frontend/shooter-workshop.client/src/routes/Dashboard/OnboardingGuide.test.tsx`
-- `frontend/shooter-workshop.client/src/services/workshopPreferences.test.ts`
+- `MorWalPizVideo.Models/Models/PublicAccount.cs`
+- `MorWalPiz.Contracts/Contracts/PublicAccountContracts.cs`
+- `MorWalPizVideo.Domain/Accounts/PublicAccountService.cs`
+- `MorWalPizVideo.Domain/Interfaces/Repository.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs`
 
 Validation completed:
 
-- `yarn --cwd frontend workspace shooter-workshop.client test --passWithNoTests=false --run src/routes/Dashboard/OnboardingGuide.test.tsx src/services/workshopPreferences.test.ts` — 4 passed.
-- `yarn --cwd frontend workspace shooter-workshop.client test --passWithNoTests=false` — 36 passed.
-- `yarn --cwd frontend workspace shooter-workshop.client build` — passed.
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --no-restore --filter FullyQualifiedName~PublicAccount` — 11 passed.
+- `cd frontend && yarn workspace @morwalpizvideo/models build && yarn workspace @morwalpizvideo/services build && yarn workspace shooter-workshop.client build` — passed.
+- `cd frontend && yarn workspace shooter-workshop.client test --run` — 48 passed.
 
 Visual browser capture was not available in this environment; the implementation
 uses the existing Workshop Operate visual system and responsive stylesheet

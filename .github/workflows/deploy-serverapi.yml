@@ -159,26 +159,44 @@ jobs:
           for attempt in {1..12}; do
             : > "$headers_file"
             : > "$body_file"
-            status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --output "$body_file" --dump-header "$headers_file" --write-out '%{http_code}' --header 'Origin: https://morwalpiz.com' "$csrf_url" || true)"
+            set +e
+            status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --output "$body_file" --dump-header "$headers_file" --write-out '%{http_code}' --header 'Origin: https://morwalpiz.com' "$csrf_url")"
+            curl_exit=$?
+            set -e
+
+            token_present=false
+            csrf_cookie_present=false
+            allow_origin_matches=false
+            allow_credentials_matches=false
+            if grep -Eiq '"token"[[:space:]]*:' "$body_file"; then
+              token_present=true
+            fi
+            if grep -Eiq '^set-cookie:[[:space:]]*public_account_csrf=' "$headers_file"; then
+              csrf_cookie_present=true
+            fi
+            if grep -Eiq '^access-control-allow-origin:[[:space:]]*https://morwalpiz\.com[[:space:]]*$' "$headers_file"; then
+              allow_origin_matches=true
+            fi
+            if grep -Eiq '^access-control-allow-credentials:[[:space:]]*true[[:space:]]*$' "$headers_file"; then
+              allow_credentials_matches=true
+            fi
 
             if [[ "$status" == "200" ]] \
-              && grep -Eiq '"token"[[:space:]]*:' "$body_file" \
-              && grep -Eiq '^set-cookie:.*csrf' "$headers_file" \
-              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://morwalpiz.com' "$headers_file" \
-              && grep -Eiq '^access-control-allow-credentials:[[:space:]]*true' "$headers_file"; then
+              && [[ "$token_present" == true ]] \
+              && [[ "$csrf_cookie_present" == true ]] \
+              && [[ "$allow_origin_matches" == true ]] \
+              && [[ "$allow_credentials_matches" == true ]]; then
               echo "Anonymous CSRF smoke test passed on attempt $attempt"
               exit 0
             fi
 
-            echo "Anonymous CSRF smoke test attempt $attempt/12 returned HTTP $status; waiting for App Service warm-up"
+            echo "Anonymous CSRF smoke test attempt $attempt/12: http_status=${status:-000}, curl_exit=$curl_exit, token_present=$token_present, csrf_cookie_present=$csrf_cookie_present, allow_origin_matches=$allow_origin_matches, allow_credentials_matches=$allow_credentials_matches"
             if [[ "$attempt" -lt 12 ]]; then
               sleep 10
             fi
           done
 
           echo "Anonymous CSRF smoke test failed after App Service warm-up window"
-          cat "$headers_file"
-          cat "$body_file"
           exit 1
 
       - name: Azure logout

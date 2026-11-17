@@ -1,8 +1,11 @@
 import { getWorkshopReconciliation } from "@morwalpizvideo/services";
 import type { LoaderFunctionArgs } from "react-router";
+import { deferRouteData } from "../shared";
 
-export async function loader(_args: LoaderFunctionArgs) {
-  return { status: await getWorkshopReconciliation() };
+export interface ReconciliationLoaderData {
+  status: Awaited<ReturnType<typeof getWorkshopReconciliation>>;
 }
 
-export type ReconciliationLoaderData = Awaited<ReturnType<typeof loader>>;
+export function loader(_args: LoaderFunctionArgs) {
+  return deferRouteData(getWorkshopReconciliation().then((status): ReconciliationLoaderData => ({ status })));
+}

@@ -1,15 +1,20 @@
 import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
-import type { WorkshopComponentCondition, WorkshopFirearmDetail } from "@morwalpizvideo/models";
+import type { WorkshopComponentCondition } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
 import { formatDate, formatNumber, localDateTimeInputValue } from "../../i18n-formatters";
-import { Stat } from "../shared";
+import { DeferredRoute, Stat, type DeferredRouteData } from "../shared";
 import type { action } from "./action";
+import type { FirearmDetailLoaderData } from "./loader";
 
 export default function FirearmDetail() {
+  const { data } = useLoaderData() as DeferredRouteData<FirearmDetailLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <FirearmDetailContent detail={resolved} />}</DeferredRoute>;
+}
+
+function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
   const { culture, t } = useI18n();
-  const detail = useLoaderData() as WorkshopFirearmDetail;
   const [searchParams] = useSearchParams();
   const maintenanceFetcher = useFetcher<typeof action>();
   const [maintenanceKey, setMaintenanceKey] = useState(() => crypto.randomUUID());

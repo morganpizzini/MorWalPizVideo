@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { markWorkshopCapabilityGuideSeen } from "@morwalpizvideo/services";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
+import CapabilityWizard from "../components/CapabilityWizard";
 import { LanguageSelector } from "../components/LanguageSelector";
 import InstallPrompt from "../components/InstallPrompt";
 import { useI18n } from "../i18n";
@@ -25,11 +27,34 @@ function HeaderIcon({ name }: { name: HeaderIcon }) {
 }
 
 export default function AppShell() {
-  const { loading, session, error, logout } = useWorkshopAuth();
+  const { loading, session, error, logout, updateSession } = useWorkshopAuth();
   const { t } = useI18n();
   const { canInstall, installed, reopen } = useInstallPrompt();
   const navigate = useNavigate();
   const location = useLocation();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardError, setWizardError] = useState<string | null>(null);
+  const guideVersion = session.account?.workshopCapabilityGuideSeenVersion ?? 1;
+  const persistGuideSeen = useCallback(async () => {
+    try {
+      const result = await markWorkshopCapabilityGuideSeen(1);
+      updateSession({
+        ...session,
+        account: session.account
+          ? { ...session.account, workshopCapabilityGuideSeenVersion: result.effectiveVersion }
+          : session.account,
+      });
+      setWizardError(null);
+      setWizardOpen(false);
+    } catch {
+      setWizardError(t("The guide could not be saved. You can retry or close it."));
+    }
+  }, [session, t, updateSession]);
+  useEffect(() => {
+    if (!loading && session.authenticated && guideVersion < 1) {
+      setWizardOpen(true);
+    }
+  }, [guideVersion, loading, session.authenticated]);
   useEffect(() => {
     if (!loading && !session.authenticated) {
       const returnUrl = `${location.pathname}${location.search}${location.hash}`;
@@ -48,6 +73,9 @@ export default function AppShell() {
           <div className="header-account">
             <LanguageSelector />
             <NavLink className="header-account-link" to="/account/profile">{session.account?.displayName ?? session.account?.username ?? t("Account")}</NavLink>
+            <button type="button" className="button button-quiet header-guide-button" onClick={() => { setWizardError(null); setWizardOpen(true); }}>
+              {t("Guide")}
+            </button>
             {canInstall && !installed ? (
               <button className="button button-quiet icon-button" onClick={reopen} aria-label={t("Install app")} title={t("Install app")}>
                 <HeaderIcon name="download" />
@@ -64,10 +92,19 @@ export default function AppShell() {
           </nav>
         </div>
       </header>
-      <main className="workshop-main">
+      <main className="workshop-main" data-feedback-app-content>
         <InstallPrompt />
         <Outlet />
       </main>
+      {wizardOpen ? (
+        <CapabilityWizard
+          onClose={() => setWizardOpen(false)}
+          onSkip={() => void persistGuideSeen()}
+          onComplete={() => void persistGuideSeen()}
+          persistenceError={wizardError}
+          onRetryPersistence={() => void persistGuideSeen()}
+        />
+      ) : null}
     </div>
   );
 }

@@ -8,10 +8,15 @@ import { useI18n } from "../../i18n";
 import { formatNumber } from "../../i18n-formatters";
 import InventoryPanel from "./InventoryPanel";
 import CataloguePanel from "./CataloguePanel";
+import { DeferredRoute, type DeferredRouteData } from "../shared";
 
 export default function Firearms() {
+  const { data } = useLoaderData() as DeferredRouteData<EquipmentLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <FirearmsContent data={resolved} />}</DeferredRoute>;
+}
+
+function FirearmsContent({ data }: { data: EquipmentLoaderData }) {
   const { t } = useI18n();
-  const data = useLoaderData() as EquipmentLoaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
   const activeTab = rawTab === "inventory" || rawTab === "catalogue" ? rawTab : "firearms";

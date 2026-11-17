@@ -4,10 +4,16 @@ import type { action } from "./action";
 import type { ReconciliationLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
 import { formatDateTime } from "../../i18n-formatters";
+import { DeferredRoute, type DeferredRouteData } from "../shared";
 
 export default function Reconciliation() {
+  const { data } = useLoaderData() as DeferredRouteData<ReconciliationLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <ReconciliationContent data={resolved} />}</DeferredRoute>;
+}
+
+function ReconciliationContent({ data }: { data: ReconciliationLoaderData }) {
   const { culture, t } = useI18n();
-  const { status } = useLoaderData() as ReconciliationLoaderData;
+  const { status } = data;
   const fetcher = useFetcher<typeof action>();
   return (
         <div>

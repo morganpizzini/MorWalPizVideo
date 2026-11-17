@@ -1,9 +1,52 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { Await, useAsyncError } from "react-router";
 import { EmptyState } from "@morwalpiz/layout";
+import { ApiResponseError } from "@morwalpizvideo/services";
 import type { WorkshopActivity } from "@morwalpizvideo/models";
 import { ErrorState, LoadingState } from "../components/States";
 import { useI18n } from "../i18n";
 import { formatDate, formatDateTime } from "../i18n-formatters";
+
+export interface DeferredRouteData<T> {
+  data: Promise<T>;
+}
+
+export function deferRouteData<T>(data: T | Promise<T>): DeferredRouteData<T> {
+  return { data: Promise.resolve(data) };
+}
+
+export function DeferredRouteError() {
+  const error = useAsyncError();
+  const { t } = useI18n();
+  const navigateToLogin = error instanceof ApiResponseError && error.status === 401;
+
+  useEffect(() => {
+    if (!navigateToLogin || window.location.pathname === "/account/login") return;
+    const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.replace(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+  }, [navigateToLogin]);
+
+  if (navigateToLogin) return <LoadingState label={t("Redirecting to account login…")} />;
+  return <ErrorState error={error} />;
+}
+
+export function DeferredRoute<T>({
+  data,
+  children,
+  errorElement,
+}: {
+  data: Promise<T>;
+  children: (value: T) => ReactNode;
+  errorElement?: ReactNode;
+}) {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <Await resolve={data} errorElement={errorElement ?? <DeferredRouteError />}>
+        {children}
+      </Await>
+    </Suspense>
+  );
+}
 
 export function useResource<T>(load: () => Promise<T>) {
   const [value, setValue] = useState<T | null>(null);

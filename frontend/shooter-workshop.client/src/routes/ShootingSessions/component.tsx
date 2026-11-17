@@ -13,20 +13,23 @@ import { formatDateTime, localDateTimeInputValue } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
 import Maintenance from "../Maintenance/component";
+import { DeferredRoute, type DeferredRouteData } from "../shared";
+import type { ShootingSessionsLoaderData } from "./loader";
 
 type RecipeRow = WorkshopConsumptionRequest & { key: string };
 
 export default function ShootingSessions() {
+  const { data } = useLoaderData() as DeferredRouteData<ShootingSessionsLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <ShootingSessionsContent data={resolved} />}</DeferredRoute>;
+}
+
+function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData }) {
   const { t } = useI18n();
   const { session } = useWorkshopAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "maintenance" ? "maintenance" : "shooting");
   const fetcher = useFetcher<typeof action>();
-  const { firearms, recipes, sessions } = useLoaderData() as {
-    firearms: WorkshopFirearm[];
-    recipes: WorkshopRecipe[];
-    sessions: WorkshopShootingSessionRecord[];
-  };
+  const { firearms, recipes, sessions } = data;
   const [firearmId, setFirearmId] = useState(searchParams.get("firearmId") ?? "");
   const [effectiveAt, setEffectiveAt] = useState(localDateTimeInputValue());
   const [notes, setNotes] = useState("");
@@ -128,7 +131,11 @@ export default function ShootingSessions() {
       <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onRepeat={repeatSession} />
             </>,
           },
-          { key: "maintenance", label: t("Maintenance"), panel: <Maintenance embedded /> },
+          {
+            key: "maintenance",
+            label: t("Maintenance"),
+            panel: <Maintenance embedded data={{ firearms, definitions: data.definitions, inventory: data.inventory }} />,
+          },
         ]}
       />
     </div>

@@ -43,6 +43,9 @@ public sealed record PublicAccount : BaseEntity
 
     [BsonElement("privacyNoticeAcknowledgedAtUtc")]
     public DateTime? PrivacyNoticeAcknowledgedAtUtc { get; init; }
+
+    [BsonElement("workshopCapabilityGuideSeenVersion")]
+    public int WorkshopCapabilityGuideSeenVersion { get; init; } = 1;
 }
 
 public sealed record PublicAccountSession : BaseEntity

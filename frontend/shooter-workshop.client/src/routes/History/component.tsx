@@ -1,12 +1,12 @@
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import { Link, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useEffect } from "react";
-import type { WorkshopActivity } from "@morwalpizvideo/models";
-import { ActivityList } from "../shared";
+import { ActivityList, DeferredRoute, type DeferredRouteData } from "../shared";
 import { useI18n } from "../../i18n";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences } from "../../services/workshopPreferences";
 import { frontendEndpoints } from "@morwalpizvideo/services";
+import type { HistoryLoaderData } from "./loader";
 
 const historyTypes = [
   ["", "All activity"],
@@ -19,16 +19,16 @@ const historyTypes = [
 ] as const;
 
 export default function History() {
+  const { data } = useLoaderData() as DeferredRouteData<HistoryLoaderData>;
+  return <DeferredRoute data={data}>{(resolved) => <HistoryContent data={resolved} />}</DeferredRoute>;
+}
+
+function HistoryContent({ data }: { data: HistoryLoaderData }) {
   const { t } = useI18n();
   const { session } = useWorkshopAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { items, page, pageSize, type } = useLoaderData() as {
-    items: WorkshopActivity[];
-    page: number;
-    pageSize: number;
-    type: string;
-  };
+  const { items, page, pageSize, type } = data;
   const savedType = session.account?.id ? readWorkshopPreferences(session.account.id).historyOperationType : "";
   const selectedType = type || savedType;
   useEffect(() => {

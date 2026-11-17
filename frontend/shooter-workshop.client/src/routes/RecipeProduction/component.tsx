@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Link, useFetcher, useLoaderData, useRouteError, isRouteErrorResponse } from "react-router";
+import { Link, useAsyncError, useFetcher, useLoaderData, useRouteError, isRouteErrorResponse } from "react-router";
 import { PageTitle } from "@morwalpiz/layout";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
 import type { action } from "./action";
 import type { RecipeProductionLoaderData } from "./loader";
+import { DeferredRoute, type DeferredRouteData } from "../shared";
 
 const fields = [
   ["caliber", "Caliber"],
@@ -24,8 +25,11 @@ const fields = [
 
 export function RecipeProductionError() {
   const { t } = useI18n();
-  const error = useRouteError();
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  const routeError = useRouteError();
+  const asyncError = useAsyncError();
+  const error = routeError ?? asyncError;
+  const notFound = (isRouteErrorResponse(error) && error.status === 404)
+    || (error instanceof Error && "status" in error && error.status === 404);
   return (
     <div className="state state-error">
       <strong>{t(notFound ? "Recipe not found" : "Could not load this workspace.")}</strong>
@@ -36,8 +40,12 @@ export function RecipeProductionError() {
 }
 
 export default function RecipeProduction() {
+  const { data } = useLoaderData() as DeferredRouteData<RecipeProductionLoaderData>;
+  return <DeferredRoute data={data} errorElement={<RecipeProductionError />}>{(resolved) => <RecipeProductionContent recipe={resolved} />}</DeferredRoute>;
+}
+
+function RecipeProductionContent({ recipe }: { recipe: RecipeProductionLoaderData }) {
   const { t } = useI18n();
-  const recipe = useLoaderData() as RecipeProductionLoaderData;
   const fetcher = useFetcher<typeof action>();
   const [qrDataUrl, setQrDataUrl] = useState<string>();
   const [qrError, setQrError] = useState(false);

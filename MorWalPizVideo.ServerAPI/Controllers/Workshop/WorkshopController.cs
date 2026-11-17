@@ -4,7 +4,9 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using MorWalPiz.Contracts.Contracts;
 using MorWalPiz.Contracts.Contracts.Workshop;
+using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.Models.Models.Workshop;
 using MorWalPizVideo.MvcHelpers.Authentication;
@@ -15,8 +17,25 @@ namespace MorWalPizVideo.ServerAPI.Controllers.Workshop;
 [EnableCors("public-account")]
 [Authorize(AuthenticationSchemes = PublicAccountSecurity.Scheme)]
 [Route("api/v1/workshop")]
-public sealed class WorkshopController(WorkshopService service) : ControllerBase
+public sealed class WorkshopController(WorkshopService service, IPublicAccountService accountService) : ControllerBase
 {
+    private const int CurrentCapabilityGuideVersion = 1;
+
+    [HttpPost("capability-guide/seen")]
+    public async Task<ActionResult<WorkshopCapabilityGuideSeenResponse>> MarkCapabilityGuideSeen(
+        WorkshopCapabilityGuideSeenRequest request,
+        CancellationToken ct)
+    {
+        if (!HasCsrf()) return StatusCode(StatusCodes.Status403Forbidden);
+        if (request.Version != CurrentCapabilityGuideVersion)
+            return ValidationProblem($"Workshop capability guide version {request.Version} is not supported.");
+
+        var version = await accountService.MarkWorkshopCapabilityGuideSeenAsync(AccountId(), request.Version, ct);
+        return version is null
+            ? Unauthorized()
+            : Ok(new WorkshopCapabilityGuideSeenResponse { EffectiveVersion = version.Value });
+    }
+
     [HttpGet("firearms")]
     public async Task<IActionResult> Firearms(CancellationToken ct) =>
         Ok(await service.GetFirearmsAsync(AccountId(), ct));

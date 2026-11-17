@@ -140,7 +140,8 @@ public sealed class PublicAccountController(
             Id = account.Id,
             Username = account.Username,
             Email = account.Email,
-            DisplayName = account.DisplayName
+            DisplayName = account.DisplayName,
+            WorkshopCapabilityGuideSeenVersion = account.WorkshopCapabilityGuideSeenVersion
         }};
 }
 
@@ -185,5 +186,12 @@ public sealed class PublicProfileController(IPublicAccountService accountService
     }
 
     private static PublicAccountSummaryContract ToContract(MorWalPizVideo.Models.Models.PublicAccount account) =>
-        new() { Id = account.Id, Username = account.Username, Email = account.Email, DisplayName = account.DisplayName };
+        new()
+        {
+            Id = account.Id,
+            Username = account.Username,
+            Email = account.Email,
+            DisplayName = account.DisplayName,
+            WorkshopCapabilityGuideSeenVersion = account.WorkshopCapabilityGuideSeenVersion
+        };
 }

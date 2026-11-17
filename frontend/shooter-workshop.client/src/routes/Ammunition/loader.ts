@@ -1,15 +1,18 @@
 import { getWorkshopBatches, getWorkshopRecipes } from "@morwalpizvideo/services";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
+import { deferRouteData } from "../shared";
 
-export async function loader() {
-  const [recipes, batches] = await Promise.all([
-    getWorkshopRecipes(),
-    getWorkshopBatches(),
-  ]);
-  return { recipes, batches };
+export interface AmmunitionLoaderData {
+  recipes: Awaited<ReturnType<typeof getWorkshopRecipes>>;
+  batches: Awaited<ReturnType<typeof getWorkshopBatches>>;
 }
 
-export type AmmunitionLoaderData = Awaited<ReturnType<typeof loader>>;
+export function loader() {
+  return deferRouteData(Promise.all([
+    getWorkshopRecipes(),
+    getWorkshopBatches(),
+  ]).then(([recipes, batches]): AmmunitionLoaderData => ({ recipes, batches })));
+}
 
 export function ammunitionShouldRevalidate({
   currentUrl,

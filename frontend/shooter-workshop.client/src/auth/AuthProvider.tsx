@@ -14,6 +14,7 @@ interface AuthContextValue {
   refresh: () => Promise<boolean>;
   login: (request: PublicAccountLoginRequest) => Promise<boolean>;
   logout: () => Promise<void>;
+  updateSession: (session: PublicAccountSession) => void;
 }
 
 const anonymous: PublicAccountSession = { authenticated: false };
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await logoutPublicAccount();
         setSession(anonymous);
       },
+      updateSession: (nextSession) => setSession(nextSession),
     }),
     [error, loading, session],
   );

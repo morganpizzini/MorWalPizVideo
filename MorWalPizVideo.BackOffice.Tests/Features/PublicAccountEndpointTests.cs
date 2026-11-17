@@ -37,6 +37,41 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
     }
 
     [Fact]
+    public async Task Csrf_bootstrap_returns_credentialed_cors_headers_for_the_public_origin()
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/account/csrf");
+        request.Headers.Add("Origin", "https://morwalpiz.com");
+
+        var response = await client.SendAsync(request);
+        var body = await response.Content.ReadFromJsonAsync<PublicAccountCsrfContract>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(body);
+        Assert.False(string.IsNullOrWhiteSpace(body!.Token));
+        Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
+        Assert.Equal("https://morwalpiz.com", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        Assert.Equal("true", response.Headers.GetValues("Access-Control-Allow-Credentials").Single());
+        Assert.Contains(
+            response.Headers.GetValues("Set-Cookie"),
+            cookie => cookie.StartsWith("public_account_csrf=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Csrf_bootstrap_does_not_allow_credentials_for_an_unsupported_origin()
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/account/csrf");
+        request.Headers.Add("Origin", "https://not-approved.example");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
+    }
+
+    [Fact]
     public async Task Registration_requires_csrf_and_restores_session_without_locking_public_pages()
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
@@ -173,6 +208,56 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         Assert.All(sessionCookieValue, character => Assert.True(char.IsAsciiHexDigit(character)));
         Assert.True(session!.Authenticated);
         Assert.Equal(request.Email, session.Account!.Email);
+    }
+
+    [Fact]
+    public async Task Workshop_capability_guide_seen_requires_csrf_and_is_monotonic()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var request = new PublicAccountRegistrationRequest
+        {
+            Username = $"user{Guid.NewGuid():N}"[..12],
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Password = "A-strong-password-123",
+            DisplayName = "Workshop User",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
+        };
+        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
+        {
+            Content = JsonContent.Create(request)
+        };
+        registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+        var registered = await client.SendAsync(registration);
+        var session = await registered.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
+
+        using var withoutCsrf = new HttpRequestMessage(HttpMethod.Post, "/api/v1/workshop/capability-guide/seen")
+        {
+            Content = JsonContent.Create(new WorkshopCapabilityGuideSeenRequest { Version = 1 })
+        };
+        var forbidden = await client.SendAsync(withoutCsrf);
+        using var markSeen = new HttpRequestMessage(HttpMethod.Post, "/api/v1/workshop/capability-guide/seen")
+        {
+            Content = JsonContent.Create(new WorkshopCapabilityGuideSeenRequest { Version = 1 })
+        };
+        markSeen.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+        var first = await client.SendAsync(markSeen);
+        var firstBody = await first.Content.ReadFromJsonAsync<WorkshopCapabilityGuideSeenResponse>();
+        using var repeat = new HttpRequestMessage(HttpMethod.Post, "/api/v1/workshop/capability-guide/seen")
+        {
+            Content = JsonContent.Create(new WorkshopCapabilityGuideSeenRequest { Version = 1 })
+        };
+        repeat.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+        var second = await client.SendAsync(repeat);
+
+        Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
+        Assert.Equal(0, session!.Account!.WorkshopCapabilityGuideSeenVersion);
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(1, firstBody!.EffectiveVersion);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Equal(1, (await second.Content.ReadFromJsonAsync<WorkshopCapabilityGuideSeenResponse>())!.EffectiveVersion);
     }
 
     [Fact]

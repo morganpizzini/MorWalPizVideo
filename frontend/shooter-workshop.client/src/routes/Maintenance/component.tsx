@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useFetcher, useLoaderData } from "react-router";
+import { useFetcher } from "react-router";
 import { Dialog, PageTitle, EmptyState } from "@morwalpiz/layout";
 import type {
   CreateWorkshopMaintenanceRequest,
@@ -11,13 +11,21 @@ import type { action } from "./action";
 import { useI18n } from "../../i18n";
 import { formatNumber, localDateTimeInputValue } from "../../i18n-formatters";
 
-export default function Maintenance({ embedded = false }: { embedded?: boolean }) {
-  const { culture, t } = useI18n();
-  const { firearms: firearmItems, definitions: definitionItems, inventory: items } = useLoaderData() as {
+export default function Maintenance({
+  embedded = false,
+  data,
+}: {
+  embedded?: boolean;
+  data?: {
     firearms: WorkshopFirearm[];
     definitions: WorkshopComponentDefinition[];
     inventory: WorkshopPhysicalComponent[];
   };
+}) {
+  const { culture, t } = useI18n();
+  const firearmItems = data?.firearms ?? [];
+  const definitionItems = data?.definitions ?? [];
+  const items = data?.inventory ?? [];
   const fetcher = useFetcher<typeof action>();
   const [targetType, setTargetType] = useState<"firearm" | "component">("firearm");
   const [showForm, setShowForm] = useState(false);

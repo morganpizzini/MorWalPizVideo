@@ -11,6 +11,7 @@ describe("Workshop route configuration", () => {
 
   it("keeps the complete operational navigation under the protected shell", () => {
     const shellRoute = routes.find((route) => route.path === "/");
+    expect(shellRoute?.errorElement).toBeTruthy();
     const childPaths = shellRoute?.children
       ?.map((route) => route.path)
       .filter((path): path is string => typeof path === "string");

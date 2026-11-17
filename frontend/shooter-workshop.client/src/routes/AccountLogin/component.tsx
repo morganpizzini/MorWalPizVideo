@@ -83,9 +83,11 @@ export default function AccountLogin() {
     setError("");
     setFieldErrorMap({});
     setPending(true);
+    let authenticated = false;
     try {
-      if (await login({ identifier, password, rememberMe })) {
-        void navigate(returnPath, { replace: true });
+      authenticated = await login({ identifier, password, rememberMe });
+      if (authenticated) {
+        await navigate(returnPath, { replace: true });
       } else {
         setError(t("Sign-in was not accepted."));
       }
@@ -98,7 +100,7 @@ export default function AccountLogin() {
           : getPublicAccountErrorMessage(requestError),
       );
     } finally {
-      setPending(false);
+      if (!authenticated) setPending(false);
     }
   };
 

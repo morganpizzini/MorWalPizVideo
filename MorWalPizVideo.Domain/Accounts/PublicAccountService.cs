@@ -35,6 +35,7 @@ public interface IPublicAccountService
     Task<PublicAccountSessionResult?> ValidateSessionAsync(string sessionToken, CancellationToken cancellationToken = default);
     Task RevokeSessionAsync(string sessionToken, CancellationToken cancellationToken = default);
     Task<PublicAccount?> UpdateProfileAsync(string accountId, PublicAccountProfileUpdateCommand request, CancellationToken cancellationToken = default);
+    Task<int?> MarkWorkshopCapabilityGuideSeenAsync(string accountId, int version, CancellationToken cancellationToken = default);
     Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default);
 }
 
@@ -74,7 +75,8 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             TermsVersionAccepted = TermsVersion,
             TermsAcceptedAtUtc = DateTime.UtcNow,
             PrivacyNoticeVersionAcknowledged = PrivacyNoticeVersion,
-            PrivacyNoticeAcknowledgedAtUtc = DateTime.UtcNow
+            PrivacyNoticeAcknowledgedAtUtc = DateTime.UtcNow,
+            WorkshopCapabilityGuideSeenVersion = 0
         };
         await repository.AddAccountAsync(account, cancellationToken);
         return await CreateSessionAsync(account, false, cancellationToken);
@@ -147,8 +149,26 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             NormalizedEmail = email,
             DisplayName = request.DisplayName.Trim()
         };
-        await repository.UpdateAccountAsync(updated, cancellationToken);
-        return updated;
+        await repository.UpdateProfileAsync(
+            accountId,
+            updated.Email,
+            updated.NormalizedEmail,
+            updated.DisplayName,
+            cancellationToken);
+        return await GetAccountAsync(accountId, cancellationToken);
+    }
+
+    public async Task<int?> MarkWorkshopCapabilityGuideSeenAsync(
+        string accountId,
+        int version,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await GetAccountAsync(accountId, cancellationToken);
+        if (account is null || !account.IsActive)
+            return null;
+
+        return await repository.AdvanceWorkshopCapabilityGuideSeenVersionAsync(
+            accountId, version, cancellationToken);
     }
 
     public async Task<PublicAccount?> GetAccountAsync(string accountId, CancellationToken cancellationToken = default)

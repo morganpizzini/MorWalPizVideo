@@ -43,6 +43,11 @@ async function request<T>(operation: Promise<unknown>): Promise<T> {
 }
 
 /** Every Workshop call intentionally uses accountApiService (cookie + CSRF). */
+export const markWorkshopCapabilityGuideSeen = (
+  version: number,
+): Promise<{ effectiveVersion: number }> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_CAPABILITY_GUIDE_SEEN, { version }));
+
 export const getWorkshopFirearms = (): Promise<WorkshopFirearm[]> =>
   request(accountApiService.get(frontendEndpoints.WORKSHOP_FIREARMS));
 

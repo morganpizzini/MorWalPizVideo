@@ -25,7 +25,7 @@ describe("Recipe production route data functions", () => {
     const recipe = { id: "recipe-1", status: "Active" };
     vi.mocked(getWorkshopRecipe).mockResolvedValue(recipe as never);
 
-    await expect(loader({ params: { recipeId: "recipe-1" } } as never)).resolves.toBe(recipe);
+    await expect(loader({ params: { recipeId: "recipe-1" } } as never).data).resolves.toBe(recipe);
     expect(getWorkshopRecipe).toHaveBeenCalledWith("recipe-1");
   });
 

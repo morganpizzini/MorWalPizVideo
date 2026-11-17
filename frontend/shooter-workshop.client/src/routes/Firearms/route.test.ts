@@ -26,7 +26,7 @@ describe("Equipment route data", () => {
     vi.mocked(getWorkshopComponents).mockResolvedValue([]);
     vi.mocked(getWorkshopComponentInstallations).mockResolvedValue([]);
 
-    await expect(loader()).resolves.toEqual({
+    await expect(loader().data).resolves.toEqual({
       firearms: [],
       definitions: [],
       inventory: [],

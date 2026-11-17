@@ -14,6 +14,21 @@ namespace MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
 public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWalPizVideo.ServerAPI.Program>
 {
+    private readonly bool enableSwagger;
+
+    public ServerApiWebApplicationFactory()
+    {
+    }
+
+    private ServerApiWebApplicationFactory(bool enableSwagger)
+        => this.enableSwagger = enableSwagger;
+
+    public static ServerApiWebApplicationFactory CreateWithSwagger()
+    {
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableSwagger", "true");
+        return new(true);
+    }
+
     public YTChannelMockRepository? YTChannelRepository => Services.GetRequiredService<IYTChannelRepository>() as YTChannelMockRepository;
     public MatchMockRepository? MatchRepository => Services.GetRequiredService<IYouTubeContentRepository>() as MatchMockRepository;
     public QuickLinksMockRepository? QuickLinksRepository => Services.GetRequiredService<IQuickLinksRepository>() as QuickLinksMockRepository;
@@ -46,7 +61,7 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
             {
                 ["FeatureManagement:EnableMock"] = "true",
                 ["FeatureManagement:EnableDev"] = "true",
-                ["FeatureManagement:EnableSwagger"] = "false",
+                ["FeatureManagement:EnableSwagger"] = enableSwagger.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["FeatureManagement:EnableCache"] = "false",
                 ["FeatureManagement:EnableOutputCache"] = "false",

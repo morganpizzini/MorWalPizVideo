@@ -59,6 +59,7 @@ export {
   deleteFeedback,
 } from "./feedbackService";
 export {
+  markWorkshopCapabilityGuideSeen,
   getWorkshopFirearms,
   getWorkshopFirearmDetail,
   createWorkshopFirearm,

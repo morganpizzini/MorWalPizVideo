@@ -48,6 +48,17 @@ login creates an eight-hour server session and a browser session cookie; selecti
 “Remember me” creates a thirty-day server session and a persistent cookie. The
 session token is never exposed to frontend JavaScript or stored in browser storage.
 
+The authenticated shell includes a four-step capability wizard. New account
+registrations initialize `WorkshopCapabilityGuideSeenVersion` to `0`; the wizard
+opens when that account first reaches Workshop and can be reopened from the
+top-right Guide control on any protected route. Legacy account documents missing
+the field are interpreted as version `1` so existing users are not interrupted.
+Skip and completion advance the marker through the CSRF-protected
+`POST /api/v1/workshop/capability-guide/seen` endpoint. The update is monotonic
+and atomic, and profile updates use targeted fields so concurrent profile changes
+cannot erase the marker. The marker is presentation state only and is not an
+authorization or domain-setup signal.
+
 The shooting-session workflow now accepts recipe quantities rather than browser-authored
 batch or allocation IDs. ServerAPI resolves each recipe quantity into deterministic
 oldest-production-date-first batch facts before appending the immutable operation. New
@@ -55,6 +66,15 @@ shooting-session documents retain the resolved recipe and batch evidence plus th
 ledger operation ID. The authenticated shooting route lists those sessions and uses
 inline positive corrections or confirmed zero/delete corrections; correction operations
 remain compensating ledger facts and are never physically deleted.
+
+Workshop route data uses React Router's deferred-data convention. Protected page
+loaders start their existing service requests and return raw promises without awaiting
+page data. Route components render their page boundary immediately and resolve the
+data-dependent content with React `Suspense` and React Router `Await`, using the
+existing Workshop loading, error, and account-transition states. React Router 7's
+removed `defer()` helper is not recreated; raw promises are the supported interface.
+Route actions, fetchers, and automatic loader revalidation remain the freshness owner
+after successful mutations.
 
 **Accepted target — allocation removal:** Ammunition allocations/reservations are not
 part of the current Workshop product model. Recipes describe ammunition and batches
