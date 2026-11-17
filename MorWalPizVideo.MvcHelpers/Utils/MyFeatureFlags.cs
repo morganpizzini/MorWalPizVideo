@@ -13,5 +13,6 @@
         public const string EnableCors = nameof(EnableCors);
         public const string EnableVideoBulkImport = nameof(EnableVideoBulkImport);
         public const string EnableAiOrchestration = nameof(EnableAiOrchestration);
+        public const string EnablePublicAccountRateLimit = nameof(EnablePublicAccountRateLimit);
     }
 }

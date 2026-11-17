@@ -40,6 +40,7 @@ var enableCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableCa
 var enableOutputCache = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableOutputCache);
 var enableMock = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableMock);
 var enableKeyVault = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnableKeyVault);
+var enablePublicAccountRateLimit = builder.Configuration.IsFeatureEnabled(MyFeatureFlags.EnablePublicAccountRateLimit);
 
 if (enableMock && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Test"))
     throw new InvalidOperationException("Mock scenario data is allowed only in Development or Test environments.");
@@ -105,15 +106,21 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
-    options.AddPolicy("public-account-register", context => RateLimitPartition.GetFixedWindowLimiter(
-        $"public-account-register:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:PermitLimit", 5),
-            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:WindowMinutes", 10)),
-            QueueLimit = 0,
-            AutoReplenishment = true
-        }));
+    options.AddPolicy("public-account-register", context =>
+    {
+        var partitionKey = $"public-account-register:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+        return enablePublicAccountRateLimit
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:PermitLimit", 5),
+                    Window = TimeSpan.FromMinutes(builder.Configuration.GetValue("PublicAccount:RegistrationRateLimit:WindowMinutes", 10)),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                })
+            : RateLimitPartition.GetNoLimiter<string>(partitionKey);
+    });
     options.AddPolicy("public-account-login", context => RateLimitPartition.GetFixedWindowLimiter(
         $"public-account-login:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
         _ => new FixedWindowRateLimiterOptions

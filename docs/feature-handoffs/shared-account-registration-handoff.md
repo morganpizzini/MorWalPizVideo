@@ -1033,6 +1033,9 @@ Implemented:
   policies. Registration defaults to five attempts per observed IP per ten minutes;
   login defaults to ten attempts per five minutes and retains the old
   `PublicAccount:RateLimit` configuration as a fallback.
+- Added `FeatureManagement:EnablePublicAccountRateLimit`, enabled by default, so
+  operators can temporarily disable registration throttling while TD-036 remains
+  open. CSRF protection and account validation remain active when the flag is off.
 - Updated security, frontend, deployment, and ADR documentation for the first-party
   Workshop cookie transport and separate account throttles.
 
