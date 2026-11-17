@@ -1,7 +1,7 @@
 export { Component as Dashboard } from "./Dashboard";
 export { Component as Firearms } from "./Firearms";
 export { Component as FirearmDetail } from "./FirearmDetail";
-export { Component as Components } from "./Components";
+export { default as Components } from "./Components/component";
 export { Component as Maintenance } from "./Maintenance";
 export { Component as Recipes } from "./Recipes";
 export { Component as Ammunition } from "./Ammunition";

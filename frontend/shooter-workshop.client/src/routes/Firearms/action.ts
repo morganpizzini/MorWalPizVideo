@@ -1,5 +1,6 @@
 import { createWorkshopFirearm } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
+import { action as componentsAction } from "../Components/action";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
@@ -7,6 +8,11 @@ const text = (form: FormData, key: string) => {
 };
 
 export async function action({ request }: ActionFunctionArgs) {
+  const intentForm = await request.clone().formData();
+  const intent = text(intentForm, "intent");
+  if (intent !== "create-firearm") {
+    return componentsAction({ request: request.clone() } as ActionFunctionArgs);
+  }
   const form = await request.formData();
   const manufacturer = text(form, "manufacturer");
   const model = text(form, "model");

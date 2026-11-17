@@ -862,9 +862,14 @@ and physical inventory once, then presents Shooting Sessions and Maintenance as
 URL-selected tabs. Shooting and maintenance creation forms use modal dialogs;
 Repeat as draft selects the shooting tab, generates a fresh idempotency key, and
 opens the populated shooting dialog. `/maintenance` redirects to the Maintenance
-tab. The Dashboard, History, Firearms, and Reconciliation
-routes load their account-scoped read models through colocated loaders. Their
-mutations are owned by colocated actions and submitted through fetchers, including
+tab. The Dashboard, History, Equipment, and Reconciliation
+routes load their account-scoped read models through colocated loaders. Equipment
+is the canonical `/firearms` workspace and loads firearms, physical component
+inventory, component definitions, and installations once, presenting Firearms,
+Inventory, and Catalogue as URL-selected tabs. The legacy `/components` URL
+redirects to the Inventory tab without issuing a read. Its mutations are owned by
+the Equipment action boundary, which delegates component intents to the focused
+component action. Their mutations are submitted through fetchers, including
 shooting corrections, maintenance events, firearm creation, and projection rebuilds.
 Successful submissions use normal route revalidation. The Dashboard loader requests
 bounded analytics periods from the authenticated Workshop API; analytics are derived
@@ -878,8 +883,7 @@ visible with a superseded label.
 | Navigation item | Main screen |
 |---|---|
 | Dashboard | Application overview |
-| My Firearms | Firearm list and details |
-| Components | Component catalogue and inventory |
+| Equipment | Firearm list, component inventory and catalogue |
 | Maintenance | Component thresholds and maintenance history |
 | Ammunition | Ammunition inventory and batches |
 | Recipes | Recipe list and details |
@@ -889,9 +893,16 @@ visible with a superseded label.
 
 Displays the overview widgets and quick actions.
 
-## 12.2 Firearms
+## 12.2 Equipment
 
-List of registered firearms.
+The canonical Equipment workspace is `/firearms`. Firearms, Inventory, and
+Catalogue are URL-selected tabs backed by one combined route loader and action.
+The former `/components` route remains a compatibility redirect to the Inventory
+tab and preserves its query parameters.
+
+The Firearms tab lists registered firearms and provides the registration form.
+The Inventory tab manages physical component instances and their installations.
+The Catalogue tab manages reusable component definitions.
 
 Each firearm detail page must include:
 
@@ -903,7 +914,7 @@ Each firearm detail page must include:
 - Ammunition allocations.
 - Shooting sessions.
 
-## 12.3 Components
+## 12.3 Component domain
 
 The component area must provide two distinct views:
 

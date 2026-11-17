@@ -35,8 +35,8 @@ export default function OnboardingGuide({ accountId, onDismiss }: OnboardingGuid
     {
       title: t("Add a component (optional)"),
       description: t("Keep a physical component and its history separate from its reusable definition."),
-      path: "/components",
-      action: t("Open components"),
+      path: "/firearms?tab=inventory",
+      action: t("Open inventory"),
     },
     {
       title: t("Create a recipe (optional)"),

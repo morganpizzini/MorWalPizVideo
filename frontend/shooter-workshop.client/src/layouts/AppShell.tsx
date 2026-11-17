@@ -8,8 +8,8 @@ import { useI18n } from "../i18n";
 import { useInstallPrompt } from "../services/installPrompt";
 
 const navigation = [
-  ["Dashboard", "/"], ["Firearms", "/firearms"], ["Components", "/components"],
-  ["Ammunition", "/ammunition"], ["Shooting sessions", "/sessions/shooting"], ["History", "/history"],
+  ["Dashboard", "/"], ["Equipment", "/firearms"],
+  ["Ammunition", "/ammunition"], ["Recordings", "/sessions/shooting"], ["History", "/history"],
 ] as const;
 
 type HeaderIcon = "globe" | "download" | "logout";

@@ -32,7 +32,8 @@ describe("Workshop route configuration", () => {
     ]);
     const componentsRoute = shellRoute?.children?.find((route) => route.path === "components");
     expect(componentsRoute?.loader).toBeTypeOf("function");
-    expect(componentsRoute?.action).toBeTypeOf("function");
+    expect(componentsRoute?.action).toBeUndefined();
+    expect(componentsRoute?.element).toBeUndefined();
     const ammunitionRoute = shellRoute?.children?.find((route) => route.path === "ammunition");
     expect(ammunitionRoute?.loader).toBeTypeOf("function");
     expect(ammunitionRoute?.action).toBeTypeOf("function");
@@ -44,7 +45,9 @@ describe("Workshop route configuration", () => {
       const route = shellRoute?.children?.find((candidate) => candidate.path === path);
       expect(route?.loader, `${path} loader`).toBeTypeOf("function");
     }
-    expect(shellRoute?.children?.find((route) => route.path === "firearms")?.action).toBeTypeOf("function");
+    const firearmsRoute = shellRoute?.children?.find((route) => route.path === "firearms");
+    expect(firearmsRoute?.action).toBeTypeOf("function");
+    expect(firearmsRoute?.shouldRevalidate).toBeTypeOf("function");
     expect(shellRoute?.children?.find((route) => route.path === "maintenance")?.element).toBeTruthy();
     expect(shellRoute?.children?.find((route) => route.path === "sessions/shooting")?.action).toBeTypeOf("function");
     expect(shellRoute?.children?.find((route) => route.path === "integrity")?.action).toBeTypeOf("function");

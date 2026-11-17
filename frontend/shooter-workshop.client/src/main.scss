@@ -81,9 +81,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .onboarding-reopen h2 { margin: 0; font-size: 1rem; }
 .onboarding-reopen p { margin: .3rem 0 0; font-size: .82rem; }
 .components-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 1.5rem; margin-bottom: 1.25rem; }
-.component-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1.25rem; }
-.component-tab { min-height: 3.5rem; border: 1px solid var(--workshop-border); border-radius: var(--workshop-radius); background: var(--workshop-surface); color: var(--workshop-secondary); cursor: pointer; font-size: 1rem; font-weight: 800; }
-.component-tab:hover, .component-tab:focus-visible, .component-tab-active { border-color: var(--workshop-accent); color: var(--workshop-accent); }
 .component-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, .45fr); gap: 1rem; margin: 1rem 0; }
 .search-field { margin: 0; }
 .component-dialog { width: min(100%, 48rem); }

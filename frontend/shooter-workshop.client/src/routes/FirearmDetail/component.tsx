@@ -49,7 +49,7 @@ export default function FirearmDetail() {
         {detail.projectionState !== "Current" && <p className="status-note">{t("Projection state")}: {t(detail.projectionState)}</p>}
       </section>
       <section className="panel">
-        <div className="section-heading"><h2>{t("Installed components")}</h2><Link className="button button-quiet" to={`/components?firearmId=${encodeURIComponent(firearm.id)}`}>{t("Install, swap, or detach a component")}</Link></div>
+        <div className="section-heading"><h2>{t("Installed components")}</h2><Link className="button button-quiet" to={`/firearms?tab=inventory&firearmId=${encodeURIComponent(firearm.id)}`}>{t("Install, swap, or detach a component")}</Link></div>
         {detail.components.length === 0 ? <p>{t("No components installed.")}</p> : (
           <div className="detail-list">{detail.components.map((item) => <ComponentRow key={item.installation.id} item={item} />)}</div>
         )}

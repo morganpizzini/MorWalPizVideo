@@ -1,18 +1,8 @@
-import {
-  getWorkshopComponentDefinitions,
-  getWorkshopComponentInstallations,
-  getWorkshopComponents,
-  getWorkshopFirearms,
-} from "@morwalpizvideo/services";
+import { redirect, type LoaderFunctionArgs } from "react-router";
 
-export async function loader() {
-  const [definitions, inventory, firearms, installations] = await Promise.all([
-    getWorkshopComponentDefinitions(),
-    getWorkshopComponents(),
-    getWorkshopFirearms(),
-    getWorkshopComponentInstallations(),
-  ]);
-  return { definitions, inventory, firearms, installations };
+export function loader({ request }: LoaderFunctionArgs) {
+  const target = new URL(request.url);
+  target.pathname = "/firearms";
+  target.searchParams.set("tab", "inventory");
+  return redirect(`${target.pathname}?${target.searchParams.toString()}`);
 }
-
-export type ComponentsLoaderData = Awaited<ReturnType<typeof loader>>;

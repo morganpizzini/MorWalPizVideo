@@ -5,7 +5,6 @@ import { Component as AccountLogin } from "./AccountLogin";
 import { Component as AccountRegister } from "./AccountRegister";
 import { Component as AccountProfile } from "./AccountProfile";
 import { Component as Ammunition } from "./Ammunition";
-import { Component as Components } from "./Components";
 import { Component as Dashboard } from "./Dashboard";
 import { Component as FirearmDetail } from "./FirearmDetail";
 import { Component as Firearms } from "./Firearms";
@@ -14,7 +13,6 @@ import { Component as RecipeProduction, RecipeProductionError } from "./RecipePr
 import { Component as Reconciliation } from "./Reconciliation";
 import { Component as ShootingSessions } from "./ShootingSessions";
 import { loader as componentsLoader } from "./Components/loader";
-import { action as componentsAction } from "./Components/action";
 import { action as ammunitionAction } from "./Ammunition/action";
 import { ammunitionShouldRevalidate, loader as ammunitionLoader } from "./Ammunition/loader";
 import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
@@ -23,7 +21,7 @@ import { loader as dashboardLoader } from "./Dashboard/loader";
 import { loader as shootingSessionsLoader } from "./ShootingSessions/loader";
 import { action as shootingSessionsAction } from "./ShootingSessions/action";
 import { loader as historyLoader } from "./History/loader";
-import { loader as firearmsLoader } from "./Firearms/loader";
+import { firearmsShouldRevalidate, loader as firearmsLoader } from "./Firearms/loader";
 import { action as firearmsAction } from "./Firearms/action";
 import { loader as reconciliationLoader } from "./Reconciliation/loader";
 import { action as reconciliationAction } from "./Reconciliation/action";
@@ -49,9 +47,9 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <Dashboard />, loader: dashboardLoader },
-      { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction },
+      { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction, shouldRevalidate: firearmsShouldRevalidate },
       { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
-      { path: "components", element: <Components />, loader: componentsLoader, action: componentsAction },
+      { path: "components", loader: componentsLoader },
       { path: "maintenance", element: <Navigate to="/sessions/shooting?tab=maintenance" replace /> },
       {
         path: "ammunition",

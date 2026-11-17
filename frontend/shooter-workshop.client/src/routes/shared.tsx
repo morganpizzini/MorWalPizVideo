@@ -151,7 +151,7 @@ export function ActivityList({ items, compact = false }: { items: WorkshopActivi
                         ? item.operationId
                         : t("not set"),
                   })}
-                </small>
+                </small>&nbsp;
                 <small>
                   {t("Effective {date}", { date: formatDateTime(item.effectiveAt, culture) })}
                   {item.recordedAt && ` · ${t("recorded {date}", { date: formatDateTime(item.recordedAt, culture) })}`}
