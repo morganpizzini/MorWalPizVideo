@@ -23,8 +23,9 @@ Documentation cleanup must not move or delete it.
 
 ## Former handoff map
 
-The 36 task records below were consolidated on 2026-11-09. Their filenames are
-retained here for discovery; use the linked topic as the continuing record.
+The task records below were consolidated in documentation-cleanup batches on
+2026-11-09 and 2026-11-17. Their filenames are retained here for discovery; use
+the linked topic as the continuing record.
 Reported implementation and test results were not rerun during this
 documentation-only change. Earlier plans do not override newer delivery records,
 and no pending rollout gate is closed by this move.
@@ -67,3 +68,25 @@ and no pending rollout gate is closed by this move.
 | `site-wide-layout-alignment-handoff.md` | [Public experience](../features/public-experience.md) |
 | `video-importer-channel-settings-handoff.md` | [VideoImporter settings](../features/video-importer-settings.md) |
 | `video-reference-classification-handoff.md` | [Content import](../features/content-import.md) |
+| `backoffice-navigation-home-handoff.md` | [BackOffice admin dashboard](../architecture/admin-dashboard.md) |
+| `backoffice-personal-quick-actions-handoff.md` | [BackOffice admin dashboard](../architecture/admin-dashboard.md) |
+| `backoffice-video-fetch-performance-handoff.md` | [Content import](../features/content-import.md) |
+| `channel-editing-and-response-contracts-handoff.md` | [Accounts and channels](../features/accounts-and-channels.md) |
+| `channel-public-base-url-handoff.md` | [Accounts and channels](../features/accounts-and-channels.md) |
+| `global-feedback-handoff.md` | [Global feedback](../features/global-feedback.md) |
+| `quick-links-minimal-layout-handoff.md` | [Public experience](../features/public-experience.md) |
+| `shared-account-registration-handoff.md` | [Accounts and channels](../features/accounts-and-channels.md) |
+| `shooter-workshop-allocation-removal-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-ammunition-container-presentation-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-ammunition-production-merge-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-component-feedback-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-consolidated-workspaces-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-container-test-dependency-handoff.md` | [Delivery and tooling](../features/delivery-and-tooling.md) |
+| `shooter-workshop-equipment-workspace-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-localization-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-production-route-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-pwa-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-recipes-route-edit-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-shooting-session-fifo-inline-correction-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `shooter-workshop-ui-feedback-handoff.md` | [Shooter Workshop](../architecture/shooter-workshop.md) |
+| `video-importer-startup-schema-gate-handoff.md` | [Windows applications](../architecture/windows-apps.md) |

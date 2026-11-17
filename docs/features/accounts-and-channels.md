@@ -190,9 +190,8 @@ compatibility are not established:
   passed. A broader backend selection found one unrelated QuickLinks test
   expecting 200 while the endpoint returns 204; that code was not changed.
 - See [ADR-026](../architecture/adr/ADR-026-stable-channel-identity-and-youtube-binding.md)
-  for the accepted identity boundary and
-  [the implementation handoff](../feature-handoffs/channel-editing-and-response-contracts-handoff.md)
-  for validation and rollout gates.
+  for the accepted identity boundary. Deployment, real-browser, and
+  persistent-Mongo compatibility remain rollout gates.
 
 ## Public account directory sort
 

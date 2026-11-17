@@ -52,7 +52,6 @@ the current value; blank input explicitly clears it. Shared and management
 responses expose the setting. BackOffice composes owned QuickLinks destinations
 from the selected channel origin and `/quick-links/:url`; unconfigured,
 invalid, missing-owner, or mismatched-owner states are non-clickable.
-See the [delivery handoff](../feature-handoffs/channel-public-base-url-handoff.md).
 
 ### CustomForm
 

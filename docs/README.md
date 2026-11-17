@@ -18,6 +18,7 @@ evidence, not a new verification or deployment approval.
 | Accounts, push, channel transport, and public links | [Accounts and channels](features/accounts-and-channels.md) |
 | Editorial workflow, AI, and partnerships | [Editorial and AI](features/editorial-and-ai.md) |
 | Multi-video import and reference classification | [Content import](features/content-import.md) |
+| Global product feedback intake and management | [Global feedback](features/global-feedback.md) |
 | FreezerAnalysis delivery and production gates | [FreezerAnalysis](features/freezer-analysis.md) |
 | CI, deployment diagnostics, build cache, and test runner | [Delivery and tooling](features/delivery-and-tooling.md) |
 | Desktop channel configuration synchronization | [VideoImporter settings](features/video-importer-settings.md) |

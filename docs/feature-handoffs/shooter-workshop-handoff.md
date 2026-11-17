@@ -2,22 +2,13 @@
 
 ## Active Follow-up
 
-The accepted removal of firearm-specific ammunition allocations and the direct
-per-recipe correction model are planned in
-[`shooter-workshop-allocation-removal-handoff.md`](./shooter-workshop-allocation-removal-handoff.md).
-It supersedes allocation and proportional-correction decisions in the shooting-session
-FIFO handoff while preserving legacy ledger compatibility.
-
-The 2026-11-14 component, firearm, maintenance, recipe, shooting, history, and
-account-session feedback is planned in
-[`shooter-workshop-ui-feedback-handoff.md`](./shooter-workshop-ui-feedback-handoff.md).
-That focused handoff governs the next implementation batch while this document remains
-the broader Workshop delivery baseline.
-
-The bounded refinement implementation is now integrated across the Workshop backend,
-shared frontend contracts, SPA routes, and account navigation. The focused handoff
-records the exact delivered capabilities, validation, and remaining deployment/read
-projection work.
+The allocation removal, per-recipe correction, component, firearm, maintenance,
+recipe, shooting, history, and account-session refinements are integrated across
+the Workshop backend, shared frontend contracts, SPA routes, and account
+navigation. The durable functional record is
+[`docs/architecture/shooter-workshop.md`](../architecture/shooter-workshop.md).
+This handoff remains only for its unresolved release certification, browser
+authentication, index, domain/TLS, and acceptance gates.
 
 ## Outcome
 

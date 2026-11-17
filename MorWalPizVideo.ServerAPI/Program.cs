@@ -121,19 +121,25 @@ builder.Services.AddRateLimiter(options =>
                 })
             : RateLimitPartition.GetNoLimiter<string>(partitionKey);
     });
-    options.AddPolicy("public-account-login", context => RateLimitPartition.GetFixedWindowLimiter(
-        $"public-account-login:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = builder.Configuration.GetValue(
-                "PublicAccount:LoginRateLimit:PermitLimit",
-                builder.Configuration.GetValue("PublicAccount:RateLimit:PermitLimit", 10)),
-            Window = TimeSpan.FromMinutes(builder.Configuration.GetValue(
-                "PublicAccount:LoginRateLimit:WindowMinutes",
-                builder.Configuration.GetValue("PublicAccount:RateLimit:WindowMinutes", 5))),
-            QueueLimit = 0,
-            AutoReplenishment = true
-        }));
+    options.AddPolicy("public-account-login", context =>
+    {
+        var partitionKey = $"public-account-login:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+        return enablePublicAccountRateLimit
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue(
+                        "PublicAccount:LoginRateLimit:PermitLimit",
+                        builder.Configuration.GetValue("PublicAccount:RateLimit:PermitLimit", 10)),
+                    Window = TimeSpan.FromMinutes(builder.Configuration.GetValue(
+                        "PublicAccount:LoginRateLimit:WindowMinutes",
+                        builder.Configuration.GetValue("PublicAccount:RateLimit:WindowMinutes", 5))),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                })
+            : RateLimitPartition.GetNoLimiter<string>(partitionKey);
+    });
     options.AddPolicy("public-feedback", context => RateLimitPartition.GetFixedWindowLimiter(
         $"feedback:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
         _ => new FixedWindowRateLimiterOptions

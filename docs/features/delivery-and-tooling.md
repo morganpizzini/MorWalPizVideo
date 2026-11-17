@@ -67,6 +67,13 @@ Only YAML/matrix/input review was recorded. No Docker daemon, actual image build
 or hosted run. Hosted clean builds, Azure pull/startup/health and qualified
 rollback remain gates; build success alone would not prove them.
 
+Shooter Workshop now declares its own React Testing Library, Testing Library
+DOM, and jsdom development dependencies. Its reduced-manifest Docker install no
+longer relies on unrelated workspace hoisting while `tsc -b` continues to
+type-check source-owned tests. Focused component tests and the application build
+passed; the local environment had no Docker daemon, so the existing hosted
+container gate remains the image-level proof.
+
 ## Public-client BuildKit cache
 
 Recorded Dockerfile/workflow implementation, not image/performance qualification:

@@ -104,5 +104,4 @@ List/detail/tag and mutation-lookup consumers retain their existing contracts.
 
 The focused backend selection passed **90/90** after a Release build; this is
 local behavior/query-count/concurrency proof, not a deployed latency claim.
-See the [delivery handoff](../feature-handoffs/backoffice-video-fetch-performance-handoff.md)
-for exact commands, modified files, and remaining real-provider measurements.
+Real-provider and deployed latency measurements remain open.

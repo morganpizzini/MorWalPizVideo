@@ -100,8 +100,9 @@ submission. Requests and responses are bound to validated session identity and
 selected channel, not localStorage display identity. Failed saves retain drafts;
 preference read failures show a local retry without hiding analytics.
 
-See the [delivery handoff](../feature-handoffs/backoffice-personal-quick-actions-handoff.md)
-for implementation files, focused validation and remaining deployed/Mongo gates.
+Production exposure still requires the source-owned unique index, deployed
+Mongo verification, and real-browser qualification described in the operations
+runbooks.
 
 ## Frontend structure
 

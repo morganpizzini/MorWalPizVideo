@@ -13,9 +13,7 @@
 
 **Status:** Target specification and complete functional baseline.
 
-**Implementation analysis:** [Shooter Workshop architecture handoff](../feature-handoffs/shooter-workshop-handoff.md).
-
-**Accepted component correction:** [Shooter Workshop component feedback handoff](../feature-handoffs/shooter-workshop-component-feedback-handoff.md).
+**Open delivery and release gates:** [Shooter Workshop architecture handoff](../feature-handoffs/shooter-workshop-handoff.md).
 
 ---
 
@@ -65,15 +63,13 @@ Availability is total batch on-hand stock. New commands and projections must not
 or depend on allocation records. Historical allocation-bearing operations remain
 readable and replayable during the compatibility migration and are never rewritten.
 Inline correction edits explicit recipe quantities, derives total rounds on the
-server, and preserves the original untracked-ammunition quantity unchanged. See the
-[allocation removal handoff](../feature-handoffs/shooter-workshop-allocation-removal-handoff.md).
+server, and preserves the original untracked-ammunition quantity unchanged.
 
 Subsequent user checks corrected the component ownership target: definitions are
 category-like records, while manufacturer, model, compatibility tags, tracking mode,
 and service threshold belong to physical component instances. Firearm installation is
 optional when a physical component is created. The current implementation described
-above remains source evidence, but it is not the accepted target for the Components
-route; the focused component feedback handoff owns the transition.
+above implements that corrected Components route ownership.
 
 This status is implementation evidence, not release approval. Full domain acceptance
 coverage, exact-origin browser authentication proof, duplicate/index audit and apply

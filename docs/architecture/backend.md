@@ -36,8 +36,8 @@ operation shares those rules, including effective impersonated identity and
 API-key behavior. A live canonical short-link overlay queries only returned
 aggregate document IDs, preserving freshness after isolated link edits even
 when the indexed content cache is warm. Routes, contracts, ordering, and mutation
-authorization are unchanged. See the [performance handoff](../feature-handoffs/backoffice-video-fetch-performance-handoff.md)
-for local regression evidence and pending deployed latency measurements.
+authorization are unchanged. Local regression evidence passed; deployed
+real-provider latency measurements remain open.
 
 Video enrichment/refresh fetches attached reference IDs, not thumbnail IDs,
 and preserves attachment order, categories, channel IDs, creation timestamps,

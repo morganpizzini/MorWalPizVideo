@@ -120,20 +120,14 @@ No current implementation was found for:
 
 ### Accepted target decisions that future work must preserve
 
-The handoff set reviewed for this analysis is:
+The current evidence set reviewed for this analysis is:
 
-1. `docs/feature-handoffs/shooter-workshop-handoff.md`
-2. `docs/feature-handoffs/shooter-workshop-ui-feedback-handoff.md`
-3. `docs/feature-handoffs/shooter-workshop-component-feedback-handoff.md`
-4. `docs/feature-handoffs/shooter-workshop-shooting-session-fifo-inline-correction-handoff.md`
-5. `docs/feature-handoffs/shooter-workshop-allocation-removal-handoff.md`
-6. `docs/feature-handoffs/shooter-workshop-firearm-detail-refinement-handoff.md`
-7. `docs/feature-handoffs/shooter-workshop-production-route-handoff.md`
-8. `docs/feature-handoffs/shooter-workshop-ammunition-production-merge-handoff.md`
-9. `docs/feature-handoffs/shooter-workshop-recipes-route-edit-handoff.md`
-10. `docs/feature-handoffs/shooter-workshop-localization-handoff.md`
-11. `docs/feature-handoffs/shooter-workshop-pwa-handoff.md`
-12. `docs/feature-handoffs/shooter-workshop-container-test-dependency-handoff.md`
+1. `docs/architecture/shooter-workshop.md`
+2. `docs/architecture/frontend.md`
+3. `docs/features/delivery-and-tooling.md`
+4. `docs/feature-handoffs/shooter-workshop-handoff.md`
+5. `docs/feature-handoffs/shooter-workshop-firearm-detail-refinement-handoff.md`
+6. `docs/feature-handoffs/shooter-workshop-nice-to-haves-handoff.md`
 
 The following accepted targets constrain future improvements:
 
