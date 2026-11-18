@@ -39,6 +39,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
             Assert.Contains(ApiTagCacheKeys.Blog, cache.Tags!);
             Assert.Equal(300, cache.Duration);
         }
+
         factory.CrossApiService.ShouldFail = true;
         try
         {
@@ -48,6 +49,54 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
             Assert.Null(await factory.Services.GetRequiredService<IBlogRepository>().GetPublishedAsync(PrimaryScenario.ChannelId, post.Slug));
         }
         finally { factory.CrossApiService.Clear(); }
+    }
+
+    [Fact]
+    public async Task Article_short_link_is_created_once_and_returned_when_the_article_is_reopened()
+    {
+        var channelRepository = factory.YTChannelRepository!;
+        var channel = await channelRepository.GetItemAsync("500000000000000000000001");
+        Assert.NotNull(channel);
+        await channelRepository.UpdateItemAsync(channel! with { PublicBaseUrl = "https://blog.example/" });
+        try
+        {
+            using var client = factory.CreateClientWithPermissions(
+                AuthorizationPermissionKeys.PagesCreate,
+                AuthorizationPermissionKeys.PagesUpdate,
+                AuthorizationPermissionKeys.ShortLinksCreate,
+                AuthorizationPermissionKeys.BackofficeManageAll);
+            var created = await client.PostAsJsonAsync("/api/blogposts", new SaveBlogPostRequest
+            {
+                Slug = $"short-link-{Guid.NewGuid():N}",
+                Draft = new BlogSnapshot { Title = "Short link article" }
+            });
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+            var post = (await created.Content.ReadFromJsonAsync<BlogPostResponse>())!;
+
+            var ensured = await client.PostAsync($"/api/blogposts/{post.Id}/short-link", null);
+            Assert.Equal(HttpStatusCode.OK, ensured.StatusCode);
+            var shortLink = (await ensured.Content.ReadFromJsonAsync<ArticleShortLinkResponse>())!;
+            Assert.StartsWith("http://localhost/", shortLink.Url);
+            Assert.False(shortLink.IsPublished);
+
+            var canonical = await factory.ShortLinkRepository!.GetByCodeAsync(shortLink.Code);
+            Assert.NotNull(canonical);
+            Assert.Equal(LinkType.Article, canonical!.LinkType);
+            Assert.Equal(post.Id, canonical.ArticleId);
+            Assert.Equal(PrimaryScenario.ChannelId, canonical.ChannelId);
+
+            var repeated = await client.PostAsync($"/api/blogposts/{post.Id}/short-link", null);
+            Assert.Equal(HttpStatusCode.OK, repeated.StatusCode);
+            Assert.Equal(shortLink, await repeated.Content.ReadFromJsonAsync<ArticleShortLinkResponse>());
+
+            var reopened = await client.GetFromJsonAsync<BlogPostResponse>($"/api/blogposts/{post.Id}");
+            Assert.Equal(shortLink.Code, reopened!.ArticleShortLink!.Code);
+            Assert.Equal(shortLink.Url, reopened.ArticleShortLink.Url);
+        }
+        finally
+        {
+            await channelRepository.UpdateItemAsync(channel!);
+        }
     }
 
     [Fact]
@@ -63,6 +112,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var created = (await create.Content.ReadFromJsonAsync<BlogPostResponse>())!;
         Assert.Equal(1, created.Revision);
+        Assert.Equal(0, created.EditorialRevision);
         Assert.True(created.IsPublished);
 
         var save = await client.PutAsJsonAsync($"/api/blogposts/{created.Id}/save-and-publish",
@@ -76,6 +126,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
         Assert.Equal(HttpStatusCode.OK, save.StatusCode);
         var published = (await save.Content.ReadFromJsonAsync<BlogPostResponse>())!;
         Assert.Equal(2, published.Revision);
+        Assert.Equal(1, published.EditorialRevision);
         Assert.True(published.IsPublished);
         Assert.Equal("Updated once", published.Draft.Title);
         var stored = await factory.Services.GetRequiredService<IBlogRepository>()
@@ -98,6 +149,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
             Assert.Equal(HttpStatusCode.ServiceUnavailable, failure.StatusCode);
             var pending = (await failure.Content.ReadFromJsonAsync<BlogPostResponse>())!;
             Assert.Equal(post.Revision + 1, pending.Revision);
+            Assert.Equal(post.EditorialRevision, pending.EditorialRevision);
             Assert.Contains(image.Id, pending.PendingImageDeletionIds);
 
             factory.BlobService.Outcome = BlobMockOutcome.Success;
@@ -107,6 +159,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
             Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
             var deleted = (await retry.Content.ReadFromJsonAsync<BlogPostResponse>())!;
             Assert.Equal(pending.Revision + 1, deleted.Revision);
+            Assert.Equal(post.EditorialRevision, deleted.EditorialRevision);
             Assert.DoesNotContain(image.Id, deleted.PendingImageDeletionIds);
             Assert.DoesNotContain(deleted.Images, item => item.Id == image.Id);
             Assert.DoesNotContain($"mock://blob/{image.Id}", await factory.BlobService.GetImagesInFolderAsync(folder));
@@ -210,6 +263,7 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
         Assert.Empty(await factory.BlobService.GetImagesInFolderAsync($"blog/{PrimaryScenario.ChannelId}/{post.Id}"));
         post = (await client.GetFromJsonAsync<BlogPostResponse>($"/api/blogposts/{post.Id}"))!;
         Assert.Equal(1, post.Revision);
+        Assert.Equal(0, post.EditorialRevision);
         Assert.Empty(post.Images);
 
         using (var image = new Image<Rgba32>(2560, 1440))
@@ -226,6 +280,8 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
             post = (await response.Content.ReadFromJsonAsync<BlogPostResponse>())!;
         }
 
+        Assert.Equal(2, post.Revision);
+        Assert.Equal(0, post.EditorialRevision);
         var stored = Assert.Single(post.Images);
         Assert.Equal(1920, stored.Width);
         Assert.Equal(1080, stored.Height);
@@ -311,10 +367,13 @@ public sealed class BlogControllerTests : IClassFixture<PageControllerWebApplica
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var post = (await response.Content.ReadFromJsonAsync<BlogPostResponse>())!;
         Assert.False(post.IsPublished);
+        Assert.Equal(0, post.EditorialRevision);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/blogposts", request)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync($"/api/blogposts/{post.Id}/publish", new BlogRevisionRequest(1))).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync($"/api/blogposts/{post.Id}", request)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"/api/blogposts/{post.Id}", request with { Revision = 2, Draft = request.Draft with { Title = "New draft" } })).StatusCode);
+        var saved = await client.PutAsJsonAsync($"/api/blogposts/{post.Id}", request with { Revision = 2, Draft = request.Draft with { Title = "New draft" } });
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.Equal(1, (await saved.Content.ReadFromJsonAsync<BlogPostResponse>())!.EditorialRevision);
         Assert.Equal("Original", (await factory.Services.GetRequiredService<IBlogRepository>().GetPublishedAsync(PrimaryScenario.ChannelId, post.Slug))!.Published!.Title);
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync($"/api/blogposts/{post.Id}/unpublish", new BlogRevisionRequest(3))).StatusCode);
         using var denied = factory.CreateClient();

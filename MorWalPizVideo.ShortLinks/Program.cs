@@ -2,6 +2,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.FeatureManagement;
 using MongoDB.Driver;
+using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.MvcHelpers.Utils;
 using MorWalPizVideo.Server.Services;
@@ -68,6 +69,8 @@ if (enableMock)
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventMockRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, MatchMockRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelMockRepository>();
+    builder.Services.AddSingleton<IBlogRepository, BlogMockRepository>();
+    builder.Services.AddScoped<BlogService>();
 }
 else
 {
@@ -77,6 +80,8 @@ else
     builder.Services.AddScoped<INewsletterEventRepository, NewsletterEventRepository>();
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IYTChannelRepository, YTChannelRepository>();
+    builder.Services.AddScoped<IBlogRepository, BlogRepository>();
+    builder.Services.AddScoped<BlogService>();
 
     // Configure MongoDB using Options pattern with lazy loading
     // This ensures Azure Key Vault configuration is fully loaded before accessing database settings

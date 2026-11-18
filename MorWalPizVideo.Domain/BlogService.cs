@@ -34,6 +34,7 @@ public sealed class BlogService(IBlogRepository repository)
     {
         var post = new BlogPost { Id = ObjectId.GenerateNewId().ToString(), ChannelId = channelId,
             Slug = string.IsNullOrWhiteSpace(slug) ? SlugFromTitle(draft?.Title ?? string.Empty) : NormalizeSlug(slug),
+            EditorialRevision = 0,
             Draft = draft is null ? null! : draft with { UpdatedAt = DateTime.UtcNow }, CreationDateTime = DateTime.UtcNow };
         Validate(post);
         try { await repository.CreateAsync(post); }
@@ -49,7 +50,8 @@ public sealed class BlogService(IBlogRepository repository)
         var normalizedSlug = string.IsNullOrWhiteSpace(slug) ? existing.Slug : NormalizeSlug(slug);
         if (existing.FirstPublishedAt is not null && normalizedSlug != existing.Slug)
             throw new BlogConflictException("A previously published slug cannot change.");
-        return await ReplaceAsync(existing with { Slug = normalizedSlug, Draft = draft with { UpdatedAt = DateTime.UtcNow } }, revision);
+        return await ReplaceAsync(existing with { Slug = normalizedSlug, Draft = draft with { UpdatedAt = DateTime.UtcNow },
+            EditorialRevision = NextEditorialRevision(existing) }, revision);
     }
 
     public async Task<BlogPost?> SaveAndPublishAsync(string channelId, string id, long revision, string slug, BlogSnapshot draft)
@@ -62,7 +64,8 @@ public sealed class BlogService(IBlogRepository repository)
             throw new BlogConflictException("A previously published slug cannot change.");
         var now = DateTime.UtcNow;
         return await ReplaceAsync(existing with { Slug = normalizedSlug, Draft = draft with { UpdatedAt = now },
-            Published = draft with { UpdatedAt = now }, FirstPublishedAt = existing.FirstPublishedAt ?? now, PublishedAt = now }, revision);
+            Published = draft with { UpdatedAt = now }, FirstPublishedAt = existing.FirstPublishedAt ?? now,
+            PublishedAt = now, EditorialRevision = NextEditorialRevision(existing) }, revision);
     }
 
     public async Task<BlogPost> CreateAndPublishAsync(string channelId, string slug, BlogSnapshot draft)
@@ -70,6 +73,7 @@ public sealed class BlogService(IBlogRepository repository)
         var now = DateTime.UtcNow;
         var post = new BlogPost { Id = ObjectId.GenerateNewId().ToString(), ChannelId = channelId,
             Slug = string.IsNullOrWhiteSpace(slug) ? SlugFromTitle(draft?.Title ?? string.Empty) : NormalizeSlug(slug),
+            EditorialRevision = 0,
             Draft = draft is null ? null! : draft with { UpdatedAt = now },
             Published = draft is null ? null : draft with { UpdatedAt = now },
             FirstPublishedAt = now, PublishedAt = now, CreationDateTime = now };
@@ -136,7 +140,11 @@ public sealed class BlogService(IBlogRepository repository)
             (post.Published is not null && References(post.Published, id))))
             throw new BlogConflictException("The article references an image pending deletion.");
         Validate(post);
-        var updated = post with { Revision = revision + 1 };
+        var updated = post with
+        {
+            Revision = revision + 1,
+            EditorialRevision = post.EditorialRevision ?? post.Revision
+        };
         try
         {
             if (!await repository.ReplaceAsync(updated, revision)) throw new BlogConflictException("Post changed. Reload before saving.");
@@ -163,6 +171,14 @@ public sealed class BlogService(IBlogRepository repository)
         if (revision is < 1 or long.MaxValue) throw new BlogValidationException("Invalid expected revision.");
     }
 
+    private static long NextEditorialRevision(BlogPost post)
+    {
+        var current = post.EditorialRevision ?? post.Revision;
+        if (current < 0 || current == long.MaxValue)
+            throw new BlogValidationException("Invalid editorial revision.");
+        return current + 1;
+    }
+
     private static string SlugFromTitle(string title)
     {
         var decomposed = title.Normalize(NormalizationForm.FormD);
@@ -177,6 +193,8 @@ public sealed class BlogService(IBlogRepository repository)
     {
         if (string.IsNullOrWhiteSpace(post.ChannelId) || post.Slug is null || !Regex.IsMatch(post.Slug, "^[a-z0-9](?:[a-z0-9-]{0,118}[a-z0-9])?$"))
             throw new BlogValidationException("Channel and ASCII slug (1-120 characters) are required.");
+        if (post.EditorialRevision is < 0)
+            throw new BlogValidationException("Editorial revision cannot be negative.");
         ValidateSnapshot(post.Draft, post.Images);
         if (post.Published is not null) ValidateSnapshot(post.Published, post.Images);
         if (post.PendingImageDeletionIds.Any(id => !post.Images.Any(image => image.StorageKey == id)))

@@ -54,6 +54,8 @@ public sealed record BlogPost : BaseEntity
     public string ChannelId { get; init; } = string.Empty;
     public string Slug { get; init; } = string.Empty;
     public long Revision { get; init; } = 1;
+    [BsonElement("editorialRevision")]
+    public long? EditorialRevision { get; init; }
     public BlogSnapshot Draft { get; init; } = new();
     public BlogSnapshot? Published { get; init; }
     public DateTime? FirstPublishedAt { get; init; }

@@ -388,6 +388,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
     public class ShortLinkMockRepository : BaseMockRepository<ShortLink>, IShortLinkRepository
     {
         private static readonly object IncrementLock = new();
+        private static readonly object ArticleLinkLock = new();
 
         public ShortLinkMockRepository(IMockScenario scenario) : base(scenario, "shortLinks")
         {
@@ -465,6 +466,16 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public async Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
             => (await GetItemsAsync(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId)).FirstOrDefault();
+
+        public Task<ShortLink> AddArticleShortLinkAsync(ShortLink link)
+        {
+            lock (ArticleLinkLock)
+            {
+                if (scenario.Read<ShortLink>(_fileName).Any(item => item.MatchesCode(link.Code)))
+                    throw new ShortLinkCodeConflictException(link.Code);
+                return Task.FromResult(scenario.Add(_fileName, PrepareForPersistence(link)));
+            }
+        }
     }
 
     public sealed class ShortLinkRequestEventMockRepository(IMockScenario scenario)

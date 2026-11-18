@@ -125,6 +125,28 @@ public sealed class LinksServiceTests
     }
 
     [Fact]
+    public async Task Article_short_link_ensure_is_idempotent_and_rejects_foreign_channel_reuse()
+    {
+        var repository = new ShortLinkMockRepository(new EmptyScenario());
+        var service = new LinksService(repository, null!, null!, null!);
+
+        var (created, wasCreated) = await service.EnsureArticleShortLinkAsync("article-id", "channel-a");
+        var (reused, wasReusedCreated) = await service.EnsureArticleShortLinkAsync("article-id", "channel-a");
+
+        Assert.True(wasCreated);
+        Assert.False(wasReusedCreated);
+        Assert.Equal(created.Id, reused.Id);
+        Assert.Equal("article-id", reused.ArticleId);
+        Assert.Equal("channel-a", reused.ChannelId);
+        await Assert.ThrowsAsync<ArticleShortLinkConflictException>(() =>
+            service.GetArticleShortLinkAsync("article-id", "channel-b"));
+        await Assert.ThrowsAsync<ArticleShortLinkConflictException>(() =>
+            service.UpdateShortLinkAsync(reused with { Target = "https://example.test/" }));
+        Assert.False(await service.DeleteShortLinkAsync(reused.Id));
+        Assert.NotNull(await service.GetArticleShortLinkAsync("article-id", "channel-a"));
+    }
+
+    [Fact]
     public async Task Merge_does_not_hide_repository_failures()
     {
         var repository = new CountingShortLinkRepository { Failure = new InvalidOperationException("Links unavailable") };

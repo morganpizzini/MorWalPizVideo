@@ -6,6 +6,7 @@ import type { BlogDocument, BlogPostAdmin } from '@morwalpizvideo/models';
 import {
   createBlogPost,
   deleteBlogImage,
+  ensureBlogPostShortLink,
   generateScriptStudio,
   getBlogPost,
   publishBlogPost,
@@ -20,6 +21,8 @@ import { action, Component, getUploadAltDefault } from './form';
 const mocks = vi.hoisted(() => ({
   initial: null as BlogPostAdmin | null,
   fetcher: { state: 'idle', data: undefined as unknown, submit: vi.fn() },
+  shortLinkFetcher: { state: 'idle', data: undefined as unknown, submit: vi.fn() },
+  channelContext: vi.fn(() => ({ selectedChannelId: null as string | null })),
 }));
 vi.hoisted(() => {
   const storage = { getItem: vi.fn(() => null), setItem: vi.fn(), removeItem: vi.fn() };
@@ -28,6 +31,7 @@ vi.hoisted(() => {
 });
 vi.mock('@/router/asyncData', () => ({ useResolvedLoaderData: () => mocks.initial }));
 vi.mock('@/router/guards', () => ({ requirePermissions: vi.fn().mockResolvedValue(null) }));
+vi.mock('@/contexts/ChannelContext', () => ({ useChannelContext: mocks.channelContext }));
 vi.mock('./Editor', () => ({
   BlogEditor: ({
     document,
@@ -69,6 +73,7 @@ vi.mock('@morwalpizvideo/services', async importOriginal => ({
   ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   createBlogPost: vi.fn(),
   deleteBlogImage: vi.fn(),
+  ensureBlogPostShortLink: vi.fn(),
   generateScriptStudio: vi.fn(),
   getBlogPost: vi.fn(),
   saveBlogPost: vi.fn(),
@@ -78,18 +83,24 @@ vi.mock('@morwalpizvideo/services', async importOriginal => ({
 }));
 vi.mock('react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('react-router')>()),
-  useFetcher: () => ({
-    ...mocks.fetcher,
-    Form: ({ children, ...props }: React.ComponentProps<'form'>) => (
-      <form {...props}>{children}</form>
-    ),
-  }),
+  useFetcher: (options?: { key?: string }) => {
+    const fetcher = options?.key?.startsWith('article-short-link-')
+      ? mocks.shortLinkFetcher
+      : mocks.fetcher;
+    return {
+      ...fetcher,
+      Form: ({ children, ...props }: React.ComponentProps<'form'>) => (
+        <form {...props}>{children}</form>
+      ),
+    };
+  },
 }));
 
 const post: BlogPostAdmin = {
   id: 'post-1',
   slug: 'article',
   revision: 4,
+  editorialRevision: 2,
   isPublished: true,
   firstPublishedAt: '2026-09-30T00:00:00Z',
   publishedAt: '2026-09-30T00:00:00Z',
@@ -121,9 +132,13 @@ function encodedForm(form: HTMLFormElement) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.initial = structuredClone(post);
+  mocks.channelContext.mockReturnValue({ selectedChannelId: null });
   mocks.fetcher.state = 'idle';
   mocks.fetcher.data = undefined;
   mocks.fetcher.submit.mockReset();
+  mocks.shortLinkFetcher.state = 'idle';
+  mocks.shortLinkFetcher.data = undefined;
+  mocks.shortLinkFetcher.submit.mockReset();
   appStore.setState({ effectivePermissions: ['pages.manage'], selectedChannelId: null });
 });
 afterEach(() => {
@@ -388,6 +403,145 @@ describe('blog draft workflow', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save as draft' })).toBeEnabled();
   });
+  it('shows the short-link action only for a saved article and permitted user', () => {
+    mocks.initial = null;
+    const { unmount: unmountNewArticle } = render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('button', { name: 'Create short link' })).not.toBeInTheDocument();
+    unmountNewArticle();
+
+    mocks.initial = post;
+    mocks.channelContext.mockReturnValue({ selectedChannelId: 'channel-1' });
+    appStore.setState({
+      effectivePermissions: ['pages.update', 'shortlinks.create'],
+      selectedChannelId: 'channel-1',
+    });
+    const { unmount } = render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: 'Create short link' })).toBeInTheDocument();
+    unmount();
+
+    appStore.setState({ effectivePermissions: ['pages.update'], selectedChannelId: 'channel-1' });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('button', { name: 'Create short link' })).not.toBeInTheDocument();
+  });
+  it('submits the article short-link action without saving article content', async () => {
+    mocks.initial = post;
+    mocks.channelContext.mockReturnValue({ selectedChannelId: 'channel-1' });
+    appStore.setState({
+      effectivePermissions: ['pages.update', 'shortlinks.create'],
+      selectedChannelId: 'channel-1',
+    });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create short link' }));
+
+    expect(mocks.shortLinkFetcher.submit).toHaveBeenCalledWith(
+      {
+        intent: 'ensureArticleShortLink',
+        postId: post.id,
+        channelId: 'channel-1',
+        revision: String(post.revision),
+      },
+      { method: 'post' }
+    );
+    expect(saveBlogPost).not.toHaveBeenCalled();
+  });
+  it('ensures a short link through the article action without saving or publishing', async () => {
+    const articleShortLink = {
+      code: 'article-code',
+      url: 'https://short.test/article',
+      isPublished: false,
+    };
+    vi.mocked(ensureBlogPostShortLink).mockResolvedValue(articleShortLink);
+    appStore.setState({
+      effectivePermissions: ['pages.update', 'shortlinks.create'],
+      selectedChannelId: 'channel-1',
+    });
+
+    const result = await action({
+      request: request({
+        intent: 'ensureArticleShortLink',
+        postId: post.id,
+        channelId: 'channel-1',
+        revision: String(post.revision),
+      }),
+      params: { id: post.id },
+    });
+
+    expect(ensureBlogPostShortLink).toHaveBeenCalledWith(post.id);
+    expect(saveBlogPost).not.toHaveBeenCalled();
+    expect(publishBlogPost).not.toHaveBeenCalled();
+    expect(result).toEqual({ articleShortLink });
+  });
+  it('shows the persisted URL and copies it when available', async () => {
+    const url = 'https://short.test/article';
+    mocks.initial = {
+      ...post,
+      articleShortLink: { code: 'article-code', url, isPublished: true },
+    };
+    mocks.channelContext.mockReturnValue({ selectedChannelId: 'channel-1' });
+    appStore.setState({
+      effectivePermissions: ['pages.update', 'shortlinks.create'],
+      selectedChannelId: 'channel-1',
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: url })).toHaveAttribute('href', url);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy short link' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(url));
+    expect(await screen.findByText('Short link copied.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create short link' })).not.toBeInTheDocument();
+  });
+  it('reports server errors and clipboard failures accessibly', async () => {
+    mocks.initial = {
+      ...post,
+      articleShortLink: { code: 'article-code', url: 'https://short.test/article', isPublished: false },
+    };
+    mocks.channelContext.mockReturnValue({ selectedChannelId: 'channel-1' });
+    mocks.shortLinkFetcher.data = { error: 'Short-link service unavailable.' };
+    appStore.setState({
+      effectivePermissions: ['pages.update', 'shortlinks.create'],
+      selectedChannelId: 'channel-1',
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('Clipboard unavailable')) },
+    });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Short-link service unavailable.');
+    expect(screen.getByText('Draft · link inactive')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy short link' }));
+    expect(await screen.findByText('Could not copy the short link. Select and copy the URL.')).toBeInTheDocument();
+  });
   it('saves canonical JSON with normalized tags and expected revision', async () => {
     vi.mocked(saveBlogPost).mockResolvedValue(post);
     const payload = { slug: post.slug, revision: 4, draft: { ...post.draft, tags: [' tag ', ''] } };
@@ -415,6 +569,38 @@ describe('blog draft workflow', () => {
       post: updated,
       message: 'Draft saved. The live article is unchanged.',
     });
+  });
+  it('shows editorial revision while keeping the aggregate revision in mutation data', () => {
+    mocks.initial = { ...post, revision: 7, editorialRevision: 2 };
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Published · Revision 2')).toBeInTheDocument();
+    expect(screen.queryByText('Published · Revision 7')).not.toBeInTheDocument();
+    const revisionInput = document.querySelector<HTMLInputElement>('input[name="revision"]');
+    const payloadInput = document.querySelector<HTMLInputElement>('input[name="payload"]');
+    expect(revisionInput?.value).toBe('7');
+    expect(JSON.parse(payloadInput!.value).revision).toBe(7);
+  });
+  it('reports the server-returned editorial revision after saving', async () => {
+    mocks.initial = { ...post, revision: 7, editorialRevision: 2 };
+    mocks.fetcher.data = {
+      post: { ...post, revision: 8, editorialRevision: 3 },
+      message: 'Draft saved.',
+    };
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Draft saved. Revision 3')
+    );
+    expect(screen.queryByText(/Revision 8/)).not.toBeInTheDocument();
   });
   it('creates a draft and redirects to its owned editor', async () => {
     vi.mocked(createBlogPost).mockResolvedValue(post);

@@ -22,6 +22,7 @@ as channel-scoped, using the existing channel-header/token provider and credenti
 | --- | --- | --- | --- |
 | GET | `/api/blogposts?page=1` | `pages.view` | Up to 50 admin posts; page 1-10000. |
 | GET | `/api/blogposts/{id}` | `pages.view` | Owned draft, revision, publication state, images. |
+| POST | `/api/blogposts/{id}/short-link` | `pages.update` + short-link create (or manage variants) | Idempotently ensure the article's channel-owned short link; non-YouTube administrator policy applies. |
 | POST | `/api/blogposts` | `pages.create` | Create draft; 201 with location. |
 | PUT | `/api/blogposts/{id}` | `pages.update` | Save `{slug, revision, draft}`. |
 | POST | `/api/blogposts/{id}/publish` | `pages.manage` only | Publish stored revision. |
@@ -48,9 +49,11 @@ they must be treated as opaque post-owned references, not arbitrary upload URLs.
 ## Schema and Publication
 
 Mongo collection is `blogPosts`. The aggregate has `ChannelId`, channel-unique `Slug`,
-`Revision` (starting at 1), `Draft`, optional `Published`, `FirstPublishedAt`, `PublishedAt`,
-creation time and owned image metadata. Each snapshot includes title, summary, author,
-tags, cover image ID/alt, SEO title/description, document and updated time.
+`Revision` (aggregate optimistic-concurrency token, starting at 1),
+`EditorialRevision` (editorial save count, starting at 0 for new articles),
+`Draft`, optional `Published`, `FirstPublishedAt`, `PublishedAt`, creation time
+and owned image metadata. Each snapshot includes title, summary, author, tags,
+cover image ID/alt, SEO title/description, document and updated time.
 
 Canonical JSON is independent of Puck/Tiptap storage formats:
 
@@ -84,13 +87,33 @@ React renderer escapes text and defensively filters link/video destinations.
 Slugs trim whitespace/slashes and lowercase invariant; valid ASCII slugs are 1-120
 characters. Creation can derive one from title; saving a title does not regenerate it.
 Once ever published, the slug cannot change, including after unpublication. Save, image
-upload, publish, unpublish and deletion use an expected revision. Mongo replacement/deletion
-filters by channel, ID and revision atomically. Publish copies the stored draft into
-Published; later draft saves leave that snapshot unchanged. Unpublish clears Published
-but retains first-publication history and media.
+upload, publish, unpublish and deletion use the aggregate `Revision` as an expected
+concurrency token. Mongo replacement/deletion filters by channel, ID and aggregate revision
+atomically. Publish copies the stored draft into Published; later draft saves leave that
+snapshot unchanged. Unpublish clears Published but retains first-publication history and media.
 
-Primary Save uses the dedicated save-and-publish route and exactly one revision increment;
-Save as draft remains unchanged. Image removal persists `PendingImageDeletionIds` before
+`EditorialRevision` is a distinct admin-facing save counter. Draft creation and
+create-and-publish initialize it to 0; each later explicit draft save or save-and-publish
+increments it exactly once. Publish/unpublish alone, image upload, and image-deletion
+reservation/finalization preserve it. Every aggregate mutation still increments `Revision`
+to protect concurrency. The admin response exposes both values; write requests continue to
+send only the aggregate `revision`, so clients cannot choose the editorial count.
+
+Article admin responses also include nullable `articleShortLink` metadata when
+the canonical standalone link exists. The link is keyed to the article ID and
+channel, not its mutable draft slug. The saved-article action creates it without
+saving/publishing content; drafts remain non-resolving until published. Public
+resolution uses the current published slug and channel public origin, and
+unpublished/deleted articles return 404 without click counting. Generic short-link
+management cannot create or mutate this article-owned type.
+
+Legacy documents without `editorialRevision` use their current aggregate `revision` as the
+visible baseline. The first successful aggregate replacement persists that baseline in the
+same atomic write; an explicit save uses baseline + 1. This preserves current values without
+a batch migration. Drain old API writers before the new SPA depends on the persisted field.
+
+Primary Save uses the dedicated save-and-publish route and exactly one aggregate revision
+increment; Save as draft remains a separate explicit save. Image removal persists `PendingImageDeletionIds` before
 deleting the server-resolved exact key from the configured page container, then finalizes with
 optimistic concurrency. Draft, Published, cover and nested block references are protected;
 storage failures retain metadata and a user-visible retry marker. Provider retention,
@@ -98,10 +121,10 @@ versions, snapshots, CDN and browser copies require operational verification bef
 permanent-erasure claim.
 
 The admin response additively exposes nullable `firstPublishedAt` directly from the
-aggregate's `FirstPublishedAt`; it is not inferred from current publication state.
-The existing response constructor, save request and public response shapes are unchanged.
-Deploy the compatible API projection before the updated admin client; no data migration
-is required.
+aggregate's `FirstPublishedAt`; it is not inferred from current publication state. It also
+exposes `editorialRevision` alongside the existing concurrency `revision`. The save request
+and public response shapes are unchanged. Deploy the compatible API projection before the
+updated admin client; no batch data migration is required.
 
 ## Editor and Public Rendering
 

@@ -109,7 +109,11 @@ export {
   ApiResponseError,
   requireSuccessfulResponse,
 } from "./apiService";
-export { saveAndPublishBlogPost, deleteBlogImage } from "./blogService";
+export {
+  saveAndPublishBlogPost,
+  deleteBlogImage,
+  ensureBlogPostShortLink,
+} from "./blogService";
 
 // Export entity-specific service functions
 export {

@@ -157,6 +157,37 @@ or Mongo rollback. Verify Azure soft-delete, versions, snapshots, retention,
 per-object purge permissions, and CDN/browser limitations before claiming
 permanent erasure.
 
+## Editorial revision counter
+
+The admin `Revision` display is an editorial-save count, separate from the
+aggregate's optimistic-concurrency `revision` token:
+
+- Draft creation and create-and-publish start at editorial revision **0**.
+- Each later explicit Save, Save as draft, or save-and-publish increments the
+  editorial revision exactly once.
+- Publish/unpublish alone, image upload, image-deletion reservation/finalization,
+  and other non-save writes do not increment the editorial revision.
+- The aggregate revision remains the request token and advances for every
+  aggregate mutation, preserving compare-and-swap protection.
+- Existing articles retain their current displayed value as a baseline. If the
+  new field is absent, the admin response uses the aggregate revision; the first
+  later mutation persists that baseline atomically. No batch backfill is needed.
+- If upload creates a new article before its first explicit Save, the article
+  starts at editorial revision 0; that later Save advances it to revision 1.
+
+The public blog contract is unchanged. The admin response additively includes
+`editorialRevision`; clients continue submitting the existing `revision` token.
+Deploy the compatible API before the admin SPA and drain old API writers before
+new writes rely on the additive persisted field.
+
+Recorded delivered 2026-11-18: the admin response now separates the displayed
+editorial save count from the aggregate concurrency token. The focused
+`BlogServiceTests`/`BlogControllerTests` selection passed **30 tests**.
+The targeted BackOffice SPA form/index selection passed **32 tests**, and the
+checked admin build passed TypeScript and Vite. Existing ImageSharp package
+advisories and the admin large-chunk warning remain. No real-browser visual
+capture was performed; drain old API writers before field writes begin.
+
 ## Editor links, breadcrumbs, and authenticated 404
 
 Recorded delivered 2026-11-09:
@@ -179,6 +210,34 @@ and [blog interactions](../../frontend/back-office-spa/src/routes/blogInteractio
 The shared 34-test/admin-build evidence above covers this delivery too.
 Direct navigation, alias, host SPA fallback, long/stale titles, and responsive
 accessibility remain unverified.
+
+## Persistent article short links
+
+Implemented in the current worktree:
+
+- The saved-article header can create one durable, article-owned short link using
+  the article's channel. It stays visible after reload and has an accessible copy
+  control; creating it does not save or publish article content.
+- The standalone short-link record stores the article ID and channel. The
+  BackOffice action requires both blog update/manage and short-link create/manage
+  permissions, with the existing administrator requirement for non-YouTube links.
+- Draft links remain visible to editors but return 404 publicly until publication.
+  Resolution looks up the current article slug by ID and channel, so pre-publication
+  slug edits do not stale the link. Unpublished or deleted articles do not redirect
+  or accrue clicks.
+- Generic short-link APIs cannot create or mutate article-owned links. The admin
+  response includes nullable article short-link metadata on article reads.
+
+The existing normalized unique short-code index must be present before rollout,
+and the ShortLinks host's configured channel must match the article channel.
+Public website origin and short-link base configuration must be valid. Deploy
+redirect support before enabling creation; older redirect instances cannot resolve
+the new type. No blog-record migration or backfill is required.
+
+Focused evidence: BackOffice/API and Domain build plus **33** targeted tests,
+ShortLinks build plus **17** tests, and **34** BackOffice form tests passed.
+Browser layout/copy validation and production index/channel configuration remain
+deployment checks.
 
 ## Remaining work
 

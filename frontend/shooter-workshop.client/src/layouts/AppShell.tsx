@@ -61,9 +61,9 @@ export default function AppShell() {
       void navigate(`/account/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
     }
   }, [loading, location.hash, location.pathname, location.search, navigate, session.authenticated]);
-  if (loading) return <LoadingState label={t("Restoring your account session…")} />;
+  if (loading) return <LoadingState fullScreen label={t("Restoring your account session…")} />;
   if (!session.authenticated) {
-    return <LoadingState label={error ?? t("Redirecting to account login…")} />;
+    return <LoadingState fullScreen label={error ?? t("Redirecting to account login…")} />;
   }
   return (
     <div className="workshop-shell">

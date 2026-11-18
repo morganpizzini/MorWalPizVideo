@@ -32,13 +32,78 @@ public sealed class BlogServiceTests
                 [[new BlogBlock { Id = "heading", Type = "heading", Text = "Title" }],
                  [new BlogBlock { Id = "text", RichText = new BlogText { Content =
                     [new BlogText { Type = "paragraph", Content = [new BlogText { Type = "text", Text = "Body" }] }] } }]] }] } };
-        var post = new BlogPost { Id = ObjectId.GenerateNewId().ToString(), ChannelId = "one", Slug = "first", Draft = snapshot, Published = snapshot };
+        var post = new BlogPost
+        {
+            Id = ObjectId.GenerateNewId().ToString(), ChannelId = "one", Slug = "first",
+            EditorialRevision = 0, Draft = snapshot, Published = snapshot
+        };
         var restored = BsonSerializer.Deserialize<BlogPost>(post.ToBson());
         Assert.Equal(post.Id, restored.Id);
+        Assert.Equal(0, restored.EditorialRevision);
         Assert.Equal(1, restored.Published!.Document.Version);
         Assert.Equal("Title", restored.Published.Document.Blocks[0].Columns[0][0].Text);
         Assert.Equal("Body", restored.Draft.Document.Blocks[0].Columns[1][0].RichText.Content[0].Content[0].Text);
         BlogService.Validate(restored);
+
+        var legacyDocument = post.ToBsonDocument();
+        legacyDocument.Remove("editorialRevision");
+        Assert.Null(BsonSerializer.Deserialize<BlogPost>(legacyDocument).EditorialRevision);
+    }
+
+    [Fact]
+    public async Task Editorial_revision_counts_explicit_saves_but_not_other_writes()
+    {
+        var service = new BlogService(new BlogMockRepository());
+        var post = await service.CreateAsync("one", "first", Draft());
+        Assert.Equal(0, post.EditorialRevision);
+
+        post = (await service.AddImageAsync("one", post.Id, post.Revision,
+            new PageImage { StorageKey = "blog/one/first/a.jpg", PublicUrl = "https://example/a.jpg" }))!;
+        Assert.Equal(2, post.Revision);
+        Assert.Equal(0, post.EditorialRevision);
+
+        post = (await service.PublishAsync("one", post.Id, post.Revision, true))!;
+        Assert.Equal(3, post.Revision);
+        Assert.Equal(0, post.EditorialRevision);
+
+        post = (await service.SaveAsync("one", post.Id, post.Revision, post.Slug, Draft("First save")))!;
+        Assert.Equal(4, post.Revision);
+        Assert.Equal(1, post.EditorialRevision);
+
+        post = (await service.SaveAndPublishAsync("one", post.Id, post.Revision, post.Slug, Draft("Second save")))!;
+        Assert.Equal(5, post.Revision);
+        Assert.Equal(2, post.EditorialRevision);
+
+        post = (await service.PublishAsync("one", post.Id, post.Revision, false))!;
+        Assert.Equal(6, post.Revision);
+        Assert.Equal(2, post.EditorialRevision);
+    }
+
+    [Fact]
+    public async Task Legacy_article_uses_its_current_revision_as_baseline_and_persists_it_on_mutation()
+    {
+        var repository = new BlogMockRepository();
+        await repository.CreateAsync(new BlogPost
+        {
+            Id = "legacy",
+            ChannelId = "one",
+            Slug = "legacy",
+            Revision = 7,
+            Draft = Draft()
+        });
+        var service = new BlogService(repository);
+
+        var legacy = (await service.GetAsync("one", "legacy"))!;
+        Assert.Equal(7, BlogPostResponse.From(legacy).EditorialRevision);
+        legacy = (await service.AddImageAsync("one", legacy.Id, legacy.Revision,
+            new PageImage { StorageKey = "blog/one/legacy/a.jpg", PublicUrl = "https://example/a.jpg" }))!;
+        Assert.Equal(8, legacy.Revision);
+        Assert.Equal(7, legacy.EditorialRevision);
+        Assert.Equal(7, BlogPostResponse.From(legacy).EditorialRevision);
+
+        legacy = (await service.SaveAsync("one", legacy.Id, legacy.Revision, legacy.Slug, Draft("Updated")))!;
+        Assert.Equal(9, legacy.Revision);
+        Assert.Equal(8, legacy.EditorialRevision);
     }
 
     [Fact]
@@ -162,16 +227,21 @@ public sealed class BlogServiceTests
     {
         var service = new BlogService(new BlogMockRepository());
         var post = await service.CreateAsync("one", "first", Draft());
+        Assert.Equal(0, post.EditorialRevision);
         post = (await service.AddImageAsync("one", post.Id, post.Revision,
             new PageImage { StorageKey = "blog/one/first/a.jpg", PublicUrl = "https://example/a.jpg" }))!;
+        Assert.Equal(0, post.EditorialRevision);
         var published = (await service.SaveAndPublishAsync("one", post.Id, post.Revision, post.Slug, Draft("Published")))!;
         Assert.Equal(post.Revision + 1, published.Revision);
+        Assert.Equal(1, published.EditorialRevision);
         Assert.Equal("Published", published.Published!.Title);
         var reserved = (await service.ReserveImageDeletionAsync("one", post.Id, published.Revision, "blog/one/first/a.jpg"))!;
         Assert.Contains("blog/one/first/a.jpg", reserved.PendingImageDeletionIds);
+        Assert.Equal(published.EditorialRevision, reserved.EditorialRevision);
         var finalized = (await service.FinalizeImageDeletionAsync("one", post.Id, reserved.Revision, "blog/one/first/a.jpg"))!;
         Assert.DoesNotContain(finalized.Images, image => image.StorageKey == "blog/one/first/a.jpg");
         Assert.Empty(finalized.PendingImageDeletionIds);
+        Assert.Equal(published.EditorialRevision, finalized.EditorialRevision);
     }
 
     [Fact]

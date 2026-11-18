@@ -198,6 +198,7 @@ export type {
   BlogDocument,
   BlogSnapshot,
   BlogImage,
+  ArticleShortLink,
   BlogPostAdmin,
   SaveBlogPost,
   BlogSummary,

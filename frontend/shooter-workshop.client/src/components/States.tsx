@@ -3,9 +3,13 @@ import type { ReactNode } from "react";
 import { useI18n } from "../i18n";
 import { useFeedback } from "./feedback/FeedbackProvider";
 
-export function LoadingState({ label }: { label?: string }) {
+export function LoadingState({ label, fullScreen = false }: { label?: string; fullScreen?: boolean }) {
   const { t } = useI18n();
-  return <p className="state state-loading" role="status"><span className="loading-spinner" aria-hidden="true" />{label ?? t("Loading data…")}</p>;
+  return (
+    <div className={`state-loading-container${fullScreen ? " state-loading-container-fullscreen" : ""}`}>
+      <p className="state state-loading" role="status"><span className="loading-spinner" aria-hidden="true" />{label ?? t("Loading data…")}</p>
+    </div>
+  );
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {

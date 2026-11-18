@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.ShortLinks.Tests.Infrastructure;
+using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Server.Services.Interfaces;
@@ -102,6 +103,51 @@ public class ShortLinksMockScenarioTests
 
         await campaigns.UpdateItemAsync(campaign with { Status = AskCampaignStatus.Published, ChannelId = "other-channel" });
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Article_shortlink_waits_for_publication_and_redirects_to_current_slug()
+    {
+        await using var factory = new ShortLinksWebApplicationFactory();
+        var channelRepository = factory.Services.GetRequiredService<IYTChannelRepository>();
+        var channel = (await channelRepository.GetItemsAsync())
+            .Single(item => item.ChannelId == PrimaryScenario.ChannelId);
+        await channelRepository.UpdateItemAsync(channel with { PublicBaseUrl = "https://public.example/" });
+        var blogService = factory.Services.GetRequiredService<BlogService>();
+        var article = await blogService.CreateAsync(
+            PrimaryScenario.ChannelId,
+            "draft-slug",
+            new BlogSnapshot { Title = "Article" });
+        var links = factory.Services.GetRequiredService<IShortLinkRepository>();
+        var link = await links.AddArticleShortLinkAsync(new ShortLink("article-redirect", article.Id, [])
+        {
+            Id = "article-short-link",
+            LinkType = LinkType.Article,
+            ArticleId = article.Id,
+            ChannelId = PrimaryScenario.ChannelId,
+            ManagementChannelId = PrimaryScenario.ChannelId
+        });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
+        Assert.Equal(0, (await links.GetByCodeAsync(link.Code))!.ClicksCount);
+
+        article = (await blogService.SaveAsync(
+            PrimaryScenario.ChannelId,
+            article.Id,
+            article.Revision,
+            "current-slug",
+            article.Draft))!;
+        await blogService.PublishAsync(PrimaryScenario.ChannelId, article.Id, article.Revision, true);
+
+        var published = await client.GetAsync($"/{link.Code}");
+        Assert.Equal(HttpStatusCode.Redirect, published.StatusCode);
+        Assert.Equal("https://public.example/blog/current-slug", published.Headers.Location?.ToString());
+        Assert.Equal(1, (await links.GetByCodeAsync(link.Code))!.ClicksCount);
+
+        await blogService.PublishAsync(PrimaryScenario.ChannelId, article.Id, article.Revision + 1, false);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/{link.Code}")).StatusCode);
+        Assert.Equal(1, (await links.GetByCodeAsync(link.Code))!.ClicksCount);
     }
 
 [Fact]

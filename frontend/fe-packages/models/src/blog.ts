@@ -61,12 +61,19 @@ export interface BlogPostAdmin {
   id: string;
   slug: string;
   revision: number;
+  editorialRevision: number;
   draft: BlogSnapshot;
   isPublished: boolean;
   firstPublishedAt: string | null;
   publishedAt: string | null;
   images: BlogImage[];
   pendingImageDeletionIds?: string[];
+  articleShortLink?: ArticleShortLink | null;
+}
+export interface ArticleShortLink {
+  code: string;
+  url: string | null;
+  isPublished: boolean;
 }
 export interface SaveBlogPost {
   slug: string;

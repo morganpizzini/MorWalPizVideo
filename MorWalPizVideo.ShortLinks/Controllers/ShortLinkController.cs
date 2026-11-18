@@ -19,11 +19,12 @@ namespace MorWalPizVideo.Shortlinks.Controllers
         private readonly INewsletterEventRepository newsletterEventRepository;
         private readonly IAskCampaignRepository askCampaignRepository;
         private readonly IYTChannelRepository channelRepository;
+        private readonly BlogService blogService;
         private readonly IShortLinkRequestClassifier requestClassifier;
         private readonly IShortLinkRequestEventRepository requestEventRepository;
         private readonly ILogger<ShortLinkController> logger;
 
-        public ShortLinkController(IShortLinkRedirectService redirectService, IYouTubeContentRepository contentRepository, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository, IShortLinkRequestClassifier requestClassifier, IShortLinkRequestEventRepository requestEventRepository, ILogger<ShortLinkController> logger)
+        public ShortLinkController(IShortLinkRedirectService redirectService, IYouTubeContentRepository contentRepository, IMorWalPizCache memoryCache, IConfiguration configuration, INewsletterEventRepository newsletterEventRepository, IAskCampaignRepository askCampaignRepository, IYTChannelRepository channelRepository, BlogService blogService, IShortLinkRequestClassifier requestClassifier, IShortLinkRequestEventRepository requestEventRepository, ILogger<ShortLinkController> logger)
         {
             cache = memoryCache;
             this.redirectService = redirectService;
@@ -32,6 +33,7 @@ namespace MorWalPizVideo.Shortlinks.Controllers
             this.newsletterEventRepository = newsletterEventRepository;
             this.askCampaignRepository = askCampaignRepository;
             this.channelRepository = channelRepository;
+            this.blogService = blogService;
             this.requestClassifier = requestClassifier;
             this.requestEventRepository = requestEventRepository;
             this.logger = logger;
@@ -116,6 +118,11 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 if (askRedirectUrl is null)
                     return NotFound();
             }
+            var articleRedirectUrl = shortLink.LinkType == LinkType.Article
+                ? await ResolveArticleUrlAsync(shortLink)
+                : null;
+            if (shortLink.LinkType == LinkType.Article && articleRedirectUrl is null)
+                return NotFound();
 
             var requestTimestamp = DateTime.UtcNow;
             var classification = requestClassifier.Classify(userAgent);
@@ -255,6 +262,9 @@ namespace MorWalPizVideo.Shortlinks.Controllers
                 case LinkType.AskCampaign:
                     return Redirect(askRedirectUrl!);
 
+                case LinkType.Article:
+                    return Redirect(articleRedirectUrl!);
+
                 case LinkType.YouTubeVideo:
                 default:                    // For YouTube videos, we need to look up the actual video data
                     var channelId = configuration["YouTubeChannelId"]?.Trim();
@@ -310,6 +320,45 @@ namespace MorWalPizVideo.Shortlinks.Controllers
 
             var baseUrl = (configuration["Ask:PublicBaseUrl"] ?? "https://ask.morwalpiz.com").TrimEnd('/');
             return $"{baseUrl}/{Uri.EscapeDataString(channel.ChannelName)}/{Uri.EscapeDataString(campaign.Slug)}";
+        }
+
+        private async Task<string?> ResolveArticleUrlAsync(ShortLink shortLink)
+        {
+            if (string.IsNullOrWhiteSpace(shortLink.ArticleId) ||
+                string.IsNullOrWhiteSpace(shortLink.ChannelId) ||
+                shortLink.ChannelId != shortLink.ManagementChannelId ||
+                !string.Equals(
+                    configuration["YouTubeChannelId"]?.Trim(),
+                    shortLink.ChannelId,
+                    StringComparison.Ordinal))
+                return null;
+
+            var article = await blogService.GetAsync(shortLink.ChannelId, shortLink.ArticleId);
+            if (article?.Published is null || string.IsNullOrWhiteSpace(article.Slug))
+                return null;
+
+            var channel = (await channelRepository.GetItemsAsync(item => item.ChannelId == shortLink.ChannelId))
+                .FirstOrDefault();
+            if (channel is null || !TryGetPublicOrigin(channel.PublicBaseUrl, out var origin))
+                return null;
+
+            return new Uri(origin, $"blog/{Uri.EscapeDataString(article.Slug)}").AbsoluteUri;
+        }
+
+        private static bool TryGetPublicOrigin(string? value, out Uri origin)
+        {
+            origin = null!;
+            if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out var parsed) ||
+                parsed.Scheme is not ("http" or "https") ||
+                string.IsNullOrWhiteSpace(parsed.Host) ||
+                !string.IsNullOrEmpty(parsed.UserInfo) ||
+                parsed.AbsolutePath != "/" ||
+                !string.IsNullOrEmpty(parsed.Query) ||
+                !string.IsNullOrEmpty(parsed.Fragment))
+                return false;
+
+            origin = parsed;
+            return true;
         }
 
 

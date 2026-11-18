@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.BackOffice.Authorization;
 using MorWalPizVideo.BackOffice.Services;
+using MorWalPizVideo.BackOffice.Services.Interfaces;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
@@ -17,7 +18,9 @@ namespace MorWalPizVideo.BackOffice.Controllers;
 [RequireChannelScope]
 [RequestSizeLimit(512_000)]
 public sealed class BlogPostsController(BlogService service, IBlobService blobs, IOptions<BlobStorageOptions> options,
-    ICrossApiService crossApi, ILogger<BlogPostsController> logger) : ControllerBase
+    ICrossApiService crossApi, ILogger<BlogPostsController> logger, ILinksService linksService,
+    IContentService contentService, IConfiguration configuration, IUserAuthorizationEvaluator authorizationEvaluator,
+    IVideoAuthorizationService videoAuthorization, IAuditService auditService) : ControllerBase
 {
     private string ChannelId => HttpContext.GetChannelContext().ChannelId;
 
@@ -34,7 +37,49 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
     public async Task<IActionResult> Get(string id)
     {
         var post = await service.GetAsync(ChannelId, id);
-        return post is null ? NotFound() : Ok(BlogPostResponse.From(post));
+        return post is null ? NotFound() : Ok(await ToResponseAsync(post));
+    }
+
+    [HttpPost("{id}/short-link")]
+    [AllowUser(AuthorizationPermissionKeys.PagesUpdate, AuthorizationPermissionKeys.PagesManage,
+        AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]
+    public async Task<IActionResult> EnsureArticleShortLink(string id)
+    {
+        if (!await HasAnyPermissionAsync(AuthorizationPermissionKeys.PagesUpdate, AuthorizationPermissionKeys.PagesManage) ||
+            !await HasAnyPermissionAsync(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage) ||
+            !await videoAuthorization.IsAdminAsync(User))
+            return Forbid();
+
+        var post = await service.GetAsync(ChannelId, id);
+        if (post is null)
+            return NotFound();
+
+        var channel = await contentService.GetChannelByIdAsync(ChannelId);
+        if (channel is null || !IsValidPublicOrigin(channel.PublicBaseUrl))
+            return Conflict("The selected channel does not have a valid public website origin.");
+
+        var configuredBlogChannel = configuration["YouTubeChannelId"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredBlogChannel) &&
+            !string.Equals(configuredBlogChannel, ChannelId, StringComparison.Ordinal))
+            return Conflict("The public blog is configured for a different channel.");
+
+        if (!TryGetShortLinkBase(out _))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Short-link URL configuration is invalid.");
+
+        try
+        {
+            var (link, created) = await linksService.EnsureArticleShortLinkAsync(post.Id, post.ChannelId);
+            if (created)
+                await auditService.RecordAsync(User, "shortlink.created", "shortlink", link.Id, null, link);
+            await crossApi.ResetCache(CacheKeys.ShortLinks);
+            await crossApi.PurgeCache(ApiTagCacheKeys.ShortLinks);
+
+            return Ok(ToArticleShortLinkResponse(link, post));
+        }
+        catch (ArticleShortLinkConflictException exception)
+        {
+            return Conflict(exception.Message);
+        }
     }
 
     [HttpPost]
@@ -44,7 +89,7 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
         try
         {
             var post = await service.CreateAsync(ChannelId, request.Slug, request.Draft);
-            return CreatedAtAction(nameof(Get), new { id = post.Id }, BlogPostResponse.From(post));
+            return CreatedAtAction(nameof(Get), new { id = post.Id }, await ToResponseAsync(post));
         }
         catch (BlogValidationException exception) { return BadRequest(exception.Message); }
         catch (BlogConflictException exception) { return Conflict(exception.Message); }
@@ -59,7 +104,7 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
     [AllowUser(AuthorizationPermissionKeys.PagesManage)]
     public async Task<IActionResult> CreateAndPublish(SaveBlogPostRequest request)
     {
-        try { var post = await service.CreateAndPublishAsync(ChannelId, request.Slug, request.Draft); return CreatedAtAction(nameof(Get), new { id = post.Id }, BlogPostResponse.From(post)); }
+        try { var post = await service.CreateAndPublishAsync(ChannelId, request.Slug, request.Draft); return CreatedAtAction(nameof(Get), new { id = post.Id }, await ToResponseAsync(post)); }
         catch (BlogValidationException exception) { return BadRequest(exception.Message); }
         catch (BlogConflictException exception) { return Conflict(exception.Message); }
     }
@@ -83,10 +128,10 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
             catch (Exception exception)
             {
                 logger.LogError(exception, "Blog image deletion failed for {PostId} {ChannelId} {ImageId}", id, ChannelId, imageId);
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, BlogPostResponse.From(reserved));
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, await ToResponseAsync(reserved));
             }
             var finalized = await service.FinalizeImageDeletionAsync(ChannelId, id, reserved.Revision, imageId);
-            return finalized is null ? NotFound() : Ok(BlogPostResponse.From(finalized));
+            return finalized is null ? NotFound() : Ok(await ToResponseAsync(finalized));
         }
         catch (BlogValidationException exception) { return BadRequest(exception.Message); }
         catch (BlogConflictException exception) { return Conflict(exception.Message); }
@@ -150,7 +195,7 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
                 await blobs.DeleteImageAsync(storageKey, options.Value.PageContainerName);
                 return NotFound();
             }
-            return Ok(BlogPostResponse.From(post));
+            return Ok(await ToResponseAsync(post));
         }
         catch (UnknownImageFormatException) { return BadRequest("Unsupported image format."); }
         catch (InvalidImageContentException) { return BadRequest("Invalid image content."); }
@@ -190,7 +235,7 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
                 await EvictAsync(() => crossApi.PurgeCache(ApiTagCacheKeys.Blog), post);
                 await EvictAsync(() => crossApi.ResetCache(CacheKeys.Blog), post);
             }
-            return Ok(BlogPostResponse.From(post));
+            return Ok(await ToResponseAsync(post));
         }
         catch (BlogValidationException exception) { return BadRequest(exception.Message); }
         catch (BlogConflictException exception) { return Conflict(exception.Message); }
@@ -205,4 +250,48 @@ public sealed class BlogPostsController(BlogService service, IBlobService blobs,
             Response.Headers["X-Blog-Cache-Warning"] = "Eviction failed; public cache expires within 300 seconds";
         }
     }
+
+    private async Task<BlogPostResponse> ToResponseAsync(BlogPost post)
+    {
+        var response = BlogPostResponse.From(post);
+        var link = await linksService.GetArticleShortLinkAsync(post.Id, post.ChannelId);
+        return response with
+        {
+            ArticleShortLink = link is null ? null : ToArticleShortLinkResponse(link, post)
+        };
+    }
+
+    private ArticleShortLinkResponse ToArticleShortLinkResponse(ShortLink link, BlogPost post)
+    {
+        var url = TryGetShortLinkBase(out var shortLinkBase)
+            ? new Uri(shortLinkBase, Uri.EscapeDataString(link.Code)).AbsoluteUri
+            : null;
+        return new ArticleShortLinkResponse(link.Code, url, post.Published is not null);
+    }
+
+    private bool TryGetShortLinkBase(out Uri shortLinkBase)
+        => TryGetHttpOrigin(configuration["SiteUrl"], out shortLinkBase);
+
+    private static bool IsValidPublicOrigin(string? value) => TryGetHttpOrigin(value, out _);
+
+    private static bool TryGetHttpOrigin(string? value, out Uri origin)
+    {
+        origin = null!;
+        if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out var parsed) ||
+            parsed.Scheme is not ("http" or "https") ||
+            string.IsNullOrWhiteSpace(parsed.Host) ||
+            !string.IsNullOrEmpty(parsed.UserInfo) ||
+            parsed.AbsolutePath != "/" ||
+            !string.IsNullOrEmpty(parsed.Query) ||
+            !string.IsNullOrEmpty(parsed.Fragment))
+            return false;
+
+        origin = parsed;
+        return true;
+    }
+
+    private Task<bool> HasAnyPermissionAsync(params string[] permissionKeys)
+        => authorizationEvaluator.IsAuthorizedAsync(
+            User,
+            permissionKeys.Select(key => new AllowUserToken(AllowUserRequirementType.Permission, key)).ToArray());
 }

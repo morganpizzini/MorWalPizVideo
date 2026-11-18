@@ -29,6 +29,7 @@ public sealed class V1ShortLinksController(
         var channelId = HttpContext.GetChannelContext().ChannelId;
         var links = await linksService.GetShortLinksAsync();
         return Ok(links
+            .Where(link => link.LinkType != LinkType.Article && link.ArticleId is null)
             .Where(link => link.ManagementChannelId == channelId || link.ChannelId == channelId)
             .OrderByDescending(link => link.CreationDateTime)
             .Select(ToResponse)
@@ -43,7 +44,8 @@ public sealed class V1ShortLinksController(
     {
         var link = await linksService.GetByCodeAsync(ShortLink.NormalizeCode(code));
         var channelId = HttpContext.GetChannelContext().ChannelId;
-        if (link is null || (link.ManagementChannelId != channelId && link.ChannelId != channelId))
+        if (link is null || link.LinkType == LinkType.Article || link.ArticleId is not null ||
+            (link.ManagementChannelId != channelId && link.ChannelId != channelId))
             return Problem(
                 statusCode: StatusCodes.Status404NotFound,
                 title: "Short link not found",
@@ -65,6 +67,14 @@ public sealed class V1ShortLinksController(
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Invalid short-link request",
                 Detail = "target and a supported linkType are required",
+                Type = "https://httpstatuses.com/400"
+            });
+
+        if (linkType == LinkType.Article)
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Article short links must be created from their article",
                 Type = "https://httpstatuses.com/400"
             });
 

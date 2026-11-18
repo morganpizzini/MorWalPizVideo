@@ -39,6 +39,7 @@ const CALENDAREVENTS_DETAIL = `${CALENDAREVENTS}/by-title/{title}`;
 const CALENDAREVENTS_ID = `${CALENDAREVENTS}/{id}`;
 const BLOG_POSTS = `${baseEndpoint}/blogposts`;
 const BLOG_POST_DETAIL = `${BLOG_POSTS}/{id}`;
+const BLOG_POST_SHORT_LINK = `${BLOG_POST_DETAIL}/short-link`;
 const BLOG = `${baseEndpoint}/blog`;
 const BLOG_DETAIL = `${BLOG}/{slug}`;
 const PUBLIC_ACCOUNTS = `${baseEndpoint}/publicaccounts`;
@@ -223,6 +224,7 @@ export default {
   CALENDAREVENTS_ID,
   BLOG_POSTS,
   BLOG_POST_DETAIL,
+  BLOG_POST_SHORT_LINK,
   BLOG,
   BLOG_DETAIL,
   PUBLIC_ACCOUNTS,

@@ -1304,3 +1304,35 @@ node .github/skills/impeccable/scripts/detect.mjs --json \
   frontend/shooter-workshop.client/src/routes/pages.tsx
   Passed: no UI detector findings
 ```
+
+## Workshop loading screen refinement (2026-11-18)
+
+The account-session loading and login-redirect states use a centered viewport
+layout with a `#FFFF36` status panel. Deferred route loading keeps its
+in-content placement beneath the persistent Workshop header while using the
+same panel styling. The spinner and label retain the existing accessible
+status semantics.
+
+Changed files:
+
+- `frontend/shooter-workshop.client/src/components/States.tsx`
+- `frontend/shooter-workshop.client/src/layouts/AppShell.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+
+Validation:
+
+```text
+cd frontend/shooter-workshop.client && npm test -- --run src/routes/shared.test.tsx
+  Passed: 1 test file, 4 tests
+
+cd frontend/shooter-workshop.client && npm run build
+  Passed: TypeScript and Vite production build
+
+.github/skills/impeccable/scripts/impeccable detect --json --scope layout \
+  frontend/shooter-workshop.client/src/components/States.tsx \
+  frontend/shooter-workshop.client/src/layouts/AppShell.tsx \
+  frontend/shooter-workshop.client/src/main.scss
+  Passed: no layout detector findings
+```
+
+Residual verification gap: no browser screenshot was captured.

@@ -249,6 +249,11 @@ public class ShortLinksController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ShortLinksCreate, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> CreateShortLink(CreateShortLinkRequest request)
     {
+        if (request.LinkType == LinkType.Article)
+        {
+            return BadRequest("Article short links must be created from their article.");
+        }
+
         if (request.LinkType is not LinkType.YouTubeVideo and not LinkType.YouTubeChannel && !await _authorization.IsAdminAsync(User))
         {
             return Forbid();
@@ -458,6 +463,11 @@ public class ShortLinksController : ApplicationControllerBase
     [AllowUser(AuthorizationPermissionKeys.ShortLinksUpdate, AuthorizationPermissionKeys.ShortLinksManage)]
     public async Task<IActionResult> UpdateShortLink(BaseRequestId<UpdateShortLinkRequest> request)
     {
+        if (request.Body.LinkType == LinkType.Article)
+        {
+            return BadRequest("Article short links must be managed through their article.");
+        }
+
         var existingShortLink = await FindShortLinkAsync(request.Id);
 
         if (existingShortLink == null || !await CanAccessShortLinkAsync(existingShortLink))
@@ -661,6 +671,9 @@ public class ShortLinksController : ApplicationControllerBase
 
     private async Task<bool> CanAccessShortLinkAsync(ShortLink link)
     {
+        if (link.LinkType == LinkType.Article || link.ArticleId is not null)
+            return false;
+
         var selectedChannelId = HttpContext.GetChannelContext().ChannelId;
         IList<YouTubeContent> matches = link.LinkType == LinkType.YouTubeVideo
             ? await _contentService.GetAllMatchesAsync()

@@ -59,7 +59,7 @@ export function Component() {
                   <td>{post.draft.title}</td>
                   <td>{post.slug}</td>
                   <td>{post.isPublished ? 'Published' : 'Draft'}</td>
-                  <td>{post.revision}</td>
+                  <td>{post.editorialRevision}</td>
                   <td>
                     {canEdit && (
                       <Link

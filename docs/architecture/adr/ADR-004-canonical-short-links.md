@@ -11,6 +11,15 @@ Short links need one globally addressable owner for reliable lookup, uniqueness,
 
 The standalone record is canonical for every short-link type, including YouTube videos and sponsor URLs, with a normalized globally unique code, validated destination/reference, optional content, channel, campaign, or sponsor ownership reference, structured query data, status, audit metadata, and an atomic total count. A YouTube video link stores the owning content ID and target video ID in the standalone record; a sponsor link uses `CustomUrl`, stores `SponsorId`, and is managed through the owning sponsor lifecycle. Creation and management validate that typed targets are valid. Embedded YouTube short links are not read, redirected, listed, mutated, or counted.
 
+Article links are also canonical standalone records. They store `ArticleId`,
+`ChannelId`, and matching management ownership, with a deterministic code
+derived from the article ID. The article-specific BackOffice ensure operation
+is idempotent and generic short-link APIs cannot create, retarget, or delete
+article-owned links. Resolution loads the article by its stored ID and channel,
+requires a published snapshot, and redirects to its current slug under that
+channel's validated public origin. Draft and unpublished links return 404 and
+are not counted.
+
 ShortLinks owns anonymous resolution/tracking only. BackOffice owns management. Detailed visits use a separate collection with an approved retention policy.
 
 YouTube resolution uses actual attached references, not the archival aggregate
@@ -42,9 +51,19 @@ All short-link writes use the standalone collection and enforce safe absolute HT
 
 BackOffice video import and short-link creation are mutation operations: a caller must be able to mutate the owning content in the selected channel. Read-only collaborators may inspect a match but cannot use bulk import or YouTube short-link operations to change it. Duplicate video imports return a conflict and do not refresh content or create a short link. Sponsor CRUD requires `X-Channel-Id`, preserves ownership on update, and blocks generic deletion of sponsor-owned links. Canonical match and sponsor output-cache entries are tagged and evicted with lowercase centralized cache constants after mutations.
 
+The blog editor exposes link creation only after the article exists, using the
+same selected channel. The URL is included in admin article reads and remains
+available after reopening. Creation is separate from article save/publish.
+
 ## Migration And Rollback
 
 Create and maintain the global unique normalized-code index for standalone records. Before rollout, manually assign channels to existing sponsor documents and optionally reconcile their owned links; no automatic sponsor backfill is required. Because Azure Cosmos DB for MongoDB RU does not support cross-collection transactions, sponsor workflows use explicit sequential writes and tolerate a missing link through URL fallback and update repair. After canonical records are verified, legacy embedded records remain archival data only and are excluded from runtime reads.
+
+Before creating Article links, verify the global unique normalized-code index,
+configure a valid article public origin and short-link base, and ensure the
+ShortLinks host's `YouTubeChannelId` matches the owning channel. Deploy the new
+redirect implementation before enabling creation; older instances cannot
+resolve Article links. No article backfill is required. Because Azure Cosmos DB for MongoDB RU does not support cross-collection transactions, sponsor workflows use explicit sequential writes and tolerate a missing link through URL fallback and update repair. After canonical records are verified, legacy embedded records remain archival data only and are excluded from runtime reads.
 
 The v1 migration endpoint is resumable, dry-run capable, and inventory capable. Codes are
 normalized invariant-lowercase. A matching standalone code is deterministically replaced by

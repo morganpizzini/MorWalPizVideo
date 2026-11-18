@@ -74,7 +74,10 @@ namespace MorWalPizVideo.Server.Models
 
         [EnumMember]
         CustomUrl = 5,
-        AskCampaign = 6
+        [EnumMember]
+        AskCampaign = 6,
+        [EnumMember]
+        Article = 7
     }
 
     [BsonIgnoreExtraElements]
@@ -138,6 +141,12 @@ namespace MorWalPizVideo.Server.Models
         [DataMember]
         [BsonElement("campaignId")]
         public string? CampaignId { get; set; }
+
+        [DataMember]
+        [BsonElement("articleId")]
+        [BsonDefaultValue(null)]
+        [BsonIgnoreIfNull]
+        public string? ArticleId { get; init; }
 
         [DataMember]
         [BsonElement("sponsorId")]

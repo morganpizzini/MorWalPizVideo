@@ -121,6 +121,7 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<int> IncrementClicksAsync(string id);
         Task<int> IncrementClicksAsync(string id, ShortLinkRequestCategory category, DateTime timestamp);
         Task<ShortLink?> GetByCampaignIdAsync(string campaignId);
+        Task<ShortLink> AddArticleShortLinkAsync(ShortLink link);
     }
     public interface IShortLinkRequestEventRepository : IRepository<ShortLinkRequestEvent>
     {

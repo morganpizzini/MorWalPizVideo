@@ -4,6 +4,7 @@ using MorWalPizVideo.Server.Services.Interfaces;
 using MongoDB.Driver;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace MorWalPizVideo.Server.Services;
 
@@ -1014,6 +1015,8 @@ public interface ILinksService
 {
     Task<IList<ShortLink>> GetShortLinksAsync();
     Task<ShortLink?> GetByCodeAsync(string code);
+    Task<ShortLink?> GetArticleShortLinkAsync(string articleId, string channelId);
+    Task<(ShortLink Link, bool Created)> EnsureArticleShortLinkAsync(string articleId, string channelId);
     Task<ShortLink?> GetCanonicalVideoShortLinkAsync(string contentId, string youtubeId);
     Task<IList<YouTubeContent>> MergeCanonicalVideoShortLinksAsync(IList<YouTubeContent> matches);
     Task<IList<QueryLink>> GetQueryLinksAsync(IList<string>? ids = null);
@@ -1037,6 +1040,11 @@ public sealed class ShortLinkCleanupPendingException(
     public ShortLink Link { get; } = link;
 }
 
+public sealed class ShortLinkCodeConflictException(string code)
+    : Exception($"A short link with code '{code}' already exists.");
+
+public sealed class ArticleShortLinkConflictException(string message) : Exception(message);
+
 public sealed class LinksService(
     IShortLinkRepository shortLinkRepository,
     IQueryLinkRepository queryLinkRepository,
@@ -1046,6 +1054,71 @@ public sealed class LinksService(
     public Task<IList<ShortLink>> GetShortLinksAsync() => shortLinkRepository.GetItemsAsync();
 
     public Task<ShortLink?> GetByCodeAsync(string code) => shortLinkRepository.GetByCodeAsync(code);
+
+    public async Task<ShortLink?> GetArticleShortLinkAsync(string articleId, string channelId)
+    {
+        var link = await shortLinkRepository.GetByCodeAsync(ArticleShortLinkCode(articleId));
+        if (link is null)
+            return null;
+        ValidateArticleShortLink(link, articleId, channelId);
+        return link;
+    }
+
+    public async Task<(ShortLink Link, bool Created)> EnsureArticleShortLinkAsync(
+        string articleId,
+        string channelId)
+    {
+        if (string.IsNullOrWhiteSpace(articleId) || string.IsNullOrWhiteSpace(channelId))
+            throw new ArgumentException("An article and channel are required.");
+
+        var code = ArticleShortLinkCode(articleId);
+        var existing = await shortLinkRepository.GetByCodeAsync(code);
+        if (existing is not null)
+        {
+            ValidateArticleShortLink(existing, articleId, channelId);
+            return (existing, false);
+        }
+
+        var candidate = new ShortLink(code, articleId, [])
+        {
+            LinkType = LinkType.Article,
+            ArticleId = articleId,
+            ChannelId = channelId,
+            ManagementChannelId = channelId
+        };
+
+        try
+        {
+            return (await shortLinkRepository.AddArticleShortLinkAsync(candidate), true);
+        }
+        catch (Exception exception) when (
+            exception is ShortLinkCodeConflictException ||
+            exception is MongoWriteException mongoException && mongoException.WriteError?.Code == 11000)
+        {
+            existing = await shortLinkRepository.GetByCodeAsync(code);
+            if (existing is null)
+                throw new InvalidOperationException($"Short-link code '{code}' conflicted but could not be read.", exception);
+
+            ValidateArticleShortLink(existing, articleId, channelId);
+            return (existing, false);
+        }
+    }
+
+    private static string ArticleShortLinkCode(string articleId)
+    {
+        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(articleId)))
+            .ToLowerInvariant();
+        return $"article-{digest[..16]}";
+    }
+
+    private static void ValidateArticleShortLink(ShortLink link, string articleId, string channelId)
+    {
+        if (link.LinkType != LinkType.Article ||
+            !string.Equals(link.ArticleId, articleId, StringComparison.Ordinal) ||
+            !string.Equals(link.ChannelId, channelId, StringComparison.Ordinal) ||
+            !string.Equals(link.ManagementChannelId, channelId, StringComparison.Ordinal))
+            throw new ArticleShortLinkConflictException("The article short-link code is already owned by another record.");
+    }
 
     public async Task<ShortLink?> GetCanonicalVideoShortLinkAsync(string contentId, string youtubeId)
         => (await shortLinkRepository.GetItemsAsync(link =>
@@ -1091,6 +1164,9 @@ public sealed class LinksService(
 
     public async Task<ShortLink> SaveShortLinkAsync(ShortLink entity)
     {
+        if (entity.LinkType == LinkType.Article || entity.ArticleId is not null)
+            throw new ArticleShortLinkConflictException("Article short links must be created through their article.");
+
         var normalizedCode = ShortLink.NormalizeCode(entity.Code);
         var normalizedEntity = entity with { Code = normalizedCode };
         var existingShortLink = await shortLinkRepository.GetItemsAsync(x => x.Code.ToLower() == normalizedCode);
@@ -1305,6 +1381,12 @@ public sealed class LinksService(
 
     public async Task UpdateShortLinkAsync(ShortLink entity)
     {
+        var existing = (await shortLinkRepository.GetItemsAsync(link => link.Id == entity.Id))
+            .FirstOrDefault();
+        if (entity.LinkType == LinkType.Article || entity.ArticleId is not null ||
+            existing?.LinkType == LinkType.Article || existing?.ArticleId is not null)
+            throw new ArticleShortLinkConflictException("Article short links must be managed through their article.");
+
         var normalizedEntity = entity with { Code = ShortLink.NormalizeCode(entity.Code) };
         await shortLinkRepository.UpdateItemAsync(normalizedEntity);
     }
@@ -1316,6 +1398,9 @@ public sealed class LinksService(
         {
             return false;
         }
+
+        if (shortLink.LinkType == LinkType.Article || shortLink.ArticleId is not null)
+            return false;
 
         if (!string.IsNullOrWhiteSpace(shortLink.SponsorId))
             return false;

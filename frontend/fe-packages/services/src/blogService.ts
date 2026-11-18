@@ -1,5 +1,6 @@
 import type {
   BlogPage,
+  ArticleShortLink,
   BlogPostAdmin,
   BlogPostPublic,
   SaveBlogPost,
@@ -16,10 +17,13 @@ import { publicGet } from "./apiTransport";
 import endpoints, { ComposeUrl } from "./endpoints";
 
 const detail = (id: string) => ComposeUrl(endpoints.BLOG_POST_DETAIL, { id });
+const shortLink = (id: string) => ComposeUrl(endpoints.BLOG_POST_SHORT_LINK, { id });
 export const fetchBlogPosts = async (page = 1): Promise<BlogPostAdmin[]> =>
   requireSuccessfulResponse(await get(endpoints.BLOG_POSTS, { page }));
 export const getBlogPost = async (id: string): Promise<BlogPostAdmin> =>
   requireSuccessfulResponse(await get(detail(id)));
+export const ensureBlogPostShortLink = async (id: string): Promise<ArticleShortLink> =>
+  requireSuccessfulResponse(await post(shortLink(id), {}));
 export const createBlogPost = async (
   payload: SaveBlogPost,
 ): Promise<BlogPostAdmin> =>

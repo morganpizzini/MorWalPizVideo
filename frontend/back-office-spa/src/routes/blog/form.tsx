@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { data, redirect, useFetcher, useLocation } from 'react-router';
 import type {
   BlogPostAdmin,
+  ArticleShortLink,
   BlogSnapshot,
   SaveBlogPost,
   InsightArticleDraft,
@@ -16,10 +17,11 @@ import {
   saveAndPublishBlogPost,
   deleteBlogImage,
   generateScriptStudio,
+  ensureBlogPostShortLink,
 } from '@morwalpizvideo/services';
 import { BlogRenderer } from '@morwalpiz/layout';
 import { ButtonGroup, Dropdown } from 'react-bootstrap';
-import { Save, Upload, Eye, Send, EyeOff, WandSparkles, X, Trash2 } from 'lucide-react';
+import { Save, Upload, Eye, Send, EyeOff, WandSparkles, X, Trash2, Link2, Copy, Check } from 'lucide-react';
 import { useResolvedLoaderData } from '@/router/asyncData';
 import PageHeader from '@components/PageHeader';
 import { hasPermission, permissions } from '@/authorization/permissions';
@@ -65,10 +67,29 @@ export async function action({ request, params }: { request: Request; params: { 
   const channelId = String(form.get('channelId') ?? '');
   let savedPost: BlogPostAdmin | undefined;
   try {
-    if (!['save', 'upload', 'publish', 'unpublish'].includes(intent))
+    if (!['save', 'upload', 'publish', 'unpublish', 'ensureArticleShortLink'].includes(intent))
       return data({ error: 'Unknown action.' }, { status: 400 });
-    if (intent !== 'save' && (!Number.isSafeInteger(revision) || revision < 1))
+    if (['upload', 'publish', 'unpublish'].includes(intent) &&
+      (!Number.isSafeInteger(revision) || revision < 1))
       return data({ error: 'Invalid article revision.' }, { status: 400 });
+
+    if (intent === 'ensureArticleShortLink') {
+      const pageDenial = await requirePermissions([permissions.pages.update, permissions.pages.manage]);
+      if (pageDenial) return pageDenial;
+      const shortLinkDenial = await requirePermissions([
+        permissions.shortlinks.create,
+        permissions.shortlinks.manage,
+      ]);
+      if (shortLinkDenial) return shortLinkDenial;
+      if (!postId || !params.id || postId !== params.id)
+        return data({ error: 'Save the article before creating its short link.' }, { status: 400 });
+      if (!channelId || appStore.getState().selectedChannelId !== channelId)
+        return data(
+          { error: 'The selected channel changed. Switch back and retry.' },
+          { status: 409 }
+        );
+      return { articleShortLink: await ensureBlogPostShortLink(postId) };
+    }
 
     if (intent === 'publish' || intent === 'unpublish') {
       const denial = await requirePermissions([permissions.pages.manage]);
@@ -189,6 +210,7 @@ function BlogForm({
   initial: BlogPostAdmin | null;
   insightDraft?: InsightArticleDraft;
 }) {
+  const { selectedChannelId } = useChannelContext();
   const fetcher = useFetcher<{
     post?: BlogPostAdmin;
     error?: string;
@@ -196,10 +218,15 @@ function BlogForm({
     uploadedImageId?: string;
     uploadedImageAlt?: string;
   }>();
+  const shortLinkFetcher = useFetcher<{
+    articleShortLink?: ArticleShortLink;
+    error?: string;
+  }>({ key: `article-short-link-${selectedChannelId ?? 'none'}-${initial?.id ?? 'new'}` });
   const busy = fetcher.state !== 'idle';
   const effectivePermissions = useAppStore(state => state.effectivePermissions);
-  const { selectedChannelId } = useChannelContext();
   const [post, setPost] = useState(initial);
+  const [articleShortLink, setArticleShortLink] = useState(initial?.articleShortLink ?? null);
+  const [copyStatus, setCopyStatus] = useState('');
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
   const canSave = hasPermission(effectivePermissions, [
     post ? permissions.pages.update : permissions.pages.create,
@@ -279,6 +306,7 @@ function BlogForm({
   useEffect(() => {
     if (fetcher.data?.post && !busy) {
       setPost(fetcher.data.post);
+      setArticleShortLink(fetcher.data.post.articleShortLink ?? null);
       setDraft(
         fetcher.data.uploadedImageId
           ? {
@@ -348,9 +376,108 @@ function BlogForm({
     prettifyRun.current += 1;
     setPrettifyOpen(false);
   };
+  const canCreateArticleShortLink =
+    hasPermission(effectivePermissions, [permissions.pages.update, permissions.pages.manage]) &&
+    hasPermission(effectivePermissions, [
+      permissions.shortlinks.create,
+      permissions.shortlinks.manage,
+    ]);
+  const ensureArticleShortLink = () => {
+    if (!post || !selectedChannelId || shortLinkFetcher.state !== 'idle') return;
+    setCopyStatus('');
+    shortLinkFetcher.submit(
+      {
+        intent: 'ensureArticleShortLink',
+        postId: post.id,
+        channelId: selectedChannelId,
+        revision: String(post.revision),
+      },
+      { method: 'post' }
+    );
+  };
+  const copyArticleShortLink = async () => {
+    if (!articleShortLink?.url) {
+      setCopyStatus('Short-link URL is unavailable.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(articleShortLink.url);
+      setCopyStatus('Short link copied.');
+    } catch {
+      setCopyStatus('Could not copy the short link. Select and copy the URL.');
+    }
+  };
+  useEffect(() => {
+    if (shortLinkFetcher.data?.articleShortLink)
+      setArticleShortLink(shortLinkFetcher.data.articleShortLink);
+  }, [shortLinkFetcher.data]);
   return (
     <>
-      <PageHeader title={post ? 'Edit article' : 'Create article'} backLink="/blogposts" />
+      <PageHeader
+        title={post ? 'Edit article' : 'Create article'}
+        backLink="/blogposts"
+        actions={
+          post && canCreateArticleShortLink ? (
+            <div className="d-flex align-items-center gap-2 me-2">
+              {articleShortLink ? (
+                <>
+                  {articleShortLink.url ? (
+                    <a
+                      className="text-truncate"
+                      style={{ maxWidth: '16rem' }}
+                      href={articleShortLink.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={articleShortLink.url}
+                    >
+                      {articleShortLink.url}
+                    </a>
+                  ) : (
+                    <span className="text-secondary">Short-link URL unavailable</span>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    aria-label="Copy short link"
+                    title="Copy short link"
+                    disabled={!articleShortLink.url}
+                    onClick={() => void copyArticleShortLink()}
+                  >
+                    {copyStatus === 'Short link copied.' ? (
+                      <Check size={16} aria-hidden="true" />
+                    ) : (
+                      <Copy size={16} aria-hidden="true" />
+                    )}
+                  </button>
+                  {!articleShortLink.isPublished && (
+                    <span className="text-secondary">Draft · link inactive</span>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  disabled={shortLinkFetcher.state !== 'idle' || !selectedChannelId}
+                  onClick={ensureArticleShortLink}
+                >
+                  <Link2 size={16} className="me-1" aria-hidden="true" />
+                  {shortLinkFetcher.state === 'idle' ? 'Create short link' : 'Creating...'}
+                </button>
+              )}
+              {copyStatus && (
+                <span className="visually-hidden" role="status" aria-live="polite">
+                  {copyStatus}
+                </span>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
+      {shortLinkFetcher.data?.error && (
+        <div className="alert alert-danger" role="alert">
+          {shortLinkFetcher.data.error}
+        </div>
+      )}
       {fetcher.data?.error && (
         <div className="alert alert-danger" role="alert">
           {fetcher.data.error}
@@ -358,7 +485,7 @@ function BlogForm({
       )}
       {fetcher.data?.message && !busy && (
         <p role="status" className="text-success">
-          {fetcher.data.message} Revision {post?.revision}
+          {fetcher.data.message} Revision {post?.editorialRevision}
         </p>
       )}
       <fetcher.Form method="post" aria-busy={busy}>
@@ -528,7 +655,7 @@ function BlogForm({
             )}
             {post && (
               <span className="text-secondary">
-                {post.isPublished ? 'Published' : 'Draft'} · Revision {post.revision}
+                {post.isPublished ? 'Published' : 'Draft'} · Revision {post.editorialRevision}
               </span>
             )}
           </div>

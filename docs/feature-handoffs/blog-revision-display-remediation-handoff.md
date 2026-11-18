@@ -69,13 +69,12 @@ The server, not the SPA, owns the increment:
 
 ### Existing article compatibility
 
-Exact historical editorial revisions cannot be reconstructed. The recommended rollout baseline is:
-
-- Existing documents with no `editorialRevision` read as their current aggregate `Revision`.
-- An idempotent backfill persists that baseline before or during rollout.
-- From that baseline onward, only explicit editorial saves increment the displayed value.
-
-This avoids a visible reset of mature articles to 0 and preserves monotonic display, while acknowledging that the pre-rollout baseline may include non-editorial writes.
+Exact historical editorial revisions cannot be reconstructed. Existing documents
+with no `editorialRevision` read as their current aggregate `Revision`. The first
+successful aggregate replacement persists that baseline atomically; an explicit
+save uses baseline + 1, while all other mutations preserve the baseline. This
+avoids a visible reset of mature articles to 0 without requiring a batch backfill,
+while acknowledging that the pre-rollout baseline may include non-editorial writes.
 
 Alternative rejected:
 
@@ -103,15 +102,15 @@ Impeccable planning lens:
 ## Impacted Projects
 
 - `MorWalPizVideo.Models`: add the persisted editorial revision to the blog aggregate with legacy-compatible deserialization behavior.
-- `MorWalPizVideo.Domain`: initialize, increment, preserve, and backfill editorial revisions at the owning service/repository boundary.
+- `MorWalPizVideo.Domain`: initialize, increment, and preserve editorial revisions at the owning service/repository boundary.
 - `MorWalPiz.Contracts`: expose the editorial revision in the admin response without replacing the concurrency token.
-- `MorWalPizVideo.BackOffice`: continue returning both values; composition-root impact is expected only if a dedicated backfill service/operation follows an existing registration pattern.
+- `MorWalPizVideo.BackOffice`: existing response projection returns both values; no composition-root change.
 - `MorWalPizVideo.BackOffice.Tests`: add service and HTTP coverage for initialization, increments, non-editorial preservation, stale concurrency, and legacy compatibility.
 - `frontend/fe-packages/models`: add the admin response property.
 - `frontend/fe-packages/services`: verify only unless a response-normalization compatibility helper is needed; mutation requests must continue carrying aggregate revision.
 - `frontend/back-office-spa`: display editorial revision while using aggregate revision internally.
 - ServerAPI and public frontend: no contract or UI impact because public blog responses do not expose revision.
-- AppHost/deployment: deployment order and backfill operations are affected; topology is unchanged.
+- AppHost/deployment: API-before-SPA deployment order and old-writer drain are required; topology is unchanged.
 - Shop, Shooting ITA, desktop applications, ShortLinks, Shooting Range, and FreezerAnalysis: not affected.
 
 ## Impacted Files
@@ -131,27 +130,24 @@ Impeccable planning lens:
 
 ### Add
 
-- A Domain- or BackOffice-owned idempotent MongoDB backfill component only if the repository's existing operational migration pattern requires a dedicated type. The exact filename must follow the pattern verified during implementation rather than being invented here.
-- Focused backfill tests beside the owning backend test feature if backfill is implemented in code.
+- None. Legacy baseline persistence is lazy and occurs atomically on the first successful aggregate replacement.
 
 ### Generated/Migration
 
-- MongoDB backfill operation for existing `blogPosts` documents missing `editorialRevision`, setting it to the existing aggregate `revision`.
-- No EF Core or SQLite migration.
+- No batch MongoDB backfill or EF Core/SQLite migration.
 
 ### Documentation
 
 - `docs/feature-handoffs/blog-revision-display-remediation-handoff.md`: this revised implementation source of truth.
 - `docs/features/blog-authoring.md`: record the two revision meanings and delivered validation.
 - `docs/architecture/structured-blog.md`: update the persisted schema, admin response, save semantics, and rollout.
-- `docs/architecture/mongo-operations.md`: update only if the chosen backfill mechanism creates a reusable operational procedure.
 
 ### Verify Only
 
 - `MorWalPizVideo.BackOffice/Controllers/BlogPostsController.cs`: response projection should acquire the additive field through the shared contract; request concurrency behavior remains unchanged.
 - `frontend/fe-packages/services/src/blogService.ts`: transport already returns typed admin responses and should continue sending aggregate revision.
-- BackOffice composition-root files, including `MorWalPizVideo.BackOffice/Program.cs`: modify only if registration or an explicit operational backfill entry point is required.
-- Deployment workflows and manifests: verify rollout can enforce API-before-SPA and run/observe the backfill; modify only if an established migration stage owns this work.
+- BackOffice composition-root files, including `MorWalPizVideo.BackOffice/Program.cs`: no registration or operational command is needed.
+- Deployment workflows and manifests: API-before-SPA and draining old writers are rollout gates; no workflow change is required for this code change.
 
 ## Impact Matrix
 
@@ -159,14 +155,14 @@ Impeccable planning lens:
 | --- | --- |
 | Backend/API | Additive admin response field. Existing aggregate revision request/response remains intact. |
 | Frontend/UI | Visible Revision uses editorial semantics; hidden concurrency behavior is unchanged. |
-| Database/Data | Additive MongoDB field plus idempotent baseline backfill for legacy articles. |
+| Database/Data | Additive MongoDB field; legacy baseline is persisted lazily in the first atomic replacement. No batch migration. |
 | Contracts/Models | Add `EditorialRevision`/`editorialRevision`; do not rename or remove aggregate `Revision`. |
 | Authentication/Authorization | No permission change. Backfill execution must use the established trusted operational boundary. |
 | Validation | Editorial revision must be nonnegative; aggregate expected revision remains at least 1. |
 | Cache | No public response change. Save-and-publish invalidation behavior remains unchanged. |
 | Configuration/Secrets | No new secret. Backfill uses existing environment-managed MongoDB access. |
 | Logging/Telemetry | Backfill must report matched, modified, skipped, and failed counts without document content. |
-| Background Jobs | Not required for normal increments. Use a job only if the existing migration pattern requires durable resumability. |
+| Background Jobs | Not applicable. |
 | Deployment/Operations | Deploy compatible API before SPA; complete or activate legacy baseline handling before displaying the new field. |
 | Backward Compatibility | Additive field supports rolling deployment. Old SPAs ignore it; new SPAs require a compatible API or explicit normalization during the compatibility window. |
 
@@ -209,12 +205,12 @@ Impeccable planning lens:
 - Mitigation: pass the desired editorial revision explicitly into the replacement candidate and test every mutation family.
 - Verification signal: transition-table service and HTTP tests cover save, save-and-publish, publish, unpublish, upload, reserve, and finalize.
 
-### Medium — non-idempotent or partial backfill
+### Medium — legacy baseline compatibility
 
-- Cause: operational interruption or an unbounded update.
+- Cause: old documents do not contain the new field.
 - Affected surface: legacy document display.
-- Mitigation: target only documents where the field is absent, make reruns safe, report counts, and retain tolerant reads throughout rollout.
-- Verification signal: second backfill run modifies zero documents and all targeted documents have a value.
+- Mitigation: use tolerant response fallback and persist a missing baseline during the first successful aggregate replacement.
+- Verification signal: legacy response uses the current aggregate revision, a non-save mutation preserves that value, and a later save increments from it.
 
 ### Low — number overflow
 
@@ -253,12 +249,11 @@ Security, cache coherence, and external-service risks otherwise remain unchanged
    - Do not accept client-selected editorial revision in save requests; server ownership prevents skipped or forged counts.
    - Gate: HTTP responses expose both values and requests still use aggregate revision.
 
-4. Implement legacy compatibility and backfill.
+4. Implement legacy compatibility without a batch migration.
    - Owners: Domain/BackOffice operational boundary.
-   - Tolerantly interpret missing editorial revision using aggregate revision during the compatibility window.
-   - Backfill only missing fields with the existing aggregate revision.
-   - Make execution bounded, observable, and idempotent; do not run an unbounded silent startup mutation.
-   - Gate: fixture with a missing field reads consistently before backfill, persists the baseline, and a rerun modifies nothing.
+   - Tolerantly interpret missing editorial revision using aggregate revision.
+   - On the first successful aggregate replacement, persist the legacy baseline in the same CAS write; explicit save advances from that baseline.
+   - Gate: fixture with a missing field reads consistently, a non-save mutation persists the same baseline, and the next explicit save increments once.
 
 5. Update shared frontend typing and presentation.
    - Owners: shared models and BackOffice SPA.
@@ -276,12 +271,50 @@ Security, cache coherence, and external-service risks otherwise remain unchanged
 
 7. Roll out in compatibility order and update documentation.
    - Deploy API and compatible reads first.
-   - Verify/backfill legacy articles.
+   - Drain old API writers before new writes rely on the additive field.
    - Deploy shared frontend artifacts and SPA.
    - Update this handoff and the owning architecture/feature records with actual files, checks, and residual risks.
    - Stop at a counter only; do not add snapshot history, diff, restore, or audit-log UI.
 
 An independent post-validation review is warranted because the change splits a concurrency-sensitive persisted concept and introduces a MongoDB compatibility transition.
+
+## Implementation Record
+
+Implemented in the worktree on 2026-11-18:
+
+- Added nullable persisted `EditorialRevision` to the blog model for legacy BSON compatibility. New draft/public articles initialize it to 0.
+- Explicit draft saves and save-and-publish advance it once. Publish/unpublish, image upload, and image deletion reserve/finalize preserve it.
+- Admin responses expose `editorialRevision`, falling back to the existing aggregate `Revision` for legacy articles. The first successful write persists that baseline in the same compare-and-swap replacement; explicit saves advance from it.
+- BackOffice editor and index now display the editorial counter. All hidden fields, API request payloads, and service arguments continue using aggregate `revision`.
+- Updated the feature handoff, blog authoring record, and Structured Blog architecture document. No batch MongoDB backfill or schema migration is required.
+
+Modified files:
+
+- `MorWalPizVideo.Models/Models/BlogPost.cs`
+- `MorWalPizVideo.Domain/BlogService.cs`
+- `MorWalPiz.Contracts/Contracts/BlogContracts.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/BlogServiceTests.cs`
+- `MorWalPizVideo.BackOffice.Tests/Features/BlogControllerTests.cs`
+- `frontend/fe-packages/models/src/blog.ts`
+- `frontend/back-office-spa/src/routes/blog/form.tsx`
+- `frontend/back-office-spa/src/routes/blog/form.test.tsx`
+- `frontend/back-office-spa/src/routes/blog/index.tsx`
+- `frontend/back-office-spa/src/routes/blog/index.test.tsx`
+- `docs/features/blog-authoring.md`
+- `docs/architecture/structured-blog.md`
+- `docs/feature-handoffs/blog-revision-display-remediation-handoff.md`
+
+Validation:
+
+- `dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~BlogServiceTests|FullyQualifiedName~BlogControllerTests"` — passed, 30 tests.
+- `yarn --cwd frontend workspace back-office-spa test --passWithNoTests=false --run src/routes/blog/form.test.tsx src/routes/blog/index.test.tsx` — passed, 32 tests (JUnit: 29 form, 3 index).
+- `yarn --cwd frontend workspace back-office-spa build` — passed (TypeScript and Vite); existing large-chunk warning remains.
+
+Residual risks:
+
+- Legacy editorial baselines intentionally reflect the prior aggregate revision and therefore are not exact historical save counts.
+- Drain old API writers before new writes persist `editorialRevision`; an older whole-document writer can discard the additive field.
+- No real-browser desktop/narrow visual capture was performed. Component tests and the checked build passed.
 
 ## Testing Strategy
 
@@ -309,12 +342,12 @@ An independent post-validation review is warranted because the change splits a c
   - clients cannot submit or override the next editorial revision;
   - permissions and channel scope remain unchanged.
 - Migration:
-  - missing-only filter, correct baseline, bounded execution, idempotent rerun, interruption recovery, and count logging.
+  - no batch migration; verify lazy baseline persistence for legacy BSON documents.
 - End to end:
   - draft-first and public-first flows;
   - cover upload before a later explicit save;
   - stale concurrent editor conflict;
-  - legacy article opened before and after backfill.
+  - legacy article read before its baseline is persisted and after the first mutation.
 - Responsive/accessibility:
   - populated list alignment at narrow width;
   - status region announces the returned revision;
@@ -323,37 +356,28 @@ An independent post-validation review is warranted because the change splits a c
 ## Migration And Rollback
 
 - MongoDB compatibility window:
-  - API tolerant reads must deploy before any backfill or SPA dependency.
+  - API tolerant reads must deploy before SPA dependency.
   - New writes always persist `editorialRevision`.
-  - Existing missing values resolve to aggregate revision until backfilled.
-- Backfill:
-  - filter only `blogPosts` where `editorialRevision` is absent;
-  - set it from the document's current aggregate `revision`;
-  - do not overwrite already initialized values;
-  - make reruns idempotent and observable.
+  - Existing missing values resolve to aggregate revision; the first successful CAS replacement persists that baseline (or increments it for an explicit save).
 - Deployment order:
   1. compatible Models/Domain/Contracts/BackOffice API;
   2. verify dual-field responses;
-  3. execute and verify backfill;
+  3. drain old API writers;
   4. shared frontend model/service build;
   5. BackOffice SPA.
 - Feature flags:
   - not required if tolerant reads and additive deployment order are used;
   - use an existing rollout mechanism only if operational constraints prevent coordinated API-first deployment.
 - Monitoring:
-  - backfill matched/modified/error counts;
   - API serialization/validation failures;
   - blog 409 conflict rate;
   - missing editorial revision count;
   - frontend response-shape errors.
 - Rollback:
   - SPA can roll back independently; older SPA continues displaying aggregate revision.
-  - API rollback is safe only to a version that ignores the additive MongoDB field.
-  - Backfilled values need not be removed; additive unknown fields are tolerated by the current model.
-  - Do not roll back to code that maps the editorial field onto aggregate concurrency semantics.
-- Recovery:
-  - rerun the missing-only backfill after interruption;
-  - restore from backup only for an incorrect overwrite, which the prescribed missing-only filter avoids.
+  - Drain old API writers before the new field is first persisted because an older whole-document replacement can discard it.
+  - Do not roll the API back to a writer that does not preserve `editorialRevision` after new-field writes begin; use SPA rollback or restore a compatible API artifact.
+  - Do not map the editorial field onto aggregate concurrency semantics.
 - SQLite, auth, cache, and secrets: no migration.
 
 ## Open Questions

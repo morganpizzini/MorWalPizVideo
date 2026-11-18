@@ -632,6 +632,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
 
         public Task<ShortLink?> GetByCampaignIdAsync(string campaignId)
             => _collection.Find(x => x.LinkType == LinkType.AskCampaign && x.CampaignId == campaignId).FirstOrDefaultAsync();
+
+        public Task<ShortLink> AddArticleShortLinkAsync(ShortLink link) => AddItemAsync(link);
     }
 
     public sealed class ShortLinkRequestEventRepository(IMongoDatabase database)
