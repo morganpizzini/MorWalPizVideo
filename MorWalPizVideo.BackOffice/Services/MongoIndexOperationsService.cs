@@ -2,6 +2,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Domain.Workshop;
+using MorWalPizVideo.Domain.ContentIndexes;
 using MorWalPizVideo.Models.Constraints;
 
 namespace MorWalPizVideo.BackOffice.Services;
@@ -95,16 +96,12 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.YouTubeContent,
             Name: "ix_youtubecontent_isprivate_creation_desc",
             Keys: new BsonDocument { { "isPrivate", 1 }, { "creationDateTime", -1 } }),
-        new(
-            Key: "youtubecontent_isprivate_latestpublished_creation_desc",
-            Collection: DbCollections.YouTubeContent,
-            Name: "ix_youtubecontent_isprivate_latestpublished_creation_desc",
-            Keys: new BsonDocument
-            {
-                { "isPrivate", 1 },
-                { "latestPublishedAt", -1 },
-                { "creationDateTime", -1 }
-            }),
+        .. YouTubeContentMongoIndexes.Manifest.Select(index => new MongoIndexManifestEntry(
+            index.Key,
+            index.Collection,
+            index.Name,
+            index.Keys,
+            index.Unique)),
         new(
             Key: "pages_url.unique",
             Collection: DbCollections.Pages,

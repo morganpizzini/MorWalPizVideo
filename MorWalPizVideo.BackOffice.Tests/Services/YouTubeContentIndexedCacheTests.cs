@@ -154,6 +154,28 @@ public sealed class YouTubeContentIndexedCacheTests
     }
 
     [Fact]
+    public async Task Single_channel_content_reads_use_repository_paging_instead_of_indexed_cache()
+    {
+        var repository = new MatchMockRepository(new EmptyScenario());
+        await repository.AddItemAsync(CreateMatch("repository-page", PrimaryScenario.ChannelId, DateTime.UtcNow));
+        var indexedCache = new RecordingIndexedCache();
+        var service = new ContentService(
+            repository,
+            null!,
+            null!,
+            null!,
+            new ShortLinkMockRepository(new EmptyScenario()),
+            indexedCache);
+
+        var matches = await service.GetPublicMatchesForChannelAsync(PrimaryScenario.ChannelId, 0, 10);
+        var count = await service.CountPublicMatchesForChannelAsync(PrimaryScenario.ChannelId);
+
+        Assert.Single(matches);
+        Assert.Equal(1, count);
+        Assert.Equal(0, indexedCache.PublicChannelReadCount);
+    }
+
+    [Fact]
     public async Task Content_service_reports_degraded_cache_without_rejecting_persisted_append()
     {
         var repository = new MatchMockRepository(new EmptyScenario());
@@ -322,7 +344,12 @@ public sealed class YouTubeContentIndexedCacheTests
 
         public List<string> ChangedIds { get; } = [];
         public int GlobalReadCount { get; private set; }
-        public Task<IReadOnlyList<YouTubeContent>> GetPublicForChannelAsync(string channelId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
+        public int PublicChannelReadCount { get; private set; }
+        public Task<IReadOnlyList<YouTubeContent>> GetPublicForChannelAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            PublicChannelReadCount++;
+            return Task.FromResult<IReadOnlyList<YouTubeContent>>([]);
+        }
         public Task<IReadOnlyList<YouTubeContent>> GetGlobalAsync(CancellationToken cancellationToken = default)
         {
             GlobalReadCount++;

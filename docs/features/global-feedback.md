@@ -41,10 +41,14 @@ Feedback uses a dedicated global MongoDB collection with:
 - a unique client request-ID index for idempotent retries;
 - creation-order and status/application query indexes;
 - an expiry field reserved for reviewed retention enforcement.
+- BackOffice startup automatically verifies/creates the non-unique
+  creation-order index used by the management list. The unique request-ID,
+  status/application and TTL indexes remain reviewed operational actions; the
+  TTL index is not automatically applied.
 
 The proposed 90-day TTL is destructive and must not be applied until the
 retention owner approves the privacy notice, unresolved-report policy, and
-backup retention. Unique and query indexes must be reviewed and applied before
+backup retention. The remaining unique and query indexes must be reviewed and applied before
 production intake. Production must also prove that ServerAPI and BackOffice
 reach the intended shared feedback store.
 

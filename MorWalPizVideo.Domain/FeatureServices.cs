@@ -49,18 +49,12 @@ public sealed class ContentService(
 {
     public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelAsync(string channelId, int skip, int take)
     {
-        var matches = indexedCache is null
-            ? await youTubeContentRepository.GetPublicOrderedForChannelAsync(channelId, skip, take)
-            : [.. (await indexedCache.GetPublicForChannelAsync(channelId))
-                .Skip(Math.Max(0, skip))
-                .Take(Math.Clamp(take, 1, 200))];
-        return indexedCache is null ? await AddCanonicalShortLinksAsync(matches) : matches;
+        var matches = await youTubeContentRepository.GetPublicOrderedForChannelAsync(channelId, skip, take);
+        return await AddCanonicalShortLinksAsync(matches);
     }
 
     public async Task<int> CountPublicMatchesForChannelAsync(string channelId)
-        => indexedCache is null
-            ? (int)await youTubeContentRepository.CountPublicForChannelAsync(channelId)
-            : (await indexedCache.GetPublicForChannelAsync(channelId)).Count;
+        => (int)await youTubeContentRepository.CountPublicForChannelAsync(channelId);
 
     public async Task<IList<YouTubeContent>> GetPublicMatchesForChannelsAsync(IReadOnlyCollection<string> channelIds, bool includePrivate, int skip, int take)
     {

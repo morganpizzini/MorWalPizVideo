@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.FeatureManagement;
 using MorWalPizVideo.Domain.BlogInteractions;
+using MorWalPizVideo.Domain.ContentIndexes;
 using MorWalPizVideo.Server.Services;
 using MorWalPizVideo.ServerAPI.Controllers;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
@@ -45,6 +46,11 @@ public sealed class HostSecurityContainmentTests
                     service.ImplementationType == typeof(BlogInteractionMongoIndexStartupService));
                 if (mongoIndexStartupService is not null)
                     services.Remove(mongoIndexStartupService);
+                var youTubeContentIndexStartupService = services.FirstOrDefault(service =>
+                    service.ServiceType == typeof(IHostedService) &&
+                    service.ImplementationType == typeof(YouTubeContentMongoIndexStartupService));
+                if (youTubeContentIndexStartupService is not null)
+                    services.Remove(youTubeContentIndexStartupService);
 
                 services.AddControllers().AddApplicationPart(typeof(HostSecurityProbeController).Assembly);
             });

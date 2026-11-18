@@ -27,6 +27,7 @@ using MorWalPizVideo.Domain.Interfaces;
 using MorWalPizVideo.Domain.Security;
 using MorWalPizVideo.Domain.Push;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Domain.ContentIndexes;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Services;
@@ -554,6 +555,8 @@ else
     builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
     builder.Services.AddHostedService<BlogInteractionMongoIndexStartupService>();
+    builder.Services.AddHostedService<FeedbackMongoIndexStartupService>();
+    builder.Services.AddHostedService<YouTubeContentMongoIndexStartupService>();
 
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();

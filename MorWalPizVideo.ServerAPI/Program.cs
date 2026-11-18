@@ -17,6 +17,7 @@ using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.Domain.BlogInteractions;
 using MorWalPizVideo.Domain.Feedback;
 using MorWalPizVideo.Domain.Workshop;
+using MorWalPizVideo.Domain.ContentIndexes;
 using MorWalPizVideo.Models.Configuration;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.MvcHelpers.Utils;
@@ -382,6 +383,7 @@ else
     builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
     builder.Services.AddHostedService<BlogInteractionMongoIndexStartupService>();
+    builder.Services.AddHostedService<YouTubeContentMongoIndexStartupService>();
 
     builder.Services.AddHttpClient(HttpClientNames.Recaptcha, httpClient =>
     {
