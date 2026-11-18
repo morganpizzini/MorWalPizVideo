@@ -1,11 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
-using MorWalPizVideo.ShootingRange.Security;
 
 namespace MorWalPizVideo.ShootingRange.Tests.Services;
 
@@ -53,21 +50,14 @@ public sealed class ShootingRangeSecurityFoundationTests
     }
 
     [Fact]
-    public void Legacy_bson_defaults_and_session_fields_remain_additive()
+    public void Legacy_entity_defaults_and_opaque_ids_remain_compatible()
     {
-        var user = BsonSerializer.Deserialize<ShootingRangeUser>(new BsonDocument { ["_id"] = "legacy", ["username"] = "legacy", ["status"] = 1 });
+        var user = new ShootingRangeUser { Id = "legacy", Username = "legacy", Status = ShootingRangeAccountStatus.Approved };
         user.SecurityVersion.Should().BeEmpty();
         user.NormalizedUsername.Should().BeEmpty();
         var session = new ShootingRangeLocalSession { Id = new string('A', 64), UserId = "legacy", CreationDateTime = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), ExpiresUtc = new DateTime(2030, 1, 1, 8, 0, 0, DateTimeKind.Utc) };
-        BsonSerializer.Deserialize<ShootingRangeLocalSession>(session.ToBsonDocument()).Should().Be(session);
-    }
-
-    [Fact]
-    public void Readiness_requires_writable_transaction_topology_and_logical_sessions()
-    {
-        ShootingRangeMongoReadiness.IsTransactionTopology(new BsonDocument { ["isWritablePrimary"] = true }).Should().BeFalse();
-        ShootingRangeMongoReadiness.IsTransactionTopology(new BsonDocument { ["isWritablePrimary"] = true, ["setName"] = "rs0", ["logicalSessionTimeoutMinutes"] = 30 }).Should().BeTrue();
-        ShootingRangeMongoReadiness.IsTransactionTopology(new BsonDocument { ["isWritablePrimary"] = false, ["setName"] = "rs0", ["logicalSessionTimeoutMinutes"] = 30 }).Should().BeFalse();
+        session.Id.Should().HaveLength(64);
+        ShootingRangeIds.NewId().Should().MatchRegex("^[0-9a-f]{24}$");
     }
 
     private sealed class EnvironmentStub(string name) : IHostEnvironment

@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:26-alpine  AS build
 WORKDIR /app
 COPY package.json yarn.lock ./
 COPY fe-packages/models/package.json fe-packages/models/package.json
@@ -12,7 +12,7 @@ RUN yarn workspace @morwalpizvideo/models build
 RUN yarn workspace @morwalpizvideo/services build
 RUN yarn workspace ask.client build:all
 
-FROM node:22-alpine
+FROM node:26-alpine 
 WORKDIR /app
 COPY --from=build /app/package.json /app/yarn.lock ./
 COPY --from=build /app/node_modules ./node_modules

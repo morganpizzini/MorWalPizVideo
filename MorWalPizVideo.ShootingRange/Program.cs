@@ -3,8 +3,10 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using Microsoft.FeatureManagement;
 using Microsoft.Extensions.Options;
-using MongoDB.Driver;
 using System.Threading.RateLimiting;
 using System.Security.Claims;
 using MorWalPizVideo.ShootingRange.Security;
@@ -13,6 +15,7 @@ using MorWalPizVideo.ShootingRange.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+builder.Services.AddFeatureManagement();
 builder.Services.AddControllersWithViews();
 builder.Services.AddAntiforgery(options => { options.HeaderName = "X-CSRF-TOKEN"; options.Cookie.Name = "__Host-shooting-range-csrf"; options.Cookie.HttpOnly = false; options.Cookie.SecurePolicy = CookieSecurePolicy.Always; options.Cookie.SameSite = SameSiteMode.None; });
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins("https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
@@ -38,8 +41,14 @@ builder.Services.AddRateLimiter(options =>
     }));
 });
 builder.Services.AddAuthorization();
-var useMock = builder.Configuration.GetValue("FeatureManagement:EnableMock", builder.Environment.IsDevelopment());
+var migrateDatabase = args.Contains("--migrate-database", StringComparer.Ordinal);
+var useInMemoryDb = !migrateDatabase && await StartupConfigurationValidation.IsFeatureEnabledAsync(
+    builder.Configuration, StartupConfigurationValidation.EnableInMemoryDb);
+var useMock = !migrateDatabase && builder.Configuration.GetValue("FeatureManagement:EnableMock", builder.Environment.IsDevelopment());
+if (useInMemoryDb)
+    useMock = false;
 StartupConfigurationValidation.ValidateMockMode(useMock, builder.Environment);
+StartupConfigurationValidation.ValidateInMemoryDbMode(useInMemoryDb, builder.Environment);
 var enableKeyVault = builder.Configuration.GetValue("FeatureManagement:EnableKeyVault", false);
 IConfigurationProvider? keyVaultProvider = null;
 
@@ -70,44 +79,65 @@ if (enableKeyVault)
     }
 }
 
-if (!useMock && !builder.Environment.IsDevelopment())
-    StartupConfigurationValidation.ValidateMongoConfiguration(builder.Configuration, enableKeyVault ? keyVaultProvider : null);
+if (!useMock && !useInMemoryDb)
+    StartupConfigurationValidation.ValidateSqlServerConfiguration(builder.Configuration, enableKeyVault ? keyVaultProvider : null);
 
-if (useMock) builder.Services.AddSingleton<IShootingRangeRepositorySet, MockShootingRangeRepositorySet>();
+if (useInMemoryDb)
+{
+    builder.Services.AddDbContext<ShootingRangeDbContext>(options => options.UseInMemoryDatabase("ShootingRange"));
+    builder.Services.AddSingleton(new SemaphoreSlim(1, 1));
+    builder.Services.AddScoped<IShootingRangeRepositorySet, SqlServerShootingRangeRepositorySet>();
+}
+else if (useMock) builder.Services.AddSingleton<IShootingRangeRepositorySet, MockShootingRangeRepositorySet>();
 else
 {
-    builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(builder.Configuration["MorWalPizDatabase:ConnectionString"] ?? throw new InvalidOperationException("MorWalPizDatabase:ConnectionString is required.")));
-    builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(builder.Configuration["MorWalPizDatabase:DatabaseName"] ?? "morwalpizvideo"));
-    builder.Services.AddSingleton<IShootingRangeRepositorySet, MongoShootingRangeRepositorySet>();
-    builder.Services.AddHealthChecks().AddCheck<ShootingRangeMongoReadiness>("range-mongo", tags: ["ready", "startup"]);
+    var connectionString = builder.Configuration["ShootingRangeDatabase:ConnectionString"]!;
+    if (migrateDatabase)
+        connectionString = builder.Configuration["ShootingRangeDatabase:MigrationConnectionString"] ?? connectionString;
+    builder.Services.AddDbContext<ShootingRangeDbContext>(options => options.UseSqlServer(connectionString));
+    builder.Services.AddScoped<IShootingRangeRepositorySet, SqlServerShootingRangeRepositorySet>();
+    builder.Services.AddHealthChecks().AddCheck<ShootingRangeSqlServerReadiness>("range-sqlserver", tags: ["ready", "startup"]);
 }
 builder.Services.AddScoped<ShootingRangeService>();
 var app = builder.Build();
-if (!useMock)
+if (!useMock && !useInMemoryDb)
 {
-    await ((MongoShootingRangeRepositorySet)app.Services.GetRequiredService<IShootingRangeRepositorySet>()).VerifySecurityIndexesAsync();
-    await ((MongoShootingRangeRepositorySet)app.Services.GetRequiredService<IShootingRangeRepositorySet>()).VerifyTransactionsAsync();
-    app.Logger.LogInformation("Shooting range transaction guard preflight succeeded.");
+    using var scope = app.Services.CreateScope();
+    var database = scope.ServiceProvider.GetRequiredService<ShootingRangeDbContext>().Database;
+    if (migrateDatabase)
+    {
+        await database.MigrateAsync();
+        return;
+    }
+
+    await scope.ServiceProvider.GetRequiredService<SqlServerShootingRangeRepositorySet>().VerifyReadyAsync(CancellationToken.None);
+    app.Logger.LogInformation("Shooting range SQL Server schema preflight succeeded.");
 }
 app.MapDefaultEndpoints();
 app.UseCors();
 app.Use(async (context, next) =>
 {
     try { await next(context); }
-    catch (Exception error) when (!context.Response.HasStarted && !context.RequestAborted.IsCancellationRequested && error is ArgumentException or KeyNotFoundException or UnauthorizedAccessException or InvalidOperationException or MongoException or OperationCanceledException)
+    catch (Exception error) when (!context.Response.HasStarted && !context.RequestAborted.IsCancellationRequested && error is ArgumentException or KeyNotFoundException or UnauthorizedAccessException or InvalidOperationException or DbUpdateException or SqlException or OperationCanceledException)
     {
+        var uniqueViolation = StartupConfigurationValidation.IsUniqueConstraintViolation(error);
         var status = error switch
         {
             ArgumentException => StatusCodes.Status400BadRequest,
             KeyNotFoundException => StatusCodes.Status404NotFound,
             UnauthorizedAccessException => StatusCodes.Status403Forbidden,
             InvalidOperationException => StatusCodes.Status409Conflict,
-            MongoWriteException mongo when mongo.WriteError.Category == ServerErrorCategory.DuplicateKey => StatusCodes.Status409Conflict,
+            _ when uniqueViolation => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status503ServiceUnavailable
         };
         app.Logger.LogWarning("Shooting range request rejected with {StatusCode} ({ErrorType}).", status, error.GetType().Name);
         context.Response.StatusCode = status;
-        await context.Response.WriteAsJsonAsync(new { message = status == 503 ? "Transactional storage is unavailable. Refresh the current state before retrying." : error is MongoException ? "The selected slot is already pending or booked." : error.Message }, context.RequestAborted);
+        var message = status == 503
+            ? "Transactional storage is unavailable. Refresh the current state before retrying."
+            : uniqueViolation
+                ? "The selected value conflicts with an existing record."
+                : error.Message;
+        await context.Response.WriteAsJsonAsync(new { message }, context.RequestAborted);
     }
 });
 app.UseAuthentication();
@@ -131,10 +161,26 @@ public partial class Program { }
 
 internal static class StartupConfigurationValidation
 {
+    internal const string EnableInMemoryDb = "EnableInMemoryDb";
+
+    internal static async Task<bool> IsFeatureEnabledAsync(IConfiguration configuration, string featureName)
+    {
+        var featureServices = new ServiceCollection();
+        featureServices.AddFeatureManagement(configuration);
+        using var provider = featureServices.BuildServiceProvider();
+        return await provider.GetRequiredService<IFeatureManager>().IsEnabledAsync(featureName);
+    }
+
     internal static void ValidateMockMode(bool useMock, IHostEnvironment environment)
     {
         if (useMock && !environment.IsDevelopment() && !environment.IsEnvironment("Test"))
             throw new InvalidOperationException("ShootingRange mock storage is allowed only in Development or Test.");
+    }
+
+    internal static void ValidateInMemoryDbMode(bool useInMemoryDb, IHostEnvironment environment)
+    {
+        if (useInMemoryDb && !environment.IsDevelopment() && !environment.IsEnvironment("Test"))
+            throw new InvalidOperationException("ShootingRange in-memory database is allowed only in Development or Test.");
     }
 
     internal static void HandleKeyVaultFailure(string message, bool useMock, IHostEnvironment environment, Exception? innerException = null)
@@ -145,19 +191,21 @@ internal static class StartupConfigurationValidation
         Console.WriteLine($"Warning: {message}");
     }
 
-    internal static void ValidateMongoConfiguration(IConfiguration configuration, IConfigurationProvider? keyVaultProvider)
+    internal static void ValidateSqlServerConfiguration(IConfiguration configuration, IConfigurationProvider? keyVaultProvider)
     {
-        var requiredKeys = new[]
-        {
-            "MorWalPizDatabase:ConnectionString",
-            "MorWalPizDatabase:DatabaseName"
-        };
+        const string connectionStringKey = "ShootingRangeDatabase:ConnectionString";
 
-        var missingKeys = requiredKeys
-            .Where(key => string.IsNullOrWhiteSpace(configuration[key]) || (keyVaultProvider is not null && (!keyVaultProvider.TryGet(key, out var value) || string.IsNullOrWhiteSpace(value))))
-            .ToArray();
+        var missing = string.IsNullOrWhiteSpace(configuration[connectionStringKey]) ||
+            (keyVaultProvider is not null && (!keyVaultProvider.TryGet(connectionStringKey, out var value) || string.IsNullOrWhiteSpace(value)));
 
-        if (missingKeys.Length > 0)
-            throw new InvalidOperationException($"Required production configuration is missing: {string.Join(", ", missingKeys)}.");
+        if (missing)
+            throw new InvalidOperationException($"Required Azure SQL configuration is missing: {connectionStringKey}.");
     }
+
+    internal static bool IsUniqueConstraintViolation(Exception error) => error switch
+    {
+        SqlException { Number: 2601 or 2627 } => true,
+        DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => true,
+        _ => false
+    };
 }

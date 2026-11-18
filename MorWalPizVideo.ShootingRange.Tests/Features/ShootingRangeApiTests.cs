@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MorWalPizVideo.ShootingRange.Contracts;
@@ -19,6 +20,21 @@ public sealed class ShootingRangeApiTests
 {
     private const string Origin = "https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net";
     private const string Password = "test-password-only-123";
+
+    [Fact]
+    public async Task In_memory_database_flag_uses_the_ef_provider_and_shares_data_between_scopes()
+    {
+        await using var factory = new Factory(enableInMemoryDb: true);
+        using var firstScope = factory.Services.CreateScope();
+        var firstRepositories = firstScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        firstScope.ServiceProvider.GetRequiredService<ShootingRangeDbContext>().Database.IsInMemory().Should().BeTrue();
+        firstRepositories.Should().BeOfType<SqlServerShootingRangeRepositorySet>();
+        await firstRepositories.Users.InsertAsync(new() { Id = "memory-user", Username = "memory-user" });
+
+        using var secondScope = factory.Services.CreateScope();
+        var secondRepositories = secondScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        (await secondRepositories.Users.GetAsync("memory-user")).Should().NotBeNull();
+    }
 
     [Theory]
     [InlineData(Origin, true)]
@@ -311,9 +327,17 @@ public sealed class ShootingRangeApiTests
 
     private sealed class Factory : WebApplicationFactory<ShootingRangeController>
     {
+        private readonly bool enableInMemoryDb;
+
+        public Factory(bool enableInMemoryDb = false)
+        {
+            this.enableInMemoryDb = enableInMemoryDb;
+            Environment.SetEnvironmentVariable("FeatureManagement__EnableMock", (!enableInMemoryDb).ToString());
+            Environment.SetEnvironmentVariable("FeatureManagement__EnableInMemoryDb", enableInMemoryDb.ToString());
+        }
+
         static Factory()
         {
-            Environment.SetEnvironmentVariable("FeatureManagement__EnableMock", "true");
             Environment.SetEnvironmentVariable("FeatureManagement__EnableKeyVault", "false");
         }
 
@@ -322,7 +346,8 @@ public sealed class ShootingRangeApiTests
             builder.UseEnvironment("Test");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["FeatureManagement:EnableMock"] = "true",
+                ["FeatureManagement:EnableMock"] = (!enableInMemoryDb).ToString(),
+                ["FeatureManagement:EnableInMemoryDb"] = enableInMemoryDb.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["Logging:LogLevel:Default"] = "Error"
             }));

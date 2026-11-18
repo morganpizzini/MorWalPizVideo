@@ -1,5 +1,3 @@
-using MongoDB.Bson.Serialization.Attributes;
-
 namespace MorWalPizVideo.ShootingRange.Models;
 
 public enum ShootingRangeAccountStatus { Pending, Approved, Disabled }
@@ -11,79 +9,79 @@ public sealed record Mechanism(string Type, int Quantity);
 
 public sealed record ShootingRangeConfig : BaseEntity
 {
-    [BsonElement("name")] public string Name { get; init; } = "Pepperbox";
-    [BsonElement("timeZone")] public string TimeZone { get; init; } = "Europe/Rome";
-    [BsonElement("sessionMode")] public ShootingRangeSessionMode SessionMode { get; init; } = ShootingRangeSessionMode.Periods;
-    [BsonElement("openingDays")] public List<DayOfWeek> OpeningDays { get; init; } = [DayOfWeek.Saturday, DayOfWeek.Sunday];
-    [BsonElement("morningStart")] public TimeSpan MorningStart { get; init; } = new(9, 0, 0);
-    [BsonElement("morningEnd")] public TimeSpan MorningEnd { get; init; } = new(13, 0, 0);
-    [BsonElement("afternoonStart")] public TimeSpan AfternoonStart { get; init; } = new(14, 0, 0);
-    [BsonElement("afternoonEnd")] public TimeSpan AfternoonEnd { get; init; } = new(18, 0, 0);
-    [BsonElement("hourlyMinutes")] public int HourlyMinutes { get; init; } = 60;
-    [BsonElement("continuousStart")] public TimeSpan? ContinuousStart { get; init; }
-    [BsonElement("continuousEnd")] public TimeSpan? ContinuousEnd { get; init; }
-    [BsonElement("reservedReleaseDaysBefore")] public int ReservedReleaseDaysBefore { get; init; } = 2;
+    public string Name { get; init; } = "Pepperbox";
+    public string TimeZone { get; init; } = "Europe/Rome";
+    public ShootingRangeSessionMode SessionMode { get; init; } = ShootingRangeSessionMode.Periods;
+    public List<DayOfWeek> OpeningDays { get; init; } = [DayOfWeek.Saturday, DayOfWeek.Sunday];
+    public TimeSpan MorningStart { get; init; } = new(9, 0, 0);
+    public TimeSpan MorningEnd { get; init; } = new(13, 0, 0);
+    public TimeSpan AfternoonStart { get; init; } = new(14, 0, 0);
+    public TimeSpan AfternoonEnd { get; init; } = new(18, 0, 0);
+    public int HourlyMinutes { get; init; } = 60;
+    public TimeSpan? ContinuousStart { get; init; }
+    public TimeSpan? ContinuousEnd { get; init; }
+    public int ReservedReleaseDaysBefore { get; init; } = 2;
 }
 
 public sealed record ShootingRangeBay : BaseEntity
 {
-    [BsonElement("code")] public string Code { get; init; } = string.Empty;
-    [BsonElement("mechanisms")] public List<Mechanism> Mechanisms { get; init; } = [];
-    [BsonElement("partitions")] public int Partitions { get; init; }
-    [BsonElement("plates")] public int Plates { get; init; }
-    [BsonElement("pepper")] public bool Pepper { get; init; }
-    [BsonElement("status")] public ShootingRangeBayStatus Status { get; init; } = ShootingRangeBayStatus.Available;
-    [BsonElement("description")] public string Description { get; init; } = string.Empty;
-    [BsonElement("reservedUntilUtc")] public DateTime? ReservedUntilUtc { get; init; }
-    [BsonElement("whitelistUserIds")] public List<string> WhitelistUserIds { get; init; } = [];
+    public string Code { get; init; } = string.Empty;
+    public List<Mechanism> Mechanisms { get; init; } = [];
+    public int Partitions { get; init; }
+    public int Plates { get; init; }
+    public bool Pepper { get; init; }
+    public ShootingRangeBayStatus Status { get; init; } = ShootingRangeBayStatus.Available;
+    public string Description { get; init; } = string.Empty;
+    public DateTime? ReservedUntilUtc { get; init; }
+    public List<string> WhitelistUserIds { get; init; } = [];
 }
 
 public sealed record ShootingRangeException : BaseEntity
 {
-    [BsonElement("localDate")] public DateOnly LocalDate { get; init; }
-    [BsonElement("bayId")] public string? BayId { get; init; }
-    [BsonElement("isClosed")] public bool IsClosed { get; init; }
-    [BsonElement("reason")] public string Reason { get; init; } = string.Empty;
+    public DateOnly LocalDate { get; init; }
+    public string? BayId { get; init; }
+    public bool IsClosed { get; init; }
+    public string Reason { get; init; } = string.Empty;
 }
 
 public sealed record ShootingRangeUser : BaseEntity
 {
-    [BsonElement("username")] public string Username { get; init; } = string.Empty;
-    [BsonElement("normalizedUsername"), System.Text.Json.Serialization.JsonIgnore] public string NormalizedUsername { get; init; } = string.Empty;
-    [BsonElement("firstName")] public string FirstName { get; init; } = string.Empty;
-    [BsonElement("lastName")] public string LastName { get; init; } = string.Empty;
-    [BsonElement("passwordHash")] public string PasswordHash { get; init; } = string.Empty;
-    [BsonElement("status")] public ShootingRangeAccountStatus Status { get; init; } = ShootingRangeAccountStatus.Pending;
-    [BsonElement("isAdmin")] public bool IsAdmin { get; init; }
-    [BsonElement("forcePasswordChange")] public bool ForcePasswordChange { get; init; }
-    [BsonElement("securityVersion"), System.Text.Json.Serialization.JsonIgnore] public string SecurityVersion { get; init; } = string.Empty;
+    public string Username { get; init; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore] public string NormalizedUsername { get; init; } = string.Empty;
+    public string FirstName { get; init; } = string.Empty;
+    public string LastName { get; init; } = string.Empty;
+    public string PasswordHash { get; init; } = string.Empty;
+    public ShootingRangeAccountStatus Status { get; init; } = ShootingRangeAccountStatus.Pending;
+    public bool IsAdmin { get; init; }
+    public bool ForcePasswordChange { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public string SecurityVersion { get; init; } = string.Empty;
 }
 
 public sealed record ShootingRangeLocalSession : BaseEntity
 {
-    [BsonElement("userId")] public string UserId { get; init; } = string.Empty;
-    [BsonElement("securityVersion")] public string SecurityVersion { get; init; } = string.Empty;
-    [BsonElement("expiresUtc")] public DateTime ExpiresUtc { get; init; }
-    [BsonElement("revoked")] public bool Revoked { get; init; }
+    public string UserId { get; init; } = string.Empty;
+    public string SecurityVersion { get; init; } = string.Empty;
+    public DateTime ExpiresUtc { get; init; }
+    public bool Revoked { get; init; }
 }
 
 public sealed record ShootingRangeBooking : BaseEntity
 {
-    [BsonElement("userId")] public string UserId { get; init; } = string.Empty;
-    [BsonElement("bayId")] public string BayId { get; init; } = string.Empty;
-    [BsonElement("localDate")] public DateOnly LocalDate { get; init; }
-    [BsonElement("periodKey")] public string PeriodKey { get; init; } = string.Empty;
-    [BsonElement("startUtc")] public DateTime StartUtc { get; init; }
-    [BsonElement("endUtc")] public DateTime EndUtc { get; init; }
-    [BsonElement("request")] public string Request { get; init; } = string.Empty;
-    [BsonElement("status")] public ShootingRangeBookingStatus Status { get; init; } = ShootingRangeBookingStatus.Pending;
+    public string UserId { get; init; } = string.Empty;
+    public string BayId { get; init; } = string.Empty;
+    public DateOnly LocalDate { get; init; }
+    public string PeriodKey { get; init; } = string.Empty;
+    public DateTime StartUtc { get; init; }
+    public DateTime EndUtc { get; init; }
+    public string Request { get; init; } = string.Empty;
+    public ShootingRangeBookingStatus Status { get; init; } = ShootingRangeBookingStatus.Pending;
 }
 
 public sealed record ShootingRangeThread : BaseEntity
 {
-    [BsonElement("userId")] public string UserId { get; init; } = string.Empty;
-    [BsonElement("subject")] public string Subject { get; init; } = string.Empty;
-    [BsonElement("messages")] public List<ShootingRangeMessage> Messages { get; init; } = [];
+    public string UserId { get; init; } = string.Empty;
+    public string Subject { get; init; } = string.Empty;
+    public List<ShootingRangeMessage> Messages { get; init; } = [];
 }
 
 public sealed record ShootingRangeMessage(string AuthorUserId, bool FromAdmin, string Text, DateTime CreatedUtc);

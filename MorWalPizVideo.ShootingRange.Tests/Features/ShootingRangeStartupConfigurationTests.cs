@@ -6,40 +6,35 @@ using Microsoft.Extensions.Configuration.Memory;
 public sealed class ShootingRangeStartupConfigurationTests
 {
     [Fact]
-    public void DirectMongoConfigurationIsAcceptedWhenKeyVaultIsDisabled()
+    public void DirectSqlServerConfigurationIsAcceptedWhenKeyVaultIsDisabled()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["MorWalPizDatabase:ConnectionString"] = "mongodb://localhost",
-                ["MorWalPizDatabase:DatabaseName"] = "shooting-range"
+                ["ShootingRangeDatabase:ConnectionString"] = "test-connection"
             })
             .Build();
 
-        StartupConfigurationValidation.ValidateMongoConfiguration(configuration, null);
+        StartupConfigurationValidation.ValidateSqlServerConfiguration(configuration, null);
     }
 
     [Fact]
-    public void KeyVaultConfigurationDoesNotFallBackToDirectMongoValues()
+    public void KeyVaultConfigurationDoesNotFallBackToDirectDatabaseValues()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["MorWalPizDatabase:ConnectionString"] = "mongodb://direct-fallback",
-                ["MorWalPizDatabase:DatabaseName"] = "shooting-range"
+                ["ShootingRangeDatabase:ConnectionString"] = "direct-fallback"
             })
             .Build();
         var keyVaultProvider = new MemoryConfigurationProvider(new MemoryConfigurationSource
         {
-            InitialData = new Dictionary<string, string?>
-            {
-                ["MorWalPizDatabase:ConnectionString"] = "mongodb://vault"
-            }
+            InitialData = new Dictionary<string, string?>()
         });
 
-        var action = () => StartupConfigurationValidation.ValidateMongoConfiguration(configuration, keyVaultProvider);
+        var action = () => StartupConfigurationValidation.ValidateSqlServerConfiguration(configuration, keyVaultProvider);
 
         action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*MorWalPizDatabase:DatabaseName*");
+            .WithMessage("*ShootingRangeDatabase:ConnectionString*");
     }
 }

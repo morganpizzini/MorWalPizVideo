@@ -40,9 +40,13 @@ Do not use a historical `TestResults` artifact as current pass/fail evidence.
   ```
 
 - Most backend tests use fake services, test authentication, and isolated
-  mock scenarios. The Shooting Range real-Mongo deployment gate additionally
-  requires the environment-managed `SHOOTING_RANGE_TEST_MONGO_URI`; do not
-  place its value in documentation or commands.
+  mock scenarios. The Shooting Range SQL Server integration gate requires
+  separate `SHOOTING_RANGE_TEST_SQL_HOST`, `SHOOTING_RANGE_TEST_SQL_PORT`,
+  `SHOOTING_RANGE_TEST_SQL_DATABASE`, and
+  `SHOOTING_RANGE_TEST_SQL_USERNAME` settings, plus an optional
+  `SHOOTING_RANGE_TEST_SQL_PASSWORD`, for an explicitly disposable SQL Server
+  that can create and drop uniquely named databases. Keep any password in
+  environment-managed configuration, not documentation or source.
 
 ## .NET Test Projects
 
@@ -213,11 +217,12 @@ dotnet test MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.cspr
 
 ```powershell
 dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange --logger "trx;LogFileName=shooting-range-related.trx" --results-directory ./TestResults/shooting-range --verbosity normal
-dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeMongoTests --logger "trx;LogFileName=shooting-range-mongo.trx" --results-directory ./TestResults/shooting-range --verbosity normal
+dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeSqlServerTests --logger "trx;LogFileName=shooting-range-sqlserver.trx" --results-directory ./TestResults/shooting-range --verbosity normal
 ```
 
-The second command is the environment-dependent real-Mongo gate and should
-not be substituted for the normal local mock-mode run.
+The second command is the environment-dependent real-SQL-Server gate. It
+creates and drops an isolated database, so use only a disposable SQL Server
+instance. It must not be substituted for the normal local mock-mode run.
 
 ### Central frontend CI shape
 

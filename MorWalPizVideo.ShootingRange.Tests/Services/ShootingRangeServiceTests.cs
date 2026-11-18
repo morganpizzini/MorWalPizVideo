@@ -62,17 +62,15 @@ public sealed class ShootingRangeServiceTests
     }
 
     [Fact]
-    public void Bson_preserves_numeric_modes_object_ids_and_default_config_id()
+    public void Sql_entities_preserve_numeric_modes_and_string_identifiers()
     {
         var config = new ShootingRangeConfig { Id = "default" };
-        var document = MongoDB.Bson.BsonExtensionMethods.ToBsonDocument(config);
-        document["_id"].AsString.Should().Be("default");
-        document["sessionMode"].AsInt32.Should().Be(0);
-        MongoDB.Bson.Serialization.BsonSerializer.Deserialize<ShootingRangeConfig>(document).ContinuousStart.Should().BeNull();
-        var id = MongoDB.Bson.ObjectId.GenerateNewId();
-        var bayDocument = MongoDB.Bson.BsonExtensionMethods.ToBsonDocument(new ShootingRangeBay { Id = id.ToString() });
-        bayDocument["_id"].AsObjectId.Should().Be(id);
-        MongoDB.Bson.Serialization.BsonSerializer.Deserialize<ShootingRangeBay>(bayDocument).Id.Should().Be(id.ToString());
+        config.Id.Should().Be("default");
+        config.SessionMode.Should().Be(ShootingRangeSessionMode.Periods);
+        config.ContinuousStart.Should().BeNull();
+        var id = "67f4b52d57af68ac3ec480c1";
+        new ShootingRangeBay { Id = id }.Id.Should().Be(id);
+        ShootingRangeIds.NewId().Should().MatchRegex("^[0-9a-f]{24}$");
         ((int)ShootingRangeSessionMode.Hourly).Should().Be(1);
         ((int)ShootingRangeSessionMode.HourlyContinuous).Should().Be(2);
     }

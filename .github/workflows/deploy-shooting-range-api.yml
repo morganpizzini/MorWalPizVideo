@@ -13,6 +13,8 @@ on:
       - 'MorWalPizVideo.ServiceDefaults/**'
       - 'MorWalPiz.Contracts/**'
       - 'MorWalPizVideo.ShootingRange.Tests/**'
+      - 'MorWalPizVideo.ShootingRange.Migration/**'
+      - 'MorWalPizVideo.sln'
       - 'MorWalPizVideo.ShootingRange/Dockerfile'
       - '.dockerignore'
       - '.github/actions/build-container-image/**'
@@ -31,7 +33,6 @@ jobs:
     name: Build and Test Shooting Range API
     runs-on: ubuntu-latest
     environment: production
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,9 +46,13 @@ jobs:
         run: |
           dotnet restore MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj
           dotnet restore MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj
+          dotnet restore MorWalPizVideo.ShootingRange.Migration/MorWalPizVideo.ShootingRange.Migration.csproj
 
       - name: Build API
         run: dotnet build MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-restore
+
+      - name: Build Mongo-to-Azure SQL operator migration tool
+        run: dotnet build MorWalPizVideo.ShootingRange.Migration/MorWalPizVideo.ShootingRange.Migration.csproj --configuration Release --no-restore
 
       - name: Run focused Shooting Range tests with mock repositories
         env:
@@ -56,16 +61,37 @@ jobs:
           dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange --logger "trx;LogFileName=shooting-range-related.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
           pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-related.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; if ($total -le 0) { throw "Shooting Range test filter selected no tests." }'
 
-      - name: Require real Mongo transaction and concurrency release gate
-        env:
-          SHOOTING_RANGE_TEST_MONGO_URI: ${{ secrets.SHOOTING_RANGE_TEST_MONGO_URI }}
+      - name: Start disposable SQL Server
+        shell: bash
         run: |
-          if [ -z "$SHOOTING_RANGE_TEST_MONGO_URI" ]; then
-            echo "Release blocked: configure a disposable transaction-capable Mongo test server in the production environment." >&2
-            exit 1
-          fi
-          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~ShootingRangeMongoTests --logger "trx;LogFileName=shooting-range-mongo.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
-          pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-mongo.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; $executed = [int]$result.TestRun.ResultSummary.Counters.executed; if ($total -le 0 -or $executed -le 0) { throw "Shooting Range Mongo test filter selected or executed no tests." }'
+          password="Range!$(openssl rand -hex 24)aA9"
+          echo "::add-mask::$password"
+          printf 'SHOOTING_RANGE_TEST_SQL_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+          docker run --detach --name shooting-range-sqlserver \
+            --publish 1433:1433 \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD="$password" \
+            mcr.microsoft.com/mssql/server:2022-latest
+          for attempt in $(seq 1 60); do
+            if docker exec shooting-range-sqlserver /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -P "$password" -C -Q "SELECT 1" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs shooting-range-sqlserver
+          exit 1
+
+      - name: Require SQL Server transaction and concurrency release gate
+        env:
+          SHOOTING_RANGE_TEST_SQL_HOST: localhost
+          SHOOTING_RANGE_TEST_SQL_PORT: '1433'
+          SHOOTING_RANGE_TEST_SQL_DATABASE: master
+          SHOOTING_RANGE_TEST_SQL_USERNAME: sa
+        run: |
+          dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --no-build --filter FullyQualifiedName~ShootingRangeSqlServerTests --logger "trx;LogFileName=shooting-range-sqlserver.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
+          pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-sqlserver.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; $executed = [int]$result.TestRun.ResultSummary.Counters.executed; if ($total -le 0 -or $executed -le 0) { throw "Shooting Range SQL Server test filter selected or executed no tests." }'
 
       - name: Publish Shooting Range test results
         if: always()

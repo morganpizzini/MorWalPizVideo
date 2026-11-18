@@ -4,7 +4,6 @@ using MorWalPizVideo.ShootingRange.Contracts;
 using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Security;
-using MongoDB.Bson;
 
 namespace MorWalPizVideo.ShootingRange.Services;
 
@@ -15,7 +14,7 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
         var username = request.Username.Trim().ToLowerInvariant();
         if (await repositories.Users.FindByUsernameAsync(username) is not null) throw new InvalidOperationException("Username already exists.");
         var hash = PasswordHashing.HashPassword(request.Password, out var salt);
-        return await repositories.Users.InsertAsync(new ShootingRangeUser { Id = ObjectId.GenerateNewId().ToString(), Username = username, FirstName = request.FirstName.Trim(), LastName = request.LastName.Trim(), PasswordHash = $"{hash}:{salt}" });
+        return await repositories.Users.InsertAsync(new ShootingRangeUser { Id = ShootingRangeIds.NewId(), Username = username, FirstName = request.FirstName.Trim(), LastName = request.LastName.Trim(), PasswordHash = $"{hash}:{salt}" });
     });
 
     public async Task<ShootingRangeUser?> AuthenticateAsync(string username, string password)
@@ -80,7 +79,7 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
         var (start, end) = ResolvePeriod(config, request.LocalDate, request.PeriodKey);
         if ((request.ExpectedStartUtc.HasValue || request.ExpectedEndUtc.HasValue) && (request.ExpectedStartUtc != start || request.ExpectedEndUtc != end))
             throw new ArgumentException("The schedule changed. Refresh sessions before booking.");
-        var booking = new ShootingRangeBooking { Id = ObjectId.GenerateNewId().ToString(), UserId = userId, BayId = request.BayId, LocalDate = request.LocalDate, PeriodKey = request.PeriodKey, StartUtc = start, EndUtc = end, Request = request.Request.Trim() };
+        var booking = new ShootingRangeBooking { Id = ShootingRangeIds.NewId(), UserId = userId, BayId = request.BayId, LocalDate = request.LocalDate, PeriodKey = request.PeriodKey, StartUtc = start, EndUtc = end, Request = request.Request.Trim() };
         return await repositories.Bookings.InsertIfAvailableAsync(booking, cancellationToken);
     }, cancellationToken);
 

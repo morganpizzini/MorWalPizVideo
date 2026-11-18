@@ -4,7 +4,7 @@
 
 Each API is an independent ASP.NET Core host. Startup selects feature flags, configuration providers, authentication, repositories, services, health checks, and middleware.
 
-Production persistence uses Mongo repositories. Development/test may select code-initialized mock repositories through the Domain-owned `IMockScenarioLifecycle`; the default is `Primary`, with named scenario selection from startup configuration and fixture overrides. Mock selection is rejected outside Development or Test, and production registrations continue to construct Mongo/external providers only when mock mode is off.
+Production persistence uses MongoDB, PostgreSQL, or SQL Server according to the independently owned host. Development/test may select code-initialized mock repositories through the Domain-owned `IMockScenarioLifecycle`; the default is `Primary`, with named scenario selection from startup configuration and fixture overrides. Mock selection is rejected outside Development or Test, and production registrations construct external providers only when mock mode is off.
 
 ## Request Flow
 
@@ -14,7 +14,7 @@ sequenceDiagram
     participant Controller
     participant App as Application service
     participant Repo as Repository interface
-    participant Store as MongoDB or mock scenario
+    participant Store as relational/document database or mock
     Client->>Controller: Versioned DTO request
     Controller->>Controller: Authenticate and validate
     Controller->>App: Execute use case
@@ -112,6 +112,16 @@ operational verification before permanent-erasure claims.
 - User lookups must use the repository ID path, which supports legacy BSON `ObjectId` and string `_id` values; do not apply string operators such as `ToLower()` to `User.Id` in Mongo predicates.
 
 Full collection materialization and in-memory sorting/filtering bypass Mongo indexes. New repository methods must push predicates, projections, ordering, limits, and atomic updates into MongoDB.
+
+### Azure SQL
+
+The standalone Shooting Range API uses EF Core and the SQL Server provider for
+Azure SQL Database persistence. Its write repositories share a guarded
+transaction that acquires the provisioned Range guard row with
+`UPDLOCK, ROWLOCK` before reading domain state and committing changes. SQL
+Server schema changes are versioned EF migrations and are applied explicitly,
+never automatically during ordinary API startup. Shooting Range does not
+require MongoDB at runtime.
 
 ### Mock Data
 

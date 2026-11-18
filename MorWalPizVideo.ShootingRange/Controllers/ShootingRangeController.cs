@@ -24,14 +24,18 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpPost("auth/login"), AllowAnonymous, ValidateAntiForgeryToken, EnableRateLimiting("range-login")]
     public async Task<IActionResult> Login(ShootingRangeLoginRequest request, CancellationToken cancellationToken)
     {
-        return await repositories.ExecuteGuardedAsync<IActionResult>(async () =>
+        var transition = await repositories.ExecuteGuardedAsync(async () =>
         {
             var user = await service.AuthenticateAsync(request.Username, request.Password);
-            if (user is null) return Unauthorized(new { message = "Credentials invalid or account not approved." });
+            if (user is null) return (User: (ShootingRangeUser?)null, Session: (ShootingRangeLocalSession?)null);
             await localSessions.RevokeAsync(User, cancellationToken);
-            await localSessions.SignInAsync(HttpContext, user, cancellationToken);
-            return Ok(ToAccount(user));
+            var session = await localSessions.CreateSessionAsync(user, cancellationToken);
+            return (User: user, Session: session);
         }, cancellationToken);
+        if (transition.User is null || transition.Session is null)
+            return Unauthorized(new { message = "Credentials invalid or account not approved." });
+        await localSessions.SignInAsync(HttpContext, transition.User, transition.Session);
+        return Ok(ToAccount(transition.User));
     }
 
     [HttpGet("auth/session"), Authorize]
@@ -46,16 +50,22 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
 
     [HttpPost("auth/password"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(PasswordChangeRequest request, CancellationToken cancellationToken)
-        => await repositories.ExecuteGuardedAsync<IActionResult>(async () =>
+    {
+        var transition = await repositories.ExecuteGuardedAsync(async () =>
     {
         var user = await repositories.Users.GetAsync(UserId(), cancellationToken);
-        if (user is null || user.Status != ShootingRangeAccountStatus.Approved || !PasswordMatches(user, request.CurrentPassword)) return Unauthorized();
+        if (user is null || user.Status != ShootingRangeAccountStatus.Approved || !PasswordMatches(user, request.CurrentPassword))
+            return (User: (ShootingRangeUser?)null, Session: (ShootingRangeLocalSession?)null);
         var hash = PasswordHashing.HashPassword(request.NewPassword, out var salt);
         var updated = await repositories.Users.ReplaceAsync(user with { PasswordHash = $"{hash}:{salt}", ForcePasswordChange = false, SecurityVersion = Guid.NewGuid().ToString("N") }, cancellationToken);
         await localSessions.RevokeAsync(User, cancellationToken);
-        await localSessions.SignInAsync(HttpContext, updated, cancellationToken);
+        var session = await localSessions.CreateSessionAsync(updated, cancellationToken);
+        return (User: updated, Session: session);
+        }, cancellationToken);
+        if (transition.User is null || transition.Session is null) return Unauthorized();
+        await localSessions.SignInAsync(HttpContext, transition.User, transition.Session);
         return NoContent();
-    }, cancellationToken);
+    }
 
     [HttpGet("config"), AllowAnonymous]
     public Task<ShootingRangeConfig> Config(CancellationToken cancellationToken) => service.GetConfigAsync(cancellationToken);
@@ -101,7 +111,7 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public async Task<IReadOnlyList<ShootingRangeException>> Exceptions(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Exceptions.GetAllAsync(cancellationToken); }
 
     [HttpPost("admin/exceptions"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public Task<ShootingRangeException> AddException(ShootingRangeException exception, CancellationToken cancellationToken) => service.AdminMutationAsync(UserId(), () => repositories.Exceptions.InsertAsync(exception with { Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString() }, cancellationToken), cancellationToken);
+    public Task<ShootingRangeException> AddException(ShootingRangeException exception, CancellationToken cancellationToken) => service.AdminMutationAsync(UserId(), () => repositories.Exceptions.InsertAsync(exception with { Id = ShootingRangeIds.NewId() }, cancellationToken), cancellationToken);
 
     [HttpPut("admin/exceptions/{id}"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
     public Task<ShootingRangeException> SaveException(string id, ShootingRangeException exception, CancellationToken cancellationToken) => service.AdminMutationAsync(UserId(), async () =>
@@ -123,7 +133,7 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpPost("messages"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> OpenMessage(ThreadRequest request, CancellationToken cancellationToken)
     {
-        var thread = new ShootingRangeThread { Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(), UserId = UserId(), Subject = request.Subject.Trim(), Messages = [new(UserId(), false, request.Text.Trim(), DateTime.UtcNow)] };
+        var thread = new ShootingRangeThread { Id = ShootingRangeIds.NewId(), UserId = UserId(), Subject = request.Subject.Trim(), Messages = [new(UserId(), false, request.Text.Trim(), DateTime.UtcNow)] };
         await repositories.Threads.InsertAsync(thread, cancellationToken);
         return Created($"api/shooting-range/messages/{thread.Id}", thread);
     }

@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:26-alpine  AS build
 
 WORKDIR /app
 COPY package.json yarn.lock ./
@@ -14,7 +14,7 @@ RUN yarn workspace @morwalpizvideo/models build \
 	&& yarn workspace @morwalpiz/layout build \
 	&& yarn workspace shooting-range.client build:all
 
-FROM node:22-alpine
+FROM node:26-alpine 
 
 WORKDIR /app
 

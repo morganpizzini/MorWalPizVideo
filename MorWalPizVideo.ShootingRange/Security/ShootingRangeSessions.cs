@@ -13,15 +13,17 @@ public sealed class ShootingRangeSessions(IShootingRangeRepositorySet repositori
     public const string ForcedChangeClaim = "range_password_change";
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
 
-    public async Task SignInAsync(HttpContext context, ShootingRangeUser user, CancellationToken cancellationToken)
-    {
-        var session = await repositories.LocalSessions.InsertAsync(new ShootingRangeLocalSession
+    public Task<ShootingRangeLocalSession> CreateSessionAsync(ShootingRangeUser user, CancellationToken cancellationToken) =>
+        repositories.LocalSessions.InsertAsync(new ShootingRangeLocalSession
         {
             Id = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
             UserId = user.Id,
             SecurityVersion = user.SecurityVersion,
             ExpiresUtc = repositories.Clock.GetUtcNow().Add(Lifetime).UtcDateTime
         }, cancellationToken);
+
+    public async Task SignInAsync(HttpContext context, ShootingRangeUser user, ShootingRangeLocalSession session)
+    {
         await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Principal(user, session.Id), new AuthenticationProperties
         {
             ExpiresUtc = new DateTimeOffset(session.ExpiresUtc),

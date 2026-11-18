@@ -13,13 +13,13 @@ Current source still allows anonymous domain reads/registration, lacks a fallbac
 
 Apply deny-by-default authorization to every Shooting Range domain endpoint. The only anonymous technical exceptions are login, CSRF token acquisition, and liveness/readiness probes. Availability requires authentication, and administrator operations additionally require the `admin` role.
 
-The first administrator is inserted manually into MongoDB. No bootstrap-admin endpoint is introduced, and credentials or reusable password hashes are never stored in source or documentation.
+The first administrator is inserted manually into the Shooting Range Azure SQL database using the current password-hashing implementation. No bootstrap-admin endpoint is introduced, and credentials or reusable password hashes are never stored in source or documentation.
 
 Public self-registration is not part of the approved release posture. Administrator-created ordinary users are the working assumption, but ordinary-user onboarding remains a product decision that may be revised without changing the service boundary.
 
 Keep models, contracts, services, repositories, authentication, and API transport locally owned by the Shooting Range projects. The Range client may consume `@morwalpiz/layout` for shared presentation components and align its visual system with Shooter Workshop. This supersedes the earlier prohibition on shared frontend packages: that restriction reflected the former layout implementation, while the consolidated layout and theme now provide the intended common presentation layer. Do not import Workshop application source, account/authentication providers, API services, or domain models. The UI remains limited to authentication and session restoration, forced password change, logout, availability and booking, the current user's bookings, and the existing minimal administrator workflows.
 
-Production exposure is gated on explicit credentialed CORS, safe response DTOs, account-state revalidation, login throttling, MongoDB uniqueness and readiness, authoritative booking validation, production rejection of mock mode, persistent Data Protection where required, and executable security/integrity tests.
+Production exposure is gated on explicit credentialed CORS, safe response DTOs, account-state revalidation, login throttling, Azure SQL uniqueness and readiness, authoritative booking validation, production rejection of mock mode, persistent Data Protection where required, and executable security/integrity tests.
 
 ## Alternatives
 
@@ -31,7 +31,7 @@ Production exposure is gated on explicit credentialed CORS, safe response DTOs, 
 
 ## Consequences
 
-The implemented foundation protects login with pre-login CSRF and per-IP throttling (10 attempts per five minutes per process), refreshes CSRF after identity changes, and uses revocable eight-hour non-sliding sessions. Logout revokes the current session; password reset/change invalidates older sessions, while successful self-change renews the current session. Disabled accounts and demoted roles are enforced on each cookie request. Forced-change sessions permit only session inspection, password change, logout and technical CSRF acquisition. Production/Staging reject mock storage; Mongo readiness supplements the startup transaction probe.
+The implemented foundation protects login with pre-login CSRF and per-IP throttling (10 attempts per five minutes per process), refreshes CSRF after identity changes, and uses revocable eight-hour non-sliding sessions. Logout revokes the current session; password reset/change invalidates older sessions, while successful self-change renews the current session after the database transaction commits. Disabled accounts and demoted roles are enforced on each cookie request. Forced-change sessions permit only session inspection, password change, logout and technical CSRF acquisition. Production/Staging reject mock storage; Azure SQL readiness requires an applied schema and guard row, while an explicit migration command applies schema changes.
 
 The remaining anonymous-domain/onboarding cutover is NOT READY pending the ordinary-user onboarding decision. Registration, anonymous configuration/sessions/availability, and existing entity/whitelist projections remain unchanged for compatibility. Do not interpret the accepted target as implemented fallback authorization or approval for public exposure.
 
@@ -39,7 +39,7 @@ Login, CSRF token acquisition, and health probes remain anonymous by necessity; 
 
 Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. Messaging expansion, cancellation, rescheduling, notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
 
-All local repository writes participate in a field-scoped transaction guard; Pending/Approved capacity is checked using stored UTC overlap, not period-key uniqueness. Unsupported transactional storage fails closed. Real target-Mongo capability, independent-writer races, historical data/index audit and browser CORS/CSRF checks remain mandatory release gates; local mock tests cannot satisfy them.
+All local repository writes participate in a field-scoped SQL Server transaction guard using `UPDLOCK, ROWLOCK`; Pending/Approved capacity is checked using stored UTC overlap, not period-key uniqueness. All checks that authorize a mutation are performed inside the guarded transaction. The schema uses explicit EF Core migrations; startup never creates or upgrades tables. Disposable SQL Server independent-writer races, Azure SQL backup/restore, existing Range data migration and browser CORS/CSRF checks remain release gates; local mock tests cannot satisfy them.
 
 Manual administrator insertion remains an operational responsibility. The procedure must use the current normalized username and password-hashing representation without recording secrets.
 
@@ -49,13 +49,13 @@ The original frontend isolation constraint is superseded. The Range client now u
 
 ## Migration And Rollback
 
-Old cookies without the new session claim require reauthentication. Sessions use the additive `shootingRangeLocalSessions` collection; account `securityVersion` and `normalizedUsername` fields are additive. A read-only startup preflight rejects normalized duplicates and missing/mismatched normalized fields before creating `normalized_username_unique`. With writes paused, operators must review duplicates, approve an additive backfill using the current trim/lowercase-invariant normalization, and verify the index; never automatically merge or delete accounts. Session TTL cleanup is not an authorization boundary: expired sessions are rejected independently. Keep existing collections and documents readable. Deploy the compatible security API before the client; full domain authorization remains a separate cutover.
+Old cookies without the new session claim require reauthentication. Sessions are persisted in the Azure SQL `shooting_range_local_sessions` table; account `security_version` and `normalized_username` columns are required, and the unique normalized-username index uses binary collation. The separate `MorWalPizVideo.ShootingRange.Migration` operator tool reads the legacy Range Mongo collections and imports into an empty, migrated Azure SQL database in one guarded transaction. It rejects duplicate or inconsistent usernames and never modifies source records. Pause legacy writes, take and verify a source backup, resolve any username issue through an explicitly reviewed procedure, then verify imported IDs/counts and booking intervals before switching hosts. Session expiry is checked during authorization, so it is not dependent on cleanup. Deploy the compatible security API before the client; full domain authorization remains a separate cutover.
 
 Pause writes for guarded API cutover, ensure all instances use the guard, deploy the client next and enable new modes last. Application rollback must use a compatible guarded version; otherwise suspend mutations. Never restore unrestricted credentialed CORS, password-hash responses, or production mock repositories. See the Shooting Range architecture procedure for data preflight and unresolved public-release controls.
 
 ## Validation
 
-These are full release acceptance criteria, not a claim that every item passes in the current foundation. Anonymous-domain rejection and broad safe DTO projections remain blocked by the cutover decision; live Mongo/browser/Data Protection evidence remains required separately from local executable tests.
+These are full release acceptance criteria, not a claim that every item passes in the current foundation. Anonymous-domain rejection and broad safe DTO projections remain blocked by the cutover decision; target Azure SQL, backup/restore, browser and Data Protection evidence remains required separately from local executable tests.
 
 - Anonymous domain requests return `401`; normal users receive `403` from administrator operations.
 - Login, CSRF token acquisition, and health probes remain reachable anonymously.
