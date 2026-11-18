@@ -19,6 +19,15 @@ public static class YouTubeContentMongoIndexes
     public static readonly IReadOnlyList<YouTubeContentMongoIndexDefinition> Manifest =
     [
         new(
+            "youtubecontent_latestpublished_creation_desc",
+            DbCollections.YouTubeContent,
+            "ix_youtubecontent_latestpublished_creation_desc",
+            new BsonDocument
+            {
+                { "latestPublishedAt", -1 },
+                { "creationDateTime", -1 }
+            }),
+        new(
             "youtubecontent_isprivate_latestpublished_creation_desc",
             DbCollections.YouTubeContent,
             "ix_youtubecontent_isprivate_latestpublished_creation_desc",

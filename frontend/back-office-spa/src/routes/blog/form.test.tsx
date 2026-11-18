@@ -6,6 +6,7 @@ import type { BlogDocument, BlogPostAdmin } from '@morwalpizvideo/models';
 import {
   createBlogPost,
   deleteBlogImage,
+  generateScriptStudio,
   getBlogPost,
   publishBlogPost,
   saveBlogPost,
@@ -68,6 +69,7 @@ vi.mock('@morwalpizvideo/services', async importOriginal => ({
   ...(await importOriginal<typeof import('@morwalpizvideo/services')>()),
   createBlogPost: vi.fn(),
   deleteBlogImage: vi.fn(),
+  generateScriptStudio: vi.fn(),
   getBlogPost: vi.fn(),
   saveBlogPost: vi.fn(),
   publishBlogPost: vi.fn(),
@@ -131,6 +133,26 @@ describe('blog draft workflow', () => {
   it('uses a deterministic fallback when a filename has no meaningful stem', () => {
     expect(getUploadAltDefault('---.png')).toBe('Immagine');
     expect(getUploadAltDefault('旅行-写真.webp')).toBe('旅行 写真');
+  });
+  it('shows the generation error when prettifying is rate limited', async () => {
+    vi.mocked(generateScriptStudio).mockRejectedValue(new Error('Too many requests'));
+    appStore.setState({
+      effectivePermissions: ['pages.manage', 'scripts.studio'],
+    });
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update composition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Prettify article' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Prettify$/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Too many requests');
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('uses removable tag pills and keeps the blog tag limit', () => {

@@ -390,3 +390,30 @@ available for other readers.
 The exact Cosmos-supported index plan and deployed data completeness remain
 unverified; both are release gates, not assumptions. The approved scope is the
 single-channel public list, not the separate multi-channel or admin lists.
+
+### Public Match Sort Index Correction (2026-11-18)
+
+The production error confirmed Cosmos could not serve the public reader's
+two-field sort from the existing three-field index whose leading key is
+`isPrivate`. The implementation now adds the exact non-unique composite index
+`{ latestPublishedAt: -1, creationDateTime: -1 }` to the Domain-owned
+`YouTubeContentMongoIndexes.Manifest`. Because both API hosts already register
+that Mongo-only initializer, they will verify/create the new index before
+accepting traffic. The existing index is retained and still projected into the
+BackOffice operations manifest; neither index is dropped.
+
+`PublicMatchOrderingTests` now verifies the exact new index definition in the
+operator manifest. Architecture documentation and ADR-028 identify the
+two-field index as the one required for the public sort.
+
+Validation: the Release build of `MorWalPizVideo.BackOffice.Tests` passed, and
+the focused `Manifest_contains_an_exact_index_for_the_public_match_sort` test
+passed. The build reported existing SixLabors.ImageSharp vulnerability
+warnings.
+
+The code change cannot confirm Cosmos index readiness or correct any existing
+`latestPublishedAt` values. Deploy both API artifacts to ensure the new startup
+initializer runs, verify the exact index in the live Cosmos database, and retry
+the public endpoint after Cosmos reports the index ready. If startup reports an
+existing same-name or same-key conflict, resolve it through the reviewed
+operator workflow; startup intentionally does not drop or repair indexes.

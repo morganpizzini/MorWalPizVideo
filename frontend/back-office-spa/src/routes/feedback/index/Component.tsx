@@ -6,6 +6,7 @@ const statuses: FeedbackStatus[] = ['New', 'Reviewing', 'Resolved', 'Dismissed']
 
 export default function FeedbackPageView() {
   const page = useLoaderData() as FeedbackPage;
+  const items = page.items ?? [];
   const location = useLocation();
   const navigate = useNavigate();
   const navigation = useNavigation();
@@ -34,9 +35,9 @@ export default function FeedbackPageView() {
       </div>
     </div>
     {pending ? <p role="status">Loading feedback...</p> : null}
-    {!pending && page.items.length === 0 ? <p>No feedback found.</p> :
+    {!pending && items.length === 0 ? <p>No feedback found.</p> :
       <Table responsive hover className="align-middle"><thead><tr><th>Status</th><th>Description</th><th>Reporter</th><th>Application</th><th>Received</th><th /></tr></thead>
-        <tbody>{page.items.map(item => <tr key={item.id}><td>{item.status}</td><td>{item.description.slice(0, 120)}</td><td>{item.reporterUsername ?? 'Anonymous'}</td><td>{item.application}</td><td>{new Date(item.createdAtUtc).toLocaleString()}</td><td><Link className="btn btn-sm btn-outline-primary" to={`/feedback/${item.id}`}>Open</Link></td></tr>)}</tbody>
+        <tbody>{items.map(item => <tr key={item.id}><td>{item.status}</td><td>{item.description.slice(0, 120)}</td><td>{item.reporterUsername ?? 'Anonymous'}</td><td>{item.application}</td><td>{new Date(item.createdAtUtc).toLocaleString()}</td><td><Link className="btn btn-sm btn-outline-primary" to={`/feedback/${item.id}`}>Open</Link></td></tr>)}</tbody>
       </Table>}
     <nav aria-label="Feedback pages" className="d-flex justify-content-between">
       {page.page > 1 ? <button className="btn btn-link" onClick={() => updateQuery('page', String(page.page - 1))}>Previous</button> : <span />}

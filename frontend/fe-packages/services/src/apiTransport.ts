@@ -1191,11 +1191,23 @@ export function createApiClient({
               // Parse JSON response for rate limit errors
               try {
                 const parsedResponse = await response.json();
-                return parsedResponse;
+                return {
+                  ...parsedResponse,
+                  errors:
+                    Array.isArray(parsedResponse?.errors) &&
+                    parsedResponse.errors.length > 0
+                      ? parsedResponse.errors
+                      : [
+                          parsedResponse?.detail ??
+                            parsedResponse?.title ??
+                            parsedResponse?.message ??
+                            "Too many requests",
+                        ],
+                  status: response.status,
+                };
               } catch {
-                errorMessages.push("Too many requests");
+                return { errors: ["Too many requests"], status: response.status };
               }
-              break;
             }
             case 404: {
               try {

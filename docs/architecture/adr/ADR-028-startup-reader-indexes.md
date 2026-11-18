@@ -22,8 +22,15 @@ operator manifest so startup and manual audit use the same key definition.
 
 The startup allowlist is explicit and currently contains only:
 
+- `youtubecontent_latestpublished_creation_desc`
 - `youtubecontent_isprivate_latestpublished_creation_desc`
 - `feedback.createdat_desc`
+
+The public match query sorts by `latestPublishedAt` and `creationDateTime`, but
+the original index begins with the equality filter `isPrivate`. Cosmos did not
+serve that two-field sort from the original index. Startup therefore also
+ensures the exact two-field descending sort index; the original index remains
+available for compatibility and is not removed or repurposed.
 
 Startup is additive and idempotent. It skips exact existing definitions,
 fails on same-name or key-pattern conflicts, tolerates concurrent exact creates,

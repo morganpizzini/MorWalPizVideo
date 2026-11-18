@@ -329,6 +329,10 @@ function BlogForm({
         );
         return;
       }
+      if (typeof response.result !== 'string') {
+        setPrettifyError('The article could not be prettified. Please try again.');
+        return;
+      }
       setDraft(current => ({
         ...current,
         document: applyPrettifiedContent(current.document, response.result),

@@ -4,7 +4,7 @@ description: "Use when implementing features, fixing bugs, refactoring, adding t
 tools: [read, search, edit, execute, todo, agent]
 agents: ["MorWalPiz Repository Expert"]
 user-invocable: true
-model: GPT-5.6 Luna (copilot)
+model: GPT-6 Luna (copilot)
 disable-model-invocation: false
 ---
 

@@ -197,4 +197,21 @@ public sealed class PublicMatchOrderingTests
             }.ToJson(),
             entry.Keys.ToJson());
     }
+
+    [Fact]
+    public void Manifest_contains_an_exact_index_for_the_public_match_sort()
+    {
+        var entry = MongoIndexOperationsService.Manifest.Single(item =>
+            item.Key == "youtubecontent_latestpublished_creation_desc");
+
+        Assert.Equal(DbCollections.YouTubeContent, entry.Collection);
+        Assert.Equal("ix_youtubecontent_latestpublished_creation_desc", entry.Name);
+        Assert.Equal(
+            new BsonDocument
+            {
+                { "latestPublishedAt", -1 },
+                { "creationDateTime", -1 }
+            }.ToJson(),
+            entry.Keys.ToJson());
+    }
 }

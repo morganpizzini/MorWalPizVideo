@@ -411,7 +411,8 @@ describe("transport response contracts", () => {
           .mockResolvedValue(Response.json({ errors: ["failed"] }, { status })),
       );
       const response = await get("/api/items");
-      if (status === 429) expect(response).toEqual({ errors: ["failed"] });
+      if (status === 429)
+        expect(response).toEqual({ errors: ["failed"], status: 429 });
       else
         expect(response).toMatchObject({ status, errors: expect.any(Array) });
     },

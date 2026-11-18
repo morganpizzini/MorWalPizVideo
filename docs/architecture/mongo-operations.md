@@ -10,7 +10,7 @@ Source-owned index operations now exist:
 - ServerAPI and BackOffice automatically verify/create only the new blog-interaction indexes before accepting traffic in Mongo mode. Missing feature collections are created empty before indexes; conflicts and database errors fail startup. Mock mode skips this path. All other indexes continue through explicit reviewed operations; see [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
 - The executable allowlist in `MongoIndexOperationsService` is the runtime authority for audit/apply/remove operations. The operational file `docs/architecture/operations/mongo-index-manifest.phase4.json` is a phase-4 review snapshot, is not loaded dynamically at runtime, and must not be used for an apply request until it has been reconciled against the executable allowlist.
 - Workshop's five feature-owned index definitions are projected into that executable allowlist from `WorkshopMongoIndexes.Manifest`; the central BackOffice service is an operational audit/apply coupling only. They are not added to the limited startup blog-index bootstrap, and production application still requires duplicate audit and approved apply evidence.
-- ServerAPI and BackOffice automatically verify/create the public YouTube-content ordering index in Mongo mode before accepting traffic. BackOffice also automatically verifies/creates the feedback creation-order index. These are narrow, non-unique startup exceptions for active readers; unique indexes, TTL indexes, and other manifest entries remain reviewed operations.
+- ServerAPI and BackOffice automatically verify/create the exact public YouTube-content sort index in Mongo mode before accepting traffic. The prior `isPrivate`-prefixed index remains in the operational manifest for compatibility but does not satisfy the public reader's two-field sort. BackOffice also automatically verifies/creates the feedback creation-order index. These are narrow, non-unique startup exceptions for active readers; unique indexes, TTL indexes, and other manifest entries remain reviewed operations.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 - The `videoimportersettings.channelid.unique` index is an additional manual
   rollout prerequisite for VideoImporter synchronization. Follow the
@@ -195,9 +195,20 @@ ordered in application memory by:
 When a match has no usable video publication date, `latestPublishedAt` is its
 `creationDateTime`. This is a persisted, BSON-only compatibility field and is
 recomputed by the YouTube content Mongo and mock repository write boundaries;
-it is not part of the public response contract. The existing compound index is
-kept in the manifest for operational compatibility, but is not a correctness
-prerequisite for this reader:
+it is not part of the public response contract.
+
+The public reader sorts on the following exact compound index, which ServerAPI
+and BackOffice verify/create during Mongo-mode startup:
+
+```text
+key:        youtubecontent_latestpublished_creation_desc
+collection: youtubeContent
+name:       ix_youtubecontent_latestpublished_creation_desc
+keys:       { latestPublishedAt: -1, creationDateTime: -1 }
+```
+
+The older index is retained in the manifest for operational compatibility; its
+leading `isPrivate` key makes it unsuitable for this reader's two-field sort:
 
 ```text
 key:        youtubecontent_isprivate_latestpublished_creation_desc
@@ -254,7 +265,7 @@ index audit. Apply using the complete request in the canonical operator guide;
 the targeted audit may be run as follows:
 
 ```text
-GET  /api/mongoindexes/audit?keys=youtubecontent_isprivate_latestpublished_creation_desc
+GET  /api/mongoindexes/audit?keys=youtubecontent_latestpublished_creation_desc
 ```
 
 Capture the audit and apply responses, confirm the exact index keys and options in Cosmos,

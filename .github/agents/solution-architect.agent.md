@@ -4,7 +4,7 @@ description: "Use when analyzing architecture, planning features or refactors, i
 tools: [read, search, edit, agent]
 agents: ["MorWalPiz Repository Expert"]
 user-invocable: true
-model: GPT-5.6 Sol (copilot)
+model: GPT-6.1 Terra (copilot)
 disable-model-invocation: false
 ---
 

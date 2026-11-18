@@ -36,6 +36,8 @@ cancellation behavior remains shared. The operation validates non-empty, bounded
 content and asks the provider to preserve Markdown, HTML, placeholders, URLs,
 code-like tokens, and meaning. The response is applied only to the current unsaved
 editor draft after a stale-source check; it never saves or publishes automatically.
+Rate-limit and malformed-generation responses remain in the prettify dialog as
+actionable errors; they do not reach the document formatter.
 
 ## Authorization
 
