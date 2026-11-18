@@ -17,7 +17,7 @@ The first administrator is inserted manually into MongoDB. No bootstrap-admin en
 
 Public self-registration is not part of the approved release posture. Administrator-created ordinary users are the working assumption, but ordinary-user onboarding remains a product decision that may be revised without changing the service boundary.
 
-Keep models, contracts, services, repositories, and frontend behavior locally owned by the Shooting Range projects. The initial UI remains limited to authentication and session restoration, forced password change, logout, availability and booking, the current user's bookings, and the minimum administrator actions needed for user creation and booking decisions if admin-created onboarding is confirmed.
+Keep models, contracts, services, repositories, authentication, and API transport locally owned by the Shooting Range projects. The Range client may consume `@morwalpiz/layout` for shared presentation components and align its visual system with Shooter Workshop. This supersedes the earlier prohibition on shared frontend packages: that restriction reflected the former layout implementation, while the consolidated layout and theme now provide the intended common presentation layer. Do not import Workshop application source, account/authentication providers, API services, or domain models. The UI remains limited to authentication and session restoration, forced password change, logout, availability and booking, the current user's bookings, and the existing minimal administrator workflows.
 
 Production exposure is gated on explicit credentialed CORS, safe response DTOs, account-state revalidation, login throttling, MongoDB uniqueness and readiness, authoritative booking validation, production rejection of mock mode, persistent Data Protection where required, and executable security/integrity tests.
 
@@ -26,7 +26,8 @@ Production exposure is gated on explicit credentialed CORS, safe response DTOs, 
 - Keep availability and registration anonymous: rejected because all domain functionality must be authorization-protected before public exposure.
 - Add a public bootstrap-admin endpoint: rejected because the first administrator will be inserted manually.
 - Complete every existing API workflow in the UI: rejected because the POC is intentionally minimal and observed use should drive expansion.
-- Move Shooting Range into shared Domain, Models, Contracts, or frontend packages: rejected because no shared runtime consumer exists.
+- Move Shooting Range backend/domain behavior or contracts into shared projects: rejected because no shared runtime consumer exists.
+- Reuse the consolidated shared presentation package: accepted for UI components and consistent styling; it does not change Range ownership of authentication, transport, or domain behavior.
 
 ## Consequences
 
@@ -41,6 +42,10 @@ Schedule, bay and closure administration and booking decisions are now accepted 
 All local repository writes participate in a field-scoped transaction guard; Pending/Approved capacity is checked using stored UTC overlap, not period-key uniqueness. Unsupported transactional storage fails closed. Real target-Mongo capability, independent-writer races, historical data/index audit and browser CORS/CSRF checks remain mandatory release gates; local mock tests cannot satisfy them.
 
 Manual administrator insertion remains an operational responsibility. The procedure must use the current normalized username and password-hashing representation without recording secrets.
+
+### Frontend presentation amendment — 2026-11-18
+
+The original frontend isolation constraint is superseded. The Range client now uses the consolidated `@morwalpiz/layout` presentation layer where its components fit, with Range-local styling and workflows. This amendment does not make Workshop authentication, services, models, or application code shared, and it does not complete or alter the separate public-release authorization/onboarding decision.
 
 ## Migration And Rollback
 

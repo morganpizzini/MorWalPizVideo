@@ -1,28 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { Link, NavLink, useFetcher, useNavigate } from "react-router";
 import {
-  ApiError,
-  availability,
-  book,
-  changePassword,
+  accountStatus as formatAccountStatus,
+  availabilityMatches,
+  bookingStatus as formatBookingStatus,
+  sessionLabel as formatSessionLabel,
+} from "./schedule";
+import {
+  ApiError as RangeApiError,
   getSession,
-  login,
-  logout,
-  myBookings,
-  register,
-  sessions,
-  type Availability,
   type Account,
   type Booking as StoredBooking,
   type Sessions,
 } from "./api";
-import {
-  accountStatus,
-  availabilityMatches,
-  bookingStatus,
-  sessionLabel,
-} from "./schedule";
+import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
+import type {
+  ActionResult,
+  BookingRouteData,
+  SessionErrorData,
+} from "./routeData";
 
 export interface SessionViewProps {
   account: Account;
@@ -43,37 +40,58 @@ export function Shell({
   loggingOut?: boolean;
 }) {
   return (
-    <main>
-      <header>
-        <div>
-          <span className="eyebrow">PEPPERBOX</span>
-          <h1>Campo da tiro</h1>
-        </div>
-        <nav aria-label="Navigazione principale">
-          <Link to="/">Prenota</Link>
-          {!account?.forcePasswordChange && (
-            <Link to="/messages">Messaggi</Link>
-          )}
-          {account?.isAdmin && !account.forcePasswordChange && (
-            <Link to="/admin">Admin</Link>
-          )}
-          {account && onLogout && (
-            <button
-              className="secondary-button"
-              disabled={loggingOut}
-              onClick={onLogout}
-            >
-              {loggingOut ? "Uscita..." : "Esci"}
-            </button>
-          )}
-        </nav>
+    <div className="range-shell">
+      <header className="range-header">
+        <Link className="range-brand" to="/" aria-label="MorWalPiz Shooting Range">
+          <span className="range-brand__mark" aria-hidden="true">M</span>
+          <span>MorWalPiz</span>
+          <small>Shooting Range</small>
+        </Link>
+        {account && !account.forcePasswordChange && (
+          <nav className="range-navigation" aria-label="Navigazione principale">
+            <NavLink to="/" end>Prenota</NavLink>
+            <NavLink to="/messages">Messaggi</NavLink>
+            {account.isAdmin && <NavLink to="/admin">Amministrazione</NavLink>}
+          </nav>
+        )}
+        {account && (
+          <div className="range-account">
+            <span className="range-account__name">
+              {account.firstName} {account.lastName}
+            </span>
+            {onLogout && (
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={loggingOut}
+                onClick={onLogout}
+              >
+                {loggingOut ? "Uscita..." : "Esci"}
+              </button>
+            )}
+          </div>
+        )}
       </header>
-      {children}
-    </main>
+      <main className="range-main">{children}</main>
+    </div>
   );
 }
 
-export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
+function Auth({
+  onSubmit,
+  pending,
+  result,
+  error,
+  onRetry,
+  onModeChange,
+}: {
+  onSubmit: (data: FormData) => void;
+  pending: boolean;
+  result?: ActionResult;
+  error: string;
+  onRetry: () => void;
+  onModeChange: () => void;
+}) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({
     username: "",
@@ -81,52 +99,41 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
     firstName: "",
     lastName: "",
   });
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState("");
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (pending) return;
-    setPending(true);
-    setError("");
-    setNotice("");
-    try {
-      const result =
-        mode === "login" ? await login(form) : await register(form);
-      if (mode === "login") onLogin(result);
-      else {
-        setMode("login");
-        setNotice(
-          "Richiesta inviata. Attendi l'approvazione dell'amministratore.",
-        );
-      }
-    } catch (reason) {
-      setError(
-        reason instanceof ApiError && reason.status === 429
-          ? "Troppi tentativi. Riprova tra cinque minuti."
-          : reason instanceof Error
-            ? reason.message
-            : "Operazione non riuscita",
-      );
-    } finally {
-      setPending(false);
+
+  useEffect(() => {
+    if (result?.intent === "register" && result.success) {
+      setMode("login");
+      setNotice(result.message);
+      setForm((value) => ({ ...value, password: "" }));
+    } else if (result?.intent === "register" && !result.success) {
+      setNotice("");
     }
+  }, [result]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    data.set("intent", mode);
+    onSubmit(data);
+    setNotice("");
   }
+
   return (
-    <section className="auth">
-      <span className="eyebrow">ACCESSO</span>
-      <h2>{mode === "login" ? "Bentornato" : "Richiedi un account"}</h2>
-      <p className="muted">
+    <section className="range-panel range-auth">
+      <h1>{mode === "login" ? "Bentornato" : "Richiedi un account"}</h1>
+      <p className="range-muted">
         Gli account nuovi restano in attesa dell'approvazione
         dell'amministratore.
       </p>
       <form onSubmit={submit}>
-        <fieldset disabled={pending} className="auth-fields">
+        <fieldset className="auth-fields" disabled={pending}>
           {mode === "register" && (
             <>
               <label>
                 Nome
                 <input
+                  name="firstName"
                   required
                   value={form.firstName}
                   autoComplete="given-name"
@@ -138,6 +145,7 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
               <label>
                 Cognome
                 <input
+                  name="lastName"
                   required
                   value={form.lastName}
                   autoComplete="family-name"
@@ -151,6 +159,7 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
           <label>
             Username
             <input
+              name="username"
               required
               value={form.username}
               autoComplete="username"
@@ -162,6 +171,7 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
           <label>
             Password
             <input
+              name="password"
               required
               minLength={12}
               type="password"
@@ -174,7 +184,7 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
               }
             />
           </label>
-          <button>
+          <button type="submit" className="button button-primary">
             {pending
               ? "Attendi..."
               : mode === "login"
@@ -184,21 +194,24 @@ export function Auth({ onLogin }: { onLogin: (account: Account) => void }) {
         </fieldset>
       </form>
       {error && (
-        <p role="alert" className="error">
+        <p role="alert" className="range-error">
           {error}
+          {error.includes("Sessione non disponibile") && (
+            <button type="button" className="button button-quiet" onClick={onRetry}>
+              Riprova
+            </button>
+          )}
         </p>
       )}
-      {notice && (
-        <p role="status" className="success">
-          {notice}
-        </p>
-      )}
+      {notice && <p role="status" className="range-success">{notice}</p>}
       <button
+        type="button"
         disabled={pending}
-        className="link-button"
+        className="range-link-button"
         onClick={() => {
           setMode(mode === "login" ? "register" : "login");
-          setError("");
+          setNotice("");
+          onModeChange();
         }}
       >
         {mode === "login" ? "Non hai un account?" : "Hai già un account?"}
@@ -214,10 +227,12 @@ export function SessionGate({
 }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [restoring, setRestoring] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const navigate = useNavigate();
+  const authFetcher = useFetcher<ActionResult>();
+  const refreshAccount = useCallback(() => setRevision((value) => value + 1), []);
+
   useEffect(() => {
     const controller = new AbortController();
     setRestoring(true);
@@ -229,8 +244,9 @@ export function SessionGate({
       .catch((reason) => {
         if (!controller.signal.aborted) {
           setAccount(null);
-          if (!(reason instanceof ApiError && reason.status === 401))
+          if (!(reason instanceof RangeApiError && reason.status === 401)) {
             setError("Sessione non disponibile. Riprova.");
+          }
         }
       })
       .finally(() => {
@@ -238,9 +254,35 @@ export function SessionGate({
       });
     return () => controller.abort();
   }, [revision]);
+
+  useEffect(() => {
+    const result = authFetcher.data;
+    if (!result) return;
+    if (result.intent === "login") {
+      if (result.success && result.account) {
+        setError("");
+        setAccount(result.account);
+      } else {
+        setError(result.message);
+      }
+    } else if (result.intent === "register") {
+      setError(result.success ? "" : result.message);
+    } else if (result.intent === "logout") {
+      if (result.success || result.status === 401) {
+        setAccount(null);
+        navigate("/");
+      } else {
+        setError(result.message || "Uscita non riuscita. Riprova.");
+      }
+    } else if (result.intent === "password-change" && result.success) {
+      setRevision((value) => value + 1);
+    }
+  }, [authFetcher.data, navigate]);
+
   useEffect(() => {
     function expired() {
       setAccount(null);
+      setRevision((value) => value + 1);
       navigate("/");
     }
     function refresh() {
@@ -253,66 +295,57 @@ export function SessionGate({
       window.removeEventListener("focus", refresh);
     };
   }, [navigate]);
-  async function signOut() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    setError("");
-    try {
-      await logout();
-      setAccount(null);
-      navigate("/");
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 401) {
-        setAccount(null);
-        navigate("/");
-      } else setError("Uscita non riuscita. Riprova.");
-    } finally {
-      setLoggingOut(false);
-    }
+
+  function submitRootAction(data: FormData) {
+    authFetcher.submit(data, { method: "post", action: "/" });
   }
-  if (restoring)
+
+  function signOut() {
+    const data = new FormData();
+    data.set("intent", "logout");
+    submitRootAction(data);
+  }
+
+  if (restoring) {
     return (
       <Shell account={null}>
-        <p role="status" className="session-status">
-          Ripristino sessione...
-        </p>
+        <RangeSkeleton rows={2} label="Ripristino sessione..." />
       </Shell>
     );
-  if (!account)
+  }
+  if (!account) {
     return (
       <Shell account={null}>
-        {error && (
-          <div role="alert" className="error">
-            {error}
-            <button
-              className="secondary-button"
-              onClick={() => setRevision((value) => value + 1)}
-            >
-              Riprova
-            </button>
-          </div>
-        )}
-        <Auth onLogin={setAccount} />
+        <Auth
+          onSubmit={submitRootAction}
+          pending={authFetcher.state !== "idle"}
+          result={authFetcher.data}
+          error={error}
+          onRetry={() => setRevision((value) => value + 1)}
+          onModeChange={() => setError("")}
+        />
       </Shell>
     );
+  }
+
   const props: SessionViewProps = {
     account,
-    loggingOut,
-    onLogout: () => void signOut(),
-    onPasswordChanged: () => setRevision((value) => value + 1),
+    loggingOut: authFetcher.state !== "idle" && authFetcher.formData?.get("intent") === "logout",
+    onLogout: signOut,
+    onPasswordChanged: refreshAccount,
   };
+  if (account.forcePasswordChange || !children) {
+    return (
+      <>
+        {error && <p role="alert" className="range-error session-error">{error}</p>}
+        <Booking {...props} />
+      </>
+    );
+  }
   return (
     <>
-      {error && (
-        <p role="alert" className="error session-error">
-          {error}
-        </p>
-      )}
-      {account.forcePasswordChange || !children ? (
-        <Booking {...props} />
-      ) : (
-        children(props)
-      )}
+      {error && <p role="alert" className="range-error session-error">{error}</p>}
+      {children(props)}
     </>
   );
 }
@@ -325,222 +358,151 @@ export function Booking({
 }: SessionViewProps) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [period, setPeriod] = useState("");
-  const [offered, setOffered] = useState<Sessions | null>(null);
-  const [data, setData] = useState<Availability | null>(null);
-  const [history, setHistory] = useState<StoredBooking[]>([]);
-  const [error, setError] = useState("");
-  const [historyError, setHistoryError] = useState("");
+  const [availabilityKey, setAvailabilityKey] = useState("");
   const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState(false);
-  const [refresh, setRefresh] = useState(0);
+  const [error, setError] = useState("");
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
   });
-  const queryVersion = useRef(0);
-
-  function invalidate() {
-    queryVersion.current++;
-    setData(null);
-    setError("");
-  }
-  function reload() {
-    invalidate();
-    setPeriod("");
-    setOffered(null);
-    setRefresh((value) => value + 1);
-  }
-
-  useEffect(() => {
-    const controller = new AbortController();
-    if (account.forcePasswordChange) {
-      setLoading(false);
-      return () => controller.abort();
-    }
-    setLoading(true);
-    setOffered(null);
-    setPeriod("");
-    setData(null);
-    if (!date) {
-      setLoading(false);
-      return () => controller.abort();
-    }
-    sessions(date, controller.signal)
-      .then((result) => {
-        if (controller.signal.aborted) return;
-        setOffered(result);
-        setPeriod(result.sessions[0]?.periodKey ?? "");
-      })
-      .catch((reason) => {
-        if (!controller.signal.aborted)
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "Sessioni non disponibili",
-          );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [date, refresh, account.forcePasswordChange]);
+  const routeFetcher = useFetcher<BookingRouteData | SessionErrorData | null>();
+  const availabilityFetcher = useFetcher<BookingRouteData | SessionErrorData | null>();
+  const actionFetcher = useFetcher<ActionResult>();
+  const periodKey = `${date}|${period}`;
+  const routeError =
+    routeFetcher.data && "sessionError" in routeFetcher.data
+      ? routeFetcher.data.sessionError
+      : null;
+  const availabilityError =
+    availabilityFetcher.data && "sessionError" in availabilityFetcher.data
+      ? availabilityFetcher.data.sessionError
+      : null;
+  const routeData =
+    routeFetcher.data &&
+    "date" in routeFetcher.data &&
+    routeFetcher.data.date === date
+      ? routeFetcher.data
+      : null;
+  const availabilityData =
+    availabilityKey === periodKey &&
+    availabilityFetcher.state !== "loading" &&
+    availabilityFetcher.data &&
+    "date" in availabilityFetcher.data &&
+    availabilityFetcher.data.date === date &&
+    availabilityFetcher.data.period === period
+      ? availabilityFetcher.data
+      : null;
+  const pending = actionFetcher.state !== "idle";
 
   useEffect(() => {
-    if (account.forcePasswordChange) return;
-    let active = true;
-    myBookings()
-      .then((result) => {
-        if (active) {
-          setHistory(result);
-          setHistoryError("");
-        }
-      })
-      .catch(() => {
-        if (active) setHistoryError("Cronologia non disponibile.");
-      });
-    return () => {
-      active = false;
-    };
-  }, [refresh, account.forcePasswordChange]);
+    if (!account.forcePasswordChange) {
+      routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+    }
+  }, [account.forcePasswordChange, account.id, date]);
 
-  async function search() {
-    const version = ++queryVersion.current;
-    setPending(true);
-    setError("");
-    setData(null);
-    try {
-      const result = await availability(date, period);
-      if (version !== queryVersion.current) return;
-      if (!availabilityMatches(result, offered?.sessions ?? [], date, period)) {
-        reload();
-        setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
-      } else setData(result);
-    } catch (reason) {
-      if (version === queryVersion.current) {
-        if (reason instanceof ApiError && reason.status === 400) reload();
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Disponibilita non disponibile",
-        );
+  useEffect(() => {
+    const result = actionFetcher.data;
+    if (!result) return;
+    if (result.intent === "book") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+    } else if (result.intent === "password-change") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setPasswords({ currentPassword: "", newPassword: "" });
+        onPasswordChanged();
       }
-    } finally {
-      setPending(false);
     }
-  }
+  }, [actionFetcher.data, onPasswordChanged]);
 
-  async function reserve(bayId: string) {
-    if (
-      !data ||
-      !availabilityMatches(data, offered?.sessions ?? [], date, period)
-    )
-      return;
-    setPending(true);
+  function search(selectedPeriod: string) {
+    if (!selectedPeriod) return;
     setError("");
     setNotice("");
-    try {
-      await book({
-        bayId,
-        localDate: date,
-        periodKey: period,
-        request: "",
-        expectedStartUtc: data.startUtc,
-        expectedEndUtc: data.endUtc,
-      });
-      setNotice("Richiesta inviata, in attesa di approvazione.");
-      reload();
-    } catch (reason) {
-      reload();
-      setError(
-        reason instanceof ApiError && reason.status === 409
-          ? "La bay non e piu disponibile. Seleziona un altro turno."
-          : reason instanceof Error
-            ? reason.message
-            : "Prenotazione non riuscita",
-      );
-    } finally {
-      setPending(false);
-    }
+    setAvailabilityKey(`${date}|${selectedPeriod}`);
+    availabilityFetcher.load(
+      `/?date=${encodeURIComponent(date)}&period=${encodeURIComponent(selectedPeriod)}&search=1&region=availability`,
+    );
   }
 
-  async function updatePassword(event: React.FormEvent) {
+  function submitBooking(
+    bayId: string,
+    selectedPeriod: string,
+    session: Sessions["sessions"][number],
+  ) {
+    if (pending || !session) return;
+    const formData = new FormData();
+    formData.set("intent", "book");
+    formData.set("bayId", bayId);
+    formData.set("localDate", date);
+    formData.set("periodKey", selectedPeriod);
+    formData.set("expectedStartUtc", session.startUtc);
+    formData.set("expectedEndUtc", session.endUtc);
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+
+  function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
-    setError("");
-    try {
-      await changePassword(passwords);
-      setPasswords({ currentPassword: "", newPassword: "" });
-      onPasswordChanged();
-      setNotice("Password aggiornata.");
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Password non aggiornata",
-      );
-    } finally {
-      setPending(false);
-    }
+    const formData = new FormData(event.currentTarget);
+    formData.set("intent", "password-change");
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+
+  if (routeError) {
+    return (
+      <Shell account={account} onLogout={onLogout} loggingOut={loggingOut}>
+        <RouteSessionError
+          message={routeError.message ?? "Sessione non disponibile."}
+          status={routeError.status}
+          onRetry={() => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)}
+        />
+      </Shell>
+    );
   }
 
   return (
     <Shell account={account} onLogout={onLogout} loggingOut={loggingOut}>
       <section className="booking-heading">
-        <h2>
-          {account.forcePasswordChange
-            ? "Aggiorna la password"
-            : "Trova il tuo prossimo turno."}
-        </h2>
+        <h1>{account.forcePasswordChange ? "Aggiorna la password" : "Prenotazioni"}</h1>
         {!account.forcePasswordChange && (
-          <p className="muted">{offered?.timeZone ?? "Orari del campo"}</p>
+          <p className="range-muted">Scegli una data e una sessione per trovare una postazione.</p>
         )}
       </section>
-      {account.forcePasswordChange && (
-        <section className="admin-section">
-          <h3>Aggiorna la password</h3>
-          <form className="form-grid" onSubmit={updatePassword}>
+      {account.forcePasswordChange ? (
+        <section className="range-panel range-form-panel">
+          <h2>Aggiorna la password</h2>
+          <form className="form-grid" onSubmit={submitPassword}>
             <label>
               Password attuale
               <input
+                name="currentPassword"
                 type="password"
                 required
                 autoComplete="current-password"
                 value={passwords.currentPassword}
-                onChange={(event) =>
-                  setPasswords({
-                    ...passwords,
-                    currentPassword: event.target.value,
-                  })
-                }
+                onChange={(event) => setPasswords({ ...passwords, currentPassword: event.target.value })}
               />
             </label>
             <label>
               Nuova password
               <input
+                name="newPassword"
                 type="password"
                 required
                 minLength={12}
                 maxLength={100}
                 autoComplete="new-password"
                 value={passwords.newPassword}
-                onChange={(event) =>
-                  setPasswords({
-                    ...passwords,
-                    newPassword: event.target.value,
-                  })
-                }
+                onChange={(event) => setPasswords({ ...passwords, newPassword: event.target.value })}
               />
             </label>
-            <button disabled={pending}>Aggiorna password</button>
+            <button className="button button-primary" disabled={pending}>Aggiorna password</button>
           </form>
         </section>
-      )}
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {!account.forcePasswordChange && (
+      ) : (
         <>
+          {error && <p role="alert" className="range-error">{error}</p>}
           <fieldset className="toolbar" disabled={pending}>
             <legend className="sr-only">Selezione del turno</legend>
             <label>
@@ -550,116 +512,234 @@ export function Booking({
                 required
                 value={date}
                 onChange={(event) => {
-                  invalidate();
                   setDate(event.target.value);
                   setPeriod("");
-                  setOffered(null);
+                  setAvailabilityKey("");
+                  setError("");
+                  setNotice("");
                 }}
               />
             </label>
             <label>
               Sessione
               <select
-                disabled={loading || !offered?.sessions.length}
+                disabled={!routeData || routeFetcher.state === "loading"}
                 value={period}
                 onChange={(event) => {
-                  invalidate();
                   setPeriod(event.target.value);
+                  setAvailabilityKey("");
                 }}
               >
-                {!period && (
+                {(!routeData || !period) && (
                   <option value="">
-                    {loading ? "Caricamento..." : "Nessuna sessione"}
+                    {routeData ? "Seleziona una sessione" : "Caricamento..."}
                   </option>
                 )}
-                {offered?.sessions.map((session) => (
-                  <option key={session.periodKey} value={session.periodKey}>
-                    {sessionLabel(session, offered.timeZone)}
-                  </option>
-                ))}
+                {routeData && routeFetcher.state !== "loading" && (
+                  <RangeDeferred
+                    resolve={routeData.offered}
+                    fallback={null}
+                  >
+                    {(offered) => (
+                      <OfferedSessionOptions
+                        offered={offered}
+                        selectedPeriod={period}
+                        onDefaultPeriod={setPeriod}
+                      />
+                    )}
+                  </RangeDeferred>
+                )}
               </select>
             </label>
             <button
-              disabled={loading || !period || account.forcePasswordChange}
-              onClick={() => void search()}
+              type="button"
+              className="button button-primary"
+              disabled={!routeData || !period}
+              onClick={() => search(period)}
             >
-              Cerca disponibilita
+              Cerca disponibilità
             </button>
-            <button className="secondary-button" onClick={reload}>
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => {
+                setAvailabilityKey("");
+                routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+              }}
+            >
               Aggiorna sessioni
             </button>
           </fieldset>
-          <div aria-live="polite">
-            {loading && <p>Caricamento sessioni...</p>}
-            {pending && <p>Operazione in corso...</p>}
-            {!loading && offered && !offered.sessions.length && (
-              <p>Nessuna sessione prenotabile per questa data.</p>
+          <div className="booking-feedback" aria-live="polite">
+            {notice && <p role="status" className="range-success">{notice}</p>}
+            {(!routeData || routeFetcher.state === "loading") && (
+              <RangeSkeleton rows={2} label="Caricamento sessioni..." />
             )}
-            {notice && <p className="success">{notice}</p>}
           </div>
-          {data && (
-            <section aria-label="Bay disponibili">
-              <div className="section-heading">
-                <h3>{data.bays.length} bay disponibili</h3>
-              </div>
-              {!data.bays.length && (
-                <p>Nessuna bay disponibile per questo turno.</p>
-              )}
-              <div className="grid">
-                {data.bays.map((bay) => (
-                  <article className="bay" key={bay.id}>
-                    <span className="bay-code">{bay.code}</span>
-                    <h3>{bay.description || "Postazione operativa"}</h3>
-                    <p>
-                      {bay.mechanisms
-                        .map((item) => `${item.quantity} ${item.type}`)
-                        .join(" · ") || "Configurazione standard"}
-                    </p>
-                    <button
-                      disabled={pending || account.forcePasswordChange}
-                      onClick={() => void reserve(bay.id)}
-                    >
-                      Richiedi bay {bay.code}
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </section>
+          {routeData && routeFetcher.state !== "loading" && (
+            <>
+              <RangeDeferred
+                resolve={routeData.offered}
+                fallback={<RangeSkeleton rows={2} label="Caricamento sessioni..." />}
+                onRetry={() => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)}
+              >
+                {(offered) => (
+                  <>
+                    <p className="range-muted">{offered.timeZone}</p>
+                    {!offered.sessions.length && (
+                      <p className="range-empty">Nessuna sessione prenotabile per questa data.</p>
+                    )}
+                  </>
+                )}
+              </RangeDeferred>
+              <section className="range-panel">
+                <h2>Postazioni disponibili</h2>
+                {availabilityError && (
+                  <RouteSessionError
+                    message={availabilityError.message ?? "Sessione non disponibile."}
+                    status={availabilityError.status}
+                    onRetry={() => search(period)}
+                  />
+                )}
+                {!availabilityData && !availabilityError && availabilityKey === periodKey && (
+                  <RangeSkeleton rows={3} label="Caricamento postazioni..." />
+                )}
+                {availabilityData && (
+                  <RangeDeferred
+                    resolve={availabilityData.availability}
+                    fallback={<RangeSkeleton rows={3} label="Caricamento postazioni..." />}
+                    onRetry={() => search(period)}
+                  >
+                    {(available) => {
+                      if (!available) return null;
+                      return (
+                        <>
+                          <p className="range-muted">{available.bays.length} postazioni disponibili</p>
+                          {!available.bays.length && (
+                            <p className="range-empty">Nessuna postazione disponibile per questo turno.</p>
+                          )}
+                          <div className="bay-grid">
+                            {available.bays.map((bay) => (
+                              <article className="bay" key={bay.id}>
+                                <span className="bay-code">{bay.code}</span>
+                                <h3>{bay.description || "Postazione operativa"}</h3>
+                                <p>
+                                  {bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard"}
+                                </p>
+                                <button
+                                  type="button"
+                                  className="button button-primary"
+                                  disabled={pending}
+                                  onClick={() => {
+                                    void routeData.offered.then((offered) => {
+                                      if (availabilityMatches(available, offered.sessions, date, period)) {
+                                        const session = offered.sessions.find((item) => item.periodKey === period);
+                                        if (session) submitBooking(bay.id, period, session);
+                                      } else {
+                                        setAvailabilityKey("");
+                                        setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
+                                        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+                                      }
+                                    });
+                                  }}
+                                >
+                                  Richiedi postazione {bay.code}
+                                </button>
+                              </article>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    }}
+                  </RangeDeferred>
+                )}
+              </section>
+              <BookingHistoryRegion
+                history={routeData.history}
+                offered={routeData.offered}
+                onRetry={() => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)}
+              />
+            </>
           )}
-          <section className="admin-section">
-            <h3>Le mie prenotazioni</h3>
-            {historyError && <p role="alert">{historyError}</p>}
-            {!historyError && !history.length && (
-              <p className="muted">Nessuna prenotazione.</p>
-            )}
-            <ul className="record-list">
-              {history.map((booking) => (
-                <li key={booking.id}>
-                  <span>
-                    {booking.localDate} ·{" "}
-                    {new Date(booking.startUtc).toLocaleString("it-IT", {
-                      timeZone: offered?.timeZone ?? "Europe/Rome",
-                    })}{" "}
-                    -{" "}
-                    {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                      timeZone: offered?.timeZone ?? "Europe/Rome",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  <strong>{bookingStatus(booking.status)}</strong>
-                </li>
-              ))}
-            </ul>
-          </section>
         </>
       )}
-      <p className="muted account-note">
-        Account: {account.firstName} {account.lastName} ·{" "}
-        {accountStatus(account.status)}
+      <p className="range-muted account-note">
+        Account: {account.firstName} {account.lastName} · {formatAccountStatus(account.status)}
       </p>
     </Shell>
   );
+}
+
+function BookingHistoryRegion({
+  history,
+  offered,
+  onRetry,
+}: {
+  history: Promise<StoredBooking[]>;
+  offered: BookingRouteData["offered"];
+  onRetry: () => void;
+}) {
+  return (
+    <section className="range-panel">
+      <h2>Le mie prenotazioni</h2>
+      <RangeDeferred
+        resolve={offered}
+        fallback={<RangeSkeleton rows={3} label="Caricamento prenotazioni..." />}
+      >
+        {(sessions) => (
+          <RangeDeferred
+            resolve={history}
+            fallback={<RangeSkeleton rows={3} label="Caricamento prenotazioni..." />}
+            onRetry={onRetry}
+          >
+            {(items: StoredBooking[]) => items.length ? (
+              <ul className="record-list">
+                {items.map((booking) => (
+                  <li key={booking.id}>
+                    <span>
+                      {booking.localDate} ·{" "}
+                      {new Date(booking.startUtc).toLocaleString("it-IT", {
+                        timeZone: sessions.timeZone,
+                      })}{" "}
+                      -{" "}
+                      {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
+                        timeZone: sessions.timeZone,
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <strong>{formatBookingStatus(booking.status)}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="range-empty">Nessuna prenotazione.</p>}
+          </RangeDeferred>
+        )}
+      </RangeDeferred>
+    </section>
+  );
+}
+
+function OfferedSessionOptions({
+  offered,
+  selectedPeriod,
+  onDefaultPeriod,
+}: {
+  offered: Sessions;
+  selectedPeriod: string;
+  onDefaultPeriod: (period: string) => void;
+}) {
+  useEffect(() => {
+    if (!selectedPeriod && offered.sessions[0]) {
+      onDefaultPeriod(offered.sessions[0].periodKey);
+    }
+  }, [offered, onDefaultPeriod, selectedPeriod]);
+
+  return offered.sessions.map((session) => (
+    <option key={session.periodKey} value={session.periodKey}>
+      {formatSessionLabel(session, offered.timeZone)}
+    </option>
+  ));
 }
 
 export function App() {

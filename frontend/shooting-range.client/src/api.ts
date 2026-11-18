@@ -180,25 +180,30 @@ export const book = (body: BookingRequest) =>
     method: "POST",
     body: JSON.stringify(body),
   });
-export const myBookings = () => request<Booking[]>(`${prefix}/bookings/mine`);
-export const messages = () => request<unknown[]>(`${prefix}/messages`);
+export const myBookings = (signal?: AbortSignal) =>
+  request<Booking[]>(`${prefix}/bookings/mine`, { signal });
+export const messages = (signal?: AbortSignal) =>
+  request<unknown[]>(`${prefix}/messages`, { signal });
 export const openMessage = (body: { subject: string; text: string }) =>
   request(`${prefix}/messages`, { method: "POST", body: JSON.stringify(body) });
-export const adminUsers = () => request<AdminUser[]>(`${prefix}/admin/users`);
-export const adminConfig = () => request<RangeConfig>(`${prefix}/admin/config`);
+export const adminUsers = (signal?: AbortSignal) =>
+  request<AdminUser[]>(`${prefix}/admin/users`, { signal });
+export const adminConfig = (signal?: AbortSignal) =>
+  request<RangeConfig>(`${prefix}/admin/config`, { signal });
 export const saveConfig = (body: RangeConfig) =>
   request<RangeConfig>(`${prefix}/admin/config`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
-export const adminBays = () => request<Bay[]>(`${prefix}/admin/bays`);
+export const adminBays = (signal?: AbortSignal) =>
+  request<Bay[]>(`${prefix}/admin/bays`, { signal });
 export const saveBay = (body: Bay) =>
   request<Bay>(`${prefix}/admin/bays/${encodeURIComponent(body.id)}`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
-export const adminClosures = () =>
-  request<Closure[]>(`${prefix}/admin/exceptions`);
+export const adminClosures = (signal?: AbortSignal) =>
+  request<Closure[]>(`${prefix}/admin/exceptions`, { signal });
 export const addClosure = (body: {
   localDate: string;
   bayId: string | null;
@@ -214,8 +219,8 @@ export const saveClosure = (body: Closure) =>
     `${prefix}/admin/exceptions/${encodeURIComponent(body.id)}`,
     { method: "PUT", body: JSON.stringify(body) },
   );
-export const adminBookings = () =>
-  request<Booking[]>(`${prefix}/admin/bookings`);
+export const adminBookings = (signal?: AbortSignal) =>
+  request<Booking[]>(`${prefix}/admin/bookings`, { signal });
 export const decideBooking = (id: string, approved: boolean) =>
   request<void>(`${prefix}/admin/bookings/${encodeURIComponent(id)}/decision`, {
     method: "POST",

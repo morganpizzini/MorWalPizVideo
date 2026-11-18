@@ -30,6 +30,7 @@ describe("admin form structure and SSR", () => {
           initial={{ ...config, sessionMode: mode }}
           busy={false}
           onSave={async () => {}}
+          onDraftChange={() => {}}
         />,
       );
       expect(html).toContain("Mattina o pomeriggio intero");
@@ -54,6 +55,7 @@ describe("admin form structure and SSR", () => {
         initial={{ ...config, hourlyMinutes: 45 }}
         busy
         onSave={async () => {}}
+        onDraftChange={() => {}}
       />,
     );
     expect(html).toContain('disabled=""');
@@ -92,6 +94,7 @@ describe("admin form structure and SSR", () => {
         ]}
         busy={false}
         onSave={async () => {}}
+        onDraftChange={() => {}}
       />,
     );
     expect(html).toContain("Manutenzione");

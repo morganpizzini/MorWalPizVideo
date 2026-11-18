@@ -3,10 +3,16 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json yarn.lock ./
 COPY shooting-range.client/package.json shooting-range.client/package.json
+COPY fe-packages/models/package.json fe-packages/models/package.json
+COPY fe-packages/layout/package.json fe-packages/layout/package.json
 RUN yarn install --frozen-lockfile
 
+COPY fe-packages/models fe-packages/models
+COPY fe-packages/layout fe-packages/layout
 COPY shooting-range.client shooting-range.client
-RUN yarn workspace shooting-range.client build:all
+RUN yarn workspace @morwalpizvideo/models build \
+	&& yarn workspace @morwalpiz/layout build \
+	&& yarn workspace shooting-range.client build:all
 
 FROM node:22-alpine
 

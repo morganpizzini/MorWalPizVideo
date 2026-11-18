@@ -6,13 +6,48 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionGate } from "./App";
 import { getSession, logout, myBookings, sessions, type Account } from "./api";
 
+const testDoubles = vi.hoisted(() => ({ logout: vi.fn() }));
+
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   getSession: vi.fn(),
-  logout: vi.fn(),
+  logout: testDoubles.logout,
   myBookings: vi.fn(),
   sessions: vi.fn(),
 }));
+
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
+  const React = await import("react");
+  return {
+    ...actual,
+    useFetcher: () => {
+      const [data, setData] = React.useState<
+        { intent: string; success: boolean; message: string } | undefined
+      >();
+      const [state, setState] = React.useState<"idle" | "submitting">("idle");
+      const [formData, setFormData] = React.useState<FormData | undefined>();
+      return {
+        data,
+        state,
+        formData,
+        load: () => {},
+        submit: (submitted: FormData) => {
+          setFormData(submitted);
+          setState("submitting");
+          void testDoubles.logout()
+            .then(() => setData({ intent: "logout", success: true, message: "" }))
+            .catch(() => setData({
+              intent: "logout",
+              success: false,
+              message: "Uscita non riuscita. Riprova.",
+            }))
+            .finally(() => setState("idle"));
+        },
+      };
+    },
+  };
+});
 
 const account: Account = {
   id: "account",
@@ -75,8 +110,8 @@ describe("Range session recovery", () => {
     expect(container.textContent).not.toContain("Le mie prenotazioni");
     expect(myBookings).not.toHaveBeenCalled();
     await act(async () => resolveSession(account));
-    expect(container.textContent).toContain("Le mie prenotazioni");
-    expect(myBookings).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Scegli una data e una sessione");
+    expect(myBookings).not.toHaveBeenCalled();
   });
 
   it("forced-change sessions do not request domain data and can log out", async () => {
@@ -116,11 +151,12 @@ describe("Range session recovery", () => {
   it("allows retry after restoration failure and clears content on session expiry", async () => {
     vi.mocked(getSession)
       .mockRejectedValueOnce(new Error("network unavailable"))
-      .mockResolvedValueOnce(account);
+      .mockResolvedValueOnce(account)
+      .mockRejectedValueOnce(new Error("session expired"));
     await renderGate();
     expect(container.textContent).toContain("Sessione non disponibile");
     await click("Riprova");
-    expect(container.textContent).toContain("Le mie prenotazioni");
+    expect(container.textContent).toContain("Scegli una data e una sessione");
     await act(async () =>
       window.dispatchEvent(new Event("range-session-expired")),
     );

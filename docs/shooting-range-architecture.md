@@ -4,7 +4,7 @@
 
 Shooting Range is a pre-release proof of concept that is expected to become publicly reachable. It remains independently deployable through the GitHub `production` environment, but public exposure does not make it a feature-complete product.
 
-The approved direction is an authorization-first, minimal user experience. Preserve the current project-local contracts, service, and repository boundaries so later features can be added without coupling the POC to BackOffice, Domain, Models, or the shared frontend packages. Do not implement speculative workflows before observed use establishes a requirement.
+The approved direction is an authorization-first, minimal user experience. Preserve the project-local API contracts, service, repository, authentication, and transport boundaries so later features can be added without coupling the POC to BackOffice, Domain, Models, or Workshop application code. The Range client may consume the consolidated `@morwalpiz/layout` presentation package to share UI components and its aligned visual system with Shooter Workshop. This supersedes ADR-016's earlier shared-frontend restriction, which reflected the old layout implementation; it does not share Workshop authentication, services, models, or domain behavior. Do not implement speculative workflows before observed use establishes a requirement.
 
 The shop is unrelated to this runtime and remains pre-production and on hold.
 
@@ -12,7 +12,7 @@ The shop is unrelated to this runtime and remains pre-production and on hold.
 
 `MorWalPizVideo.ShootingRange` is a dedicated ASP.NET Core API. Its models, request/response contracts, application service, repository interfaces, Mongo and mock repositories, and password hashing implementation are owned by the project itself. It references only ServiceDefaults among the solution's application projects and is registered with `MorWalPizVideo.AppHost` as `shooting-range`. `frontend/shooting-range.client` is a separate React/Vite application with the same SSR shape as `ask.client`, but no Ask-domain dependency.
 
-The API is intentionally detached from `MorWalPizVideo.BackOffice`, `MorWalPizVideo.Domain`, `MorWalPizVideo.Models`, and `MorWalPiz.Contracts`. BackOffice is a pattern reference only; no BackOffice entities or shared ShootingRange types are used at runtime.
+The API is intentionally detached from `MorWalPizVideo.BackOffice`, `MorWalPizVideo.Domain`, `MorWalPizVideo.Models`, and `MorWalPiz.Contracts`. BackOffice is a pattern reference only; no BackOffice entities or shared ShootingRange types are used at runtime. The client uses `@morwalpiz/layout` only for presentation components; its Range API client, types, cookie/CSRF handling, and business workflows remain local.
 
 ## Defaults and time
 

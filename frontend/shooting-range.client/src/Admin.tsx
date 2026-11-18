@@ -1,34 +1,21 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useFetcher } from "react-router";
+import { TabbedWorkspace, type TabbedWorkspaceTab } from "@morwalpiz/layout";
 import { Shell, type SessionViewProps } from "./App";
-import {
-  ApiError,
-  addClosure,
-  adminBays,
-  adminBookings,
-  adminClosures,
-  adminConfig,
-  adminUsers,
-  approveUser,
-  decideBooking,
-  saveBay,
-  saveClosure,
-  saveConfig,
-  type AdminUser,
-  type Bay,
-  type Booking,
-  type Closure,
-  type RangeConfig,
-} from "./api";
+import type { AdminUser, Bay, Booking, Closure, RangeConfig } from "./api";
+import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
+import type {
+  ActionResult,
+  AdminRouteData,
+  SessionErrorData,
+} from "./routeData";
 import { accountStatus, bookingStatus } from "./schedule";
 
-interface AdminData {
-  config: RangeConfig;
-  users: AdminUser[];
-  bays: Bay[];
-  closures: Closure[];
-  bookings: Booking[];
-}
+type ClosureDraft = {
+  localDate: string;
+  bayId: string;
+  reason: string;
+};
 const dayNames = [
   "Domenica",
   "Lunedi",
@@ -38,14 +25,6 @@ const dayNames = [
   "Venerdi",
   "Sabato",
 ];
-
-function errorMessage(reason: unknown): string {
-  if (reason instanceof ApiError && reason.status === 401)
-    return "Accedi con un account amministratore.";
-  if (reason instanceof ApiError && reason.status === 403)
-    return "Account non autorizzato o cambio password richiesto.";
-  return reason instanceof Error ? reason.message : "Operazione non riuscita.";
-}
 
 function TimeField({
   label,
@@ -76,13 +55,19 @@ export function ConfigForm({
   initial,
   busy,
   onSave,
+  onDraftChange,
 }: {
   initial: RangeConfig;
   busy: boolean;
   onSave: (config: RangeConfig) => Promise<void>;
+  onDraftChange: (config: RangeConfig) => void;
 }) {
   const [config, setConfig] = useState(initial);
   useEffect(() => setConfig(initial), [initial]);
+  function updateConfig(value: RangeConfig) {
+    setConfig(value);
+    onDraftChange(value);
+  }
   return (
     <form
       onSubmit={(event) => {
@@ -99,7 +84,7 @@ export function ConfigForm({
             maxLength={120}
             value={config.name}
             onChange={(event) =>
-              setConfig({ ...config, name: event.target.value })
+              updateConfig({ ...config, name: event.target.value })
             }
           />
         </label>
@@ -109,7 +94,7 @@ export function ConfigForm({
             required
             value={config.timeZone}
             onChange={(event) =>
-              setConfig({ ...config, timeZone: event.target.value })
+              updateConfig({ ...config, timeZone: event.target.value })
             }
           />
         </label>
@@ -118,7 +103,7 @@ export function ConfigForm({
           <select
             value={config.sessionMode}
             onChange={(event) =>
-              setConfig({
+              updateConfig({
                 ...config,
                 sessionMode: Number(
                   event.target.value,
@@ -137,14 +122,14 @@ export function ConfigForm({
               label="Apertura continua"
               value={config.continuousStart}
               onChange={(value) =>
-                setConfig({ ...config, continuousStart: value })
+                updateConfig({ ...config, continuousStart: value })
               }
             />
             <TimeField
               label="Chiusura continua"
               value={config.continuousEnd}
               onChange={(value) =>
-                setConfig({ ...config, continuousEnd: value })
+                updateConfig({ ...config, continuousEnd: value })
               }
             />
           </>
@@ -154,28 +139,28 @@ export function ConfigForm({
               label="Apertura mattina"
               value={config.morningStart}
               onChange={(value) =>
-                setConfig({ ...config, morningStart: value ?? "" })
+                updateConfig({ ...config, morningStart: value ?? "" })
               }
             />
             <TimeField
               label="Chiusura mattina"
               value={config.morningEnd}
               onChange={(value) =>
-                setConfig({ ...config, morningEnd: value ?? "" })
+                updateConfig({ ...config, morningEnd: value ?? "" })
               }
             />
             <TimeField
               label="Apertura pomeriggio"
               value={config.afternoonStart}
               onChange={(value) =>
-                setConfig({ ...config, afternoonStart: value ?? "" })
+                updateConfig({ ...config, afternoonStart: value ?? "" })
               }
             />
             <TimeField
               label="Chiusura pomeriggio"
               value={config.afternoonEnd}
               onChange={(value) =>
-                setConfig({ ...config, afternoonEnd: value ?? "" })
+                updateConfig({ ...config, afternoonEnd: value ?? "" })
               }
             />
           </>
@@ -189,7 +174,7 @@ export function ConfigForm({
                   type="checkbox"
                   checked={config.openingDays.includes(day)}
                   onChange={(event) =>
-                    setConfig({
+                    updateConfig({
                       ...config,
                       openingDays: event.target.checked
                         ? [...config.openingDays, day]
@@ -211,7 +196,7 @@ export function ConfigForm({
             required
             value={config.reservedReleaseDaysBefore}
             onChange={(event) =>
-              setConfig({
+              updateConfig({
                 ...config,
                 reservedReleaseDaysBefore: Number(event.target.value),
               })
@@ -239,19 +224,25 @@ export function BayForm({
   users,
   busy,
   onSave,
+  onDraftChange,
 }: {
   initial: Bay;
   users: AdminUser[];
   busy: boolean;
   onSave: (bay: Bay) => Promise<void>;
+  onDraftChange: (bay: Bay) => void;
 }) {
   const [bay, setBay] = useState(initial);
   useEffect(() => setBay(initial), [initial]);
+  function updateBay(value: Bay) {
+    setBay(value);
+    onDraftChange(value);
+  }
   function updateMechanism(
     index: number,
     update: Partial<Bay["mechanisms"][number]>,
   ) {
-    setBay({
+    updateBay({
       ...bay,
       mechanisms: bay.mechanisms.map((mechanism, position) =>
         position === index ? { ...mechanism, ...update } : mechanism,
@@ -273,7 +264,7 @@ export function BayForm({
             required
             maxLength={40}
             value={bay.code}
-            onChange={(event) => setBay({ ...bay, code: event.target.value })}
+            onChange={(event) => updateBay({ ...bay, code: event.target.value })}
           />
         </label>
         <label>
@@ -281,7 +272,7 @@ export function BayForm({
           <select
             value={bay.status}
             onChange={(event) =>
-              setBay({ ...bay, status: Number(event.target.value) })
+              updateBay({ ...bay, status: Number(event.target.value) })
             }
           >
             <option value={0}>Disponibile</option>
@@ -295,7 +286,7 @@ export function BayForm({
             maxLength={1000}
             value={bay.description}
             onChange={(event) =>
-              setBay({ ...bay, description: event.target.value })
+              updateBay({ ...bay, description: event.target.value })
             }
           />
         </label>
@@ -307,7 +298,7 @@ export function BayForm({
             required
             value={bay.partitions}
             onChange={(event) =>
-              setBay({ ...bay, partitions: Number(event.target.value) })
+              updateBay({ ...bay, partitions: Number(event.target.value) })
             }
           />
         </label>
@@ -319,7 +310,7 @@ export function BayForm({
             required
             value={bay.plates}
             onChange={(event) =>
-              setBay({ ...bay, plates: Number(event.target.value) })
+              updateBay({ ...bay, plates: Number(event.target.value) })
             }
           />
         </label>
@@ -328,7 +319,7 @@ export function BayForm({
             type="checkbox"
             checked={bay.pepper}
             onChange={(event) =>
-              setBay({ ...bay, pepper: event.target.checked })
+              updateBay({ ...bay, pepper: event.target.checked })
             }
           />
           Pepper
@@ -342,7 +333,7 @@ export function BayForm({
                   type="checkbox"
                   checked={bay.whitelistUserIds.includes(user.id)}
                   onChange={(event) =>
-                    setBay({
+                    updateBay({
                       ...bay,
                       whitelistUserIds: event.target.checked
                         ? [...bay.whitelistUserIds, user.id]
@@ -389,7 +380,7 @@ export function BayForm({
                 className="secondary-button"
                 aria-label={`Rimuovi meccanismo ${index + 1}`}
                 onClick={() =>
-                  setBay({
+                  updateBay({
                     ...bay,
                     mechanisms: bay.mechanisms.filter(
                       (_, position) => position !== index,
@@ -405,7 +396,7 @@ export function BayForm({
             type="button"
             className="secondary-button"
             onClick={() =>
-              setBay({
+              updateBay({
                 ...bay,
                 mechanisms: [...bay.mechanisms, { type: "", quantity: 1 }],
               })
@@ -424,9 +415,13 @@ function ClosureForm({
   bays,
   busy,
   onSave,
+  closure,
+  onDraftChange,
 }: {
   bays: Bay[];
   busy: boolean;
+  closure: ClosureDraft;
+  onDraftChange: (closure: ClosureDraft) => void;
   onSave: (closure: {
     localDate: string;
     bayId: string | null;
@@ -434,11 +429,6 @@ function ClosureForm({
     reason: string;
   }) => Promise<void>;
 }) {
-  const [closure, setClosure] = useState({
-    localDate: "",
-    bayId: "",
-    reason: "",
-  });
   return (
     <form
       onSubmit={(event) => {
@@ -459,7 +449,7 @@ function ClosureForm({
             required
             value={closure.localDate}
             onChange={(event) =>
-              setClosure({ ...closure, localDate: event.target.value })
+              onDraftChange({ ...closure, localDate: event.target.value })
             }
           />
         </label>
@@ -468,7 +458,7 @@ function ClosureForm({
           <select
             value={closure.bayId}
             onChange={(event) =>
-              setClosure({ ...closure, bayId: event.target.value })
+              onDraftChange({ ...closure, bayId: event.target.value })
             }
           >
             <option value="">Tutto il campo</option>
@@ -486,7 +476,7 @@ function ClosureForm({
             maxLength={1000}
             value={closure.reason}
             onChange={(event) =>
-              setClosure({ ...closure, reason: event.target.value })
+              onDraftChange({ ...closure, reason: event.target.value })
             }
           />
         </label>
@@ -501,56 +491,66 @@ export function Admin({
   onLogout,
   loggingOut,
 }: Partial<SessionViewProps> = {}) {
-  const [data, setData] = useState<AdminData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("config");
+  const [configDraft, setConfigDraft] = useState<RangeConfig | null>(null);
+  const [bayDrafts, setBayDrafts] = useState<Record<string, Bay>>({});
+  const [closureDraft, setClosureDraft] = useState<ClosureDraft>({
+    localDate: "",
+    bayId: "",
+    reason: "",
+  });
+  const [newBay, setNewBay] = useState<Bay | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [newBay, setNewBay] = useState<Bay | null>(null);
-  async function load(): Promise<AdminData> {
-    const [config, users, bays, closures, bookings] = await Promise.all([
-      adminConfig(),
-      adminUsers(),
-      adminBays(),
-      adminClosures(),
-      adminBookings(),
-    ]);
-    return { config, users, bays, closures, bookings };
-  }
-  useEffect(() => {
-    let active = true;
-    load()
-      .then((result) => {
-        if (active) setData(result);
-      })
-      .catch((reason) => {
-        if (active) setError(errorMessage(reason));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const routeFetcher = useFetcher<AdminRouteData | SessionErrorData | null>();
+  const actionFetcher = useFetcher<ActionResult>();
+  const busy = actionFetcher.state !== "idle";
 
-  async function perform(
-    action: () => Promise<unknown>,
-    success: string,
-  ): Promise<void> {
-    setBusy(true);
+  useEffect(() => {
+    routeFetcher.load("/admin");
+  }, [account?.id, routeFetcher.load]);
+
+  useEffect(() => {
+    const result = actionFetcher.data;
+    if (!result) return;
+    setError("");
+    if (result.success) {
+      setNotice(result.message);
+      if (result.intent === "save-config") setConfigDraft(null);
+      if (result.intent === "save-bay" && result.entityId) {
+        setBayDrafts((value) => {
+          const next = { ...value };
+          delete next[result.entityId!];
+          return next;
+        });
+        setNewBay((value) => value?.id === result.entityId ? null : value);
+      }
+      if (result.intent === "add-closure") {
+        setClosureDraft({ localDate: "", bayId: "", reason: "" });
+      }
+    } else {
+      setNotice("");
+      setError(result.message);
+    }
+  }, [actionFetcher.data]);
+
+  const routeError =
+    routeFetcher.data && "sessionError" in routeFetcher.data
+      ? routeFetcher.data.sessionError
+      : null;
+  const routeData =
+    routeFetcher.data && "core" in routeFetcher.data
+      ? routeFetcher.data
+      : null;
+
+  function perform(intent: string, payload?: object) {
+    if (busy) return;
+    const formData = new FormData();
+    formData.set("intent", intent);
+    if (payload) formData.set("payload", JSON.stringify(payload));
     setError("");
     setNotice("");
-    try {
-      await action();
-      setData(await load());
-      setNotice(success);
-      setNewBay(null);
-    } catch (reason) {
-      setError(errorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
+    actionFetcher.submit(formData, { method: "post", action: "/admin" });
   }
 
   function createBay() {
@@ -576,223 +576,268 @@ export function Admin({
       loggingOut={loggingOut}
     >
       <section className="booking-heading">
-        <h2>Amministrazione</h2>
-        <Link to="/">Prenotazioni</Link>
+        <div>
+          <h1>Amministrazione</h1>
+          <p className="range-muted">Gestisci calendario, postazioni e richieste.</p>
+        </div>
+        <Link className="button button-quiet" to="/">Prenotazioni</Link>
       </section>
-      <div aria-live="polite">
-        {loading && <p>Caricamento amministrazione...</p>}
-        {busy && <p>Salvataggio in corso...</p>}
-        {notice && <p className="success">{notice}</p>}
-      </div>
+      {busy && <p className="range-pending" role="status">Salvataggio in corso...</p>}
+      {notice && <p className="range-success" role="status">{notice}</p>}
       {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
+        <p role="alert" className="range-error">{error}</p>
       )}
-      {!loading && !data && <Link to="/">Torna all'accesso</Link>}
-      {data && (
-        <>
-          <section className="admin-section">
-            <h3>Configurazione del campo</h3>
-            <ConfigForm
-              initial={data.config}
-              busy={busy}
-              onSave={(config) =>
-                perform(() => saveConfig(config), "Configurazione salvata.")
-              }
-            />
-          </section>
-          <section className="admin-section">
-            <div className="section-heading">
-              <h3>Bay</h3>
-              <button
-                disabled={busy || !!newBay}
-                className="secondary-button"
-                onClick={createBay}
-              >
-                Nuova bay
-              </button>
-            </div>
-            {!data.bays.length && !newBay && (
-              <p className="muted">Nessuna bay configurata.</p>
-            )}
-            {data.bays.map((bay) => (
-              <details key={bay.id}>
-                <summary>
-                  Bay {bay.code} ·{" "}
-                  {["Disponibile", "Manutenzione", "Disabilitata"][
-                    bay.status
-                  ] ?? "Stato sconosciuto"}
-                </summary>
-                <BayForm
-                  initial={bay}
-                  users={data.users}
-                  busy={busy}
-                  onSave={(value) =>
-                    perform(() => saveBay(value), "Bay salvata.")
-                  }
-                />
-              </details>
-            ))}
-            {newBay && (
-              <>
-                <BayForm
-                  initial={newBay}
-                  users={data.users}
-                  busy={busy}
-                  onSave={(value) =>
-                    perform(() => saveBay(value), "Bay creata.")
-                  }
-                />
-                <button
-                  className="secondary-button"
-                  disabled={busy}
-                  onClick={() => setNewBay(null)}
-                >
-                  Annulla nuova bay
-                </button>
-              </>
-            )}
-          </section>
-          <section className="admin-section">
-            <h3>Chiusure</h3>
-            <ClosureForm
-              bays={data.bays}
-              busy={busy}
-              onSave={(closure) =>
-                perform(() => addClosure(closure), "Chiusura salvata.")
-              }
-            />
-            {!data.closures.length && (
-              <p className="muted">Nessuna eccezione al calendario.</p>
-            )}
-            <ul className="record-list">
-              {data.closures.map((closure) => (
-                <li key={closure.id}>
-                  <span>
-                    {closure.localDate} ·{" "}
-                    {closure.bayId
-                      ? (data.bays.find((bay) => bay.id === closure.bayId)
-                          ?.code ?? closure.bayId)
-                      : "Tutto il campo"}{" "}
-                    · {closure.reason}
-                  </span>
-                  <strong>
-                    {closure.isClosed ? "Chiuso" : "Nessuna chiusura"}
-                  </strong>
-                  {closure.isClosed && (
-                    <button
-                      className="secondary-button"
-                      disabled={busy}
-                      onClick={() =>
-                        void perform(
-                          () => saveClosure({ ...closure, isClosed: false }),
-                          "Chiusura rimossa.",
-                        )
-                      }
-                    >
-                      Riapri
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className="admin-section">
-            <h3>Account</h3>
-            <ul className="record-list">
-              {data.users.map((user) => (
-                <li key={user.id}>
-                  <span>
-                    <strong>
-                      {user.firstName} {user.lastName}
-                    </strong>{" "}
-                    · {user.username} · {accountStatus(user.status)}
-                    {user.forcePasswordChange && " · Cambio password richiesto"}
-                  </span>
-                  {user.status === 0 && (
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void perform(
-                          () => approveUser(user.id),
-                          "Account approvato.",
-                        )
-                      }
-                    >
-                      Approva {user.username}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className="admin-section">
-            <h3>Richieste di prenotazione</h3>
-            {!data.bookings.length && (
-              <p className="muted">Nessuna richiesta.</p>
-            )}
-            <ul className="record-list">
-              {data.bookings.map((booking) => (
-                <li key={booking.id}>
-                  <div>
-                    <strong>
-                      {booking.localDate} · Bay{" "}
-                      {data.bays.find((bay) => bay.id === booking.bayId)
-                        ?.code ?? booking.bayId}
-                    </strong>
-                    <p>
-                      {new Date(booking.startUtc).toLocaleString("it-IT", {
-                        timeZone: data.config.timeZone,
-                      })}{" "}
-                      -{" "}
-                      {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                        timeZone: data.config.timeZone,
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      · {bookingStatus(booking.status)}
-                    </p>
-                    <p>
-                      {data.users.find((user) => user.id === booking.userId)
-                        ?.username ?? booking.userId}{" "}
-                      · {booking.request}
-                    </p>
-                  </div>
-                  <div className="action-group">
-                    {booking.status !== 1 && (
+      {routeError && (
+        <RouteSessionError
+          message={routeError.message ?? "Sessione non disponibile."}
+          status={routeError.status}
+          onRetry={() => routeFetcher.load("/admin")}
+        />
+      )}
+      {!routeError && !routeData && (
+        <RangeSkeleton rows={5} label="Caricamento amministrazione..." />
+      )}
+      {!routeError && routeData && (
+        <RangeDeferred
+          resolve={routeData.core}
+          fallback={<RangeSkeleton rows={5} label="Caricamento amministrazione..." />}
+          onRetry={() => routeFetcher.load("/admin")}
+        >
+          {(core) => {
+            const tabs: TabbedWorkspaceTab[] = [
+              {
+                key: "config",
+                label: "Calendario",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Configurazione del campo</h2>
+                    <ConfigForm
+                      initial={configDraft ?? core.config}
+                      busy={busy}
+                      onDraftChange={setConfigDraft}
+                      onSave={async (config) => perform("save-config", config)}
+                    />
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
+                key: "bays",
+                label: "Postazioni",
+                panel: (
+                  <section className="range-panel">
+                    <div className="section-heading">
+                      <h2>Postazioni</h2>
                       <button
-                        disabled={busy}
-                        onClick={() =>
-                          void perform(
-                            () => decideBooking(booking.id, true),
-                            "Prenotazione approvata.",
-                          )
-                        }
+                        type="button"
+                        disabled={busy || !!newBay}
+                        className="button button-quiet"
+                        onClick={createBay}
                       >
-                        Approva
+                        Nuova postazione
                       </button>
+                    </div>
+                    {!core.bays.length && !newBay && (
+                      <p className="range-empty">Nessuna postazione configurata.</p>
                     )}
-                    {booking.status !== 2 && (
-                      <button
-                        className="secondary-button"
-                        disabled={busy}
-                        onClick={() =>
-                          void perform(
-                            () => decideBooking(booking.id, false),
-                            "Prenotazione rifiutata.",
-                          )
-                        }
-                      >
-                        Rifiuta
-                      </button>
+                    {core.bays.map((bay) => (
+                      <details key={bay.id}>
+                        <summary>
+                          Postazione {bay.code} ·{" "}
+                          {["Disponibile", "Manutenzione", "Disabilitata"][bay.status] ?? "Stato sconosciuto"}
+                        </summary>
+                        <BayForm
+                          initial={bayDrafts[bay.id] ?? bay}
+                          users={core.users}
+                          busy={busy}
+                          onDraftChange={(value) => setBayDrafts((drafts) => ({ ...drafts, [bay.id]: value }))}
+                          onSave={async (value) => perform("save-bay", value)}
+                        />
+                      </details>
+                    ))}
+                    {newBay && (
+                      <>
+                        <BayForm
+                          initial={newBay}
+                          users={core.users}
+                          busy={busy}
+                          onDraftChange={setNewBay}
+                          onSave={async (value) => perform("save-bay", value)}
+                        />
+                        <button
+                          type="button"
+                          className="button button-quiet"
+                          disabled={busy}
+                          onClick={() => setNewBay(null)}
+                        >
+                          Annulla nuova postazione
+                        </button>
+                      </>
                     )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
+                key: "closures",
+                label: "Chiusure",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Chiusure</h2>
+                    <ClosureForm
+                      bays={core.bays}
+                      busy={busy}
+                      closure={closureDraft}
+                      onDraftChange={setClosureDraft}
+                      onSave={async (value) => perform("add-closure", value)}
+                    />
+                    <RangeDeferred
+                      resolve={routeData.closures}
+                      fallback={<RangeSkeleton rows={3} label="Caricamento chiusure..." />}
+                      onRetry={() => routeFetcher.load("/admin")}
+                    >
+                      {(closures) => closures.length ? (
+                        <ul className="record-list">
+                          {closures.map((closure) => (
+                            <li key={closure.id}>
+                              <span>
+                                {closure.localDate} ·{" "}
+                                {closure.bayId
+                                  ? (core.bays.find((bay) => bay.id === closure.bayId)?.code ?? closure.bayId)
+                                  : "Tutto il campo"}{" "}
+                                · {closure.reason}
+                              </span>
+                              <strong>{closure.isClosed ? "Chiuso" : "Nessuna chiusura"}</strong>
+                              {closure.isClosed && (
+                                <button
+                                  type="button"
+                                  className="button button-quiet"
+                                  disabled={busy}
+                                  onClick={() => perform("save-closure", { ...closure, isClosed: false })}
+                                >
+                                  Riapri
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="range-empty">Nessuna eccezione al calendario.</p>}
+                    </RangeDeferred>
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
+                key: "accounts",
+                label: "Account",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Account</h2>
+                    <ul className="record-list">
+                      {core.users.map((user) => (
+                        <li key={user.id}>
+                          <span>
+                            <strong>{user.firstName} {user.lastName}</strong> · {user.username} · {accountStatus(user.status)}
+                            {user.forcePasswordChange && " · Cambio password richiesto"}
+                          </span>
+                          {user.status === 0 && (
+                            <button
+                              type="button"
+                              className="button button-primary"
+                              disabled={busy}
+                              onClick={() => perform("approve-user", { id: user.id })}
+                            >
+                              Approva {user.username}
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
+                key: "bookings",
+                label: "Prenotazioni",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Richieste di prenotazione</h2>
+                    <RangeDeferred
+                      resolve={routeData.bookings}
+                      fallback={<RangeSkeleton rows={4} label="Caricamento richieste..." />}
+                      onRetry={() => routeFetcher.load("/admin")}
+                    >
+                      {(data) => data.bookings.length ? (
+                        <ul className="record-list">
+                          {data.bookings.map((booking) => (
+                            <li key={booking.id}>
+                              <div>
+                                <strong>
+                                  {booking.localDate} · Postazione{" "}
+                                  {data.bays.find((bay) => bay.id === booking.bayId)?.code ?? booking.bayId}
+                                </strong>
+                                <p>
+                                  {new Date(booking.startUtc).toLocaleString("it-IT", { timeZone: data.config.timeZone })}{" "}
+                                  -{" "}
+                                  {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
+                                    timeZone: data.config.timeZone,
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}{" "}
+                                  · {bookingStatus(booking.status)}
+                                </p>
+                                <p>
+                                  {data.users.find((user) => user.id === booking.userId)?.username ?? booking.userId}
+                                  {" · "}{booking.request}
+                                </p>
+                              </div>
+                              <div className="action-group">
+                                {booking.status !== 1 && (
+                                  <button
+                                    type="button"
+                                    className="button button-primary"
+                                    disabled={busy}
+                                    onClick={() => perform("decide-booking", { id: booking.id, approved: true })}
+                                  >
+                                    Approva
+                                  </button>
+                                )}
+                                {booking.status !== 2 && (
+                                  <button
+                                    type="button"
+                                    className="button button-quiet"
+                                    disabled={busy}
+                                    onClick={() => perform("decide-booking", { id: booking.id, approved: false })}
+                                  >
+                                    Rifiuta
+                                  </button>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="range-empty">Nessuna richiesta.</p>}
+                    </RangeDeferred>
+                  </section>
+                ),
+                disabled: busy,
+              },
+            ];
+            return (
+              <TabbedWorkspace
+                aria-label="Sezioni di amministrazione"
+                tabs={tabs}
+                selectedKey={selectedTab}
+                onSelectedKeyChange={setSelectedTab}
+                className="range-admin-tabs"
+                tabListClassName="range-admin-tabs__list"
+                tabClassName="range-admin-tabs__tab"
+                panelClassName="range-admin-tabs__panel"
+              />
+            );
+          }}
+        </RangeDeferred>
       )}
     </Shell>
   );
