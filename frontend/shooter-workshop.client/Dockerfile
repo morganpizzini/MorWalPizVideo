@@ -1,6 +1,8 @@
 FROM node:26-alpine  AS builder
 
 WORKDIR /app
+RUN npm install --global yarn@1.22.22
+
 COPY package.json yarn.lock ./
 COPY fe-packages/models/package.json ./fe-packages/models/
 COPY fe-packages/services/package.json ./fe-packages/services/

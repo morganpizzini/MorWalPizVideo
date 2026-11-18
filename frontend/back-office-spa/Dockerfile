@@ -4,6 +4,8 @@ FROM node:26-alpine  AS builder
 # Set working directory
 WORKDIR /app
 
+RUN npm install --global yarn@1.22.22
+
 # Copy root package files and workspace manifests
 COPY package.json yarn.lock ./
 COPY fe-packages/models/package.json ./fe-packages/models/

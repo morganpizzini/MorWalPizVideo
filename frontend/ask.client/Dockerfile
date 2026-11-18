@@ -1,5 +1,7 @@
 FROM node:26-alpine  AS build
 WORKDIR /app
+RUN npm install --global yarn@1.22.22
+
 COPY package.json yarn.lock ./
 COPY fe-packages/models/package.json fe-packages/models/package.json
 COPY fe-packages/services/package.json fe-packages/services/package.json
@@ -14,6 +16,8 @@ RUN yarn workspace ask.client build:all
 
 FROM node:26-alpine 
 WORKDIR /app
+RUN npm install --global yarn@1.22.22
+
 COPY --from=build /app/package.json /app/yarn.lock ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/ask.client ./ask.client

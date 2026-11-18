@@ -1,6 +1,8 @@
 FROM node:26-alpine  AS build
 
 WORKDIR /app
+RUN npm install --global yarn@1.22.22
+
 COPY package.json yarn.lock ./
 COPY shooting-range.client/package.json shooting-range.client/package.json
 COPY fe-packages/models/package.json fe-packages/models/package.json
