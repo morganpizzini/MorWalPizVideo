@@ -48,7 +48,6 @@ application; BackOffice and ServerAPI identity/data are unaffected.
 - `MorWalPizVideo.ShootingRange/Persistence/Migrations/` (SQL Server initial
   migration replaces the unshipped PostgreSQL migration)
 - `MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj`
-- `MorWalPizVideo.ShootingRange.Migration/Program.cs`
 - `MorWalPizVideo.ShootingRange.Tests/Services/ShootingRangeSqlServerTests.cs`
 - `.github/workflows/deploy-shooting-range-api.yml`
 - `docs/shooting-range-architecture.md`,
@@ -62,8 +61,6 @@ application; BackOffice and ServerAPI identity/data are unaffected.
 - Ran the entire Shooting Range test project against a disposable local SQL
   Server 2022 container: **71 passed, 0 failed, 0 skipped**, including all six
   SQL Server transaction/concurrency integration tests.
-- The migration tool is referenced by the test project and built as part of
-  that build.
 - Restore/build reports existing transitive `System.Security.Cryptography.Pkcs`
   9.0.4 NU1902/NU1903 advisories.
 

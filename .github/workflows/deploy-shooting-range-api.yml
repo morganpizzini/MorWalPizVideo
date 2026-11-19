@@ -13,7 +13,6 @@ on:
       - 'MorWalPizVideo.ServiceDefaults/**'
       - 'MorWalPiz.Contracts/**'
       - 'MorWalPizVideo.ShootingRange.Tests/**'
-      - 'MorWalPizVideo.ShootingRange.Migration/**'
       - 'MorWalPizVideo.sln'
       - 'MorWalPizVideo.ShootingRange/Dockerfile'
       - '.dockerignore'
@@ -46,13 +45,9 @@ jobs:
         run: |
           dotnet restore MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj
           dotnet restore MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj
-          dotnet restore MorWalPizVideo.ShootingRange.Migration/MorWalPizVideo.ShootingRange.Migration.csproj
 
       - name: Build API
         run: dotnet build MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-restore
-
-      - name: Build Mongo-to-Azure SQL operator migration tool
-        run: dotnet build MorWalPizVideo.ShootingRange.Migration/MorWalPizVideo.ShootingRange.Migration.csproj --configuration Release --no-restore
 
       - name: Run focused Shooting Range tests with mock repositories
         env:
