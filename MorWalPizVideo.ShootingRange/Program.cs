@@ -44,12 +44,12 @@ builder.Services.AddAuthorization();
 var migrateDatabase = args.Contains("--migrate-database", StringComparer.Ordinal);
 var useInMemoryDb = !migrateDatabase && await StartupConfigurationValidation.IsFeatureEnabledAsync(
     builder.Configuration, StartupConfigurationValidation.EnableInMemoryDb);
-var useMock = !migrateDatabase && builder.Configuration.GetValue("FeatureManagement:EnableMock", builder.Environment.IsDevelopment());
+var useMock = !migrateDatabase && await StartupConfigurationValidation.IsFeatureEnabledAsync(builder.Configuration, StartupConfigurationValidation.UseMock);
 if (useInMemoryDb)
     useMock = false;
 StartupConfigurationValidation.ValidateMockMode(useMock, builder.Environment);
 StartupConfigurationValidation.ValidateInMemoryDbMode(useInMemoryDb, builder.Environment);
-var enableKeyVault = builder.Configuration.GetValue("FeatureManagement:EnableKeyVault", false);
+var enableKeyVault = await StartupConfigurationValidation.IsFeatureEnabledAsync(builder.Configuration, StartupConfigurationValidation.EnableKeyVault);
 IConfigurationProvider? keyVaultProvider = null;
 
 if (enableKeyVault)
@@ -100,6 +100,37 @@ else
 }
 builder.Services.AddScoped<ShootingRangeService>();
 var app = builder.Build();
+if (useInMemoryDb)
+{
+    var adminPassword = builder.Configuration["ShootingRange:InMemoryAdminPassword"];
+    if (string.IsNullOrWhiteSpace(adminPassword))
+    {
+        app.Logger.LogWarning("No in-memory administrator was seeded because ShootingRange:InMemoryAdminPassword is not configured.");
+    }
+    else
+    {
+        using var scope = app.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        if (await repositories.Users.FindByUsernameAsync("admin") is null)
+        {
+            var hash = PasswordHashing.HashPassword(adminPassword, out var salt);
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "in-memory-admin",
+                Username = "admin",
+                FirstName = "Local",
+                LastName = "Administrator",
+                PasswordHash = $"{hash}:{salt}",
+                Status = MorWalPizVideo.ShootingRange.Models.ShootingRangeAccountStatus.Approved,
+                IsAdmin = true,
+                ForcePasswordChange = true,
+                SecurityVersion = Guid.NewGuid().ToString("N")
+            });
+            app.Logger.LogInformation("Seeded the in-memory administrator account.");
+        }
+    }
+}
+
 if (!useMock && !useInMemoryDb)
 {
     using var scope = app.Services.CreateScope();
@@ -162,6 +193,8 @@ public partial class Program { }
 internal static class StartupConfigurationValidation
 {
     internal const string EnableInMemoryDb = "EnableInMemoryDb";
+    internal const string UseMock = "UseMock";
+    internal const string EnableKeyVault = "EnableKeyVault";
 
     internal static async Task<bool> IsFeatureEnabledAsync(IConfiguration configuration, string featureName)
     {

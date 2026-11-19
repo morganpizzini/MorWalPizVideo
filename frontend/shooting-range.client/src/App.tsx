@@ -127,7 +127,7 @@ function Auth({
         dell'amministratore.
       </p>
       <form onSubmit={submit}>
-        <fieldset className="auth-fields" disabled={pending}>
+        <div className="auth-fields" disabled={pending}>
           {mode === "register" && (
             <>
               <label>
@@ -191,7 +191,7 @@ function Auth({
                 ? "Accedi"
                 : "Invia richiesta"}
           </button>
-        </fieldset>
+        </div>
       </form>
       {error && (
         <p role="alert" className="range-error">

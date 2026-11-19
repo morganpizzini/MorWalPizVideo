@@ -62,7 +62,7 @@
   grid-template-columns: minmax(0, 3.5fr) minmax(240px, 1fr);
   gap: 18px;
   margin-bottom: 30px;
-  &__aside { display: grid; grid-template-rows: 1fr 1fr; gap: 16px; min-width: 0; }
+  &__aside { display: grid; grid-template-rows: repeat(3, minmax(0, auto)); align-content: space-between; gap: 10px; min-width: 0; }
 }
 
 .featured-content {
@@ -85,23 +85,37 @@
 }
 
 .journey-panel, .donation-panel {
-  padding: 20px 22px;
+  padding: 12px 16px;
   border: 1px solid var(--magazine-border);
   border-radius: 10px;
   background: var(--magazine-surface);
-  h2 { font-size: 16px; line-height: 1.3; margin: 0 0 8px; }
-  p { color: var(--magazine-secondary); font-size: 12px; margin: 0 0 16px; }
+  h2 { font-size: 16px; line-height: 1.3; margin: 0 0 4px; }
+  p { color: var(--magazine-secondary); font-size: 12px; margin: 0 0 8px; }
 }
 .donation-panel {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   align-content: center;
-  gap: 12px;
+  gap: 8px;
   border-color: var(--magazine-donation-border);
   background: linear-gradient(115deg, #ffff360b, transparent 85%), var(--magazine-surface);
   > i { color: var(--magazine-accent); font-size: var(--magazine-font-home-heading); align-self: center; }
   h2 { color: var(--magazine-accent); font-size: var(--magazine-font-home-supporting); margin-bottom: 5px; }
   p { margin: 0; }
+  .editorial-button { grid-column: 1 / -1; min-height: 34px; padding: 6px 12px; }
+}
+.workshop-panel {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--magazine-border);
+  border-radius: 10px;
+  background: var(--magazine-surface);
+  > i { color: var(--magazine-accent); font-size: var(--magazine-font-home-heading); align-self: center; }
+  h2 { font-size: var(--magazine-font-home-supporting); margin: 0 0 5px; }
+  p { color: var(--magazine-secondary); font-size: 12px; margin: 0; }
   .editorial-button { grid-column: 1 / -1; min-height: 34px; padding: 6px 12px; }
 }
 
@@ -195,6 +209,8 @@
 .home-editorial-bottom { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(250px, 1fr); align-items: start; gap: 32px; }
 .article-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .community-banner { position: relative; padding: 22px; min-height: 180px; background: repeating-linear-gradient(130deg, #202020 0, #202020 9px, #181818 9px, #181818 18px); overflow: hidden; border-block: 1px solid var(--magazine-border); &::after { content: ''; position: absolute; right: 20px; top: -20%; height: 140%; width: 14px; transform: rotate(35deg); background: var(--magazine-accent); } > div { position: relative; z-index: 1; max-width: 85%; } h2 { font-size: var(--magazine-font-card-title); margin: 0 0 8px; } p { color: #ddd; font-size: var(--magazine-font-small); margin: 0 0 18px; } }
+.home-editorial-aside { display: grid; gap: 16px; }
+.workshop-banner { .editorial-button { min-height: 40px; padding: 7px 14px; } }
 .home-section-message { margin: 16px 0; color: var(--magazine-secondary); a { color: var(--magazine-accent); } }
 .more-content { margin-top: 36px; > h2 { margin-bottom: 20px; } }
 .home-empty { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; padding: 32px 0; h2 { font-size: var(--magazine-font-section); } h3 { font-size: var(--magazine-font-card-title); } p { color: var(--magazine-secondary); margin: 0; } }
@@ -210,7 +226,7 @@
 @media (max-width: 1199.98px) {
   .home-feature { grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr); gap: 16px; }
   .featured-content { padding: 24px; min-height: 330px; h2 { font-size: var(--magazine-font-home-heading); } &__copy { width: 90%; } }
-  .journey-panel, .donation-panel { padding: 16px; }
+  .journey-panel, .donation-panel, .workshop-panel { padding: 12px 14px; }
   .editorial-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .shorts-card { min-height: 320px; }
   .sponsors-and-gear { flex-direction: column; align-items: stretch; gap: 20px; }
@@ -224,6 +240,7 @@
   .home-feature { grid-template-columns: 1fr; margin-bottom: 28px; }
   .featured-content { aspect-ratio: auto; min-height: 360px; padding: 24px 20px; h2 { font-size: var(--magazine-font-home-featured); } p { font-size: var(--magazine-font-footer); } &__copy { width: 95%; } &::after { background: linear-gradient(0deg, #000f, #0009 55%, #0002); } }
   .home-feature__aside { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+  .workshop-panel { grid-column: 1 / -1; }
   .journey-panel h2, .donation-panel h2 { font-size: 14px; }
   .journey-panel .social-links { gap: 10px; }
   .social-link { width: 36px; height: 36px; flex-basis: 36px; font-size: var(--magazine-font-brand-compact); }

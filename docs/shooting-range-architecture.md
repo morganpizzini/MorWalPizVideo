@@ -34,7 +34,7 @@ Pending and Approved consume capacity through half-open persisted UTC intervals 
 
 All account passwords are PBKDF2 hashes with per-account salts. Passwords must never be logged or returned. Only Approved users can authenticate. Admin reset marks `ForcePasswordChange`; the new password must be communicated out of band.
 
-The first administrator is inserted manually into `shooting_range_users`; there is no public or administrative bootstrap endpoint. The inserted row must use the normalized username and the password representation produced by the current password-hashing implementation. No credential or reusable hash belongs in source or documentation.
+The first production administrator is inserted manually into `shooting_range_users`; there is no public or administrative bootstrap endpoint. The inserted row must use the normalized username and the password representation produced by the current password-hashing implementation. In Development/Test only, the EF in-memory provider can seed a local administrator when `ShootingRange:InMemoryAdminPassword` is supplied through environment-managed configuration. That account requires a password change at first login. No password or reusable hash is stored in source or documentation.
 
 Ordinary-user onboarding is not yet a final product decision. Admin-created users are the working assumption because it keeps account creation behind authorization; public self-registration is not part of the approved public-release posture.
 

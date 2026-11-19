@@ -182,6 +182,7 @@ export default function Index() {
             <aside className="home-feature__aside">
               <div className="journey-panel"><h2>Segui il percorso</h2><p>Ci vediamo anche qui.</p><SocialLinks /></div>
               <DonationCard />
+              <WorkshopCard />
             </aside>
           </section>
           {data.channelNews[0] && <ChannelNewsBanner item={data.channelNews[0]} />}
@@ -216,7 +217,10 @@ export default function Index() {
               <div className="section-toolbar"><h2 id="articles-heading" className="editorial-heading">Ultimi articoli</h2><Link className="editorial-text-link" to="/blog">Tutti gli articoli <i className="fas fa-arrow-right" aria-hidden="true" /></Link></div>
               {data.articlesUnavailable ? <p className="home-section-message" role="status">Gli articoli non sono disponibili al momento. <Link to="/blog">Vai al blog</Link></p> : !data.articles?.length ? <p className="home-section-message">Nessun articolo pubblicato.</p> : <div className="article-grid">{data.articles.slice(0, 3).map((article) => <ContentCard key={article.slug} item={{ type: 'article', article }} />)}</div>}
             </section>
-            <section className="community-banner" aria-labelledby="community-heading"><div><h2 id="community-heading">Entra nella community</h2><p>Ci si incontra sul campo. E non solo.</p><SocialLinks /></div></section>
+            <div className="home-editorial-aside">
+              <section className="community-banner" aria-labelledby="community-heading"><div><h2 id="community-heading">Entra nella community</h2><p>Ci si incontra sul campo. E non solo.</p><SocialLinks /></div></section>
+              <WorkshopBanner />
+            </div>
           </div>
           {filtered.length > 4 && <section className="more-content" aria-label="Altri contenuti"><h2 className="editorial-heading">Ancora da scoprire</h2><div className="editorial-grid">{filtered.slice(4).map((item) => <ContentCard key={item.type === 'article' ? `article-${item.article.slug}` : `match-${item.match.url || item.match.contentId}`} item={item} />)}</div></section>}
         </>
@@ -270,6 +274,14 @@ function ShareMenu({ url, title }: { url: string; title: string }) {
 
 function DonationCard() {
   return <section className="donation-panel" aria-labelledby="donation-heading"><i className="fas fa-mug-hot" aria-hidden="true" /><div><h2 id="donation-heading">Sostieni il canale</h2><p>Aiutami nel mio percorso!</p></div><a className="editorial-button" href="https://www.buymeacoffee.com/MorWalPiz" target="_blank" rel="noopener noreferrer">Offrimi un caffè <i className="fas fa-arrow-right" aria-hidden="true" /></a></section>;
+}
+
+export function WorkshopCard() {
+  return <section className="workshop-panel" aria-labelledby="workshop-heading"><i className="fas fa-bullseye" aria-hidden="true" /><div><h2 id="workshop-heading">Workshop</h2><p>Allenati con la mia app.</p></div><a className="editorial-button" href="https://workshop.morwalpiz.com" target="_blank" rel="noopener noreferrer">Apri l'app <i className="fas fa-arrow-right" aria-hidden="true" /></a></section>;
+}
+
+export function WorkshopBanner() {
+  return <section className="community-banner workshop-banner" aria-labelledby="workshop-banner-heading"><div><h2 id="workshop-banner-heading">Scopri il Workshop</h2><p>Allenati con la mia app.</p><a className="editorial-button" href="https://workshop.morwalpiz.com" target="_blank" rel="noopener noreferrer">Apri il Workshop <i className="fas fa-arrow-right" aria-hidden="true" /></a></div></section>;
 }
 
 function ShortsCard() {

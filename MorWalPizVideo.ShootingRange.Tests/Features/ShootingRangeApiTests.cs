@@ -29,6 +29,13 @@ public sealed class ShootingRangeApiTests
         var firstRepositories = firstScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         firstScope.ServiceProvider.GetRequiredService<ShootingRangeDbContext>().Database.IsInMemory().Should().BeTrue();
         firstRepositories.Should().BeOfType<SqlServerShootingRangeRepositorySet>();
+        var seededAdmin = await firstRepositories.Users.FindByUsernameAsync("admin");
+        seededAdmin.Should().NotBeNull();
+        seededAdmin!.Status.Should().Be(ShootingRangeAccountStatus.Approved);
+        seededAdmin.IsAdmin.Should().BeTrue();
+        seededAdmin.ForcePasswordChange.Should().BeTrue();
+        var passwordParts = seededAdmin.PasswordHash.Split(':', 2);
+        PasswordHashing.VerifyPassword(factory.InMemoryAdminPassword!, passwordParts[0], passwordParts[1]).Should().BeTrue();
         await firstRepositories.Users.InsertAsync(new() { Id = "memory-user", Username = "memory-user" });
 
         using var secondScope = factory.Services.CreateScope();
@@ -328,10 +335,12 @@ public sealed class ShootingRangeApiTests
     private sealed class Factory : WebApplicationFactory<ShootingRangeController>
     {
         private readonly bool enableInMemoryDb;
+        public string? InMemoryAdminPassword { get; }
 
         public Factory(bool enableInMemoryDb = false)
         {
             this.enableInMemoryDb = enableInMemoryDb;
+            InMemoryAdminPassword = enableInMemoryDb ? Guid.NewGuid().ToString("N") : null;
             Environment.SetEnvironmentVariable("FeatureManagement__EnableMock", (!enableInMemoryDb).ToString());
             Environment.SetEnvironmentVariable("FeatureManagement__EnableInMemoryDb", enableInMemoryDb.ToString());
         }
@@ -349,6 +358,7 @@ public sealed class ShootingRangeApiTests
                 ["FeatureManagement:EnableMock"] = (!enableInMemoryDb).ToString(),
                 ["FeatureManagement:EnableInMemoryDb"] = enableInMemoryDb.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
+                ["ShootingRange:InMemoryAdminPassword"] = InMemoryAdminPassword,
                 ["Logging:LogLevel:Default"] = "Error"
             }));
         }

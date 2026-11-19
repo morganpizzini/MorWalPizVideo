@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import type { BlogSummary } from '@morwalpizvideo/models';
-import { ContentCard, createEditorialFeed, filterEditorialFeed, getMatchDestination, type IndexMatch } from './Component';
+import { ContentCard, createEditorialFeed, filterEditorialFeed, getMatchDestination, WorkshopBanner, WorkshopCard, type IndexMatch } from './Component';
 
 const video: IndexMatch = {
   contentId: 'video-id',
@@ -68,5 +68,21 @@ describe('editorial homepage', () => {
     expect(html).toContain('href="/blog/sul-campo"');
     expect(html).toContain('alt="Campo di gara"');
     expect(html).toContain('loading="lazy"');
+  });
+
+  it('opens the Workshop app in a new tab safely', () => {
+    const html = renderToStaticMarkup(<WorkshopCard />);
+    expect(html).toContain('href="https://workshop.morwalpiz.com"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it('renders the Workshop banner with the community banner layout and destination', () => {
+    const html = renderToStaticMarkup(<WorkshopBanner />);
+    expect(html).toContain('class="community-banner workshop-banner"');
+    expect(html).toContain('Scopri il Workshop');
+    expect(html).toContain('href="https://workshop.morwalpiz.com"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
   });
 });

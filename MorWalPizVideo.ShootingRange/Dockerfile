@@ -11,11 +11,9 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj", "MorWalPizVideo.ShootingRange/"]
 COPY ["MorWalPizVideo.ServiceDefaults/MorWalPizVideo.ServiceDefaults.csproj", "MorWalPizVideo.ServiceDefaults/"]
-RUN --mount=type=cache,id=shootingrange-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet restore "./MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj"
+RUN dotnet restore "./MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj"
 COPY . .
-RUN --mount=type=cache,id=shootingrange-nuget,target=/root/.nuget/packages,sharing=locked \
-	dotnet publish "./MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj" \
+RUN dotnet publish "./MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj" \
 		-c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final
