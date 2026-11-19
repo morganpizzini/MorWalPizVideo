@@ -27,6 +27,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MorWalPizVideo.ShootingRange\MorWalPizVideo.ShootingRange.csproj" />
-    <ProjectReference Include="..\MorWalPizVideo.ShootingRange.Migration\MorWalPizVideo.ShootingRange.Migration.csproj" />
   </ItemGroup>
 </Project>
