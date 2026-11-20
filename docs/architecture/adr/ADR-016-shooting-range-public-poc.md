@@ -37,7 +37,7 @@ The remaining anonymous-domain/onboarding cutover is NOT READY pending the ordin
 
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
-Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal capacity admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. Messaging expansion, rescheduling, push notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
+Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal capacity admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. The existing message page now shows text, sent dates and request status to users; administrators also see the sender and can set or correct the status to InProgress, Completed or Refused. This limited slice does not add reply composition or notifications. Broader messaging expansion, rescheduling, push notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
 
 ### Booking workflow amendment — 2026-11-20
 
@@ -56,11 +56,33 @@ Manual administrator insertion remains an operational responsibility. The proced
 
 The original frontend isolation constraint is superseded. The Range client now uses the consolidated `@morwalpiz/layout` presentation layer where its components fit, with Range-local styling and workflows. This amendment does not make Workshop authentication, services, models, or application code shared, and it does not complete or alter the separate public-release authorization/onboarding decision.
 
+### Message status amendment — 2026-11-20
+
+The existing `/messages` page may display each thread's messages and sent
+dates, and show its status to the owner. Administrators may see the sender and
+set the status to InProgress, Completed or Refused; an administrator may
+correct any earlier decision. Pending (`0`) is the default for existing and
+new threads, not an administrator decision. The Range-local API enforces the
+administrator role, current approved account and CSRF validation. Both status
+changes and replies perform their thread read-modify-write inside the existing
+repository mutation guard. An additive SQL migration preserves all existing
+thread and message data and defaults old rows to Pending. This does not add
+reply composition, notifications, or other deferred messaging capabilities.
+
 ## Migration And Rollback
 
 Old cookies without the new session claim require reauthentication. Sessions are persisted in the Azure SQL `shooting_range_local_sessions` table; account `security_version` and `normalized_username` columns are required, and the unique normalized-username index uses binary collation. Deploy the compatible security API before the client; full domain authorization remains a separate cutover.
 
-Pause writes for guarded API cutover, ensure all instances use the guard, deploy the client next and enable new modes last. Application rollback must use a compatible guarded version; otherwise suspend mutations. Never restore unrestricted credentialed CORS, password-hash responses, or production mock repositories. See the Shooting Range architecture procedure for data preflight and unresolved public-release controls.
+For the message status migration, back up SQL, pause message writes, drain old
+API instances, apply the explicit EF migration and deploy the guarded API
+everywhere before deploying the client. Old API instances must not coexist as
+writers because their reply path does not guard the preceding read. Retain the
+status column when rolling back after decisions have been recorded; an old
+client cannot show or change those values. Application rollback must use a
+compatible guarded version; otherwise suspend mutations. Never restore
+unrestricted credentialed CORS, password-hash responses, or production mock
+repositories. See the Shooting Range architecture procedure for data preflight
+and unresolved public-release controls.
 
 ## Validation
 

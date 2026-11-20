@@ -225,6 +225,44 @@ public sealed class ShootingRangeServiceTests
     }
 
     [Fact]
+    public async Task Message_status_can_be_corrected_and_guarded_replies_preserve_thread_history()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var thread = await repositories.Threads.InsertAsync(new()
+        {
+            Id = "message-thread",
+            UserId = "user-2",
+            Subject = "Question",
+            Messages = [new("user-2", false, "Original message", DateTime.UtcNow)]
+        });
+        var service = new ShootingRangeService(repositories);
+
+        await service.DecideThreadStatusAsync("user-1", thread.Id, ShootingRangeThreadStatus.InProgress, default);
+        await service.DecideThreadStatusAsync("user-1", thread.Id, ShootingRangeThreadStatus.Completed, default);
+        await service.DecideThreadStatusAsync("user-1", thread.Id, ShootingRangeThreadStatus.Refused, default);
+        await service.DecideThreadStatusAsync("user-1", thread.Id, ShootingRangeThreadStatus.InProgress, default);
+        var replied = await service.ReplyToThreadAsync("user-2", thread.Id, "Additional details", default);
+
+        replied.Status.Should().Be(ShootingRangeThreadStatus.InProgress);
+        replied.Messages.Should().HaveCount(2);
+        replied.Messages[0].Text.Should().Be("Original message");
+        replied.Messages[1].AuthorUserId.Should().Be("user-2");
+        replied.Messages[1].FromAdmin.Should().BeFalse();
+        replied.Messages[1].Text.Should().Be("Additional details");
+
+        var nonAdminDecision = () => service.DecideThreadStatusAsync(
+            "user-2", thread.Id, ShootingRangeThreadStatus.Completed, default);
+        await nonAdminDecision.Should().ThrowAsync<UnauthorizedAccessException>();
+        var invalidStatus = () => service.DecideThreadStatusAsync("user-1", thread.Id, ShootingRangeThreadStatus.Pending, default);
+        await invalidStatus.Should().ThrowAsync<ArgumentException>();
+        var undefinedStatus = () => service.DecideThreadStatusAsync("user-1", thread.Id, (ShootingRangeThreadStatus)99, default);
+        await undefinedStatus.Should().ThrowAsync<ArgumentException>();
+        var missingThread = () => service.DecideThreadStatusAsync("user-1", "missing", ShootingRangeThreadStatus.Completed, default);
+        await missingThread.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
     public async Task User_can_cancel_only_their_own_active_booking_before_its_start_and_admin_can_restore_it()
     {
         var repositories = await CreateRepositoriesAsync();

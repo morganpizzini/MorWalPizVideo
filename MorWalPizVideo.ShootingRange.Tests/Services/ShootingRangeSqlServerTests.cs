@@ -147,6 +147,36 @@ public sealed class ShootingRangeSqlServerTests
             item.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved).Should().Be(1);
     }
 
+    [SqlServerFact]
+    public async Task Concurrent_thread_reply_and_status_updates_preserve_both_changes()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        const string adminId = "message-admin";
+        await fixture.First.Users.InsertAsync(new()
+        {
+            Id = adminId,
+            Username = adminId,
+            Status = ShootingRangeAccountStatus.Approved,
+            IsAdmin = true
+        });
+        var thread = await fixture.First.Threads.InsertAsync(new()
+        {
+            Id = "message-thread",
+            UserId = fixture.UserId,
+            Subject = "Question",
+            Messages = [new(fixture.UserId, false, "Original", DateTime.UtcNow)]
+        });
+
+        await Task.WhenAll(
+            new ShootingRangeService(fixture.First).ReplyToThreadAsync(adminId, thread.Id, "Reply", default),
+            new ShootingRangeService(fixture.Second).DecideThreadStatusAsync(
+                adminId, thread.Id, ShootingRangeThreadStatus.Completed, default));
+
+        var persisted = (await fixture.First.Threads.GetAsync(thread.Id))!;
+        persisted.Status.Should().Be(ShootingRangeThreadStatus.Completed);
+        persisted.Messages.Select(message => message.Text).Should().Contain("Original").And.Contain("Reply");
+    }
+
     private sealed class SqlServerFactAttribute : FactAttribute
     {
         public SqlServerFactAttribute()

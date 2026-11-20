@@ -47,14 +47,14 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("description");
 
+                    b.Property<decimal?>("Height")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("height");
+
                     b.Property<string>("Mechanisms")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("mechanisms");
-
-                    b.Property<decimal?>("Height")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("height");
 
                     b.Property<int>("Partitions")
                         .HasColumnType("int")
@@ -94,39 +94,6 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("shooting_range_bays", (string)null);
-                });
-
-            modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeMechanismType", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreationDateTime")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("creation_date_time");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("NormalizedName")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .UseCollation("Latin1_General_100_BIN2")
-                        .HasColumnType("nvarchar(80)")
-                        .HasColumnName("normalized_name");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("ux_shooting_range_mechanism_types_normalized_name");
-
-                    b.ToTable("shooting_range_mechanism_types", (string)null);
                 });
 
             modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeBooking", b =>
@@ -332,6 +299,39 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                     b.ToTable("shooting_range_local_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeMechanismType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreationDateTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("creation_date_time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("normalized_name")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ux_shooting_range_mechanism_types_normalized_name");
+
+                    b.ToTable("shooting_range_mechanism_types", (string)null);
+                });
+
             modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeThread", b =>
                 {
                     b.Property<string>("Id")
@@ -347,6 +347,12 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("messages");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
 
                     b.Property<string>("Subject")
                         .IsRequired()

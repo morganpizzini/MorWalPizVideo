@@ -12,6 +12,7 @@ public sealed record BookingDecisionRequest(bool Approved);
 public sealed record CreateMechanismTypeRequest([Required, StringLength(80, MinimumLength = 1)] string Name);
 public sealed record ThreadRequest([Required, StringLength(120)] string Subject, [Required, StringLength(2000)] string Text);
 public sealed record ThreadMessageRequest([Required, StringLength(2000)] string Text);
+public sealed record ThreadStatusDecisionRequest([Required] ShootingRangeThreadStatus? Status);
 public sealed record AccountDto(string Id, string Username, string FirstName, string LastName, ShootingRangeAccountStatus Status, bool IsAdmin, bool ForcePasswordChange);
 public sealed record BookingDto(string Id, string BayId, DateOnly LocalDate, string PeriodKey, DateTime StartUtc, DateTime EndUtc, string Request, ShootingRangeBookingStatus Status);
 public sealed record AvailabilityDto(DateOnly LocalDate, string PeriodKey, DateTime StartUtc, DateTime EndUtc, IReadOnlyList<ShootingRangeBay> Bays);

@@ -119,6 +119,7 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
         {
             entity.Property(x => x.UserId).HasMaxLength(128).IsRequired();
             entity.Property(x => x.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Status).HasConversion<int>().HasDefaultValue(ShootingRangeThreadStatus.Pending);
             ConfigureJson(entity.Property(x => x.Messages));
         });
 

@@ -763,6 +763,74 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.message__header,
+.message__entry-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  min-width: 0;
+}
+
+.message__header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.message__status,
+.message__sender {
+  margin: 0.4rem 0 0;
+  color: var(--range-secondary);
+  font-size: 0.82rem;
+}
+
+.message__status strong {
+  color: var(--range-text);
+}
+
+.message__entries {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.75rem;
+}
+
+.message__entry {
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--range-border);
+}
+
+.message__entry-header {
+  color: var(--range-secondary);
+  font-size: 0.78rem;
+}
+
+.message__entry-header time {
+  font-variant-numeric: tabular-nums;
+}
+
+.message__text {
+  margin: 0.5rem 0 0;
+  color: var(--range-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message__empty {
+  margin: 0;
+  color: var(--range-secondary);
+}
+
+.message__decisions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
 .range-admin-tabs__list {
   display: flex;
   gap: 0.4rem;

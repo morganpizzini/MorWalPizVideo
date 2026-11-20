@@ -71,6 +71,21 @@ export type Booking = Session & {
   request: string;
   status: number;
 };
+export type Message = {
+  authorUserId: string;
+  fromAdmin: boolean;
+  text: string;
+  createdUtc: string;
+};
+export type MessageThread = {
+  id: string;
+  creationDateTime: string;
+  userId: string;
+  subject: string;
+  status?: number;
+  messages?: Message[] | null;
+};
+export type MessageStatusDecision = 1 | 2 | 3;
 export type BookingRequest = {
   bayId: string;
   localDate: string;
@@ -193,9 +208,14 @@ export const cancelBooking = (id: string) =>
     method: "POST",
   });
 export const messages = (signal?: AbortSignal) =>
-  request<unknown[]>(`${prefix}/messages`, { signal });
+  request<MessageThread[]>(`${prefix}/messages`, { signal });
 export const openMessage = (body: { subject: string; text: string }) =>
-  request(`${prefix}/messages`, { method: "POST", body: JSON.stringify(body) });
+  request<MessageThread>(`${prefix}/messages`, { method: "POST", body: JSON.stringify(body) });
+export const decideMessageStatus = (id: string, status: MessageStatusDecision) =>
+  request<MessageThread>(`${prefix}/admin/messages/${encodeURIComponent(id)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
 export const adminUsers = (signal?: AbortSignal) =>
   request<AdminUser[]>(`${prefix}/admin/users`, { signal });
 export const adminConfig = (signal?: AbortSignal) =>

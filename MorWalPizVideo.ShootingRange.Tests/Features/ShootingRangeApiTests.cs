@@ -469,6 +469,68 @@ public sealed class ShootingRangeApiTests
     }
 
     [Fact]
+    public async Task Message_status_decisions_require_admin_and_csrf_and_can_be_corrected()
+    {
+        await using var factory = new Factory();
+        using var member = await LoginAsync(factory, false);
+        using var admin = await LoginAsync(factory, true, username: "administrator");
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        var thread = await repositories.Threads.InsertAsync(new()
+        {
+            Id = "message-request",
+            UserId = "account",
+            Subject = "Portal request",
+            Messages = [new("account", false, "Please help", DateTime.UtcNow)]
+        });
+
+        var memberList = await member.GetFromJsonAsync<ShootingRangeThread[]>("/api/shooting-range/messages");
+        memberList.Should().ContainSingle(item => item.Id == thread.Id);
+        using var forbidden = await member.PostAsJsonAsync(
+            $"/api/shooting-range/admin/messages/{thread.Id}/status",
+            new ThreadStatusDecisionRequest(ShootingRangeThreadStatus.InProgress));
+        forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var noCsrf = await admin.PostAsJsonAsync(
+            $"/api/shooting-range/admin/messages/{thread.Id}/status",
+            new ThreadStatusDecisionRequest(ShootingRangeThreadStatus.InProgress));
+        noCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await SetCsrfAsync(admin);
+        using var missing = await admin.PostAsJsonAsync(
+            $"/api/shooting-range/admin/messages/{thread.Id}/status",
+            new { });
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var pending = await admin.PostAsJsonAsync(
+            $"/api/shooting-range/admin/messages/{thread.Id}/status",
+            new ThreadStatusDecisionRequest(ShootingRangeThreadStatus.Pending));
+        pending.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        foreach (var status in new[]
+        {
+            ShootingRangeThreadStatus.InProgress,
+            ShootingRangeThreadStatus.Completed,
+            ShootingRangeThreadStatus.Refused,
+            ShootingRangeThreadStatus.InProgress
+        })
+        {
+            using var updated = await admin.PostAsJsonAsync(
+                $"/api/shooting-range/admin/messages/{thread.Id}/status",
+                new ThreadStatusDecisionRequest(status));
+            updated.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await updated.Content.ReadFromJsonAsync<ShootingRangeThread>())!.Status.Should().Be(status);
+        }
+
+        using var notFound = await admin.PostAsJsonAsync(
+            "/api/shooting-range/admin/messages/missing/status",
+            new ThreadStatusDecisionRequest(ShootingRangeThreadStatus.Completed));
+        notFound.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var persisted = await repositories.Threads.GetAsync(thread.Id);
+        persisted!.Status.Should().Be(ShootingRangeThreadStatus.InProgress);
+        persisted.Messages.Should().BeEquivalentTo(thread.Messages);
+    }
+
+    [Fact]
     public async Task Password_change_invalidates_other_sessions_and_renews_current_session()
     {
         await using var factory = new Factory();

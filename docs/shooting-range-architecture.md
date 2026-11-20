@@ -40,6 +40,14 @@ Every repository write participates in a SQL Server `ReadCommitted` transaction 
 
 Pending and Approved consume capacity through half-open persisted UTC intervals per bay, regardless of period key or current mode. Adjacent intervals and different bays are allowed. Generic booking insert/replace paths also validate capacity; inactive-to-active transitions recheck admission, while Pending-to-Approved preserves the original reservation. Historical intervals and booking identity cannot be rewritten. Malformed active intervals block the affected bay until operational reconciliation. A unique normalized-username index with binary collation is a database backstop. The mock repository serializes mutations and restores its snapshot on failure; mock tests do not prove SQL Server locking or transaction rollback.
 
+Message threads persist a numeric `ShootingRangeThreadStatus`: Pending (`0`),
+InProgress (`1`), Completed (`2`) or Refused (`3`). The SQL migration defaults
+existing rows and inserts from an older API version to Pending. Administrators
+may select any of the three decision states and correct a prior decision;
+Pending is not a decision. Both status decisions and reply append operations
+read and replace the thread inside the existing guarded write transaction, so
+concurrent writes preserve the latest messages and status.
+
 All account passwords are PBKDF2 hashes with per-account salts. New passwords must contain at least seven characters. Passwords must never be logged or returned. Only Approved users can authenticate. Admin reset marks `ForcePasswordChange`; the new password must be communicated out of band.
 
 The first production administrator is inserted manually into `shooting_range_users`; there is no public or administrative bootstrap endpoint. The inserted row must use the normalized username and the password representation produced by the current password-hashing implementation. In Development/Test only, the EF in-memory provider can seed a local administrator when `ShootingRange:InMemoryAdminPassword` is supplied through environment-managed configuration. That account requires a password change at first login. No password or reusable hash is stored in source or documentation.
@@ -79,6 +87,13 @@ The initial public-facing POC is limited to:
 
 Schedule, bay, mechanism-type catalogue, closure management and booking decisions are accepted administrator scope. Bays have nonnegative integer target, partition, plate and popper counts; optional height and width are unit-free positive decimal values, entered to two decimal places and supplied together. The client preserves `/`, `/messages` and `/admin` and adds `/admin/bookings`; this does not authorize unrelated messaging expansion. Rescheduling, push notifications, waitlists, custom-duration sessions, and reporting remain deferred.
 
+The existing `/messages` page displays request text and each message's sent
+date. Users see their request status; administrators also see the sender and
+may set it to InProgress, Completed or Refused, including correcting an earlier
+decision. Status is visible as text and unknown values are not represented as
+Pending. This is limited to the existing thread workflow; reply composition,
+status notifications and other messaging expansion remain deferred.
+
 ## Appearance preference
 
 The client uses the shared `@morwalpiz/layout` System/Light/Dark appearance
@@ -98,7 +113,8 @@ Reassess these only after real POC use establishes operational value:
 
 1. Rescheduling with an explicit policy.
 2. Further administration workflows beyond the accepted schedule, bay and closure controls.
-3. Message threads and replies.
+3. Messaging capabilities beyond the existing thread view, replies and
+   administrator status decisions.
 4. Push notifications and waitlists.
 5. Custom-duration sessions.
 6. Attendance and utilization reporting.

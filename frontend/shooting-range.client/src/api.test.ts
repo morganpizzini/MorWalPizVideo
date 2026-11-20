@@ -13,6 +13,8 @@ import {
   getSession,
   login,
   logout,
+  messages,
+  decideMessageStatus,
   saveConfig,
   sessions,
   type RangeConfig,
@@ -21,6 +23,26 @@ import {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("credentialed range API", () => {
+  it("loads typed message threads and protects status decisions with CSRF", async () => {
+    const thread = { id: "thread-1", status: 1, messages: [] };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([thread])))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "csrf" })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...thread, status: 2 })));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(messages()).resolves.toEqual([thread]);
+    await decideMessageStatus("thread/1", 2);
+
+    expect(fetch.mock.calls[0][0]).toBe("/api/shooting-range/messages");
+    expect(fetch.mock.calls[1][0]).toBe("/api/shooting-range/csrf");
+    expect(fetch.mock.calls[2][0]).toBe("/api/shooting-range/admin/messages/thread%2F1/status");
+    expect(fetch.mock.calls[2][1]).toMatchObject({ method: "POST", credentials: "include" });
+    expect(fetch.mock.calls[2][1].headers.get("X-CSRF-TOKEN")).toBe("csrf");
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({ status: 2 });
+  });
+
   it("loads and creates admin mechanism types through the protected API", async () => {
     const fetch = vi
       .fn()

@@ -4,6 +4,7 @@ public enum ShootingRangeAccountStatus { Pending, Approved, Disabled }
 public enum ShootingRangeBookingStatus { Pending, Approved, Rejected, Cancelled }
 public enum ShootingRangeSessionMode { Periods = 0, Hourly = 1, HourlyContinuous = 2 }
 public enum ShootingRangeBayStatus { Available, Maintenance, Disabled }
+public enum ShootingRangeThreadStatus { Pending, InProgress, Completed, Refused }
 
 public sealed record Mechanism(string Type, int Quantity);
 
@@ -90,6 +91,7 @@ public sealed record ShootingRangeThread : BaseEntity
 {
     public string UserId { get; init; } = string.Empty;
     public string Subject { get; init; } = string.Empty;
+    public ShootingRangeThreadStatus Status { get; init; } = ShootingRangeThreadStatus.Pending;
     public List<ShootingRangeMessage> Messages { get; init; } = [];
 }
 

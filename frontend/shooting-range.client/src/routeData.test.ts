@@ -12,9 +12,11 @@ import {
   changePassword,
   createMechanismType,
   decideBooking,
+  decideMessageStatus,
   getConfig,
   getSession,
   login,
+  messages,
   myBookings,
   register,
   sessions,
@@ -29,6 +31,8 @@ import {
   adminLoader,
   bookingAction,
   bookingLoader,
+  messagesAction,
+  messagesLoader,
 } from "./routeData";
 
 vi.mock("./api", async (importOriginal) => ({
@@ -44,6 +48,7 @@ vi.mock("./api", async (importOriginal) => ({
   changePassword: vi.fn(),
   createMechanismType: vi.fn(),
   decideBooking: vi.fn(),
+  decideMessageStatus: vi.fn(),
   getConfig: vi.fn(),
   getSession: vi.fn(),
   login: vi.fn(),
@@ -187,6 +192,78 @@ describe("Range route data security and mutations", () => {
       bays: [],
       bookings: [],
     });
+  });
+
+  it("loads message threads for members and sender identities only for admins", async () => {
+    vi.stubGlobal("window", {});
+    const thread = {
+      id: "thread-1",
+      creationDateTime: "2030-01-01T10:00:00Z",
+      userId: account.id,
+      subject: "Help",
+      status: 0,
+      messages: [],
+    };
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(messages).mockResolvedValue([thread]);
+    vi.mocked(adminUsers).mockResolvedValue([]);
+
+    const memberResult = await messagesLoader(loaderArgs("https://range.test/messages"));
+    if (!memberResult || !("items" in memberResult)) throw new Error("Expected message data.");
+    await expect(memberResult.items).resolves.toEqual({ threads: [thread], users: [] });
+    expect(adminUsers).not.toHaveBeenCalled();
+
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(adminUsers).mockResolvedValue([{
+      ...account,
+      creationDateTime: "2030-01-01T00:00:00Z",
+    }]);
+    const adminResult = await messagesLoader(loaderArgs("https://range.test/messages"));
+    if (!adminResult || !("items" in adminResult)) throw new Error("Expected admin message data.");
+    await expect(adminResult.items).resolves.toMatchObject({
+      threads: [thread],
+      users: [{ id: account.id, username: account.username }],
+    });
+    expect(adminUsers).toHaveBeenCalledOnce();
+  });
+
+  it("requires an administrator before accepting a message status decision", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+
+    const denied = await messagesAction(actionArgs("/messages", {
+      intent: "decide-message-status",
+      payload: JSON.stringify({ id: "thread-1", status: 2 }),
+    }));
+    expect(denied).toMatchObject({ success: false, status: 403 });
+    expect(decideMessageStatus).not.toHaveBeenCalled();
+
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(decideMessageStatus).mockResolvedValue({
+      id: "thread-1",
+      creationDateTime: "2030-01-01T10:00:00Z",
+      userId: account.id,
+      subject: "Help",
+      status: 2,
+      messages: [],
+    });
+    const updated = await messagesAction(actionArgs("/messages", {
+      intent: "decide-message-status",
+      payload: JSON.stringify({ id: "thread-1", status: 2 }),
+    }));
+    expect(updated).toMatchObject({
+      intent: "decide-message-status",
+      success: true,
+      message: "Stato del messaggio aggiornato: Completata.",
+    });
+    expect(decideMessageStatus).toHaveBeenCalledWith("thread-1", 2);
+
+    const invalid = await messagesAction(actionArgs("/messages", {
+      intent: "decide-message-status",
+      payload: JSON.stringify({ id: "thread-1", status: 0 }),
+    }));
+    expect(invalid).toMatchObject({ success: false });
+    expect(decideMessageStatus).toHaveBeenCalledOnce();
   });
 
   it("loads sessions and opening weekdays after validating the browser session", async () => {

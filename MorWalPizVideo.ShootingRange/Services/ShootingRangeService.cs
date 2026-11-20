@@ -105,6 +105,45 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             return await repositories.Bookings.ReplaceAsync(booking with { Status = ShootingRangeBookingStatus.Cancelled }, cancellationToken);
         }, cancellationToken);
 
+    public Task<ShootingRangeThread> DecideThreadStatusAsync(
+        string actorId,
+        string threadId,
+        ShootingRangeThreadStatus status,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.IsDefined(status) || status == ShootingRangeThreadStatus.Pending)
+            throw new ArgumentException("Choose a valid message status.", nameof(status));
+
+        return AdminMutationAsync(actorId, async () =>
+        {
+            var thread = await repositories.Threads.GetAsync(threadId, cancellationToken)
+                ?? throw new KeyNotFoundException("Message not found.");
+            return await repositories.Threads.ReplaceAsync(thread with { Status = status }, cancellationToken);
+        }, cancellationToken);
+    }
+
+    public Task<ShootingRangeThread> ReplyToThreadAsync(
+        string actorId,
+        string threadId,
+        string text,
+        CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await repositories.Users.GetAsync(actorId, cancellationToken);
+            if (actor is null || actor.Status != ShootingRangeAccountStatus.Approved || actor.ForcePasswordChange)
+                throw new UnauthorizedAccessException("An approved account without a required password change is necessary.");
+
+            var thread = await repositories.Threads.GetAsync(threadId, cancellationToken);
+            if (thread is null || !actor.IsAdmin && thread.UserId != actorId)
+                throw new KeyNotFoundException("Message not found.");
+
+            var updated = thread with
+            {
+                Messages = [.. (thread.Messages ?? []), new(actorId, actor.IsAdmin, text.Trim(), DateTime.UtcNow)]
+            };
+            return await repositories.Threads.ReplaceAsync(updated, cancellationToken);
+        }, cancellationToken);
+
     public async Task<IReadOnlyList<ShootingRangeBooking>> GetUserBookingsAsync(string userId, CancellationToken cancellationToken)
     {
         var firstVisibleDate = await GetFirstVisibleBookingDateAsync(cancellationToken);

@@ -14,6 +14,7 @@ import {
   cancelBooking,
   changePassword,
   decideBooking,
+  decideMessageStatus,
   createMechanismType,
   getConfig,
   getSession,
@@ -34,6 +35,8 @@ import {
   type Closure,
   type RangeConfig,
   type MechanismType,
+  type MessageStatusDecision,
+  type MessageThread,
   type Booking,
   type Sessions,
 } from "./api";
@@ -74,7 +77,10 @@ export interface AdminCoreData {
 }
 
 export interface MessagesRouteData {
-  items: Promise<unknown[]>;
+  items: Promise<{
+    threads: MessageThread[];
+    users: AdminUser[];
+  }>;
 }
 
 export interface AdminRouteData {
@@ -362,7 +368,11 @@ export async function messagesLoader({ request }: LoaderFunctionArgs) {
   const account = await browserAccount(request);
   if (isSessionResult(account)) return { sessionError: account };
   if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
-  return { items: messages(request.signal) };
+  const users = account.isAdmin ? adminUsers(request.signal) : Promise.resolve([]);
+  return {
+    items: Promise.all([messages(request.signal), users])
+      .then(([threads, adminUsersList]) => ({ threads, users: adminUsersList })),
+  };
 }
 
 export async function messagesAction({ request }: ActionFunctionArgs): Promise<ActionResult> {
@@ -373,18 +383,43 @@ export async function messagesAction({ request }: ActionFunctionArgs): Promise<A
     if (account.forcePasswordChange) {
       return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
     }
-    if (intent !== "send-message") {
-      return { intent, success: false, message: "Operazione non riconosciuta." };
+    if (intent === "decide-message-status") {
+      if (!account.isAdmin) {
+        return { intent, success: false, status: 403, message: "Account non autorizzato." };
+      }
+      const payload = jsonField(formData, "payload");
+      const id = payload?.id;
+      const status = payload?.status;
+      if (typeof id !== "string" || !id || !isMessageStatusDecision(status)) {
+        return { intent, success: false, message: "Decisione sul messaggio non valida." };
+      }
+      await decideMessageStatus(id, status);
+      return {
+        intent,
+        success: true,
+        message: `Stato del messaggio aggiornato: ${messageStatusLabel(status)}.`,
+      };
     }
-    const text = formData.get("text");
-    if (typeof text !== "string" || text.trim().length < 3 || text.length > 2000) {
-      return { intent, success: false, message: "Il messaggio deve contenere da 3 a 2000 caratteri." };
+    if (intent === "send-message") {
+      const text = formData.get("text");
+      if (typeof text !== "string" || text.trim().length < 3 || text.length > 2000) {
+        return { intent, success: false, message: "Il messaggio deve contenere da 3 a 2000 caratteri." };
+      }
+      await openMessage({ subject: "Richiesta dal portale", text });
+      return { intent, success: true, message: "Messaggio inviato." };
     }
-    await openMessage({ subject: "Richiesta dal portale", text });
-    return { intent, success: true, message: "Messaggio inviato." };
+    return { intent, success: false, message: "Operazione non riconosciuta." };
   } catch (reason) {
     return actionError(intent, reason);
   }
+}
+
+function isMessageStatusDecision(value: unknown): value is MessageStatusDecision {
+  return value === 1 || value === 2 || value === 3;
+}
+
+function messageStatusLabel(status: MessageStatusDecision): string {
+  return status === 1 ? "Presa in carico" : status === 2 ? "Completata" : "Rifiutata";
 }
 
 export async function adminLoader({ request }: LoaderFunctionArgs) {

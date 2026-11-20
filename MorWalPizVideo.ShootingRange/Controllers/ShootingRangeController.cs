@@ -199,11 +199,29 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpPost("messages/{id}/replies"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> Reply(string id, ThreadMessageRequest request, CancellationToken cancellationToken)
     {
-        var thread = await repositories.Threads.GetAsync(id, cancellationToken);
-        if (thread is null || (!User.IsInRole("admin") && thread.UserId != UserId())) return NotFound();
-        var updated = thread with { Messages = [.. thread.Messages, new(UserId(), User.IsInRole("admin"), request.Text.Trim(), DateTime.UtcNow)] };
-        await repositories.Threads.ReplaceAsync(updated, cancellationToken);
-        return Ok(updated);
+        try
+        {
+            return Ok(await service.ReplyToThreadAsync(UserId(), id, request.Text, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("admin/messages/{id}/status"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> DecideMessageStatus(string id, ThreadStatusDecisionRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var status = request.Status ?? throw new ArgumentException("Choose a message status.");
+            var thread = await service.DecideThreadStatusAsync(UserId(), id, status, cancellationToken);
+            return Ok(thread);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException();
