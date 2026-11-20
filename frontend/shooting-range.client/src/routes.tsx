@@ -2,9 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { type RouteObject, useFetcher } from "react-router";
 import { App, SessionGate, Shell, type SessionViewProps } from "./App";
 import { Admin } from "./Admin";
+import { AdminBookings } from "./AdminBookings";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import {
   adminAction,
+  adminBookingsLoader,
   adminLoader,
   bookingAction,
   bookingLoader,
@@ -138,6 +140,24 @@ function AdminRoute() {
   );
 }
 
+function AdminBookingsRoute() {
+  return (
+    <SessionGate>
+      {(props) => props.account.isAdmin ? (
+        <AdminBookings {...props} />
+      ) : (
+        <Shell
+          account={props.account}
+          onLogout={props.onLogout}
+          loggingOut={props.loggingOut}
+        >
+          <RouteSessionError message="Account non autorizzato." status={403} />
+        </Shell>
+      )}
+    </SessionGate>
+  );
+}
+
 export const routes: RouteObject[] = [
   { path: "/", Component: App, loader: bookingLoader, action: bookingAction },
   {
@@ -150,6 +170,12 @@ export const routes: RouteObject[] = [
     path: "/admin",
     Component: AdminRoute,
     loader: adminLoader,
+    action: adminAction,
+  },
+  {
+    path: "/admin/bookings",
+    Component: AdminBookingsRoute,
+    loader: adminBookingsLoader,
     action: adminAction,
   },
 ];

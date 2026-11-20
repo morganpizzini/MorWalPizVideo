@@ -3,16 +3,32 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionGate } from "./App";
-import { ApiError, getSession, logout, myBookings, sessions, type Account } from "./api";
+import { Booking, SessionGate, Shell } from "./App";
+import {
+  adminPendingBookingCount,
+  ApiError,
+  getSession,
+  logout,
+  myBookings,
+  sessions,
+  type Account,
+} from "./api";
+import type { BookingRouteData } from "./routeData";
 
-const testDoubles = vi.hoisted(() => ({ login: vi.fn(), logout: vi.fn() }));
+const testDoubles = vi.hoisted(() => ({
+  login: vi.fn(),
+  logout: vi.fn(),
+  adminPendingBookingCount: vi.fn(),
+  fetcherLoad: vi.fn(),
+  fetcherData: null as unknown,
+}));
 
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   getSession: vi.fn(),
   login: testDoubles.login,
   logout: testDoubles.logout,
+  adminPendingBookingCount: testDoubles.adminPendingBookingCount,
   myBookings: vi.fn(),
   sessions: vi.fn(),
 }));
@@ -29,10 +45,10 @@ vi.mock("react-router", async (importOriginal) => {
       const [state, setState] = React.useState<"idle" | "submitting">("idle");
       const [formData, setFormData] = React.useState<FormData | undefined>();
       return {
-        data,
+        data: data ?? testDoubles.fetcherData,
         state,
         formData,
-        load: () => {},
+        load: (href: string) => testDoubles.fetcherLoad(href),
         submit: (submitted: FormData) => {
           setFormData(submitted);
           setState("submitting");
@@ -123,6 +139,101 @@ async function submitLogin() {
 }
 
 describe("Range session recovery", () => {
+  it("loads availability automatically when its selected session changes", async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const routeData: BookingRouteData = {
+      date,
+      period: "",
+      offered: {
+        localDate: date,
+        timeZone: "Europe/Rome",
+        sessions: [
+          {
+            periodKey: "morning",
+            startUtc: `${date}T08:00:00Z`,
+            endUtc: `${date}T12:00:00Z`,
+          },
+          {
+            periodKey: "afternoon",
+            startUtc: `${date}T13:00:00Z`,
+            endUtc: `${date}T17:00:00Z`,
+          },
+        ],
+      },
+      config: {
+        id: "default",
+        creationDateTime: "",
+        name: "Pepperbox",
+        timeZone: "Europe/Rome",
+        sessionMode: 0,
+        openingDays: [0, 1, 2, 3, 4, 5, 6],
+        morningStart: "09:00:00",
+        morningEnd: "13:00:00",
+        afternoonStart: "14:00:00",
+        afternoonEnd: "18:00:00",
+        hourlyMinutes: 60,
+        continuousStart: null,
+        continuousEnd: null,
+        reservedReleaseDaysBefore: 2,
+      },
+      history: Promise.resolve([]),
+      availability: Promise.resolve(null),
+    };
+    testDoubles.fetcherData = routeData;
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <Booking
+            account={account}
+            onLogout={() => {}}
+            loggingOut={false}
+            onPasswordChanged={() => {}}
+          />
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () => Promise.resolve());
+
+    expect(testDoubles.fetcherLoad).toHaveBeenCalledWith(
+      expect.stringContaining(`date=${date}&period=morning&search=1`),
+    );
+    const sessionSelect = container.querySelector("select")!;
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLSelectElement.prototype,
+      "value",
+    )!.set!;
+    await act(async () => {
+      setValue.call(sessionSelect, "afternoon");
+      sessionSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => Promise.resolve());
+
+    expect(testDoubles.fetcherLoad).toHaveBeenCalledWith(
+      expect.stringContaining(`date=${date}&period=afternoon&search=1`),
+    );
+  });
+
+  it("shows a labelled pending-request badge to administrators", async () => {
+    testDoubles.adminPendingBookingCount.mockResolvedValue({ count: 2 });
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <Shell account={{ ...account, isAdmin: true }}>
+            <p>Admin</p>
+          </Shell>
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () => Promise.resolve());
+
+    const requestsLink = container.querySelector<HTMLAnchorElement>(
+      'a[href="/admin/bookings"]',
+    );
+    expect(requestsLink?.textContent).toContain("2");
+    expect(requestsLink?.getAttribute("aria-label")).toContain("2 da approvare");
+    expect(adminPendingBookingCount).toHaveBeenCalledOnce();
+  });
+
   it("disables authentication fields while a request is pending", async () => {
     vi.mocked(getSession).mockRejectedValue(new Error("not authenticated"));
     let finishSubmit: () => void = () => {};

@@ -37,7 +37,16 @@ The remaining anonymous-domain/onboarding cutover is NOT READY pending the ordin
 
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
-Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. Messaging expansion, cancellation, rescheduling, notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
+Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal capacity admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. Messaging expansion, rescheduling, push notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
+
+### Booking workflow amendment — 2026-11-20
+
+The client loads availability automatically after the date and offered session
+are selected, and refreshes it when either changes. User cancellation follows
+the future-only, owner-only guarded policy above. An additive SQL migration
+adds target count and nullable dimensions; existing rows receive zero targets
+and unspecified dimensions. The API requires new bay fields on full-replacement
+requests so stale clients fail safely rather than erase new inventory data.
 
 All local repository writes participate in a field-scoped SQL Server transaction guard using `UPDLOCK, ROWLOCK`; Pending/Approved capacity is checked using stored UTC overlap, not period-key uniqueness. All checks that authorize a mutation are performed inside the guarded transaction. The schema uses explicit EF Core migrations; startup never creates or upgrades tables. Disposable SQL Server independent-writer races, Azure SQL backup/restore, existing Range data migration and browser CORS/CSRF checks remain release gates; local mock tests cannot satisfy them.
 

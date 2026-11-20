@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ApiError,
+  adminBays,
+  adminBookings,
   adminConfig,
+  adminUsers,
+  approveUser,
+  availability,
   book,
+  cancelBooking,
   changePassword,
   createMechanismType,
+  decideBooking,
   getConfig,
   getSession,
   login,
@@ -18,6 +25,7 @@ import {
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
   adminAction,
+  adminBookingsLoader,
   adminLoader,
   bookingAction,
   bookingLoader,
@@ -26,9 +34,16 @@ import {
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   adminConfig: vi.fn(),
+  adminBays: vi.fn(),
+  adminBookings: vi.fn(),
+  adminUsers: vi.fn(),
+  approveUser: vi.fn(),
+  availability: vi.fn(),
   book: vi.fn(),
+  cancelBooking: vi.fn(),
   changePassword: vi.fn(),
   createMechanismType: vi.fn(),
+  decideBooking: vi.fn(),
   getConfig: vi.fn(),
   getSession: vi.fn(),
   login: vi.fn(),
@@ -156,6 +171,24 @@ describe("Range route data security and mutations", () => {
     expect(adminConfig).not.toHaveBeenCalled();
   });
 
+  it("loads the dedicated reservation-decision page from the current admin session", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(adminConfig).mockResolvedValue(config);
+    vi.mocked(adminUsers).mockResolvedValue([]);
+    vi.mocked(adminBays).mockResolvedValue([]);
+    vi.mocked(adminBookings).mockResolvedValue([]);
+
+    await expect(adminBookingsLoader(
+      loaderArgs("https://range.test/admin/bookings"),
+    )).resolves.toMatchObject({
+      config,
+      users: [],
+      bays: [],
+      bookings: [],
+    });
+  });
+
   it("loads sessions and opening weekdays after validating the browser session", async () => {
     vi.stubGlobal("window", {});
     vi.mocked(getSession).mockResolvedValue(account);
@@ -228,6 +261,50 @@ describe("Range route data security and mutations", () => {
     expect(result).toMatchObject({ success: false });
     expect(result.message).toContain("Gli orari sono cambiati");
     expect(book).not.toHaveBeenCalled();
+  });
+
+  it("loads availability only for a currently offered selected session", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(getConfig).mockResolvedValue(config);
+    vi.mocked(myBookings).mockResolvedValue([]);
+    vi.mocked(availability).mockResolvedValue({
+      localDate: offered.localDate,
+      periodKey: offered.sessions[0].periodKey,
+      startUtc: offered.sessions[0].startUtc,
+      endUtc: offered.sessions[0].endUtc,
+      bays: [],
+    });
+
+    const result = await bookingLoader(loaderArgs(
+      "https://range.test/?date=2030-01-12&period=09%3A00&search=1&region=availability",
+    ));
+
+    if (!result || !("availability" in result)) throw new Error("Expected booking loader data.");
+    await expect(result.availability).resolves.toMatchObject({
+      periodKey: "09:00",
+      bays: [],
+    });
+    expect(availability).toHaveBeenCalledWith(
+      "2030-01-12",
+      "09:00",
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("cancels a reservation through the protected route action", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(cancelBooking).mockResolvedValue(undefined);
+
+    const result = await bookingAction(actionArgs("/", {
+      intent: "cancel-booking",
+      id: "booking-1",
+    }));
+
+    expect(result).toMatchObject({ intent: "cancel-booking", success: true });
+    expect(cancelBooking).toHaveBeenCalledWith("booking-1");
   });
 
   it("enforces seven-character passwords before registration and password change", async () => {
@@ -345,6 +422,27 @@ describe("Range route data security and mutations", () => {
 
     expect(result).toMatchObject({ intent: "create-mechanism-type", success: true });
     expect(createMechanismType).toHaveBeenCalledWith("Pepper popper");
+  });
+
+  it("submits administrator approval and decision payloads to their matching APIs", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(approveUser).mockResolvedValue(undefined);
+    vi.mocked(decideBooking).mockResolvedValue(undefined);
+
+    const approvedUser = await adminAction(actionArgs("/admin", {
+      intent: "approve-user",
+      payload: JSON.stringify({ id: "pending-user" }),
+    }));
+    const decidedBooking = await adminAction(actionArgs("/admin/bookings", {
+      intent: "decide-booking",
+      payload: JSON.stringify({ id: "booking-1", approved: true }),
+    }));
+
+    expect(approvedUser.success).toBe(true);
+    expect(decidedBooking.success).toBe(true);
+    expect(approveUser).toHaveBeenCalledWith("pending-user");
+    expect(decideBooking).toHaveBeenCalledWith("booking-1", true);
   });
 
   it("expires the browser session after a protected action receives 401", async () => {

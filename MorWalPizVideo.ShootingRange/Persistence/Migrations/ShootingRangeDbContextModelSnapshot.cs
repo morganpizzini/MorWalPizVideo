@@ -52,6 +52,10 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("mechanisms");
 
+                    b.Property<decimal?>("Height")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("height");
+
                     b.Property<int>("Partitions")
                         .HasColumnType("int")
                         .HasColumnName("partitions");
@@ -72,10 +76,20 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("status");
 
+                    b.Property<int>("Targets")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("targets");
+
                     b.Property<string>("WhitelistUserIds")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("whitelist_user_ids");
+
+                    b.Property<decimal?>("Width")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("width");
 
                     b.HasKey("Id");
 

@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { TabbedWorkspace, type TabbedWorkspaceTab } from "@morwalpiz/layout";
 import { Shell, type SessionViewProps } from "./App";
-import type { AdminUser, Bay, Booking, Closure, RangeConfig } from "./api";
+import type { AdminUser, Bay, Closure, RangeConfig } from "./api";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import type {
   ActionResult,
   AdminRouteData,
   SessionErrorData,
 } from "./routeData";
-import { accountStatus, bookingStatus } from "./schedule";
+import { accountStatus } from "./schedule";
 
 type ClosureDraft = {
   localDate: string;
@@ -293,6 +293,19 @@ export function BayForm({
           />
         </label>
         <label>
+          Bersagli
+          <input
+            type="number"
+            min={0}
+            step={1}
+            required
+            value={bay.targets}
+            onChange={(event) =>
+              updateBay({ ...bay, targets: Number(event.target.value) })
+            }
+          />
+        </label>
+        <label>
           Paratie
           <input
             type="number"
@@ -317,7 +330,7 @@ export function BayForm({
           />
         </label>
         <label>
-          Pepper
+          Popper
           <input
             type="number"
             min={0}
@@ -329,6 +342,41 @@ export function BayForm({
             }
           />
         </label>
+        <div className="bay-dimension-fields">
+          <span className="field-label">Dimensioni</span>
+          <label>
+            Altezza
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              required={bay.width !== null}
+              value={bay.height ?? ""}
+              onChange={(event) =>
+                updateBay({
+                  ...bay,
+                  height: event.target.value ? Number(event.target.value) : null,
+                })
+              }
+            />
+          </label>
+          <label>
+            Larghezza
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              required={bay.height !== null}
+              value={bay.width ?? ""}
+              onChange={(event) =>
+                updateBay({
+                  ...bay,
+                  width: event.target.value ? Number(event.target.value) : null,
+                })
+              }
+            />
+          </label>
+        </div>
         <div className="wide-field">
           <span className="field-label">Utenti in whitelist</span>
           <div className="check-group">
@@ -591,9 +639,12 @@ export function Admin({
       code: "",
       description: "",
       mechanisms: [],
+      targets: 0,
       partitions: 0,
       plates: 0,
       pepper: 0,
+      height: null,
+      width: null,
       status: 0,
       reservedUntilUtc: null,
       whitelistUserIds: [],
@@ -834,72 +885,6 @@ export function Admin({
                         </li>
                       ))}
                     </ul>
-                  </section>
-                ),
-                disabled: busy,
-              },
-              {
-                key: "bookings",
-                label: "Prenotazioni",
-                panel: (
-                  <section className="range-panel">
-                    <h2>Richieste di prenotazione</h2>
-                    <RangeDeferred
-                      resolve={routeData.bookings}
-                      fallback={<RangeSkeleton rows={4} label="Caricamento richieste..." />}
-                      onRetry={() => routeFetcher.load("/admin")}
-                    >
-                      {(data) => data.bookings.length ? (
-                        <ul className="record-list">
-                          {data.bookings.map((booking) => (
-                            <li key={booking.id}>
-                              <div>
-                                <strong>
-                                  {booking.localDate} · Postazione{" "}
-                                  {data.bays.find((bay) => bay.id === booking.bayId)?.code ?? booking.bayId}
-                                </strong>
-                                <p>
-                                  {new Date(booking.startUtc).toLocaleString("it-IT", { timeZone: data.config.timeZone })}{" "}
-                                  -{" "}
-                                  {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                                    timeZone: data.config.timeZone,
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}{" "}
-                                  · {bookingStatus(booking.status)}
-                                </p>
-                                <p>
-                                  {data.users.find((user) => user.id === booking.userId)?.username ?? booking.userId}
-                                  {" · "}{booking.request}
-                                </p>
-                              </div>
-                              <div className="action-group">
-                                {booking.status !== 1 && (
-                                  <button
-                                    type="button"
-                                    className="button button-primary"
-                                    disabled={busy}
-                                    onClick={() => perform("decide-booking", { id: booking.id, approved: true })}
-                                  >
-                                    Approva
-                                  </button>
-                                )}
-                                {booking.status !== 2 && (
-                                  <button
-                                    type="button"
-                                    className="button button-quiet"
-                                    disabled={busy}
-                                    onClick={() => perform("decide-booking", { id: booking.id, approved: false })}
-                                  >
-                                    Rifiuta
-                                  </button>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : <p className="range-empty">Nessuna richiesta.</p>}
-                    </RangeDeferred>
                   </section>
                 ),
                 disabled: busy,

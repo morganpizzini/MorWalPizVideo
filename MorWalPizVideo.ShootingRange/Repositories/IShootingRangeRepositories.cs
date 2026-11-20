@@ -59,7 +59,14 @@ internal static class ShootingRangeWriteValidation
         if (item is ShootingRangeConfig config) Services.ShootingRangeService.ValidateConfig(config);
         if (item is ShootingRangeBay bay)
         {
-            if (!Enum.IsDefined(bay.Status) || string.IsNullOrWhiteSpace(bay.Code) || bay.Partitions < 0 || bay.Plates < 0 || bay.Pepper < 0 || bay.Mechanisms is null || bay.WhitelistUserIds is null || bay.Mechanisms.Any(mechanism => mechanism is null || string.IsNullOrWhiteSpace(mechanism.Type) || mechanism.Quantity <= 0) || bay.Mechanisms.Select(mechanism => mechanism.Type.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != bay.Mechanisms.Count) throw new ArgumentException("Invalid bay.");
+            static bool InvalidDimension(decimal? value) =>
+                value.HasValue && (value.Value <= 0 || decimal.Round(value.Value, 2) != value.Value);
+            if (!Enum.IsDefined(bay.Status) || string.IsNullOrWhiteSpace(bay.Code) || bay.Targets < 0 || bay.Partitions < 0 || bay.Plates < 0 || bay.Pepper < 0 ||
+                bay.Height.HasValue != bay.Width.HasValue || InvalidDimension(bay.Height) || InvalidDimension(bay.Width) ||
+                bay.Mechanisms is null || bay.WhitelistUserIds is null ||
+                bay.Mechanisms.Any(mechanism => mechanism is null || string.IsNullOrWhiteSpace(mechanism.Type) || mechanism.Quantity <= 0) ||
+                bay.Mechanisms.Select(mechanism => mechanism.Type.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != bay.Mechanisms.Count)
+                throw new ArgumentException("Invalid bay.");
             var mechanismTypes = await repositories.MechanismTypes.GetAllAsync(cancellationToken);
             if (bay.Mechanisms.Any(mechanism => mechanism is null || !mechanismTypes.Any(type => string.Equals(type.Name, mechanism.Type, StringComparison.Ordinal))))
                 throw new ArgumentException("A bay uses an unknown mechanism type.");

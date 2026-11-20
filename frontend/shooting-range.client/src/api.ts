@@ -14,9 +14,12 @@ export type Bay = {
   code: string;
   description: string;
   mechanisms: { type: string; quantity: number }[];
+  targets: number;
   partitions: number;
   plates: number;
   pepper: number;
+  height: number | null;
+  width: number | null;
   status: number;
   reservedUntilUtc: string | null;
   whitelistUserIds: string[];
@@ -185,6 +188,10 @@ export const book = (body: BookingRequest) =>
   });
 export const myBookings = (signal?: AbortSignal) =>
   request<Booking[]>(`${prefix}/bookings/mine`, { signal });
+export const cancelBooking = (id: string) =>
+  request<void>(`${prefix}/bookings/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+  });
 export const messages = (signal?: AbortSignal) =>
   request<unknown[]>(`${prefix}/messages`, { signal });
 export const openMessage = (body: { subject: string; text: string }) =>
@@ -231,6 +238,10 @@ export const saveClosure = (body: Closure) =>
   );
 export const adminBookings = (signal?: AbortSignal) =>
   request<Booking[]>(`${prefix}/admin/bookings`, { signal });
+export const adminPendingBookingCount = (signal?: AbortSignal) =>
+  request<{ count: number }>(`${prefix}/admin/bookings/pending-count`, {
+    signal,
+  });
 export const decideBooking = (id: string, approved: boolean) =>
   request<void>(`${prefix}/admin/bookings/${encodeURIComponent(id)}/decision`, {
     method: "POST",

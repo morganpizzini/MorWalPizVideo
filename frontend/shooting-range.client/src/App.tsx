@@ -9,6 +9,7 @@ import {
 } from "./schedule";
 import {
   ApiError as RangeApiError,
+  adminPendingBookingCount,
   getSession,
   type Account,
   type Booking as StoredBooking,
@@ -41,6 +42,54 @@ export function Shell({
   onLogout?: () => void;
   loggingOut?: boolean;
 }) {
+  const [pendingRequestCount, setPendingRequestCount] = useState<number | null>(null);
+  const [notificationError, setNotificationError] = useState(false);
+  const [notificationRetry, setNotificationRetry] = useState(0);
+
+  useEffect(() => {
+    if (!account?.isAdmin || account.forcePasswordChange) {
+      setPendingRequestCount(null);
+      setNotificationError(false);
+      return;
+    }
+
+    let active = true;
+    let controller: AbortController | null = null;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      controller?.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      void adminPendingBookingCount(requestController.signal)
+        .then(({ count }) => {
+          if (!active || controller !== requestController) return;
+          setPendingRequestCount(count);
+          setNotificationError(false);
+        })
+        .catch(() => {
+          if (!active || controller !== requestController || requestController.signal.aborted) return;
+          setNotificationError(true);
+        });
+    };
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refreshOnVisibility, 60_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("range-admin-booking-changed", refresh);
+    document.addEventListener("visibilitychange", refreshOnVisibility);
+    refresh();
+
+    return () => {
+      active = false;
+      controller?.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("range-admin-booking-changed", refresh);
+      document.removeEventListener("visibilitychange", refreshOnVisibility);
+    };
+  }, [account?.id, account?.isAdmin, account?.forcePasswordChange, notificationRetry]);
+
   return (
     <div className="range-shell">
       <header className="range-header">
@@ -60,7 +109,39 @@ export function Shell({
           <nav className="range-navigation" aria-label="Navigazione principale">
             <NavLink to="/" end>Prenota</NavLink>
             <NavLink to="/messages">Messaggi</NavLink>
-            {account.isAdmin && <NavLink to="/admin">Amministrazione</NavLink>}
+            {account.isAdmin && (
+              <>
+                <NavLink to="/admin" end>Amministrazione</NavLink>
+                <NavLink
+                  to="/admin/bookings"
+                  aria-label={
+                    pendingRequestCount === null
+                      ? notificationError
+                        ? "Richieste di prenotazione: conteggio non disponibile"
+                        : "Richieste di prenotazione"
+                      : notificationError
+                        ? `Richieste di prenotazione: ultimo conteggio ${pendingRequestCount}, non aggiornato`
+                        : `Richieste di prenotazione: ${pendingRequestCount} da approvare`
+                  }
+                >
+                  Richieste
+                  {pendingRequestCount !== null && pendingRequestCount > 0 && (
+                    <span className="range-notification-badge" aria-hidden="true">
+                      {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                    </span>
+                  )}
+                </NavLink>
+                {notificationError && (
+                  <button
+                    type="button"
+                    className="range-notification-retry"
+                    onClick={() => setNotificationRetry((value) => value + 1)}
+                  >
+                    Conteggio non aggiornato · Riprova
+                  </button>
+                )}
+              </>
+            )}
           </nav>
         )}
         {account && (
@@ -478,6 +559,10 @@ export function Booking({
     availabilityFetcher.data.period === period
       ? availabilityFetcher.data
       : null;
+  const visibleAvailabilityError =
+    availabilityKey === periodKey &&
+    availabilityFetcher.state === "idle" &&
+    availabilityError;
   const pending = actionFetcher.state !== "idle";
 
   useEffect(() => {
@@ -492,6 +577,24 @@ export function Booking({
     if (result.intent === "book") {
       setError(result.success ? "" : result.message);
       setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+        window.dispatchEvent(new Event("range-admin-booking-changed"));
+      } else if (result.status === 409) {
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+      }
+    } else if (result.intent === "cancel-booking") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+        window.dispatchEvent(new Event("range-admin-booking-changed"));
+      } else if (result.status === 404 || result.status === 409) {
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+      }
     } else if (result.intent === "password-change") {
       setError(result.success ? "" : result.message);
       setNotice(result.success ? result.message : "");
@@ -500,9 +603,9 @@ export function Booking({
         onPasswordChanged();
       }
     }
-  }, [actionFetcher.data, onPasswordChanged]);
+  }, [actionFetcher.data, date, onPasswordChanged, routeFetcher.load]);
 
-  function search(selectedPeriod: string) {
+  const search = useCallback((selectedPeriod: string) => {
     if (!selectedPeriod) return;
     setError("");
     setNotice("");
@@ -510,7 +613,17 @@ export function Booking({
     availabilityFetcher.load(
       `/?date=${encodeURIComponent(date)}&period=${encodeURIComponent(selectedPeriod)}&search=1&region=availability`,
     );
-  }
+  }, [availabilityFetcher.load, date]);
+
+  useEffect(() => {
+    if (
+      !routeData ||
+      routeFetcher.state === "loading" ||
+      !period ||
+      !routeData.offered.sessions.some((session) => session.periodKey === period)
+    ) return;
+    search(period);
+  }, [period, routeData, routeFetcher.state, search]);
 
   function submitBooking(
     bayId: string,
@@ -532,6 +645,14 @@ export function Booking({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set("intent", "password-change");
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+
+  function cancelReservation(id: string) {
+    if (pending || !window.confirm("Vuoi annullare questa prenotazione? La registrazione resterà visibile nello storico.")) return;
+    const formData = new FormData();
+    formData.set("intent", "cancel-booking");
+    formData.set("id", id);
     actionFetcher.submit(formData, { method: "post", action: "/" });
   }
 
@@ -631,14 +752,6 @@ export function Booking({
             </label>
             <button
               type="button"
-              className="button button-primary"
-              disabled={!routeData || !period}
-              onClick={() => search(period)}
-            >
-              Cerca disponibilità
-            </button>
-            <button
-              type="button"
               className="button button-quiet"
               onClick={() => {
                 setAvailabilityKey("");
@@ -662,14 +775,14 @@ export function Booking({
               )}
               <section className="range-panel">
                 <h2>Postazioni disponibili</h2>
-                {availabilityError && (
+                {visibleAvailabilityError && (
                   <RouteSessionError
-                    message={availabilityError.message ?? "Sessione non disponibile."}
-                    status={availabilityError.status}
+                    message={visibleAvailabilityError.message ?? "Sessione non disponibile."}
+                    status={visibleAvailabilityError.status}
                     onRetry={() => search(period)}
                   />
                 )}
-                {!availabilityData && !availabilityError && availabilityKey === periodKey && (
+                {!availabilityData && !visibleAvailabilityError && availabilityKey === periodKey && (
                   <RangeSkeleton rows={3} label="Caricamento postazioni..." />
                 )}
                 {availabilityData && (
@@ -691,8 +804,19 @@ export function Booking({
                               <article className="bay" key={bay.id}>
                                 <span className="bay-code">{bay.code}</span>
                                 <h3>{bay.description || "Postazione operativa"}</h3>
-                                <p>
-                                  {bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard"}
+                                <ul className="bay-inventory" aria-label={`Dettagli postazione ${bay.code}`}>
+                                  <li>Bersagli: {bay.targets}</li>
+                                  <li>Paratie: {bay.partitions}</li>
+                                  <li>Piastre: {bay.plates}</li>
+                                  <li>Popper: {bay.pepper}</li>
+                                  <li>
+                                    Dimensioni: {bay.height !== null && bay.width !== null
+                                      ? `${bay.height} × ${bay.width}`
+                                      : "non specificate"}
+                                  </li>
+                                </ul>
+                                <p className="bay-mechanisms">
+                                  Meccanismi: {bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "nessuno"}
                                 </p>
                                 <button
                                   type="button"
@@ -724,6 +848,8 @@ export function Booking({
                 history={routeData.history}
                 offered={routeData.offered}
                 onRetry={() => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)}
+                onCancel={cancelReservation}
+                cancelling={pending}
               />
             </>
           )}
@@ -740,10 +866,14 @@ function BookingHistoryRegion({
   history,
   offered,
   onRetry,
+  onCancel,
+  cancelling,
 }: {
   history: Promise<StoredBooking[]>;
   offered: BookingRouteData["offered"];
   onRetry: () => void;
+  onCancel: (id: string) => void;
+  cancelling: boolean;
 }) {
   return (
     <section className="range-panel">
@@ -770,6 +900,17 @@ function BookingHistoryRegion({
                   })}
                 </span>
                 <strong>{formatBookingStatus(booking.status)}</strong>
+                {(booking.status === 0 || booking.status === 1) &&
+                  new Date(booking.startUtc).getTime() > Date.now() && (
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      disabled={cancelling}
+                      onClick={() => onCancel(booking.id)}
+                    >
+                      Annulla prenotazione
+                    </button>
+                  )}
               </li>
             ))}
           </ul>

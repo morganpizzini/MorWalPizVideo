@@ -19,3 +19,4 @@ public sealed record SessionDto(string PeriodKey, DateTime StartUtc, DateTime En
 public sealed record SessionsDto(DateOnly LocalDate, string TimeZone, IReadOnlyList<SessionDto> Sessions);
 public sealed record AdminUserDto(string Id, DateTime CreationDateTime, string Username, string FirstName, string LastName, ShootingRangeAccountStatus Status, bool IsAdmin, bool ForcePasswordChange);
 public sealed record MechanismTypeDto(string Id, string Name);
+public sealed record PendingBookingCountDto(int Count);

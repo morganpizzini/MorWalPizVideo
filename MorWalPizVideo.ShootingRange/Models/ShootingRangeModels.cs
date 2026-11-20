@@ -33,9 +33,12 @@ public sealed record ShootingRangeBay : BaseEntity
 {
     public string Code { get; init; } = string.Empty;
     public List<Mechanism> Mechanisms { get; init; } = [];
+    [System.Text.Json.Serialization.JsonRequired] public int Targets { get; init; }
     public int Partitions { get; init; }
     public int Plates { get; init; }
     public int Pepper { get; init; }
+    [System.Text.Json.Serialization.JsonRequired] public decimal? Height { get; init; }
+    [System.Text.Json.Serialization.JsonRequired] public decimal? Width { get; init; }
     public ShootingRangeBayStatus Status { get; init; } = ShootingRangeBayStatus.Available;
     public string Description { get; init; } = string.Empty;
     public DateTime? ReservedUntilUtc { get; init; }

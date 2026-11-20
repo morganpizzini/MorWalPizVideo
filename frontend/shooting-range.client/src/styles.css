@@ -157,6 +157,38 @@ summary:focus-visible {
   text-decoration: none;
 }
 
+.range-notification-badge {
+  display: inline-grid;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.4rem;
+  padding: 0 0.25rem;
+  place-items: center;
+  border: 1px solid var(--appearance-error);
+  border-radius: 999px;
+  background: var(--appearance-error-surface);
+  color: var(--appearance-error);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.range-notification-retry {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--appearance-error-border);
+  border-radius: 7px;
+  background: var(--appearance-error-surface);
+  color: var(--appearance-error);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.range-notification-retry:hover {
+  border-color: var(--appearance-error);
+}
+
 .range-account {
   display: flex;
   flex: 0 0 auto;
@@ -495,6 +527,18 @@ button:disabled {
   margin-bottom: 0;
 }
 
+.bay-dimension-fields {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 0.65rem;
+}
+
+.bay-dimension-fields > .field-label {
+  margin-bottom: -0.5rem;
+}
+
 .form-grid button {
   align-self: end;
   justify-self: start;
@@ -598,6 +642,26 @@ button:disabled {
   flex: 1 1 auto;
   color: var(--range-secondary);
   font-size: 0.82rem;
+}
+
+.bay-inventory {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  color: var(--range-secondary);
+  font-size: 0.78rem;
+  list-style: none;
+}
+
+.bay-inventory li:last-child {
+  grid-column: 1 / -1;
+}
+
+.bay .bay-mechanisms {
+  margin: 0.2rem 0 0.5rem;
+  font-weight: 600;
 }
 
 .section-heading,

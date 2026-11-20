@@ -11,6 +11,7 @@ import {
   approveUser,
   availability,
   book,
+  cancelBooking,
   changePassword,
   decideBooking,
   createMechanismType,
@@ -27,6 +28,7 @@ import {
   saveConfig,
   sessions,
   type Account,
+  type AdminUser,
   type Availability,
   type Bay,
   type Closure,
@@ -78,7 +80,13 @@ export interface MessagesRouteData {
 export interface AdminRouteData {
   core: Promise<AdminCoreData>;
   closures: Promise<Closure[]>;
-  bookings: Promise<AdminCoreData & { bookings: Booking[] }>;
+}
+
+export interface AdminBookingsRouteData {
+  config: RangeConfig;
+  users: AdminUser[];
+  bays: Bay[];
+  bookings: Booking[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -236,7 +244,7 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       return { intent, success: true, message: "Richiesta inviata. Attendi l'approvazione dell'amministratore." };
     }
 
-    if (intent === "logout" || intent === "password-change" || intent === "book") {
+    if (intent === "logout" || intent === "password-change" || intent === "book" || intent === "cancel-booking") {
       const account = await getSession(request.signal);
       if (intent === "logout") {
         await logout();
@@ -244,6 +252,14 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       }
       if (account.forcePasswordChange && intent !== "password-change") {
         return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
+      }
+      if (intent === "cancel-booking") {
+        const id = formData.get("id");
+        if (typeof id !== "string" || !id) {
+          return { intent, success: false, message: "Prenotazione non valida." };
+        }
+        await cancelBooking(id);
+        return { intent, success: true, message: "Prenotazione annullata. La registrazione resta visibile nello storico." };
       }
       if (intent === "password-change") {
         const currentPassword = formData.get("currentPassword");
@@ -329,6 +345,14 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
         message: "La postazione non è più disponibile. Seleziona un altro turno.",
       };
     }
+    if (intent === "cancel-booking" && reason instanceof ApiError && reason.status === 409) {
+      return {
+        intent,
+        success: false,
+        status: 409,
+        message: "La prenotazione è iniziata o non è più annullabile. Aggiorna lo storico.",
+      };
+    }
     return actionError(intent, reason);
   }
 }
@@ -377,9 +401,27 @@ export async function adminLoader({ request }: LoaderFunctionArgs) {
     adminMechanismTypes(request.signal),
   ]).then(([config, users, bays, mechanismTypes]) => ({ config, users, bays, mechanismTypes }));
   const closures = adminClosures(request.signal);
-  const bookings = Promise.all([core, adminBookings(request.signal)])
-    .then(([data, items]) => ({ ...data, bookings: items }));
-  return { core, closures, bookings };
+  return { core, closures };
+}
+
+export async function adminBookingsLoader({ request }: LoaderFunctionArgs) {
+  if (typeof window === "undefined") return null;
+  const account = await browserAccount(request);
+  if (isSessionResult(account)) return { sessionError: account };
+  if (!account.isAdmin) return { sessionError: { error: true, status: 403, message: "Account non autorizzato." } };
+  if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
+
+  try {
+    const [config, users, bays, bookings] = await Promise.all([
+      adminConfig(request.signal),
+      adminUsers(request.signal),
+      adminBays(request.signal),
+      adminBookings(request.signal),
+    ]);
+    return { config, users, bays, bookings };
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
 }
 
 export async function adminAction({ request }: ActionFunctionArgs): Promise<ActionResult> {
@@ -423,7 +465,30 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
       }
       case "save-bay": {
         const payload = jsonField(formData, "payload");
-        if (!payload || typeof payload.id !== "string" || typeof payload.code !== "string" || !Array.isArray(payload.mechanisms) || !Array.isArray(payload.whitelistUserIds) || typeof payload.pepper !== "number" || !Number.isInteger(payload.pepper) || payload.pepper < 0) {
+        const validCount = (value: unknown): value is number =>
+          typeof value === "number" && Number.isInteger(value) && value >= 0;
+        const validDimension = (value: unknown): value is number | null =>
+          value === null || typeof value === "number" && Number.isFinite(value) && value > 0;
+        const targets = payload?.targets;
+        const partitions = payload?.partitions;
+        const plates = payload?.plates;
+        const pepper = payload?.pepper;
+        const height = payload?.height;
+        const width = payload?.width;
+        if (
+          !payload ||
+          typeof payload.id !== "string" ||
+          typeof payload.code !== "string" ||
+          !Array.isArray(payload.mechanisms) ||
+          !Array.isArray(payload.whitelistUserIds) ||
+          !validCount(targets) ||
+          !validCount(partitions) ||
+          !validCount(plates) ||
+          !validCount(pepper) ||
+          !validDimension(height) ||
+          !validDimension(width) ||
+          (height === null) !== (width === null)
+        ) {
           return { intent, success: false, message: "La configurazione della bay non è valida." };
         }
         const value: Bay = {
@@ -431,13 +496,16 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
           creationDateTime: String(payload.creationDateTime ?? ""),
           code: payload.code,
           description: String(payload.description ?? ""),
+          targets,
           mechanisms: payload.mechanisms.filter(isRecord).map((mechanism) => ({
             type: typeof mechanism.type === "string" ? mechanism.type : "",
             quantity: typeof mechanism.quantity === "number" ? mechanism.quantity : 0,
           })),
-          partitions: Number(payload.partitions),
-          plates: Number(payload.plates),
-          pepper: payload.pepper,
+          partitions,
+          plates,
+          pepper,
+          height,
+          width,
           status: Number(payload.status),
           reservedUntilUtc: typeof payload.reservedUntilUtc === "string" ? payload.reservedUntilUtc : null,
           whitelistUserIds: payload.whitelistUserIds.filter((id): id is string => typeof id === "string"),
@@ -483,19 +551,20 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
         return { intent, success: true, message: "Chiusura rimossa." };
       }
       case "approve-user": {
-        const id = formData.get("id");
+        const id = jsonField(formData, "payload")?.id;
         if (typeof id !== "string" || !id) return { intent, success: false, message: "Utente non valido." };
         await approveUser(id);
         return { intent, success: true, message: "Account approvato." };
       }
       case "decide-booking": {
-        const id = formData.get("id");
-        const approved = formData.get("approved");
-        if (typeof id !== "string" || !id || (approved !== "true" && approved !== "false")) {
+        const payload = jsonField(formData, "payload");
+        const id = payload?.id;
+        const approved = payload?.approved;
+        if (typeof id !== "string" || !id || typeof approved !== "boolean") {
           return { intent, success: false, message: "Decisione di prenotazione non valida." };
         }
-        await decideBooking(id, approved === "true");
-        return { intent, success: true, message: approved === "true" ? "Prenotazione approvata." : "Prenotazione rifiutata." };
+        await decideBooking(id, approved);
+        return { intent, success: true, message: approved ? "Prenotazione approvata." : "Prenotazione rifiutata." };
       }
       default:
         return { intent, success: false, message: "Operazione non riconosciuta." };

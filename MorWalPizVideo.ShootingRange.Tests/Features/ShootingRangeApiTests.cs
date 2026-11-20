@@ -168,20 +168,94 @@ public sealed class ShootingRangeApiTests
             Id = "type-test-bay",
             Code = "Type test",
             Pepper = 3,
+            Targets = 4,
+            Height = 1.5m,
+            Width = 2.25m,
             Mechanisms = [new(mechanismType.Name, 2)]
         };
         using var saved = await client.PutAsJsonAsync($"/api/shooting-range/admin/bays/{bay.Id}", bay);
         saved.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await saved.Content.ReadFromJsonAsync<ShootingRangeBay>())!.Pepper.Should().Be(3);
+        var savedBay = (await saved.Content.ReadFromJsonAsync<ShootingRangeBay>())!;
+        savedBay.Pepper.Should().Be(3);
+        savedBay.Targets.Should().Be(4);
+        savedBay.Height.Should().Be(1.5m);
+        savedBay.Width.Should().Be(2.25m);
 
         using var negative = await client.PutAsJsonAsync(
             $"/api/shooting-range/admin/bays/{bay.Id}",
             bay with { Pepper = -1 });
         negative.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var negativeTargets = await client.PutAsJsonAsync(
+            $"/api/shooting-range/admin/bays/{bay.Id}",
+            bay with { Targets = -1 });
+        negativeTargets.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var incompleteDimensions = await client.PutAsJsonAsync(
+            $"/api/shooting-range/admin/bays/{bay.Id}",
+            bay with { Width = null });
+        incompleteDimensions.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var unknown = await client.PutAsJsonAsync(
             $"/api/shooting-range/admin/bays/{bay.Id}",
             bay with { Mechanisms = [new("not in catalogue", 1)] });
         unknown.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var oldClientPayload = new StringContent(
+            """{"id":"type-test-bay","code":"Type test","mechanisms":[],"partitions":0,"plates":0,"pepper":3,"status":0,"description":"","reservedUntilUtc":null,"whitelistUserIds":[]}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+        using var rejectedOldPayload = await client.PutAsync(
+            $"/api/shooting-range/admin/bays/{bay.Id}",
+            oldClientPayload);
+        rejectedOldPayload.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetFromJsonAsync<ShootingRangeBay[]>("/api/shooting-range/admin/bays"))!
+            .Single(saved => saved.Id == bay.Id).Targets.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task Future_booking_cancellation_requires_csrf_retains_history_and_updates_admin_count()
+    {
+        await using var factory = new Factory();
+        using var user = await LoginAsync(factory, false);
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        await repositories.Bays.InsertAsync(new() { Id = "cancel-test-bay", Code = "Cancel test" });
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+        while (date.DayOfWeek != DayOfWeek.Saturday) date = date.AddDays(1);
+        using var admin = await LoginAsync(factory, true, username: "administrator");
+        var baselineCount = (await admin.GetFromJsonAsync<PendingBookingCountDto>(
+            "/api/shooting-range/admin/bookings/pending-count"))!.Count;
+
+        await SetCsrfAsync(user);
+        using var created = await user.PostAsJsonAsync(
+            "/api/shooting-range/bookings",
+            new BookingRequest("cancel-test-bay", date, "morning", "test"));
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var booking = (await created.Content.ReadFromJsonAsync<ShootingRangeBooking>())!;
+
+        var pendingCount = await admin.GetFromJsonAsync<PendingBookingCountDto>(
+            "/api/shooting-range/admin/bookings/pending-count");
+        pendingCount!.Count.Should().Be(baselineCount + 1);
+
+        user.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        using var missingCsrf = await user.PostAsync(
+            $"/api/shooting-range/bookings/{booking.Id}/cancel",
+            null);
+        missingCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await SetCsrfAsync(user);
+        using var cancelled = await user.PostAsync(
+            $"/api/shooting-range/bookings/{booking.Id}/cancel",
+            null);
+        cancelled.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await user.GetFromJsonAsync<ShootingRangeBooking[]>("/api/shooting-range/bookings/mine"))!
+            .Single(item => item.Id == booking.Id).Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+        (await admin.GetFromJsonAsync<PendingBookingCountDto>(
+            "/api/shooting-range/admin/bookings/pending-count"))!.Count.Should().Be(baselineCount);
+
+        await SetCsrfAsync(user);
+        using var repeated = await user.PostAsync(
+            $"/api/shooting-range/bookings/{booking.Id}/cancel",
+            null);
+        repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -196,6 +270,8 @@ public sealed class ShootingRangeApiTests
         forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         using var forbiddenTypes = await client.GetAsync("/api/shooting-range/admin/mechanism-types");
         forbiddenTypes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenCount = await client.GetAsync("/api/shooting-range/admin/bookings/pending-count");
+        forbiddenCount.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
         while (date.DayOfWeek != DayOfWeek.Saturday) date = date.AddDays(1);
         var sessions = await client.GetFromJsonAsync<SessionsDto>($"/api/shooting-range/sessions?date={date:yyyy-MM-dd}");

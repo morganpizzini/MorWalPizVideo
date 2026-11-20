@@ -64,7 +64,7 @@ Every cookie request revalidates the session's expiry/revocation/security versio
 
 Booking admission also rechecks current approved account status and `ForcePasswordChange`; touched administrator operations recheck current administrator state. Admin-user responses explicitly preserve `Id`, `CreationDateTime`, username, names, status, administrator and forced-password flags, excluding `PasswordHash`. Safe projections for other persistence entities remain a separate cutover requirement. The API remains the authoritative admission boundary.
 
-Cancellation/modification is intentionally not exposed in the POC. Admin rejection is the supported way to release a pending slot; this avoids ambiguous user-side policy while the operational cancellation policy is agreed.
+Users may cancel their own future Pending or Approved reservation. The operation rechecks the approved account, ownership, active status, and future UTC start inside the guarded write, then sets the existing Cancelled status; the record remains visible in history. Administrators may restore a cancelled future reservation by approving it, subject to the normal guarded admission and capacity checks. User and admin booking lists include local field dates from yesterday onward; this is a read filter, not data deletion. The admin-only pending count includes future Pending reservations.
 
 ## Minimal UI scope
 
@@ -74,9 +74,10 @@ The initial public-facing POC is limited to:
 - Authenticated availability search and booking.
 - Booking dates use the field configuration's opening weekdays; closed weekdays are disabled in the calendar, and available sessions render only after the sessions response resolves.
 - The current user's bookings.
-- Minimal administrator user creation and booking approval or rejection, if admin-created ordinary users are confirmed.
+- User cancellation of future Pending or Approved bookings, with the cancelled record retained in the current user's history.
+- Administrator booking decisions on the dedicated `/admin/bookings` page, linked in the top navigation with an accessible count badge for future pending requests. The client refreshes this count on navigation/focus, after relevant booking changes and every 60 seconds while visible; this is not push notification.
 
-Schedule, bay, mechanism-type catalogue and closure management and booking decisions are accepted administrator scope. The client preserves `/`, `/messages` and `/admin`; this refinement does not authorize unrelated messaging expansion. Cancellation, rescheduling, notifications, waitlists, custom-duration sessions, and reporting remain deferred.
+Schedule, bay, mechanism-type catalogue, closure management and booking decisions are accepted administrator scope. Bays have nonnegative integer target, partition, plate and popper counts; optional height and width are unit-free positive decimal values, entered to two decimal places and supplied together. The client preserves `/`, `/messages` and `/admin` and adds `/admin/bookings`; this does not authorize unrelated messaging expansion. Rescheduling, push notifications, waitlists, custom-duration sessions, and reporting remain deferred.
 
 ## Appearance preference
 
@@ -95,10 +96,10 @@ were not verified locally because no Chromium-based browser was installed.
 
 Reassess these only after real POC use establishes operational value:
 
-1. Cancellation and rescheduling with an explicit policy.
+1. Rescheduling with an explicit policy.
 2. Further administration workflows beyond the accepted schedule, bay and closure controls.
 3. Message threads and replies.
-4. Notifications and waitlists.
+4. Push notifications and waitlists.
 5. Custom-duration sessions.
 6. Attendance and utilization reporting.
 7. Invite-based onboarding if administrator-created accounts become burdensome.

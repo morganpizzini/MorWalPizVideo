@@ -80,7 +80,29 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public async Task<IActionResult> Book(BookingRequest request, CancellationToken cancellationToken) { try { var booking = await service.CreateBookingAsync(UserId(), request, cancellationToken); return Created($"api/shooting-range/bookings/{booking.Id}", booking); } catch (UnauthorizedAccessException error) { return StatusCode(403, new { message = error.Message }); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
 
     [HttpGet("bookings/mine"), Authorize]
-    public async Task<IReadOnlyList<ShootingRangeBooking>> Mine(CancellationToken cancellationToken) => (await repositories.Bookings.GetAllAsync(cancellationToken)).Where(x => x.UserId == UserId()).OrderByDescending(x => x.StartUtc).ToArray();
+    public Task<IReadOnlyList<ShootingRangeBooking>> Mine(CancellationToken cancellationToken) => service.GetUserBookingsAsync(UserId(), cancellationToken);
+
+    [HttpPost("bookings/{id}/cancel"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelBooking(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.CancelBookingAsync(UserId(), id, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException error)
+        {
+            return Conflict(new { message = error.Message });
+        }
+        catch (UnauthorizedAccessException error)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = error.Message });
+        }
+    }
 
     [HttpGet("admin/users"), Authorize(Roles = "admin")]
     public async Task<IReadOnlyList<AdminUserDto>> Users(CancellationToken cancellationToken)
@@ -138,10 +160,29 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     }, cancellationToken);
 
     [HttpGet("admin/bookings"), Authorize(Roles = "admin")]
-    public async Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Bookings.GetAllAsync(cancellationToken); }
+    public Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) => service.GetAdminBookingsAsync(UserId(), cancellationToken);
+
+    [HttpGet("admin/bookings/pending-count"), Authorize(Roles = "admin")]
+    public async Task<PendingBookingCountDto> PendingBookingCount(CancellationToken cancellationToken) =>
+        new(await service.GetPendingBookingCountAsync(UserId(), cancellationToken));
 
     [HttpPost("admin/bookings/{id}/decision"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> DecideBooking(string id, BookingDecisionRequest request, CancellationToken cancellationToken) { await service.DecideBookingAsync(UserId(), id, request.Approved, cancellationToken); return NoContent(); }
+    public async Task<IActionResult> DecideBooking(string id, BookingDecisionRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.DecideBookingAsync(UserId(), id, request.Approved, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException error)
+        {
+            return Conflict(new { message = error.Message });
+        }
+    }
 
     [HttpGet("messages"), Authorize]
     public async Task<IReadOnlyList<ShootingRangeThread>> Messages(CancellationToken cancellationToken)

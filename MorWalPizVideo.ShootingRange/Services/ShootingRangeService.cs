@@ -83,8 +83,62 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
     public Task<ShootingRangeBooking> DecideBookingAsync(string actorId, string id, bool approved, CancellationToken cancellationToken) => AdminMutationAsync(actorId, async () =>
     {
         var booking = await repositories.Bookings.GetAsync(id, cancellationToken) ?? throw new KeyNotFoundException("Booking not found.");
+        if (booking.Status == ShootingRangeBookingStatus.Cancelled && !approved)
+            throw new InvalidOperationException("A cancelled booking can only be restored by approval.");
+        if (approved && booking.StartUtc <= repositories.Clock.GetUtcNow().UtcDateTime)
+            throw new InvalidOperationException("A booking cannot be approved after its session has started.");
         return await repositories.Bookings.ReplaceAsync(booking with { Status = approved ? ShootingRangeBookingStatus.Approved : ShootingRangeBookingStatus.Rejected }, cancellationToken);
     }, cancellationToken);
+
+    public Task<ShootingRangeBooking> CancelBookingAsync(string userId, string id, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var user = await repositories.Users.GetAsync(userId, cancellationToken);
+            if (user is null || user.Status != ShootingRangeAccountStatus.Approved || user.ForcePasswordChange)
+                throw new UnauthorizedAccessException("An approved account without a required password change is necessary.");
+            var booking = await repositories.Bookings.GetAsync(id, cancellationToken);
+            if (booking is null || booking.UserId != userId)
+                throw new KeyNotFoundException("Booking not found.");
+            if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved ||
+                booking.StartUtc <= repositories.Clock.GetUtcNow().UtcDateTime)
+                throw new InvalidOperationException("Only a future pending or approved booking can be cancelled.");
+            return await repositories.Bookings.ReplaceAsync(booking with { Status = ShootingRangeBookingStatus.Cancelled }, cancellationToken);
+        }, cancellationToken);
+
+    public async Task<IReadOnlyList<ShootingRangeBooking>> GetUserBookingsAsync(string userId, CancellationToken cancellationToken)
+    {
+        var firstVisibleDate = await GetFirstVisibleBookingDateAsync(cancellationToken);
+        return (await repositories.Bookings.GetAllAsync(cancellationToken))
+            .Where(booking => booking.UserId == userId && booking.LocalDate >= firstVisibleDate)
+            .OrderByDescending(booking => booking.StartUtc)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<ShootingRangeBooking>> GetAdminBookingsAsync(string actorId, CancellationToken cancellationToken)
+    {
+        await RequireAdminAsync(actorId, cancellationToken);
+        var firstVisibleDate = await GetFirstVisibleBookingDateAsync(cancellationToken);
+        return (await repositories.Bookings.GetAllAsync(cancellationToken))
+            .Where(booking => booking.LocalDate >= firstVisibleDate)
+            .OrderByDescending(booking => booking.StartUtc)
+            .ToArray();
+    }
+
+    public async Task<int> GetPendingBookingCountAsync(string actorId, CancellationToken cancellationToken)
+    {
+        await RequireAdminAsync(actorId, cancellationToken);
+        var now = repositories.Clock.GetUtcNow().UtcDateTime;
+        return (await repositories.Bookings.GetAllAsync(cancellationToken))
+            .Count(booking => booking.Status == ShootingRangeBookingStatus.Pending && booking.StartUtc > now);
+    }
+
+    private async Task<DateOnly> GetFirstVisibleBookingDateAsync(CancellationToken cancellationToken)
+    {
+        var config = await GetConfigAsync(cancellationToken);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(repositories.Clock.GetUtcNow(), zone).DateTime);
+        return today.AddDays(-1);
+    }
 
     public Task<ShootingRangeBooking> CreateBookingAsync(string userId, BookingRequest request, CancellationToken cancellationToken) => repositories.ExecuteGuardedAsync(async () =>
     {

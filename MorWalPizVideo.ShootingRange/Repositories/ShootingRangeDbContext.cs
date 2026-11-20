@@ -52,7 +52,10 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
         {
             entity.Property(x => x.Code).HasMaxLength(100).IsRequired();
             ConfigureJson(entity.Property(x => x.Mechanisms));
+            entity.Property(x => x.Targets).HasDefaultValue(0);
             entity.Property(x => x.Pepper).IsRequired();
+            entity.Property(x => x.Height).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.Width).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Description).IsRequired();
             entity.Property(x => x.ReservedUntilUtc).HasColumnType("datetime2")

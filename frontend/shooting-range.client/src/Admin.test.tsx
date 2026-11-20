@@ -73,9 +73,12 @@ describe("admin form structure and SSR", () => {
           code: "01",
           description: "",
           mechanisms: [{ type: "Pepper popper", quantity: 2 }],
+          targets: 3,
           partitions: 0,
           plates: 0,
           pepper: 1,
+          height: 1.5,
+          width: 2.25,
           status: 1,
           reservedUntilUtc: null,
           whitelistUserIds: ["user"],
@@ -102,12 +105,17 @@ describe("admin form structure and SSR", () => {
     expect(html).toContain('type="number"');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain("Pepper popper");
+    expect(html).toContain("Bersagli");
+    expect(html).toContain("Popper");
+    expect(html).toContain("Altezza");
+    expect(html).toContain("Larghezza");
+    expect(html).toContain('class="bay-dimension-fields"');
     expect(html).toContain("<select");
     expect(html).toContain("approved-user");
     expect(html).not.toContain("passwordHash");
   });
 
-  it.each(["/", "/admin", "/messages"])(
+  it.each(["/", "/admin", "/admin/bookings", "/messages"])(
     "supports direct SSR navigation to %s without exposing content before restoration",
     async (path) => {
       const result = await render(new Request(`https://localhost${path}`));

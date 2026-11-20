@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adminUsers,
+  adminPendingBookingCount,
   adminMechanismTypes,
   ApiError,
   availability,
   book,
+  cancelBooking,
   createMechanismType,
   changePassword,
   getConfig,
@@ -98,6 +100,7 @@ describe("credentialed range API", () => {
       expectedStartUtc: "2030-01-12T08:00:00Z",
       expectedEndUtc: "2030-01-12T12:00:00Z",
     });
+
     expect(fetch.mock.calls.map((call) => call[0])).toEqual([
       "/api/shooting-range/csrf",
       "/api/shooting-range/auth/login",
@@ -115,6 +118,29 @@ describe("credentialed range API", () => {
       expectedStartUtc: "2030-01-12T08:00:00Z",
       expectedEndUtc: "2030-01-12T12:00:00Z",
     });
+  });
+
+  it("uses the guarded cancellation route and aggregate admin count", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "cancel-token" })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ count: 3 })));
+    vi.stubGlobal("fetch", fetch);
+
+    await cancelBooking("booking/one");
+    await expect(adminPendingBookingCount()).resolves.toEqual({ count: 3 });
+
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/bookings/booking%2Fone/cancel",
+      "/api/shooting-range/admin/bookings/pending-count",
+    ]);
+    expect(fetch.mock.calls[1][1]).toMatchObject({
+      method: "POST",
+      credentials: "include",
+    });
+    expect(fetch.mock.calls[1][1].headers.get("X-CSRF-TOKEN")).toBe("cancel-token");
   });
 
   it("restores cookie sessions and sends CSRF-protected logout without persisting credentials", async () => {

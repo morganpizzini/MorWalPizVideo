@@ -224,6 +224,116 @@ public sealed class ShootingRangeServiceTests
         (await repositories.Configs.GetAllAsync()).Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task User_can_cancel_only_their_own_active_booking_before_its_start_and_admin_can_restore_it()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var booking = await service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 12), "morning", ""), default);
+
+        var clock = (FixedClock)repositories.Clock;
+        clock.SetUtcNow(booking.StartUtc);
+        var started = () => service.CancelBookingAsync("user-1", booking.Id, default);
+        await started.Should().ThrowAsync<InvalidOperationException>();
+
+        clock.SetUtcNow(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var otherUser = () => service.CancelBookingAsync("user-2", booking.Id, default);
+        await otherUser.Should().ThrowAsync<KeyNotFoundException>();
+
+        var cancelled = await service.CancelBookingAsync("user-1", booking.Id, default);
+        cancelled.Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+        var rejectCancelled = () => service.DecideBookingAsync("user-1", booking.Id, false, default);
+        await rejectCancelled.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("A cancelled booking can only be restored by approval.");
+        var restored = await service.DecideBookingAsync("user-1", booking.Id, true, default);
+        restored.Status.Should().Be(ShootingRangeBookingStatus.Approved);
+    }
+
+    [Fact]
+    public async Task Booking_lists_include_yesterday_in_field_time_but_exclude_older_dates()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        ((FixedClock)repositories.Clock).SetUtcNow(new DateTimeOffset(2029, 12, 31, 23, 30, 0, TimeSpan.Zero));
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        foreach (var (id, date, userId) in new[]
+        {
+            ("today", new DateOnly(2030, 1, 1), "user-1"),
+            ("yesterday", new DateOnly(2029, 12, 31), "user-1"),
+            ("older", new DateOnly(2029, 12, 30), "user-1"),
+            ("other-user", new DateOnly(2030, 1, 1), "user-2")
+        })
+        {
+            var start = date.ToDateTime(new TimeOnly(9, 0), DateTimeKind.Utc);
+            await repositories.Bookings.InsertAsync(new()
+            {
+                Id = id,
+                UserId = userId,
+                BayId = "bay-1",
+                LocalDate = date,
+                PeriodKey = "morning",
+                StartUtc = start,
+                EndUtc = start.AddHours(1),
+                Status = ShootingRangeBookingStatus.Cancelled
+            });
+        }
+
+        (await service.GetUserBookingsAsync("user-1", default))
+            .Select(booking => booking.Id)
+            .Should().BeEquivalentTo("today", "yesterday");
+        (await service.GetAdminBookingsAsync("user-1", default))
+            .Select(booking => booking.Id)
+            .Should().BeEquivalentTo("today", "yesterday", "other-user");
+    }
+
+    [Fact]
+    public async Task Admin_pending_count_includes_only_future_pending_bookings()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var pending = await service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 12), "morning", ""), default);
+        await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 12), "afternoon", ""), default);
+        (await service.GetPendingBookingCountAsync("user-1", default)).Should().Be(2);
+        await service.DecideBookingAsync("user-1", pending.Id, true, default);
+        (await service.GetPendingBookingCountAsync("user-1", default)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Admin_cannot_approve_a_booking_after_its_session_starts()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var booking = await service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 12), "morning", ""), default);
+        ((FixedClock)repositories.Clock).SetUtcNow(booking.StartUtc);
+
+        var approve = () => service.DecideBookingAsync("user-1", booking.Id, true, default);
+        await approve.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("A booking cannot be approved after its session has started.");
+    }
+
+    [Fact]
+    public async Task Bay_validation_requires_nonnegative_targets_and_paired_positive_dimensions()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        var bay = new ShootingRangeBay { Id = "bay-1", Code = "01", Targets = 2, Height = 1.5m, Width = 2.25m };
+        await repositories.Bays.InsertAsync(bay);
+
+        var negativeTargets = () => repositories.Bays.ReplaceAsync(bay with { Targets = -1 });
+        await negativeTargets.Should().ThrowAsync<ArgumentException>();
+        var oneDimension = () => repositories.Bays.ReplaceAsync(bay with { Width = null });
+        await oneDimension.Should().ThrowAsync<ArgumentException>();
+        var zeroHeight = () => repositories.Bays.ReplaceAsync(bay with { Height = 0 });
+        await zeroHeight.Should().ThrowAsync<ArgumentException>();
+        var excessivePrecision = () => repositories.Bays.ReplaceAsync(bay with { Height = 1.555m, Width = 2.25m });
+        await excessivePrecision.Should().ThrowAsync<ArgumentException>();
+    }
+
     private static async Task<MockShootingRangeRepositorySet> CreateRepositoriesAsync()
     {
         var repositories = new MockShootingRangeRepositorySet(new FixedClock());
@@ -234,6 +344,8 @@ public sealed class ShootingRangeServiceTests
 
     private sealed class FixedClock : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        private DateTimeOffset now = new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => now;
+        public void SetUtcNow(DateTimeOffset value) => now = value;
     }
 }
