@@ -127,7 +127,7 @@ function Auth({
         dell'amministratore.
       </p>
       <form onSubmit={submit}>
-        <div className="auth-fields" disabled={pending}>
+        <div className="auth-fields">
           {mode === "register" && (
             <>
               <label>
@@ -137,6 +137,7 @@ function Auth({
                   required
                   value={form.firstName}
                   autoComplete="given-name"
+                  disabled={pending}
                   onChange={(event) =>
                     setForm({ ...form, firstName: event.target.value })
                   }
@@ -149,6 +150,7 @@ function Auth({
                   required
                   value={form.lastName}
                   autoComplete="family-name"
+                  disabled={pending}
                   onChange={(event) =>
                     setForm({ ...form, lastName: event.target.value })
                   }
@@ -163,6 +165,7 @@ function Auth({
               required
               value={form.username}
               autoComplete="username"
+              disabled={pending}
               onChange={(event) =>
                 setForm({ ...form, username: event.target.value })
               }
@@ -179,12 +182,17 @@ function Auth({
               autoComplete={
                 mode === "login" ? "current-password" : "new-password"
               }
+              disabled={pending}
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
               }
             />
           </label>
-          <button type="submit" className="button button-primary">
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={pending}
+          >
             {pending
               ? "Attendi..."
               : mode === "login"

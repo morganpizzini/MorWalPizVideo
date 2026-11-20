@@ -98,6 +98,35 @@ async function click(label: string) {
 }
 
 describe("Range session recovery", () => {
+  it("disables authentication fields while a request is pending", async () => {
+    vi.mocked(getSession).mockRejectedValue(new Error("not authenticated"));
+    let finishSubmit: () => void = () => {};
+    testDoubles.logout.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishSubmit = resolve;
+      }),
+    );
+    await renderGate();
+
+    await act(async () => {
+      container
+        .querySelector("form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    const inputs = container.querySelectorAll<HTMLInputElement>("input");
+    expect(inputs).toHaveLength(2);
+    expect(
+      Array.from(inputs).every((input) => input.disabled),
+    ).toBe(true);
+    expect(
+      container.querySelector<HTMLButtonElement>('button[type="submit"]')
+        ?.disabled,
+    ).toBe(true);
+
+    await act(async () => finishSubmit());
+  });
+
   it("shows no protected content until cookie session restoration completes", async () => {
     let resolveSession: (value: Account) => void = () => {};
     vi.mocked(getSession).mockReturnValue(
