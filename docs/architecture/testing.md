@@ -40,7 +40,10 @@ Do not use a historical `TestResults` artifact as current pass/fail evidence.
   ```
 
 - Most backend tests use fake services, test authentication, and isolated
-  mock scenarios. The Shooting Range SQL Server integration gate requires
+  mock scenarios. Shooting Range API host tests explicitly use the EF Core
+  in-memory database and need no Azure SQL configuration. They do not prove
+  SQL transaction, index, or locking behavior. The separate Shooting Range
+  SQL Server integration gate requires
   separate `SHOOTING_RANGE_TEST_SQL_HOST`, `SHOOTING_RANGE_TEST_SQL_PORT`,
   `SHOOTING_RANGE_TEST_SQL_DATABASE`, and
   `SHOOTING_RANGE_TEST_SQL_USERNAME` settings, plus an optional
@@ -222,7 +225,7 @@ dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Test
 
 The second command is the environment-dependent real-SQL-Server gate. It
 creates and drops an isolated database, so use only a disposable SQL Server
-instance. It must not be substituted for the normal local mock-mode run.
+instance. It must not be substituted for the normal local in-memory API run.
 
 ### Central frontend CI shape
 

@@ -4,9 +4,11 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MorWalPizVideo.ShootingRange.Contracts;
 using MorWalPizVideo.ShootingRange.Controllers;
 using MorWalPizVideo.ShootingRange.Models;
@@ -22,9 +24,9 @@ public sealed class ShootingRangeApiTests
     private const string Password = "test-password-only-123";
 
     [Fact]
-    public async Task In_memory_database_flag_uses_the_ef_provider_and_shares_data_between_scopes()
+    public async Task In_memory_database_flag_uses_the_ef_provider_and_isolates_factories()
     {
-        await using var factory = new Factory(enableInMemoryDb: true);
+        await using var factory = new Factory(seedInMemoryAdmin: true);
         using var firstScope = factory.Services.CreateScope();
         var firstRepositories = firstScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         firstScope.ServiceProvider.GetRequiredService<ShootingRangeDbContext>().Database.IsInMemory().Should().BeTrue();
@@ -41,6 +43,11 @@ public sealed class ShootingRangeApiTests
         using var secondScope = factory.Services.CreateScope();
         var secondRepositories = secondScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         (await secondRepositories.Users.GetAsync("memory-user")).Should().NotBeNull();
+
+        await using var isolatedFactory = new Factory();
+        using var isolatedScope = isolatedFactory.Services.CreateScope();
+        var isolatedRepositories = isolatedScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        (await isolatedRepositories.Users.GetAsync("memory-user")).Should().BeNull();
     }
 
     [Theory]
@@ -91,7 +98,8 @@ public sealed class ShootingRangeApiTests
         using var reopened = await client.PutAsJsonAsync($"/api/shooting-range/admin/exceptions/{closure!.Id}", closure with { IsClosed = false });
         reopened.StatusCode.Should().Be(HttpStatusCode.OK);
         (await client.GetFromJsonAsync<ShootingRangeException[]>("/api/shooting-range/admin/exceptions"))!.Single().IsClosed.Should().BeFalse();
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         var admin = (await repositories.Users.GetAllAsync()).Single();
         await repositories.Users.ReplaceAsync(admin with { Status = ShootingRangeAccountStatus.Disabled });
         using var staleCookie = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config);
@@ -103,7 +111,8 @@ public sealed class ShootingRangeApiTests
     {
         await using var factory = new Factory();
         using var client = await LoginAsync(factory, false);
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
         using var forbidden = await client.GetAsync("/api/shooting-range/admin/users");
         forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -179,7 +188,8 @@ public sealed class ShootingRangeApiTests
         using var replay = await ReplayAsync(factory, client, includeSession: !legacy);
         if (!legacy)
         {
-            var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+            using var scope = factory.Services.CreateScope();
+            var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
             var session = (await repositories.LocalSessions.GetAllAsync()).Single();
             await repositories.LocalSessions.ReplaceAsync(session with { ExpiresUtc = DateTime.UtcNow.AddMinutes(-1) });
         }
@@ -192,7 +202,8 @@ public sealed class ShootingRangeApiTests
     {
         await using var factory = new Factory();
         using var client = await LoginAsync(factory, false);
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         var user = await repositories.Users.GetAsync("account");
         await repositories.Users.ReplaceAsync(user! with { ForcePasswordChange = true });
         await SetCsrfAsync(client);
@@ -206,15 +217,28 @@ public sealed class ShootingRangeApiTests
     [InlineData("Staging")]
     public void Deployed_host_rejects_mock_before_resolving_storage(string environment)
     {
-        using var parent = new Factory();
-        using var factory = parent.WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment(environment);
-            builder.UseSetting("FeatureManagement:EnableMock", "true");
-            builder.UseSetting("FeatureManagement:EnableKeyVault", "false");
-        });
+        using var factory = new Factory(enableInMemoryDb: false, useMock: true, environment: environment);
         Action start = () => factory.CreateClient();
         start.Should().Throw<InvalidOperationException>().WithMessage("*mock storage*");
+    }
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void Deployed_host_rejects_in_memory_database_before_resolving_storage(string environment)
+    {
+        using var factory = new Factory(environment: environment);
+        Action start = () => factory.CreateClient();
+        start.Should().Throw<InvalidOperationException>().WithMessage("*in-memory database*");
+    }
+
+    [Fact]
+    public void Sql_server_mode_requires_connection_configuration()
+    {
+        using var factory = new Factory(enableInMemoryDb: false);
+        Action start = () => factory.CreateClient();
+        start.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ShootingRangeDatabase:ConnectionString*");
     }
 
     [Theory]
@@ -225,7 +249,8 @@ public sealed class ShootingRangeApiTests
     {
         await using var factory = new Factory();
         using var client = await LoginAsync(factory, false);
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         var user = await repositories.Users.GetAsync("account");
         await repositories.Users.ReplaceAsync(user! with { Status = ShootingRangeAccountStatus.Disabled });
         using var rejected = await client.GetAsync(path);
@@ -237,7 +262,8 @@ public sealed class ShootingRangeApiTests
     {
         await using var factory = new Factory();
         using var client = await LoginAsync(factory, true);
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         await repositories.Threads.InsertAsync(new() { Id = "private", UserId = "another-user", Subject = "private" });
         var user = await repositories.Users.GetAsync("account");
         await repositories.Users.ReplaceAsync(user! with { IsAdmin = false });
@@ -297,7 +323,8 @@ public sealed class ShootingRangeApiTests
     {
         var session = await client.GetFromJsonAsync<AccountDto>("/api/shooting-range/auth/session");
         session.Should().NotBeNull();
-        var repositories = factory.Services.GetRequiredService<IShootingRangeRepositorySet>();
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         var localSession = (await repositories.LocalSessions.GetAllAsync()).Single(session => session.UserId == "account" && !session.Revoked);
         var user = await repositories.Users.GetAsync("account");
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([
@@ -317,7 +344,12 @@ public sealed class ShootingRangeApiTests
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         var hash = PasswordHashing.HashPassword(Password, out var salt);
-        if (insert) await factory.Services.GetRequiredService<IShootingRangeRepositorySet>().Users.InsertAsync(new() { Id = username, Username = username, PasswordHash = $"{hash}:{salt}", Status = ShootingRangeAccountStatus.Approved, IsAdmin = admin });
+        if (insert)
+        {
+            using var scope = factory.Services.CreateScope();
+            var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+            await repositories.Users.InsertAsync(new() { Id = username, Username = username, PasswordHash = $"{hash}:{salt}", Status = ShootingRangeAccountStatus.Approved, IsAdmin = admin });
+        }
         await SetCsrfAsync(client);
         using var login = await client.PostAsJsonAsync("/api/shooting-range/auth/login", new ShootingRangeLoginRequest(username, Password));
         login.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -335,32 +367,44 @@ public sealed class ShootingRangeApiTests
     private sealed class Factory : WebApplicationFactory<ShootingRangeController>
     {
         private readonly bool enableInMemoryDb;
+        private readonly bool useMock;
+        private readonly string environment;
+        private readonly string inMemoryDatabaseName = $"ShootingRange-{Guid.NewGuid():N}";
         public string? InMemoryAdminPassword { get; }
 
-        public Factory(bool enableInMemoryDb = false)
+        public Factory(bool enableInMemoryDb = true, bool useMock = false, string environment = "Test", bool seedInMemoryAdmin = false)
         {
             this.enableInMemoryDb = enableInMemoryDb;
-            InMemoryAdminPassword = enableInMemoryDb ? Guid.NewGuid().ToString("N") : null;
-            Environment.SetEnvironmentVariable("FeatureManagement__EnableMock", (!enableInMemoryDb).ToString());
-            Environment.SetEnvironmentVariable("FeatureManagement__EnableInMemoryDb", enableInMemoryDb.ToString());
-        }
-
-        static Factory()
-        {
-            Environment.SetEnvironmentVariable("FeatureManagement__EnableKeyVault", "false");
+            this.useMock = useMock;
+            this.environment = environment;
+            InMemoryAdminPassword = seedInMemoryAdmin ? Guid.NewGuid().ToString("N") : null;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Test");
+            builder.UseEnvironment(environment);
+            builder.UseSetting("FeatureManagement:UseMock", useMock.ToString());
+            builder.UseSetting("FeatureManagement:EnableInMemoryDb", enableInMemoryDb.ToString());
+            builder.UseSetting("FeatureManagement:EnableKeyVault", "false");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["FeatureManagement:EnableMock"] = (!enableInMemoryDb).ToString(),
+                ["FeatureManagement:UseMock"] = useMock.ToString(),
                 ["FeatureManagement:EnableInMemoryDb"] = enableInMemoryDb.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["ShootingRange:InMemoryAdminPassword"] = InMemoryAdminPassword,
+                ["ShootingRangeDatabase:ConnectionString"] = null,
                 ["Logging:LogLevel:Default"] = "Error"
             }));
+            if (enableInMemoryDb)
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<ShootingRangeDbContext>();
+                    services.RemoveAll<DbContextOptions<ShootingRangeDbContext>>();
+                    services.AddDbContext<ShootingRangeDbContext>(options =>
+                        options.UseInMemoryDatabase(inMemoryDatabaseName));
+                });
+            }
         }
     }
 }

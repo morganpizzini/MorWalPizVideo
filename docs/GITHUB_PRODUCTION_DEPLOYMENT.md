@@ -468,7 +468,7 @@ All deployment workflows can be triggered:
 1. **Automatically**: On push to `main` branch when relevant files change
 2. **Manually**: Via GitHub Actions UI using workflow_dispatch
 
-The Shooting Range workflows validate the API with mock repositories and the client with its real Yarn/Vite SSR build before Azure login or deployment. The API workflow watches the Shooting Range API, shared .NET projects, contracts, and focused tests. The client workflow watches the client, shared frontend packages, root manifests, its Dockerfile, and workflow.
+The Shooting Range workflows validate the API with its EF Core in-memory database and the client with its real Yarn/Vite SSR build before Azure login or deployment. The API workflow separately runs provider-specific tests against a disposable SQL Server. The API workflow watches the Shooting Range API, shared .NET projects, contracts, and focused tests. The client workflow watches the client, shared frontend packages, root manifests, its Dockerfile, and workflow.
 
 ### Rollback
 

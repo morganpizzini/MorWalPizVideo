@@ -49,9 +49,7 @@ jobs:
       - name: Build API
         run: dotnet build MorWalPizVideo.ShootingRange/MorWalPizVideo.ShootingRange.csproj --configuration Release --no-restore
 
-      - name: Run focused Shooting Range tests with mock repositories
-        env:
-          FeatureManagement__EnableMock: 'true'
+      - name: Run focused Shooting Range tests with in-memory database
         run: |
           dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~ShootingRange --logger "trx;LogFileName=shooting-range-related.trx" --results-directory ./TestResults/shooting-range --verbosity minimal
           pwsh -Command '$result = [xml](Get-Content ./TestResults/shooting-range/shooting-range-related.trx); $total = [int]$result.TestRun.ResultSummary.Counters.total; if ($total -le 0) { throw "Shooting Range test filter selected no tests." }'
