@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Monitor } from "lucide-react";
+import { Check, Monitor } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import {
   setAppearancePreference,
