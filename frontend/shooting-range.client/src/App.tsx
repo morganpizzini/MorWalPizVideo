@@ -14,6 +14,7 @@ import {
   type Booking as StoredBooking,
   type Sessions,
 } from "./api";
+import { OpeningDayDatePicker } from "./OpeningDayDatePicker";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import type {
   ActionResult,
@@ -590,21 +591,20 @@ export function Booking({
           {error && <p role="alert" className="range-error">{error}</p>}
           <fieldset className="toolbar" disabled={pending}>
             <legend className="sr-only">Selezione del turno</legend>
-            <label>
-              Data
-              <input
-                type="date"
-                required
+            {routeData ? (
+              <OpeningDayDatePicker
                 value={date}
-                onChange={(event) => {
-                  setDate(event.target.value);
+                openingDays={routeData.config.openingDays}
+                disabled={pending}
+                onChange={(value) => {
+                  setDate(value);
                   setPeriod("");
                   setAvailabilityKey("");
                   setError("");
                   setNotice("");
                 }}
               />
-            </label>
+            ) : <RangeSkeleton rows={1} label="Caricamento configurazione..." />}
             <label>
               Sessione
               <select
@@ -621,18 +621,11 @@ export function Booking({
                   </option>
                 )}
                 {routeData && routeFetcher.state !== "loading" && (
-                  <RangeDeferred
-                    resolve={routeData.offered}
-                    fallback={null}
-                  >
-                    {(offered) => (
-                      <OfferedSessionOptions
-                        offered={offered}
-                        selectedPeriod={period}
-                        onDefaultPeriod={setPeriod}
-                      />
-                    )}
-                  </RangeDeferred>
+                  <OfferedSessionOptions
+                    offered={routeData.offered}
+                    selectedPeriod={period}
+                    onDefaultPeriod={setPeriod}
+                  />
                 )}
               </select>
             </label>
@@ -663,20 +656,10 @@ export function Booking({
           </div>
           {routeData && routeFetcher.state !== "loading" && (
             <>
-              <RangeDeferred
-                resolve={routeData.offered}
-                fallback={<RangeSkeleton rows={2} label="Caricamento sessioni..." />}
-                onRetry={() => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)}
-              >
-                {(offered) => (
-                  <>
-                    <p className="range-muted">{offered.timeZone}</p>
-                    {!offered.sessions.length && (
-                      <p className="range-empty">Nessuna sessione prenotabile per questa data.</p>
-                    )}
-                  </>
-                )}
-              </RangeDeferred>
+              <p className="range-muted">{routeData.offered.timeZone}</p>
+              {!routeData.offered.sessions.length && (
+                <p className="range-empty">Nessuna sessione prenotabile per questa data.</p>
+              )}
               <section className="range-panel">
                 <h2>Postazioni disponibili</h2>
                 {availabilityError && (
@@ -716,16 +699,14 @@ export function Booking({
                                   className="button button-primary"
                                   disabled={pending}
                                   onClick={() => {
-                                    void routeData.offered.then((offered) => {
-                                      if (availabilityMatches(available, offered.sessions, date, period)) {
-                                        const session = offered.sessions.find((item) => item.periodKey === period);
-                                        if (session) submitBooking(bay.id, period, session);
-                                      } else {
-                                        setAvailabilityKey("");
-                                        setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
-                                        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
-                                      }
-                                    });
+                                    if (availabilityMatches(available, routeData.offered.sessions, date, period)) {
+                                      const session = routeData.offered.sessions.find((item) => item.periodKey === period);
+                                      if (session) submitBooking(bay.id, period, session);
+                                    } else {
+                                      setAvailabilityKey("");
+                                      setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
+                                      routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+                                    }
                                   }}
                                 >
                                   Richiedi postazione {bay.code}
@@ -768,38 +749,31 @@ function BookingHistoryRegion({
     <section className="range-panel">
       <h2>Le mie prenotazioni</h2>
       <RangeDeferred
-        resolve={offered}
+        resolve={history}
         fallback={<RangeSkeleton rows={3} label="Caricamento prenotazioni..." />}
+        onRetry={onRetry}
       >
-        {(sessions) => (
-          <RangeDeferred
-            resolve={history}
-            fallback={<RangeSkeleton rows={3} label="Caricamento prenotazioni..." />}
-            onRetry={onRetry}
-          >
-            {(items: StoredBooking[]) => items.length ? (
-              <ul className="record-list">
-                {items.map((booking) => (
-                  <li key={booking.id}>
-                    <span>
-                      {booking.localDate} ·{" "}
-                      {new Date(booking.startUtc).toLocaleString("it-IT", {
-                        timeZone: sessions.timeZone,
-                      })}{" "}
-                      -{" "}
-                      {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                        timeZone: sessions.timeZone,
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <strong>{formatBookingStatus(booking.status)}</strong>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="range-empty">Nessuna prenotazione.</p>}
-          </RangeDeferred>
-        )}
+        {(items: StoredBooking[]) => items.length ? (
+          <ul className="record-list">
+            {items.map((booking) => (
+              <li key={booking.id}>
+                <span>
+                  {booking.localDate} ·{" "}
+                  {new Date(booking.startUtc).toLocaleString("it-IT", {
+                    timeZone: offered.timeZone,
+                  })}{" "}
+                  -{" "}
+                  {new Date(booking.endUtc).toLocaleTimeString("it-IT", {
+                    timeZone: offered.timeZone,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <strong>{formatBookingStatus(booking.status)}</strong>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="range-empty">Nessuna prenotazione.</p>}
       </RangeDeferred>
     </section>
   );

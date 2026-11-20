@@ -72,6 +72,7 @@ The initial public-facing POC is limited to:
 
 - Login, session restoration, forced password change, and logout.
 - Authenticated availability search and booking.
+- Booking dates use the field configuration's opening weekdays; closed weekdays are disabled in the calendar, and available sessions render only after the sessions response resolves.
 - The current user's bookings.
 - Minimal administrator user creation and booking approval or rejection, if admin-created ordinary users are confirmed.
 

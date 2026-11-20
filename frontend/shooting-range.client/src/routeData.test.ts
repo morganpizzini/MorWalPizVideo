@@ -5,12 +5,14 @@ import {
   book,
   changePassword,
   createMechanismType,
+  getConfig,
   getSession,
   login,
   myBookings,
   register,
   sessions,
   type Account,
+  type RangeConfig,
   type Sessions,
 } from "./api";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
@@ -27,6 +29,7 @@ vi.mock("./api", async (importOriginal) => ({
   book: vi.fn(),
   changePassword: vi.fn(),
   createMechanismType: vi.fn(),
+  getConfig: vi.fn(),
   getSession: vi.fn(),
   login: vi.fn(),
   messages: vi.fn(),
@@ -54,6 +57,22 @@ const offered: Sessions = {
     startUtc: "2030-01-12T08:00:00Z",
     endUtc: "2030-01-12T09:00:00Z",
   }],
+};
+const config: RangeConfig = {
+  id: "default",
+  creationDateTime: "",
+  name: "Pepperbox",
+  timeZone: "Europe/Rome",
+  sessionMode: 0,
+  openingDays: [0, 6],
+  morningStart: "09:00:00",
+  morningEnd: "13:00:00",
+  afternoonStart: "14:00:00",
+  afternoonEnd: "18:00:00",
+  hourlyMinutes: 60,
+  continuousStart: null,
+  continuousEnd: null,
+  reservedReleaseDaysBefore: 2,
 };
 
 function loaderArgs(url: string): LoaderFunctionArgs {
@@ -137,21 +156,47 @@ describe("Range route data security and mutations", () => {
     expect(adminConfig).not.toHaveBeenCalled();
   });
 
-  it("keeps loader data deferred after validating the browser session", async () => {
+  it("loads sessions and opening weekdays after validating the browser session", async () => {
     vi.stubGlobal("window", {});
     vi.mocked(getSession).mockResolvedValue(account);
     vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(getConfig).mockResolvedValue(config);
     vi.mocked(myBookings).mockResolvedValue([]);
 
     const result = await bookingLoader(
       loaderArgs("https://range.test/?date=2030-01-12"),
     );
 
-    expect(result).toMatchObject({ date: "2030-01-12" });
-    if (!result || !("offered" in result)) throw new Error("Expected booking loader data.");
-    expect(result.offered).toBeInstanceOf(Promise);
-    await expect(result.offered).resolves.toEqual(offered);
+    expect(result).toMatchObject({
+      date: "2030-01-12",
+      offered,
+      config,
+    });
+    if (
+      !result ||
+      !("offered" in result) ||
+      !("config" in result) ||
+      result.config === undefined
+    ) {
+      throw new Error("Expected booking loader data.");
+    }
+    expect(result.offered).toEqual(offered);
+    expect(result.config.openingDays).toEqual([0, 6]);
     await expect(result.history).resolves.toEqual([]);
+  });
+
+  it("surfaces field configuration failures instead of enabling an unfiltered calendar", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(getConfig).mockRejectedValue(new Error("Configuration unavailable"));
+
+    await expect(
+      bookingLoader(loaderArgs("https://range.test/?date=2030-01-12")),
+    ).resolves.toMatchObject({
+      sessionError: { error: true, message: "Configuration unavailable" },
+    });
+    expect(myBookings).not.toHaveBeenCalled();
   });
 
   it("rejects stale booking boundaries before issuing the mutation", async () => {

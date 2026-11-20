@@ -14,6 +14,7 @@ import {
   changePassword,
   decideBooking,
   createMechanismType,
+  getConfig,
   getSession,
   login,
   logout,
@@ -53,7 +54,8 @@ export interface SessionResult {
 export interface BookingRouteData {
   date: string;
   period: string;
-  offered: Promise<Sessions>;
+  offered: Sessions;
+  config: RangeConfig;
   history: Promise<Booking[]>;
   availability: Promise<Availability | null>;
 }
@@ -166,20 +168,29 @@ export async function bookingLoader({ request }: LoaderFunctionArgs) {
   const date = url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
   const period = url.searchParams.get("period") ?? "";
   const search = url.searchParams.get("search") === "1";
-  const offered = sessions(date, request.signal);
+  let offered: Sessions;
+  let config: RangeConfig;
+  try {
+    [offered, config] = await Promise.all([
+      sessions(date, request.signal),
+      getConfig(request.signal),
+    ]);
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
   const history = url.searchParams.get("region") === "availability"
     ? Promise.resolve([])
     : myBookings(request.signal);
   const available: Promise<Availability | null> = search && period
-    ? offered.then(async (result) => {
-        if (!result.sessions.some((item) => item.periodKey === period)) {
+    ? Promise.resolve().then(async () => {
+        if (!offered.sessions.some((item) => item.periodKey === period)) {
           throw new Error("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
         }
         return availability(date, period, request.signal);
       })
     : Promise.resolve(null);
 
-  return { date, period, offered, history, availability: available };
+  return { date, period, offered, config, history, availability: available };
 }
 
 export async function bookingAction({ request }: ActionFunctionArgs): Promise<ActionResult> {

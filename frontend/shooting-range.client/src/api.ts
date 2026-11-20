@@ -167,6 +167,8 @@ export const sessions = (date: string, signal?: AbortSignal) =>
   request<Sessions>(`${prefix}/sessions?date=${encodeURIComponent(date)}`, {
     signal,
   });
+export const getConfig = (signal?: AbortSignal) =>
+  request<RangeConfig>(`${prefix}/config`, { signal });
 export const availability = (
   date: string,
   period: string,

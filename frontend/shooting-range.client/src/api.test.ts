@@ -7,6 +7,7 @@ import {
   book,
   createMechanismType,
   changePassword,
+  getConfig,
   getSession,
   login,
   logout,
@@ -57,6 +58,18 @@ describe("credentialed range API", () => {
       signal,
       credentials: "include",
     });
+  });
+
+  it("loads public field configuration for the booking calendar", async () => {
+    const config = { openingDays: [0, 6] };
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(config)));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getConfig()).resolves.toEqual(config);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/shooting-range/config",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 
   it("obtains a fresh authenticated CSRF token before booking after login", async () => {

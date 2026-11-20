@@ -213,7 +213,7 @@ export function ConfigForm({
             Correggi la configurazione prima di accettare nuove prenotazioni.
           </p>
         )}
-        <button type="submit">Salva configurazione</button>
+        <button type="submit" className="button button-primary">Salva configurazione</button>
       </fieldset>
     </form>
   );
@@ -506,7 +506,7 @@ function ClosureForm({
             }
           />
         </label>
-        <button type="submit">Aggiungi chiusura</button>
+        <button type="submit" className="button button-primary">Aggiungi chiusura</button>
       </fieldset>
     </form>
   );

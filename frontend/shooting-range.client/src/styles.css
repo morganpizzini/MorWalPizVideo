@@ -359,14 +359,121 @@ button:disabled {
   border-bottom: 1px solid var(--range-border);
 }
 
-.toolbar label {
+.toolbar label,
+.toolbar .range-date-picker {
   min-width: min(100%, 12rem);
   flex: 0 1 15rem;
   margin: 0;
 }
 
+.range-date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--range-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .toolbar button {
   flex: 0 0 auto;
+}
+
+.range-date-picker {
+  position: relative;
+}
+
+.range-date-picker__details {
+  position: relative;
+  width: 100%;
+}
+
+.range-date-picker__details > summary {
+  width: 100%;
+  overflow: hidden;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--range-border);
+  border-radius: 6px;
+  background: var(--range-elevated);
+  color: var(--range-text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.range-calendar {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 3;
+  width: min(19rem, calc(100vw - 2rem));
+  padding: 0.75rem;
+  border: 1px solid var(--range-border);
+  border-radius: 8px;
+  background: var(--range-surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.range-calendar__month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--range-text);
+  text-transform: capitalize;
+}
+
+.range-calendar__month .button {
+  min-height: 2rem;
+  padding: 0.3rem 0.45rem;
+}
+
+.range-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+
+.range-calendar__weekday {
+  padding: 0.35rem 0;
+  color: var(--range-secondary);
+  font-size: 0.7rem;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.range-calendar__empty,
+.range-calendar__day {
+  min-width: 0;
+  min-height: 2.2rem;
+}
+
+.range-calendar__day {
+  padding: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--range-text);
+  cursor: pointer;
+}
+
+.range-calendar__day[aria-pressed="true"] {
+  background: var(--range-accent);
+  color: var(--appearance-on-action);
+  font-weight: 800;
+}
+
+.range-calendar__day:disabled {
+  color: var(--range-muted);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.range-calendar__day:not(:disabled):hover {
+  border-color: var(--range-accent);
 }
 
 .form-grid {
