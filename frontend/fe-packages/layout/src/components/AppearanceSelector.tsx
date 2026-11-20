@@ -109,11 +109,6 @@ export function AppearanceSelector({
         }}
       >
         <Monitor aria-hidden="true" focusable="false" />
-        <ChevronDown
-          className="mpv-appearance__chevron"
-          aria-hidden="true"
-          focusable="false"
-        />
       </button>
       <div
         className="mpv-appearance__menu"

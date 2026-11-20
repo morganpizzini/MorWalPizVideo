@@ -3,6 +3,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.FeatureManagement;
@@ -144,6 +145,14 @@ if (!useMock && !useInMemoryDb)
     await scope.ServiceProvider.GetRequiredService<SqlServerShootingRangeRepositorySet>().VerifyReadyAsync(CancellationToken.None);
     app.Logger.LogInformation("Shooting range SQL Server schema preflight succeeded.");
 }
+var forwardedHeaders = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1
+};
+forwardedHeaders.KnownIPNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
 app.MapDefaultEndpoints();
 app.UseCors();
 app.Use(async (context, next) =>

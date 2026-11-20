@@ -159,13 +159,6 @@ body {
   stroke-width: 2;
 }
 
-.mpv-appearance__chevron {
-  width: 0.75rem;
-  height: 0.75rem;
-  flex: 0 0 auto;
-  stroke-width: 2.5;
-}
-
 .mpv-appearance__trigger:hover,
 .mpv-appearance__trigger[aria-expanded="true"] {
   border-color: var(--appearance-border);

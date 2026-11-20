@@ -151,6 +151,20 @@ public sealed class ShootingRangeApiTests
     }
 
     [Fact]
+    public async Task Csrf_accepts_https_forwarded_by_the_app_service_proxy()
+    {
+        await using var factory = new Factory();
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("http://localhost") });
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/shooting-range/csrf");
+        request.Headers.Add("X-Forwarded-Proto", "https");
+
+        using var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("Set-Cookie").Should().ContainSingle(cookie => cookie.Contains("Secure", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task New_passwords_require_seven_characters_for_registration_change_and_reset()
     {
         await using var factory = new Factory();
