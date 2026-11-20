@@ -3,8 +3,10 @@ import {
   ApiError,
   adminConfig,
   book,
+  changePassword,
   getSession,
   myBookings,
+  register,
   sessions,
   type Account,
   type Sessions,
@@ -21,10 +23,12 @@ vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   adminConfig: vi.fn(),
   book: vi.fn(),
+  changePassword: vi.fn(),
   getSession: vi.fn(),
   messages: vi.fn(),
   myBookings: vi.fn(),
   openMessage: vi.fn(),
+  register: vi.fn(),
   sessions: vi.fn(),
 }));
 
@@ -142,6 +146,49 @@ describe("Range route data security and mutations", () => {
     expect(result).toMatchObject({ success: false });
     expect(result.message).toContain("Gli orari sono cambiati");
     expect(book).not.toHaveBeenCalled();
+  });
+
+  it("enforces seven-character passwords before registration and password change", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(register).mockResolvedValue(account);
+
+    const shortRegistration = await bookingAction(actionArgs("/", {
+      intent: "register",
+      username: "new-user",
+      password: "123456",
+      firstName: "New",
+      lastName: "User",
+    }));
+    expect(shortRegistration).toMatchObject({ success: false });
+    expect(register).not.toHaveBeenCalled();
+
+    const acceptedRegistration = await bookingAction(actionArgs("/", {
+      intent: "register",
+      username: "new-user",
+      password: "1234567",
+      firstName: "New",
+      lastName: "User",
+    }));
+    expect(acceptedRegistration).toMatchObject({ success: true });
+    expect(register).toHaveBeenCalledOnce();
+
+    vi.mocked(getSession).mockResolvedValue(account);
+    const shortChange = await bookingAction(actionArgs("/", {
+      intent: "password-change",
+      currentPassword: "current",
+      newPassword: "123456",
+    }));
+    expect(shortChange).toMatchObject({ success: false });
+    expect(changePassword).not.toHaveBeenCalled();
+
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    const acceptedChange = await bookingAction(actionArgs("/", {
+      intent: "password-change",
+      currentPassword: "current",
+      newPassword: "1234567",
+    }));
+    expect(acceptedChange).toMatchObject({ success: true });
+    expect(changePassword).toHaveBeenCalledOnce();
   });
 
   it("rechecks administrator authorization before admin mutations", async () => {

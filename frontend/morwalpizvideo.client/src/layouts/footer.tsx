@@ -8,7 +8,7 @@ export default function TitleComponent() {
   const { navigation, loading, error } = usePublicNavigation();
 
   return (
-    <footer className="site-footer mt-auto" data-bs-theme="dark">
+    <footer className="site-footer mt-auto">
       <div className="site-footer__inner">
         <div className="row">
           <div className="col-4 col-md-3">

@@ -3,10 +3,10 @@ using MorWalPizVideo.ShootingRange.Models;
 
 namespace MorWalPizVideo.ShootingRange.Contracts;
 
-public sealed record RegisterShootingRangeUserRequest([Required, StringLength(80, MinimumLength = 3)] string Username, [Required, StringLength(100, MinimumLength = 12)] string Password, [Required, StringLength(80)] string FirstName, [Required, StringLength(80)] string LastName);
+public sealed record RegisterShootingRangeUserRequest([Required, StringLength(80, MinimumLength = 3)] string Username, [Required, StringLength(100, MinimumLength = 7)] string Password, [Required, StringLength(80)] string FirstName, [Required, StringLength(80)] string LastName);
 public sealed record ShootingRangeLoginRequest([Required] string Username, [Required] string Password);
-public sealed record PasswordChangeRequest([Required] string CurrentPassword, [Required, StringLength(100, MinimumLength = 12)] string NewPassword);
-public sealed record AdminPasswordResetRequest([Required, StringLength(100, MinimumLength = 12)] string NewPassword);
+public sealed record PasswordChangeRequest([Required] string CurrentPassword, [Required, StringLength(100, MinimumLength = 7)] string NewPassword);
+public sealed record AdminPasswordResetRequest([Required, StringLength(100, MinimumLength = 7)] string NewPassword);
 public sealed record BookingRequest([Required] string BayId, [Required] DateOnly LocalDate, [Required] string PeriodKey, [StringLength(1000)] string Request, DateTime? ExpectedStartUtc = null, DateTime? ExpectedEndUtc = null);
 public sealed record BookingDecisionRequest(bool Approved);
 public sealed record ThreadRequest([Required, StringLength(120)] string Subject, [Required, StringLength(2000)] string Text);

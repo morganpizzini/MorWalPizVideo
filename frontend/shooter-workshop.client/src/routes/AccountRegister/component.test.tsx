@@ -27,5 +27,7 @@ describe("Workshop account registration", () => {
     expect(markup).toContain("Create your Workshop account");
     expect(markup).toContain('type="checkbox"');
     expect(markup).toContain("I have read the privacy notice and accept the terms of use.");
+    expect(markup).toContain('class="mpv-appearance__select"');
+    expect(markup).toContain('<option value="system"');
   });
 });

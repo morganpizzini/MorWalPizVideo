@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { AccountForm } from "@morwalpiz/layout";
+import { AccountForm, AppearanceSelector } from "@morwalpiz/layout";
 import {
   getApiFieldErrors,
   getPublicAccountErrorMessage,
@@ -109,7 +109,18 @@ export default function AccountRegister() {
       header={
         <div className="account-header">
           <p className="eyebrow">{t("Private workspace")}</p>
-          <LanguageSelector />
+          <div className="account-header-controls">
+            <LanguageSelector />
+            <AppearanceSelector
+              label={t("Appearance")}
+              systemLabel={t("System")}
+              lightLabel={t("Light")}
+              darkLabel={t("Dark")}
+              persistenceErrorMessage={t(
+                "Your appearance choice will last only for this visit because browser storage is unavailable.",
+              )}
+            />
+          </div>
           <p className="account-subtitle">
             {t(
               "Create one MorWalPiz account to use Workshop and keep your equipment history connected.",

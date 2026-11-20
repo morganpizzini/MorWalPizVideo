@@ -11,7 +11,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles": "./dist/styles/index.css"
+    "./styles": "./dist/styles/index.css",
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "default": "./dist/styles/theme.css"
+    }
   },
   "scripts": {
     "build": "tsc && npm run build:styles",

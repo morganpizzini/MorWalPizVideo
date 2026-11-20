@@ -209,6 +209,9 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       ) {
         return { intent, success: false, message: "Completa tutti i campi richiesti." };
       }
+      if (password.length < 7) {
+        return { intent, success: false, message: "La password deve contenere almeno 7 caratteri." };
+      }
       await register({ username, password, firstName, lastName });
       return { intent, success: true, message: "Richiesta inviata. Attendi l'approvazione dell'amministratore." };
     }
@@ -225,8 +228,8 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       if (intent === "password-change") {
         const currentPassword = formData.get("currentPassword");
         const newPassword = formData.get("newPassword");
-        if (typeof currentPassword !== "string" || typeof newPassword !== "string" || newPassword.length < 12) {
-          return { intent, success: false, message: "Inserisci la password attuale e una nuova password di almeno 12 caratteri." };
+        if (typeof currentPassword !== "string" || typeof newPassword !== "string" || newPassword.length < 7) {
+          return { intent, success: false, message: "Inserisci la password attuale e una nuova password di almeno 7 caratteri." };
         }
         await changePassword({ currentPassword, newPassword });
         return { intent, success: true, message: "Password aggiornata." };

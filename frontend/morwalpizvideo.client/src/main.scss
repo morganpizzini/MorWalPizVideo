@@ -14,22 +14,24 @@ body {
 }
 
 :root {
-  --magazine-bg: #101010;
-  --magazine-surface: #181818;
-  --magazine-elevated: #222222;
-  --magazine-accent: #ffff36;
-  --magazine-text: #ffffff;
-  --magazine-secondary: #b8b8b8;
-  --magazine-border: #383838;
-  --magazine-accent-hover: #eded2f;
+  --magazine-bg: var(--appearance-page-background);
+  --magazine-surface: var(--appearance-surface);
+  --magazine-elevated: var(--appearance-surface-subtle);
+  --magazine-accent: var(--appearance-action);
+  --magazine-on-accent: var(--appearance-on-action);
+  --magazine-brand-accent: var(--appearance-brand-accent);
+  --magazine-text: var(--appearance-text);
+  --magazine-secondary: var(--appearance-text-secondary);
+  --magazine-border: var(--appearance-border);
+  --magazine-accent-hover: var(--appearance-action-hover);
   --magazine-youtube-hover: #ef4f5f;
   --magazine-social-gradient-start: #edb527;
   --magazine-social-gradient-end: #863eae;
   --magazine-print-border: #dee2e6;
   --magazine-shorts: #df1010;
-  --magazine-donation-border: #878727;
-  --magazine-collection-border: #74743b;
-  --magazine-home-accent-hover: #e6e626;
+  --magazine-donation-border: var(--appearance-warning-border);
+  --magazine-collection-border: var(--appearance-warning-border);
+  --magazine-home-accent-hover: var(--appearance-action-hover);
   --magazine-shadow-soft: rgba(0, 0, 0, 0.1);
   --magazine-shadow-medium: rgba(0, 0, 0, 0.15);
   --magazine-shadow-toolbar: rgba(0, 0, 0, 0.2);
@@ -41,7 +43,7 @@ body {
   --magazine-shadow-popover: rgba(0, 0, 0, 0.4);
   --magazine-shadow-overlay: rgba(0, 0, 0, 0.82);
   --magazine-shadow-quick-links: rgba(0, 0, 0, 0.32);
-  --magazine-shadow-focus: rgba(255, 255, 54, 0.2);
+  --magazine-shadow-focus: var(--appearance-focus-ring);
   --magazine-font-small: 12px;
   --magazine-font-body: 14px;
   --magazine-font-large: 16px;
@@ -95,9 +97,9 @@ body {
   letter-spacing: 0;
 }
 
-::selection { background: var(--magazine-accent); color: var(--magazine-bg); }
+::selection { background: var(--appearance-action); color: var(--appearance-on-action); }
 
-:focus-visible { outline: 2px solid var(--magazine-accent); outline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--appearance-focus); outline-offset: 4px; }
 
 .site-content {
   flex: 1;
@@ -403,6 +405,11 @@ body {
     color: var(--magazine-accent) !important;
   }
 
+  .bg-secondary {
+    color: var(--magazine-text) !important;
+    background-color: var(--magazine-elevated) !important;
+  }
+
   .page-title {
     color: var(--magazine-text);
   }
@@ -416,7 +423,7 @@ body {
   }
 
   .bg-primary {
-    color: var(--magazine-bg) !important;
+    color: var(--magazine-on-accent) !important;
     background-color: var(--magazine-accent) !important;
   }
 
@@ -433,16 +440,16 @@ body {
   }
 
   .btn-primary {
-    --bs-btn-color: var(--magazine-bg);
+    --bs-btn-color: var(--magazine-on-accent);
     --bs-btn-bg: var(--magazine-accent);
     --bs-btn-border-color: var(--magazine-accent);
-    --bs-btn-hover-color: var(--magazine-bg);
+    --bs-btn-hover-color: var(--magazine-on-accent);
     --bs-btn-hover-bg: var(--magazine-accent-hover);
     --bs-btn-hover-border-color: var(--magazine-accent-hover);
-    --bs-btn-active-color: var(--magazine-bg);
+    --bs-btn-active-color: var(--magazine-on-accent);
     --bs-btn-active-bg: var(--magazine-accent-hover);
     --bs-btn-active-border-color: var(--magazine-accent-hover);
-    --bs-btn-disabled-color: var(--magazine-bg);
+    --bs-btn-disabled-color: var(--magazine-on-accent);
     --bs-btn-disabled-bg: var(--magazine-accent);
     --bs-btn-disabled-border-color: var(--magazine-accent);
   }
@@ -450,10 +457,10 @@ body {
   .btn-outline-primary {
     --bs-btn-color: var(--magazine-accent);
     --bs-btn-border-color: var(--magazine-accent);
-    --bs-btn-hover-color: var(--magazine-bg);
+    --bs-btn-hover-color: var(--magazine-on-accent);
     --bs-btn-hover-bg: var(--magazine-accent);
     --bs-btn-hover-border-color: var(--magazine-accent);
-    --bs-btn-active-color: var(--magazine-bg);
+    --bs-btn-active-color: var(--magazine-on-accent);
     --bs-btn-active-bg: var(--magazine-accent);
     --bs-btn-active-border-color: var(--magazine-accent);
   }

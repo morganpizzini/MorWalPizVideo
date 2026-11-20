@@ -32,7 +32,7 @@ Every repository write participates in a SQL Server `ReadCommitted` transaction 
 
 Pending and Approved consume capacity through half-open persisted UTC intervals per bay, regardless of period key or current mode. Adjacent intervals and different bays are allowed. Generic booking insert/replace paths also validate capacity; inactive-to-active transitions recheck admission, while Pending-to-Approved preserves the original reservation. Historical intervals and booking identity cannot be rewritten. Malformed active intervals block the affected bay until operational reconciliation. A unique normalized-username index with binary collation is a database backstop. The mock repository serializes mutations and restores its snapshot on failure; mock tests do not prove SQL Server locking or transaction rollback.
 
-All account passwords are PBKDF2 hashes with per-account salts. Passwords must never be logged or returned. Only Approved users can authenticate. Admin reset marks `ForcePasswordChange`; the new password must be communicated out of band.
+All account passwords are PBKDF2 hashes with per-account salts. New passwords must contain at least seven characters. Passwords must never be logged or returned. Only Approved users can authenticate. Admin reset marks `ForcePasswordChange`; the new password must be communicated out of band.
 
 The first production administrator is inserted manually into `shooting_range_users`; there is no public or administrative bootstrap endpoint. The inserted row must use the normalized username and the password representation produced by the current password-hashing implementation. In Development/Test only, the EF in-memory provider can seed a local administrator when `ShootingRange:InMemoryAdminPassword` is supplied through environment-managed configuration. That account requires a password change at first login. No password or reusable hash is stored in source or documentation.
 
@@ -68,6 +68,19 @@ The initial public-facing POC is limited to:
 - Minimal administrator user creation and booking approval or rejection, if admin-created ordinary users are confirmed.
 
 Schedule, bay and closure management and booking decisions are now accepted administrator scope. The client preserves `/`, `/messages` and `/admin`; this refinement does not authorize unrelated messaging expansion. Cancellation, rescheduling, notifications, waitlists, custom-duration sessions, and reporting remain deferred.
+
+## Appearance preference
+
+The client uses the shared `@morwalpiz/layout` System/Light/Dark appearance
+contract and opt-in theme stylesheet. System is the default; explicit choices
+are stored per browser origin and do not alter Range authentication, booking,
+or account state. The initial HTML bootstrap applies the resolved theme before
+the client starts, while the React selector appears on the login and
+authenticated shell. Range-specific status roles map to shared semantic tokens.
+
+The Range test suite (**36 passed**), checked client build, and SSR build passed.
+Browser rendering, deployed content-security policy, and PWA/offline behavior
+were not verified locally because no Chromium-based browser was installed.
 
 ## Future extension candidates
 

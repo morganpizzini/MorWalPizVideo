@@ -9,6 +9,16 @@ colors:
   magazine-text: '#ffffff'
   magazine-secondary: '#b8b8b8'
   magazine-border: '#383838'
+  appearance-light-page-background: '#f2f4f6'
+  appearance-light-surface: '#ffffff'
+  appearance-light-surface-subtle: '#e8edf1'
+  appearance-light-text: '#1c2b36'
+  appearance-light-secondary-text: '#536573'
+  appearance-light-border: '#c9d3da'
+  appearance-light-action: '#38566d'
+  appearance-light-action-hover: '#263f52'
+  appearance-light-on-action: '#ffffff'
+  appearance-light-focus: '#205b82'
   magazine-accent-hover: '#eded2f'
   youtube-hover: '#ef4f5f'
   magazine-shadow-soft: 'rgba(0, 0, 0, 0.1)'
@@ -150,19 +160,23 @@ task-specific content hierarchy.
 
 ## Colors
 
-- **Magazine black** (`#101010`) is the page background and header/footer base.
-- **Magazine surface** (`#181818`) frames panels and cards.
-- **Magazine elevated** (`#222222`) supports alerts, media placeholders, and menus.
-- **Signal yellow** (`#ffff36`) identifies primary actions, selected filters, and active navigation.
-- **White** (`#ffffff`) is reserved for primary content and link text.
-- **Secondary gray** (`#b8b8b8`) is used for supporting text and metadata.
-- **Border gray** (`#383838`) separates dense editorial regions.
-- Social colors identify their destination only: Telegram, Instagram, YouTube, and Discord.
-- Hover and depth tokens are reserved for interaction feedback and layered surfaces;
-  neutral frames keep logo artwork legible without changing the brand palette.
+System is the first-visit appearance; users may choose Light or Dark, with the
+choice stored per origin. Dark preserves the incumbent editorial palette:
+**Magazine black** (`#101010`), **Magazine surface** (`#181818`), **Magazine
+elevated** (`#222222`), **Signal yellow** (`#ffff36`), **White** (`#ffffff`),
+**Secondary gray** (`#b8b8b8`), and **Border gray** (`#383838`).
 
-The palette is intentionally high contrast. Yellow is an action and state color,
-not a page wash.
+Light uses the shared Slate & Mist palette: page (`#f2f4f6`), surface
+(`#ffffff`), subtle surface (`#e8edf1`), primary text (`#1c2b36`), secondary
+text (`#536573`), border (`#c9d3da`), action (`#38566d`), action hover
+(`#263f52`), action text (`#ffffff`), and focus (`#205b82`). The shared layout
+package owns both palettes and semantic status roles; the public client maps
+its existing variables to those tokens.
+
+Yellow remains a limited brand marker rather than body text on light surfaces.
+Social destination colors, photographic media overlays, and neutral frames
+around logo artwork remain intentional exceptions. The palettes are
+high-contrast; measured semantic text/status pairs meet 4.5:1.
 
 ## Typography
 
@@ -229,8 +243,11 @@ introducing page overflow.
 ### Header and footer
 
 The sticky header provides the brand, route navigation, search, social destinations,
-and authenticated profile action. The footer keeps configured navigation plus stable
-Sponsor, Gear, Articles, Donation, Privacy, Terms, and consent destinations.
+appearance selector, and authenticated profile action. The selector offers
+System, Light, and Dark in the header and mobile navigation, with a visible
+focus state and a 44px minimum control height. The footer keeps configured
+navigation plus stable Sponsor, Gear, Articles, Donation, Privacy, Terms, and
+consent destinations.
 
 ## Responsive rules
 
@@ -238,9 +255,11 @@ Sponsor, Gear, Articles, Donation, Privacy, Terms, and consent destinations.
 - 768px: stack the feature region and reduce page gutters.
 - 480px: use one content column, stack Follow and Donation, and preserve full-width controls.
 - 360px: retain one column and reduce only nonessential spacing.
+- The appearance selector remains touch-sized and moves into the mobile navigation.
 
-All currently registered public routes use the dark-and-yellow shell; individual
-page layouts remain purpose-built. Existing login, registration, and profile
+All currently registered public routes use the resolved shared appearance with
+the same dark-and-yellow brand identity; individual page layouts remain
+purpose-built. Existing login, registration, and profile
 components use the same visual system but their routes remain inactive pending a
 separate account activation decision. The unregistered Ask component remains out
 of scope. The canonical public identity is `https://morwalpiz.com`; runtime

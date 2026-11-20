@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { AccountForm } from "@morwalpiz/layout";
+import { AccountForm, AppearanceSelector } from "@morwalpiz/layout";
 import { getApiFieldErrors, getPublicAccountErrorMessage } from "@morwalpizvideo/services";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { LanguageSelector } from "../../components/LanguageSelector";
@@ -126,7 +126,18 @@ export default function AccountLogin() {
       header={
         <div className="account-header">
           <p className="eyebrow">{t("Private workspace")}</p>
-          <LanguageSelector />
+          <div className="account-header-controls">
+            <LanguageSelector />
+            <AppearanceSelector
+              label={t("Appearance")}
+              systemLabel={t("System")}
+              lightLabel={t("Light")}
+              darkLabel={t("Dark")}
+              persistenceErrorMessage={t(
+                "Your appearance choice will last only for this visit because browser storage is unavailable.",
+              )}
+            />
+          </div>
           <p className="account-subtitle">
             {t(
               "Use your existing MorWalPiz account. Workshop requests stay on the account cookie transport.",

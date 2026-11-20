@@ -1,5 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
+import { AppearanceProvider, initializeAppearance } from '@morwalpiz/layout';
+import '@morwalpiz/layout/theme';
 import './main.scss';
 
 import { routes } from './routes/config';
@@ -12,6 +14,7 @@ import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { registerSW } from 'virtual:pwa-register';
 
 const router = createBrowserRouter(routes);
+initializeAppearance();
 
 // Configurazione del registro SW con callback
 const updateSW = registerSW({
@@ -30,13 +33,15 @@ const updateSW = registerSW({
 
 const app = (
   <StrictMode>
-    <HelmetProvider>
-      <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
-        <RouterProvider router={router} />
-      </GoogleReCaptchaProvider>
-    </HelmetProvider>
-    <BuyMeWidget />
-    <ConsentBanner />
+    <AppearanceProvider>
+      <HelmetProvider>
+        <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
+          <RouterProvider router={router} />
+        </GoogleReCaptchaProvider>
+      </HelmetProvider>
+      <BuyMeWidget />
+      <ConsentBanner />
+    </AppearanceProvider>
   </StrictMode>
 );
 

@@ -151,6 +151,32 @@ public sealed class ShootingRangeApiTests
     }
 
     [Fact]
+    public async Task New_passwords_require_seven_characters_for_registration_change_and_reset()
+    {
+        await using var factory = new Factory();
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
+        var shortRegistration = new RegisterShootingRangeUserRequest("new-user", "123456", "New", "User");
+        using var rejectedRegistration = await client.PostAsJsonAsync("/api/shooting-range/auth/register", shortRegistration);
+        rejectedRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var acceptedRegistration = await client.PostAsJsonAsync("/api/shooting-range/auth/register", shortRegistration with { Password = "1234567" });
+        acceptedRegistration.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var user = await LoginAsync(factory, false);
+        await SetCsrfAsync(user);
+        using var rejectedChange = await user.PostAsJsonAsync("/api/shooting-range/auth/password", new PasswordChangeRequest(Password, "123456"));
+        rejectedChange.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var acceptedChange = await user.PostAsJsonAsync("/api/shooting-range/auth/password", new PasswordChangeRequest(Password, "1234567"));
+        acceptedChange.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var admin = await LoginAsync(factory, true, username: "administrator");
+        await SetCsrfAsync(admin);
+        using var rejectedReset = await admin.PostAsJsonAsync("/api/shooting-range/admin/users/account/password", new AdminPasswordResetRequest("123456"));
+        rejectedReset.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var acceptedReset = await admin.PostAsJsonAsync("/api/shooting-range/admin/users/account/password", new AdminPasswordResetRequest("1234567"));
+        acceptedReset.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
     public async Task Login_is_throttled_with_generic_failure()
     {
         await using var factory = new Factory();

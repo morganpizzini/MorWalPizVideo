@@ -161,6 +161,24 @@ describe("Range session recovery", () => {
     expect(container.textContent).not.toContain("Aggiorna la password");
   });
 
+  it("requires seven characters in the account password field", async () => {
+    vi.mocked(getSession).mockRejectedValue(new Error("not authenticated"));
+    await renderGate();
+
+    expect(container.querySelector<HTMLInputElement>('input[name="password"]')?.minLength).toBe(7);
+    expect(container.querySelector(".mpv-appearance__select")).not.toBeNull();
+  });
+
+  it("requires seven characters for new passwords", async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      ...account,
+      forcePasswordChange: true,
+    });
+    await renderGate();
+
+    expect(container.querySelector<HTMLInputElement>('input[name="newPassword"]')?.minLength).toBe(7);
+  });
+
   it("keeps the signed-in state when logout fails and offers a retry", async () => {
     vi.mocked(getSession).mockResolvedValue({
       ...account,

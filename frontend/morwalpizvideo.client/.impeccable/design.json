@@ -3,6 +3,56 @@
   "generatedAt": "2026-09-04T00:00:00.000Z",
   "title": "Design System: MorWalPizVideo Client",
   "extensions": {
+    "appearanceThemes": {
+      "defaultPreference": "system",
+      "preferenceScope": "per-origin",
+      "storageKey": "morwalpiz.appearance.v1",
+      "dark": {
+        "pageBackground": "#101010",
+        "surface": "#181818",
+        "surfaceSubtle": "#222222",
+        "text": "#ffffff",
+        "textSecondary": "#b8b8b8",
+        "border": "#383838",
+        "action": "#ffff36",
+        "actionHover": "#eded2f",
+        "onAction": "#101010",
+        "focus": "#ffff36",
+        "success": "#42c77a",
+        "successSurface": "#162a1f",
+        "warning": "#e9b949",
+        "warningSurface": "#33280f",
+        "error": "#ef6464",
+        "errorSurface": "#321b1b",
+        "information": "#85bad6",
+        "informationSurface": "#15232c"
+      },
+      "light": {
+        "pageBackground": "#f2f4f6",
+        "surface": "#ffffff",
+        "surfaceSubtle": "#e8edf1",
+        "text": "#1c2b36",
+        "textSecondary": "#536573",
+        "border": "#c9d3da",
+        "action": "#38566d",
+        "actionHover": "#263f52",
+        "onAction": "#ffffff",
+        "focus": "#205b82",
+        "success": "#176a3a",
+        "successSurface": "#e7f4ec",
+        "warning": "#805400",
+        "warningSurface": "#fff4d7",
+        "error": "#a33a3a",
+        "errorSurface": "#fceaea",
+        "information": "#205b82",
+        "informationSurface": "#e8f2f7"
+      },
+      "exceptions": [
+        "Social destination colors",
+        "Photographic media overlays",
+        "Neutral frames behind logo artwork"
+      ]
+    },
     "colorMeta": {
       "brand-black": {
         "role": "neutral",

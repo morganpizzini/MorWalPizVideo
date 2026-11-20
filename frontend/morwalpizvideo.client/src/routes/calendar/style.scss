@@ -107,7 +107,8 @@
         }
 
         &.bg-secondary {
-            background-color: #6c757d !important;
+            color: var(--appearance-text) !important;
+            background-color: var(--appearance-surface-subtle) !important;
         }
     }
 }
@@ -157,9 +158,9 @@
 
         &.btn-outline-secondary {
             &:hover {
-                background-color: #6c757d;
-                border-color: #6c757d;
-                color: white;
+                background-color: var(--appearance-surface-subtle);
+                border-color: var(--appearance-border);
+                color: var(--appearance-text);
             }
         }
 

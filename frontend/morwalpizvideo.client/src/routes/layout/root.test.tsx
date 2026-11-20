@@ -11,6 +11,8 @@ describe('public application shell', () => {
     expect(html).toContain('href="#main-content"');
     expect(html).toContain('<footer');
     expect(html.match(/<main\b/g)).toHaveLength(1);
-    expect(html).toContain('data-bs-theme="dark"');
+    expect(html).not.toContain('data-bs-theme="dark"');
+    expect(html).toContain('class="mpv-appearance__select"');
+    expect(html).toContain('<option value="system"');
   });
 });

@@ -38,6 +38,15 @@ Applications must not introduce direct `fetch` or Axios clients when this packag
 
 Owns reusable visual components used by more than one application. App-specific business workflows and routes remain local.
 
+The opt-in `@morwalpiz/layout/theme` stylesheet and appearance API own the shared
+System/Light/Dark preference contract and semantic palette for the public,
+Shooting Range, and Shooter Workshop clients. Preference is stored in
+origin-local browser storage; it is not account data and does not synchronize
+between applications. Each opted-in client loads a synchronous initial-theme
+bootstrap before theme-sensitive styles, then the shared runtime handles device
+changes, storage events, and the accessible selector. Existing consumers remain
+unchanged unless they import the theme subpath.
+
 ## BackOffice SPA
 
 - React 19 and React Router data routes.

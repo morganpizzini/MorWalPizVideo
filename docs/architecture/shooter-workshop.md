@@ -1013,21 +1013,23 @@ However, this application has a functional dashboard purpose, so its layout shou
 
 ## 13.1 Color palette
 
-| Token | Value | Usage |
-|---|---|---|
-| Primary background | #101010 | Main background |
-| Secondary background | #181818 | Cards and panels |
-| Elevated background | #222222 | Elevated surfaces |
-| Primary accent | #FFFF36 | Primary actions and highlights |
-| Primary text | #FFFFFF | Titles and important text |
-| Secondary text | #B8B8B8 | Descriptions |
-| Muted text | #777777 | Metadata |
-| Border | #383838 | Separators |
-| Success | #42C77A | Informational positive status |
-| Warning | #E9B949 | Approaching thresholds |
-| Error | #EF4444 | Threshold reached or validation error |
+| Token | Dark | Light | Usage |
+|---|---|---|---|
+| Page background | #101010 | #F2F4F6 | Main background |
+| Surface | #181818 | #FFFFFF | Cards and panels |
+| Subtle surface | #222222 | #E8EDF1 | Elevated surfaces |
+| Primary text | #FFFFFF | #1C2B36 | Titles and important text |
+| Secondary text | #B8B8B8 | #536573 | Descriptions and metadata |
+| Border | #383838 | #C9D3DA | Separators |
+| Primary action | #FFFF36 | #38566D | Actions and selected states |
+| Action text | #101010 | #FFFFFF | Text on primary actions |
+| Focus | #FFFF36 | #205B82 | Visible keyboard focus |
 
-Yellow must remain the recognizable brand accent.
+The shared `@morwalpiz/layout` theme owns these semantic roles. System is the
+first-visit default and follows the device; explicit Light or Dark choices are
+stored in origin-local browser storage. Yellow remains the recognizable dark
+brand accent and is not reused as light-theme body text. Status colors retain
+their shared success, warning, error, and information roles.
 
 Use it selectively for primary actions, active navigation, important values and selected states.
 
@@ -1051,6 +1053,20 @@ Dashboard information should adapt to available screen space.
 Tables should become mobile-friendly cards or horizontally scrollable views where appropriate.
 
 Forms should remain usable on mobile without excessive scrolling or unnecessarily complex layouts.
+
+## 13.4 Appearance preference
+
+The shared selector is present in the authenticated shell and on login and
+registration. Each Workshop origin stores its own versioned preference; it
+does not synchronize with the public site, Shooting Range, Workshop account, or
+the existing culture preference. The bootstrap sets the document's resolved
+theme before client startup. The installation manifest and service-worker
+lifecycle colors remain static and unchanged.
+
+Workshop tests (**48 passed**) and the checked production build passed.
+Screenshot-based responsive review, deployed CSP, and service-worker
+update/offline verification remain release gates; the local environment had no
+Chromium-based browser available.
 
 ---
 

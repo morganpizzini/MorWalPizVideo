@@ -1,5 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { AppearanceProvider, initializeAppearance } from "@morwalpiz/layout";
+import "@morwalpiz/layout/theme";
 import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { accountApiService } from "@morwalpizvideo/services";
@@ -8,6 +10,8 @@ import { routes } from "./routes/config";
 import { I18nProvider } from "./i18n";
 import "./services/installPrompt";
 import "./main.scss";
+
+initializeAppearance();
 
 if ("serviceWorker" in navigator) {
   void navigator.serviceWorker.register("/workshop-sw.js", { scope: "/" }).catch(error => {
@@ -23,10 +27,12 @@ accountApiService.setUnauthorizedHandler(() => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <I18nProvider>
-      <AuthProvider>
-        <RouterProvider router={createBrowserRouter(routes)} />
-      </AuthProvider>
-    </I18nProvider>
+    <AppearanceProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <RouterProvider router={createBrowserRouter(routes)} />
+        </AuthProvider>
+      </I18nProvider>
+    </AppearanceProvider>
   </StrictMode>,
 );

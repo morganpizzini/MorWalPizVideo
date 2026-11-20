@@ -10,6 +10,22 @@ navigation. The durable functional record is
 This handoff remains only for its unresolved release certification, browser
 authentication, index, domain/TLS, and acceptance gates.
 
+## Verification follow-up — 2026-11-20 ammunition production form reset
+
+The Ammunition production form now resets to its defaults after a successful
+fetcher submission. Failed submissions retain the entered values so users can
+correct and retry without re-entering the form.
+
+Changed files:
+
+- `frontend/shooter-workshop.client/src/routes/Ammunition/AmmunitionPanel.tsx`
+- `frontend/shooter-workshop.client/src/routes/Ammunition/AmmunitionPanel.test.tsx`
+
+Validation:
+
+- `cd frontend && yarn workspace shooter-workshop.client test --run src/routes/Ammunition/AmmunitionPanel.test.tsx` — 2 passed.
+- `cd frontend && yarn workspace shooter-workshop.client exec tsc --noEmit --project tsconfig.app.json --pretty false` — passed.
+
 ## Verification follow-up — 2026-11-17 stable Workshop tab resources
 
 The Firearms inventory and Ammunition production tab panels now receive their

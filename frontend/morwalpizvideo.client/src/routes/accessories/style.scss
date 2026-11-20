@@ -139,7 +139,7 @@
     &:focus-visible {
       position: relative;
       z-index: 1;
-      outline: 3px solid rgba(255, 255, 54, 0.5);
+      outline: 3px solid var(--appearance-focus);
       outline-offset: 0.2rem;
     }
   }

@@ -8,6 +8,7 @@ import { LanguageSelector } from "../components/LanguageSelector";
 import InstallPrompt from "../components/InstallPrompt";
 import { useI18n } from "../i18n";
 import { useInstallPrompt } from "../services/installPrompt";
+import { AppearanceSelector } from "@morwalpiz/layout";
 
 const navigation = [
   ["Dashboard", "/"], ["Equipment", "/firearms"],
@@ -72,6 +73,15 @@ export default function AppShell() {
           <NavLink to="/" className="brand"><span className="brand-mark">M</span>orWalPiz <span>Workshop</span></NavLink>
           <div className="header-account">
             <LanguageSelector />
+            <AppearanceSelector
+              label={t("Appearance")}
+              systemLabel={t("System")}
+              lightLabel={t("Light")}
+              darkLabel={t("Dark")}
+              persistenceErrorMessage={t(
+                "Your appearance choice will last only for this visit because browser storage is unavailable.",
+              )}
+            />
             <NavLink className="header-account-link" to="/account/profile">{session.account?.displayName ?? session.account?.username ?? t("Account")}</NavLink>
             <button type="button" className="button button-quiet header-guide-button" onClick={() => { setWizardError(null); setWizardOpen(true); }}>
               {t("Guide")}

@@ -18,7 +18,6 @@ export default function Root() {
           <div
             id="main-content"
             tabIndex={-1}
-            data-bs-theme="dark"
             className={`site-content ${navigation.state === 'loading' ? 'loading' : ''}`}
             aria-busy={navigation.state === 'loading'}
           >

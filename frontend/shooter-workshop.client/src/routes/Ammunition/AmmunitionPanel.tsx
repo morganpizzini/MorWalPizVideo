@@ -1,6 +1,7 @@
 import { EmptyState } from "@morwalpiz/layout";
 import type { WorkshopAmmunitionBatch, WorkshopRecipe } from "@morwalpizvideo/models";
 import { useFetcher } from "react-router";
+import { useEffect, useRef } from "react";
 import { useI18n } from "../../i18n";
 import { formatNumber, localDateInputValue } from "../../i18n-formatters";
 import type { action } from "./action";
@@ -26,10 +27,17 @@ export default function AmmunitionPanel({
   fetcher: AmmunitionFetcher;
 }) {
   const { culture, t } = useI18n();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.ok) {
+      formRef.current?.reset();
+    }
+  }, [fetcher.data, fetcher.state]);
 
   return (
     <>
-      <fetcher.Form method="post" className="panel form-panel ammunition-production-form">
+      <fetcher.Form ref={formRef} method="post" className="panel form-panel ammunition-production-form">
         <h2>{t("Record production")}</h2>
         <div className="ammunition-production-grid">
           <div className="ammunition-production-primary">

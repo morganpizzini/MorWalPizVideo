@@ -34,6 +34,21 @@ export {
   onPrefersReducedMotionChange,
 } from "./utils/prefersReducedMotion.js";
 export { formatRelativeTime } from "./utils/formatRelativeTime.js";
+export {
+  APPEARANCE_STORAGE_KEY,
+  AppearanceProvider,
+  initializeAppearance,
+  resolveAppearance,
+  setAppearancePreference,
+  useAppearance,
+} from "./appearance.js";
+export type {
+  AppearancePreference,
+  AppearanceSnapshot,
+  ResolvedAppearance,
+} from "./appearance.js";
+export { AppearanceSelector } from "./components/AppearanceSelector.js";
+export type { AppearanceSelectorProps } from "./components/AppearanceSelector.js";
 
 // Types
 export type {

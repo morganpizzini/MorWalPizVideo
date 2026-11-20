@@ -10,6 +10,7 @@
 
     <!-- Load runtime environment configuration (injected by Docker entrypoint) -->
     <script src="/env-config.js"></script>
+    <script src="/appearance-bootstrap.js"></script>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +32,7 @@
             font-size: 2.5rem;
             letter-spacing: 0;
             margin: 0 0 1.5rem;
-            color: #fff;
+            color: var(--appearance-text, #fff);
         }
 
         #initial-skeleton .sk-grid {
@@ -53,7 +54,7 @@
         }
 
         #initial-skeleton .sk-card {
-            background: #181818;
+            background: var(--appearance-surface, #181818);
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -61,7 +62,7 @@
 
         #initial-skeleton .sk-thumb {
             aspect-ratio: 16 / 9;
-            background: linear-gradient(110deg, #222 30%, #303030 50%, #222 70%);
+            background: linear-gradient(110deg, var(--appearance-surface-subtle, #222) 30%, var(--appearance-border, #303030) 50%, var(--appearance-surface-subtle, #222) 70%);
             background-size: 200% 100%;
             animation: sk-shimmer 1.4s linear infinite;
         }
@@ -73,7 +74,7 @@
         #initial-skeleton .sk-line {
             height: 0.7rem;
             border-radius: 4px;
-            background: linear-gradient(110deg, #222 30%, #303030 50%, #222 70%);
+            background: linear-gradient(110deg, var(--appearance-surface-subtle, #222) 30%, var(--appearance-border, #303030) 50%, var(--appearance-surface-subtle, #222) 70%);
             background-size: 200% 100%;
             animation: sk-shimmer 1.4s linear infinite;
             margin-bottom: 0.6rem;

@@ -6,6 +6,7 @@ import SocialLinks from '../components/SocialLinks';
 import { usePublicNavigation } from '../routes/layout/navigation';
 import { usePublicAccount } from '../routes/layout/account';
 import { getAccountLoginLink } from '../routes/account/returnUrl';
+import { AppearanceSelector } from '@morwalpiz/layout';
 
 interface TitleComponentProps {
   dimensions?: string;
@@ -25,8 +26,8 @@ export default function TitleComponent(props: TitleComponentProps) {
     if (!menuOpen) return;
 
     const navigationElement = navigationRef.current;
-    const focusableElements = navigationElement?.querySelectorAll<HTMLElement>(
-      'a, button, input, [tabindex]:not([tabindex="-1"])'
+      const focusableElements = navigationElement?.querySelectorAll<HTMLElement>(
+        'a, button, input, select, [tabindex]:not([tabindex="-1"])'
     );
     focusableElements?.[0]?.focus();
 
@@ -63,7 +64,7 @@ export default function TitleComponent(props: TitleComponentProps) {
   }
 
   return (
-    <header className={`site-header ${props.dimensions ?? ''}`} data-bs-theme="dark">
+    <header className={`site-header ${props.dimensions ?? ''}`}>
       <div className="site-header__inner">
         <Link to="/" className="site-brand" aria-label="MorWalPiz, homepage">
           <img src="/images/logo-300.png" alt="" width="54" height="54" />
@@ -169,7 +170,25 @@ export default function TitleComponent(props: TitleComponentProps) {
                 </Form>
               </details>
               <SocialLinks compact />
+              <div className="site-header__appearance site-header__appearance--wide">
+                <AppearanceSelector
+                  label="Aspetto"
+                  systemLabel="Sistema"
+                  lightLabel="Chiaro"
+                  darkLabel="Scuro"
+                  persistenceErrorMessage="La preferenza di aspetto resta attiva solo per questa visita perché il browser non può salvarla."
+                />
+              </div>
               <AccountAction />
+            </div>
+            <div className="site-header__appearance site-header__appearance--mobile">
+              <AppearanceSelector
+                label="Aspetto"
+                systemLabel="Sistema"
+                lightLabel="Chiaro"
+                darkLabel="Scuro"
+                persistenceErrorMessage="La preferenza di aspetto resta attiva solo per questa visita perché il browser non può salvarla."
+              />
             </div>
           </>
         )}

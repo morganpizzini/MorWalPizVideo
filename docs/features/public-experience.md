@@ -48,6 +48,28 @@ Visual acceptance matrix: 320x568, 375x812, 390x844, 667x375, 768x1024, 1024x768
 functional checks. Use Impeccable adapt/audit as a refinement of the incumbent
 Read/Persuade surfaces, not a redesign.
 
+## System-aware appearance
+
+The public header offers System, Light, and Dark. System is the default and
+follows device changes; explicit choices persist under the versioned
+`morwalpiz.appearance.v1` key in this browser origin only. The shared
+`@morwalpiz/layout` appearance API owns preference resolution and semantic
+tokens; the opt-in `@morwalpiz/layout/theme` stylesheet leaves nonparticipating
+layout consumers unchanged. A synchronous bootstrap applies the resolved
+document theme before hydration, and SSR keeps a deterministic System snapshot.
+
+Dark retains the site's black/yellow identity. Light uses shared Slate & Mist
+roles, while social destination colors, media overlays, and logo framing remain
+intentional local exceptions. The selector is available in desktop and mobile
+navigation; storage failure leaves the choice active for the visit and exposes
+an accessible status message.
+
+Shared package build, public tests (**41 passed**), client build, and SSR build
+passed. Token-level contrast calculations were at least 5.10:1 for the tested
+text/status pairs. Browser screenshots, runtime hydration, deployed CSP, and
+PWA update/offline behavior remain unverified: the local screenshot command
+could not find an installed Chromium-based browser.
+
 ## Consent and article reading layout
 
 Recorded delivered 2026-11-07:

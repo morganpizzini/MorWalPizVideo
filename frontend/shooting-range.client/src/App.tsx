@@ -20,6 +20,7 @@ import type {
   BookingRouteData,
   SessionErrorData,
 } from "./routeData";
+import { AppearanceSelector } from "@morwalpiz/layout";
 
 export interface SessionViewProps {
   account: Account;
@@ -47,6 +48,13 @@ export function Shell({
           <span>MorWalPiz</span>
           <small>Shooting Range</small>
         </Link>
+        <AppearanceSelector
+          label="Aspetto"
+          systemLabel="Sistema"
+          lightLabel="Chiaro"
+          darkLabel="Scuro"
+          persistenceErrorMessage="La preferenza di aspetto resta attiva solo per questa visita perché il browser non può salvarla."
+        />
         {account && !account.forcePasswordChange && (
           <nav className="range-navigation" aria-label="Navigazione principale">
             <NavLink to="/" end>Prenota</NavLink>
@@ -176,7 +184,7 @@ function Auth({
             <input
               name="password"
               required
-              minLength={12}
+              minLength={7}
               type="password"
               value={form.password}
               autoComplete={
@@ -498,7 +506,7 @@ export function Booking({
                 name="newPassword"
                 type="password"
                 required
-                minLength={12}
+                minLength={7}
                 maxLength={100}
                 autoComplete="new-password"
                 value={passwords.newPassword}

@@ -468,11 +468,11 @@ function requireReact_production() {
   react_production.useState = function(initialState) {
     return ReactSharedInternals.H.useState(initialState);
   };
-  react_production.useSyncExternalStore = function(subscribe, getSnapshot, getServerSnapshot) {
+  react_production.useSyncExternalStore = function(subscribe2, getSnapshot2, getServerSnapshot2) {
     return ReactSharedInternals.H.useSyncExternalStore(
-      subscribe,
-      getSnapshot,
-      getServerSnapshot
+      subscribe2,
+      getSnapshot2,
+      getServerSnapshot2
     );
   };
   react_production.useTransition = function() {
@@ -1449,11 +1449,11 @@ function requireReact_development() {
       exports.useState = function(initialState) {
         return resolveDispatcher().useState(initialState);
       };
-      exports.useSyncExternalStore = function(subscribe, getSnapshot, getServerSnapshot) {
+      exports.useSyncExternalStore = function(subscribe2, getSnapshot2, getServerSnapshot2) {
         return resolveDispatcher().useSyncExternalStore(
-          subscribe,
-          getSnapshot,
-          getServerSnapshot
+          subscribe2,
+          getSnapshot2,
+          getServerSnapshot2
         );
       };
       exports.useTransition = function() {
@@ -4751,12 +4751,12 @@ function requireReactDomServerLegacy_node_production() {
       0 < overflow && (JSCompiler_inline_result += "H" + overflow.toString(32));
       return JSCompiler_inline_result + "_";
     },
-    useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
-      if (void 0 === getServerSnapshot)
+    useSyncExternalStore: function(subscribe2, getSnapshot2, getServerSnapshot2) {
+      if (void 0 === getServerSnapshot2)
         throw Error(
           "Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering."
         );
-      return getServerSnapshot();
+      return getServerSnapshot2();
     },
     useOptimistic: function(passthrough) {
       resolveCurrentlyRenderingComponent();
@@ -9817,12 +9817,12 @@ function requireReactDomServer_node_production() {
       0 < overflow && (JSCompiler_inline_result += "H" + overflow.toString(32));
       return JSCompiler_inline_result + "_";
     },
-    useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
-      if (void 0 === getServerSnapshot)
+    useSyncExternalStore: function(subscribe2, getSnapshot2, getServerSnapshot2) {
+      if (void 0 === getServerSnapshot2)
         throw Error(
           "Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering."
         );
-      return getServerSnapshot();
+      return getServerSnapshot2();
     },
     useOptimistic: function(passthrough) {
       resolveCurrentlyRenderingComponent();
@@ -19803,12 +19803,12 @@ function requireReactDomServerLegacy_node_development() {
         0 < overflow && (treeId += "H" + overflow.toString(32));
         return treeId + "_";
       },
-      useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
-        if (void 0 === getServerSnapshot)
+      useSyncExternalStore: function(subscribe2, getSnapshot2, getServerSnapshot2) {
+        if (void 0 === getServerSnapshot2)
           throw Error(
             "Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering."
           );
-        return getServerSnapshot();
+        return getServerSnapshot2();
       },
       useOptimistic: function(passthrough) {
         resolveCurrentlyRenderingComponent();
@@ -27275,12 +27275,12 @@ function requireReactDomServer_node_development() {
         0 < overflow && (treeId += "H" + overflow.toString(32));
         return treeId + "_";
       },
-      useSyncExternalStore: function(subscribe, getSnapshot, getServerSnapshot) {
-        if (void 0 === getServerSnapshot)
+      useSyncExternalStore: function(subscribe2, getSnapshot2, getServerSnapshot2) {
+        if (void 0 === getServerSnapshot2)
           throw Error(
             "Missing getServerSnapshot, which is required for server-rendered content. Will revert to client rendering."
           );
-        return getServerSnapshot();
+        return getServerSnapshot2();
       },
       useOptimistic: function(passthrough) {
         resolveCurrentlyRenderingComponent();
@@ -32424,632 +32424,6 @@ function RouteSessionError({
     onRetry && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "button button-quiet", onClick: onRetry, children: "Riprova" })
   ] });
 }
-function Shell({
-  account,
-  children,
-  onLogout,
-  loggingOut = false
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-shell", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "range-header", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { className: "range-brand", to: "/", "aria-label": "MorWalPiz Shooting Range", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-brand__mark", "aria-hidden": "true", children: "M" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "MorWalPiz" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: "Shooting Range" })
-      ] }),
-      account && !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "range-navigation", "aria-label": "Navigazione principale", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/", end: true, children: "Prenota" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/messages", children: "Messaggi" }),
-        account.isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/admin", children: "Amministrazione" })
-      ] }),
-      account && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-account", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "range-account__name", children: [
-          account.firstName,
-          " ",
-          account.lastName
-        ] }),
-        onLogout && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "button button-quiet",
-            disabled: loggingOut,
-            onClick: onLogout,
-            children: loggingOut ? "Uscita..." : "Esci"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("main", { className: "range-main", children })
-  ] });
-}
-function Auth({
-  onSubmit,
-  pending,
-  result,
-  error,
-  onRetry,
-  onModeChange
-}) {
-  const [mode, setMode] = reactExports.useState("login");
-  const [form, setForm] = reactExports.useState({
-    username: "",
-    password: "",
-    firstName: "",
-    lastName: ""
-  });
-  const [notice, setNotice] = reactExports.useState("");
-  reactExports.useEffect(() => {
-    if ((result == null ? void 0 : result.intent) === "register" && result.success) {
-      setMode("login");
-      setNotice(result.message);
-      setForm((value) => ({ ...value, password: "" }));
-    } else if ((result == null ? void 0 : result.intent) === "register" && !result.success) {
-      setNotice("");
-    }
-  }, [result]);
-  function submit(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    data.set("intent", mode);
-    onSubmit(data);
-    setNotice("");
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-auth", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: mode === "login" ? "Bentornato" : "Richiedi un account" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Gli account nuovi restano in attesa dell'approvazione dell'amministratore." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submit, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-fields", children: [
-      mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Nome",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "firstName",
-              required: true,
-              value: form.firstName,
-              autoComplete: "given-name",
-              disabled: pending,
-              onChange: (event) => setForm({ ...form, firstName: event.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Cognome",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "lastName",
-              required: true,
-              value: form.lastName,
-              autoComplete: "family-name",
-              disabled: pending,
-              onChange: (event) => setForm({ ...form, lastName: event.target.value })
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        "Username",
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            name: "username",
-            required: true,
-            value: form.username,
-            autoComplete: "username",
-            disabled: pending,
-            onChange: (event) => setForm({ ...form, username: event.target.value })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        "Password",
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            name: "password",
-            required: true,
-            minLength: 12,
-            type: "password",
-            value: form.password,
-            autoComplete: mode === "login" ? "current-password" : "new-password",
-            disabled: pending,
-            onChange: (event) => setForm({ ...form, password: event.target.value })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "submit",
-          className: "button button-primary",
-          disabled: pending,
-          children: pending ? "Attendi..." : mode === "login" ? "Accedi" : "Invia richiesta"
-        }
-      )
-    ] }) }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "range-error", children: [
-      error,
-      error.includes("Sessione non disponibile") && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "button button-quiet", onClick: onRetry, children: "Riprova" })
-    ] }),
-    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        disabled: pending,
-        className: "range-link-button",
-        onClick: () => {
-          setMode(mode === "login" ? "register" : "login");
-          setNotice("");
-          onModeChange();
-        },
-        children: mode === "login" ? "Non hai un account?" : "Hai già un account?"
-      }
-    )
-  ] });
-}
-function SessionGate({
-  children
-}) {
-  var _a2;
-  const [account, setAccount] = reactExports.useState(null);
-  const [restoring, setRestoring] = reactExports.useState(true);
-  const [error, setError] = reactExports.useState("");
-  const [revision, setRevision] = reactExports.useState(0);
-  const navigate = useNavigate();
-  const authFetcher = useFetcher();
-  const refreshAccount = reactExports.useCallback(() => setRevision((value) => value + 1), []);
-  reactExports.useEffect(() => {
-    const controller = new AbortController();
-    setRestoring(true);
-    setError("");
-    getSession(controller.signal).then((value) => {
-      if (!controller.signal.aborted) setAccount(value);
-    }).catch((reason) => {
-      if (!controller.signal.aborted) {
-        setAccount(null);
-        if (!(reason instanceof ApiError && reason.status === 401)) {
-          setError("Sessione non disponibile. Riprova.");
-        }
-      }
-    }).finally(() => {
-      if (!controller.signal.aborted) setRestoring(false);
-    });
-    return () => controller.abort();
-  }, [revision]);
-  reactExports.useEffect(() => {
-    const result = authFetcher.data;
-    if (!result) return;
-    if (result.intent === "login") {
-      if (result.success && result.account) {
-        setError("");
-        setAccount(result.account);
-      } else {
-        setError(result.message);
-      }
-    } else if (result.intent === "register") {
-      setError(result.success ? "" : result.message);
-    } else if (result.intent === "logout") {
-      if (result.success || result.status === 401) {
-        setAccount(null);
-        navigate("/");
-      } else {
-        setError(result.message || "Uscita non riuscita. Riprova.");
-      }
-    } else if (result.intent === "password-change" && result.success) {
-      setRevision((value) => value + 1);
-    }
-  }, [authFetcher.data, navigate]);
-  reactExports.useEffect(() => {
-    function expired() {
-      setAccount(null);
-      setRevision((value) => value + 1);
-      navigate("/");
-    }
-    function refresh() {
-      setRevision((value) => value + 1);
-    }
-    window.addEventListener("range-session-expired", expired);
-    window.addEventListener("focus", refresh);
-    return () => {
-      window.removeEventListener("range-session-expired", expired);
-      window.removeEventListener("focus", refresh);
-    };
-  }, [navigate]);
-  function submitRootAction(data) {
-    authFetcher.submit(data, { method: "post", action: "/" });
-  }
-  function signOut() {
-    const data = new FormData();
-    data.set("intent", "logout");
-    submitRootAction(data);
-  }
-  if (restoring) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Ripristino sessione..." }) });
-  }
-  if (!account) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Auth,
-      {
-        onSubmit: submitRootAction,
-        pending: authFetcher.state !== "idle",
-        result: authFetcher.data,
-        error,
-        onRetry: () => setRevision((value) => value + 1),
-        onModeChange: () => setError("")
-      }
-    ) });
-  }
-  const props = {
-    account,
-    loggingOut: authFetcher.state !== "idle" && ((_a2 = authFetcher.formData) == null ? void 0 : _a2.get("intent")) === "logout",
-    onLogout: signOut,
-    onPasswordChanged: refreshAccount
-  };
-  if (account.forcePasswordChange || !children) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Booking, { ...props })
-    ] });
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
-    children(props)
-  ] });
-}
-function Booking({
-  account,
-  onPasswordChanged,
-  onLogout,
-  loggingOut
-}) {
-  const [date, setDate] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
-  const [period, setPeriod] = reactExports.useState("");
-  const [availabilityKey, setAvailabilityKey] = reactExports.useState("");
-  const [notice, setNotice] = reactExports.useState("");
-  const [error, setError] = reactExports.useState("");
-  const [passwords, setPasswords] = reactExports.useState({
-    currentPassword: "",
-    newPassword: ""
-  });
-  const routeFetcher = useFetcher();
-  const availabilityFetcher = useFetcher();
-  const actionFetcher = useFetcher();
-  const periodKey = `${date}|${period}`;
-  const routeError = routeFetcher.data && "sessionError" in routeFetcher.data ? routeFetcher.data.sessionError : null;
-  const availabilityError = availabilityFetcher.data && "sessionError" in availabilityFetcher.data ? availabilityFetcher.data.sessionError : null;
-  const routeData = routeFetcher.data && "date" in routeFetcher.data && routeFetcher.data.date === date ? routeFetcher.data : null;
-  const availabilityData = availabilityKey === periodKey && availabilityFetcher.state !== "loading" && availabilityFetcher.data && "date" in availabilityFetcher.data && availabilityFetcher.data.date === date && availabilityFetcher.data.period === period ? availabilityFetcher.data : null;
-  const pending = actionFetcher.state !== "idle";
-  reactExports.useEffect(() => {
-    if (!account.forcePasswordChange) {
-      routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
-    }
-  }, [account.forcePasswordChange, account.id, date]);
-  reactExports.useEffect(() => {
-    const result = actionFetcher.data;
-    if (!result) return;
-    if (result.intent === "book") {
-      setError(result.success ? "" : result.message);
-      setNotice(result.success ? result.message : "");
-    } else if (result.intent === "password-change") {
-      setError(result.success ? "" : result.message);
-      setNotice(result.success ? result.message : "");
-      if (result.success) {
-        setPasswords({ currentPassword: "", newPassword: "" });
-        onPasswordChanged();
-      }
-    }
-  }, [actionFetcher.data, onPasswordChanged]);
-  function search(selectedPeriod) {
-    if (!selectedPeriod) return;
-    setError("");
-    setNotice("");
-    setAvailabilityKey(`${date}|${selectedPeriod}`);
-    availabilityFetcher.load(
-      `/?date=${encodeURIComponent(date)}&period=${encodeURIComponent(selectedPeriod)}&search=1&region=availability`
-    );
-  }
-  function submitBooking(bayId, selectedPeriod, session) {
-    if (pending || !session) return;
-    const formData = new FormData();
-    formData.set("intent", "book");
-    formData.set("bayId", bayId);
-    formData.set("localDate", date);
-    formData.set("periodKey", selectedPeriod);
-    formData.set("expectedStartUtc", session.startUtc);
-    formData.set("expectedEndUtc", session.endUtc);
-    actionFetcher.submit(formData, { method: "post", action: "/" });
-  }
-  function submitPassword(event) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    formData.set("intent", "password-change");
-    actionFetcher.submit(formData, { method: "post", action: "/" });
-  }
-  if (routeError) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account, onLogout, loggingOut, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      RouteSessionError,
-      {
-        message: routeError.message ?? "Sessione non disponibile.",
-        status: routeError.status,
-        onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)
-      }
-    ) });
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "booking-heading", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: account.forcePasswordChange ? "Aggiorna la password" : "Prenotazioni" }),
-      !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Scegli una data e una sessione per trovare una postazione." })
-    ] }),
-    account.forcePasswordChange ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-form-panel", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Aggiorna la password" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "form-grid", onSubmit: submitPassword, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Password attuale",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "currentPassword",
-              type: "password",
-              required: true,
-              autoComplete: "current-password",
-              value: passwords.currentPassword,
-              onChange: (event) => setPasswords({ ...passwords, currentPassword: event.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Nuova password",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "newPassword",
-              type: "password",
-              required: true,
-              minLength: 12,
-              maxLength: 100,
-              autoComplete: "new-password",
-              value: passwords.newPassword,
-              onChange: (event) => setPasswords({ ...passwords, newPassword: event.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "button button-primary", disabled: pending, children: "Aggiorna password" })
-      ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "toolbar", disabled: pending, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "sr-only", children: "Selezione del turno" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Data",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              required: true,
-              value: date,
-              onChange: (event) => {
-                setDate(event.target.value);
-                setPeriod("");
-                setAvailabilityKey("");
-                setError("");
-                setNotice("");
-              }
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Sessione",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              disabled: !routeData || routeFetcher.state === "loading",
-              value: period,
-              onChange: (event) => {
-                setPeriod(event.target.value);
-                setAvailabilityKey("");
-              },
-              children: [
-                (!routeData || !period) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: routeData ? "Seleziona una sessione" : "Caricamento..." }),
-                routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  RangeDeferred,
-                  {
-                    resolve: routeData.offered,
-                    fallback: null,
-                    children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      OfferedSessionOptions,
-                      {
-                        offered,
-                        selectedPeriod: period,
-                        onDefaultPeriod: setPeriod
-                      }
-                    )
-                  }
-                )
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "button button-primary",
-            disabled: !routeData || !period,
-            onClick: () => search(period),
-            children: "Cerca disponibilità"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "button button-quiet",
-            onClick: () => {
-              setAvailabilityKey("");
-              routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
-            },
-            children: "Aggiorna sessioni"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "booking-feedback", "aria-live": "polite", children: [
-        notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
-        (!routeData || routeFetcher.state === "loading") && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." })
-      ] }),
-      routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          RangeDeferred,
-          {
-            resolve: routeData.offered,
-            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." }),
-            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`),
-            children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: offered.timeZone }),
-              !offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna sessione prenotabile per questa data." })
-            ] })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Postazioni disponibili" }),
-          availabilityError && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            RouteSessionError,
-            {
-              message: availabilityError.message ?? "Sessione non disponibile.",
-              status: availabilityError.status,
-              onRetry: () => search(period)
-            }
-          ),
-          !availabilityData && !availabilityError && availabilityKey === periodKey && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
-          availabilityData && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            RangeDeferred,
-            {
-              resolve: availabilityData.availability,
-              fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
-              onRetry: () => search(period),
-              children: (available) => {
-                if (!available) return null;
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "range-muted", children: [
-                    available.bays.length,
-                    " postazioni disponibili"
-                  ] }),
-                  !available.bays.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna postazione disponibile per questo turno." }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bay-grid", children: available.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        className: "button button-primary",
-                        disabled: pending,
-                        onClick: () => {
-                          void routeData.offered.then((offered) => {
-                            if (availabilityMatches(available, offered.sessions, date, period)) {
-                              const session = offered.sessions.find((item) => item.periodKey === period);
-                              if (session) submitBooking(bay.id, period, session);
-                            } else {
-                              setAvailabilityKey("");
-                              setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
-                              routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
-                            }
-                          });
-                        },
-                        children: [
-                          "Richiedi postazione ",
-                          bay.code
-                        ]
-                      }
-                    )
-                  ] }, bay.id)) })
-                ] });
-              }
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          BookingHistoryRegion,
-          {
-            history: routeData.history,
-            offered: routeData.offered,
-            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "range-muted account-note", children: [
-      "Account: ",
-      account.firstName,
-      " ",
-      account.lastName,
-      " · ",
-      accountStatus(account.status)
-    ] })
-  ] });
-}
-function BookingHistoryRegion({
-  history,
-  offered,
-  onRetry
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Le mie prenotazioni" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      RangeDeferred,
-      {
-        resolve: offered,
-        fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
-        children: (sessions2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          RangeDeferred,
-          {
-            resolve: history,
-            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
-            onRetry,
-            children: (items) => items.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: items.map((booking) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                booking.localDate,
-                " ·",
-                " ",
-                new Date(booking.startUtc).toLocaleString("it-IT", {
-                  timeZone: sessions2.timeZone
-                }),
-                " ",
-                "-",
-                " ",
-                new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                  timeZone: sessions2.timeZone,
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: bookingStatus(booking.status) })
-            ] }, booking.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna prenotazione." })
-          }
-        )
-      }
-    )
-  ] });
-}
-function OfferedSessionOptions({
-  offered,
-  selectedPeriod,
-  onDefaultPeriod
-}) {
-  reactExports.useEffect(() => {
-    if (!selectedPeriod && offered.sessions[0]) {
-      onDefaultPeriod(offered.sessions[0].periodKey);
-    }
-  }, [offered, onDefaultPeriod, selectedPeriod]);
-  return offered.sessions.map((session) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: session.periodKey, children: sessionLabel(session, offered.timeZone) }, session.periodKey));
-}
-function App() {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, {});
-}
 function TabbedWorkspace({ "aria-label": ariaLabel, tabs, selectedKey, onSelectedKeyChange, className, tabListClassName, tabClassName, panelClassName }) {
   const instanceId = reactExports.useId();
   const tabRefs = reactExports.useRef([]);
@@ -37299,6 +36673,811 @@ FontAwesomeIcon.propTypes = {
   widthAuto: PropTypes.bool
 };
 var convertCurry = convert.bind(null, React.createElement);
+const APPEARANCE_STORAGE_KEY = "morwalpiz.appearance.v1";
+const SYSTEM_PREFERENCE_QUERY = "(prefers-color-scheme: light)";
+const serverSnapshot = Object.freeze({
+  preference: "system",
+  resolved: "dark",
+  persistenceUnavailable: false
+});
+let snapshot = serverSnapshot;
+let initialized = false;
+let subscribers = /* @__PURE__ */ new Set();
+let mediaQuery = null;
+let removeMediaListener = null;
+let removeStorageListener = null;
+function resolveAppearance(preference, systemPrefersLight) {
+  if (preference === "light" || preference === "dark")
+    return preference;
+  return systemPrefersLight === true ? "light" : "dark";
+}
+function getSystemPreference() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return null;
+  }
+  try {
+    return window.matchMedia(SYSTEM_PREFERENCE_QUERY).matches;
+  } catch {
+    return null;
+  }
+}
+function applyDocumentTheme(resolved) {
+  if (typeof document === "undefined")
+    return;
+  document.documentElement.dataset.appearanceTheme = resolved;
+  document.documentElement.dataset.bsTheme = resolved;
+}
+function publish(next) {
+  snapshot = Object.freeze(next);
+  applyDocumentTheme(snapshot.resolved);
+  subscribers.forEach((subscriber) => subscriber());
+}
+function isAppearancePreference(value) {
+  return value === "system" || value === "light" || value === "dark";
+}
+function resolveStoredPreference(value) {
+  if (value === null)
+    return "system";
+  if (isAppearancePreference(value))
+    return value;
+  console.warn("Saved appearance preference is invalid; using the system preference.");
+  return "system";
+}
+function initialize() {
+  if (initialized || typeof window === "undefined")
+    return;
+  initialized = true;
+  let preference = "system";
+  let persistenceUnavailable = false;
+  try {
+    preference = resolveStoredPreference(window.localStorage.getItem(APPEARANCE_STORAGE_KEY));
+  } catch {
+    persistenceUnavailable = true;
+    console.warn("Appearance preference could not be read from browser storage.");
+  }
+  snapshot = Object.freeze({
+    preference,
+    resolved: resolveAppearance(preference, getSystemPreference()),
+    persistenceUnavailable
+  });
+  applyDocumentTheme(snapshot.resolved);
+}
+function handleStorage(event) {
+  if (event.key !== APPEARANCE_STORAGE_KEY && event.key !== null)
+    return;
+  const preference = resolveStoredPreference(event.key === null ? null : event.newValue);
+  publish({
+    preference,
+    resolved: resolveAppearance(preference, getSystemPreference()),
+    persistenceUnavailable: false
+  });
+}
+function handleSystemPreference(event) {
+  if (snapshot.preference !== "system")
+    return;
+  publish({
+    ...snapshot,
+    resolved: resolveAppearance("system", event.matches)
+  });
+}
+function startListening() {
+  if (typeof window === "undefined")
+    return;
+  window.addEventListener("storage", handleStorage);
+  removeStorageListener = () => window.removeEventListener("storage", handleStorage);
+  if (typeof window.matchMedia !== "function")
+    return;
+  try {
+    mediaQuery = window.matchMedia(SYSTEM_PREFERENCE_QUERY);
+  } catch {
+    mediaQuery = null;
+    return;
+  }
+  if (!mediaQuery)
+    return;
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", handleSystemPreference);
+    removeMediaListener = () => mediaQuery == null ? void 0 : mediaQuery.removeEventListener("change", handleSystemPreference);
+  } else {
+    mediaQuery.addListener(handleSystemPreference);
+    removeMediaListener = () => mediaQuery == null ? void 0 : mediaQuery.removeListener(handleSystemPreference);
+  }
+}
+function stopListening() {
+  removeStorageListener == null ? void 0 : removeStorageListener();
+  removeStorageListener = null;
+  removeMediaListener == null ? void 0 : removeMediaListener();
+  removeMediaListener = null;
+  mediaQuery = null;
+}
+function subscribe(subscriber) {
+  initialize();
+  subscribers.add(subscriber);
+  if (subscribers.size === 1)
+    startListening();
+  return () => {
+    subscribers.delete(subscriber);
+    if (subscribers.size === 0)
+      stopListening();
+  };
+}
+function getSnapshot() {
+  initialize();
+  return snapshot;
+}
+function getServerSnapshot() {
+  return serverSnapshot;
+}
+function useAppearance() {
+  return reactExports.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+function setAppearancePreference(preference) {
+  initialize();
+  if (typeof window === "undefined")
+    return;
+  let persistenceUnavailable = false;
+  try {
+    if (preference === "system") {
+      window.localStorage.removeItem(APPEARANCE_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(APPEARANCE_STORAGE_KEY, preference);
+    }
+  } catch {
+    persistenceUnavailable = true;
+    console.warn("Appearance preference could not be saved to browser storage.");
+  }
+  publish({
+    preference,
+    resolved: resolveAppearance(preference, getSystemPreference()),
+    persistenceUnavailable
+  });
+}
+function AppearanceSelector({ label, systemLabel, lightLabel, darkLabel, persistenceErrorMessage }) {
+  const { preference, persistenceUnavailable } = useAppearance();
+  const errorId = reactExports.useId();
+  return jsxRuntimeExports.jsxs("label", { className: "mpv-appearance", children: [jsxRuntimeExports.jsx("span", { className: "mpv-appearance__label", children: label }), jsxRuntimeExports.jsxs("select", { className: "mpv-appearance__select", value: preference, onChange: (event) => {
+    const value = event.currentTarget.value;
+    if (value === "system" || value === "light" || value === "dark") {
+      setAppearancePreference(value);
+    }
+  }, "aria-describedby": persistenceUnavailable ? errorId : void 0, children: [jsxRuntimeExports.jsx("option", { value: "system", children: systemLabel }), jsxRuntimeExports.jsx("option", { value: "light", children: lightLabel }), jsxRuntimeExports.jsx("option", { value: "dark", children: darkLabel })] }), persistenceUnavailable && jsxRuntimeExports.jsx("span", { className: "mpv-appearance__error", id: errorId, role: "status", children: persistenceErrorMessage })] });
+}
+function Shell({
+  account,
+  children,
+  onLogout,
+  loggingOut = false
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-shell", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "range-header", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { className: "range-brand", to: "/", "aria-label": "MorWalPiz Shooting Range", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-brand__mark", "aria-hidden": "true", children: "M" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "MorWalPiz" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: "Shooting Range" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AppearanceSelector,
+        {
+          label: "Aspetto",
+          systemLabel: "Sistema",
+          lightLabel: "Chiaro",
+          darkLabel: "Scuro",
+          persistenceErrorMessage: "La preferenza di aspetto resta attiva solo per questa visita perché il browser non può salvarla."
+        }
+      ),
+      account && !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "range-navigation", "aria-label": "Navigazione principale", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/", end: true, children: "Prenota" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/messages", children: "Messaggi" }),
+        account.isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/admin", children: "Amministrazione" })
+      ] }),
+      account && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-account", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "range-account__name", children: [
+          account.firstName,
+          " ",
+          account.lastName
+        ] }),
+        onLogout && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "button button-quiet",
+            disabled: loggingOut,
+            onClick: onLogout,
+            children: loggingOut ? "Uscita..." : "Esci"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("main", { className: "range-main", children })
+  ] });
+}
+function Auth({
+  onSubmit,
+  pending,
+  result,
+  error,
+  onRetry,
+  onModeChange
+}) {
+  const [mode, setMode] = reactExports.useState("login");
+  const [form, setForm] = reactExports.useState({
+    username: "",
+    password: "",
+    firstName: "",
+    lastName: ""
+  });
+  const [notice, setNotice] = reactExports.useState("");
+  reactExports.useEffect(() => {
+    if ((result == null ? void 0 : result.intent) === "register" && result.success) {
+      setMode("login");
+      setNotice(result.message);
+      setForm((value) => ({ ...value, password: "" }));
+    } else if ((result == null ? void 0 : result.intent) === "register" && !result.success) {
+      setNotice("");
+    }
+  }, [result]);
+  function submit(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    data.set("intent", mode);
+    onSubmit(data);
+    setNotice("");
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-auth", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: mode === "login" ? "Bentornato" : "Richiedi un account" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Gli account nuovi restano in attesa dell'approvazione dell'amministratore." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submit, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-fields", children: [
+      mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Nome",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              name: "firstName",
+              required: true,
+              value: form.firstName,
+              autoComplete: "given-name",
+              disabled: pending,
+              onChange: (event) => setForm({ ...form, firstName: event.target.value })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Cognome",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              name: "lastName",
+              required: true,
+              value: form.lastName,
+              autoComplete: "family-name",
+              disabled: pending,
+              onChange: (event) => setForm({ ...form, lastName: event.target.value })
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        "Username",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            name: "username",
+            required: true,
+            value: form.username,
+            autoComplete: "username",
+            disabled: pending,
+            onChange: (event) => setForm({ ...form, username: event.target.value })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        "Password",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            name: "password",
+            required: true,
+            minLength: 7,
+            type: "password",
+            value: form.password,
+            autoComplete: mode === "login" ? "current-password" : "new-password",
+            disabled: pending,
+            onChange: (event) => setForm({ ...form, password: event.target.value })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "submit",
+          className: "button button-primary",
+          disabled: pending,
+          children: pending ? "Attendi..." : mode === "login" ? "Accedi" : "Invia richiesta"
+        }
+      )
+    ] }) }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "range-error", children: [
+      error,
+      error.includes("Sessione non disponibile") && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "button button-quiet", onClick: onRetry, children: "Riprova" })
+    ] }),
+    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        disabled: pending,
+        className: "range-link-button",
+        onClick: () => {
+          setMode(mode === "login" ? "register" : "login");
+          setNotice("");
+          onModeChange();
+        },
+        children: mode === "login" ? "Non hai un account?" : "Hai già un account?"
+      }
+    )
+  ] });
+}
+function SessionGate({
+  children
+}) {
+  var _a2;
+  const [account, setAccount] = reactExports.useState(null);
+  const [restoring, setRestoring] = reactExports.useState(true);
+  const [error, setError] = reactExports.useState("");
+  const [revision, setRevision] = reactExports.useState(0);
+  const navigate = useNavigate();
+  const authFetcher = useFetcher();
+  const refreshAccount = reactExports.useCallback(() => setRevision((value) => value + 1), []);
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setRestoring(true);
+    setError("");
+    getSession(controller.signal).then((value) => {
+      if (!controller.signal.aborted) setAccount(value);
+    }).catch((reason) => {
+      if (!controller.signal.aborted) {
+        setAccount(null);
+        if (!(reason instanceof ApiError && reason.status === 401)) {
+          setError("Sessione non disponibile. Riprova.");
+        }
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setRestoring(false);
+    });
+    return () => controller.abort();
+  }, [revision]);
+  reactExports.useEffect(() => {
+    const result = authFetcher.data;
+    if (!result) return;
+    if (result.intent === "login") {
+      if (result.success && result.account) {
+        setError("");
+        setAccount(result.account);
+      } else {
+        setError(result.message);
+      }
+    } else if (result.intent === "register") {
+      setError(result.success ? "" : result.message);
+    } else if (result.intent === "logout") {
+      if (result.success || result.status === 401) {
+        setAccount(null);
+        navigate("/");
+      } else {
+        setError(result.message || "Uscita non riuscita. Riprova.");
+      }
+    } else if (result.intent === "password-change" && result.success) {
+      setRevision((value) => value + 1);
+    }
+  }, [authFetcher.data, navigate]);
+  reactExports.useEffect(() => {
+    function expired() {
+      setAccount(null);
+      setRevision((value) => value + 1);
+      navigate("/");
+    }
+    function refresh() {
+      setRevision((value) => value + 1);
+    }
+    window.addEventListener("range-session-expired", expired);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("range-session-expired", expired);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [navigate]);
+  function submitRootAction(data) {
+    authFetcher.submit(data, { method: "post", action: "/" });
+  }
+  function signOut() {
+    const data = new FormData();
+    data.set("intent", "logout");
+    submitRootAction(data);
+  }
+  if (restoring) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Ripristino sessione..." }) });
+  }
+  if (!account) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account: null, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Auth,
+      {
+        onSubmit: submitRootAction,
+        pending: authFetcher.state !== "idle",
+        result: authFetcher.data,
+        error,
+        onRetry: () => setRevision((value) => value + 1),
+        onModeChange: () => setError("")
+      }
+    ) });
+  }
+  const props = {
+    account,
+    loggingOut: authFetcher.state !== "idle" && ((_a2 = authFetcher.formData) == null ? void 0 : _a2.get("intent")) === "logout",
+    onLogout: signOut,
+    onPasswordChanged: refreshAccount
+  };
+  if (account.forcePasswordChange || !children) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Booking, { ...props })
+    ] });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
+    children(props)
+  ] });
+}
+function Booking({
+  account,
+  onPasswordChanged,
+  onLogout,
+  loggingOut
+}) {
+  const [date, setDate] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+  const [period, setPeriod] = reactExports.useState("");
+  const [availabilityKey, setAvailabilityKey] = reactExports.useState("");
+  const [notice, setNotice] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const [passwords, setPasswords] = reactExports.useState({
+    currentPassword: "",
+    newPassword: ""
+  });
+  const routeFetcher = useFetcher();
+  const availabilityFetcher = useFetcher();
+  const actionFetcher = useFetcher();
+  const periodKey = `${date}|${period}`;
+  const routeError = routeFetcher.data && "sessionError" in routeFetcher.data ? routeFetcher.data.sessionError : null;
+  const availabilityError = availabilityFetcher.data && "sessionError" in availabilityFetcher.data ? availabilityFetcher.data.sessionError : null;
+  const routeData = routeFetcher.data && "date" in routeFetcher.data && routeFetcher.data.date === date ? routeFetcher.data : null;
+  const availabilityData = availabilityKey === periodKey && availabilityFetcher.state !== "loading" && availabilityFetcher.data && "date" in availabilityFetcher.data && availabilityFetcher.data.date === date && availabilityFetcher.data.period === period ? availabilityFetcher.data : null;
+  const pending = actionFetcher.state !== "idle";
+  reactExports.useEffect(() => {
+    if (!account.forcePasswordChange) {
+      routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+    }
+  }, [account.forcePasswordChange, account.id, date]);
+  reactExports.useEffect(() => {
+    const result = actionFetcher.data;
+    if (!result) return;
+    if (result.intent === "book") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+    } else if (result.intent === "password-change") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setPasswords({ currentPassword: "", newPassword: "" });
+        onPasswordChanged();
+      }
+    }
+  }, [actionFetcher.data, onPasswordChanged]);
+  function search(selectedPeriod) {
+    if (!selectedPeriod) return;
+    setError("");
+    setNotice("");
+    setAvailabilityKey(`${date}|${selectedPeriod}`);
+    availabilityFetcher.load(
+      `/?date=${encodeURIComponent(date)}&period=${encodeURIComponent(selectedPeriod)}&search=1&region=availability`
+    );
+  }
+  function submitBooking(bayId, selectedPeriod, session) {
+    if (pending || !session) return;
+    const formData = new FormData();
+    formData.set("intent", "book");
+    formData.set("bayId", bayId);
+    formData.set("localDate", date);
+    formData.set("periodKey", selectedPeriod);
+    formData.set("expectedStartUtc", session.startUtc);
+    formData.set("expectedEndUtc", session.endUtc);
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+  function submitPassword(event) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    formData.set("intent", "password-change");
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+  if (routeError) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Shell, { account, onLogout, loggingOut, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      RouteSessionError,
+      {
+        message: routeError.message ?? "Sessione non disponibile.",
+        status: routeError.status,
+        onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)
+      }
+    ) });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "booking-heading", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: account.forcePasswordChange ? "Aggiorna la password" : "Prenotazioni" }),
+      !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Scegli una data e una sessione per trovare una postazione." })
+    ] }),
+    account.forcePasswordChange ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-form-panel", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Aggiorna la password" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "form-grid", onSubmit: submitPassword, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Password attuale",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              name: "currentPassword",
+              type: "password",
+              required: true,
+              autoComplete: "current-password",
+              value: passwords.currentPassword,
+              onChange: (event) => setPasswords({ ...passwords, currentPassword: event.target.value })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Nuova password",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              name: "newPassword",
+              type: "password",
+              required: true,
+              minLength: 7,
+              maxLength: 100,
+              autoComplete: "new-password",
+              value: passwords.newPassword,
+              onChange: (event) => setPasswords({ ...passwords, newPassword: event.target.value })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "button button-primary", disabled: pending, children: "Aggiorna password" })
+      ] })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "toolbar", disabled: pending, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "sr-only", children: "Selezione del turno" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Data",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "date",
+              required: true,
+              value: date,
+              onChange: (event) => {
+                setDate(event.target.value);
+                setPeriod("");
+                setAvailabilityKey("");
+                setError("");
+                setNotice("");
+              }
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Sessione",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              disabled: !routeData || routeFetcher.state === "loading",
+              value: period,
+              onChange: (event) => {
+                setPeriod(event.target.value);
+                setAvailabilityKey("");
+              },
+              children: [
+                (!routeData || !period) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: routeData ? "Seleziona una sessione" : "Caricamento..." }),
+                routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  RangeDeferred,
+                  {
+                    resolve: routeData.offered,
+                    fallback: null,
+                    children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      OfferedSessionOptions,
+                      {
+                        offered,
+                        selectedPeriod: period,
+                        onDefaultPeriod: setPeriod
+                      }
+                    )
+                  }
+                )
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "button button-primary",
+            disabled: !routeData || !period,
+            onClick: () => search(period),
+            children: "Cerca disponibilità"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "button button-quiet",
+            onClick: () => {
+              setAvailabilityKey("");
+              routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+            },
+            children: "Aggiorna sessioni"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "booking-feedback", "aria-live": "polite", children: [
+        notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
+        (!routeData || routeFetcher.state === "loading") && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." })
+      ] }),
+      routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          RangeDeferred,
+          {
+            resolve: routeData.offered,
+            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." }),
+            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`),
+            children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: offered.timeZone }),
+              !offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna sessione prenotabile per questa data." })
+            ] })
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Postazioni disponibili" }),
+          availabilityError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            RouteSessionError,
+            {
+              message: availabilityError.message ?? "Sessione non disponibile.",
+              status: availabilityError.status,
+              onRetry: () => search(period)
+            }
+          ),
+          !availabilityData && !availabilityError && availabilityKey === periodKey && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
+          availabilityData && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            RangeDeferred,
+            {
+              resolve: availabilityData.availability,
+              fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
+              onRetry: () => search(period),
+              children: (available) => {
+                if (!available) return null;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "range-muted", children: [
+                    available.bays.length,
+                    " postazioni disponibili"
+                  ] }),
+                  !available.bays.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna postazione disponibile per questo turno." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bay-grid", children: available.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        className: "button button-primary",
+                        disabled: pending,
+                        onClick: () => {
+                          void routeData.offered.then((offered) => {
+                            if (availabilityMatches(available, offered.sessions, date, period)) {
+                              const session = offered.sessions.find((item) => item.periodKey === period);
+                              if (session) submitBooking(bay.id, period, session);
+                            } else {
+                              setAvailabilityKey("");
+                              setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
+                              routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+                            }
+                          });
+                        },
+                        children: [
+                          "Richiedi postazione ",
+                          bay.code
+                        ]
+                      }
+                    )
+                  ] }, bay.id)) })
+                ] });
+              }
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          BookingHistoryRegion,
+          {
+            history: routeData.history,
+            offered: routeData.offered,
+            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "range-muted account-note", children: [
+      "Account: ",
+      account.firstName,
+      " ",
+      account.lastName,
+      " · ",
+      accountStatus(account.status)
+    ] })
+  ] });
+}
+function BookingHistoryRegion({
+  history,
+  offered,
+  onRetry
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Le mie prenotazioni" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      RangeDeferred,
+      {
+        resolve: offered,
+        fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
+        children: (sessions2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          RangeDeferred,
+          {
+            resolve: history,
+            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
+            onRetry,
+            children: (items) => items.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: items.map((booking) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                booking.localDate,
+                " ·",
+                " ",
+                new Date(booking.startUtc).toLocaleString("it-IT", {
+                  timeZone: sessions2.timeZone
+                }),
+                " ",
+                "-",
+                " ",
+                new Date(booking.endUtc).toLocaleTimeString("it-IT", {
+                  timeZone: sessions2.timeZone,
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: bookingStatus(booking.status) })
+            ] }, booking.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna prenotazione." })
+          }
+        )
+      }
+    )
+  ] });
+}
+function OfferedSessionOptions({
+  offered,
+  selectedPeriod,
+  onDefaultPeriod
+}) {
+  reactExports.useEffect(() => {
+    if (!selectedPeriod && offered.sessions[0]) {
+      onDefaultPeriod(offered.sessions[0].periodKey);
+    }
+  }, [offered, onDefaultPeriod, selectedPeriod]);
+  return offered.sessions.map((session) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: session.periodKey, children: sessionLabel(session, offered.timeZone) }, session.periodKey));
+}
+function App() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, {});
+}
 const dayNames = [
   "Domenica",
   "Lunedi",
@@ -38209,6 +38388,9 @@ async function bookingAction({ request: request2 }) {
       if (typeof username !== "string" || !username.trim() || typeof password !== "string" || !password || typeof firstName !== "string" || !firstName.trim() || typeof lastName !== "string" || !lastName.trim()) {
         return { intent, success: false, message: "Completa tutti i campi richiesti." };
       }
+      if (password.length < 7) {
+        return { intent, success: false, message: "La password deve contenere almeno 7 caratteri." };
+      }
       await register({ username, password, firstName, lastName });
       return { intent, success: true, message: "Richiesta inviata. Attendi l'approvazione dell'amministratore." };
     }
@@ -38224,8 +38406,8 @@ async function bookingAction({ request: request2 }) {
       if (intent === "password-change") {
         const currentPassword = formData.get("currentPassword");
         const newPassword = formData.get("newPassword");
-        if (typeof currentPassword !== "string" || typeof newPassword !== "string" || newPassword.length < 12) {
-          return { intent, success: false, message: "Inserisci la password attuale e una nuova password di almeno 12 caratteri." };
+        if (typeof currentPassword !== "string" || typeof newPassword !== "string" || newPassword.length < 7) {
+          return { intent, success: false, message: "Inserisci la password attuale e una nuova password di almeno 7 caratteri." };
         }
         await changePassword({ currentPassword, newPassword });
         return { intent, success: true, message: "Password aggiornata." };

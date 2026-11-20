@@ -1,25 +1,30 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 :root {
-  color-scheme: dark;
   font-family: Manrope, Roboto, sans-serif;
   line-height: 1.5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --range-bg: #101010;
-  --range-surface: #181818;
-  --range-elevated: #222;
-  --range-accent: #ffff36;
-  --range-text: #fff;
-  --range-secondary: #b8b8b8;
-  --range-muted: #a0a0a0;
-  --range-border: #383838;
-  --range-success: #42c77a;
-  --range-warning: #e9b949;
-  --range-error: #ef6464;
+  --range-bg: var(--appearance-page-background);
+  --range-surface: var(--appearance-surface);
+  --range-elevated: var(--appearance-surface-subtle);
+  --range-accent: var(--appearance-action);
+  --range-text: var(--appearance-text);
+  --range-secondary: var(--appearance-text-secondary);
+  --range-muted: var(--appearance-text-secondary);
+  --range-border: var(--appearance-border);
+  --range-success: var(--appearance-success);
+  --range-warning: var(--appearance-warning);
+  --range-error: var(--appearance-error);
   --range-radius: 12px;
   color: var(--range-text);
   background: var(--range-bg);
+}
+
+@media (max-width: 480px) {
+  .range-brand small {
+    display: none;
+  }
 }
 
 * {
@@ -53,7 +58,7 @@ a {
 }
 
 a:hover {
-  color: #ffff9a;
+  color: var(--appearance-action-hover);
   text-decoration: underline;
 }
 
@@ -63,12 +68,12 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 2px solid var(--range-accent);
+  outline: 2px solid var(--appearance-focus);
   outline-offset: 3px;
 }
 
 ::selection {
-  color: var(--range-bg);
+  color: var(--appearance-on-action);
   background: var(--range-accent);
 }
 
@@ -87,7 +92,7 @@ summary:focus-visible {
   gap: clamp(0.75rem, 2vw, 2rem);
   padding: 0.75rem clamp(1rem, 3vw, 3rem);
   border-bottom: 1px solid var(--range-border);
-  background: rgb(16 16 16 / 97%);
+  background: var(--appearance-page-background);
 }
 
 .range-brand {
@@ -315,12 +320,12 @@ button {
 
 .button-primary {
   background: var(--range-accent);
-  color: var(--range-bg);
+  color: var(--appearance-on-action);
 }
 
 .button-primary:hover {
-  background: #eded2f;
-  color: var(--range-bg);
+  background: var(--appearance-action-hover);
+  color: var(--appearance-on-action);
 }
 
 .button-quiet {
@@ -503,15 +508,15 @@ button:disabled {
 }
 
 .range-error {
-  border-color: #7d3434;
-  background: #321b1b;
-  color: #ffb1b1;
+  border-color: var(--appearance-error-border);
+  background: var(--appearance-error-surface);
+  color: var(--appearance-error);
 }
 
 .range-success {
-  border-color: #286545;
-  background: #162a1f;
-  color: #8be0ad;
+  border-color: var(--appearance-success-border);
+  background: var(--appearance-success-surface);
+  color: var(--appearance-success);
 }
 
 .range-pending {
@@ -529,10 +534,10 @@ button:disabled {
 
 .range-load-error {
   padding: 1rem;
-  border: 1px solid #7d3434;
+  border: 1px solid var(--appearance-error-border);
   border-radius: 8px;
-  background: #321b1b;
-  color: #ffb1b1;
+  background: var(--appearance-error-surface);
+  color: var(--appearance-error);
 }
 
 .range-load-error p {
@@ -578,7 +583,7 @@ button:disabled {
 
 .range-admin-tabs__tab[aria-selected="true"] {
   background: var(--range-accent);
-  color: var(--range-bg);
+  color: var(--appearance-on-action);
 }
 
 .range-admin-tabs__tab:disabled {
@@ -609,7 +614,7 @@ button:disabled {
 .range-skeleton__row span {
   height: 0.75rem;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--range-elevated) 25%, #343434 50%, var(--range-elevated) 75%);
+  background: linear-gradient(90deg, var(--range-elevated) 25%, var(--range-border) 50%, var(--range-elevated) 75%);
   background-size: 200% 100%;
   animation: range-shimmer 1.5s ease-in-out infinite;
 }
