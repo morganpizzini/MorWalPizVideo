@@ -69,7 +69,8 @@ public sealed class InMemorySampleDataSeeder
         CancellationToken cancellationToken)
     {
         if (await repositories.Users.GetAsync(id, cancellationToken) is { } existing) return existing;
-        var hash = PasswordHashing.HashPassword(Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)), out var salt);
+        // var hash = PasswordHashing.HashPassword(Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)), out var salt);
+        var hash = PasswordHashing.HashPassword(username, out var salt);
         return await repositories.Users.InsertAsync(new ShootingRangeUser
         {
             Id = id,
