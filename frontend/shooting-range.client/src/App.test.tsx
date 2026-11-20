@@ -6,11 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionGate } from "./App";
 import { getSession, logout, myBookings, sessions, type Account } from "./api";
 
-const testDoubles = vi.hoisted(() => ({ logout: vi.fn() }));
+const testDoubles = vi.hoisted(() => ({ login: vi.fn(), logout: vi.fn() }));
 
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
   getSession: vi.fn(),
+  login: testDoubles.login,
   logout: testDoubles.logout,
   myBookings: vi.fn(),
   sessions: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock("react-router", async (importOriginal) => {
     ...actual,
     useFetcher: () => {
       const [data, setData] = React.useState<
-        { intent: string; success: boolean; message: string } | undefined
+        { intent: string; success: boolean; message: string; account?: Account; status?: number } | undefined
       >();
       const [state, setState] = React.useState<"idle" | "submitting">("idle");
       const [formData, setFormData] = React.useState<FormData | undefined>();
@@ -35,12 +36,23 @@ vi.mock("react-router", async (importOriginal) => {
         submit: (submitted: FormData) => {
           setFormData(submitted);
           setState("submitting");
-          void testDoubles.logout()
-            .then(() => setData({ intent: "logout", success: true, message: "" }))
-            .catch(() => setData({
-              intent: "logout",
+          const intent = submitted.get("intent");
+          const operation = intent === "login"
+            ? testDoubles.login(submitted)
+            : testDoubles.logout();
+          void Promise.resolve(operation)
+            .then((result) => setData({
+              intent: typeof intent === "string" ? intent : "",
+              success: true,
+              message: "",
+              ...(intent === "login" ? { account: result } : {}),
+            }))
+            .catch((reason: unknown) => setData({
+              intent: typeof intent === "string" ? intent : "",
               success: false,
-              message: "Uscita non riuscita. Riprova.",
+              message: intent === "logout"
+                ? "Uscita non riuscita. Riprova."
+                : reason instanceof Error ? reason.message : "Operazione non riuscita.",
             }))
             .finally(() => setState("idle"));
         },
@@ -88,6 +100,7 @@ async function renderGate() {
       </MemoryRouter>,
     ),
   );
+  await act(async () => Promise.resolve());
 }
 async function click(label: string) {
   const button = Array.from(container.querySelectorAll("button")).find(
@@ -96,12 +109,24 @@ async function click(label: string) {
   expect(button).toBeDefined();
   await act(async () => button!.click());
 }
+async function submitLogin() {
+  const form = container.querySelector("form")!;
+  const setValue = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )!.set!;
+  setValue.call(form.querySelector<HTMLInputElement>('input[name="username"]')!, "account");
+  setValue.call(form.querySelector<HTMLInputElement>('input[name="password"]')!, "password");
+  await act(async () => {
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+}
 
 describe("Range session recovery", () => {
   it("disables authentication fields while a request is pending", async () => {
     vi.mocked(getSession).mockRejectedValue(new Error("not authenticated"));
     let finishSubmit: () => void = () => {};
-    testDoubles.logout.mockReturnValue(
+    testDoubles.login.mockReturnValue(
       new Promise<void>((resolve) => {
         finishSubmit = resolve;
       }),
@@ -127,6 +152,27 @@ describe("Range session recovery", () => {
     await act(async () => finishSubmit());
   });
 
+  it.each([false, true])(
+    "routes a successful login to its destination (forced change: %s)",
+    async (forcePasswordChange) => {
+      vi.mocked(getSession).mockRejectedValue(new Error("not authenticated"));
+      testDoubles.login.mockResolvedValue({
+        ...account,
+        forcePasswordChange,
+      });
+      await renderGate();
+
+      await submitLogin();
+      await act(async () => Promise.resolve());
+
+      if (forcePasswordChange) {
+        expect(container.textContent).toContain("Aggiorna la password");
+      } else {
+        expect(container.textContent).toContain("Prenotazioni");
+      }
+    },
+  );
+
   it("shows no protected content until cookie session restoration completes", async () => {
     let resolveSession: (value: Account) => void = () => {};
     vi.mocked(getSession).mockReturnValue(
@@ -141,6 +187,21 @@ describe("Range session recovery", () => {
     await act(async () => resolveSession(account));
     expect(container.textContent).toContain("Scegli una data e una sessione");
     expect(myBookings).not.toHaveBeenCalled();
+  });
+
+  it("expires a signed-in session once without restarting restoration on duplicate events", async () => {
+    vi.mocked(getSession).mockResolvedValue(account);
+    await renderGate();
+    expect(getSession).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("range-session-expired"));
+      window.dispatchEvent(new Event("range-session-expired"));
+    });
+
+    expect(container.textContent).toContain("Bentornato");
+    expect(container.textContent).not.toContain("Prenotazioni");
+    expect(getSession).toHaveBeenCalledOnce();
   });
 
   it("forced-change sessions do not request domain data and can log out", async () => {
@@ -166,7 +227,7 @@ describe("Range session recovery", () => {
     await renderGate();
 
     expect(container.querySelector<HTMLInputElement>('input[name="password"]')?.minLength).toBe(7);
-    expect(container.querySelector(".mpv-appearance__select")).not.toBeNull();
+    expect(container.querySelector(".mpv-appearance__trigger")).not.toBeNull();
   });
 
   it("requires seven characters for new passwords", async () => {

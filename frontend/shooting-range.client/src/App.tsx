@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link, NavLink, useFetcher, useNavigate } from "react-router";
+import { Link, NavLink, useFetcher, useLocation, useNavigate } from "react-router";
 import {
   accountStatus as formatAccountStatus,
   availabilityMatches,
@@ -246,6 +246,13 @@ export function SessionGate({
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationRef = useRef(location.pathname);
+  const accountRef = useRef(account);
+  const handledAuthResultRef = useRef<ActionResult | null>(null);
+  const sessionExpiredRef = useRef(false);
+  locationRef.current = location.pathname;
+  accountRef.current = account;
   const authFetcher = useFetcher<ActionResult>();
   const refreshAccount = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -255,7 +262,10 @@ export function SessionGate({
     setError("");
     getSession(controller.signal)
       .then((value) => {
-        if (!controller.signal.aborted) setAccount(value);
+        if (!controller.signal.aborted) {
+          sessionExpiredRef.current = false;
+          setAccount(value);
+        }
       })
       .catch((reason) => {
         if (!controller.signal.aborted) {
@@ -273,11 +283,14 @@ export function SessionGate({
 
   useEffect(() => {
     const result = authFetcher.data;
-    if (!result) return;
+    if (!result || handledAuthResultRef.current === result) return;
+    handledAuthResultRef.current = result;
     if (result.intent === "login") {
       if (result.success && result.account) {
+        sessionExpiredRef.current = false;
         setError("");
         setAccount(result.account);
+        if (locationRef.current !== "/") navigate("/", { replace: true });
       } else {
         setError(result.message);
       }
@@ -297,12 +310,16 @@ export function SessionGate({
 
   useEffect(() => {
     function expired() {
+      if (!accountRef.current || sessionExpiredRef.current) return;
+      sessionExpiredRef.current = true;
       setAccount(null);
-      setRevision((value) => value + 1);
-      navigate("/");
+      setError("");
+      if (locationRef.current !== "/") navigate("/", { replace: true });
     }
     function refresh() {
-      setRevision((value) => value + 1);
+      if (accountRef.current && !sessionExpiredRef.current) {
+        setRevision((value) => value + 1);
+      }
     }
     window.addEventListener("range-session-expired", expired);
     window.addEventListener("focus", refresh);

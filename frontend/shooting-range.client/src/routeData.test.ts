@@ -5,6 +5,7 @@ import {
   book,
   changePassword,
   getSession,
+  login,
   myBookings,
   register,
   sessions,
@@ -25,6 +26,7 @@ vi.mock("./api", async (importOriginal) => ({
   book: vi.fn(),
   changePassword: vi.fn(),
   getSession: vi.fn(),
+  login: vi.fn(),
   messages: vi.fn(),
   myBookings: vi.fn(),
   openMessage: vi.fn(),
@@ -79,6 +81,39 @@ afterEach(() => {
 });
 
 describe("Range route data security and mutations", () => {
+  it("does not treat an anonymous session-check 401 as an expired signed-in session", async () => {
+    const browser = new EventTarget();
+    vi.stubGlobal("window", browser);
+    vi.mocked(getSession).mockRejectedValue(new ApiError(401, "Unauthorized"));
+    const onExpired = vi.fn();
+    browser.addEventListener("range-session-expired", onExpired);
+
+    await bookingLoader(loaderArgs("https://range.test/"));
+
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic login error for invalid credentials without expiring the session", async () => {
+    const browser = new EventTarget();
+    vi.stubGlobal("window", browser);
+    vi.mocked(login).mockRejectedValue(new ApiError(401, "Credentials invalid."));
+    const onExpired = vi.fn();
+    browser.addEventListener("range-session-expired", onExpired);
+
+    const result = await bookingAction(actionArgs("/", {
+      intent: "login",
+      username: "unknown",
+      password: "wrong-password",
+    }));
+
+    expect(result).toMatchObject({
+      success: false,
+      status: 401,
+      message: "Username o password non validi, oppure account non approvato.",
+    });
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
   it("does not make session or domain requests during SSR loaders", async () => {
     vi.stubGlobal("window", undefined);
 
@@ -189,6 +224,53 @@ describe("Range route data security and mutations", () => {
     }));
     expect(acceptedChange).toMatchObject({ success: true });
     expect(changePassword).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a valid forced-change session when the current password is incorrect", async () => {
+    const browser = new EventTarget();
+    vi.stubGlobal("window", browser);
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(changePassword).mockRejectedValue(new ApiError(401, "Unauthorized"));
+    const onExpired = vi.fn();
+    browser.addEventListener("range-session-expired", onExpired);
+
+    const result = await bookingAction(actionArgs("/", {
+      intent: "password-change",
+      currentPassword: "incorrect",
+      newPassword: "replacement",
+    }));
+
+    expect(result).toMatchObject({
+      success: false,
+      status: 401,
+      message: "La password attuale non è corretta.",
+    });
+    expect(getSession).toHaveBeenCalledTimes(2);
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
+  it("expires the session when a password-change 401 is confirmed by session inspection", async () => {
+    const browser = new EventTarget();
+    vi.stubGlobal("window", browser);
+    vi.mocked(getSession)
+      .mockResolvedValueOnce(account)
+      .mockRejectedValueOnce(new ApiError(401, "Unauthorized"));
+    vi.mocked(changePassword).mockRejectedValue(new ApiError(401, "Unauthorized"));
+    const onExpired = vi.fn();
+    browser.addEventListener("range-session-expired", onExpired);
+
+    const result = await bookingAction(actionArgs("/", {
+      intent: "password-change",
+      currentPassword: "password",
+      newPassword: "replacement",
+    }));
+
+    expect(result).toMatchObject({
+      success: false,
+      status: 401,
+      message: "Sessione scaduta. Accedi di nuovo.",
+    });
+    expect(onExpired).toHaveBeenCalledOnce();
   });
 
   it("rechecks administrator authorization before admin mutations", async () => {

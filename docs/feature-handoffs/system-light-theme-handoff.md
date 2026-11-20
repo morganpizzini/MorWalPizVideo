@@ -455,7 +455,9 @@ were provided.
   `data-bs-theme` use the resolved theme. SSR snapshots remain deterministic;
   no browser preference is read on the server.
 - Public navigation, Range shell/login, and Workshop shell/login/registration
-  expose the selector. Workshop labels are localized. Existing routes,
+  expose the selector. The shared control is an icon-only screen/monitor
+  button that opens a custom-styled, keyboard-operable appearance menu; it is
+  not a native select. Workshop labels are localized. Existing routes,
   authentication, account data, API contracts, consent, and QR output are
   unchanged. Static PWA/manifest colors remain unchanged.
 
@@ -490,10 +492,16 @@ were provided.
 - All three workspace `build` commands passed; public and Range `build:ssr`
   commands passed.
 - Focused tests cover system changes, explicit overrides, cross-tab storage,
-  invalid values, unavailable storage, bootstrap parity, and selector presence.
+  invalid values, unavailable storage, bootstrap parity, and a custom monitor
+  button/menu with arrow-key navigation, Escape dismissal, selection and no
+  native appearance select.
 - WCAG relative-luminance calculation on shared semantic text/status pairs:
   dark minimum 5.10:1; light minimum 5.48:1. This is token-level evidence,
   not a substitute for rendered-state measurement.
+- Picker refinement validation: shared layout build passed; public appearance
+  and shell tests passed (7 tests), and the Workshop registration test passed
+  (1 test). The Range shell test passed (10 tests); the Range app was not
+  rebuilt for this shared-component-only refinement.
 
 ### Residual risks and release gates
 

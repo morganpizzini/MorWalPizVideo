@@ -17,7 +17,9 @@ vi.mock("@morwalpizvideo/services", () => ({
 describe("Workshop account registration", () => {
   it("renders the shared account form with legal acknowledgement", () => {
     const markup = renderToStaticMarkup(
-      <MemoryRouter initialEntries={["/account/register?returnUrl=%2Ffirearms"]}>
+      <MemoryRouter
+        initialEntries={["/account/register?returnUrl=%2Ffirearms"]}
+      >
         <I18nProvider>
           <AccountRegister />
         </I18nProvider>
@@ -26,8 +28,11 @@ describe("Workshop account registration", () => {
 
     expect(markup).toContain("Create your Workshop account");
     expect(markup).toContain('type="checkbox"');
-    expect(markup).toContain("I have read the privacy notice and accept the terms of use.");
-    expect(markup).toContain('class="mpv-appearance__select"');
-    expect(markup).toContain('<option value="system"');
+    expect(markup).toContain(
+      "I have read the privacy notice and accept the terms of use.",
+    );
+    expect(markup).toContain('class="mpv-appearance__trigger"');
+    expect(markup).toContain('role="menuitemradio"');
+    expect(markup).not.toContain('class="mpv-appearance__select"');
   });
 });

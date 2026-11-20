@@ -32424,6 +32424,133 @@ function RouteSessionError({
     onRetry && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "button button-quiet", onClick: onRetry, children: "Riprova" })
   ] });
 }
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const toKebabCase = (string) => string.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+const toCamelCase = (string) => string.replace(
+  /^([A-Z])|[\s-_]+(\w)/g,
+  (match, p1, p2) => p2 ? p2.toUpperCase() : p1.toLowerCase()
+);
+const toPascalCase = (string) => {
+  const camelCase = toCamelCase(string);
+  return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
+};
+const mergeClasses = (...classes) => classes.filter((className, index, array) => {
+  return Boolean(className) && className.trim() !== "" && array.indexOf(className) === index;
+}).join(" ").trim();
+const hasA11yProp = (props) => {
+  for (const prop in props) {
+    if (prop.startsWith("aria-") || prop === "role" || prop === "title") {
+      return true;
+    }
+  }
+};
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var defaultAttributes = {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: 24,
+  height: 24,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+};
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Icon = reactExports.forwardRef(
+  ({
+    color = "currentColor",
+    size = 24,
+    strokeWidth = 2,
+    absoluteStrokeWidth,
+    className = "",
+    children,
+    iconNode,
+    ...rest
+  }, ref) => reactExports.createElement(
+    "svg",
+    {
+      ref,
+      ...defaultAttributes,
+      width: size,
+      height: size,
+      stroke: color,
+      strokeWidth: absoluteStrokeWidth ? Number(strokeWidth) * 24 / Number(size) : strokeWidth,
+      className: mergeClasses("lucide", className),
+      ...!children && !hasA11yProp(rest) && { "aria-hidden": "true" },
+      ...rest
+    },
+    [
+      ...iconNode.map(([tag, attrs]) => reactExports.createElement(tag, attrs)),
+      ...Array.isArray(children) ? children : [children]
+    ]
+  )
+);
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const createLucideIcon = (iconName, iconNode) => {
+  const Component = reactExports.forwardRef(
+    ({ className, ...props }, ref) => reactExports.createElement(Icon, {
+      ref,
+      iconNode,
+      className: mergeClasses(
+        `lucide-${toKebabCase(toPascalCase(iconName))}`,
+        `lucide-${iconName}`,
+        className
+      ),
+      ...props
+    })
+  );
+  Component.displayName = toPascalCase(iconName);
+  return Component;
+};
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$2 = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$2);
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$1 = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$1);
+/**
+ * @license lucide-react v0.555.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode = [
+  ["rect", { width: "20", height: "14", x: "2", y: "3", rx: "2", key: "48i651" }],
+  ["line", { x1: "8", x2: "16", y1: "21", y2: "21", key: "1svkeh" }],
+  ["line", { x1: "12", x2: "12", y1: "17", y2: "21", key: "vw1qmm" }]
+];
+const Monitor = createLucideIcon("monitor", __iconNode);
 function TabbedWorkspace({ "aria-label": ariaLabel, tabs, selectedKey, onSelectedKeyChange, className, tabListClassName, tabClassName, panelClassName }) {
   const instanceId = reactExports.useId();
   const tabRefs = reactExports.useRef([]);
@@ -36834,13 +36961,73 @@ function setAppearancePreference(preference) {
 }
 function AppearanceSelector({ label, systemLabel, lightLabel, darkLabel, persistenceErrorMessage }) {
   const { preference, persistenceUnavailable } = useAppearance();
-  const errorId = reactExports.useId();
-  return jsxRuntimeExports.jsxs("label", { className: "mpv-appearance", children: [jsxRuntimeExports.jsx("span", { className: "mpv-appearance__label", children: label }), jsxRuntimeExports.jsxs("select", { className: "mpv-appearance__select", value: preference, onChange: (event) => {
-    const value = event.currentTarget.value;
-    if (value === "system" || value === "light" || value === "dark") {
-      setAppearancePreference(value);
+  const id = reactExports.useId();
+  const [isOpen, setIsOpen] = reactExports.useState(false);
+  const rootRef = reactExports.useRef(null);
+  const triggerRef = reactExports.useRef(null);
+  const labels = {
+    system: systemLabel,
+    light: lightLabel,
+    dark: darkLabel
+  };
+  reactExports.useEffect(() => {
+    var _a2;
+    if (!isOpen)
+      return;
+    const root = rootRef.current;
+    (_a2 = root == null ? void 0 : root.querySelector('[role="menuitemradio"][aria-checked="true"]')) == null ? void 0 : _a2.focus();
+    function closeOnOutsidePointer(event) {
+      if (!(root == null ? void 0 : root.contains(event.target)))
+        setIsOpen(false);
     }
-  }, "aria-describedby": persistenceUnavailable ? errorId : void 0, children: [jsxRuntimeExports.jsx("option", { value: "system", children: systemLabel }), jsxRuntimeExports.jsx("option", { value: "light", children: lightLabel }), jsxRuntimeExports.jsx("option", { value: "dark", children: darkLabel })] }), persistenceUnavailable && jsxRuntimeExports.jsx("span", { className: "mpv-appearance__error", id: errorId, role: "status", children: persistenceErrorMessage })] });
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [isOpen]);
+  function closeMenu(returnFocus) {
+    var _a2;
+    setIsOpen(false);
+    (_a2 = triggerRef.current) == null ? void 0 : _a2.focus();
+  }
+  function handleMenuKeyDown(event) {
+    var _a2;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu();
+      return;
+    }
+    const items = Array.from(event.currentTarget.querySelectorAll('[role="menuitemradio"]'));
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowDown")
+      nextIndex = (currentIndex + 1) % items.length;
+    else if (event.key === "ArrowUp") {
+      nextIndex = (currentIndex - 1 + items.length) % items.length;
+    } else if (event.key === "Home")
+      nextIndex = 0;
+    else if (event.key === "End")
+      nextIndex = items.length - 1;
+    else
+      return;
+    event.preventDefault();
+    (_a2 = items[nextIndex]) == null ? void 0 : _a2.focus();
+  }
+  return jsxRuntimeExports.jsxs("div", { className: "mpv-appearance", ref: rootRef, children: [jsxRuntimeExports.jsxs("button", { ref: triggerRef, className: "mpv-appearance__trigger", type: "button", "aria-label": `${label}: ${labels[preference]}`, "aria-haspopup": "menu", "aria-expanded": isOpen, "aria-controls": `${id}-menu`, "aria-describedby": persistenceUnavailable ? `${id}-error` : void 0, title: label, onClick: () => setIsOpen((open) => !open), onKeyDown: (event) => {
+    if (!isOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      event.preventDefault();
+      setIsOpen(true);
+    }
+  }, children: [jsxRuntimeExports.jsx(Monitor, { "aria-hidden": "true", focusable: "false" }), jsxRuntimeExports.jsx(ChevronDown, { className: "mpv-appearance__chevron", "aria-hidden": "true", focusable: "false" })] }), jsxRuntimeExports.jsx("div", { className: "mpv-appearance__menu", id: `${id}-menu`, role: "menu", "aria-label": label, hidden: !isOpen, onKeyDown: handleMenuKeyDown, onBlur: (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsOpen(false);
+    }
+  }, children: [
+    ["system", systemLabel],
+    ["light", lightLabel],
+    ["dark", darkLabel]
+  ].map(([value, optionLabel]) => jsxRuntimeExports.jsxs("button", { className: "mpv-appearance__option", "data-appearance-preference": value, type: "button", role: "menuitemradio", "aria-checked": preference === value, tabIndex: preference === value ? 0 : -1, onClick: () => {
+    setAppearancePreference(value);
+    closeMenu();
+  }, children: [jsxRuntimeExports.jsx("span", { children: optionLabel }), jsxRuntimeExports.jsx(Check, { className: "mpv-appearance__check", "aria-hidden": "true", focusable: "false" })] }, value)) }), persistenceUnavailable && jsxRuntimeExports.jsx("span", { className: "mpv-appearance__error", id: `${id}-error`, role: "status", children: persistenceErrorMessage })] });
 }
 function Shell({
   account,
@@ -37027,6 +37214,13 @@ function SessionGate({
   const [error, setError] = reactExports.useState("");
   const [revision, setRevision] = reactExports.useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationRef = reactExports.useRef(location.pathname);
+  const accountRef = reactExports.useRef(account);
+  const handledAuthResultRef = reactExports.useRef(null);
+  const sessionExpiredRef = reactExports.useRef(false);
+  locationRef.current = location.pathname;
+  accountRef.current = account;
   const authFetcher = useFetcher();
   const refreshAccount = reactExports.useCallback(() => setRevision((value) => value + 1), []);
   reactExports.useEffect(() => {
@@ -37034,7 +37228,10 @@ function SessionGate({
     setRestoring(true);
     setError("");
     getSession(controller.signal).then((value) => {
-      if (!controller.signal.aborted) setAccount(value);
+      if (!controller.signal.aborted) {
+        sessionExpiredRef.current = false;
+        setAccount(value);
+      }
     }).catch((reason) => {
       if (!controller.signal.aborted) {
         setAccount(null);
@@ -37049,11 +37246,14 @@ function SessionGate({
   }, [revision]);
   reactExports.useEffect(() => {
     const result = authFetcher.data;
-    if (!result) return;
+    if (!result || handledAuthResultRef.current === result) return;
+    handledAuthResultRef.current = result;
     if (result.intent === "login") {
       if (result.success && result.account) {
+        sessionExpiredRef.current = false;
         setError("");
         setAccount(result.account);
+        if (locationRef.current !== "/") navigate("/", { replace: true });
       } else {
         setError(result.message);
       }
@@ -37072,12 +37272,16 @@ function SessionGate({
   }, [authFetcher.data, navigate]);
   reactExports.useEffect(() => {
     function expired() {
+      if (!accountRef.current || sessionExpiredRef.current) return;
+      sessionExpiredRef.current = true;
       setAccount(null);
-      setRevision((value) => value + 1);
-      navigate("/");
+      setError("");
+      if (locationRef.current !== "/") navigate("/", { replace: true });
     }
     function refresh() {
-      setRevision((value) => value + 1);
+      if (accountRef.current && !sessionExpiredRef.current) {
+        setRevision((value) => value + 1);
+      }
     }
     window.addEventListener("range-session-expired", expired);
     window.addEventListener("focus", refresh);
@@ -38294,6 +38498,14 @@ function actionIntent(formData) {
 }
 function actionError(intent, reason) {
   if (reason instanceof ApiError && reason.status === 401) {
+    if (intent === "login") {
+      return {
+        intent,
+        success: false,
+        status: 401,
+        message: "Username o password non validi, oppure account non approvato."
+      };
+    }
     if (typeof window !== "undefined" && intent !== "login" && intent !== "register") {
       window.dispatchEvent(new Event("range-session-expired"));
     }
@@ -38324,9 +38536,6 @@ function jsonField(formData, name) {
 }
 function readSessionResult(reason) {
   if (reason instanceof ApiError) {
-    if (reason.status === 401 && typeof window !== "undefined") {
-      window.dispatchEvent(new Event("range-session-expired"));
-    }
     return {
       error: true,
       status: reason.status,
@@ -38437,6 +38646,35 @@ async function bookingAction({ request: request2 }) {
     }
     return { intent, success: false, message: "Operazione non riconosciuta." };
   } catch (reason) {
+    if (intent === "password-change" && reason instanceof ApiError && reason.status === 401) {
+      try {
+        await getSession(request2.signal);
+        return {
+          intent,
+          success: false,
+          status: 401,
+          message: "La password attuale non è corretta."
+        };
+      } catch (sessionReason) {
+        if (sessionReason instanceof ApiError && sessionReason.status === 401) {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("range-session-expired"));
+          }
+          return {
+            intent,
+            success: false,
+            status: 401,
+            message: "Sessione scaduta. Accedi di nuovo."
+          };
+        }
+        return {
+          intent,
+          success: false,
+          status: sessionReason instanceof ApiError ? sessionReason.status : void 0,
+          message: "Impossibile verificare la sessione. Riprova."
+        };
+      }
+    }
     if (intent === "book" && reason instanceof ApiError && reason.status === 409) {
       return {
         intent,

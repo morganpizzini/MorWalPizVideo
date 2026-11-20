@@ -86,6 +86,14 @@ function actionIntent(formData: FormData): string {
 
 function actionError(intent: string, reason: unknown): ActionResult {
   if (reason instanceof ApiError && reason.status === 401) {
+    if (intent === "login") {
+      return {
+        intent,
+        success: false,
+        status: 401,
+        message: "Username o password non validi, oppure account non approvato.",
+      };
+    }
     if (typeof window !== "undefined" && intent !== "login" && intent !== "register") {
       window.dispatchEvent(new Event("range-session-expired"));
     }
@@ -118,9 +126,6 @@ function jsonField(formData: FormData, name: string): Record<string, unknown> | 
 
 function readSessionResult(reason: unknown): SessionResult {
   if (reason instanceof ApiError) {
-    if (reason.status === 401 && typeof window !== "undefined") {
-      window.dispatchEvent(new Event("range-session-expired"));
-    }
     return {
       error: true,
       status: reason.status,
@@ -272,6 +277,35 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
 
     return { intent, success: false, message: "Operazione non riconosciuta." };
   } catch (reason) {
+    if (intent === "password-change" && reason instanceof ApiError && reason.status === 401) {
+      try {
+        await getSession(request.signal);
+        return {
+          intent,
+          success: false,
+          status: 401,
+          message: "La password attuale non è corretta.",
+        };
+      } catch (sessionReason) {
+        if (sessionReason instanceof ApiError && sessionReason.status === 401) {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("range-session-expired"));
+          }
+          return {
+            intent,
+            success: false,
+            status: 401,
+            message: "Sessione scaduta. Accedi di nuovo.",
+          };
+        }
+        return {
+          intent,
+          success: false,
+          status: sessionReason instanceof ApiError ? sessionReason.status : undefined,
+          message: "Impossibile verificare la sessione. Riprova.",
+        };
+      }
+    }
     if (intent === "book" && reason instanceof ApiError && reason.status === 409) {
       return {
         intent,

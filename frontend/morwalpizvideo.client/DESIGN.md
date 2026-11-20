@@ -174,8 +174,10 @@ package owns both palettes and semantic status roles; the public client maps
 its existing variables to those tokens.
 
 Yellow remains a limited brand marker rather than body text on light surfaces.
-Social destination colors, photographic media overlays, and neutral frames
-around logo artwork remain intentional exceptions. The palettes are
+The homepage featured image uses a page-background gradient that follows the
+active appearance, with semantic text colors for its copy. Social destination
+colors, photographic media overlays, and neutral frames around logo artwork
+remain intentional exceptions. The palettes are
 high-contrast; measured semantic text/status pairs meet 4.5:1.
 
 ## Typography

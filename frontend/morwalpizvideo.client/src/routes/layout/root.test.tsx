@@ -12,7 +12,8 @@ describe('public application shell', () => {
     expect(html).toContain('<footer');
     expect(html.match(/<main\b/g)).toHaveLength(1);
     expect(html).not.toContain('data-bs-theme="dark"');
-    expect(html).toContain('class="mpv-appearance__select"');
-    expect(html).toContain('<option value="system"');
+    expect(html).toContain('class="mpv-appearance__trigger"');
+    expect(html).toContain('role="menuitemradio"');
+    expect(html).not.toContain('class="mpv-appearance__select"');
   });
 });

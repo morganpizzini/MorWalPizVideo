@@ -77,12 +77,12 @@
   border: 1px solid var(--magazine-border);
   border-radius: var(--magazine-radius-lg);
   background: var(--magazine-elevated);
-  color: #fff;
-  &::after { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #000e 0%, #0009 45%, #0001 100%), linear-gradient(0deg, #0007, transparent 70%); }
+  color: var(--magazine-text);
+  &::after { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--magazine-bg) 96%, transparent) 0%, color-mix(in srgb, var(--magazine-bg) 82%, transparent) 38%, color-mix(in srgb, var(--magazine-bg) 42%, transparent) 72%, transparent 100%), linear-gradient(0deg, color-mix(in srgb, var(--magazine-bg) 38%, transparent), transparent 70%); }
   &__image { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
   &__copy { width: min(76%, 610px); min-width: 0; }
   h2 { font-size: var(--magazine-font-home); line-height: 1.12; margin: 14px 0 12px; text-wrap: balance; }
-  p { color: #e0e0e0; font-size: var(--magazine-font-home-supporting); line-height: 1.5; margin-bottom: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 50ch; }
+  p { color: var(--magazine-secondary); font-size: var(--magazine-font-home-supporting); line-height: 1.5; margin-bottom: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 50ch; }
 }
 
 .journey-panel, .donation-panel {
@@ -239,7 +239,7 @@
 
 @media (max-width: 767.98px) {
   .home-feature { grid-template-columns: 1fr; margin-bottom: 28px; }
-  .featured-content { aspect-ratio: auto; min-height: 360px; padding: 24px 20px; h2 { font-size: var(--magazine-font-home-featured); } p { font-size: var(--magazine-font-footer); } &__copy { width: 95%; } &::after { background: linear-gradient(0deg, #000f, #0009 55%, #0002); } }
+  .featured-content { aspect-ratio: auto; min-height: 360px; padding: 24px 20px; h2 { font-size: var(--magazine-font-home-featured); } p { font-size: var(--magazine-font-footer); } &__copy { width: 95%; } &::after { background: linear-gradient(0deg, color-mix(in srgb, var(--magazine-bg) 96%, transparent), color-mix(in srgb, var(--magazine-bg) 78%, transparent) 55%, color-mix(in srgb, var(--magazine-bg) 20%, transparent)); } }
   .home-feature__aside { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
   .workshop-panel { grid-column: 1 / -1; }
   .journey-panel h2, .donation-panel h2 { font-size: 14px; }
