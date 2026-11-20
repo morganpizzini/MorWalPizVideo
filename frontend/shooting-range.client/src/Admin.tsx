@@ -222,12 +222,14 @@ export function ConfigForm({
 export function BayForm({
   initial,
   users,
+  mechanismTypes,
   busy,
   onSave,
   onDraftChange,
 }: {
   initial: Bay;
   users: AdminUser[];
+  mechanismTypes: { id: string; name: string }[];
   busy: boolean;
   onSave: (bay: Bay) => Promise<void>;
   onDraftChange: (bay: Bay) => void;
@@ -314,15 +316,18 @@ export function BayForm({
             }
           />
         </label>
-        <label className="check-label">
+        <label>
+          Pepper
           <input
-            type="checkbox"
-            checked={bay.pepper}
+            type="number"
+            min={0}
+            step={1}
+            required
+            value={bay.pepper}
             onChange={(event) =>
-              updateBay({ ...bay, pepper: event.target.checked })
+              updateBay({ ...bay, pepper: Number(event.target.value) })
             }
           />
-          Pepper
         </label>
         <div className="wide-field">
           <span className="field-label">Utenti in whitelist</span>
@@ -349,63 +354,84 @@ export function BayForm({
         </div>
         <div className="wide-field">
           <span className="field-label">Meccanismi</span>
-          {bay.mechanisms.map((mechanism, index) => (
-            <div className="mechanism-row" key={index}>
-              <label>
-                Tipo
-                <input
-                  required
-                  value={mechanism.type}
-                  onChange={(event) =>
-                    updateMechanism(index, { type: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Quantita
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  value={mechanism.quantity}
-                  onChange={(event) =>
-                    updateMechanism(index, {
-                      quantity: Number(event.target.value),
-                    })
-                  }
-                />
-              </label>
-              <button
-                type="button"
-                className="secondary-button"
-                aria-label={`Rimuovi meccanismo ${index + 1}`}
-                onClick={() =>
-                  updateBay({
-                    ...bay,
-                    mechanisms: bay.mechanisms.filter(
-                      (_, position) => position !== index,
-                    ),
-                  })
-                }
-              >
-                Rimuovi
-              </button>
+          {bay.mechanisms.length > 0 && (
+            <div className="mechanism-list">
+              {bay.mechanisms.map((mechanism, index) => (
+                <div className="mechanism-row" key={index}>
+                  <label>
+                    Tipo
+                    <select
+                      required
+                      value={mechanism.type}
+                      onChange={(event) =>
+                        updateMechanism(index, { type: event.target.value })
+                      }
+                    >
+                      <option value="">Seleziona un tipo</option>
+                      {mechanismTypes.map((type) => (
+                        <option key={type.id} value={type.name}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Quantita
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      step={1}
+                      value={mechanism.quantity}
+                      onChange={(event) =>
+                        updateMechanism(index, {
+                          quantity: Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="button button-quiet"
+                    aria-label={`Rimuovi meccanismo ${index + 1}`}
+                    onClick={() =>
+                      updateBay({
+                        ...bay,
+                        mechanisms: bay.mechanisms.filter(
+                          (_, position) => position !== index,
+                        ),
+                      })
+                    }
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {!mechanismTypes.length && (
+            <p className="range-muted">Crea prima un tipo di meccanismo.</p>
+          )}
           <button
             type="button"
-            className="secondary-button"
+            className="button button-quiet"
+            disabled={!mechanismTypes.length}
             onClick={() =>
               updateBay({
                 ...bay,
-                mechanisms: [...bay.mechanisms, { type: "", quantity: 1 }],
+                mechanisms: [
+                  ...bay.mechanisms,
+                  { type: mechanismTypes[0].name, quantity: 1 },
+                ],
               })
             }
           >
             Aggiungi meccanismo
           </button>
         </div>
-        <button type="submit">Salva bay {bay.code}</button>
+        <button type="submit" className="button button-primary">
+          Salva bay {bay.code}
+        </button>
       </fieldset>
     </form>
   );
@@ -500,6 +526,7 @@ export function Admin({
     reason: "",
   });
   const [newBay, setNewBay] = useState<Bay | null>(null);
+  const [mechanismTypeName, setMechanismTypeName] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const routeFetcher = useFetcher<AdminRouteData | SessionErrorData | null>();
@@ -517,6 +544,10 @@ export function Admin({
     if (result.success) {
       setNotice(result.message);
       if (result.intent === "save-config") setConfigDraft(null);
+      if (result.intent === "create-mechanism-type") {
+        setMechanismTypeName("");
+        routeFetcher.load("/admin");
+      }
       if (result.intent === "save-bay" && result.entityId) {
         setBayDrafts((value) => {
           const next = { ...value };
@@ -562,7 +593,7 @@ export function Admin({
       mechanisms: [],
       partitions: 0,
       plates: 0,
-      pepper: false,
+      pepper: 0,
       status: 0,
       reservedUntilUtc: null,
       whitelistUserIds: [],
@@ -622,11 +653,59 @@ export function Admin({
                 disabled: busy,
               },
               {
+                key: "mechanism-types",
+                label: "Meccanismi",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Tipi di meccanismo</h2>
+                    <p className="range-muted">
+                      Crea i tipi disponibili per la configurazione delle postazioni.
+                    </p>
+                    <form
+                      className="mechanism-type-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        perform("create-mechanism-type", { name: mechanismTypeName });
+                      }}
+                    >
+                      <label>
+                        Nome del tipo
+                        <input
+                          required
+                          maxLength={80}
+                          value={mechanismTypeName}
+                          onChange={(event) => setMechanismTypeName(event.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="button button-primary"
+                        disabled={busy || !mechanismTypeName.trim()}
+                      >
+                        Crea tipo
+                      </button>
+                    </form>
+                    {core.mechanismTypes.length ? (
+                      <ul className="record-list">
+                        {core.mechanismTypes.map((type) => (
+                          <li key={type.id}><strong>{type.name}</strong></li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="range-empty">
+                        Nessun tipo creato. Aggiungi un tipo per configurare i meccanismi delle postazioni.
+                      </p>
+                    )}
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
                 key: "bays",
                 label: "Postazioni",
                 panel: (
                   <section className="range-panel">
-                    <div className="section-heading">
+                    <div className="section-heading mb-2">
                       <h2>Postazioni</h2>
                       <button
                         type="button"
@@ -649,6 +728,7 @@ export function Admin({
                         <BayForm
                           initial={bayDrafts[bay.id] ?? bay}
                           users={core.users}
+                          mechanismTypes={core.mechanismTypes}
                           busy={busy}
                           onDraftChange={(value) => setBayDrafts((drafts) => ({ ...drafts, [bay.id]: value }))}
                           onSave={async (value) => perform("save-bay", value)}
@@ -660,6 +740,7 @@ export function Admin({
                         <BayForm
                           initial={newBay}
                           users={core.users}
+                          mechanismTypes={core.mechanismTypes}
                           busy={busy}
                           onDraftChange={setNewBay}
                           onSave={async (value) => perform("save-bay", value)}

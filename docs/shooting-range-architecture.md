@@ -24,9 +24,17 @@ A reserved bay is restricted to its whitelist while the local field date is more
 
 ## Data and concurrency
 
-Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
+Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_mechanism_types`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Mechanism types are immutable, administrator-created catalog entries; a bay stores its canonical mechanism name and quantity in the existing JSON list. Bay Pepper inventory is a nonnegative integer. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
 
-The `FeatureManagement:EnableInMemoryDb` flag selects EF Core's in-memory provider for Development or Test only; it is enabled in `appsettings.Development.json` and disabled by default elsewhere. It uses the SQL repository implementation with a process-local write gate, but has no SQL transaction, cross-process concurrency, or persistence guarantees and must not be used for production data. When enabled it takes precedence over the legacy `EnableMock` repository flag. The mock repository remains available in Development/Test when the in-memory database flag is off.
+The mechanism-catalogue migration validates existing bay mechanism JSON and
+quantities, rejects ambiguous names and repeated types within one bay, and
+backfills distinct valid names before changing Pepper from `bit` to `int`.
+The reverse migration refuses to discard Pepper counts above one. Coordinate
+the schema, API and client rollout because the bay JSON Pepper value changes
+from boolean to number; normal API startup still requires the explicit
+`--migrate-database` operation before the new version is deployed.
+
+The `FeatureManagement:EnableInMemoryDb` flag selects EF Core's in-memory provider for Development or Test only; it is enabled in `appsettings.Development.json` and disabled by default elsewhere. It uses the SQL repository implementation with a process-local write gate, but has no SQL transaction, cross-process concurrency, or persistence guarantees and must not be used for production data. When enabled it takes precedence over the legacy `EnableMock` repository flag. The in-memory provider automatically initializes sample mechanism types, bays, fictional users, bookings and closures for demonstrations and tests; these records are process-local and reset with the database/process. It does not seed SQL or the separate mock repository. The mock repository remains available in Development/Test when the in-memory database flag is off.
 
 Every repository write participates in a SQL Server `ReadCommitted` transaction and acquires the singleton mutation-guard row using `UPDLOCK, ROWLOCK` before reading validation/admission state. The lock has a 15-second deadline. Every Range writer, including account, session, schedule, bay, closure, booking, and message changes, must use this guard. This serializes writes globally by design for the POC; no process-local lock is used for correctness. Cookie issuance follows successful transaction commit. The readiness check is read-only and verifies database connectivity, schema and guard row.
 
@@ -67,7 +75,7 @@ The initial public-facing POC is limited to:
 - The current user's bookings.
 - Minimal administrator user creation and booking approval or rejection, if admin-created ordinary users are confirmed.
 
-Schedule, bay and closure management and booking decisions are now accepted administrator scope. The client preserves `/`, `/messages` and `/admin`; this refinement does not authorize unrelated messaging expansion. Cancellation, rescheduling, notifications, waitlists, custom-duration sessions, and reporting remain deferred.
+Schedule, bay, mechanism-type catalogue and closure management and booking decisions are accepted administrator scope. The client preserves `/`, `/messages` and `/admin`; this refinement does not authorize unrelated messaging expansion. Cancellation, rescheduling, notifications, waitlists, custom-duration sessions, and reporting remain deferred.
 
 ## Appearance preference
 

@@ -47,6 +47,7 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
         Clock = clock ?? TimeProvider.System;
         Configs = Register(new MockShootingRangeRepository<ShootingRangeConfig>(this));
         Bays = Register(new MockShootingRangeRepository<ShootingRangeBay>(this));
+        MechanismTypes = Register(new MockShootingRangeRepository<ShootingRangeMechanismType>(this));
         Exceptions = Register(new MockShootingRangeRepository<ShootingRangeException>(this));
         var users = new MockShootingRangeUserRepository(this);
         Register(users);
@@ -74,6 +75,7 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
     }
     public IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
     public IShootingRangeRepository<ShootingRangeBay> Bays { get; }
+    public IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
     public IShootingRangeRepository<ShootingRangeException> Exceptions { get; }
     public IShootingRangeUserRepository Users { get; }
     public IShootingRangeBookingRepository Bookings { get; }

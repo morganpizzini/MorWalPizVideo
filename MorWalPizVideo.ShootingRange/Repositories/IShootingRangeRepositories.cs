@@ -27,6 +27,7 @@ public interface IShootingRangeRepositorySet
     Task<T> ExecuteGuardedAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
     IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
     IShootingRangeRepository<ShootingRangeBay> Bays { get; }
+    IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
     IShootingRangeRepository<ShootingRangeException> Exceptions { get; }
     IShootingRangeUserRepository Users { get; }
     IShootingRangeBookingRepository Bookings { get; }
@@ -38,8 +39,12 @@ internal static class ShootingRangeWriteValidation
 {
     internal static string NormalizeUsername(string username) => username.Trim().ToLowerInvariant();
 
-    internal static T Prepare<T>(T item) where T : BaseEntity => item is ShootingRangeUser user
-        ? (T)(BaseEntity)(user with { NormalizedUsername = NormalizeUsername(user.Username) }) : item;
+    internal static T Prepare<T>(T item) where T : BaseEntity => item switch
+    {
+        ShootingRangeUser user => (T)(BaseEntity)(user with { NormalizedUsername = NormalizeUsername(user.Username) }),
+        ShootingRangeMechanismType mechanismType => (T)(BaseEntity)(mechanismType with { NormalizedName = mechanismType.Name.Trim().ToLowerInvariant() }),
+        _ => item
+    };
 
     internal static void ValidateUsernamePreflight(IReadOnlyList<ShootingRangeUser> users)
     {
@@ -54,9 +59,24 @@ internal static class ShootingRangeWriteValidation
         if (item is ShootingRangeConfig config) Services.ShootingRangeService.ValidateConfig(config);
         if (item is ShootingRangeBay bay)
         {
-            if (!Enum.IsDefined(bay.Status) || string.IsNullOrWhiteSpace(bay.Code) || bay.Partitions < 0 || bay.Plates < 0 || bay.Mechanisms is null || bay.WhitelistUserIds is null || bay.Mechanisms.Any(mechanism => string.IsNullOrWhiteSpace(mechanism.Type) || mechanism.Quantity <= 0)) throw new ArgumentException("Invalid bay.");
+            if (!Enum.IsDefined(bay.Status) || string.IsNullOrWhiteSpace(bay.Code) || bay.Partitions < 0 || bay.Plates < 0 || bay.Pepper < 0 || bay.Mechanisms is null || bay.WhitelistUserIds is null || bay.Mechanisms.Any(mechanism => mechanism is null || string.IsNullOrWhiteSpace(mechanism.Type) || mechanism.Quantity <= 0) || bay.Mechanisms.Select(mechanism => mechanism.Type.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != bay.Mechanisms.Count) throw new ArgumentException("Invalid bay.");
+            var mechanismTypes = await repositories.MechanismTypes.GetAllAsync(cancellationToken);
+            if (bay.Mechanisms.Any(mechanism => mechanism is null || !mechanismTypes.Any(type => string.Equals(type.Name, mechanism.Type, StringComparison.Ordinal))))
+                throw new ArgumentException("A bay uses an unknown mechanism type.");
             foreach (var userId in bay.WhitelistUserIds)
                 if (await repositories.Users.GetAsync(userId, cancellationToken) is null) throw new ArgumentException("Whitelist account not found.");
+        }
+        if (item is ShootingRangeMechanismType mechanismType)
+        {
+            var normalizedName = mechanismType.Name.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName.Length > 80 || mechanismType.Name != normalizedName)
+                throw new ArgumentException("Invalid mechanism type name.");
+            if (replacing && await repositories.MechanismTypes.GetAsync(mechanismType.Id, cancellationToken) is { } existingType && existingType.Name != mechanismType.Name)
+                throw new InvalidOperationException("Mechanism type names cannot be changed.");
+            if ((await repositories.MechanismTypes.GetAllAsync(cancellationToken)).Any(existing =>
+                existing.Id != mechanismType.Id &&
+                existing.NormalizedName == normalizedName.ToLowerInvariant()))
+                throw new InvalidOperationException("Mechanism type already exists.");
         }
         if (item is ShootingRangeUser user)
         {

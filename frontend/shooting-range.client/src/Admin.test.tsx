@@ -72,10 +72,10 @@ describe("admin form structure and SSR", () => {
           creationDateTime: config.creationDateTime,
           code: "01",
           description: "",
-          mechanisms: [],
+          mechanisms: [{ type: "Pepper popper", quantity: 2 }],
           partitions: 0,
           plates: 0,
-          pepper: true,
+          pepper: 1,
           status: 1,
           reservedUntilUtc: null,
           whitelistUserIds: ["user"],
@@ -92,6 +92,7 @@ describe("admin form structure and SSR", () => {
             forcePasswordChange: false,
           },
         ]}
+        mechanismTypes={[{ id: "type-1", name: "Pepper popper" }]}
         busy={false}
         onSave={async () => {}}
         onDraftChange={() => {}}
@@ -100,6 +101,8 @@ describe("admin form structure and SSR", () => {
     expect(html).toContain("Manutenzione");
     expect(html).toContain('type="number"');
     expect(html).toContain('type="checkbox"');
+    expect(html).toContain("Pepper popper");
+    expect(html).toContain("<select");
     expect(html).toContain("approved-user");
     expect(html).not.toContain("passwordHash");
   });

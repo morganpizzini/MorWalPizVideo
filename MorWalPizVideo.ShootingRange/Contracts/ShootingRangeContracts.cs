@@ -9,6 +9,7 @@ public sealed record PasswordChangeRequest([Required] string CurrentPassword, [R
 public sealed record AdminPasswordResetRequest([Required, StringLength(100, MinimumLength = 7)] string NewPassword);
 public sealed record BookingRequest([Required] string BayId, [Required] DateOnly LocalDate, [Required] string PeriodKey, [StringLength(1000)] string Request, DateTime? ExpectedStartUtc = null, DateTime? ExpectedEndUtc = null);
 public sealed record BookingDecisionRequest(bool Approved);
+public sealed record CreateMechanismTypeRequest([Required, StringLength(80, MinimumLength = 1)] string Name);
 public sealed record ThreadRequest([Required, StringLength(120)] string Subject, [Required, StringLength(2000)] string Text);
 public sealed record ThreadMessageRequest([Required, StringLength(2000)] string Text);
 public sealed record AccountDto(string Id, string Username, string FirstName, string LastName, ShootingRangeAccountStatus Status, bool IsAdmin, bool ForcePasswordChange);
@@ -17,3 +18,4 @@ public sealed record AvailabilityDto(DateOnly LocalDate, string PeriodKey, DateT
 public sealed record SessionDto(string PeriodKey, DateTime StartUtc, DateTime EndUtc);
 public sealed record SessionsDto(DateOnly LocalDate, string TimeZone, IReadOnlyList<SessionDto> Sessions);
 public sealed record AdminUserDto(string Id, DateTime CreationDateTime, string Username, string FirstName, string LastName, ShootingRangeAccountStatus Status, bool IsAdmin, bool ForcePasswordChange);
+public sealed record MechanismTypeDto(string Id, string Name);

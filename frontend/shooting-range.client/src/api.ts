@@ -16,11 +16,12 @@ export type Bay = {
   mechanisms: { type: string; quantity: number }[];
   partitions: number;
   plates: number;
-  pepper: boolean;
+  pepper: number;
   status: number;
   reservedUntilUtc: string | null;
   whitelistUserIds: string[];
 };
+export type MechanismType = { id: string; name: string };
 export type Availability = {
   localDate: string;
   periodKey: string;
@@ -197,6 +198,13 @@ export const saveConfig = (body: RangeConfig) =>
   });
 export const adminBays = (signal?: AbortSignal) =>
   request<Bay[]>(`${prefix}/admin/bays`, { signal });
+export const adminMechanismTypes = (signal?: AbortSignal) =>
+  request<MechanismType[]>(`${prefix}/admin/mechanism-types`, { signal });
+export const createMechanismType = (name: string) =>
+  request<MechanismType>(`${prefix}/admin/mechanism-types`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
 export const saveBay = (body: Bay) =>
   request<Bay>(`${prefix}/admin/bays/${encodeURIComponent(body.id)}`, {
     method: "PUT",

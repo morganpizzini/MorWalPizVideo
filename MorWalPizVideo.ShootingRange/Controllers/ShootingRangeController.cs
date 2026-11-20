@@ -98,6 +98,23 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpGet("admin/bays"), Authorize(Roles = "admin")]
     public async Task<IReadOnlyList<ShootingRangeBay>> Bays(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Bays.GetAllAsync(cancellationToken); }
 
+    [HttpGet("admin/mechanism-types"), Authorize(Roles = "admin")]
+    public async Task<IReadOnlyList<MechanismTypeDto>> MechanismTypes(CancellationToken cancellationToken)
+    {
+        await service.RequireAdminAsync(UserId(), cancellationToken);
+        return (await repositories.MechanismTypes.GetAllAsync(cancellationToken))
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new MechanismTypeDto(item.Id, item.Name))
+            .ToArray();
+    }
+
+    [HttpPost("admin/mechanism-types"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateMechanismType(CreateMechanismTypeRequest request, CancellationToken cancellationToken)
+    {
+        var mechanismType = await service.CreateMechanismTypeAsync(UserId(), request.Name, cancellationToken);
+        return Ok(new MechanismTypeDto(mechanismType.Id, mechanismType.Name));
+    }
+
     [HttpPut("admin/bays/{id}"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
     public Task<IActionResult> SaveBay(string id, ShootingRangeBay bay, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var saved = await repositories.Bays.ReplaceAsync(bay with { Id = id }, cancellationToken); return Ok(saved); }, cancellationToken);
 

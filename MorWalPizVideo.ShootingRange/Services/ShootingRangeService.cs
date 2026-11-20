@@ -67,6 +67,19 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             throw new UnauthorizedAccessException("A currently approved administrator is required.");
     }
 
+    public Task<ShootingRangeMechanismType> CreateMechanismTypeAsync(string actorId, string name, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var normalizedName = name.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName.Length > 80)
+                throw new ArgumentException("Mechanism type name must contain 1 to 80 characters.");
+            return await repositories.MechanismTypes.InsertAsync(new ShootingRangeMechanismType
+            {
+                Id = ShootingRangeIds.NewId(),
+                Name = normalizedName
+            }, cancellationToken);
+        }, cancellationToken);
+
     public Task<ShootingRangeBooking> DecideBookingAsync(string actorId, string id, bool approved, CancellationToken cancellationToken) => AdminMutationAsync(actorId, async () =>
     {
         var booking = await repositories.Bookings.GetAsync(id, cancellationToken) ?? throw new KeyNotFoundException("Booking not found.");

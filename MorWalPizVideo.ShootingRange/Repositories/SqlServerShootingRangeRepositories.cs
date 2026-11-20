@@ -23,6 +23,7 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
         Clock = clock ?? TimeProvider.System;
         Configs = new SqlServerShootingRangeRepository<ShootingRangeConfig>(this, context);
         Bays = new SqlServerShootingRangeRepository<ShootingRangeBay>(this, context);
+        MechanismTypes = new SqlServerShootingRangeRepository<ShootingRangeMechanismType>(this, context);
         Exceptions = new SqlServerShootingRangeRepository<ShootingRangeException>(this, context);
         Users = new SqlServerShootingRangeUserRepository(this, context);
         Bookings = new SqlServerShootingRangeBookingRepository(this, context);
@@ -36,6 +37,7 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
     public TimeProvider Clock { get; }
     public IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
     public IShootingRangeRepository<ShootingRangeBay> Bays { get; }
+    public IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
     public IShootingRangeRepository<ShootingRangeException> Exceptions { get; }
     public IShootingRangeUserRepository Users { get; }
     public IShootingRangeBookingRepository Bookings { get; }

@@ -6,12 +6,14 @@ import {
   adminBookings,
   adminClosures,
   adminConfig,
+  adminMechanismTypes,
   adminUsers,
   approveUser,
   availability,
   book,
   changePassword,
   decideBooking,
+  createMechanismType,
   getSession,
   login,
   logout,
@@ -28,6 +30,7 @@ import {
   type Bay,
   type Closure,
   type RangeConfig,
+  type MechanismType,
   type Booking,
   type Sessions,
 } from "./api";
@@ -63,6 +66,7 @@ export interface AdminCoreData {
   config: RangeConfig;
   users: Awaited<ReturnType<typeof adminUsers>>;
   bays: Awaited<ReturnType<typeof adminBays>>;
+  mechanismTypes: MechanismType[];
 }
 
 export interface MessagesRouteData {
@@ -355,8 +359,12 @@ export async function adminLoader({ request }: LoaderFunctionArgs) {
   if (!account.isAdmin) return { sessionError: { error: true, status: 403, message: "Account non autorizzato." } };
   if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
 
-  const core = Promise.all([adminConfig(request.signal), adminUsers(request.signal), adminBays(request.signal)])
-    .then(([config, users, bays]) => ({ config, users, bays }));
+  const core = Promise.all([
+    adminConfig(request.signal),
+    adminUsers(request.signal),
+    adminBays(request.signal),
+    adminMechanismTypes(request.signal),
+  ]).then(([config, users, bays, mechanismTypes]) => ({ config, users, bays, mechanismTypes }));
   const closures = adminClosures(request.signal);
   const bookings = Promise.all([core, adminBookings(request.signal)])
     .then(([data, items]) => ({ ...data, bookings: items }));
@@ -404,7 +412,7 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
       }
       case "save-bay": {
         const payload = jsonField(formData, "payload");
-        if (!payload || typeof payload.id !== "string" || typeof payload.code !== "string" || !Array.isArray(payload.mechanisms) || !Array.isArray(payload.whitelistUserIds)) {
+        if (!payload || typeof payload.id !== "string" || typeof payload.code !== "string" || !Array.isArray(payload.mechanisms) || !Array.isArray(payload.whitelistUserIds) || typeof payload.pepper !== "number" || !Number.isInteger(payload.pepper) || payload.pepper < 0) {
           return { intent, success: false, message: "La configurazione della bay non è valida." };
         }
         const value: Bay = {
@@ -418,13 +426,21 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
           })),
           partitions: Number(payload.partitions),
           plates: Number(payload.plates),
-          pepper: payload.pepper === true,
+          pepper: payload.pepper,
           status: Number(payload.status),
           reservedUntilUtc: typeof payload.reservedUntilUtc === "string" ? payload.reservedUntilUtc : null,
           whitelistUserIds: payload.whitelistUserIds.filter((id): id is string => typeof id === "string"),
         };
         await saveBay(value);
         return { intent, success: true, message: "Bay salvata.", entityId: value.id };
+      }
+      case "create-mechanism-type": {
+        const payload = jsonField(formData, "payload");
+        if (!payload || typeof payload.name !== "string" || !payload.name.trim()) {
+          return { intent, success: false, message: "Inserisci il nome del meccanismo." };
+        }
+        await createMechanismType(payload.name);
+        return { intent, success: true, message: "Tipo di meccanismo creato." };
       }
       case "add-closure": {
         const payload = jsonField(formData, "payload");

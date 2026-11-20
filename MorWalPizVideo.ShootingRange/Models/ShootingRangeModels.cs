@@ -7,6 +7,12 @@ public enum ShootingRangeBayStatus { Available, Maintenance, Disabled }
 
 public sealed record Mechanism(string Type, int Quantity);
 
+public sealed record ShootingRangeMechanismType : BaseEntity
+{
+    public string Name { get; init; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore] public string NormalizedName { get; init; } = string.Empty;
+}
+
 public sealed record ShootingRangeConfig : BaseEntity
 {
     public string Name { get; init; } = "Pepperbox";
@@ -29,7 +35,7 @@ public sealed record ShootingRangeBay : BaseEntity
     public List<Mechanism> Mechanisms { get; init; } = [];
     public int Partitions { get; init; }
     public int Plates { get; init; }
-    public bool Pepper { get; init; }
+    public int Pepper { get; init; }
     public ShootingRangeBayStatus Status { get; init; } = ShootingRangeBayStatus.Available;
     public string Description { get; init; } = string.Empty;
     public DateTime? ReservedUntilUtc { get; init; }

@@ -4,6 +4,7 @@ import {
   adminConfig,
   book,
   changePassword,
+  createMechanismType,
   getSession,
   login,
   myBookings,
@@ -25,6 +26,7 @@ vi.mock("./api", async (importOriginal) => ({
   adminConfig: vi.fn(),
   book: vi.fn(),
   changePassword: vi.fn(),
+  createMechanismType: vi.fn(),
   getSession: vi.fn(),
   login: vi.fn(),
   messages: vi.fn(),
@@ -284,6 +286,20 @@ describe("Range route data security and mutations", () => {
 
     expect(result).toMatchObject({ success: false });
     expect(result.status).toBe(403);
+  });
+
+  it("creates mechanism types only after the current administrator is verified", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(createMechanismType).mockResolvedValue({ id: "type", name: "Pepper popper" });
+
+    const result = await adminAction(actionArgs("/admin", {
+      intent: "create-mechanism-type",
+      payload: JSON.stringify({ name: "Pepper popper" }),
+    }));
+
+    expect(result).toMatchObject({ intent: "create-mechanism-type", success: true });
+    expect(createMechanismType).toHaveBeenCalledWith("Pepper popper");
   });
 
   it("expires the browser session after a protected action receives 401", async () => {

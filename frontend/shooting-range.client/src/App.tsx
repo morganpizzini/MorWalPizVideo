@@ -251,10 +251,35 @@ export function SessionGate({
   const accountRef = useRef(account);
   const handledAuthResultRef = useRef<ActionResult | null>(null);
   const sessionExpiredRef = useRef(false);
+  const focusCheckRef = useRef<AbortController | null>(null);
   locationRef.current = location.pathname;
   accountRef.current = account;
   const authFetcher = useFetcher<ActionResult>();
   const refreshAccount = useCallback(() => setRevision((value) => value + 1), []);
+  const cancelFocusCheck = useCallback(() => {
+    focusCheckRef.current?.abort();
+    focusCheckRef.current = null;
+  }, []);
+  const revalidateFocusedSession = useCallback(async () => {
+    if (!accountRef.current || sessionExpiredRef.current || focusCheckRef.current) return;
+    const controller = new AbortController();
+    focusCheckRef.current = controller;
+    try {
+      const value = await getSession(controller.signal);
+      if (controller.signal.aborted || sessionExpiredRef.current) return;
+      setAccount(value);
+      setError("");
+    } catch (reason) {
+      if (controller.signal.aborted) return;
+      if (reason instanceof RangeApiError && reason.status === 401) {
+        window.dispatchEvent(new Event("range-session-expired"));
+      } else {
+        setError("Sessione non disponibile. Riprova.");
+      }
+    } finally {
+      if (focusCheckRef.current === controller) focusCheckRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -287,6 +312,7 @@ export function SessionGate({
     handledAuthResultRef.current = result;
     if (result.intent === "login") {
       if (result.success && result.account) {
+        cancelFocusCheck();
         sessionExpiredRef.current = false;
         setError("");
         setAccount(result.account);
@@ -298,6 +324,8 @@ export function SessionGate({
       setError(result.success ? "" : result.message);
     } else if (result.intent === "logout") {
       if (result.success || result.status === 401) {
+        cancelFocusCheck();
+        sessionExpiredRef.current = true;
         setAccount(null);
         navigate("/");
       } else {
@@ -306,28 +334,28 @@ export function SessionGate({
     } else if (result.intent === "password-change" && result.success) {
       setRevision((value) => value + 1);
     }
-  }, [authFetcher.data, navigate]);
+  }, [authFetcher.data, cancelFocusCheck, navigate]);
 
   useEffect(() => {
     function expired() {
       if (!accountRef.current || sessionExpiredRef.current) return;
+      cancelFocusCheck();
       sessionExpiredRef.current = true;
       setAccount(null);
       setError("");
       if (locationRef.current !== "/") navigate("/", { replace: true });
     }
     function refresh() {
-      if (accountRef.current && !sessionExpiredRef.current) {
-        setRevision((value) => value + 1);
-      }
+      void revalidateFocusedSession();
     }
     window.addEventListener("range-session-expired", expired);
     window.addEventListener("focus", refresh);
     return () => {
       window.removeEventListener("range-session-expired", expired);
       window.removeEventListener("focus", refresh);
+      cancelFocusCheck();
     };
-  }, [navigate]);
+  }, [cancelFocusCheck, navigate, revalidateFocusedSession]);
 
   function submitRootAction(data: FormData) {
     authFetcher.submit(data, { method: "post", action: "/" });
@@ -370,14 +398,38 @@ export function SessionGate({
   if (account.forcePasswordChange || !children) {
     return (
       <>
-        {error && <p role="alert" className="range-error session-error">{error}</p>}
+        {error && (
+          <p role="alert" className="range-error session-error">
+            {error}
+            {account && (
+              <button
+                type="button"
+                className="button button-quiet"
+                onClick={() => void revalidateFocusedSession()}
+              >
+                Riprova controllo sessione
+              </button>
+            )}
+          </p>
+        )}
         <Booking {...props} />
       </>
     );
   }
   return (
     <>
-      {error && <p role="alert" className="range-error session-error">{error}</p>}
+      {error && (
+        <p role="alert" className="range-error session-error">
+          {error}
+          <button
+            type="button"
+            className="button button-quiet"
+            onClick={() => void revalidateFocusedSession()}
+          >
+            Riprova controllo sessione
+          </button>
+        </p>
+      )}
       {children(props)}
     </>
   );

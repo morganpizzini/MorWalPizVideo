@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adminUsers,
+  adminMechanismTypes,
   ApiError,
   availability,
   book,
+  createMechanismType,
   changePassword,
   getSession,
   login,
@@ -16,6 +18,27 @@ import {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("credentialed range API", () => {
+  it("loads and creates admin mechanism types through the protected API", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: "type-1", name: "Target" }])))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "csrf" })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "type-2", name: "Spinner" })));
+    vi.stubGlobal("fetch", fetch);
+
+    await adminMechanismTypes();
+    await createMechanismType("Spinner");
+
+    expect(fetch.mock.calls[0][0]).toBe("/api/shooting-range/admin/mechanism-types");
+    expect(fetch.mock.calls[1][0]).toBe("/api/shooting-range/csrf");
+    expect(fetch.mock.calls[2][0]).toBe("/api/shooting-range/admin/mechanism-types");
+    expect(fetch.mock.calls[2][1]).toMatchObject({
+      method: "POST",
+      credentials: "include",
+    });
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({ name: "Spinner" });
+  });
+
   it("loads server sessions and encodes availability keys with an abort signal", async () => {
     const fetch = vi
       .fn()

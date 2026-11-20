@@ -13,6 +13,9 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
     [DbContext(typeof(ShootingRangeDbContext))]
     partial class ShootingRangeDbContextModelSnapshot : ModelSnapshot
     {
+        internal static void ConfigureTargetModel(ModelBuilder modelBuilder) =>
+            new ShootingRangeDbContextModelSnapshot().BuildModel(modelBuilder);
+
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -53,8 +56,8 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("partitions");
 
-                    b.Property<bool>("Pepper")
-                        .HasColumnType("bit")
+                    b.Property<int>("Pepper")
+                        .HasColumnType("int")
                         .HasColumnName("pepper");
 
                     b.Property<int>("Plates")
@@ -77,6 +80,39 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("shooting_range_bays", (string)null);
+                });
+
+            modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeMechanismType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreationDateTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("creation_date_time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .UseCollation("Latin1_General_100_BIN2")
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("normalized_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ux_shooting_range_mechanism_types_normalized_name");
+
+                    b.ToTable("shooting_range_mechanism_types", (string)null);
                 });
 
             modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeBooking", b =>

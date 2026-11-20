@@ -411,6 +411,40 @@ button:disabled {
   gap: 0.6rem 1rem;
 }
 
+.mechanism-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.mechanism-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--range-border);
+  border-radius: 8px;
+  background: var(--range-elevated);
+}
+
+.mechanism-row label {
+  margin: 0;
+}
+
+.mechanism-type-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+  max-width: 42rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.mechanism-type-form label {
+  margin: 0;
+}
+
 .check-label {
   display: flex !important;
   flex-direction: row;
@@ -700,6 +734,11 @@ output {
   }
 
   .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mechanism-row,
+  .mechanism-type-form {
     grid-template-columns: minmax(0, 1fr);
   }
 

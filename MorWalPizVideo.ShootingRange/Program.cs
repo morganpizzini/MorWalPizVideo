@@ -132,6 +132,14 @@ if (useInMemoryDb)
     }
 }
 
+if (useInMemoryDb)
+{
+    using var scope = app.Services.CreateScope();
+    var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+    await new InMemorySampleDataSeeder().SeedAsync(repositories, CancellationToken.None);
+    app.Logger.LogInformation("Initialized Shooting Range in-memory sample records.");
+}
+
 if (!useMock && !useInMemoryDb)
 {
     using var scope = app.Services.CreateScope();

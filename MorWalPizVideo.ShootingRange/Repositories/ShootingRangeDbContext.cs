@@ -15,6 +15,7 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
 
     public DbSet<ShootingRangeConfig> Configs => Set<ShootingRangeConfig>();
     public DbSet<ShootingRangeBay> Bays => Set<ShootingRangeBay>();
+    public DbSet<ShootingRangeMechanismType> MechanismTypes => Set<ShootingRangeMechanismType>();
     public DbSet<ShootingRangeException> Exceptions => Set<ShootingRangeException>();
     public DbSet<ShootingRangeUser> Users => Set<ShootingRangeUser>();
     public DbSet<ShootingRangeLocalSession> LocalSessions => Set<ShootingRangeLocalSession>();
@@ -26,6 +27,7 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
     {
         ConfigureBase<ShootingRangeConfig>(modelBuilder, "shooting_range_configs");
         ConfigureBase<ShootingRangeBay>(modelBuilder, "shooting_range_bays");
+        ConfigureBase<ShootingRangeMechanismType>(modelBuilder, "shooting_range_mechanism_types");
         ConfigureBase<ShootingRangeException>(modelBuilder, "shooting_range_exceptions");
         ConfigureBase<ShootingRangeUser>(modelBuilder, "shooting_range_users");
         ConfigureBase<ShootingRangeLocalSession>(modelBuilder, "shooting_range_local_sessions");
@@ -50,11 +52,19 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
         {
             entity.Property(x => x.Code).HasMaxLength(100).IsRequired();
             ConfigureJson(entity.Property(x => x.Mechanisms));
+            entity.Property(x => x.Pepper).IsRequired();
             entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Description).IsRequired();
             entity.Property(x => x.ReservedUntilUtc).HasColumnType("datetime2")
                 .HasConversion(UtcDateTimeConverter);
             ConfigureJson(entity.Property(x => x.WhitelistUserIds));
+        });
+
+        modelBuilder.Entity<ShootingRangeMechanismType>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.NormalizedName).HasMaxLength(80).IsRequired().UseCollation("Latin1_General_100_BIN2");
+            entity.HasIndex(x => x.NormalizedName).IsUnique().HasDatabaseName("ux_shooting_range_mechanism_types_normalized_name");
         });
 
         modelBuilder.Entity<ShootingRangeException>(entity =>

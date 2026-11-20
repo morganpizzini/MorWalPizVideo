@@ -14,6 +14,7 @@ using MorWalPizVideo.ShootingRange.Controllers;
 using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
 using MorWalPizVideo.ShootingRange.Security;
+using MorWalPizVideo.ShootingRange.Services;
 
 namespace MorWalPizVideo.ShootingRange.Tests.Features;
 
@@ -31,6 +32,25 @@ public sealed class ShootingRangeApiTests
         var firstRepositories = firstScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         firstScope.ServiceProvider.GetRequiredService<ShootingRangeDbContext>().Database.IsInMemory().Should().BeTrue();
         firstRepositories.Should().BeOfType<SqlServerShootingRangeRepositorySet>();
+        (await firstRepositories.MechanismTypes.GetAllAsync()).Should().HaveCountGreaterThanOrEqualTo(3);
+        (await firstRepositories.Bays.GetAllAsync()).Should().HaveCountGreaterThanOrEqualTo(4);
+        (await firstRepositories.Users.GetAllAsync()).Should().Contain(user => user.Status == ShootingRangeAccountStatus.Pending);
+        (await firstRepositories.Bookings.GetAllAsync()).Should().Contain(booking => booking.Status == ShootingRangeBookingStatus.Pending);
+        (await firstRepositories.Bookings.GetAllAsync()).Should().Contain(booking => booking.Status == ShootingRangeBookingStatus.Approved);
+        (await firstRepositories.Exceptions.GetAllAsync()).Should().Contain(closure => closure.BayId == null);
+        (await firstRepositories.Exceptions.GetAllAsync()).Should().Contain(closure => closure.BayId != null);
+        var sampleCounts = (
+            Types: (await firstRepositories.MechanismTypes.GetAllAsync()).Count,
+            Bays: (await firstRepositories.Bays.GetAllAsync()).Count,
+            Users: (await firstRepositories.Users.GetAllAsync()).Count,
+            Bookings: (await firstRepositories.Bookings.GetAllAsync()).Count,
+            Closures: (await firstRepositories.Exceptions.GetAllAsync()).Count);
+        await new InMemorySampleDataSeeder().SeedAsync(firstRepositories, CancellationToken.None);
+        (await firstRepositories.MechanismTypes.GetAllAsync()).Should().HaveCount(sampleCounts.Types);
+        (await firstRepositories.Bays.GetAllAsync()).Should().HaveCount(sampleCounts.Bays);
+        (await firstRepositories.Users.GetAllAsync()).Should().HaveCount(sampleCounts.Users);
+        (await firstRepositories.Bookings.GetAllAsync()).Should().HaveCount(sampleCounts.Bookings);
+        (await firstRepositories.Exceptions.GetAllAsync()).Should().HaveCount(sampleCounts.Closures);
         var seededAdmin = await firstRepositories.Users.FindByUsernameAsync("admin");
         seededAdmin.Should().NotBeNull();
         seededAdmin!.Status.Should().Be(ShootingRangeAccountStatus.Approved);
@@ -48,6 +68,19 @@ public sealed class ShootingRangeApiTests
         using var isolatedScope = isolatedFactory.Services.CreateScope();
         var isolatedRepositories = isolatedScope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         (await isolatedRepositories.Users.GetAsync("memory-user")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Mock_repository_does_not_receive_in_memory_sample_data()
+    {
+        await using var factory = new Factory(enableInMemoryDb: false, useMock: true);
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+
+        (await repositories.MechanismTypes.GetAllAsync()).Should().BeEmpty();
+        (await repositories.Bays.GetAllAsync()).Should().BeEmpty();
+        (await repositories.Bookings.GetAllAsync()).Should().BeEmpty();
+        (await repositories.Exceptions.GetAllAsync()).Should().BeEmpty();
     }
 
     [Theory]
@@ -78,9 +111,10 @@ public sealed class ShootingRangeApiTests
     {
         await using var factory = new Factory();
         using var client = await LoginAsync(factory, true);
-        var users = await client.GetFromJsonAsync<JsonElement>("/api/shooting-range/admin/users");
-        users[0].EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("id", "creationDateTime", "username", "firstName", "lastName", "status", "isAdmin", "forcePasswordChange");
-        users[0].GetProperty("status").GetInt32().Should().Be(1);
+        var users = await client.GetFromJsonAsync<JsonElement[]>("/api/shooting-range/admin/users");
+        var adminDto = users!.Single(user => user.GetProperty("username").GetString() == "account");
+        adminDto.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("id", "creationDateTime", "username", "firstName", "lastName", "status", "isAdmin", "forcePasswordChange");
+        adminDto.GetProperty("status").GetInt32().Should().Be(1);
         using var withoutCsrf = await client.PutAsJsonAsync("/api/shooting-range/admin/config", new ShootingRangeConfig());
         withoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await SetCsrfAsync(client);
@@ -97,13 +131,57 @@ public sealed class ShootingRangeApiTests
         var closure = await closureResponse.Content.ReadFromJsonAsync<ShootingRangeException>();
         using var reopened = await client.PutAsJsonAsync($"/api/shooting-range/admin/exceptions/{closure!.Id}", closure with { IsClosed = false });
         reopened.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.GetFromJsonAsync<ShootingRangeException[]>("/api/shooting-range/admin/exceptions"))!.Single().IsClosed.Should().BeFalse();
+        (await client.GetFromJsonAsync<ShootingRangeException[]>("/api/shooting-range/admin/exceptions"))!
+            .Single(item => item.Id == closure.Id).IsClosed.Should().BeFalse();
         using var scope = factory.Services.CreateScope();
         var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
-        var admin = (await repositories.Users.GetAllAsync()).Single();
+        var admin = (await repositories.Users.GetAllAsync()).Single(user => user.Username == "account");
         await repositories.Users.ReplaceAsync(admin with { Status = ShootingRangeAccountStatus.Disabled });
         using var staleCookie = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config);
         staleCookie.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Admin_mechanism_catalogue_requires_admin_and_csrf_and_bays_use_numeric_pepper()
+    {
+        await using var factory = new Factory();
+        using var client = await LoginAsync(factory, true);
+        using var withoutCsrf = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/mechanism-types",
+            new CreateMechanismTypeRequest("Bersaglio dinamico"));
+        withoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await SetCsrfAsync(client);
+        using var created = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/mechanism-types",
+            new CreateMechanismTypeRequest("  Bersaglio dinamico  "));
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var mechanismType = await created.Content.ReadFromJsonAsync<MechanismTypeDto>();
+        mechanismType!.Name.Should().Be("Bersaglio dinamico");
+        using var duplicate = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/mechanism-types",
+            new CreateMechanismTypeRequest("bersaglio DINAMICO"));
+        duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var bay = new ShootingRangeBay
+        {
+            Id = "type-test-bay",
+            Code = "Type test",
+            Pepper = 3,
+            Mechanisms = [new(mechanismType.Name, 2)]
+        };
+        using var saved = await client.PutAsJsonAsync($"/api/shooting-range/admin/bays/{bay.Id}", bay);
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await saved.Content.ReadFromJsonAsync<ShootingRangeBay>())!.Pepper.Should().Be(3);
+
+        using var negative = await client.PutAsJsonAsync(
+            $"/api/shooting-range/admin/bays/{bay.Id}",
+            bay with { Pepper = -1 });
+        negative.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var unknown = await client.PutAsJsonAsync(
+            $"/api/shooting-range/admin/bays/{bay.Id}",
+            bay with { Mechanisms = [new("not in catalogue", 1)] });
+        unknown.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -116,6 +194,8 @@ public sealed class ShootingRangeApiTests
         await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
         using var forbidden = await client.GetAsync("/api/shooting-range/admin/users");
         forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenTypes = await client.GetAsync("/api/shooting-range/admin/mechanism-types");
+        forbiddenTypes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
         while (date.DayOfWeek != DayOfWeek.Saturday) date = date.AddDays(1);
         var sessions = await client.GetFromJsonAsync<SessionsDto>($"/api/shooting-range/sessions?date={date:yyyy-MM-dd}");

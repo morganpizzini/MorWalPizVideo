@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionGate } from "./App";
-import { getSession, logout, myBookings, sessions, type Account } from "./api";
+import { ApiError, getSession, logout, myBookings, sessions, type Account } from "./api";
 
 const testDoubles = vi.hoisted(() => ({ login: vi.fn(), logout: vi.fn() }));
 
@@ -202,6 +202,57 @@ describe("Range session recovery", () => {
     expect(container.textContent).toContain("Bentornato");
     expect(container.textContent).not.toContain("Prenotazioni");
     expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("revalidates on focus without replacing the mounted session view", async () => {
+    vi.mocked(getSession)
+      .mockResolvedValueOnce(account)
+      .mockResolvedValueOnce({ ...account, firstName: "Updated" });
+    await renderGate();
+    expect(container.textContent).toContain("Scegli una data e una sessione");
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new Event("focus"));
+      await Promise.resolve();
+    });
+
+    expect(getSession).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("Updated User");
+    expect(container.textContent).not.toContain("Ripristino sessione");
+  });
+
+  it("expires the signed-in session when a focus recheck confirms a 401", async () => {
+    vi.mocked(getSession)
+      .mockResolvedValueOnce(account)
+      .mockRejectedValueOnce(new ApiError(401, "Unauthorized"));
+    await renderGate();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Bentornato");
+    expect(container.textContent).not.toContain("Scegli una data e una sessione");
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the session view visible after a transient focus check failure and offers a retry", async () => {
+    vi.mocked(getSession)
+      .mockResolvedValueOnce(account)
+      .mockRejectedValueOnce(new Error("network unavailable"))
+      .mockResolvedValueOnce(account);
+    await renderGate();
+
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(container.textContent).toContain("Scegli una data e una sessione");
+    expect(container.textContent).toContain("Sessione non disponibile. Riprova.");
+    expect(container.textContent).not.toContain("Ripristino sessione");
+    await click("Riprova controllo sessione");
+    expect(getSession).toHaveBeenCalledTimes(3);
+    expect(container.textContent).toContain("Scegli una data e una sessione");
+    expect(container.textContent).not.toContain("Sessione non disponibile");
   });
 
   it("forced-change sessions do not request domain data and can log out", async () => {
