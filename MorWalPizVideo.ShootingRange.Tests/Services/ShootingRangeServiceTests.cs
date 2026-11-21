@@ -294,6 +294,7 @@ public sealed class ShootingRangeServiceTests
     {
         var repositories = await CreateRepositoriesAsync();
         ((FixedClock)repositories.Clock).SetUtcNow(new DateTimeOffset(2029, 12, 31, 23, 30, 0, TimeSpan.Zero));
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
         await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
         var service = new ShootingRangeService(repositories);
         foreach (var (id, date, userId) in new[]

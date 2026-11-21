@@ -1,4 +1,6 @@
 using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Security;
+using MorWalPizVideo.ShootingRange.Services;
 
 namespace MorWalPizVideo.ShootingRange.Repositories;
 
@@ -24,7 +26,9 @@ public interface IShootingRangeBookingRepository : IShootingRangeRepository<Shoo
 public interface IShootingRangeRepositorySet
 {
     TimeProvider Clock { get; }
+    ShootingRangeTenantContext TenantContext { get; }
     Task<T> ExecuteGuardedAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
+    IShootingRangeRepository<ShootingRangeTenant> Tenants { get; }
     IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
     IShootingRangeRepository<ShootingRangeBay> Bays { get; }
     IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
@@ -39,12 +43,34 @@ internal static class ShootingRangeWriteValidation
 {
     internal static string NormalizeUsername(string username) => username.Trim().ToLowerInvariant();
 
-    internal static T Prepare<T>(T item) where T : BaseEntity => item switch
+    internal static T Prepare<T>(T item, string? tenantId) where T : BaseEntity
     {
-        ShootingRangeUser user => (T)(BaseEntity)(user with { NormalizedUsername = NormalizeUsername(user.Username) }),
-        ShootingRangeMechanismType mechanismType => (T)(BaseEntity)(mechanismType with { NormalizedName = mechanismType.Name.Trim().ToLowerInvariant() }),
-        _ => item
-    };
+        if (item is ShootingRangeTenant) return item;
+        if (string.IsNullOrWhiteSpace(tenantId))
+            throw new InvalidOperationException("A resolved shooting range tenant is required for data writes.");
+
+        var owned = item switch
+        {
+            ShootingRangeConfig config => (BaseEntity)(config with { TenantId = tenantId }),
+            ShootingRangeBay bay => bay with { TenantId = tenantId },
+            ShootingRangeMechanismType mechanismType => mechanismType with
+            {
+                TenantId = tenantId,
+                NormalizedName = mechanismType.Name.Trim().ToLowerInvariant()
+            },
+            ShootingRangeException exception => exception with { TenantId = tenantId },
+            ShootingRangeUser user => user with
+            {
+                TenantId = tenantId,
+                NormalizedUsername = NormalizeUsername(user.Username)
+            },
+            ShootingRangeLocalSession session => session with { TenantId = tenantId },
+            ShootingRangeBooking booking => booking with { TenantId = tenantId },
+            ShootingRangeThread thread => thread with { TenantId = tenantId },
+            _ => throw new InvalidOperationException($"Unsupported tenant-owned record type {typeof(T).Name}.")
+        };
+        return (T)owned;
+    }
 
     internal static void ValidateUsernamePreflight(IReadOnlyList<ShootingRangeUser> users)
     {
@@ -56,6 +82,25 @@ internal static class ShootingRangeWriteValidation
 
     internal static async Task ValidateAsync<T>(IShootingRangeRepositorySet repositories, T item, bool replacing, CancellationToken cancellationToken) where T : BaseEntity
     {
+        if (item is ShootingRangeTenant tenant)
+        {
+            var slug = NormalizeTenantSlug(tenant.Slug);
+            if (string.IsNullOrWhiteSpace(slug) || slug.Length > 64 || slug != tenant.Slug ||
+                string.IsNullOrWhiteSpace(tenant.Name) || tenant.Name.Length > 200 ||
+                !ShootingRangeTenantProvisioningService.TryNormalizeOrigin(tenant.ClientOrigin, out var origin) ||
+                origin != tenant.ClientOrigin)
+                throw new ArgumentException("Invalid shooting range tenant.");
+            if ((await repositories.Tenants.GetAllAsync(cancellationToken)).Any(existing =>
+                existing.Id != tenant.Id && (existing.Slug == tenant.Slug || existing.ClientOrigin == tenant.ClientOrigin)))
+                throw new InvalidOperationException("Shooting range tenant slug or origin already exists.");
+            return;
+        }
+
+        var tenantId = repositories.TenantContext.TenantId;
+        if (string.IsNullOrWhiteSpace(tenantId) || item.TenantId != tenantId ||
+            await repositories.Tenants.GetAsync(tenantId, cancellationToken) is not { IsActive: true })
+            throw new InvalidOperationException("An active shooting range tenant is required for data writes.");
+
         if (item is ShootingRangeConfig config) Services.ShootingRangeService.ValidateConfig(config);
         if (item is ShootingRangeBay bay)
         {
@@ -91,17 +136,34 @@ internal static class ShootingRangeWriteValidation
             if ((await repositories.Users.GetAllAsync(cancellationToken)).Any(existing => existing.Id != user.Id && NormalizeUsername(existing.Username) == user.NormalizedUsername))
                 throw new InvalidOperationException("Username already exists.");
         }
+        if (item is ShootingRangeThread thread)
+        {
+            if (await repositories.Users.GetAsync(thread.UserId, cancellationToken) is null)
+                throw new ArgumentException("Message users must belong to this shooting range.");
+            foreach (var message in thread.Messages)
+                if (await repositories.Users.GetAsync(message.AuthorUserId, cancellationToken) is null)
+                    throw new ArgumentException("Message users must belong to this shooting range.");
+        }
         if (item is ShootingRangeException closure && closure.BayId is not null && await repositories.Bays.GetAsync(closure.BayId, cancellationToken) is null) throw new KeyNotFoundException("Bay not found.");
+        if (item is ShootingRangeLocalSession session &&
+            await repositories.Users.GetAsync(session.UserId, cancellationToken) is null)
+            throw new ArgumentException("Session user must belong to this shooting range.");
         if (item is not ShootingRangeBooking booking) return;
         if (!Enum.IsDefined(booking.Status) || booking.StartUtc.Kind != DateTimeKind.Utc || booking.EndUtc.Kind != DateTimeKind.Utc || booking.StartUtc >= booking.EndUtc) throw new ArgumentException("Invalid booking interval or status.");
         var previous = replacing ? await repositories.Bookings.GetAsync(booking.Id, cancellationToken) : null;
         if (replacing && previous is null) throw new KeyNotFoundException("Booking not found.");
         if (previous is not null && (previous.UserId != booking.UserId || previous.BayId != booking.BayId || previous.LocalDate != booking.LocalDate || previous.PeriodKey != booking.PeriodKey || previous.StartUtc != booking.StartUtc || previous.EndUtc != booking.EndUtc))
             throw new ArgumentException("Stored booking intervals and identity cannot be rewritten.");
+        if (await repositories.Users.GetAsync(booking.UserId, cancellationToken) is null)
+            throw new ArgumentException("Booking user must belong to this shooting range.");
+        if (await repositories.Bays.GetAsync(booking.BayId, cancellationToken) is null)
+            throw new KeyNotFoundException("Bay not found.");
         if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved) return;
         if (previous is null || previous.Status is ShootingRangeBookingStatus.Rejected or ShootingRangeBookingStatus.Cancelled)
             await Services.ShootingRangeService.ValidateAdmissionAsync(repositories, booking, cancellationToken);
         if ((await repositories.Bookings.GetAllAsync(cancellationToken)).Any(existing => existing.Id != booking.Id && Services.ShootingRangeService.BlocksBay(existing, booking.BayId, booking.StartUtc, booking.EndUtc)))
             throw new InvalidOperationException("The selected slot is already pending or booked.");
     }
+
+    internal static string NormalizeTenantSlug(string slug) => slug.Trim().ToLowerInvariant();
 }

@@ -10,6 +10,7 @@ namespace MorWalPizVideo.ShootingRange.Security;
 public sealed class ShootingRangeSessions(IShootingRangeRepositorySet repositories)
 {
     public const string SessionClaim = "range_session";
+    public const string TenantClaim = "range_tenant";
     public const string ForcedChangeClaim = "range_password_change";
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
 
@@ -42,11 +43,24 @@ public sealed class ShootingRangeSessions(IShootingRangeRepositorySet repositori
     public async Task ValidateAsync(CookieValidatePrincipalContext context)
     {
         var cancellationToken = context.HttpContext.RequestAborted;
+        var currentTenantId = repositories.TenantContext.TenantId;
+        if (currentTenantId is not null &&
+            context.Principal?.FindFirstValue(TenantClaim) is { } claimedTenantId &&
+            claimedTenantId != currentTenantId)
+        {
+            context.RejectPrincipal();
+            return;
+        }
+
         var id = context.Principal?.FindFirstValue(SessionClaim);
         var session = id is null ? null : await repositories.LocalSessions.GetAsync(id, cancellationToken);
         var user = session is null ? null : await repositories.Users.GetAsync(session.UserId, cancellationToken);
+        var tenant = currentTenantId is null ? null : await repositories.Tenants.GetAsync(currentTenantId, cancellationToken);
         if (session is null || session.Revoked || session.ExpiresUtc <= repositories.Clock.GetUtcNow().UtcDateTime ||
             user is null || user.Status != ShootingRangeAccountStatus.Approved || user.SecurityVersion != session.SecurityVersion ||
+            tenant is null || !tenant.IsActive || string.IsNullOrWhiteSpace(currentTenantId) ||
+            session.TenantId != currentTenantId || user.TenantId != currentTenantId ||
+            context.Principal?.FindFirstValue(TenantClaim) != currentTenantId ||
             context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) != user.Id)
         {
             context.RejectPrincipal();
@@ -62,6 +76,7 @@ public sealed class ShootingRangeSessions(IShootingRangeRepositorySet repositori
     private static ClaimsPrincipal Principal(ShootingRangeUser user, string sessionId) => new(new ClaimsIdentity([
         new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim(ClaimTypes.Name, user.Username),
         new Claim(ClaimTypes.Role, user.IsAdmin ? "admin" : "user"), new Claim(SessionClaim, sessionId),
+        new Claim(TenantClaim, user.TenantId),
         new Claim(ForcedChangeClaim, user.ForcePasswordChange ? "true" : "false")
     ], CookieAuthenticationDefaults.AuthenticationScheme));
 }

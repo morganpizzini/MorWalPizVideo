@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   adminUsers,
   adminPendingBookingCount,
@@ -22,6 +23,10 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 
+beforeEach(() => {
+  Object.assign(window, { ENV: { SHOOTING_RANGE: "test-range" } });
+});
+
 describe("credentialed range API", () => {
   it("loads typed message threads and protects status decisions with CSRF", async () => {
     const thread = { id: "thread-1", status: 1, messages: [] };
@@ -36,11 +41,21 @@ describe("credentialed range API", () => {
     await decideMessageStatus("thread/1", 2);
 
     expect(fetch.mock.calls[0][0]).toBe("/api/shooting-range/messages");
+    expect(fetch.mock.calls[0][1].headers.get("X-Shooting-Range")).toBe("test-range");
     expect(fetch.mock.calls[1][0]).toBe("/api/shooting-range/csrf");
     expect(fetch.mock.calls[2][0]).toBe("/api/shooting-range/admin/messages/thread%2F1/status");
     expect(fetch.mock.calls[2][1]).toMatchObject({ method: "POST", credentials: "include" });
     expect(fetch.mock.calls[2][1].headers.get("X-CSRF-TOKEN")).toBe("csrf");
     expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({ status: 2 });
+  });
+
+  it("fails closed when the runtime tenant is missing", async () => {
+    Object.assign(window, { ENV: {} });
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getSession()).rejects.toThrow("Shooting Range tenant is missing or invalid.");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("loads and creates admin mechanism types through the protected API", async () => {

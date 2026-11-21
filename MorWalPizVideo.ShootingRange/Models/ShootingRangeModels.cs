@@ -8,6 +8,14 @@ public enum ShootingRangeThreadStatus { Pending, InProgress, Completed, Refused 
 
 public sealed record Mechanism(string Type, int Quantity);
 
+public sealed record ShootingRangeTenant : BaseEntity
+{
+    public string Slug { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string ClientOrigin { get; init; } = string.Empty;
+    public bool IsActive { get; init; } = true;
+}
+
 public sealed record ShootingRangeMechanismType : BaseEntity
 {
     public string Name { get; init; } = string.Empty;

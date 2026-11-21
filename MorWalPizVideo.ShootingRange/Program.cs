@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.FeatureManagement;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Threading.RateLimiting;
 using System.Security.Claims;
 using MorWalPizVideo.ShootingRange.Security;
@@ -18,9 +20,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddFeatureManagement();
 builder.Services.AddControllersWithViews();
+builder.Services.AddSingleton(new ShootingRangeTenantContext(
+    builder.Environment.IsEnvironment("Test") ? "test-range-id" : null));
 builder.Services.AddAntiforgery(options => { options.HeaderName = "X-CSRF-TOKEN"; options.Cookie.Name = "__Host-shooting-range-csrf"; options.Cookie.HttpOnly = false; options.Cookie.SecurePolicy = CookieSecurePolicy.Always; options.Cookie.SameSite = SameSiteMode.None; });
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins("https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddScoped<ShootingRangeSessions>();
+builder.Services.AddScoped<ShootingRangeTenantProvisioningService>();
+var enableSwagger = builder.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ShootingRange:EnableSwagger");
+if (enableSwagger)
+{
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Shooting Range API", Version = "v1" });
+        options.AddSecurityDefinition("ShootingRangeManagementKey", new OpenApiSecurityScheme
+        {
+            Name = ShootingRangeManagementAuthenticationHandler.HeaderName,
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Description = "Server-side tenant provisioning key. Never send this key from the shooting range client."
+        });
+        options.OperationFilter<ShootingRangeManagementKeyOperationFilter>();
+    });
+}
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.Cookie.Name = "shooting_range_auth";
@@ -32,7 +52,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Events.OnValidatePrincipal = context => context.HttpContext.RequestServices.GetRequiredService<ShootingRangeSessions>().ValidateAsync(context);
     options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
     options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
-});
+}).AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ShootingRangeManagementAuthenticationHandler>(
+    ShootingRangeManagementAuthenticationHandler.AuthenticationScheme, _ => { });
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -40,8 +61,13 @@ builder.Services.AddRateLimiter(options =>
     {
         PermitLimit = 10, Window = TimeSpan.FromMinutes(5), QueueLimit = 0, AutoReplenishment = true
     }));
+    options.AddPolicy("range-tenant-provision", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0, AutoReplenishment = true
+    }));
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 var migrateDatabase = args.Contains("--migrate-database", StringComparer.Ordinal);
 var useInMemoryDb = !migrateDatabase && await StartupConfigurationValidation.IsFeatureEnabledAsync(
     builder.Configuration, StartupConfigurationValidation.EnableInMemoryDb);
@@ -50,6 +76,7 @@ if (useInMemoryDb)
     useMock = false;
 StartupConfigurationValidation.ValidateMockMode(useMock, builder.Environment);
 StartupConfigurationValidation.ValidateInMemoryDbMode(useInMemoryDb, builder.Environment);
+StartupConfigurationValidation.ValidateManagementKey(builder.Configuration, builder.Environment);
 var enableKeyVault = await StartupConfigurationValidation.IsFeatureEnabledAsync(builder.Configuration, StartupConfigurationValidation.EnableKeyVault);
 IConfigurationProvider? keyVaultProvider = null;
 
@@ -103,16 +130,20 @@ builder.Services.AddScoped<ShootingRangeService>();
 var app = builder.Build();
 if (useInMemoryDb)
 {
-    var adminPassword = builder.Configuration["ShootingRange:InMemoryAdminPassword"];
-    if (string.IsNullOrWhiteSpace(adminPassword))
+    using var scope = app.Services.CreateScope();
+    var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+    var localSlug = builder.Configuration["ShootingRange:LocalTenantSlug"] ?? "development";
+    var localOrigin = builder.Configuration["ShootingRange:LocalTenantOrigin"] ?? "http://localhost:5177";
+    var localTenant = await InMemorySampleDataSeeder.EnsureTenantAsync(
+        repositories, localSlug, localOrigin, builder.Configuration["ShootingRange:LocalTenantId"], CancellationToken.None);
+    using (repositories.TenantContext.BeginScope(localTenant.Id))
     {
-        app.Logger.LogWarning("No in-memory administrator was seeded because ShootingRange:InMemoryAdminPassword is not configured.");
-    }
-    else
-    {
-        using var scope = app.Services.CreateScope();
-        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
-        if (await repositories.Users.FindByUsernameAsync("admin") is null)
+        var adminPassword = builder.Configuration["ShootingRange:InMemoryAdminPassword"];
+        if (string.IsNullOrWhiteSpace(adminPassword))
+        {
+            app.Logger.LogWarning("No in-memory administrator was seeded because ShootingRange:InMemoryAdminPassword is not configured.");
+        }
+        else if (await repositories.Users.FindByUsernameAsync("admin") is null)
         {
             var hash = PasswordHashing.HashPassword(adminPassword, out var salt);
             await repositories.Users.InsertAsync(new()
@@ -127,17 +158,12 @@ if (useInMemoryDb)
                 ForcePasswordChange = true,
                 SecurityVersion = Guid.NewGuid().ToString("N")
             });
-            app.Logger.LogInformation("Seeded the in-memory administrator account.");
+            app.Logger.LogInformation("Seeded the in-memory administrator account for tenant {TenantSlug}.", localTenant.Slug);
         }
-    }
-}
 
-if (useInMemoryDb)
-{
-    using var scope = app.Services.CreateScope();
-    var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
-    await new InMemorySampleDataSeeder().SeedAsync(repositories, CancellationToken.None);
-    app.Logger.LogInformation("Initialized Shooting Range in-memory sample records.");
+        await new InMemorySampleDataSeeder().SeedAsync(repositories, CancellationToken.None);
+        app.Logger.LogInformation("Initialized Shooting Range in-memory sample records for tenant {TenantSlug}.", localTenant.Slug);
+    }
 }
 
 if (!useMock && !useInMemoryDb)
@@ -162,7 +188,6 @@ forwardedHeaders.KnownIPNetworks.Clear();
 forwardedHeaders.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeaders);
 app.MapDefaultEndpoints();
-app.UseCors();
 app.Use(async (context, next) =>
 {
     try { await next(context); }
@@ -188,6 +213,8 @@ app.Use(async (context, next) =>
         await context.Response.WriteAsJsonAsync(new { message }, context.RequestAborted);
     }
 });
+app.UseMiddleware<ShootingRangeCorsMiddleware>();
+app.UseMiddleware<ShootingRangeTenantMiddleware>();
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {
@@ -202,6 +229,11 @@ app.Use(async (context, next) =>
 });
 app.UseAuthorization();
 app.UseRateLimiter();
+if (enableSwagger)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.MapControllers();
 app.Run();
 
@@ -212,6 +244,13 @@ internal static class StartupConfigurationValidation
     internal const string EnableInMemoryDb = "EnableInMemoryDb";
     internal const string UseMock = "UseMock";
     internal const string EnableKeyVault = "EnableKeyVault";
+
+    internal static void ValidateManagementKey(IConfiguration configuration, IHostEnvironment environment)
+    {
+        var key = configuration["ShootingRange:ManagementKey"];
+        if (environment.IsProduction() && (string.IsNullOrWhiteSpace(key) || key.Length < 32))
+            throw new InvalidOperationException("ShootingRange:ManagementKey must contain at least 32 characters in Production.");
+    }
 
     internal static async Task<bool> IsFeatureEnabledAsync(IConfiguration configuration, string featureName)
     {

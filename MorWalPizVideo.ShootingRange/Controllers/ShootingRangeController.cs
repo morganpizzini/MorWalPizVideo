@@ -18,9 +18,6 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpGet("csrf"), AllowAnonymous]
     public IActionResult Csrf([FromServices] IAntiforgery antiforgery) => Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
 
-    [HttpPost("auth/register"), AllowAnonymous]
-    public async Task<IActionResult> Register(RegisterShootingRangeUserRequest request) { try { var user = await service.RegisterAsync(request); return Ok(new AccountDto(user.Id, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange)); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
-
     [HttpPost("auth/login"), AllowAnonymous, ValidateAntiForgeryToken, EnableRateLimiting("range-login")]
     public async Task<IActionResult> Login(ShootingRangeLoginRequest request, CancellationToken cancellationToken)
     {
@@ -67,13 +64,13 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
         return NoContent();
     }
 
-    [HttpGet("config"), AllowAnonymous]
+    [HttpGet("config"), Authorize]
     public Task<ShootingRangeConfig> Config(CancellationToken cancellationToken) => service.GetConfigAsync(cancellationToken);
 
-    [HttpGet("sessions"), AllowAnonymous]
+    [HttpGet("sessions"), Authorize]
     public Task<SessionsDto> Sessions([FromQuery] DateOnly date, CancellationToken cancellationToken) => service.GetSessionsAsync(date, cancellationToken);
 
-    [HttpGet("availability"), AllowAnonymous]
+    [HttpGet("availability"), Authorize]
     public Task<AvailabilityDto> Availability([FromQuery] DateOnly date, [FromQuery] string period = "morning", CancellationToken cancellationToken = default) => service.GetAvailabilityAsync(date, period, cancellationToken, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
     [HttpPost("bookings"), Authorize, ValidateAntiForgeryToken]
@@ -144,7 +141,12 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public async Task<ShootingRangeConfig> AdminConfig(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await service.GetConfigAsync(cancellationToken); }
 
     [HttpPut("admin/config"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
-    public Task<IActionResult> SaveConfig(ShootingRangeConfig config, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () => { var saved = await repositories.Configs.ReplaceAsync(config with { Id = "default" }, cancellationToken); return Ok(saved); }, cancellationToken);
+    public Task<IActionResult> SaveConfig(ShootingRangeConfig config, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () =>
+    {
+        var existing = (await repositories.Configs.GetAllAsync(cancellationToken)).SingleOrDefault();
+        var saved = await repositories.Configs.ReplaceAsync(config with { Id = existing?.Id ?? ShootingRangeIds.NewId() }, cancellationToken);
+        return Ok(saved);
+    }, cancellationToken);
 
     [HttpGet("admin/exceptions"), Authorize(Roles = "admin")]
     public async Task<IReadOnlyList<ShootingRangeException>> Exceptions(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Exceptions.GetAllAsync(cancellationToken); }

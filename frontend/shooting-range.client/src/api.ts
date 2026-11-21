@@ -99,6 +99,14 @@ const apiBaseUrl =
   typeof window !== "undefined"
     ? (window.ENV?.API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? "")
     : (import.meta.env.VITE_API_BASE_URL ?? "");
+function tenantSlug(): string {
+  const configured = typeof window !== "undefined"
+    ? window.ENV?.SHOOTING_RANGE ?? import.meta.env.VITE_SHOOTING_RANGE
+    : process.env.SHOOTING_RANGE ?? import.meta.env.VITE_SHOOTING_RANGE;
+  if (!configured || !/^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$/.test(configured))
+    throw new Error("Shooting Range tenant is missing or invalid.");
+  return configured;
+}
 function apiUrl(path: string) {
   return apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
 }
@@ -115,11 +123,8 @@ export class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
-  if (
-    init.method &&
-    init.method !== "GET" &&
-    !path.includes("/auth/register")
-  ) {
+  headers.set("X-Shooting-Range", tenantSlug());
+  if (init.method && init.method !== "GET") {
     headers.set("X-CSRF-TOKEN", await getCsrf());
   }
   const response = await fetch(apiUrl(path), {
@@ -146,16 +151,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export async function getCsrf(): Promise<string> {
   return (await request<{ token: string }>(`${prefix}/csrf`)).token;
 }
-export const register = (body: {
-  username: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}) =>
-  request<Account>(`${prefix}/auth/register`, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
 export async function login(body: {
   username: string;
   password: string;

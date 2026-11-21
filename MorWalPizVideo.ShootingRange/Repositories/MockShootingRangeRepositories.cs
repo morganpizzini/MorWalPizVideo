@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Security;
 
 namespace MorWalPizVideo.ShootingRange.Repositories;
 
@@ -11,18 +12,29 @@ public class MockShootingRangeRepository<T>(MockShootingRangeRepositorySet owner
         var snapshot = Items.ToArray();
         return () => { Items.Clear(); foreach (var entry in snapshot) Items[entry.Key] = entry.Value; };
     }
-    public Task<T?> GetAsync(string id, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(id));
-    public Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<T>>(Items.Values.ToList());
+    public Task<T?> GetAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var item = Items.GetValueOrDefault(id);
+        return Task.FromResult(item is not null && IsVisible(item) ? item : null);
+    }
+
+    public Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<T>>(Items.Values.Where(IsVisible).ToArray());
     public Task<T> InsertAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, false, cancellationToken);
     public Task<T> ReplaceAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, true, cancellationToken);
     private Task<T> WriteAsync(T item, bool replacing, CancellationToken cancellationToken) => owner.ExecuteGuardedAsync(async () =>
     {
-        item = ShootingRangeWriteValidation.Prepare(item);
+        item = ShootingRangeWriteValidation.Prepare(item, owner.TenantContext.TenantId);
         await ShootingRangeWriteValidation.ValidateAsync(owner, item, replacing, cancellationToken);
+        if (replacing && Items.TryGetValue(item.Id, out var existing) && !IsVisible(existing))
+            throw new KeyNotFoundException("Record not found.");
         if (!replacing && Items.ContainsKey(item.Id)) throw new InvalidOperationException("Duplicate identifier.");
         Items[item.Id] = item;
         return item;
     }, cancellationToken);
+
+    private bool IsVisible(T item) => item is ShootingRangeTenant ||
+        owner.TenantContext.TenantId is { } tenantId && item.TenantId == tenantId;
 }
 
 public sealed class MockShootingRangeUserRepository(MockShootingRangeRepositorySet owner) : MockShootingRangeRepository<ShootingRangeUser>(owner), IShootingRangeUserRepository
@@ -42,10 +54,13 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
     private readonly AsyncLocal<bool> guarded = new();
     private readonly List<Func<Action>> rollbackFactories = [];
     public TimeProvider Clock { get; }
-    public MockShootingRangeRepositorySet(TimeProvider? clock = null)
+    public ShootingRangeTenantContext TenantContext { get; }
+    public MockShootingRangeRepositorySet(TimeProvider? clock = null, ShootingRangeTenantContext? tenantContext = null)
     {
         Clock = clock ?? TimeProvider.System;
+        TenantContext = tenantContext ?? new ShootingRangeTenantContext("test-tenant");
         Configs = Register(new MockShootingRangeRepository<ShootingRangeConfig>(this));
+        Tenants = Register(new MockShootingRangeRepository<ShootingRangeTenant>(this));
         Bays = Register(new MockShootingRangeRepository<ShootingRangeBay>(this));
         MechanismTypes = Register(new MockShootingRangeRepository<ShootingRangeMechanismType>(this));
         Exceptions = Register(new MockShootingRangeRepository<ShootingRangeException>(this));
@@ -57,6 +72,13 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
         Bookings = bookings;
         Threads = Register(new MockShootingRangeRepository<ShootingRangeThread>(this));
         LocalSessions = Register(new MockShootingRangeRepository<ShootingRangeLocalSession>(this));
+        ((MockShootingRangeRepository<ShootingRangeTenant>)Tenants).InsertAsync(new ShootingRangeTenant
+        {
+            Id = TenantContext.TenantId ?? "test-tenant",
+            Slug = "test-tenant",
+            Name = "Test tenant",
+            ClientOrigin = "https://range-spa-bjeqb5gwggf0hfaj.westeurope-01.azurewebsites.net"
+        }).GetAwaiter().GetResult();
     }
     private MockShootingRangeRepository<T> Register<T>(MockShootingRangeRepository<T> repository) where T : BaseEntity
     {
@@ -74,6 +96,7 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
         finally { guarded.Value = false; gate.Release(); }
     }
     public IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
+    public IShootingRangeRepository<ShootingRangeTenant> Tenants { get; }
     public IShootingRangeRepository<ShootingRangeBay> Bays { get; }
     public IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
     public IShootingRangeRepository<ShootingRangeException> Exceptions { get; }

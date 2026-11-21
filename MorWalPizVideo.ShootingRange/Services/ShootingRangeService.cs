@@ -9,14 +9,6 @@ namespace MorWalPizVideo.ShootingRange.Services;
 
 public sealed class ShootingRangeService(IShootingRangeRepositorySet repositories)
 {
-    public Task<ShootingRangeUser> RegisterAsync(RegisterShootingRangeUserRequest request) => repositories.ExecuteGuardedAsync(async () =>
-    {
-        var username = request.Username.Trim().ToLowerInvariant();
-        if (await repositories.Users.FindByUsernameAsync(username) is not null) throw new InvalidOperationException("Username already exists.");
-        var hash = PasswordHashing.HashPassword(request.Password, out var salt);
-        return await repositories.Users.InsertAsync(new ShootingRangeUser { Id = ShootingRangeIds.NewId(), Username = username, FirstName = request.FirstName.Trim(), LastName = request.LastName.Trim(), PasswordHash = $"{hash}:{salt}" });
-    });
-
     public async Task<ShootingRangeUser?> AuthenticateAsync(string username, string password)
     {
         var user = await repositories.Users.FindByUsernameAsync(username.Trim().ToLowerInvariant());
@@ -27,7 +19,13 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
 
     public async Task<ShootingRangeConfig> GetConfigAsync(CancellationToken cancellationToken) => await LoadConfigAsync(repositories, cancellationToken);
 
-    private static async Task<ShootingRangeConfig> LoadConfigAsync(IShootingRangeRepositorySet repositories, CancellationToken cancellationToken) => (await repositories.Configs.GetAllAsync(cancellationToken)).OrderByDescending(config => config.Id == "default").FirstOrDefault() ?? new ShootingRangeConfig { Id = "default" };
+    private static async Task<ShootingRangeConfig> LoadConfigAsync(IShootingRangeRepositorySet repositories, CancellationToken cancellationToken) =>
+        (await repositories.Configs.GetAllAsync(cancellationToken)).FirstOrDefault()
+        ?? new ShootingRangeConfig
+        {
+            Id = ShootingRangeIds.NewId(),
+            TenantId = repositories.TenantContext.TenantId ?? string.Empty
+        };
 
     public async Task<SessionsDto> GetSessionsAsync(DateOnly localDate, CancellationToken cancellationToken)
     {

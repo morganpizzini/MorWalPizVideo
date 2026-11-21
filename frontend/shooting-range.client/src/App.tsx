@@ -170,84 +170,32 @@ export function Shell({
 function Auth({
   onSubmit,
   pending,
-  result,
   error,
   onRetry,
-  onModeChange,
 }: {
   onSubmit: (data: FormData) => void;
   pending: boolean;
-  result?: ActionResult;
   error: string;
   onRetry: () => void;
-  onModeChange: () => void;
 }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({
     username: "",
     password: "",
-    firstName: "",
-    lastName: "",
   });
-  const [notice, setNotice] = useState("");
-
-  useEffect(() => {
-    if (result?.intent === "register" && result.success) {
-      setMode("login");
-      setNotice(result.message);
-      setForm((value) => ({ ...value, password: "" }));
-    } else if (result?.intent === "register" && !result.success) {
-      setNotice("");
-    }
-  }, [result]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    data.set("intent", mode);
+    data.set("intent", "login");
     onSubmit(data);
-    setNotice("");
   }
 
   return (
     <section className="range-panel range-auth">
-      <h1>{mode === "login" ? "Bentornato" : "Richiedi un account"}</h1>
-      <p className="range-muted">
-        Gli account nuovi restano in attesa dell'approvazione
-        dell'amministratore.
-      </p>
+      <h1>Bentornato</h1>
+      <p className="range-muted">Accedi con l'account fornito dalla tua amministrazione.</p>
       <form onSubmit={submit}>
         <div className="auth-fields">
-          {mode === "register" && (
-            <>
-              <label>
-                Nome
-                <input
-                  name="firstName"
-                  required
-                  value={form.firstName}
-                  autoComplete="given-name"
-                  disabled={pending}
-                  onChange={(event) =>
-                    setForm({ ...form, firstName: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Cognome
-                <input
-                  name="lastName"
-                  required
-                  value={form.lastName}
-                  autoComplete="family-name"
-                  disabled={pending}
-                  onChange={(event) =>
-                    setForm({ ...form, lastName: event.target.value })
-                  }
-                />
-              </label>
-            </>
-          )}
           <label>
             Username
             <input
@@ -269,9 +217,7 @@ function Auth({
               minLength={7}
               type="password"
               value={form.password}
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
+              autoComplete="current-password"
               disabled={pending}
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
@@ -283,11 +229,7 @@ function Auth({
             className="button button-primary"
             disabled={pending}
           >
-            {pending
-              ? "Attendi..."
-              : mode === "login"
-                ? "Accedi"
-                : "Invia richiesta"}
+            {pending ? "Attendi..." : "Accedi"}
           </button>
         </div>
       </form>
@@ -301,19 +243,6 @@ function Auth({
           )}
         </p>
       )}
-      {notice && <p role="status" className="range-success">{notice}</p>}
-      <button
-        type="button"
-        disabled={pending}
-        className="range-link-button"
-        onClick={() => {
-          setMode(mode === "login" ? "register" : "login");
-          setNotice("");
-          onModeChange();
-        }}
-      >
-        {mode === "login" ? "Non hai un account?" : "Hai già un account?"}
-      </button>
     </section>
   );
 }
@@ -402,8 +331,6 @@ export function SessionGate({
       } else {
         setError(result.message);
       }
-    } else if (result.intent === "register") {
-      setError(result.success ? "" : result.message);
     } else if (result.intent === "logout") {
       if (result.success || result.status === 401) {
         cancelFocusCheck();
@@ -462,10 +389,8 @@ export function SessionGate({
         <Auth
           onSubmit={submitRootAction}
           pending={authFetcher.state !== "idle"}
-          result={authFetcher.data}
           error={error}
           onRetry={() => setRevision((value) => value + 1)}
-          onModeChange={() => setError("")}
         />
       </Shell>
     );

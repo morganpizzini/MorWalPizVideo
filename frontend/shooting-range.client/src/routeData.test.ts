@@ -18,7 +18,6 @@ import {
   login,
   messages,
   myBookings,
-  register,
   sessions,
   type Account,
   type RangeConfig,
@@ -55,7 +54,6 @@ vi.mock("./api", async (importOriginal) => ({
   messages: vi.fn(),
   myBookings: vi.fn(),
   openMessage: vi.fn(),
-  register: vi.fn(),
   sessions: vi.fn(),
 }));
 
@@ -384,30 +382,8 @@ describe("Range route data security and mutations", () => {
     expect(cancelBooking).toHaveBeenCalledWith("booking-1");
   });
 
-  it("enforces seven-character passwords before registration and password change", async () => {
+  it("enforces seven-character passwords before password change", async () => {
     vi.stubGlobal("window", {});
-    vi.mocked(register).mockResolvedValue(account);
-
-    const shortRegistration = await bookingAction(actionArgs("/", {
-      intent: "register",
-      username: "new-user",
-      password: "123456",
-      firstName: "New",
-      lastName: "User",
-    }));
-    expect(shortRegistration).toMatchObject({ success: false });
-    expect(register).not.toHaveBeenCalled();
-
-    const acceptedRegistration = await bookingAction(actionArgs("/", {
-      intent: "register",
-      username: "new-user",
-      password: "1234567",
-      firstName: "New",
-      lastName: "User",
-    }));
-    expect(acceptedRegistration).toMatchObject({ success: true });
-    expect(register).toHaveBeenCalledOnce();
-
     vi.mocked(getSession).mockResolvedValue(account);
     const shortChange = await bookingAction(actionArgs("/", {
       intent: "password-change",

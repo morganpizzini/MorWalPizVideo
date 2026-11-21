@@ -21,3 +21,8 @@ public sealed record SessionsDto(DateOnly LocalDate, string TimeZone, IReadOnlyL
 public sealed record AdminUserDto(string Id, DateTime CreationDateTime, string Username, string FirstName, string LastName, ShootingRangeAccountStatus Status, bool IsAdmin, bool ForcePasswordChange);
 public sealed record MechanismTypeDto(string Id, string Name);
 public sealed record PendingBookingCountDto(int Count);
+public sealed record CreateShootingRangeTenantRequest(
+    [Required, StringLength(64, MinimumLength = 3), RegularExpression("^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$")] string Slug,
+    [Required, StringLength(200, MinimumLength = 1)] string Name,
+    [Required, StringLength(300)] string ClientOrigin);
+public sealed record ShootingRangeTenantDto(string Id, string Slug, string Name, string ClientOrigin, bool IsActive);

@@ -4,16 +4,22 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Security;
 
 namespace MorWalPizVideo.ShootingRange.Repositories;
 
-public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbContext> options) : DbContext(options)
+public sealed class ShootingRangeDbContext(
+    DbContextOptions<ShootingRangeDbContext> options,
+    ShootingRangeTenantContext? tenantContext = null) : DbContext(options)
 {
+    private readonly ShootingRangeTenantContext _tenantContext = tenantContext ?? new();
+
     private static readonly ValueConverter<DateTime, DateTime> UtcDateTimeConverter = new(
         value => DateTime.SpecifyKind(value, DateTimeKind.Unspecified),
         value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
     public DbSet<ShootingRangeConfig> Configs => Set<ShootingRangeConfig>();
+    public DbSet<ShootingRangeTenant> Tenants => Set<ShootingRangeTenant>();
     public DbSet<ShootingRangeBay> Bays => Set<ShootingRangeBay>();
     public DbSet<ShootingRangeMechanismType> MechanismTypes => Set<ShootingRangeMechanismType>();
     public DbSet<ShootingRangeException> Exceptions => Set<ShootingRangeException>();
@@ -22,9 +28,24 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
     public DbSet<ShootingRangeBooking> Bookings => Set<ShootingRangeBooking>();
     public DbSet<ShootingRangeThread> Threads => Set<ShootingRangeThread>();
     public DbSet<ShootingRangeMutationGuard> MutationGuards => Set<ShootingRangeMutationGuard>();
+    internal ShootingRangeTenantContext TenantContext => _tenantContext;
+    public string? CurrentTenantId => _tenantContext.TenantId;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ShootingRangeTenant>(entity =>
+        {
+            entity.ToTable("shooting_range_tenants");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasMaxLength(128).ValueGeneratedNever();
+            entity.Ignore(x => x.TenantId);
+            entity.Property(x => x.Slug).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ClientOrigin).HasMaxLength(300).IsRequired();
+            entity.HasIndex(x => x.Slug).IsUnique().HasDatabaseName("ux_shooting_range_tenants_slug");
+            entity.HasIndex(x => x.ClientOrigin).IsUnique().HasDatabaseName("ux_shooting_range_tenants_client_origin");
+        });
+
         ConfigureBase<ShootingRangeConfig>(modelBuilder, "shooting_range_configs");
         ConfigureBase<ShootingRangeBay>(modelBuilder, "shooting_range_bays");
         ConfigureBase<ShootingRangeMechanismType>(modelBuilder, "shooting_range_mechanism_types");
@@ -34,8 +55,18 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
         ConfigureBase<ShootingRangeBooking>(modelBuilder, "shooting_range_bookings");
         ConfigureBase<ShootingRangeThread>(modelBuilder, "shooting_range_threads");
 
+        ConfigureTenantOwned<ShootingRangeConfig>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeBay>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeMechanismType>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeException>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeUser>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeLocalSession>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeBooking>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeThread>(modelBuilder);
+
         modelBuilder.Entity<ShootingRangeConfig>(entity =>
         {
+            entity.HasIndex(x => x.TenantId).IsUnique().HasDatabaseName("ux_shooting_range_configs_tenant");
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.TimeZone).HasMaxLength(100).IsRequired();
             entity.Property(x => x.SessionMode).HasConversion<int>();
@@ -61,13 +92,15 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
             entity.Property(x => x.ReservedUntilUtc).HasColumnType("datetime2")
                 .HasConversion(UtcDateTimeConverter);
             ConfigureJson(entity.Property(x => x.WhitelistUserIds));
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
         });
 
         modelBuilder.Entity<ShootingRangeMechanismType>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
             entity.Property(x => x.NormalizedName).HasMaxLength(80).IsRequired().UseCollation("Latin1_General_100_BIN2");
-            entity.HasIndex(x => x.NormalizedName).IsUnique().HasDatabaseName("ux_shooting_range_mechanism_types_normalized_name");
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.HasIndex(x => new { x.TenantId, x.NormalizedName }).IsUnique().HasDatabaseName("ux_shooting_range_mechanism_types_tenant_normalized_name");
         });
 
         modelBuilder.Entity<ShootingRangeException>(entity =>
@@ -75,6 +108,9 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
             entity.Property(x => x.LocalDate).HasColumnType("date");
             entity.Property(x => x.BayId).HasMaxLength(128);
             entity.Property(x => x.Reason).IsRequired();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.HasOne<ShootingRangeBay>().WithMany().HasForeignKey(x => new { x.TenantId, x.BayId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShootingRangeUser>(entity =>
@@ -87,7 +123,8 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
             entity.Property(x => x.PasswordHash).IsRequired();
             entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.SecurityVersion).HasMaxLength(64).IsRequired();
-            entity.HasIndex(x => x.NormalizedUsername).IsUnique().HasDatabaseName("ux_shooting_range_users_normalized_username");
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.HasIndex(x => new { x.TenantId, x.NormalizedUsername }).IsUnique().HasDatabaseName("ux_shooting_range_users_tenant_normalized_username");
         });
 
         modelBuilder.Entity<ShootingRangeLocalSession>(entity =>
@@ -96,7 +133,9 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
             entity.Property(x => x.SecurityVersion).HasMaxLength(64).IsRequired();
             entity.Property(x => x.ExpiresUtc).HasColumnType("datetime2")
                 .HasConversion(UtcDateTimeConverter);
-            entity.HasIndex(x => new { x.UserId, x.Revoked, x.ExpiresUtc }).HasDatabaseName("ix_shooting_range_sessions_user_expiry");
+            entity.HasIndex(x => new { x.TenantId, x.UserId, x.Revoked, x.ExpiresUtc }).HasDatabaseName("ix_shooting_range_sessions_user_expiry");
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShootingRangeBooking>(entity =>
@@ -111,8 +150,12 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
                 .HasConversion(UtcDateTimeConverter);
             entity.Property(x => x.Request).IsRequired();
             entity.Property(x => x.Status).HasConversion<int>();
-            entity.HasIndex(x => new { x.BayId, x.StartUtc, x.EndUtc, x.Status }).HasDatabaseName("ix_shooting_range_bookings_interval");
-            entity.HasIndex(x => new { x.UserId, x.StartUtc }).HasDatabaseName("ix_shooting_range_bookings_user_start");
+            entity.HasIndex(x => new { x.TenantId, x.BayId, x.StartUtc, x.EndUtc, x.Status }).HasDatabaseName("ix_shooting_range_bookings_interval");
+            entity.HasIndex(x => new { x.TenantId, x.UserId, x.StartUtc }).HasDatabaseName("ix_shooting_range_bookings_user_start");
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ShootingRangeBay>().WithMany().HasForeignKey(x => new { x.TenantId, x.BayId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShootingRangeThread>(entity =>
@@ -121,6 +164,9 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
             entity.Property(x => x.Subject).HasMaxLength(500).IsRequired();
             entity.Property(x => x.Status).HasConversion<int>().HasDefaultValue(ShootingRangeThreadStatus.Pending);
             ConfigureJson(entity.Property(x => x.Messages));
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShootingRangeMutationGuard>(entity =>
@@ -144,6 +190,16 @@ public sealed class ShootingRangeDbContext(DbContextOptions<ShootingRangeDbConte
         entity.HasKey(x => x.Id);
         entity.Property(x => x.Id).HasMaxLength(128).ValueGeneratedNever();
         entity.Property(x => x.CreationDateTime).HasColumnType("datetime2");
+        entity.Property(x => x.TenantId).HasMaxLength(128).IsRequired();
+    }
+
+    private void ConfigureTenantOwned<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : BaseEntity
+    {
+        var entity = modelBuilder.Entity<TEntity>();
+        entity.HasQueryFilter(item => CurrentTenantId != null && item.TenantId == CurrentTenantId);
+        entity.HasOne<ShootingRangeTenant>().WithMany().HasForeignKey(item => item.TenantId)
+            .HasPrincipalKey(item => item.Id).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureJson<TValue>(PropertyBuilder<List<TValue>> property)

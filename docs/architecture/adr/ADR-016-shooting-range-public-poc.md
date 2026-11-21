@@ -7,7 +7,7 @@
 
 `MorWalPizVideo.ShootingRange` and `frontend/shooting-range.client` form an independent booking proof of concept. They are not publicly exposed yet but are expected to be soon, and their deployment workflows remain bound to the GitHub `production` environment.
 
-Current source still allows anonymous domain reads/registration, lacks a fallback authorization policy, and exposes some persistence entities. The schedule guard and session/security foundation restrict credentialed CORS to the exact deployed range client, exclude password hashes from admin-user responses, and revalidate revocable sessions against current account state. They do not complete the broader public-release posture. The POC must remain simple without making imminent public exposure unsafe or coupling it to the main publishing architecture.
+At the time this ADR was accepted, source allowed anonymous domain reads/registration and lacked a fallback authorization policy. The POC must remain simple without making public exposure unsafe or coupling it to the main publishing architecture. The implementation status below records the later authorization and tenancy changes; target-environment release evidence remains separate.
 
 ## Decision
 
@@ -33,7 +33,7 @@ Production exposure is gated on explicit credentialed CORS, safe response DTOs, 
 
 The implemented foundation protects login with pre-login CSRF and per-IP throttling (10 attempts per five minutes per process), refreshes CSRF after identity changes, and uses revocable eight-hour non-sliding sessions. Logout revokes the current session; password reset/change invalidates older sessions, while successful self-change renews the current session after the database transaction commits. Disabled accounts and demoted roles are enforced on each cookie request. Forced-change sessions permit only session inspection, password change, logout and technical CSRF acquisition. Production/Staging reject mock storage; Azure SQL readiness requires an applied schema and guard row, while an explicit migration command applies schema changes.
 
-The remaining anonymous-domain/onboarding cutover is NOT READY pending the ordinary-user onboarding decision. Registration, anonymous configuration/sessions/availability, and existing entity/whitelist projections remain unchanged for compatibility. Do not interpret the accepted target as implemented fallback authorization or approval for public exposure.
+The deny-by-default fallback authorization policy is implemented and public registration has been removed. Ordinary-user onboarding remains an operational/product decision; tenant provisioning does not create an administrator. Do not interpret local implementation or tests as approval for public exposure or as evidence that all response DTOs have been reduced to safe projections.
 
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
@@ -69,9 +69,39 @@ repository mutation guard. An additive SQL migration preserves all existing
 thread and message data and defaults old rows to Pending. This does not add
 reply composition, notifications, or other deferred messaging capabilities.
 
+### Multi-tenant amendment — 2026-11-20
+
+The Range API and SQL database serve multiple shooting ranges. Each client
+deployment sets the public `SHOOTING_RANGE` runtime slug and sends it as
+`X-Shooting-Range` on every API request. The API resolves the slug before
+authentication, binds the internal tenant ID to the request, and enforces
+tenant-scoped EF query filters, server-assigned ownership, tenant-qualified
+uniqueness/relationships, and tenant-bound cookie and server-side session
+claims. CORS resolves exact origins from the active tenant registry and
+requires actual requests to select the tenant bound to that origin.
+
+`POST /api/shooting-range/management/tenants` is protected by the independent
+`X-Shooting-Range-Management-Key` header and the API-only
+`ShootingRange:ManagementKey` setting. Provisioning creates a tenant and its
+initial configuration; it does not create an administrator or accept the key
+from a client deployment. Swagger exposes the management scheme in Development
+or when `ShootingRange:EnableSwagger` is enabled. Keep production ingress,
+secret rotation and Swagger access under operator control.
+
+The explicit `20261120233255_AddShootingRangeTenancy` migration adds the
+tenant registry and ownership constraints without historical data backfill.
+The user confirmed that no existing data needs preservation. Verify the target
+database is empty before applying the migration; do not silently assign any
+existing records to a tenant. The migration has not been applied to the
+production database. Tests cover tenant selection, provisioning, session
+mismatch, tenant-scoped uniqueness and foreign-ID isolation. The local
+Shooting Range test run passed 81 tests; eight SQL Server integration tests
+were skipped because no disposable SQL host was configured. This is not SQL
+Server/Azure migration or concurrency evidence.
+
 ## Migration And Rollback
 
-Old cookies without the new session claim require reauthentication. Sessions are persisted in the Azure SQL `shooting_range_local_sessions` table; account `security_version` and `normalized_username` columns are required, and the unique normalized-username index uses binary collation. Deploy the compatible security API before the client; full domain authorization remains a separate cutover.
+Old cookies without the session tenant claim require reauthentication. Sessions are persisted in the Azure SQL `shooting_range_local_sessions` table; account `security_version`, `normalized_username` and tenant ownership are required, and unique indexes use tenant-qualified binary-collated keys. Before migration, confirm that the target database is empty, pause traffic, drain old writers, apply the explicit EF migration and deploy the compatible API before clients. Do not run old API writers against the tenant-aware schema.
 
 For the message status migration, back up SQL, pause message writes, drain old
 API instances, apply the explicit EF migration and deploy the guarded API
@@ -86,7 +116,7 @@ and unresolved public-release controls.
 
 ## Validation
 
-These are full release acceptance criteria, not a claim that every item passes in the current foundation. Anonymous-domain rejection and broad safe DTO projections remain blocked by the cutover decision; target Azure SQL, backup/restore, browser and Data Protection evidence remains required separately from local executable tests.
+These are full release acceptance criteria, not a claim that every item passes in the current foundation. Local API/client validation has passed, but target Azure SQL migration, backup/restore, real-browser origin/session switching and Data Protection evidence remain required separately from local executable tests. The eight SQL Server tests were skipped without `SHOOTING_RANGE_TEST_SQL_HOST`.
 
 - Anonymous domain requests return `401`; normal users receive `403` from administrator operations.
 - Login, CSRF token acquisition, and health probes remain reachable anonymously.

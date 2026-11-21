@@ -14,6 +14,26 @@ public sealed class InMemorySampleDataSeeder
         "Piastra girevole"
     ];
 
+    public static async Task<ShootingRangeTenant> EnsureTenantAsync(
+        IShootingRangeRepositorySet repositories,
+        string slug,
+        string clientOrigin,
+        string? configuredId,
+        CancellationToken cancellationToken)
+    {
+        var existing = (await repositories.Tenants.GetAllAsync(cancellationToken))
+            .SingleOrDefault(tenant => tenant.Slug == slug);
+        if (existing is not null) return existing;
+
+        return await repositories.Tenants.InsertAsync(new ShootingRangeTenant
+        {
+            Id = configuredId ?? ShootingRangeIds.NewId(),
+            Slug = slug,
+            Name = "Local Shooting Range",
+            ClientOrigin = clientOrigin
+        }, cancellationToken);
+    }
+
     public async Task SeedAsync(IShootingRangeRepositorySet repositories, CancellationToken cancellationToken)
     {
         await repositories.ExecuteGuardedAsync(async () =>

@@ -96,7 +96,7 @@ public sealed class ShootingRangeApiTests
         using var request = new HttpRequestMessage(HttpMethod.Options, "/api/shooting-range/bookings");
         request.Headers.Add("Origin", origin);
         request.Headers.Add("Access-Control-Request-Method", "POST");
-        request.Headers.Add("Access-Control-Request-Headers", "X-CSRF-TOKEN,Content-Type");
+        request.Headers.Add("Access-Control-Request-Headers", "X-CSRF-TOKEN,Content-Type,X-Shooting-Range");
         using var response = await client.SendAsync(request);
         response.Headers.Contains("Access-Control-Allow-Origin").Should().Be(allowed);
         if (allowed)
@@ -104,6 +104,131 @@ public sealed class ShootingRangeApiTests
             response.Headers.GetValues("Access-Control-Allow-Origin").Should().Equal(Origin);
             response.Headers.GetValues("Access-Control-Allow-Credentials").Should().Equal("true");
         }
+    }
+
+    [Fact]
+    public async Task Tenant_selector_is_required_and_domain_reads_require_authentication()
+    {
+        await using var factory = new Factory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+
+        using var csrf = await client.GetAsync("/api/shooting-range/csrf");
+        csrf.StatusCode.Should().Be(HttpStatusCode.OK);
+        foreach (var path in new[]
+        {
+            "/api/shooting-range/config",
+            "/api/shooting-range/sessions?date=2030-01-12",
+            "/api/shooting-range/availability?date=2030-01-12"
+        })
+        {
+            using var response = await client.GetAsync(path);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        client.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        using var missingTenant = await client.GetAsync("/api/shooting-range/csrf");
+        missingTenant.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        client.DefaultRequestHeaders.Add("X-Shooting-Range", "unknown-range");
+        using var unknownTenant = await client.GetAsync("/api/shooting-range/csrf");
+        unknownTenant.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Management_key_provisions_tenant_and_default_configuration()
+    {
+        await using var factory = new Factory();
+        using var client = factory.CreateClient();
+        var request = new CreateShootingRangeTenantRequest(
+            "second-range", "Second Range", "https://second-range.example");
+
+        using var unauthorized = await client.PostAsJsonAsync("/api/shooting-range/management/tenants", request);
+        unauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        client.DefaultRequestHeaders.Add(
+            ShootingRangeManagementAuthenticationHandler.HeaderName,
+            "test-management-key-long-enough-for-tests-123456");
+        using var created = await client.PostAsJsonAsync("/api/shooting-range/management/tenants", request);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var tenant = (await created.Content.ReadFromJsonAsync<ShootingRangeTenantDto>())!;
+        tenant.Should().BeEquivalentTo(new ShootingRangeTenantDto(
+            tenant.Id, "second-range", "Second Range", "https://second-range.example", true));
+        created.Content.Headers.ContentLength.Should().NotBeNull();
+        (await created.Content.ReadAsStringAsync()).Should().NotContain("test-management-key");
+
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        using (repositories.TenantContext.BeginScope(tenant.Id))
+            (await repositories.Configs.GetAllAsync()).Should().ContainSingle();
+
+        using var duplicate = await client.PostAsJsonAsync("/api/shooting-range/management/tenants", request);
+        duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Tenant_cookie_and_ids_cannot_cross_range_boundaries()
+    {
+        await using var factory = new Factory();
+        using var firstTenantClient = await LoginAsync(factory, true);
+        using var scope = factory.Services.CreateScope();
+        var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        const string secondTenantId = "second-test-tenant";
+        await repositories.Tenants.InsertAsync(new()
+        {
+            Id = secondTenantId,
+            Slug = "second-test-range",
+            Name = "Second test range",
+            ClientOrigin = "https://second-test-range.example"
+        });
+
+        using (repositories.TenantContext.BeginScope(secondTenantId))
+        {
+            await repositories.Configs.InsertAsync(new() { Id = "second-config" });
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "second-account",
+                Username = "account",
+                PasswordHash = $"{PasswordHashing.HashPassword(Password, out var salt)}:{salt}",
+                Status = ShootingRangeAccountStatus.Approved,
+                IsAdmin = true
+            });
+            await repositories.Bays.InsertAsync(new() { Id = "second-bay", Code = "Second" });
+            await repositories.Threads.InsertAsync(new()
+            {
+                Id = "second-thread",
+                UserId = "second-account",
+                Subject = "Private to second range"
+            });
+        }
+
+        firstTenantClient.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        firstTenantClient.DefaultRequestHeaders.Add("X-Shooting-Range", "second-test-range");
+        using var crossTenantSession = await firstTenantClient.GetAsync("/api/shooting-range/auth/session");
+        crossTenantSession.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        firstTenantClient.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        firstTenantClient.DefaultRequestHeaders.Add("X-Shooting-Range", "test-range");
+        using var restoredFirstTenant = await firstTenantClient.GetAsync("/api/shooting-range/auth/session");
+        restoredFirstTenant.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var secondTenantClient = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        secondTenantClient.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        secondTenantClient.DefaultRequestHeaders.Add("X-Shooting-Range", "second-test-range");
+        await SetCsrfAsync(secondTenantClient);
+        using var secondTenantLogin = await secondTenantClient.PostAsJsonAsync(
+            "/api/shooting-range/auth/login",
+            new ShootingRangeLoginRequest("account", Password));
+        secondTenantLogin.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        firstTenantClient.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        firstTenantClient.DefaultRequestHeaders.Add("X-Shooting-Range", "test-range");
+        await SetCsrfAsync(firstTenantClient);
+        using var crossTenantUpdate = await firstTenantClient.PutAsJsonAsync(
+            "/api/shooting-range/admin/bays/second-bay",
+            new ShootingRangeBay { Id = "second-bay", Code = "Overwritten" });
+        crossTenantUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        (await repositories.Bays.GetAsync("second-bay")).Should().BeNull();
     }
 
     [Fact]
@@ -122,7 +247,7 @@ public sealed class ShootingRangeApiTests
         using var saved = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config);
         saved.StatusCode.Should().Be(HttpStatusCode.OK);
         var loaded = await client.GetFromJsonAsync<ShootingRangeConfig>("/api/shooting-range/admin/config");
-        loaded!.Id.Should().Be("default");
+        loaded!.Id.Should().NotBeNullOrWhiteSpace();
         loaded.SessionMode.Should().Be(ShootingRangeSessionMode.HourlyContinuous);
         using var invalid = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config with { HourlyMinutes = 30 });
         invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -321,16 +446,9 @@ public sealed class ShootingRangeApiTests
     }
 
     [Fact]
-    public async Task New_passwords_require_seven_characters_for_registration_change_and_reset()
+    public async Task New_passwords_require_seven_characters_for_password_change_and_reset()
     {
         await using var factory = new Factory();
-        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
-        var shortRegistration = new RegisterShootingRangeUserRequest("new-user", "123456", "New", "User");
-        using var rejectedRegistration = await client.PostAsJsonAsync("/api/shooting-range/auth/register", shortRegistration);
-        rejectedRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        using var acceptedRegistration = await client.PostAsJsonAsync("/api/shooting-range/auth/register", shortRegistration with { Password = "1234567" });
-        acceptedRegistration.StatusCode.Should().Be(HttpStatusCode.OK);
-
         using var user = await LoginAsync(factory, false);
         await SetCsrfAsync(user);
         using var rejectedChange = await user.PostAsJsonAsync("/api/shooting-range/auth/password", new PasswordChangeRequest(Password, "123456"));
@@ -460,6 +578,12 @@ public sealed class ShootingRangeApiTests
         using var client = await LoginAsync(factory, true);
         using var scope = factory.Services.CreateScope();
         var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+        await repositories.Users.InsertAsync(new()
+        {
+            Id = "another-user",
+            Username = "another-user",
+            Status = ShootingRangeAccountStatus.Approved
+        });
         await repositories.Threads.InsertAsync(new() { Id = "private", UserId = "another-user", Subject = "private" });
         var user = await repositories.Users.GetAsync("account");
         await repositories.Users.ReplaceAsync(user! with { IsAdmin = false });
@@ -588,6 +712,7 @@ public sealed class ShootingRangeApiTests
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([
             new(System.Security.Claims.ClaimTypes.NameIdentifier, user!.Id),
             new(System.Security.Claims.ClaimTypes.Role, user.IsAdmin ? "admin" : "user"),
+            new(ShootingRangeSessions.TenantClaim, localSession.TenantId),
             new(ShootingRangeSessions.SessionClaim, localSession.Id)
         ], Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme));
         if (!includeSession) ((System.Security.Claims.ClaimsIdentity)principal.Identity!).RemoveClaim(principal.FindFirst(ShootingRangeSessions.SessionClaim)!);
@@ -638,6 +763,15 @@ public sealed class ShootingRangeApiTests
             InMemoryAdminPassword = seedInMemoryAdmin ? Guid.NewGuid().ToString("N") : null;
         }
 
+        public new HttpClient CreateClient() => CreateClient(new WebApplicationFactoryClientOptions());
+
+        public new HttpClient CreateClient(WebApplicationFactoryClientOptions options)
+        {
+            var client = base.CreateClient(options);
+            client.DefaultRequestHeaders.Add("X-Shooting-Range", "test-range");
+            return client;
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(environment);
@@ -650,6 +784,11 @@ public sealed class ShootingRangeApiTests
                 ["FeatureManagement:EnableInMemoryDb"] = enableInMemoryDb.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
                 ["ShootingRange:InMemoryAdminPassword"] = InMemoryAdminPassword,
+                ["ShootingRange:LocalTenantSlug"] = "test-range",
+                ["ShootingRange:LocalTenantOrigin"] = Origin,
+                ["ShootingRange:LocalTenantId"] = "test-range-id",
+                ["ShootingRange:TestTenantId"] = "test-range-id",
+                ["ShootingRange:ManagementKey"] = "test-management-key-long-enough-for-tests-123456",
                 ["ShootingRangeDatabase:ConnectionString"] = null,
                 ["Logging:LogLevel:Default"] = "Error"
             }));

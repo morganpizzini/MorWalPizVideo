@@ -23,7 +23,6 @@ import {
   messages,
   myBookings,
   openMessage,
-  register,
   saveBay,
   saveClosure,
   saveConfig,
@@ -114,7 +113,7 @@ function actionError(intent: string, reason: unknown): ActionResult {
         message: "Username o password non validi, oppure account non approvato.",
       };
     }
-    if (typeof window !== "undefined" && intent !== "login" && intent !== "register") {
+    if (typeof window !== "undefined" && intent !== "login") {
       window.dispatchEvent(new Event("range-session-expired"));
     }
     return { intent, success: false, status: 401, message: "Sessione scaduta. Accedi di nuovo." };
@@ -224,30 +223,6 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       }
       const account = await login({ username, password });
       return { intent, success: true, message: "", account };
-    }
-
-    if (intent === "register") {
-      const username = formData.get("username");
-      const password = formData.get("password");
-      const firstName = formData.get("firstName");
-      const lastName = formData.get("lastName");
-      if (
-        typeof username !== "string" ||
-        !username.trim() ||
-        typeof password !== "string" ||
-        !password ||
-        typeof firstName !== "string" ||
-        !firstName.trim() ||
-        typeof lastName !== "string" ||
-        !lastName.trim()
-      ) {
-        return { intent, success: false, message: "Completa tutti i campi richiesti." };
-      }
-      if (password.length < 7) {
-        return { intent, success: false, message: "La password deve contenere almeno 7 caratteri." };
-      }
-      await register({ username, password, firstName, lastName });
-      return { intent, success: true, message: "Richiesta inviata. Attendi l'approvazione dell'amministratore." };
     }
 
     if (intent === "logout" || intent === "password-change" || intent === "book" || intent === "cancel-booking") {

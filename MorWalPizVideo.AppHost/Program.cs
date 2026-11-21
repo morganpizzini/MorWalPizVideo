@@ -66,6 +66,8 @@ builder.AddJavaScriptApp("shooting-range-client", "../frontend", "dev:shooting-r
     .WaitFor(shootingRange)
     .WithEnvironment("ASPNETCORE_URLS", shootingRange.GetEndpoint("https"))
     .WithEnvironment("BROWSER", "none")
+    .WithEnvironment("SHOOTING_RANGE", "development")
+    .WithEnvironment("VITE_SHOOTING_RANGE", "development")
     .WithHttpEndpoint(port: 5177, env: "PORT")
     .InGroup(frontendGroup);
 

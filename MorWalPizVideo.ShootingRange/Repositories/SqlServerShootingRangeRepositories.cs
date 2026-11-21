@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MorWalPizVideo.ShootingRange.Models;
+using MorWalPizVideo.ShootingRange.Security;
 
 namespace MorWalPizVideo.ShootingRange.Repositories;
 
@@ -21,7 +22,9 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
         this.context = context;
         this.inMemoryWriteGate = inMemoryWriteGate ?? new SemaphoreSlim(1, 1);
         Clock = clock ?? TimeProvider.System;
+        TenantContext = context.TenantContext;
         Configs = new SqlServerShootingRangeRepository<ShootingRangeConfig>(this, context);
+        Tenants = new SqlServerShootingRangeRepository<ShootingRangeTenant>(this, context);
         Bays = new SqlServerShootingRangeRepository<ShootingRangeBay>(this, context);
         MechanismTypes = new SqlServerShootingRangeRepository<ShootingRangeMechanismType>(this, context);
         Exceptions = new SqlServerShootingRangeRepository<ShootingRangeException>(this, context);
@@ -35,7 +38,9 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
     internal bool HasTransaction => transaction.Value is not null || context.Database.IsInMemory() && guarded.Value;
     internal CancellationToken OperationToken(CancellationToken requested) => operationToken.Value ?? requested;
     public TimeProvider Clock { get; }
+    public ShootingRangeTenantContext TenantContext { get; }
     public IShootingRangeRepository<ShootingRangeConfig> Configs { get; }
+    public IShootingRangeRepository<ShootingRangeTenant> Tenants { get; }
     public IShootingRangeRepository<ShootingRangeBay> Bays { get; }
     public IShootingRangeRepository<ShootingRangeMechanismType> MechanismTypes { get; }
     public IShootingRangeRepository<ShootingRangeException> Exceptions { get; }
@@ -114,9 +119,10 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
     {
         var token = owner.OperationToken(cancellationToken);
         var local = Set.Local.FirstOrDefault(item => item.Id == id);
-        if (local is not null && context.Entry(local).State is EntityState.Added or EntityState.Modified)
+        if (local is not null && IsVisible(local) && context.Entry(local).State is EntityState.Added or EntityState.Modified)
             return local;
-        return await Set.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id, token) ?? local;
+        return await Set.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id, token) ??
+            (local is not null && IsVisible(local) ? local : null);
     }
 
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -125,6 +131,11 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
         var items = (await Set.AsNoTracking().ToListAsync(token)).ToDictionary(item => item.Id);
         foreach (var entry in context.ChangeTracker.Entries<T>())
         {
+            if (!IsVisible(entry.Entity))
+            {
+                items.Remove(entry.Entity.Id);
+                continue;
+            }
             if (entry.State == EntityState.Deleted) items.Remove(entry.Entity.Id);
             else if (entry.State is EntityState.Added or EntityState.Modified)
                 items[entry.Entity.Id] = entry.Entity;
@@ -140,11 +151,15 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
         {
             if (!owner.HasTransaction)
                 throw new InvalidOperationException("A database transaction is required for repository writes.");
-            item = ShootingRangeWriteValidation.Prepare(item);
+            item = ShootingRangeWriteValidation.Prepare(item, owner.TenantContext.TenantId);
             await ShootingRangeWriteValidation.ValidateAsync(owner, item, replacing, owner.OperationToken(cancellationToken));
 
             var token = owner.OperationToken(cancellationToken);
             var existing = await Set.AsNoTracking().AnyAsync(entity => entity.Id == item.Id, token);
+            var existsInAnotherTenant = !existing && item is not ShootingRangeTenant &&
+                await Set.IgnoreQueryFilters().AsNoTracking().AnyAsync(entity => entity.Id == item.Id, token);
+            if (existsInAnotherTenant)
+                throw new KeyNotFoundException("Record not found.");
             if (!replacing && existing)
                 throw new InvalidOperationException("Duplicate identifier.");
             if (replacing && !existing && typeof(T) == typeof(ShootingRangeBooking))
@@ -164,6 +179,9 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
             else Set.Add(item);
             return item;
         }, cancellationToken);
+
+    private bool IsVisible(T item) => item is ShootingRangeTenant ||
+        owner.TenantContext.TenantId is { } tenantId && item.TenantId == tenantId;
 }
 
 public sealed class SqlServerShootingRangeBookingRepository(SqlServerShootingRangeRepositorySet owner, ShootingRangeDbContext context)

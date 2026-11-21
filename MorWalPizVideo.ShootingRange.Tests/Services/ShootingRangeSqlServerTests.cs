@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using MorWalPizVideo.ShootingRange.Models;
 using MorWalPizVideo.ShootingRange.Repositories;
+using MorWalPizVideo.ShootingRange.Security;
 using MorWalPizVideo.ShootingRange.Services;
 
 namespace MorWalPizVideo.ShootingRange.Tests.Services;
@@ -24,6 +25,27 @@ public sealed class ShootingRangeSqlServerTests
         (await duplicate.Should().ThrowAsync<DbUpdateException>()).Which
             .GetBaseException().Should().BeOfType<SqlException>()
             .Which.Number.Should().BeOneOf(2601, 2627);
+    }
+
+    [SqlServerFact]
+    public async Task Same_normalized_username_is_allowed_in_different_tenants()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        const string secondTenantId = "second-sql-tenant";
+        await fixture.First.Tenants.InsertAsync(new()
+        {
+            Id = secondTenantId,
+            Slug = "second-sql-tenant",
+            Name = "Second SQL tenant",
+            ClientOrigin = "https://second-sql-tenant.example"
+        });
+
+        using (fixture.First.TenantContext.BeginScope(secondTenantId))
+            await fixture.First.Users.InsertAsync(new() { Id = "second-user", Username = "test-only" });
+
+        (await fixture.First.Users.FindByUsernameAsync("TEST-ONLY"))!.Id.Should().Be(fixture.UserId);
+        using (fixture.First.TenantContext.BeginScope(secondTenantId))
+            (await fixture.First.Users.FindByUsernameAsync("TEST-ONLY"))!.Id.Should().Be("second-user");
     }
 
     [SqlServerFact]
@@ -191,6 +213,7 @@ public sealed class ShootingRangeSqlServerTests
         private readonly string adminConnectionString;
         private readonly string databaseName;
         private readonly string databaseConnectionString;
+        private readonly ShootingRangeTenantContext tenantContext = new("sql-test-tenant");
 
         public ShootingRangeDbContext FirstContext { get; }
         private ShootingRangeDbContext SecondContext { get; }
@@ -208,8 +231,8 @@ public sealed class ShootingRangeSqlServerTests
             var options = new DbContextOptionsBuilder<ShootingRangeDbContext>()
                 .UseSqlServer(databaseConnectionString)
                 .Options;
-            FirstContext = new(options);
-            SecondContext = new(options);
+            FirstContext = new(options, tenantContext);
+            SecondContext = new(options, tenantContext);
             First = new(FirstContext);
             Second = new(SecondContext);
             var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14));
@@ -246,6 +269,13 @@ public sealed class ShootingRangeSqlServerTests
             };
             var fixture = new Fixture(adminBuilder.ConnectionString, databaseName, databaseBuilder.ConnectionString);
             await fixture.FirstContext.Database.MigrateAsync();
+            await fixture.First.Tenants.InsertAsync(new()
+            {
+                Id = "sql-test-tenant",
+                Slug = "sql-test-tenant",
+                Name = "SQL test tenant",
+                ClientOrigin = "https://sql-test-tenant.example"
+            });
             (await fixture.First.Configs.GetAllAsync()).Should().BeEmpty();
             await fixture.First.Configs.ReplaceAsync(new() { Id = "default" });
             await fixture.First.Users.InsertAsync(new() { Id = fixture.UserId, Username = "test-only", Status = ShootingRangeAccountStatus.Approved });

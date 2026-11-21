@@ -1,7 +1,7 @@
 # Shooting Range multi-tenant handoff
 
-**Status:** Proposed; awaiting product and security decisions. No implementation,
-migration, deployment, or tenant isolation has been performed.
+**Status:** Implemented in source and locally validated; not deployed. The
+tenant-aware EF migration has not been applied to any SQL Server database.
 
 ## Outcome
 
@@ -18,7 +18,11 @@ preserve, so the tenant schema can be initialized without a historical data
 backfill. Verify that the target database is empty before resetting or
 recreating its schema.
 
-## Current Evidence
+## Baseline Evidence
+
+The following describes the pre-implementation state that motivated this work.
+Current behavior and validation are recorded under
+[Implementation and Verification Status](#implementation-and-verification-status).
 
 - [Program.cs](../../MorWalPizVideo.ShootingRange/Program.cs) uses a single
   SQL Server database, an exact hard-coded credentialed CORS origin, cookie
@@ -54,7 +58,7 @@ recreating its schema.
   authorization release evidence. [ShootingRangeSqlServerTests.cs](../../MorWalPizVideo.ShootingRange.Tests/Services/ShootingRangeSqlServerTests.cs)
   exercises actual SQL constraints and independent writers.
 
-## Proposed Design
+## Implemented Design
 
 ### Trust and request flow
 
@@ -125,7 +129,7 @@ recreating its schema.
 
 ### Tenant setup and Swagger
 
-Proposed minimal management API: create a tenant with a unique, normalized slug,
+The management API creates a tenant with a unique, normalized slug,
 display name and exact permitted client origin; initialize its configuration and
 first administrator atomically. First-admin password is submitted only over
 HTTPS in the request body, hashed with the existing password helper, never
@@ -314,35 +318,82 @@ forking source. Keep tenant ownership local to Range.
 - Distributed login throttling, durable Data Protection and target backup/restore
   evidence remain release prerequisites; do not claim local tests prove them.
 
-## Implementation Roadmap
+## Implementation and Verification Status
 
-1. **Decision gate:** confirm first tenant, onboarding/bootstrap, one-session
-   browser limitation, allowed origins and operator-managed Swagger access.
-   Record decisions and the approved public authorization cutover.
-2. **Data and contract:** define registry, immutable tenant identity and
-   management DTOs; verify the target database has no data to preserve; design
-   the initial schema with tenant-qualified indexes/FKs. Verify fresh database
-   initialization on a disposable SQL Server.
-3. **Storage boundary:** add scoped context, EF filters and tenant-safe writes;
-   replace config singleton assumption; update mocks, seed and design-time
-   contexts. Verify two-tenant SQL reads, writes, constraints and races.
-4. **Authentication and setup:** resolve tenant before cookie validation;
-   bind sessions to it, complete domain authorization and add independently
-   protected setup/Swagger according to approved bootstrap decision. Verify
-   replay, role, CSRF, key and failure paths.
-5. **Client and deployment:** runtime tenant, safe config serialization,
-   header on all Range requests, exact CORS/origin mapping and mismatch
-   handling; support multiple client App Services using the same image.
-   Verify client tests and two-origin browser flows.
-6. **Cutover:** verify the target database is empty, stop and drain old
-   writers, initialize the tenant-aware schema, verify readiness and tenant
-   constraints, deploy the new API then clients, and only then admit traffic.
-   Record approvals and metrics. Keep backup/restore evidence as a general
-   production readiness gate, not as historical data migration work.
-7. **Finish:** update architecture/ADR and this handoff with actual files,
-   results and residual risks. Independent security-focused code review after
-   validation is recommended because isolation is a cross-cutting security
-   boundary; the user decides whether to request it.
+### Implemented
+
+- Each client deployment reads and validates `SHOOTING_RANGE`, exposes it
+  through safely serialized `window.ENV`, and sends `X-Shooting-Range` on all
+  API requests, including CSRF. Missing or malformed configuration fails
+  closed.
+- The API resolves an active tenant before cookie authentication. Active
+  registry origins control exact credentialed CORS; preflight is resolved by
+  origin and actual requests must match the selected tenant.
+- All tenant-owned records use server-assigned `TenantId`. EF Core filters,
+  composite uniqueness/foreign keys, write validation and tenant-scoped
+  replacement logic prevent cross-tenant reads, relationship references and
+  updates. Tenant identity is excluded from JSON input/output.
+- Cookie claims and persisted sessions are tenant-bound. A selector/cookie
+  mismatch is rejected without revoking the session belonging to the other
+  tenant.
+- Domain APIs use a deny-by-default authorization policy. Anonymous
+  registration was removed; the manually provisioned first-administrator
+  policy from ADR-016 remains. Provisioning does not create an administrator.
+- `POST /api/shooting-range/management/tenants` uses the independent
+  `X-Shooting-Range-Management-Key` authentication scheme, configured only
+  on the API as `ShootingRange:ManagementKey` (App Service setting
+  `ShootingRange__ManagementKey`). It creates the tenant and initial
+  configuration. Swagger documents the management key when Swagger is
+  enabled.
+- EF migration
+  `20261120233255_AddShootingRangeTenancy` and the model snapshot add tenant
+  ownership and tenant-qualified constraints. The user confirmed no data
+  needs preservation; no historical backfill was added. The migration has not
+  been applied to a real SQL database.
+
+Key implementation files include the Range `Program.cs`, tenant context,
+tenant/CORS/session security middleware, `ShootingRangeDbContext`,
+SQL/mock repository validation, management controller/service/auth handler,
+the new migration and snapshot, client `api.ts` and `server.mjs`, AppHost
+tenant configuration, and the Range API/client tests.
+
+### Validation performed
+
+- `dotnet build MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- `dotnet test MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore --no-build --filter 'FullyQualifiedName~ShootingRange'` — passed: 81 passed, 8 skipped. The SQL Server tests were skipped because `SHOOTING_RANGE_TEST_SQL_HOST` was not configured.
+- `yarn --cwd frontend workspace shooting-range.client test` — passed: 67 tests.
+- `yarn --cwd frontend workspace shooting-range.client build:all` — passed,
+  including the production SPA and SSR bundles.
+- `dotnet build MorWalPizVideo.AppHost/MorWalPizVideo.AppHost.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false` — passed.
+- The .NET builds reported NuGet advisories, including critical severity for
+  `Aspire.Dashboard.Sdk.linux-x64` 13.4.6 and high severity for Aspire.Hosting
+  13.5.3 and `System.Security.Cryptography.Pkcs` 9.0.4. No dependency changes
+  were made in this task.
+- The client build emitted Vite's existing warning for the runtime
+  `/env-config.js` script tag; output completed successfully.
+
+### Remaining deployment gates
+
+1. Verify the target Azure SQL database has no business rows before applying
+   the tenant migration. Stop and investigate if any rows exist; do not reset
+   or reassign them implicitly.
+2. Apply the migration explicitly, then verify SQL constraints, tenant-scoped
+   reads/writes, concurrency and backup/restore against a disposable or
+   approved environment. Local in-memory tests do not prove these properties.
+3. Configure an exact origin and public `SHOOTING_RANGE` value for every
+   client App Service. Provision each tenant through Swagger only when enabled
+   and reachable through trusted ingress.
+4. Configure and rotate the API-only management key through App Service secret
+   settings. Never expose it to client runtime configuration.
+5. Manually create the first administrator with the tenant ID; define a
+   tenant-aware ordinary-user onboarding process. Do not enable public
+   registration as a workaround.
+6. Validate real-browser CORS, cookie/CSRF, tenant switching and shared
+   API-host cookie behavior. One active Range session per browser/API host
+   remains the practical limitation.
+
+No Azure migration, deployment, real-browser check, or production approval was
+performed as part of this implementation.
 
 Completion ends at secure multi-tenant Range provisioning, existing workflows
 and the stated verification gates. Reporting, multi-tenant account membership,
@@ -399,9 +450,9 @@ available without exposing key material.
 ## Open Questions
 
 1. What initial tenant slug and exact client origin should be configured?
-2. Should the setup endpoint create the first administrator, overriding the
-   existing manual-bootstrap decision? How are ordinary users onboarded once
-   anonymous registration is removed?
+2. How will administrators and ordinary users be provisioned tenant-safely?
+   The implementation deliberately retains the manual first-admin policy and
+   removes public registration.
 3. Is one active Range login per browser/API host acceptable, or must users be
    simultaneously signed in to multiple ranges?
 4. Who may reach Swagger and the management endpoint, and what trusted network
