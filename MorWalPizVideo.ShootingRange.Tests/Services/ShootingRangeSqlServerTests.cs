@@ -19,7 +19,13 @@ public sealed class ShootingRangeSqlServerTests
 
         var duplicate = async () =>
         {
-            fixture.FirstContext.Users.Add(new() { Id = "database-duplicate", Username = "third", NormalizedUsername = "test-only" });
+            fixture.FirstContext.Users.Add(new()
+            {
+                Id = "database-duplicate",
+                TenantId = fixture.FirstContext.CurrentTenantId!,
+                Username = "third",
+                NormalizedUsername = "test-only"
+            });
             await fixture.FirstContext.SaveChangesAsync();
         };
         (await duplicate.Should().ThrowAsync<DbUpdateException>()).Which

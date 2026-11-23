@@ -170,6 +170,13 @@ database, frontend source, dependency lockfile, or deployment secret changed.
 - `dotnet build MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
   passed; its no-build suite passed: 100 passed, 9 skipped. Skips are the
   disposable SQL Server integration cases, not a SQL compatibility result.
+  A later CI SQL Server run exposed that the duplicate-username test's direct
+  `DbContext` insert omitted the required tenant ID and failed on the tenant
+  foreign key before reaching the unique index. The test row now uses the
+  fixture's current tenant. The affected test project builds successfully;
+  the focused local test is skipped because no disposable SQL Server is
+  configured. A disposable SQL Server run is still needed to confirm the
+  expected unique-index error.
 - `dotnet build MorWalPizVideo.FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
   passed. The full suite had 73 passed, 2 skipped and 2 failures because
   Playwright Chromium was not installed. Re-running with
