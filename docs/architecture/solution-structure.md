@@ -4,23 +4,23 @@
 
 | Project | Type | References | Responsibility |
 |---|---|---|---|
-| `MorWalPizVideo.Models` | .NET 10 library | None | Mongo entities, embedded records, enums, serializers, configuration POCOs, collection names, cache keys |
-| `MorWalPizVideo.Domain` | .NET 10 library | Models, YouTubeUtilities | Repository interfaces and Mongo/mock implementations, data and external-service abstractions |
-| `MorWalPizVideo.YouTubeUtilities` | .NET 10 library | None | Host-independent YouTube parsing/transformation helpers |
+| `MorWalPizVideo.Models` | .NET 11 library | None | Mongo entities, embedded records, enums, serializers, configuration POCOs, collection names, cache keys |
+| `MorWalPizVideo.Domain` | .NET 11 library | Models, YouTubeUtilities | Repository interfaces and Mongo/mock implementations, data and external-service abstractions |
+| `MorWalPizVideo.YouTubeUtilities` | .NET 11 library | None | Host-independent YouTube parsing/transformation helpers |
 | `MorWalPizVideo.YouTubeUtilities.Tests` | xUnit | YouTubeUtilities | Pure helper regression tests |
-| `MorWalPiz.Contracts` | .NET 10 library | Models | Cross-process request/response DTOs and conversion helpers |
-| `MorWalPizVideo.MvcHelpers` | .NET 10 library | Domain, Models | Shared ASP.NET controller helpers, cache services, Mongo setup, feature utilities, test auth |
-| `MorWalPizVideo.ServiceDefaults` | .NET 10 library | Aspire packages | Service discovery, HTTP resilience, OpenTelemetry, health endpoints |
+| `MorWalPiz.Contracts` | .NET 11 library | Models | Cross-process request/response DTOs and conversion helpers |
+| `MorWalPizVideo.MvcHelpers` | .NET 11 library | Domain, Models | Shared ASP.NET controller helpers, cache services, Mongo setup, feature utilities, test auth |
+| `MorWalPizVideo.ServiceDefaults` | .NET 11 library | Aspire packages | Service discovery, HTTP resilience, OpenTelemetry, health endpoints |
 | `MorWalPizVideo.BackOffice` | ASP.NET API | Contracts, Domain, Models, MvcHelpers, ServiceDefaults | Administrative system and business-management center |
 | `MorWalPizVideo.ServerAPI` | ASP.NET API | Contracts, Domain, Models, MvcHelpers, ServiceDefaults | Public projections and approved public interactions |
 | `MorWalPizVideo.ShortLinks` | ASP.NET API | Domain, MvcHelpers, ServiceDefaults | Branded redirects and usage tracking |
 | `MorWalPizVideo.ShootingRange` | ASP.NET API POC | ServiceDefaults | Independent authorized range-booking proof of concept |
 | `MorWalPizVideo.AppHost` | Aspire host | BackOffice, ServerAPI, ShortLinks, ShootingRange | Local orchestration for APIs and selected frontends |
 | `MorWalPizVideo.BackOffice.Tests` | xUnit/Reqnroll | BackOffice, ServerAPI, ShortLinks, ShootingRange | HTTP behavior, authentication, repositories, cache and contract tests |
-| `MorWalPiz.VideoImporter` | .NET 10 WPF | Contracts, YouTubeUtilities | Local upload, scheduling, tenant, SQLite, and BackOffice integration |
-| `MorWalPiz.InsightScanner` | .NET 10 WPF | Contracts | Local web scanning and insight submission |
-| `MorWalPiz.VideoImporter.Tests` | .NET 10 Windows xUnit | VideoImporter | Host/tenant, image and database compatibility checks |
-| `MorWalPiz.InsightScanner.Tests` | .NET 10 Windows xUnit | InsightScanner | Constructor DI and fake-service checks |
+| `MorWalPiz.VideoImporter` | .NET 11 WPF | Contracts, YouTubeUtilities | Local upload, scheduling, tenant, SQLite, and BackOffice integration |
+| `MorWalPiz.InsightScanner` | .NET 11 WPF | Contracts | Local web scanning and insight submission |
+| `MorWalPiz.VideoImporter.Tests` | .NET 11 Windows xUnit | VideoImporter | Host/tenant, image and database compatibility checks |
+| `MorWalPiz.InsightScanner.Tests` | .NET 11 Windows xUnit | InsightScanner | Constructor DI and fake-service checks |
 
 `MorWalPizVideo.Operations` is not a project and must not be treated as a deployable component.
 

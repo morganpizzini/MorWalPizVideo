@@ -22,7 +22,7 @@ RUN yarn --cwd frontend build:shared \
 	&& yarn --cwd frontend install --force --frozen-lockfile \
 	&& yarn --cwd frontend workspace freezer-analysis.spa build
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS publish
+FROM mcr.microsoft.com/dotnet/sdk:11.0-resolute AS publish
 WORKDIR /src
 COPY ["FreezerAnalysis.Api/FreezerAnalysis.Api.csproj", "FreezerAnalysis.Api/"]
 COPY ["MorWalPiz.Contracts/MorWalPiz.Contracts.csproj", "MorWalPiz.Contracts/"]
@@ -41,11 +41,11 @@ RUN --mount=type=cache,id=freezer-analysis-nuget,target=/root/.nuget/packages,sh
     --output /app/publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute AS final
 USER root
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends wget ca-certificates \
-    && wget --quiet https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+    && wget --quiet https://packages.microsoft.com/config/ubuntu/26.04/packages-microsoft-prod.deb \
     && dpkg --install packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb \
     && apt-get update \

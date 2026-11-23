@@ -24,8 +24,8 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Products Management", "    As a BackOffice user\r\n    I want to manage products\r\n    So that I can mainta" +
-                "in the affiliate catalog exposed to the public site", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Products Management", "    As a BackOffice user\n    I want to manage products\n    So that I can maintain" +
+                " the affiliate catalog exposed to the public site", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

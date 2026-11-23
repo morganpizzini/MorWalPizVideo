@@ -35,7 +35,7 @@ jobs:
       - name: Verify credential artifacts stay out of build output
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Run credential artifact tests
         run: dotnet test MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj --filter FullyQualifiedName~CredentialArtifactExclusionTests --configuration Release --verbosity minimal --logger "trx;LogFileName=CredentialArtifact.trx" --results-directory ./TestResults
@@ -92,7 +92,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore tests
         run: dotnet restore ${{ matrix.project }}/${{ matrix.project }}.csproj -p:Platform=AnyCPU
@@ -250,7 +250,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore ${{ matrix.project.path }}/${{ matrix.project.path }}.csproj
@@ -269,7 +269,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore AppHost
         run: dotnet restore MorWalPizVideo.AppHost/MorWalPizVideo.AppHost.csproj
@@ -296,7 +296,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore ${{ matrix.project.path }} -p:Platform=AnyCPU
@@ -316,7 +316,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore backend test projects
         run: |
@@ -370,7 +370,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Install Poppler text extractor
         run: |
@@ -384,7 +384,7 @@ jobs:
         run: dotnet build FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore
 
       - name: Install pinned Playwright Chromium
-        run: pwsh FreezerAnalysis.Api.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        run: pwsh FreezerAnalysis.Api.Tests/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
 
       - name: Test FreezerAnalysis API
         run: |
@@ -412,7 +412,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj

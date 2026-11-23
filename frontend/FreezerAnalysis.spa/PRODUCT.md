@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Confirmed by the implementation handoff: .NET 10, React 19, TypeScript, MongoDB, and the existing Yarn workspace.
+Confirmed by the implementation handoff: .NET 11, React 19, TypeScript, MongoDB, and the existing Yarn workspace.
 
 ## Users
 

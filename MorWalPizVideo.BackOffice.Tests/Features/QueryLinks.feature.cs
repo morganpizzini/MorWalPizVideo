@@ -26,8 +26,8 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         private static string[] featureTags = new string[] {
                 "TestGroup:BackOffice"};
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "QueryLinks Management", "    As a BackOffice user\r\n    I want to manage query links\r\n    So that I can att" +
-                "ach reusable query-string snippets to shortlinks", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "QueryLinks Management", "    As a BackOffice user\n    I want to manage query links\n    So that I can attac" +
+                "h reusable query-string snippets to shortlinks", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

@@ -54,7 +54,7 @@ Treat this as an orientation index only. Re-verify relevant entries before citin
 - `MorWalPizVideo.ShortLinks` is the focused short-link resolution and redirect service over shared Domain, MVC helpers, and ServiceDefaults.
 - `MorWalPizVideo.AppHost` is the .NET Aspire orchestrator for APIs, services, and selected frontend development processes. Its `Program.cs` is the runtime topology authority for local orchestration.
 - `MorWalPiz.VideoImporter` is a .NET Windows WPF importer. It combines YouTube and BackOffice integration with EF Core SQLite, tenant query filters, migrations, optional Key Vault/user-secret/environment configuration, and a partially adopted MVVM architecture with substantial code-behind.
-- All current .NET project files target .NET 10, with VideoImporter targeting Windows. Verify project files because deployment images and documentation may lag this target.
+- All current .NET project files target .NET 11, with VideoImporter and InsightScanner targeting Windows. Verify project files because deployment images and documentation may lag this target.
 
 ### Tests
 

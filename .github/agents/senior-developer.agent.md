@@ -49,8 +49,8 @@ Verify relevant files before each task because the repository evolves.
 - `MorWalPizVideo.ShortLinks`: focused short-link lookup and redirect service.
 - `MorWalPizVideo.AppHost`: .NET Aspire development orchestration for APIs and frontend applications.
 - `MorWalPizVideo.BackOffice.Tests`: xUnit, Reqnroll, FluentAssertions, `WebApplicationFactory`, test authentication, mock repositories, and HTTP contract tests.
-- `MorWalPiz.VideoImporter`: .NET 10 Windows WPF importer using EF Core SQLite, API-key calls to BackOffice, user secrets/environment/Key Vault configuration, and a mixture of MVVM and legacy code-behind. Improve touched UI code toward MVVM without unrelated rewrites.
-- All current .NET projects use .NET 10; verify the target framework and package versions in the owning project before changing dependencies.
+- `MorWalPiz.VideoImporter`: .NET 11 Windows WPF importer using EF Core SQLite, API-key calls to BackOffice, user secrets/environment/Key Vault configuration, and a mixture of MVVM and legacy code-behind. Improve touched UI code toward MVVM without unrelated rewrites.
+- All current .NET projects use .NET 11; verify the target framework and package versions in the owning project before changing dependencies.
 
 ### Frontend
 

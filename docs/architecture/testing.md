@@ -16,10 +16,10 @@ Do not use a historical `TestResults` artifact as current pass/fail evidence.
 
 ## Prerequisites and Working Directories
 
-- Backend tests require the .NET 10 SDK used by CI. Run the commands below
+- Backend tests require the .NET 11 SDK used by CI. Run the commands below
   from the repository root.
 - `MorWalPiz.InsightScanner.Tests` and `MorWalPiz.VideoImporter.Tests` target
-  `net10.0-windows` and enable WPF. Run them on Windows with the required
+  `net11.0-windows` and enable WPF. Run them on Windows with the required
   Windows desktop runtime.
 - Frontend tests require Node.js `>=18.0.0` and Yarn Classic `1.22.22`.
   Central CI uses Node 26; the BackOffice SPA deployment workflow uses Node
@@ -58,13 +58,13 @@ first narrowing boundary.
 
 | Project | Repository-relative path | Platform and coverage |
 |---|---|---|
-| BackOffice and mixed API coverage | `MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj` | `net10.0`; BackOffice, ServerAPI, shared, cross-API, and BackOffice management/Reqnroll tests |
-| ShortLinks host coverage | `MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj` | `net10.0`; redirect, resolution, and click behavior |
-| Shooting Range API coverage | `MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj` | `net10.0`; API and startup configuration tests |
-| FreezerAnalysis API coverage | `FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj` | `net10.0`; FreezerAnalysis host, import diagnostics, and deterministic engine behavior |
-| YouTube utilities | `MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj` | `net10.0`; parsing and transformation reliability |
-| InsightScanner Windows tests | `MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj` | `net10.0-windows`, WPF; fake scan-service coverage |
-| VideoImporter Windows tests | `MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj` | `net10.0-windows`, WPF; image, database compatibility, and channel settings synchronization coverage |
+| BackOffice and mixed API coverage | `MorWalPizVideo.BackOffice.Tests/MorWalPizVideo.BackOffice.Tests.csproj` | `net11.0`; BackOffice, ServerAPI, shared, cross-API, and BackOffice management/Reqnroll tests |
+| ShortLinks host coverage | `MorWalPizVideo.ShortLinks.Tests/MorWalPizVideo.ShortLinks.Tests.csproj` | `net11.0`; redirect, resolution, and click behavior |
+| Shooting Range API coverage | `MorWalPizVideo.ShootingRange.Tests/MorWalPizVideo.ShootingRange.Tests.csproj` | `net11.0`; API and startup configuration tests |
+| FreezerAnalysis API coverage | `FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj` | `net11.0`; FreezerAnalysis host, import diagnostics, and deterministic engine behavior |
+| YouTube utilities | `MorWalPizVideo.YouTubeUtilities.Tests/MorWalPizVideo.YouTubeUtilities.Tests.csproj` | `net11.0`; parsing and transformation reliability |
+| InsightScanner Windows tests | `MorWalPiz.InsightScanner.Tests/MorWalPiz.InsightScanner.Tests.csproj` | `net11.0-windows`, WPF; fake scan-service coverage |
+| VideoImporter Windows tests | `MorWalPiz.VideoImporter.Tests/MorWalPiz.VideoImporter.Tests.csproj` | `net11.0-windows`, WPF; image, database compatibility, and channel settings synchronization coverage |
 
 Restore a selected project, then run it:
 

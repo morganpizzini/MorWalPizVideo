@@ -48,7 +48,7 @@ Verify this map against the current tree before every plan because the repositor
 - `MorWalPizVideo.AppHost` is the .NET Aspire orchestrator. It coordinates ServerAPI with public/shop clients, BackOffice with the admin SPA, and the ShortLinks service.
 - `MorWalPizVideo.BackOffice.Tests` is the backend integration/behavior test project. It references both APIs and uses xUnit, Reqnroll, FluentAssertions, `WebApplicationFactory`, test authentication, and mock repositories.
 - `MorWalPiz.VideoImporter` is a Windows WPF desktop uploader/importer. It uses Google YouTube APIs, BackOffice API-key calls, Key Vault/user-secrets/environment configuration, EF Core SQLite, tenant query filters, and EF migrations. Much UI logic currently lives in code-behind with partial `INotifyPropertyChanged` view-model behavior; treat full MVVM as a target convention, not an accomplished fact.
-- All current .NET projects target .NET 10; the WPF project targets `net10.0-windows`. Confirm target frameworks in project files before planning.
+- All current .NET projects target .NET 11; WPF projects target `net11.0-windows`. Confirm target frameworks in project files before planning.
 
 ### Frontend solution
 

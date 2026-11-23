@@ -39,7 +39,7 @@ Cache reliability is explicitly DEFERRED, not closed by the existing cache-tag/a
 - Rotate and revoke exposed credentials.
 - Remove secret-bearing source, migration seeds, and publish artifacts.
 - Correct development flags and deployed CORS.
-- Align Docker images with .NET 10.
+- Align Docker images with the current .NET 11 project targets.
 - Fix CI so existing backend tests execute. (Completed 2026-08-03; backend build matrix includes ShortLinks.)
 
 ### Exit Criteria

@@ -26,9 +26,9 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         private static string[] featureTags = new string[] {
                 "TestGroup:BackOffice"};
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Video Channel Assignment", "    As a BackOffice user\r\n    I want to assign a YouTube video to a specific chan" +
-                "nel\r\n    So that the video-to-channel ownership is consistent in the embedded YT" +
-                "Channel.Videos list", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Video Channel Assignment", "    As a BackOffice user\n    I want to assign a YouTube video to a specific chann" +
+                "el\n    So that the video-to-channel ownership is consistent in the embedded YTCh" +
+                "annel.Videos list", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

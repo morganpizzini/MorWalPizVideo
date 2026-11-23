@@ -4,7 +4,7 @@
 
 ### Responsibility
 
-VideoImporter is a .NET 10 WPF application for tenant-aware local media preparation, scheduling, YouTube upload, and BackOffice integration.
+VideoImporter is a .NET 11 WPF application for tenant-aware local media preparation, scheduling, YouTube upload, and BackOffice integration.
 
 ### Current Architecture
 
@@ -46,7 +46,7 @@ and the [rollout runbook](operations/video-importer-channel-settings-rollout.md)
 
 ### Responsibility
 
-InsightScanner is a .NET 10 WPF application that scans external sources and submits normalized insight data to BackOffice using API-key authentication.
+InsightScanner is a .NET 11 WPF application that scans external sources and submits normalized insight data to BackOffice using API-key authentication.
 
 ### Current Architecture
 

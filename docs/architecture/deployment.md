@@ -22,7 +22,7 @@ flowchart LR
     API --> Blob[(Azure Blob Storage)]
     BO --> Blob
     BO --> Vault[Azure Key Vault]
-    ShootingAPI --> Mongo
+    ShootingAPI --> RangeSql[(SQL Server)]
 ```
 
 There is no source-backed production reverse proxy from `morwalpiz.com` to ServerAPI. The browser calls Azure ServerAPI directly. Relative `/api` proxy behavior is local-development behavior only.
@@ -44,7 +44,7 @@ There is no source-backed production reverse proxy from `morwalpiz.com` to Serve
 
 The browser session between the admin SPA and BackOffice API is the Secure, HttpOnly `auth_token` cookie with `SameSite=None`; unsafe cookie requests carry the CSRF token from `/api/auth/csrf`. The SPA does not read `localStorage.authToken` or send a browser Bearer header. API-key headers remain supported for VideoImporter, InsightScanner, and other explicitly machine-authenticated callers.
 
-Shooting Range is not publicly exposed yet but is expected to be soon. Its API and client workflows remain bound to the GitHub `production` environment. Before public exposure, the release must satisfy the authorization, CORS, CSRF, account-state, response-contract, MongoDB readiness, and booking-integrity gates in [Shooting Range Booking](../shooting-range-architecture.md).
+Shooting Range is not publicly exposed yet but is expected to be soon. Its API and client workflows remain bound to the GitHub `production` environment. Before public exposure, the release must satisfy the authorization, CORS, CSRF, account-state, response-contract, SQL Server readiness, and booking-integrity gates in [Shooting Range Booking](../shooting-range-architecture.md).
 
 The shop remains pre-production and on hold. Existing shop workflows or runtime artifacts do not imply approval to deploy or evolve it; deployment automation must be reviewed when the hold is eventually lifted.
 
@@ -54,7 +54,7 @@ Other Azure application names and custom bindings are environment-managed and mu
 
 Deployment workflows run validation first, then build and push a commit-SHA image and a mutable `latest` tag to the configured Azure Container Registry. Buildx imports and exports a per-image `buildcache` registry reference. BackOffice API, ServerAPI, and ShortLinks also retain their existing ZIP-package deployments to Azure Web Apps in separate jobs. Their test gates are prerequisites for both jobs. ServerAPI runs its anonymous account bootstrap smoke test after the package deployment. The Azure image-deployment step remains explicitly skipped in these workflows.
 
-For other application workflows, Azure Web App deployment remains skipped while image-only staging is prepared. Resuming deployment from those images requires verifying runtime configuration, health/readiness, and rollback. No image cleanup is performed by these workflows. The shop workflow follows image-only staging, but this does not lift its product or runtime hold.
+Shooting Range is an active exception: its workflow deploys the commit-SHA image after the mock and disposable SQL Server gates pass. FreezerAnalysis image deployment remains skipped while image-only staging is prepared. Resuming any disabled deployment path requires verifying runtime configuration, health/readiness, and rollback. No image cleanup is performed by these workflows. The shop workflow follows image-only staging, but this does not lift its product or runtime hold.
 
 ## Local Orchestration
 
@@ -99,11 +99,11 @@ Required improvements for active surfaces:
 
 ### Delivery And Test Matrix
 
-| Owner/surface | Central gate | Delivery gate | Local evidence 2026-10-01 |
+| Owner/surface | Central gate | Delivery gate | Local evidence / status |
 |---|---|---|---|
-| BackOffice, ServerAPI, ShortLinks, Range | .NET 10 Release builds; full `BackOffice.Tests`, `ShortLinks.Tests`, and `ShootingRange.Tests` regression | BackOffice: `BackOffice|Shared|CrossApi`; ServerAPI: `ServerAPI|Shared|CrossApi`; ShortLinks host tests before image publication; Range dedicated mock and disposable real Mongo gates before image publication | Split-project validation is tracked with this phase; the real-Mongo gate remains environment-dependent |
+| BackOffice, ServerAPI, ShortLinks, Range | .NET 11 Release builds; full `BackOffice.Tests`, `ShortLinks.Tests`, and `ShootingRange.Tests` regression | BackOffice: `BackOffice|Shared|CrossApi`; ServerAPI: `ServerAPI|Shared|CrossApi`; ShortLinks host tests before image publication; Range dedicated mock and disposable SQL Server gates before image publication | Migration validation is recorded below; production qualification remains separate |
 | YouTubeUtilities | Existing xUnit suite | Both publishing APIs retain tests and dependency path filters | PASS: 6 passed, 0 failed, 0 skipped |
-| AppHost | Existing .NET 10 build | Local orchestration, not a production deployable | Not rerun in this slice |
+| AppHost | .NET 11 Release build | Local orchestration, not a production deployable | PASS: local Release build on SDK 11.0.100; hosted/local orchestration remains unverified |
 | Shared models/services/layout | `yarn --cwd frontend build:shared` in dependency order | Required before active frontend checks | PASS |
 | Shooter Workshop | `shooter-workshop.client` CI test/build matrix entry; staged SPA image and dedicated workflow | Image-only staging after nonempty client tests/build; deployment remains disabled pending complete acceptance, exact-origin browser proof, and host configuration | Implementation and delivery wiring present; production/release evidence remains open |
 | Shared services | `yarn --cwd frontend workspace @morwalpizvideo/services test --passWithNoTests=false` | Admin/Ask/public-video workflows also execute this suite | PASS: 2 files, 18 tests; config collects `src/**/*.test.ts`, including transport tests |
@@ -119,13 +119,27 @@ Required improvements for active surfaces:
 | Active SPA images | Shared Buildx composite action builds BackOffice, Ask, public video, Shooting Range, and FreezerAnalysis SPA images without pushing | SPA deployment workflows call the same action to build and push | Clean image build NOT RUN locally: Docker daemon unavailable |
 | Shop and standalone utilities | No test expansion or new gate | Shop image is staged only; Azure deployment remains skipped and the product hold remains | NOT RUN; historical shop Sass failure is not fixed or bypassed |
 
-The frontend counts above are fresh local Windows runner results, not GitHub/Linux results or browser proof. The .NET suites were rerun locally with `dotnet test <project>/<project>.csproj --configuration Release --no-restore --verbosity minimal`; the Windows test projects also passed under their actual VSTest runners. Local SDK is `10.0.400-preview.0.26322.102`; CI selects `10.0.x`. CI restores first and uses `--no-restore`. The green local .NET results do not satisfy real-Mongo, browser, container, or cloud-runner gates. See [transport isolation](transport-isolation.md) and [Windows applications](windows-apps.md) for other build/typecheck/lint evidence. Deployment workflow path filters include workspace manifests/lockfile and Dockerfiles; API paths include transitive YouTubeUtilities dependencies where required.
+The frontend counts and legacy .NET test results above are from the 2026-10-01 local-runner snapshot, not fresh GitHub/Linux results or browser proof. At that time, the local SDK was `10.0.400-preview.0.26322.102` and CI selected `10.0.x`; CI restores first and uses `--no-restore`. Current .NET 11 validation is recorded below. Neither snapshot proves hosted runtime, browser, container, or production compatibility. See [transport isolation](transport-isolation.md) and [Windows applications](windows-apps.md) for other build/typecheck/lint evidence. Deployment workflow path filters include workspace manifests/lockfile and Dockerfiles; API paths include transitive YouTubeUtilities dependencies where required.
 
 Additional fresh checks: `yarn --cwd frontend/back-office-spa tsc -b --pretty false` FAILS with the same eight unrelated Toast/product/sponsor errors. `yarn --cwd frontend/morwalpizvideo.client eslint src/services/apiKeys.ts` FAILS with seven existing `no-explicit-any` errors. No errors were suppressed or fixed outside scope. Desktop suites now pass with 4 and 9 executed tests. Parsed YAML validates changed workflow paths, runners and test/build ordering before cloud steps; no GitHub jobs were executed locally. The remaining frontend failures and browser/container/cloud gates mean this is not an all-green release certification. Lint remains a required release-review check even where a legacy workflow does not automate it.
 
 ## Container Baseline
 
-API Dockerfiles use SDK/runtime .NET 10, copy transitive project manifests before restore, and use BuildKit NuGet cache mounts. FreezerAnalysis additionally uses a BuildKit Yarn cache mount while building its bundled SPA. CI builds all five API Dockerfiles and active SPA images with Buildx and does not push test images. All deployment workflows use the same local composite action with per-image registry cache import/export; Azure Web App deployment steps remain disabled during this migration stage. Clean image builds still require GitHub runner execution; the local Docker daemon is unavailable. Credential context/publish exclusions do not invalidate historical artifacts; operator review remains required.
+API Dockerfiles use .NET 11 SDK/runtime images pinned to the `resolute` Ubuntu 26.04 variant, copy transitive project manifests before restore, and use BuildKit NuGet cache mounts. FreezerAnalysis additionally uses a BuildKit Yarn cache mount while building its bundled SPA and installs PowerShell from the matching Ubuntu 26.04 Microsoft package feed. CI builds all five API Dockerfiles and active SPA images with Buildx and does not push test images. BackOffice, ServerAPI and ShortLinks retain ZIP deployment while their image deployments remain disabled; Shooting Range currently has an enabled image deployment step, while FreezerAnalysis image deployment remains disabled. Confirm protected-environment approval before release. Local clean image builds were not completed because the shared filesystem was nearly full; hosted builds remain required. Credential context/publish exclusions do not invalidate historical artifacts; operator review remains required.
+
+### .NET 11 migration status (2026-11-23)
+
+All 21 C# project targets, the .NET 11 CI SDK selectors, API Docker SDK/runtime
+images, runtime-aligned Microsoft package references, and FreezerAnalysis
+Playwright output paths have been retargeted to .NET 11. The local
+`MorWalPizVideo.BackOffice.Tests` Release graph built successfully and its full
+suite passed with 771 passed, 2 skipped, and 0 failed on SDK 11.0.100/runtime
+11.0.0. Aspire AppHost restore/build and local container-image validation are
+not yet complete: the 29 GB shared filesystem had 345 MB free and restore/image
+operations failed with “No space left on device.” No application image or
+production artifact was published or deployed by this work. Remaining test,
+Windows, clean-image, hosted-runtime, and mixed-version gates are not satisfied
+by the local BackOffice test result.
 
 Frontend containers use each application's established runtime/build-time configuration. The shop client's existing runtime injection is retained but receives no active evolution while the hold applies.
 

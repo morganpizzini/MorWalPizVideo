@@ -26,8 +26,8 @@ namespace MorWalPizVideo.BackOffice.Tests.Features
         private static string[] featureTags = new string[] {
                 "TestGroup:BackOffice"};
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Videos Management", "    As a BackOffice user\r\n    I want to manage YouTube videos and collections\r\n  " +
-                "  So that I can curate the content presented on the public site", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Videos Management", "    As a BackOffice user\n    I want to manage YouTube videos and collections\n    " +
+                "So that I can curate the content presented on the public site", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

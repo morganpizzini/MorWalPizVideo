@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute AS base
 USER app
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0-resolute AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["MorWalPizVideo.ShortLinks/MorWalPizVideo.ShortLinks.csproj", "MorWalPizVideo.ShortLinks/"]
