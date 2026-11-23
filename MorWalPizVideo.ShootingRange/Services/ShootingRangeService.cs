@@ -112,6 +112,10 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
         var booking = await repositories.Bookings.GetAsync(id, cancellationToken) ?? throw new KeyNotFoundException("Booking not found.");
         if (booking.Status == ShootingRangeBookingStatus.Cancelled && !approved)
             throw new InvalidOperationException("A cancelled booking can only be restored by approval.");
+        if (booking.IsNoShow &&
+            (booking.Status == ShootingRangeBookingStatus.Cancelled && approved ||
+             booking.Status == ShootingRangeBookingStatus.Approved && !approved))
+            throw new InvalidOperationException("Correct the no-show mark before changing this booking decision.");
         if (approved && booking.StartUtc <= repositories.Clock.GetUtcNow().UtcDateTime)
             throw new InvalidOperationException("A booking cannot be approved after its session has started.");
         return await repositories.Bookings.ReplaceAsync(booking with { Status = approved ? ShootingRangeBookingStatus.Approved : ShootingRangeBookingStatus.Rejected }, cancellationToken);
@@ -126,10 +130,157 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             var booking = await repositories.Bookings.GetAsync(id, cancellationToken);
             if (booking is null || booking.UserId != userId)
                 throw new KeyNotFoundException("Booking not found.");
-            if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved ||
-                booking.StartUtc <= repositories.Clock.GetUtcNow().UtcDateTime)
-                throw new InvalidOperationException("Only a future pending or approved booking can be cancelled.");
-            return await repositories.Bookings.ReplaceAsync(booking with { Status = ShootingRangeBookingStatus.Cancelled }, cancellationToken);
+            var config = await GetConfigAsync(cancellationToken);
+            ValidateBookingPolicy(config);
+            var today = GetFieldLocalToday(config);
+            var daysUntil = booking.LocalDate.DayNumber - today.DayNumber;
+            if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved)
+                throw new InvalidOperationException("Only an active pending or approved booking can be cancelled.");
+            if (daysUntil < 0)
+                throw new InvalidOperationException("A past booking cannot be cancelled.");
+            if (daysUntil < config.MinimumCancellationDays)
+                throw new InvalidOperationException("Il termine per annullare è scaduto. Contatta l'amministrazione del campo.");
+            return await repositories.Bookings.ReplaceAsync(booking with
+            {
+                Status = ShootingRangeBookingStatus.Cancelled,
+                IsNoShow = false,
+                NoShowDate = null
+            }, cancellationToken);
+        }, cancellationToken);
+
+    public Task<ShootingRangeBooking> SetBookingAttendanceAsync(
+        string actorId, string id, bool isNoShow, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var booking = await repositories.Bookings.GetAsync(id, cancellationToken)
+                ?? throw new KeyNotFoundException("Booking not found.");
+            if (isNoShow)
+            {
+                var config = await GetConfigAsync(cancellationToken);
+                var today = GetFieldLocalToday(config);
+                if (booking.Status != ShootingRangeBookingStatus.Approved || booking.LocalDate > today)
+                    throw new InvalidOperationException("Only an approved reservation dated today or earlier can be marked as no-show.");
+                return await repositories.Bookings.ReplaceAsync(booking with
+                {
+                    IsNoShow = true,
+                    NoShowDate = booking.LocalDate
+                }, cancellationToken);
+            }
+
+            if (booking.Status != ShootingRangeBookingStatus.Approved &&
+                (booking.Status != ShootingRangeBookingStatus.Cancelled || !booking.IsNoShow))
+                throw new InvalidOperationException("There is no correctable no-show mark on this reservation.");
+            return await repositories.Bookings.ReplaceAsync(booking with
+            {
+                IsNoShow = false,
+                NoShowDate = null
+            }, cancellationToken);
+        }, cancellationToken);
+
+    public Task<ShootingRangeBooking> CancelBookingAsAdminAsync(
+        string actorId,
+        string id,
+        AdminBookingCancellationRequest request,
+        CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var booking = await repositories.Bookings.GetAsync(id, cancellationToken)
+                ?? throw new KeyNotFoundException("Booking not found.");
+            var config = await GetConfigAsync(cancellationToken);
+            ValidateBookingPolicy(config);
+            if (request.PolicyRevision != config.PolicyRevision ||
+                request.ExpectedIsNoShow != booking.IsNoShow ||
+                request.ExpectedNoShowDate != booking.NoShowDate)
+                throw new InvalidOperationException("La prenotazione o la regola di cancellazione è cambiata. Aggiorna la pagina.");
+            if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved)
+                throw new InvalidOperationException("Solo una prenotazione in attesa o approvata può essere annullata.");
+
+            var recordNoShow = false;
+            if (config.MinimumCancellationDays > 0 && booking.Status == ShootingRangeBookingStatus.Approved)
+            {
+                if (!request.RecordNoShow.HasValue)
+                    throw new InvalidOperationException("Conferma se registrare o meno la mancata presenza.");
+                recordNoShow = request.RecordNoShow.Value;
+            }
+            else if (request.RecordNoShow == true)
+            {
+                throw new InvalidOperationException("La prenotazione non può essere registrata come mancata presenza.");
+            }
+
+            if (booking.IsNoShow && !recordNoShow && !request.ConfirmExistingNoShowRemoval)
+                throw new InvalidOperationException("Conferma la rimozione della mancata presenza già registrata.");
+
+            DateOnly? noShowDate = recordNoShow
+                ? GetFieldLocalToday(config)
+                : null;
+            return await repositories.Bookings.ReplaceAsync(booking with
+            {
+                Status = ShootingRangeBookingStatus.Cancelled,
+                IsNoShow = recordNoShow,
+                NoShowDate = noShowDate
+            }, cancellationToken);
+        }, cancellationToken);
+
+    public Task<BookingPolicyDto> GetBookingPolicyAsync(string actorId, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var config = await GetConfigAsync(cancellationToken);
+            ValidateBookingPolicy(config);
+            return ToBookingPolicy(config);
+        }, cancellationToken);
+
+    public Task<BookingPolicyDto> SaveBookingPolicyAsync(
+        string actorId, BookingPolicyRequest request, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var existing = await LoadConfigAsync(repositories, cancellationToken);
+            ValidateBookingPolicy(existing);
+            if (request.Revision != existing.PolicyRevision)
+                throw new InvalidOperationException("Le impostazioni sono state modificate da un altro amministratore. Aggiorna la pagina.");
+            ValidateBookingPolicy(request.MinimumCancellationDays, request.NoShowRules);
+            var saved = await repositories.Configs.ReplaceAsync(existing with
+            {
+                MinimumCancellationDays = request.MinimumCancellationDays,
+                NoShowRules = request.NoShowRules.ToList(),
+                PolicyRevision = checked(existing.PolicyRevision + 1)
+            }, cancellationToken);
+            return ToBookingPolicy(saved);
+        }, cancellationToken);
+
+    public Task<IReadOnlyList<BookingNoShowAlertDto>> GetBookingNoShowAlertsAsync(
+        string actorId, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            var config = await GetConfigAsync(cancellationToken);
+            ValidateBookingPolicy(config);
+            if (config.NoShowRules.Count == 0) return (IReadOnlyList<BookingNoShowAlertDto>)[];
+            var today = GetFieldLocalToday(config);
+            var earliestDate = today.AddDays(-(config.NoShowRules.Max(rule => rule.WindowDays) - 1));
+            var occurrences = await repositories.Bookings.GetNoShowOccurrencesSinceAsync(earliestDate, cancellationToken);
+            var alerts = new Dictionary<string, List<BookingNoShowRuleAlertDto>>(StringComparer.Ordinal);
+            foreach (var rule in config.NoShowRules)
+            {
+                var start = today.AddDays(-(rule.WindowDays - 1));
+                var matchingCounts = occurrences
+                    .Where(booking => booking.NoShowDate >= start && booking.NoShowDate <= today &&
+                        booking.Status is ShootingRangeBookingStatus.Approved or ShootingRangeBookingStatus.Cancelled)
+                    .GroupBy(booking => booking.UserId, StringComparer.Ordinal)
+                    .Select(group => (UserId: group.Key, Count: group.Count()))
+                    .Where(item => item.Count >= rule.OccurrenceThreshold);
+                foreach (var match in matchingCounts)
+                {
+                    if (!alerts.TryGetValue(match.UserId, out var userAlerts))
+                    {
+                        userAlerts = [];
+                        alerts.Add(match.UserId, userAlerts);
+                    }
+                    userAlerts.Add(new(rule.Id, rule.Label, match.Count, rule.OccurrenceThreshold, rule.WindowDays));
+                }
+            }
+            return (IReadOnlyList<BookingNoShowAlertDto>)alerts
+                .OrderBy(item => item.Key, StringComparer.Ordinal)
+                .Select(item => new BookingNoShowAlertDto(item.Key, item.Value))
+                .ToArray();
         }, cancellationToken);
 
     public Task<ShootingRangeThread> DecideThreadStatusAsync(
@@ -171,23 +322,113 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             return await repositories.Threads.ReplaceAsync(updated, cancellationToken);
         }, cancellationToken);
 
-    public async Task<IReadOnlyList<ShootingRangeBooking>> GetUserBookingsAsync(string userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MemberBookingDto>> GetUserBookingsAsync(string userId, CancellationToken cancellationToken)
     {
         var firstVisibleDate = await GetFirstVisibleBookingDateAsync(cancellationToken);
+        var config = await GetConfigAsync(cancellationToken);
+        ValidateBookingPolicy(config);
+        var today = GetFieldLocalToday(config);
         return (await repositories.Bookings.GetAllAsync(cancellationToken))
             .Where(booking => booking.UserId == userId && booking.LocalDate >= firstVisibleDate)
             .OrderByDescending(booking => booking.StartUtc)
+            .Select(booking =>
+            {
+                var daysUntil = booking.LocalDate.DayNumber - today.DayNumber;
+                var active = booking.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved;
+                var canCancel = active && daysUntil >= config.MinimumCancellationDays;
+                var cancellationMessage = !active
+                    ? null
+                    : canCancel
+                        ? null
+                        : daysUntil < 0
+                            ? "La prenotazione è passata."
+                            : "Il termine per annullare è scaduto. Contatta l'amministrazione del campo.";
+                return ToMemberBooking(booking, canCancel, cancellationMessage);
+            })
             .ToArray();
     }
 
-    public async Task<IReadOnlyList<ShootingRangeBooking>> GetAdminBookingsAsync(string actorId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AdminBookingDto>> GetAdminBookingsAsync(string actorId, CancellationToken cancellationToken)
     {
         await RequireAdminAsync(actorId, cancellationToken);
         var firstVisibleDate = await GetFirstVisibleBookingDateAsync(cancellationToken);
-        return (await repositories.Bookings.GetAllAsync(cancellationToken))
+        var bookings = (await repositories.Bookings.GetAllAsync(cancellationToken))
             .Where(booking => booking.LocalDate >= firstVisibleDate)
             .OrderByDescending(booking => booking.StartUtc)
             .ToArray();
+        return await ToAdminBookingsAsync(bookings, cancellationToken);
+    }
+
+    public Task<AdminBookingPageDto> GetAdminBookingHistoryPageAsync(
+        string actorId, DateOnly localDate, int page, int pageSize, CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            ValidatePage(page, pageSize);
+            var (items, totalCount) = await repositories.Bookings.GetLocalDatePageAsync(
+                localDate, checked(page * pageSize), pageSize, cancellationToken);
+            return new AdminBookingPageDto(
+                await ToAdminBookingsAsync(items, cancellationToken), page, pageSize, totalCount);
+        }, cancellationToken);
+
+    public Task<AdminBookingPageDto> GetAdminUserBookingReportPageAsync(
+        string actorId,
+        string userId,
+        bool? isNoShow,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken) =>
+        AdminMutationAsync(actorId, async () =>
+        {
+            ValidatePage(page, pageSize);
+            if (await repositories.Users.GetAsync(userId, cancellationToken) is null)
+                throw new KeyNotFoundException("User not found.");
+            var (items, totalCount) = await repositories.Bookings.GetUserReportPageAsync(
+                userId, isNoShow, checked(page * pageSize), pageSize, cancellationToken);
+            return new AdminBookingPageDto(
+                await ToAdminBookingsAsync(items, cancellationToken), page, pageSize, totalCount);
+        }, cancellationToken);
+
+    private async Task<IReadOnlyList<AdminBookingDto>> ToAdminBookingsAsync(
+        IReadOnlyList<ShootingRangeBooking> bookings, CancellationToken cancellationToken)
+    {
+        var bays = await repositories.Bays.GetAllAsync(cancellationToken);
+        var bayCodes = bays.ToDictionary(bay => bay.Id, bay => bay.Code, StringComparer.Ordinal);
+        return bookings.Select(booking => new AdminBookingDto(
+            booking.Id,
+            booking.CreationDateTime,
+            booking.UserId,
+            booking.BayId,
+            bayCodes.GetValueOrDefault(booking.BayId, booking.BayId),
+            booking.LocalDate,
+            booking.PeriodKey,
+            booking.StartUtc,
+            booking.EndUtc,
+            booking.Request,
+            booking.Status,
+            booking.IsNoShow,
+            booking.NoShowDate)).ToArray();
+    }
+
+    private static MemberBookingDto ToMemberBooking(
+        ShootingRangeBooking booking, bool canCancel, string? cancellationMessage) =>
+        new(
+            booking.Id,
+            booking.CreationDateTime,
+            booking.UserId,
+            booking.BayId,
+            booking.LocalDate,
+            booking.PeriodKey,
+            booking.StartUtc,
+            booking.EndUtc,
+            booking.Request,
+            booking.Status,
+            canCancel,
+            cancellationMessage);
+
+    private static void ValidatePage(int page, int pageSize)
+    {
+        if (page < 0 || pageSize is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(page), "Page must be nonnegative and page size must be from 1 to 100.");
     }
 
     public async Task<int> GetPendingBookingCountAsync(string actorId, CancellationToken cancellationToken)
@@ -394,6 +635,45 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
         return today.AddDays(-1);
     }
 
+    private DateOnly GetFieldLocalToday(ShootingRangeConfig config)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone);
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(repositories.Clock.GetUtcNow(), zone).DateTime);
+    }
+
+    private static BookingPolicyDto ToBookingPolicy(ShootingRangeConfig config) =>
+        new(config.PolicyRevision, config.MinimumCancellationDays, config.NoShowRules.ToArray());
+
+    internal static void ValidateBookingPolicy(ShootingRangeConfig config)
+    {
+        try
+        {
+            ValidateBookingPolicy(config.MinimumCancellationDays, config.NoShowRules);
+        }
+        catch (ArgumentException error)
+        {
+            throw new InvalidOperationException("Stored booking policy is invalid. Repair the policy before continuing.", error);
+        }
+    }
+
+    internal static void ValidateBookingPolicy(
+        int minimumCancellationDays,
+        IReadOnlyList<ShootingRangeNoShowRule>? rules)
+    {
+        if (minimumCancellationDays is < 0 or > 3650 || rules is null || rules.Count > 20)
+            throw new ArgumentException("Booking policy values are outside the supported limits.");
+        if (rules.Any(rule =>
+                rule is null ||
+                string.IsNullOrWhiteSpace(rule.Id) ||
+                rule.Id.Length > 128 ||
+                rule.OccurrenceThreshold is < 1 or > 1_000_000 ||
+                rule.WindowDays is < 1 or > 3650 ||
+                string.IsNullOrWhiteSpace(rule.Label) ||
+                rule.Label.Trim().Length > 80) ||
+            rules.Select(rule => rule.Id).Distinct(StringComparer.Ordinal).Count() != rules.Count)
+            throw new ArgumentException("Each no-show rule needs a unique identity, valid threshold and window, and a label of 1 to 80 characters.");
+    }
+
     public Task<ShootingRangeBooking> CreateBookingAsync(string userId, BookingRequest request, CancellationToken cancellationToken) => repositories.ExecuteGuardedAsync(async () =>
     {
         var config = await GetConfigAsync(cancellationToken);
@@ -433,6 +713,7 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
 
     public static void ValidateConfig(ShootingRangeConfig config)
     {
+        ValidateBookingPolicy(config);
         if (!Enum.IsDefined(config.SessionMode) ||
             (config.SessionMode == ShootingRangeSessionMode.Mixed
                 ? config.HourlyMinutes is not 60 and not 120

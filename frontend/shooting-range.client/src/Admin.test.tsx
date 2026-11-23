@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BayForm, ConfigForm } from "./Admin";
+import { BayForm, BookingPolicyForm, ConfigForm } from "./Admin";
 import { groupBookings } from "./AdminBookings";
 import { render } from "./entry-server";
 import type { RangeConfig } from "./api";
@@ -97,7 +97,32 @@ describe("admin form structure and SSR", () => {
     expect(html).toContain('role="alert"');
   });
 
-  it("renders native bay state, quantity and whitelist controls without user hashes", () => {
+  it("explains the inclusive member cancellation deadline and configurable no-show rules", () => {
+    const html = renderToStaticMarkup(
+      <BookingPolicyForm
+        initial={{
+          revision: 3,
+          minimumCancellationDays: 2,
+          noShowRules: [{
+            id: "rule-1",
+            occurrenceThreshold: 5,
+            windowDays: 90,
+            label: "Cinque in tre mesi",
+          }],
+        }}
+        busy={false}
+        onSave={async () => {}}
+      />,
+    );
+
+    expect(html).toContain("intera data locale di due giorni prima");
+    expect(html).toContain("Cinque in tre mesi");
+    expect(html).toContain('max="1000000"');
+    expect(html).toContain('max="3650"');
+    expect(html).toContain("non impediscono prenotazioni");
+  });
+
+  it("renders native bay state, quantity and priority-user controls without user hashes", () => {
     const html = renderToStaticMarkup(
       <BayForm
         initial={{
@@ -136,15 +161,18 @@ describe("admin form structure and SSR", () => {
     );
     expect(html).toContain("Manutenzione");
     expect(html).toContain('type="number"');
-    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('type="search"');
+    expect(html).toContain("Utenti prioritari");
+    expect(html).toContain("Aggiungi");
     expect(html).toContain("Pepper popper");
     expect(html).toContain("Bersagli");
     expect(html).toContain("Popper");
     expect(html).toContain("Altezza");
     expect(html).toContain("Larghezza");
     expect(html).toContain('class="bay-dimension-fields"');
-    expect(html).toContain("<select");
+    expect(html).toContain('<select aria-label="Seleziona un utente prioritario"');
     expect(html).toContain("approved-user");
+    expect(html).toContain('aria-label="Rimuovi Test User (@approved-user) dai prioritari"');
     expect(html).not.toContain("passwordHash");
   });
 

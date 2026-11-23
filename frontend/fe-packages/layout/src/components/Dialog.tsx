@@ -47,6 +47,11 @@ export function Dialog({
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -78,7 +83,7 @@ export function Dialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && closeOnEscape) {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -109,7 +114,7 @@ export function Dialog({
       returnFocusRef.current?.focus();
       returnFocusRef.current = null;
     };
-  }, [closeOnEscape, initialFocusRef, onClose, open, portalHost]);
+  }, [closeOnEscape, initialFocusRef, open, portalHost]);
 
   if (!open || !portalHost) return null;
   const titleId = `${instanceId}-title`;
@@ -136,7 +141,7 @@ export function Dialog({
       >
         <div className="mwp-dialog__header">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" onClick={onClose} aria-label={closeLabel}>
+          <button type="button" className="button button-quiet" onClick={onClose} aria-label={closeLabel}>
             {closeLabel}
           </button>
         </div>

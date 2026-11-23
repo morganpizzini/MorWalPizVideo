@@ -34,7 +34,7 @@ A reserved bay is restricted to its whitelist while the local field date is more
 
 ## Data and concurrency
 
-Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_mechanism_types`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_friendships`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Friendships are one tenant-owned row per canonically ordered, unique pair with tenant-qualified restrictive foreign keys to both users; the required requester and status distinguish pending consent from accepted friendship. The schema permits only Pending and Accepted states, and the requester must be one of the canonical pair members. Mechanism types are immutable, administrator-created catalog entries; a bay stores its canonical mechanism name and quantity in the existing JSON list. Bay Pepper inventory is a nonnegative integer. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
+Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_mechanism_types`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_friendships`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Booking attendance is stored on the individual booking as an optional no-show date plus a false-by-default marker. Tenant cancellation deadline and advisory rules are stored in the existing configuration row; rule values use its JSON text mapping. Friendships are one tenant-owned row per canonically ordered, unique pair with tenant-qualified restrictive foreign keys to both users; the required requester and status distinguish pending consent from accepted friendship. The schema permits only Pending and Accepted states, and the requester must be one of the canonical pair members. Mechanism types are immutable, administrator-created catalog entries; a bay stores its canonical mechanism name and quantity in the existing JSON list. Bay Pepper inventory is a nonnegative integer. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
 
 The mechanism-catalogue migration validates existing bay mechanism JSON and
 quantities, rejects ambiguous names and repeated types within one bay, and
@@ -84,7 +84,9 @@ Every cookie request revalidates the session's expiry/revocation/security versio
 
 Booking admission also rechecks current approved account status and `ForcePasswordChange`; touched administrator operations recheck current administrator state. Admin-user responses explicitly preserve `Id`, `CreationDateTime`, username, names, status, administrator and forced-password flags, excluding `PasswordHash`. Safe projections for other persistence entities remain a separate cutover requirement. The API remains the authoritative admission boundary.
 
-Users may cancel their own future Pending or Approved reservation. The operation rechecks the approved account, ownership, active status, and future UTC start inside the guarded write, then sets the existing Cancelled status; the record remains visible in history. Administrators may restore a cancelled future reservation by approving it, subject to the normal guarded admission and capacity checks. User and admin booking lists include local field dates from yesterday onward; this is a read filter, not data deletion. The admin-only pending count includes future Pending reservations.
+Members may cancel their own Pending or Approved reservations through the inclusive field-local date deadline configured for their tenant (zero days permits cancellation throughout the reservation date). The guarded write rechecks current account, ownership, status, configuration and date; it clears any same-day attendance mark when the member cancels. Administrators may cancel Pending or Approved reservations on any date through a separate guarded, antiforgery-protected action. When the configured deadline is positive, an Approved admin cancellation requires an explicit no-show choice; a cancellation no-show is dated to the field-local cancellation date. Existing marks must be explicitly replaced or cleared. Administrators may restore an unmarked cancelled future reservation through the existing guarded approval and capacity checks. Members receive safe cancellation eligibility guidance but no attendance fields.
+
+Normal admin booking review remains yesterday-inclusive and retains its pending count. A separate exact-field-local-date historical query permits attendance correction on arbitrary past dates. A separate admin report pages one selected user's full history/future bookings with status and all/unmarked/no-show filters. Both reads are tenant-scoped and bounded in SQL. Configurable no-show rules are advisory only: they count each marked booking once in inclusive field-local date windows, show every matching rule, and never prevent booking or admin decisions. The policy and attendance/report operations use the existing global mutation guard for writes; no cache or background job is introduced.
 
 ## Booking and friendship workflows
 
@@ -119,8 +121,10 @@ The initial public-facing POC is limited to:
 - Accepted-friend management and exact-slot requests to join a slot occupied
   by an accepted direct friend; each join remains Pending until individually
   approved.
-- User cancellation of future Pending or Approved bookings, with the cancelled record retained in the current user's history.
+- Member cancellation of Pending or Approved bookings through the tenant-configured field-local deadline, with the cancelled record retained in history.
 - Administrator booking decisions on the dedicated `/admin/bookings` page, linked in the top navigation with an accessible count badge for future pending requests. The client refreshes this count on navigation/focus, after relevant booking changes and every 60 seconds while visible; this is not push notification.
+- Member cancellation eligibility and deadline guidance, tenant policy editing, explicit admin cancellation/no-show choices, individual attendance correction, advisory alert retry, and field-local historical paging.
+- The administrator `/admin/reports` page with selected-user and attendance filters, bounded paging and explicit state handling.
 
 Schedule, bay, mechanism-type catalogue, closure management, grouped booking
 review and direct approved booking are accepted administrator scope. In Mixed
@@ -128,9 +132,10 @@ mode the administrator selects a 60- or 120-minute increment. Bays have
 nonnegative integer target, partition, plate and popper counts; optional
 height and width are unit-free positive decimal values, entered to two decimal
 places and supplied together. The client preserves `/`, `/messages` and
-`/admin` and adds `/admin/bookings` and `/friends`; this does not authorize
-unrelated messaging expansion. Rescheduling, push notifications, waitlists,
-arbitrary-duration sessions, and reporting remain deferred.
+`/admin` and adds `/admin/bookings`, `/admin/reports` and `/friends`; this does
+not authorize unrelated messaging expansion. Rescheduling, push notifications, waitlists,
+arbitrary-duration sessions and notifications remain deferred. Reporting is
+limited to the administrator booking report described above.
 
 The existing `/messages` page displays request text and each message's sent
 date. Users see their request status; administrators also see the sender and
@@ -186,6 +191,15 @@ not recognize `SessionMode=3`, 120-minute increments, or shared exact-slot
 admission. Do not roll back to an old writer while shared active bookings
 exist; pause writes and use a compatible API or an explicitly approved
 recovery. No migration or deployment has been run for this change.
+
+The additive `20261123110721_AddShootingRangeAttendanceAndPolicy` migration
+adds unmarked/no-date defaults for existing bookings, empty rules and a
+zero-day cancellation deadline, plus tenant/date indexes for attendance,
+history and user reports. It has not been applied or exercised against SQL.
+Back up and rehearse it against a disposable SQL Server, apply it explicitly
+before the compatible API, then deploy the compatible SPA. Do not roll back
+its down migration after production attendance or policy writes without
+explicitly accepting data loss and verifying recovery.
 
 The API and client continue to deploy independently through workflows bound to the GitHub `production` environment. Before public exposure, validate the authorization matrix, configured tenant origins, CSRF/login flow, persistent Data Protection keys, Azure SQL readiness, tenant-scoped uniqueness and relationships, booking concurrency, backup/restore, and successful login by the manually inserted tenant-owned administrator.
 

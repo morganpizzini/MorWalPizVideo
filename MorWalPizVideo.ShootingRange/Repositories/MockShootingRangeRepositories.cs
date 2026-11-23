@@ -61,6 +61,36 @@ public sealed class MockShootingRangeBookingRepository(MockShootingRangeReposito
 {
     public async Task<bool> HasOverlapAsync(string bayId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default) => (await GetAllAsync(cancellationToken)).Any(item => item.BayId == bayId && item.StartUtc < endUtc && item.EndUtc > startUtc && item.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved);
     public Task<ShootingRangeBooking> InsertIfAvailableAsync(ShootingRangeBooking booking, CancellationToken cancellationToken = default) => InsertAsync(booking, cancellationToken);
+
+    public async Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetLocalDatePageAsync(
+        DateOnly localDate, int offset, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var matches = (await GetAllAsync(cancellationToken))
+            .Where(item => item.LocalDate == localDate)
+            .OrderBy(item => item.LocalDate)
+            .ThenBy(item => item.StartUtc)
+            .ThenBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        return (matches.Skip(offset).Take(pageSize).ToArray(), matches.Length);
+    }
+
+    public async Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetUserReportPageAsync(
+        string userId, bool? isNoShow, int offset, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var matches = (await GetAllAsync(cancellationToken))
+            .Where(item => item.UserId == userId && (!isNoShow.HasValue || item.IsNoShow == isNoShow.Value))
+            .OrderByDescending(item => item.LocalDate)
+            .ThenByDescending(item => item.StartUtc)
+            .ThenBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        return (matches.Skip(offset).Take(pageSize).ToArray(), matches.Length);
+    }
+
+    public async Task<IReadOnlyList<ShootingRangeBooking>> GetNoShowOccurrencesSinceAsync(
+        DateOnly earliestDate, CancellationToken cancellationToken = default) =>
+        (await GetAllAsync(cancellationToken))
+        .Where(item => item.IsNoShow && item.NoShowDate >= earliestDate)
+        .ToArray();
 }
 
 public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet

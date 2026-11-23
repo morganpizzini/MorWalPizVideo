@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   adminUsers,
   adminPendingBookingCount,
+  adminBookingReport,
+  adminCancelBooking,
   adminMechanismTypes,
   ApiError,
   availability,
@@ -25,6 +27,7 @@ import {
   sendFriendRequest,
   decideMessageStatus,
   saveConfig,
+  setBookingAttendance,
   sessions,
   type RangeConfig,
 } from "./api";
@@ -186,6 +189,50 @@ describe("credentialed range API", () => {
       credentials: "include",
     });
     expect(fetch.mock.calls[1][1].headers.get("X-CSRF-TOKEN")).toBe("cancel-token");
+  });
+
+  it("uses bounded report reads and CSRF-protected administrator attendance mutations", async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        items: [],
+        page: 1,
+        pageSize: 25,
+        totalCount: 30,
+      })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "admin-token" })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "admin-token" })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(adminBookingReport("user/one", "no-show", 1)).resolves.toMatchObject({
+      page: 1,
+      pageSize: 25,
+      totalCount: 30,
+    });
+    await adminCancelBooking("booking/one", {
+      policyRevision: 4,
+      recordNoShow: true,
+      confirmExistingNoShowRemoval: false,
+      expectedIsNoShow: false,
+      expectedNoShowDate: null,
+    });
+    await setBookingAttendance("booking/one", false);
+
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shooting-range/admin/reports/bookings?userId=user%2Fone&attendance=no-show&page=1&pageSize=25",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/admin/bookings/booking%2Fone/cancel",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/admin/bookings/booking%2Fone/attendance",
+    ]);
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toMatchObject({
+      policyRevision: 4,
+      recordNoShow: true,
+    });
+    expect(JSON.parse(fetch.mock.calls[4][1].body)).toEqual({ isNoShow: false });
+    expect(fetch.mock.calls[2][1].headers.get("X-CSRF-TOKEN")).toBe("admin-token");
+    expect(fetch.mock.calls[4][1].headers.get("X-CSRF-TOKEN")).toBe("admin-token");
   });
 
   it("restores cookie sessions and sends CSRF-protected logout without persisting credentials", async () => {

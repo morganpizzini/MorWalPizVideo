@@ -4,6 +4,10 @@ import {
   ApiError,
   adminBays,
   adminBookings,
+  adminBookingHistory,
+  adminBookingPolicy,
+  adminBookingReport,
+  adminCancelBooking,
   adminConfig,
   adminUsers,
   approveUser,
@@ -28,6 +32,8 @@ import {
   declineFriendRequest,
   removeFriend,
   saveConfig,
+  saveBookingPolicy,
+  setBookingAttendance,
   type Account,
   type RangeConfig,
   type Sessions,
@@ -37,6 +43,7 @@ import {
   adminAction,
   adminBookingsLoader,
   adminLoader,
+  adminReportLoader,
   bookingAction,
   bookingLoader,
   friendsAction,
@@ -51,6 +58,10 @@ vi.mock("./api", async (importOriginal) => ({
   cancelFriendRequest: vi.fn(),
   declineFriendRequest: vi.fn(),
   adminConfig: vi.fn(),
+  adminBookingPolicy: vi.fn(),
+  adminBookingHistory: vi.fn(),
+  adminBookingReport: vi.fn(),
+  adminCancelBooking: vi.fn(),
   adminBays: vi.fn(),
   adminBookings: vi.fn(),
   adminUsers: vi.fn(),
@@ -75,6 +86,8 @@ vi.mock("./api", async (importOriginal) => ({
   sendFriendRequest: vi.fn(),
   removeFriend: vi.fn(),
   saveConfig: vi.fn(),
+  saveBookingPolicy: vi.fn(),
+  setBookingAttendance: vi.fn(),
 }));
 
 const account: Account = {
@@ -198,18 +211,92 @@ describe("Range route data security and mutations", () => {
     vi.stubGlobal("window", {});
     vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
     vi.mocked(adminConfig).mockResolvedValue(config);
+    vi.mocked(adminBookingPolicy).mockResolvedValue({
+      revision: 0,
+      minimumCancellationDays: 0,
+      noShowRules: [],
+    });
     vi.mocked(adminUsers).mockResolvedValue([]);
     vi.mocked(adminBays).mockResolvedValue([]);
     vi.mocked(adminBookings).mockResolvedValue([]);
+    vi.mocked(adminBookingHistory).mockResolvedValue({
+      items: [],
+      page: 0,
+      pageSize: 25,
+      totalCount: 0,
+    });
     vi.mocked(sessions).mockResolvedValue(offered);
 
     await expect(adminBookingsLoader(
-      loaderArgs("https://range.test/admin/bookings"),
+      loaderArgs("https://range.test/admin/bookings?historyDate=2030-01-01"),
     )).resolves.toMatchObject({
       config,
       users: [],
       bays: [],
       bookings: [],
+      historyDate: "2030-01-01",
+      history: { items: [], page: 0, pageSize: 25, totalCount: 0 },
+    });
+  });
+
+  it("does not fetch an administrator report until a user is selected", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(adminUsers).mockResolvedValue([]);
+    vi.mocked(adminConfig).mockResolvedValue(config);
+
+    await expect(adminReportLoader(loaderArgs("https://range.test/admin/reports")))
+      .resolves.toMatchObject({ users: [], report: null, userId: "" });
+    expect(adminBookingReport).not.toHaveBeenCalled();
+  });
+
+  it("loads a bounded user report with the selected attendance filter", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(adminUsers).mockResolvedValue([]);
+    vi.mocked(adminConfig).mockResolvedValue(config);
+    vi.mocked(adminBookingReport).mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 25,
+      totalCount: 30,
+    });
+
+    const result = await adminReportLoader(loaderArgs(
+      "https://range.test/admin/reports?userId=user-1&attendance=no-show&page=1",
+    ));
+
+    expect(result).toMatchObject({
+      userId: "user-1",
+      attendance: "no-show",
+      report: { page: 1, totalCount: 30 },
+    });
+    expect(adminBookingReport).toHaveBeenCalledWith(
+      "user-1",
+      "no-show",
+      1,
+      25,
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("preserves stale-policy conflicts as visible administrator feedback", async () => {
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(saveBookingPolicy).mockRejectedValue(new ApiError(409, "Settings changed. Refresh."));
+
+    const result = await adminAction(actionArgs("/admin", {
+      intent: "save-booking-policy",
+      payload: JSON.stringify({
+        revision: 0,
+        minimumCancellationDays: 2,
+        noShowRules: [],
+      }),
+    }));
+
+    expect(result).toMatchObject({
+      success: false,
+      status: 409,
+      message: "Settings changed. Refresh.",
     });
   });
 

@@ -34,7 +34,19 @@ function ShootingLoadingShell() {
         selectedKey="shooting"
         onSelectedKeyChange={() => undefined}
         tabs={[
-          { key: "shooting", label: t("Shooting sessions"), panel: <><div className="section-heading workspace-action-heading"><span /><button className="button button-primary" type="button" disabled>+ {t("Record shooting")}</button></div><section className="panel"><ActivitySkeleton /></section></> },
+          {
+            key: "shooting",
+            label: t("Shooting sessions"),
+            panel: (
+              <section className="panel">
+                <div className="section-heading shooting-history-heading">
+                  <h2>{t("Recent shooting sessions")}</h2>
+                  <button className="button button-primary" type="button" disabled>+ {t("Record shooting")}</button>
+                </div>
+                <ActivitySkeleton />
+              </section>
+            ),
+          },
           { key: "maintenance", label: t("Maintenance"), panel: <PanelSkeleton /> },
         ]}
       />
@@ -109,10 +121,6 @@ function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData })
             key: "shooting",
             label: t("Shooting sessions"),
             panel: <>
-      <div className="section-heading workspace-action-heading">
-        <span />
-        <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>+ {t("Record shooting")}</button>
-      </div>
       <Dialog open={showForm} title={t("Record shooting")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
       <fetcher.Form method="post" className="panel form-panel shooting-sessions-form">
         <input type="hidden" name="intent" value="record" />
@@ -147,7 +155,7 @@ function ShootingSessionsContent({ data }: { data: ShootingSessionsLoaderData })
         </button>
       </fetcher.Form>
       </Dialog>
-      <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onRepeat={repeatSession} />
+      <ShootingHistory sessions={sessions} firearms={firearms} recipes={recipes} onRepeat={repeatSession} onRecord={() => setShowForm(true)} />
             </>,
           },
           {
@@ -205,20 +213,29 @@ function ShootingHistory({
   firearms,
   recipes,
   onRepeat,
+  onRecord,
 }: {
   sessions: WorkshopShootingSessionRecord[];
   firearms: WorkshopFirearm[];
   recipes: WorkshopRecipe[];
   onRepeat: (record: WorkshopShootingSessionRecord) => void;
+  onRecord: () => void;
 }) {
   const { t } = useI18n();
   const labels = useMemo(() => new Map(firearms.map((firearm) => [firearm.id, firearm.nickname || `${firearm.manufacturer} ${firearm.model}`])), [firearms]);
   return (
     <section className="panel">
-      <div className="section-heading"><h2>{t("Recent shooting sessions")}</h2></div>
-      {sessions.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : sessions.map((session) => (
-        <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} onRepeat={onRepeat} />
-      ))}
+      <div className="section-heading shooting-history-heading">
+        <h2>{t("Recent shooting sessions")}</h2>
+        <button className="button button-primary" type="button" onClick={onRecord}>+ {t("Record shooting")}</button>
+      </div>
+      {sessions.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : (
+        <div className="shooting-session-list">
+          {sessions.map((session) => (
+            <ShootingRow key={session.session.id} record={session} recipes={recipes} firearmLabel={labels.get(session.session.firearmId) ?? t("Firearm")} onRepeat={onRepeat} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -277,33 +294,39 @@ function ShootingRow({
     }, { method: "post" });
   };
   return (
-    <article className="detail-list-item">
-      <div><strong>{firearmLabel}</strong>&nbsp;<span>{formatDateTime(session.date, culture)}</span></div>
-      {editing ? (
-        <fieldset>
-          <legend>{t("Correct ammunition quantities")}</legend>
-          {Object.entries(quantities).map(([recipeId, quantity]) => (
-            <label key={recipeId}>
-              {recipes.find((recipe) => recipe.id === recipeId)?.name ?? recipeId}
-              <input
-                type="number"
-                min="0"
-                value={quantity}
-                onChange={(event) => setQuantities((current) => ({ ...current, [recipeId]: Number(event.target.value) }))}
-              />
-            </label>
-          ))}
-          <p>{t("Untracked ammunition")}: {session.untrackedAmmunition} ({t("unchanged")})</p>
-          <strong>{t("Total rounds")}: {correctedTotal}</strong>
-        </fieldset>
-      ) : <strong>{session.totalRounds} {t("rounds")}</strong>}
-      <div className="button-row mt-2">
-        <button type="button" className="button button-quiet me-2" onClick={() => onRepeat(record)}>{t("Repeat as draft")}</button>
+    <article className="shooting-session-row">
+      <div className="shooting-session-details">
+        <div className="shooting-session-meta">
+          <h3 className="shooting-session-firearm">{firearmLabel}</h3>
+          <time dateTime={session.date}>{formatDateTime(session.date, culture)}</time>
+        </div>
+        {editing ? (
+          <fieldset>
+            <legend>{t("Correct ammunition quantities")}</legend>
+            {Object.entries(quantities).map(([recipeId, quantity]) => (
+              <label key={recipeId}>
+                {recipes.find((recipe) => recipe.id === recipeId)?.name ?? recipeId}
+                <input
+                  type="number"
+                  min="0"
+                  value={quantity}
+                  onChange={(event) => setQuantities((current) => ({ ...current, [recipeId]: Number(event.target.value) }))}
+                />
+              </label>
+            ))}
+            <p>{t("Untracked ammunition")}: {session.untrackedAmmunition} ({t("unchanged")})</p>
+            <strong>{t("Total rounds")}: {correctedTotal}</strong>
+          </fieldset>
+        ) : <strong className="shooting-session-rounds">{session.totalRounds} {t("rounds")}</strong>}
+        {error && <p className="form-error shooting-session-error" role="alert">{error}</p>}
+      </div>
+      <div className="shooting-session-actions">
+        <button type="button" className="button button-quiet" onClick={() => onRepeat(record)}>{t("Repeat as draft")}</button>
         {editing ? <>
-          <button type="button" className="button me-2" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
-          <button type="button" className="button button-quiet me-2" onClick={() => setEditing(false)}>{t("Cancel")}</button>
+          <button type="button" className="button" disabled={fetcher.state !== "idle"} onClick={() => save()}>{t("Save")}</button>
+          <button type="button" className="button button-quiet" onClick={() => setEditing(false)}>{t("Cancel")}</button>
         </> : editable && <>
-            <button type="button" className="button button-quiet me-2" onClick={() => {
+            <button type="button" className="button button-quiet" onClick={() => {
             setQuantities(session.consumptionRecords.reduce<Record<string, number>>((result, item) => {
               if (item.recipeId) result[item.recipeId] = (result[item.recipeId] ?? 0) + item.quantity;
               return result;
@@ -316,7 +339,6 @@ function ShootingRow({
           }}>{t("Delete")}</button>
         </>}
       </div>
-      {error && <p role="alert">{error}</p>}
     </article>
   );
 }

@@ -37,7 +37,7 @@ The deny-by-default fallback authorization policy is implemented and public regi
 
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
-Schedule, bay and closure administration and booking decisions are accepted scope. Four modes preserve `Periods=0`, `Hourly=1`, and `HourlyContinuous=2`, adding opt-in `Mixed=3` for whole morning/afternoon or contiguous 60/120-minute increments. User booking requests include an optional note and remain Pending; administrators see requests grouped by field-local date, bay and interval, and can also create a direct Approved booking for an approved member. Friendship requests are sent by exact username and become reciprocal only after the recipient accepts; incoming and outgoing requests remain distinct, and accepted relationships can be removed. A member may request to join an exact bay/UTC interval held by an accepted direct friend; there is no application-defined participant cap, while every member booking still requires its own admin decision. Partial overlaps and non-friend sharing remain conflicts. Friendship removal does not cancel existing bookings. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. The existing message page shows text, sent dates and request status; administrators also see the sender and can set or correct status. Broader messaging expansion, rescheduling, push notifications, waitlists, arbitrary-duration sessions, and reporting remain deferred.
+Schedule, bay and closure administration and booking decisions are accepted scope. Four modes preserve `Periods=0`, `Hourly=1`, and `HourlyContinuous=2`, adding opt-in `Mixed=3` for whole morning/afternoon or contiguous 60/120-minute increments. User booking requests include an optional note and remain Pending; administrators see requests grouped by field-local date, bay and interval, and can also create a direct Approved booking for an approved member. Friendship requests are sent by exact username and become reciprocal only after the recipient accepts; incoming and outgoing requests remain distinct, and accepted relationships can be removed. A member may request to join an exact bay/UTC interval held by an accepted direct friend; there is no application-defined participant cap, while every member booking still requires its own admin decision. Partial overlaps and non-friend sharing remain conflicts. Friendship removal does not cancel existing bookings. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. The existing message page shows text, sent dates and request status; administrators also see the sender and can set or correct status. Broader messaging expansion, rescheduling, push notifications, waitlists and arbitrary-duration sessions remain deferred. Reporting was deferred at this decision point and is superseded by the bounded booking-report amendment below.
 
 ### Booking workflow amendment — 2026-11-20
 
@@ -149,6 +149,41 @@ Focused client tests passed (65), App tests passed on rerun (16), and
 TypeScript checking plus client and SSR builds passed. The migration has not
 been applied or rehearsed against SQL; independent SQL concurrency and
 authenticated browser checks remain rollout gates.
+
+### Attendance, cancellation and reporting amendment — 2026-11-23
+
+Each booking now stores a false-by-default no-show marker and an optional
+occurrence date. Ordinary attendance marking is admin-only and applies to
+Approved bookings on or before the current field-local date. A separate admin
+cancellation action may cancel Pending or Approved bookings on any date.
+When the tenant deadline is positive, cancelling an Approved booking requires
+an explicit no-show choice; any resulting occurrence is dated to the actual
+field-local cancellation date. Existing marks require an explicit correction
+or removal. These writes remain in the tenant-scoped mutation guard.
+
+Members may cancel their own Pending/Approved bookings through a configurable
+inclusive field-local calendar-day deadline, defaulting to zero. Eligibility
+is rechecked inside the guarded mutation. Member booking responses expose
+cancellation guidance but never attendance data. The separate admin policy
+contract stores the deadline and up to 20 advisory rules in tenant config;
+legacy full-config writes preserve these values. Matching rules never block
+booking or decisions.
+
+The admin booking page retains recent decision work and adds independent
+field-local history paging, attendance correction, cancellation confirmation
+and retryable advisory alerts. `/admin/reports` is restricted to one selected
+user and provides all/unmarked/no-show filters with deterministic paging.
+History, reports and alert reads are tenant-filtered and bounded in repository
+queries. The additive
+`20261123110721_AddShootingRangeAttendanceAndPolicy` migration adds safe
+defaults and supporting indexes; it has not been applied to a target database.
+
+Local validation passed: 100 backend tests and 90 frontend tests; 9 SQL Server
+integration tests skipped because no disposable SQL host was configured.
+TypeScript checking, production and SSR builds, migration SQL generation/
+inspection, and EF pending-model-change validation passed. No SQL migration
+execution, authenticated browser capture, deployment, or backup/restore
+rehearsal was performed. These remain release evidence gates.
 
 ## Migration And Rollback
 

@@ -123,9 +123,19 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("end_utc");
 
+                    b.Property<bool>("IsNoShow")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_no_show");
+
                     b.Property<DateOnly>("LocalDate")
                         .HasColumnType("date")
                         .HasColumnName("local_date");
+
+                    b.Property<DateOnly?>("NoShowDate")
+                        .HasColumnType("date")
+                        .HasColumnName("no_show_date");
 
                     b.Property<string>("PeriodKey")
                         .IsRequired()
@@ -160,11 +170,20 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "IsNoShow", "NoShowDate")
+                        .HasDatabaseName("ix_shooting_range_bookings_attendance_date");
+
+                    b.HasIndex("TenantId", "LocalDate", "StartUtc")
+                        .HasDatabaseName("ix_shooting_range_bookings_local_date");
+
                     b.HasIndex("TenantId", "UserId", "StartUtc")
                         .HasDatabaseName("ix_shooting_range_bookings_user_start");
 
                     b.HasIndex("TenantId", "BayId", "StartUtc", "EndUtc", "Status")
                         .HasDatabaseName("ix_shooting_range_bookings_interval");
+
+                    b.HasIndex("TenantId", "UserId", "IsNoShow", "LocalDate", "StartUtc")
+                        .HasDatabaseName("ix_shooting_range_bookings_user_attendance");
 
                     b.ToTable("shooting_range_bookings", (string)null);
                 });
@@ -200,6 +219,12 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("hourly_minutes");
 
+                    b.Property<int>("MinimumCancellationDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("minimum_cancellation_days");
+
                     b.Property<TimeSpan>("MorningEnd")
                         .HasColumnType("time")
                         .HasColumnName("morning_end");
@@ -214,10 +239,23 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("NoShowRules")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("no_show_rules")
+                        .HasDefaultValueSql("N'[]'");
+
                     b.Property<string>("OpeningDays")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("opening_days");
+
+                    b.Property<int>("PolicyRevision")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("policy_revision");
 
                     b.Property<int>("ReservedReleaseDaysBefore")
                         .HasColumnType("int")

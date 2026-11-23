@@ -98,6 +98,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stat strong { font-size: 1.7rem; }
 .stat.warning strong { color: var(--workshop-warning); }
 .section-heading, .toolbar, .record-card-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.shooting-history-heading { margin: 0 0 1rem; }
+.shooting-session-list { display: grid; }
+.shooting-session-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; padding: 1.1rem 0; border-top: 1px solid var(--workshop-border); }
+.shooting-session-details { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: .45rem; }
+.shooting-session-meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: .35rem .75rem; }
+.shooting-session-firearm { margin: 0; color: var(--workshop-text); font-size: 1rem; font-weight: 800; }
+.shooting-session-meta time { color: var(--workshop-secondary); font-size: .84rem; }
+.shooting-session-rounds { color: var(--workshop-text); }
+.shooting-session-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.shooting-session-actions .button { min-height: 2.75rem; margin: 0; }
+.shooting-session-details fieldset { width: min(100%, 36rem); margin: .25rem 0 0; }
+.shooting-session-error { margin: 0; }
 .history-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
 .history-toolbar label { flex: 0 1 18rem; margin-bottom: 0; }
 .history-toolbar p { max-width: 42rem; margin: 0; color: var(--workshop-secondary); font-size: .8rem; }
@@ -191,3 +203,12 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 .feedback-actions { display: flex; justify-content: flex-end; gap: .6rem; }
 @media (max-width: 900px) { .desktop-nav { justify-content: flex-start; }.dashboard-grid, .detail-grid, .components-grid, .recipe-production-layout { grid-template-columns: 1fr; }.quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }.component-filters { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .workshop-main { width: min(100% - 1.5rem, 1440px); }.workshop-header-top { flex-wrap: wrap; }.header-account { width: 100%; justify-content: flex-end; flex-wrap: wrap; white-space: normal; }.header-account-link { display: none; }.desktop-nav { justify-content: flex-start; }.nav-scroll-hint { width: 1.6rem; height: 1.6rem; }.install-prompt { align-items: stretch; flex-direction: column; }.install-prompt__actions { width: 100%; }.install-prompt__actions .button { flex: 1 1 8rem; }.quick-actions, .stats-grid, .form-grid, .shooting-ammunition-row, .recipe-detail-grid, .ammunition-production-grid { grid-template-columns: 1fr; }.dashboard-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.shooting-ammunition-row .button { margin-bottom: 1rem; justify-self: start; }.activity-list:not(.activity-list-compact) time { display: none; }.activity-list-compact time { font-size: .7rem; }.definition-list { grid-template-columns: 1fr; gap: .2rem; }.definition-list dd { margin-bottom: .8rem; }.recipe-detail-wide { grid-column: auto; }.account-header { grid-template-columns: minmax(0, 1fr); }.account-header-controls { grid-column: 1; grid-row: auto; }.account-header .account-subtitle { grid-column: 1; }.onboarding-header, .onboarding-actions, .onboarding-reopen, .history-toolbar { align-items: stretch; flex-direction: column; }.onboarding-progress { align-self: flex-start; }.capability-wizard-backdrop { padding: .5rem; }.capability-wizard-dialog { max-height: calc(100dvh - 1rem); }.capability-wizard-header, .capability-wizard-actions { align-items: stretch; flex-direction: column; }.capability-wizard-header-actions, .capability-wizard-actions > div { justify-content: space-between; }.capability-wizard-actions > div .button { flex: 1 1 auto; }.capability-wizard-route-actions .button { flex: 1 1 100%; }.goal-form { align-items: stretch; flex-direction: column; } }
+.shooting-history-heading { align-items: center; }
+@media (max-width: 560px) {
+  .shooting-history-heading { align-items: stretch; flex-direction: column; }
+  .shooting-history-heading .button { width: 100%; min-height: 2.75rem; }
+  .shooting-session-row { grid-template-columns: minmax(0, 1fr); gap: .85rem; }
+  .shooting-session-actions { justify-content: flex-start; }
+  .shooting-session-details fieldset { width: 100%; }
+}
+.mwp-dialog__header h2 { margin: 0; }

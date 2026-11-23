@@ -210,6 +210,8 @@ public sealed class SqlServerShootingRangeFriendshipRepository(
 public sealed class SqlServerShootingRangeBookingRepository(SqlServerShootingRangeRepositorySet owner, ShootingRangeDbContext context)
     : SqlServerShootingRangeRepository<ShootingRangeBooking>(owner, context), IShootingRangeBookingRepository
 {
+    private DbSet<ShootingRangeBooking> Set => context.Set<ShootingRangeBooking>();
+
     public async Task<bool> HasOverlapAsync(string bayId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default) =>
         (await GetAllAsync(cancellationToken)).Any(item =>
             item.BayId == bayId && item.StartUtc < endUtc && item.EndUtc > startUtc &&
@@ -217,6 +219,41 @@ public sealed class SqlServerShootingRangeBookingRepository(SqlServerShootingRan
 
     public Task<ShootingRangeBooking> InsertIfAvailableAsync(ShootingRangeBooking booking, CancellationToken cancellationToken = default) =>
         InsertAsync(booking, cancellationToken);
+
+    public async Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetLocalDatePageAsync(
+        DateOnly localDate, int offset, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = Set.AsNoTracking().Where(item => item.LocalDate == localDate);
+        var totalCount = await query.CountAsync(owner.OperationToken(cancellationToken));
+        var items = await query.OrderBy(item => item.StartUtc)
+            .ThenBy(item => item.Id)
+            .Skip(offset)
+            .Take(pageSize)
+            .ToListAsync(owner.OperationToken(cancellationToken));
+        return (items, totalCount);
+    }
+
+    public async Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetUserReportPageAsync(
+        string userId, bool? isNoShow, int offset, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = Set.AsNoTracking().Where(item => item.UserId == userId);
+        if (isNoShow.HasValue)
+            query = query.Where(item => item.IsNoShow == isNoShow.Value);
+        var totalCount = await query.CountAsync(owner.OperationToken(cancellationToken));
+        var items = await query.OrderByDescending(item => item.LocalDate)
+            .ThenByDescending(item => item.StartUtc)
+            .ThenBy(item => item.Id)
+            .Skip(offset)
+            .Take(pageSize)
+            .ToListAsync(owner.OperationToken(cancellationToken));
+        return (items, totalCount);
+    }
+
+    public async Task<IReadOnlyList<ShootingRangeBooking>> GetNoShowOccurrencesSinceAsync(
+        DateOnly earliestDate, CancellationToken cancellationToken = default) =>
+        await Set.AsNoTracking()
+            .Where(item => item.IsNoShow && item.NoShowDate >= earliestDate)
+            .ToListAsync(owner.OperationToken(cancellationToken));
 }
 
 public sealed class SqlServerShootingRangeUserRepository(SqlServerShootingRangeRepositorySet owner, ShootingRangeDbContext context)

@@ -252,13 +252,33 @@ public sealed class ShootingRangeApiTests
         adminDto.GetProperty("status").GetInt32().Should().Be(1);
         using var withoutCsrf = await client.PutAsJsonAsync("/api/shooting-range/admin/config", new ShootingRangeConfig());
         withoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var attendanceWithoutCsrf = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/bookings/missing/attendance",
+            new BookingAttendanceRequest(true));
+        attendanceWithoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var cancellationWithoutCsrf = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/bookings/missing/cancel",
+            new AdminBookingCancellationRequest(0, null, false, false, null));
+        cancellationWithoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await SetCsrfAsync(client);
+        var policy = new BookingPolicyRequest(0, 2, [new("five-in-90", 5, 90, "Five in ninety days")]);
+        using var savedPolicy = await client.PutAsJsonAsync("/api/shooting-range/admin/booking-policy", policy);
+        savedPolicy.StatusCode.Should().Be(HttpStatusCode.OK);
         var config = new ShootingRangeConfig { SessionMode = ShootingRangeSessionMode.HourlyContinuous, ContinuousStart = new(9, 30, 0), ContinuousEnd = new(13, 0, 0) };
         using var saved = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config);
         saved.StatusCode.Should().Be(HttpStatusCode.OK);
         var loaded = await client.GetFromJsonAsync<ShootingRangeConfig>("/api/shooting-range/admin/config");
         loaded!.Id.Should().NotBeNullOrWhiteSpace();
         loaded.SessionMode.Should().Be(ShootingRangeSessionMode.HourlyContinuous);
+        using var loadedConfigJson = JsonDocument.Parse(await saved.Content.ReadAsStringAsync());
+        loadedConfigJson.RootElement.EnumerateObject().Select(property => property.Name)
+            .Should().NotContain("minimumCancellationDays", "policyRevision", "noShowRules");
+        var preservedPolicy = await client.GetFromJsonAsync<BookingPolicyDto>("/api/shooting-range/admin/booking-policy");
+        preservedPolicy.Should().BeEquivalentTo(new BookingPolicyDto(
+            1, 2, [new("five-in-90", 5, 90, "Five in ninety days")]));
+        using var stalePolicy = await client.PutAsJsonAsync("/api/shooting-range/admin/booking-policy",
+            policy with { MinimumCancellationDays = 1 });
+        stalePolicy.StatusCode.Should().Be(HttpStatusCode.Conflict);
         using var invalid = await client.PutAsJsonAsync("/api/shooting-range/admin/config", config with { HourlyMinutes = 30 });
         invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var closureResponse = await client.PostAsJsonAsync("/api/shooting-range/admin/exceptions", new ShootingRangeException { LocalDate = new(2030, 1, 12), IsClosed = true, Reason = "test closure" });
@@ -531,6 +551,14 @@ public sealed class ShootingRangeApiTests
             new BookingRequest("cancel-test-bay", date, "morning", "test"));
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         var booking = (await created.Content.ReadFromJsonAsync<ShootingRangeBooking>())!;
+        using (var mineResponse = await user.GetAsync("/api/shooting-range/bookings/mine"))
+        using (var mineDocument = JsonDocument.Parse(await mineResponse.Content.ReadAsStringAsync()))
+        {
+            var memberBooking = mineDocument.RootElement[0];
+            var memberFields = memberBooking.EnumerateObject().Select(property => property.Name).ToArray();
+            memberFields.Should().Contain("canCancel").And.Contain("cancellationMessage");
+            memberFields.Should().NotContain("isNoShow").And.NotContain("noShowDate");
+        }
 
         var pendingCount = await admin.GetFromJsonAsync<PendingBookingCountDto>(
             "/api/shooting-range/admin/bookings/pending-count");
@@ -571,6 +599,18 @@ public sealed class ShootingRangeApiTests
         forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         using var forbiddenTypes = await client.GetAsync("/api/shooting-range/admin/mechanism-types");
         forbiddenTypes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenPolicy = await client.GetAsync("/api/shooting-range/admin/booking-policy");
+        forbiddenPolicy.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenAlerts = await client.GetAsync("/api/shooting-range/admin/bookings/no-show-alerts");
+        forbiddenAlerts.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenHistory = await client.GetAsync("/api/shooting-range/admin/bookings/history?date=2030-01-12");
+        forbiddenHistory.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenReport = await client.GetAsync("/api/shooting-range/admin/reports/bookings?userId=approved");
+        forbiddenReport.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var forbiddenAttendance = await client.PostAsJsonAsync(
+            "/api/shooting-range/admin/bookings/missing/attendance",
+            new BookingAttendanceRequest(true));
+        forbiddenAttendance.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         using var forbiddenCount = await client.GetAsync("/api/shooting-range/admin/bookings/pending-count");
         forbiddenCount.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));

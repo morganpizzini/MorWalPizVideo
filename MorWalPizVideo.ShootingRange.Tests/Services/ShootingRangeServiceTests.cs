@@ -501,7 +501,7 @@ public sealed class ShootingRangeServiceTests
     }
 
     [Fact]
-    public async Task User_can_cancel_only_their_own_active_booking_before_its_start_and_admin_can_restore_it()
+    public async Task User_can_cancel_their_own_active_booking_on_the_local_date_after_start()
     {
         var repositories = await CreateRepositoriesAsync();
         await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
@@ -511,10 +511,6 @@ public sealed class ShootingRangeServiceTests
 
         var clock = (FixedClock)repositories.Clock;
         clock.SetUtcNow(booking.StartUtc);
-        var started = () => service.CancelBookingAsync("user-1", booking.Id, default);
-        await started.Should().ThrowAsync<InvalidOperationException>();
-
-        clock.SetUtcNow(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
         var otherUser = () => service.CancelBookingAsync("user-2", booking.Id, default);
         await otherUser.Should().ThrowAsync<KeyNotFoundException>();
 
@@ -523,8 +519,199 @@ public sealed class ShootingRangeServiceTests
         var rejectCancelled = () => service.DecideBookingAsync("user-1", booking.Id, false, default);
         await rejectCancelled.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("A cancelled booking can only be restored by approval.");
+        clock.SetUtcNow(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
         var restored = await service.DecideBookingAsync("user-1", booking.Id, true, default);
         restored.Status.Should().Be(ShootingRangeBookingStatus.Approved);
+    }
+
+    [Fact]
+    public async Task Member_deadline_uses_inclusive_field_local_calendar_days()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Configs.ReplaceAsync(new()
+        {
+            Id = "default",
+            OpeningDays = Enum.GetValues<DayOfWeek>().ToList(),
+            MinimumCancellationDays = 2
+        });
+        var service = new ShootingRangeService(repositories);
+        var booking = await service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 3), "morning", ""), default);
+
+        (await service.CancelBookingAsync("user-1", booking.Id, default)).Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+
+        var nextBooking = await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 3), "afternoon", ""), default);
+        ((FixedClock)repositories.Clock).SetUtcNow(new DateTimeOffset(2030, 1, 1, 23, 30, 0, TimeSpan.Zero));
+        var late = () => service.CancelBookingAsync("user-2", nextBooking.Id, default);
+        await late.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Il termine per annullare è scaduto. Contatta l'amministrazione del campo.");
+    }
+
+    [Fact]
+    public async Task Member_cancellation_clears_an_admin_no_show_mark_on_the_same_local_date()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var booking = await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 12), "morning", ""), default);
+        await service.DecideBookingAsync("user-1", booking.Id, true, default);
+        ((FixedClock)repositories.Clock).SetUtcNow(booking.StartUtc);
+        await service.SetBookingAttendanceAsync("user-1", booking.Id, true, default);
+
+        var cancelled = await service.CancelBookingAsync("user-2", booking.Id, default);
+
+        cancelled.Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+        cancelled.IsNoShow.Should().BeFalse();
+        cancelled.NoShowDate.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Admin_cancellation_marks_today_and_requires_correction_before_restore()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Configs.ReplaceAsync(new()
+        {
+            Id = "default",
+            OpeningDays = Enum.GetValues<DayOfWeek>().ToList(),
+            MinimumCancellationDays = 1
+        });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var booking = await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 3), "morning", ""), default);
+        await service.DecideBookingAsync("user-1", booking.Id, true, default);
+
+        var missingChoice = () => service.CancelBookingAsAdminAsync(
+            "user-1", booking.Id, new(0, null, false, false, null), default);
+        await missingChoice.Should().ThrowAsync<InvalidOperationException>();
+
+        var cancelled = await service.CancelBookingAsAdminAsync(
+            "user-1", booking.Id, new(0, true, false, false, null), default);
+        cancelled.Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+        cancelled.IsNoShow.Should().BeTrue();
+        cancelled.NoShowDate.Should().Be(new DateOnly(2030, 1, 1));
+
+        var restoreMarked = () => service.DecideBookingAsync("user-1", booking.Id, true, default);
+        await restoreMarked.Should().ThrowAsync<InvalidOperationException>();
+        await service.SetBookingAttendanceAsync("user-1", booking.Id, false, default);
+        (await service.DecideBookingAsync("user-1", booking.Id, true, default)).Status
+            .Should().Be(ShootingRangeBookingStatus.Approved);
+    }
+
+    [Fact]
+    public async Task No_show_alerts_apply_inclusive_windows_and_exclude_noneligible_statuses()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        await repositories.Configs.ReplaceAsync(new()
+        {
+            Id = "default",
+            OpeningDays = Enum.GetValues<DayOfWeek>().ToList(),
+            NoShowRules =
+            [
+                new("two-in-five", 2, 5, "Due in cinque giorni"),
+                new("three-in-five", 3, 5, "Tre in cinque giorni")
+            ]
+        });
+        var service = new ShootingRangeService(repositories);
+        var todayBooking = await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 1), "morning", ""), default);
+        await service.DecideBookingAsync("user-1", todayBooking.Id, true, default);
+        ((FixedClock)repositories.Clock).SetUtcNow(todayBooking.StartUtc);
+        await service.SetBookingAttendanceAsync("user-1", todayBooking.Id, true, default);
+
+        async Task AddMarkedBooking(string id, ShootingRangeBookingStatus status, DateOnly occurrenceDate)
+        {
+            await repositories.Bookings.InsertAsync(new()
+            {
+                Id = id,
+                UserId = "user-2",
+                BayId = "bay-1",
+                LocalDate = new(2030, 1, 20),
+                PeriodKey = "morning",
+                StartUtc = new DateTime(2030, 1, 20, 8, 0, 0, DateTimeKind.Utc),
+                EndUtc = new DateTime(2030, 1, 20, 12, 0, 0, DateTimeKind.Utc),
+                Status = status,
+                IsNoShow = true,
+                NoShowDate = occurrenceDate
+            });
+        }
+
+        await AddMarkedBooking("inclusive-boundary", ShootingRangeBookingStatus.Cancelled, new(2029, 12, 28));
+        await AddMarkedBooking("outside-window", ShootingRangeBookingStatus.Cancelled, new(2029, 12, 27));
+        await repositories.Bookings.InsertAsync(new()
+        {
+            Id = "unmarked-pending",
+            UserId = "user-2",
+            BayId = "bay-1",
+            LocalDate = new(2030, 1, 20),
+            PeriodKey = "morning",
+            StartUtc = new DateTime(2030, 1, 20, 8, 0, 0, DateTimeKind.Utc),
+            EndUtc = new DateTime(2030, 1, 20, 12, 0, 0, DateTimeKind.Utc),
+            Status = ShootingRangeBookingStatus.Pending
+        });
+
+        var alerts = await service.GetBookingNoShowAlertsAsync("user-1", default);
+        alerts.Should().ContainSingle();
+        alerts[0].UserId.Should().Be("user-2");
+        alerts[0].Rules.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new BookingNoShowRuleAlertDto("two-in-five", "Due in cinque giorni", 2, 2, 5));
+    }
+
+    [Fact]
+    public async Task Booking_policy_uses_revision_guard_and_validates_rule_identity()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var saved = await service.SaveBookingPolicyAsync("user-1", new(
+            0, 2, [new("rule", 5, 90, "Five in ninety days")]), default);
+        saved.Revision.Should().Be(1);
+        saved.MinimumCancellationDays.Should().Be(2);
+
+        var stale = () => service.SaveBookingPolicyAsync("user-1", new(
+            0, 3, [new("rule", 5, 90, "Five in ninety days")]), default);
+        await stale.Should().ThrowAsync<InvalidOperationException>();
+
+        var duplicate = () => service.SaveBookingPolicyAsync("user-1", new(
+            1, 0, [new("same", 1, 1, "First"), new("same", 2, 2, "Second")]), default);
+        await duplicate.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task Admin_report_and_history_use_filtered_deterministic_pages()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        await repositories.Configs.ReplaceAsync(new()
+        {
+            Id = "default",
+            OpeningDays = Enum.GetValues<DayOfWeek>().ToList(),
+            MinimumCancellationDays = 1
+        });
+        var service = new ShootingRangeService(repositories);
+        var marked = await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 12), "morning", ""), default);
+        await service.DecideBookingAsync("user-1", marked.Id, true, default);
+        await service.CancelBookingAsAdminAsync("user-1", marked.Id, new(0, true, false, false, null), default);
+        await service.CreateBookingAsync("user-2", new("bay-1", new(2030, 1, 12), "afternoon", ""), default);
+
+        var firstPage = await service.GetAdminUserBookingReportPageAsync("user-1", "user-2", null, 0, 1, default);
+        firstPage.TotalCount.Should().Be(2);
+        firstPage.Items.Should().ContainSingle();
+        var noShowPage = await service.GetAdminUserBookingReportPageAsync("user-1", "user-2", true, 0, 10, default);
+        noShowPage.Items.Should().ContainSingle();
+        noShowPage.Items[0].Status.Should().Be(ShootingRangeBookingStatus.Cancelled);
+        noShowPage.Items[0].NoShowDate.Should().Be(new DateOnly(2030, 1, 1));
+        noShowPage.Items[0].BayCode.Should().Be("01");
+        var history = await service.GetAdminBookingHistoryPageAsync("user-1", new(2030, 1, 12), 0, 10, default);
+        history.TotalCount.Should().Be(2);
+        history.Items.Select(item => item.Id).Should().Equal(
+            history.Items.OrderBy(item => item.StartUtc).Select(item => item.Id));
+
+        var foreignUser = () => service.GetAdminUserBookingReportPageAsync("user-1", "missing", null, 0, 25, default);
+        await foreignUser.Should().ThrowAsync<KeyNotFoundException>();
     }
 
     [Fact]

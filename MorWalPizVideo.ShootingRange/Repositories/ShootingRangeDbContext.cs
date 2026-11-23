@@ -80,6 +80,10 @@ public sealed class ShootingRangeDbContext(
             entity.Property(x => x.AfternoonEnd).HasColumnType("time");
             entity.Property(x => x.ContinuousStart).HasColumnType("time");
             entity.Property(x => x.ContinuousEnd).HasColumnType("time");
+            entity.Property(x => x.MinimumCancellationDays).HasDefaultValue(0);
+            entity.Property(x => x.PolicyRevision).HasDefaultValue(0);
+            ConfigureJson(entity.Property(x => x.NoShowRules));
+            entity.Property(x => x.NoShowRules).HasDefaultValueSql("N'[]'");
         });
 
         modelBuilder.Entity<ShootingRangeBay>(entity =>
@@ -182,8 +186,16 @@ public sealed class ShootingRangeDbContext(
                 .HasConversion(UtcDateTimeConverter);
             entity.Property(x => x.Request).IsRequired();
             entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.IsNoShow).HasDefaultValue(false);
+            entity.Property(x => x.NoShowDate).HasColumnType("date");
             entity.HasIndex(x => new { x.TenantId, x.BayId, x.StartUtc, x.EndUtc, x.Status }).HasDatabaseName("ix_shooting_range_bookings_interval");
             entity.HasIndex(x => new { x.TenantId, x.UserId, x.StartUtc }).HasDatabaseName("ix_shooting_range_bookings_user_start");
+            entity.HasIndex(x => new { x.TenantId, x.UserId, x.IsNoShow, x.LocalDate, x.StartUtc })
+                .HasDatabaseName("ix_shooting_range_bookings_user_attendance");
+            entity.HasIndex(x => new { x.TenantId, x.LocalDate, x.StartUtc })
+                .HasDatabaseName("ix_shooting_range_bookings_local_date");
+            entity.HasIndex(x => new { x.TenantId, x.IsNoShow, x.NoShowDate })
+                .HasDatabaseName("ix_shooting_range_bookings_attendance_date");
             entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
                 .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ShootingRangeBay>().WithMany().HasForeignKey(x => new { x.TenantId, x.BayId })

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { TabbedWorkspace, type TabbedWorkspaceTab } from "@morwalpiz/layout";
 import { Shell, type SessionViewProps } from "./App";
-import type { AdminUser, Bay, Closure, RangeConfig } from "./api";
+import type { AdminUser, Bay, BookingPolicy, Closure, NoShowRule, RangeConfig } from "./api";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import type {
   ActionResult,
@@ -192,7 +192,7 @@ export function ConfigForm({
           </div>
         </div>
         <label>
-          Rilascio bay riservate (giorni prima)
+          Rilascio priorità bay (giorni prima)
           <input
             type="number"
             min={0}
@@ -239,6 +239,138 @@ export function ConfigForm({
   );
 }
 
+export function BookingPolicyForm({
+  initial,
+  busy,
+  onSave,
+}: {
+  initial: BookingPolicy;
+  busy: boolean;
+  onSave: (policy: BookingPolicy) => Promise<void>;
+}) {
+  const [policy, setPolicy] = useState(initial);
+  useEffect(() => setPolicy(initial), [initial]);
+
+  function updateRule(id: string, values: Partial<NoShowRule>) {
+    setPolicy((current) => ({
+      ...current,
+      noShowRules: current.noShowRules.map((rule) =>
+        rule.id === id ? { ...rule, ...values } : rule,
+      ),
+    }));
+  }
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSave(policy);
+      }}
+    >
+      <fieldset className="form-grid booking-policy-form" disabled={busy}>
+        <legend>Cancellazione e avvisi di mancata presenza</legend>
+        <label>
+          Giorni minimi prima della prenotazione
+          <input
+            type="number"
+            min={0}
+            max={3650}
+            required
+            value={policy.minimumCancellationDays}
+            onChange={(event) => setPolicy({
+              ...policy,
+              minimumCancellationDays: Number(event.target.value),
+            })}
+          />
+        </label>
+        <p className="muted wide-field">
+          Con 0 giorni si può annullare per tutta la data locale della prenotazione.
+          Con 2 giorni si può annullare fino all'intera data locale di due giorni prima.
+          Dopo la scadenza, il membro deve contattare il campo.
+        </p>
+        <div className="wide-field">
+          <div className="section-heading">
+            <h3>Regole di avviso</h3>
+            <button
+              type="button"
+              className="button button-quiet"
+              disabled={policy.noShowRules.length >= 20}
+              onClick={() => setPolicy({
+                ...policy,
+                noShowRules: [...policy.noShowRules, {
+                  id: crypto.randomUUID(),
+                  occurrenceThreshold: 5,
+                  windowDays: 90,
+                  label: "",
+                }],
+              })}
+            >
+              Aggiungi regola
+            </button>
+          </div>
+          <p className="muted">
+            Gli avvisi informano gli amministratori e non impediscono prenotazioni o decisioni.
+            Ogni regola mostra un avviso quando il numero raggiunge la soglia nella finestra indicata.
+          </p>
+          {policy.noShowRules.length ? (
+            <ol className="booking-policy-rules">
+              {policy.noShowRules.map((rule) => (
+                <li key={rule.id}>
+                  <label>
+                    Descrizione breve
+                    <input
+                      required
+                      maxLength={80}
+                      value={rule.label}
+                      onChange={(event) => updateRule(rule.id, { label: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Mancate presenze
+                    <input
+                      type="number"
+                      min={1}
+                      max={1_000_000}
+                      required
+                      value={rule.occurrenceThreshold}
+                      onChange={(event) => updateRule(rule.id, { occurrenceThreshold: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label>
+                    Finestra (giorni)
+                    <input
+                      type="number"
+                      min={1}
+                      max={3650}
+                      required
+                      value={rule.windowDays}
+                      onChange={(event) => updateRule(rule.id, { windowDays: Number(event.target.value) })}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="button button-quiet"
+                    aria-label={`Rimuovi regola ${rule.label || "senza descrizione"}`}
+                    onClick={() => setPolicy({
+                      ...policy,
+                      noShowRules: policy.noShowRules.filter((item) => item.id !== rule.id),
+                    })}
+                  >
+                    Rimuovi
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="range-empty">Nessun avviso configurato.</p>
+          )}
+        </div>
+        <button type="submit" className="button button-primary">Salva regole</button>
+      </fieldset>
+    </form>
+  );
+}
+
 export function BayForm({
   initial,
   users,
@@ -255,10 +387,47 @@ export function BayForm({
   onDraftChange: (bay: Bay) => void;
 }) {
   const [bay, setBay] = useState(initial);
+  const [prioritySearch, setPrioritySearch] = useState("");
+  const [selectedPriorityUserId, setSelectedPriorityUserId] = useState("");
   useEffect(() => setBay(initial), [initial]);
+  useEffect(() => {
+    setPrioritySearch("");
+    setSelectedPriorityUserId("");
+  }, [initial]);
   function updateBay(value: Bay) {
     setBay(value);
     onDraftChange(value);
+  }
+  const prioritySearchTerm = prioritySearch.trim().toLowerCase();
+  const availablePriorityUsers = users.filter((user) => {
+    if (bay.whitelistUserIds.includes(user.id)) return false;
+    const searchableName =
+      `${user.firstName} ${user.lastName} ${user.username}`.toLowerCase();
+    return searchableName.includes(prioritySearchTerm);
+  });
+  const selectedPriorityUser = users.find(
+    (user) => user.id === selectedPriorityUserId,
+  );
+  function addPriorityUser() {
+    if (!selectedPriorityUser || bay.whitelistUserIds.includes(selectedPriorityUser.id)) return;
+    updateBay({
+      ...bay,
+      whitelistUserIds: [...bay.whitelistUserIds, selectedPriorityUser.id],
+    });
+    setPrioritySearch("");
+    setSelectedPriorityUserId("");
+  }
+  function removePriorityUser(userId: string) {
+    updateBay({
+      ...bay,
+      whitelistUserIds: bay.whitelistUserIds.filter((id) => id !== userId),
+    });
+  }
+  function priorityUserLabel(userId: string) {
+    const user = users.find((item) => item.id === userId);
+    if (!user) return userId;
+    const fullName = `${user.firstName} ${user.lastName}`.trim();
+    return fullName ? `${fullName} (@${user.username})` : user.username;
   }
   function updateMechanism(
     index: number,
@@ -398,27 +567,77 @@ export function BayForm({
           </label>
         </div>
         <div className="wide-field">
-          <span className="field-label">Utenti in whitelist</span>
-          <div className="check-group">
-            {users.map((user) => (
-              <label className="check-label" key={user.id}>
-                <input
-                  type="checkbox"
-                  checked={bay.whitelistUserIds.includes(user.id)}
-                  onChange={(event) =>
-                    updateBay({
-                      ...bay,
-                      whitelistUserIds: event.target.checked
-                        ? [...bay.whitelistUserIds, user.id]
-                        : bay.whitelistUserIds.filter((id) => id !== user.id),
-                    })
-                  }
-                />
-                {user.username}
-              </label>
-            ))}
+          <span className="field-label">Utenti prioritari</span>
+          <p className="muted">
+            Possono prenotare la bay prima degli altri, fino al rilascio della priorità.
+          </p>
+          <div className="priority-user-controls">
+            <label>
+              Cerca utenti
+              <input
+                type="search"
+                placeholder="Nome o username"
+                value={prioritySearch}
+                onChange={(event) => {
+                  setPrioritySearch(event.target.value);
+                  setSelectedPriorityUserId("");
+                }}
+              />
+            </label>
+            <label>
+              Seleziona un utente
+              <select
+                aria-label="Seleziona un utente prioritario"
+                value={selectedPriorityUserId}
+                disabled={!availablePriorityUsers.length}
+                onChange={(event) => setSelectedPriorityUserId(event.target.value)}
+              >
+                <option value="">Scegli un utente</option>
+                {availablePriorityUsers.map((user) => {
+                  const fullName = `${user.firstName} ${user.lastName}`.trim();
+                  return (
+                    <option key={user.id} value={user.id}>
+                      {fullName ? `${fullName} (@${user.username})` : user.username}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={!selectedPriorityUser}
+              onClick={addPriorityUser}
+            >
+              Aggiungi
+            </button>
           </div>
-          {!users.length && <p className="muted">Nessun utente.</p>}
+          {!users.length ? (
+            <p className="muted">Nessun utente disponibile.</p>
+          ) : !availablePriorityUsers.length ? (
+            <p className="muted">
+              {prioritySearchTerm
+                ? "Nessun utente corrisponde alla ricerca."
+                : "Tutti gli utenti disponibili hanno già la priorità."}
+            </p>
+          ) : null}
+          <ul className="priority-user-list" aria-label="Utenti prioritari">
+            {bay.whitelistUserIds.map((userId) => (
+              <li className="priority-user-pill" key={userId}>
+                <span>{priorityUserLabel(userId)}</span>
+                <button
+                  type="button"
+                  className="priority-user-remove"
+                  aria-label={`Rimuovi ${priorityUserLabel(userId)} dai prioritari`}
+                  onClick={() => removePriorityUser(userId)}
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="m4 4 8 8m0-8-8 8" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
         <div className="wide-field">
           <span className="field-label">Meccanismi</span>
@@ -612,6 +831,7 @@ export function Admin({
     if (result.success) {
       setNotice(result.message);
       if (result.intent === "save-config") setConfigDraft(null);
+      if (result.intent === "save-booking-policy") routeFetcher.load("/admin");
       if (result.intent === "create-mechanism-type") {
         setMechanismTypeName("");
         routeFetcher.load("/admin");
@@ -767,6 +987,21 @@ export function Admin({
                         Nessun tipo creato. Aggiungi un tipo per configurare i meccanismi delle postazioni.
                       </p>
                     )}
+                  </section>
+                ),
+                disabled: busy,
+              },
+              {
+                key: "booking-policy",
+                label: "Prenotazioni",
+                panel: (
+                  <section className="range-panel">
+                    <h2>Regole delle prenotazioni</h2>
+                    <BookingPolicyForm
+                      initial={core.bookingPolicy}
+                      busy={busy}
+                      onSave={async (policy) => perform("save-booking-policy", policy)}
+                    />
                   </section>
                 ),
                 disabled: busy,

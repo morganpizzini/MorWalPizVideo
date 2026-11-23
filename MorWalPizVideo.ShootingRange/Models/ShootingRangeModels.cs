@@ -37,7 +37,12 @@ public sealed record ShootingRangeConfig : BaseEntity
     public TimeSpan? ContinuousStart { get; init; }
     public TimeSpan? ContinuousEnd { get; init; }
     public int ReservedReleaseDaysBefore { get; init; } = 2;
+    [System.Text.Json.Serialization.JsonIgnore] public int MinimumCancellationDays { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public int PolicyRevision { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public List<ShootingRangeNoShowRule> NoShowRules { get; init; } = [];
 }
+
+public sealed record ShootingRangeNoShowRule(string Id, int OccurrenceThreshold, int WindowDays, string Label);
 
 public sealed record ShootingRangeBay : BaseEntity
 {
@@ -102,6 +107,8 @@ public sealed record ShootingRangeBooking : BaseEntity
     public DateTime EndUtc { get; init; }
     public string Request { get; init; } = string.Empty;
     public ShootingRangeBookingStatus Status { get; init; } = ShootingRangeBookingStatus.Pending;
+    [System.Text.Json.Serialization.JsonIgnore] public bool IsNoShow { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public DateOnly? NoShowDate { get; init; }
 }
 
 public sealed record ShootingRangeThread : BaseEntity

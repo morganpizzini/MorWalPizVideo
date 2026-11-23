@@ -21,6 +21,12 @@ public interface IShootingRangeBookingRepository : IShootingRangeRepository<Shoo
 {
     Task<bool> HasOverlapAsync(string bayId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
     Task<ShootingRangeBooking> InsertIfAvailableAsync(ShootingRangeBooking booking, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetLocalDatePageAsync(
+        DateOnly localDate, int offset, int pageSize, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<ShootingRangeBooking> Items, int TotalCount)> GetUserReportPageAsync(
+        string userId, bool? isNoShow, int offset, int pageSize, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ShootingRangeBooking>> GetNoShowOccurrencesSinceAsync(
+        DateOnly earliestDate, CancellationToken cancellationToken = default);
 }
 
 public interface IShootingRangeFriendshipRepository : IShootingRangeRepository<ShootingRangeFriendship>
@@ -200,6 +206,11 @@ internal static class ShootingRangeWriteValidation
             throw new InvalidOperationException("Friendship pair already exists.");
         if (item is not ShootingRangeBooking booking) return;
         if (!Enum.IsDefined(booking.Status) || booking.StartUtc.Kind != DateTimeKind.Utc || booking.EndUtc.Kind != DateTimeKind.Utc || booking.StartUtc >= booking.EndUtc) throw new ArgumentException("Invalid booking interval or status.");
+        if (booking.IsNoShow != booking.NoShowDate.HasValue)
+            throw new ArgumentException("A no-show mark must have exactly one occurrence date.");
+        if (booking.IsNoShow &&
+            booking.Status is not ShootingRangeBookingStatus.Approved and not ShootingRangeBookingStatus.Cancelled)
+            throw new InvalidOperationException("Only an approved or administratively cancelled booking can carry a no-show mark.");
         var previous = replacing ? await repositories.Bookings.GetAsync(booking.Id, cancellationToken) : null;
         if (replacing && previous is null) throw new KeyNotFoundException("Booking not found.");
         if (previous is not null && (previous.UserId != booking.UserId || previous.BayId != booking.BayId || previous.LocalDate != booking.LocalDate || previous.PeriodKey != booking.PeriodKey || previous.StartUtc != booking.StartUtc || previous.EndUtc != booking.EndUtc))

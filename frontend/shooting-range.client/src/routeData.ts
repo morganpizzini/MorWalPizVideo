@@ -8,6 +8,11 @@ import {
   friendRequests,
   adminBays,
   adminBookings,
+  adminBookingReport,
+  adminBookingHistory,
+  adminBookingPolicy,
+  adminCancelBooking,
+  setBookingAttendance,
   adminClosures,
   adminConfig,
   adminMechanismTypes,
@@ -33,6 +38,7 @@ import {
   saveBay,
   saveClosure,
   saveConfig,
+  saveBookingPolicy,
   removeFriend,
   sessions,
   type Account,
@@ -41,6 +47,8 @@ import {
   type Bay,
   type Closure,
   type RangeConfig,
+  type BookingPolicy,
+  type BookingPage,
   type MechanismType,
   type MessageStatusDecision,
   type MessageThread,
@@ -80,6 +88,7 @@ export interface SessionErrorData {
 
 export interface AdminCoreData {
   config: RangeConfig;
+  bookingPolicy: BookingPolicy;
   users: Awaited<ReturnType<typeof adminUsers>>;
   bays: Awaited<ReturnType<typeof adminBays>>;
   mechanismTypes: MechanismType[];
@@ -99,6 +108,7 @@ export interface AdminRouteData {
 
 export interface AdminBookingsRouteData {
   config: RangeConfig;
+  bookingPolicy: BookingPolicy;
   users: AdminUser[];
   bays: Bay[];
   bookings: Booking[];
@@ -106,6 +116,17 @@ export interface AdminBookingsRouteData {
   offered: Sessions;
   period: string;
   availability: Availability | null;
+  historyDate: string;
+  history: Awaited<ReturnType<typeof adminBookingHistory>>;
+}
+
+export interface AdminReportRouteData {
+  users: AdminUser[];
+  config: RangeConfig;
+  userId: string;
+  attendance: "all" | "show" | "no-show";
+  report: BookingPage | null;
+  reportError?: SessionResult;
 }
 
 export interface FriendsRouteData {
@@ -354,7 +375,7 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
         intent,
         success: false,
         status: 409,
-        message: "La prenotazione è iniziata o non è più annullabile. Aggiorna lo storico.",
+        message: reason.message || "Il termine per annullare è scaduto. Contatta l'amministrazione del campo.",
       };
     }
     return actionError(intent, reason);
@@ -429,10 +450,11 @@ export async function adminLoader({ request }: LoaderFunctionArgs) {
 
   const core = Promise.all([
     adminConfig(request.signal),
+    adminBookingPolicy(request.signal),
     adminUsers(request.signal),
     adminBays(request.signal),
     adminMechanismTypes(request.signal),
-  ]).then(([config, users, bays, mechanismTypes]) => ({ config, users, bays, mechanismTypes }));
+  ]).then(([config, bookingPolicy, users, bays, mechanismTypes]) => ({ config, bookingPolicy, users, bays, mechanismTypes }));
   const closures = adminClosures(request.signal);
   return { core, closures };
 }
@@ -448,16 +470,63 @@ export async function adminBookingsLoader({ request }: LoaderFunctionArgs) {
     const url = new URL(request.url);
     const date = url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
     const period = url.searchParams.get("period") ?? "";
-    const [config, users, bays, bookings, offered] = await Promise.all([
-      adminConfig(request.signal),
+    const config = await adminConfig(request.signal);
+    const historyDate = url.searchParams.get("historyDate") ?? fieldLocalDate(new Date(), config.timeZone);
+    const page = Math.max(0, Number(url.searchParams.get("historyPage") ?? "0") || 0);
+    const [bookingPolicy, users, bays, bookings, offered, history] = await Promise.all([
+      adminBookingPolicy(request.signal),
       adminUsers(request.signal),
       adminBays(request.signal),
       adminBookings(request.signal),
       sessions(date, request.signal),
+      adminBookingHistory(historyDate, page, 25, request.signal),
     ]);
     const selected = offered.sessions.find((item) => item.periodKey === period);
     const available = selected ? await availability(date, period, request.signal) : null;
-    return { config, users, bays, bookings, date, offered, period, availability: available };
+    return { config, bookingPolicy, users, bays, bookings, date, offered, period, availability: available, historyDate, history };
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
+}
+
+function fieldLocalDate(now: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export async function adminReportLoader({ request }: LoaderFunctionArgs) {
+  if (typeof window === "undefined") return null;
+  const account = await browserAccount(request);
+  if (isSessionResult(account)) return { sessionError: account };
+  if (!account.isAdmin) return { sessionError: { error: true, status: 403, message: "Account non autorizzato." } };
+  if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
+
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("userId") ?? "";
+  const filter = url.searchParams.get("attendance") ?? "all";
+  if (filter !== "all" && filter !== "show" && filter !== "no-show")
+    return { sessionError: { error: true, status: 400, message: "Filtro di presenza non valido." } };
+  const attendance = filter;
+
+  try {
+    const [users, config] = await Promise.all([
+      adminUsers(request.signal),
+      adminConfig(request.signal),
+    ]);
+    if (!userId) return { users, config, userId, attendance, report: null };
+    const page = Math.max(0, Number(url.searchParams.get("page") ?? "0") || 0);
+    try {
+      const report = await adminBookingReport(userId, attendance, page, 25, request.signal);
+      return { users, config, userId, attendance, report };
+    } catch (reason) {
+      return { users, config, userId, attendance, report: null, reportError: readSessionResult(reason) };
+    }
   } catch (reason) {
     return { sessionError: readSessionResult(reason) };
   }
@@ -544,6 +613,33 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
       return { intent, success: false, status: 403, message: "Account non autorizzato o cambio password richiesto." };
     }
     switch (intent) {
+      case "save-booking-policy": {
+        const payload = jsonField(formData, "payload");
+        if (
+          !payload ||
+          !Number.isInteger(payload.revision) ||
+          !Number.isInteger(payload.minimumCancellationDays) ||
+          !Array.isArray(payload.noShowRules)
+        ) {
+          return { intent, success: false, message: "Le impostazioni delle prenotazioni non sono valide." };
+        }
+        const rules = payload.noShowRules;
+        if (rules.some((item) =>
+          !isRecord(item) ||
+          typeof item.id !== "string" ||
+          typeof item.label !== "string" ||
+          !Number.isInteger(item.occurrenceThreshold) ||
+          !Number.isInteger(item.windowDays)
+        )) {
+          return { intent, success: false, message: "Controlla soglie, periodi e descrizioni degli avvisi." };
+        }
+        await saveBookingPolicy({
+          revision: payload.revision as number,
+          minimumCancellationDays: payload.minimumCancellationDays as number,
+          noShowRules: rules as BookingPolicy["noShowRules"],
+        });
+        return { intent, success: true, message: "Impostazioni delle prenotazioni salvate." };
+      }
       case "save-config": {
         const payload = jsonField(formData, "payload");
         if (
@@ -677,6 +773,39 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
         }
         await decideBooking(id, approved);
         return { intent, success: true, message: approved ? "Prenotazione approvata." : "Prenotazione rifiutata." };
+      }
+      case "decide-booking-attendance": {
+        const payload = jsonField(formData, "payload");
+        if (typeof payload?.id !== "string" || typeof payload.isNoShow !== "boolean") {
+          return { intent, success: false, message: "Indicazione di presenza non valida." };
+        }
+        await setBookingAttendance(payload.id, payload.isNoShow);
+        return {
+          intent,
+          success: true,
+          message: payload.isNoShow ? "Mancata presenza registrata." : "Indicazione di mancata presenza rimossa.",
+        };
+      }
+      case "cancel-admin-booking": {
+        const payload = jsonField(formData, "payload");
+        if (
+          typeof payload?.id !== "string" ||
+          !Number.isInteger(payload.policyRevision) ||
+          typeof payload.confirmExistingNoShowRemoval !== "boolean" ||
+          typeof payload.expectedIsNoShow !== "boolean" ||
+          payload.expectedNoShowDate !== null && typeof payload.expectedNoShowDate !== "string" ||
+          payload.recordNoShow !== null && typeof payload.recordNoShow !== "boolean"
+        ) {
+          return { intent, success: false, message: "Conferma di cancellazione non valida." };
+        }
+        await adminCancelBooking(payload.id, {
+          policyRevision: payload.policyRevision as number,
+          recordNoShow: payload.recordNoShow as boolean | null,
+          confirmExistingNoShowRemoval: payload.confirmExistingNoShowRemoval,
+          expectedIsNoShow: payload.expectedIsNoShow,
+          expectedNoShowDate: payload.expectedNoShowDate as string | null,
+        });
+        return { intent, success: true, message: "Prenotazione annullata." };
       }
       case "create-admin-booking": {
         const payload = jsonField(formData, "payload");

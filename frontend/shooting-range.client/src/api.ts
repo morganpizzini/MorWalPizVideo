@@ -83,7 +83,37 @@ export type Booking = Session & {
   localDate: string;
   request: string;
   status: number;
+  canCancel?: boolean;
+  cancellationMessage?: string | null;
+  isNoShow?: boolean;
+  noShowDate?: string | null;
+  bayCode?: string;
 };
+export type NoShowRule = {
+  id: string;
+  occurrenceThreshold: number;
+  windowDays: number;
+  label: string;
+};
+export type BookingPolicy = {
+  revision: number;
+  minimumCancellationDays: number;
+  noShowRules: NoShowRule[];
+};
+export type BookingPage = {
+  items: Booking[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+};
+export type NoShowRuleAlert = {
+  ruleId: string;
+  label: string;
+  count: number;
+  threshold: number;
+  windowDays: number;
+};
+export type NoShowAlert = { userId: string; rules: NoShowRuleAlert[] };
 export type Message = {
   authorUserId: string;
   fromAdmin: boolean;
@@ -245,6 +275,25 @@ export const cancelBooking = (id: string) =>
   request<void>(`${prefix}/bookings/${encodeURIComponent(id)}/cancel`, {
     method: "POST",
   });
+export const adminCancelBooking = (
+  id: string,
+  body: {
+    policyRevision: number;
+    recordNoShow: boolean | null;
+    confirmExistingNoShowRemoval: boolean;
+    expectedIsNoShow: boolean;
+    expectedNoShowDate: string | null;
+  },
+) =>
+  request<void>(`${prefix}/admin/bookings/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+export const setBookingAttendance = (id: string, isNoShow: boolean) =>
+  request<void>(`${prefix}/admin/bookings/${encodeURIComponent(id)}/attendance`, {
+    method: "POST",
+    body: JSON.stringify({ isNoShow }),
+  });
 export const messages = (signal?: AbortSignal) =>
   request<MessageThread[]>(`${prefix}/messages`, { signal });
 export const openMessage = (body: { subject: string; text: string }) =>
@@ -258,6 +307,13 @@ export const adminUsers = (signal?: AbortSignal) =>
   request<AdminUser[]>(`${prefix}/admin/users`, { signal });
 export const adminConfig = (signal?: AbortSignal) =>
   request<RangeConfig>(`${prefix}/admin/config`, { signal });
+export const adminBookingPolicy = (signal?: AbortSignal) =>
+  request<BookingPolicy>(`${prefix}/admin/booking-policy`, { signal });
+export const saveBookingPolicy = (body: BookingPolicy) =>
+  request<BookingPolicy>(`${prefix}/admin/booking-policy`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 export const saveConfig = (body: RangeConfig) =>
   request<RangeConfig>(`${prefix}/admin/config`, {
     method: "PUT",
@@ -296,6 +352,29 @@ export const saveClosure = (body: Closure) =>
   );
 export const adminBookings = (signal?: AbortSignal) =>
   request<Booking[]>(`${prefix}/admin/bookings`, { signal });
+export const adminBookingHistory = (
+  date: string,
+  page = 0,
+  pageSize = 25,
+  signal?: AbortSignal,
+) =>
+  request<BookingPage>(
+    `${prefix}/admin/bookings/history?date=${encodeURIComponent(date)}&page=${page}&pageSize=${pageSize}`,
+    { signal },
+  );
+export const adminBookingReport = (
+  userId: string,
+  attendance: "all" | "show" | "no-show",
+  page = 0,
+  pageSize = 25,
+  signal?: AbortSignal,
+) =>
+  request<BookingPage>(
+    `${prefix}/admin/reports/bookings?userId=${encodeURIComponent(userId)}&attendance=${attendance}&page=${page}&pageSize=${pageSize}`,
+    { signal },
+  );
+export const adminNoShowAlerts = (signal?: AbortSignal) =>
+  request<NoShowAlert[]>(`${prefix}/admin/bookings/no-show-alerts`, { signal });
 export const adminPendingBookingCount = (signal?: AbortSignal) =>
   request<{ count: number }>(`${prefix}/admin/bookings/pending-count`, {
     signal,

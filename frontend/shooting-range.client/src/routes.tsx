@@ -3,11 +3,13 @@ import { type RouteObject, useFetcher } from "react-router";
 import { App, SessionGate, Shell, type SessionViewProps } from "./App";
 import { Admin } from "./Admin";
 import { AdminBookings } from "./AdminBookings";
+import { AdminReport } from "./AdminReport";
 import { Friends } from "./Friends";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import {
   adminAction,
   adminBookingsLoader,
+  adminReportLoader,
   adminLoader,
   friendsAction,
   friendsLoader,
@@ -292,6 +294,24 @@ function AdminBookingsRoute() {
   );
 }
 
+function AdminReportRoute() {
+  return (
+    <SessionGate>
+      {(props) => props.account.isAdmin ? (
+        <AdminReport {...props} />
+      ) : (
+        <Shell
+          account={props.account}
+          onLogout={props.onLogout}
+          loggingOut={props.loggingOut}
+        >
+          <RouteSessionError message="Account non autorizzato." status={403} />
+        </Shell>
+      )}
+    </SessionGate>
+  );
+}
+
 function FriendsRoute() {
   return <SessionGate>{(props) => <Friends {...props} />}</SessionGate>;
 }
@@ -321,5 +341,10 @@ export const routes: RouteObject[] = [
     Component: AdminBookingsRoute,
     loader: adminBookingsLoader,
     action: adminAction,
+  },
+  {
+    path: "/admin/reports",
+    Component: AdminReportRoute,
+    loader: adminReportLoader,
   },
 ];

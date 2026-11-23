@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
@@ -139,7 +140,7 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public async Task<IActionResult> Book(BookingRequest request, CancellationToken cancellationToken) { try { var booking = await service.CreateBookingAsync(UserId(), request, cancellationToken); return Created($"api/shooting-range/bookings/{booking.Id}", booking); } catch (UnauthorizedAccessException error) { return StatusCode(403, new { message = error.Message }); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
 
     [HttpGet("bookings/mine"), Authorize]
-    public Task<IReadOnlyList<ShootingRangeBooking>> Mine(CancellationToken cancellationToken) => service.GetUserBookingsAsync(UserId(), cancellationToken);
+    public Task<IReadOnlyList<MemberBookingDto>> Mine(CancellationToken cancellationToken) => service.GetUserBookingsAsync(UserId(), cancellationToken);
 
     [HttpPost("bookings/{id}/cancel"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelBooking(string id, CancellationToken cancellationToken)
@@ -206,9 +207,40 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     public Task<IActionResult> SaveConfig(ShootingRangeConfig config, CancellationToken cancellationToken) => service.AdminMutationAsync<IActionResult>(UserId(), async () =>
     {
         var existing = (await repositories.Configs.GetAllAsync(cancellationToken)).SingleOrDefault();
-        var saved = await repositories.Configs.ReplaceAsync(config with { Id = existing?.Id ?? ShootingRangeIds.NewId() }, cancellationToken);
+        var saved = await repositories.Configs.ReplaceAsync(config with
+        {
+            Id = existing?.Id ?? ShootingRangeIds.NewId(),
+            MinimumCancellationDays = existing?.MinimumCancellationDays ?? 0,
+            PolicyRevision = existing?.PolicyRevision ?? 0,
+            NoShowRules = existing?.NoShowRules ?? []
+        }, cancellationToken);
         return Ok(saved);
     }, cancellationToken);
+
+    [HttpGet("admin/booking-policy"), Authorize(Roles = "admin")]
+    public Task<BookingPolicyDto> BookingPolicy(CancellationToken cancellationToken) =>
+        service.GetBookingPolicyAsync(UserId(), cancellationToken);
+
+    [HttpPut("admin/booking-policy"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveBookingPolicy(BookingPolicyRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await service.SaveBookingPolicyAsync(UserId(), request, cancellationToken));
+        }
+        catch (InvalidOperationException error)
+        {
+            return Conflict(new { message = error.Message });
+        }
+        catch (ArgumentException error)
+        {
+            return BadRequest(new { message = error.Message });
+        }
+    }
+
+    [HttpGet("admin/bookings/no-show-alerts"), Authorize(Roles = "admin")]
+    public Task<IReadOnlyList<BookingNoShowAlertDto>> BookingNoShowAlerts(CancellationToken cancellationToken) =>
+        service.GetBookingNoShowAlertsAsync(UserId(), cancellationToken);
 
     [HttpGet("admin/exceptions"), Authorize(Roles = "admin")]
     public async Task<IReadOnlyList<ShootingRangeException>> Exceptions(CancellationToken cancellationToken) { await service.RequireAdminAsync(UserId(), cancellationToken); return await repositories.Exceptions.GetAllAsync(cancellationToken); }
@@ -224,7 +256,94 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     }, cancellationToken);
 
     [HttpGet("admin/bookings"), Authorize(Roles = "admin")]
-    public Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) => service.GetAdminBookingsAsync(UserId(), cancellationToken);
+    public Task<IReadOnlyList<AdminBookingDto>> AllBookings(CancellationToken cancellationToken) => service.GetAdminBookingsAsync(UserId(), cancellationToken);
+
+    [HttpGet("admin/bookings/history"), Authorize(Roles = "admin")]
+    public async Task<IActionResult> BookingHistory(
+        [FromQuery] DateOnly date,
+        [FromQuery] int page = 0,
+        [FromQuery] int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return Ok(await service.GetAdminBookingHistoryPageAsync(UserId(), date, page, pageSize, cancellationToken));
+        }
+        catch (ArgumentOutOfRangeException error)
+        {
+            return BadRequest(new { message = error.Message });
+        }
+    }
+
+    [HttpGet("admin/reports/bookings"), Authorize(Roles = "admin")]
+    public async Task<IActionResult> BookingReport(
+        [FromQuery, Required] string userId,
+        [FromQuery] string attendance = "all",
+        [FromQuery] int page = 0,
+        [FromQuery] int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        bool? isNoShow = attendance switch
+        {
+            "all" => null,
+            "show" => false,
+            "no-show" => true,
+            _ => null
+        };
+        if (attendance is not "all" and not "show" and not "no-show")
+            return BadRequest(new { message = "Choose all, show, or no-show attendance." });
+        try
+        {
+            return Ok(await service.GetAdminUserBookingReportPageAsync(
+                UserId(), userId, isNoShow, page, pageSize, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+        catch (ArgumentOutOfRangeException error)
+        {
+            return BadRequest(new { message = error.Message });
+        }
+    }
+
+    [HttpPost("admin/bookings/{id}/attendance"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetBookingAttendance(
+        string id, BookingAttendanceRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.SetBookingAttendanceAsync(UserId(), id, request.IsNoShow, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException error)
+        {
+            return Conflict(new { message = error.Message });
+        }
+    }
+
+    [HttpPost("admin/bookings/{id}/cancel"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelBookingAsAdmin(
+        string id, AdminBookingCancellationRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.CancelBookingAsAdminAsync(UserId(), id, request, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException error)
+        {
+            return Conflict(new { message = error.Message });
+        }
+    }
 
     [HttpPost("admin/bookings"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateAdminBooking(AdminBookingRequest request, CancellationToken cancellationToken)

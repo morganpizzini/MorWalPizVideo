@@ -197,6 +197,44 @@ Validation completed:
 
 - `cd frontend && yarn workspace shooter-workshop.client build` — passed.
 
+## Verification follow-up — 2026-11-23 shooting dialog focus and alignment
+
+The shared dialog now updates its close handler without restarting the focus trap,
+so controlled shooting-session fields keep focus while typing. The close action uses
+the Workshop quiet-button style, and the dialog heading margin is reset to align it
+with the button.
+
+Changed files:
+
+- `frontend/fe-packages/layout/src/components/Dialog.tsx`
+- `frontend/shooter-workshop.client/src/routes/ShootingSessions/component.test.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+
+Validation completed:
+
+- `cd frontend && yarn workspace @morwalpiz/layout build` — passed.
+- `cd frontend && yarn workspace shooter-workshop.client test src/routes/ShootingSessions/component.test.tsx` — 1 passed.
+- `cd frontend && yarn workspace shooter-workshop.client build` — passed.
+
+## Verification follow-up — 2026-11-23 shooting history layout
+
+The shooting history now places its primary recording action beside the section
+heading. Each session has a semantic firearm heading, date/time, and round total in
+one details group, with its actions aligned opposite that group on wider screens.
+Rows gain clear separators, stack on narrow screens, and use wrapped 44px action
+targets.
+
+Changed files:
+
+- `frontend/shooter-workshop.client/src/routes/ShootingSessions/component.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+
+Validation completed:
+
+- `cd frontend && yarn workspace shooter-workshop.client test src/routes/ShootingSessions/component.test.tsx` — 1 passed.
+- `cd frontend && yarn workspace shooter-workshop.client build` — passed.
+- `.github/skills/impeccable/scripts/impeccable detect --json --scope layout frontend/shooter-workshop.client/src/routes/ShootingSessions/component.tsx` — no findings.
+
 Deliver a new private React application for personal firearm, physical-component,
 maintenance, ammunition and shooting-history management. It is a standalone Yarn
 workspace that reuses the structure, visual identity and genuinely shared components of

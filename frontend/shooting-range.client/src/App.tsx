@@ -142,6 +142,7 @@ export function Shell({
                     Conteggio non aggiornato · Riprova
                   </button>
                 )}
+                <NavLink to="/admin/reports">Storico</NavLink>
               </>
             )}
           </nav>
@@ -926,8 +927,7 @@ function BookingHistoryRegion({
                   })}
                 </span>
                 <strong>{formatBookingStatus(booking.status)}</strong>
-                {(booking.status === 0 || booking.status === 1) &&
-                  new Date(booking.startUtc).getTime() > Date.now() && (
+                {(booking.status === 0 || booking.status === 1) && booking.canCancel === true && (
                     <button
                       type="button"
                       className="button button-quiet"
@@ -936,6 +936,10 @@ function BookingHistoryRegion({
                     >
                       Annulla prenotazione
                     </button>
+                  )}
+                {(booking.status === 0 || booking.status === 1) &&
+                  booking.canCancel === false && booking.cancellationMessage && (
+                    <p className="range-muted">{booking.cancellationMessage}</p>
                   )}
               </li>
             ))}
