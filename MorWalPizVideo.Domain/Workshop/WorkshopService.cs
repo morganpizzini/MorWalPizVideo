@@ -48,7 +48,8 @@ public sealed record WorkshopCorrectionCommand(string OriginalOperationId, Works
 public sealed record WorkshopDashboardData(int FirearmCount, int ComponentCount, long TotalFirearmRounds,
     int ComponentsAtOrAboveInterval, long TotalProducedRounds, long AvailableRounds,
     int RecentActivityCount, WorkshopProjectionState ProjectionState);
-public sealed record WorkshopAnalyticsBucketData(DateTime Date, long ShootingRounds, long ProducedRounds, int ShootingSessions);
+public sealed record WorkshopAnalyticsBucketData(DateTime Date, long ShootingRounds, long ProducedRounds,
+    int ShootingSessions, IReadOnlyList<string> Notes);
 public sealed record WorkshopAnalyticsData(DateTime From, DateTime To, long ShootingRounds, int ShootingSessions,
     long TrackedRounds, long UntrackedRounds, long ProducedRounds, long AvailableRounds,
     int MaintenanceEvents, int MalfunctionEvents, int CorrectionCount, WorkshopProjectionState ProjectionState,
@@ -255,13 +256,16 @@ public sealed class WorkshopService(
         var shootingRounds = activeSessions.Sum(x => x.TotalRounds);
         var untrackedRounds = activeSessions.Sum(x => x.UntrackedAmmunition);
         var buckets = activeSessions.GroupBy(x => x.Date.Date)
-            .Select(group => new WorkshopAnalyticsBucketData(group.Key, group.Sum(x => x.TotalRounds), 0, group.Count()))
+            .Select(group => new WorkshopAnalyticsBucketData(group.Key, group.Sum(x => x.TotalRounds), 0, group.Count(),
+                group.Select(x => x.Notes).Where(note => !string.IsNullOrWhiteSpace(note)).Select(note => note!.Trim()).ToArray()))
             .Concat(batches.GroupBy(x => x.ProductionDate.Date)
-                .Select(group => new WorkshopAnalyticsBucketData(group.Key, 0, group.Sum(x => x.ProducedQuantity), 0)))
+                .Select(group => new WorkshopAnalyticsBucketData(group.Key, 0, group.Sum(x => x.ProducedQuantity), 0,
+                    group.Select(x => x.Notes).Where(note => !string.IsNullOrWhiteSpace(note)).Select(note => note!.Trim()).ToArray())))
             .GroupBy(x => x.Date)
             .OrderBy(x => x.Key)
             .Select(group => new WorkshopAnalyticsBucketData(group.Key, group.Sum(x => x.ShootingRounds),
-                group.Sum(x => x.ProducedRounds), group.Sum(x => x.ShootingSessions)))
+                group.Sum(x => x.ProducedRounds), group.Sum(x => x.ShootingSessions),
+                group.SelectMany(x => x.Notes).ToArray()))
             .ToArray();
         var reconciliationState = await repository.GetReconciliationAsync(accountId, ct);
         return new(fromInclusive, toExclusive, shootingRounds, activeSessions.Length,

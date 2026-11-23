@@ -351,6 +351,7 @@ export interface WorkshopAnalyticsBucket {
   shootingRounds: number;
   producedRounds: number;
   shootingSessions: number;
+  notes?: string[];
 }
 
 export interface WorkshopAnalytics {

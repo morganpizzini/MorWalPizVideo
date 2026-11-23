@@ -1,12 +1,12 @@
 import { Link, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
-import type { WorkshopAnalytics, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
+import type { WorkshopAnalytics, WorkshopAnalyticsBucket, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
 import { ActivityList, DeferredRoute, Stat } from "../shared";
 import { ActivitySkeleton, MetricSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 import type { DashboardLoaderData } from "./loader";
 import { useI18n } from "../../i18n";
-import { formatNumber } from "../../i18n-formatters";
+import { formatDate, formatNumber } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences, type WorkshopPersonalGoal } from "../../services/workshopPreferences";
 
@@ -109,22 +109,9 @@ function DashboardContent({ data }: { data: { dashboard: WorkshopDashboard; hist
         {data.analytics.projectionState !== "Current" && (
           <p className="status-note mt-2" role="status">{t("Projection state")}: {t(data.analytics.projectionState)}</p>
         )}
-        {data.analytics.buckets.length ? (
-          <div className="table-scroll">
-            <table>
-              <caption>{t("Daily recorded activity")}</caption>
-              <thead><tr><th>{t("Date")}</th><th>{t("Shooting rounds")}</th><th>{t("Produced rounds")}</th><th>{t("Sessions")}</th></tr></thead>
-              <tbody>{data.analytics.buckets.map((bucket) => (
-                <tr key={bucket.date}>
-                  <td>{new Intl.DateTimeFormat(culture, { dateStyle: "medium" }).format(new Date(bucket.date))}</td>
-                  <td>{formatNumber(bucket.shootingRounds, culture)}</td>
-                  <td>{formatNumber(bucket.producedRounds, culture)}</td>
-                  <td>{bucket.shootingSessions}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        ) : <p>{t("No recorded activity in this period.")}</p>}
+        {data.analytics.buckets.length
+          ? <DailyActivityTable buckets={data.analytics.buckets} />
+          : <p>{t("No recorded activity in this period.")}</p>}
       </section>
       <section className="panel personal-goal">
         <div className="section-heading"><h2>{t("Personal goal")}</h2><span className="status-note">{t("Presentation-only")}</span></div>
@@ -146,6 +133,31 @@ function DashboardContent({ data }: { data: { dashboard: WorkshopDashboard; hist
         <div className="section-heading"><h2>{t("Recent activity")}</h2><Link to="/history">{t("View history")}</Link></div>
         {data.history.length ? <ActivityList compact items={data.history.slice(0, 10)} /> : <EmptyState title={t("No activity yet")} message={t("Your first operation will appear here.")} />}
       </section>
+    </div>
+  );
+}
+
+export function DailyActivityTable({ buckets }: { buckets: WorkshopAnalyticsBucket[] }) {
+  const { culture, t } = useI18n();
+  return (
+    <div className="table-scroll">
+      <table>
+        <caption>{t("Daily recorded activity")}</caption>
+        <thead><tr><th>{t("Date")}</th><th>{t("Rounds")}</th><th>{t("Notes")}</th></tr></thead>
+        <tbody>{buckets.map((bucket) => (
+          <tr key={bucket.date}>
+            <td>{formatDate(bucket.date, culture)}{bucket.shootingSessions > 1 && ` (${formatNumber(bucket.shootingSessions, culture)})`}</td>
+            <td>
+              <div className="daily-activity-rounds">
+                {bucket.producedRounds > 0 && <span className="daily-activity-produced"><span className="visually-hidden">{t("Produced")}: </span>+{formatNumber(bucket.producedRounds, culture)}</span>}
+                {bucket.shootingRounds > 0 && <span className="daily-activity-used"><span className="visually-hidden">{t("Used")}: </span>-{formatNumber(bucket.shootingRounds, culture)}</span>}
+                {bucket.producedRounds === 0 && bucket.shootingRounds === 0 && "-"}
+              </div>
+            </td>
+            <td>{bucket.notes?.filter((note) => note.trim()).join(" · ") || "-"}</td>
+          </tr>
+        ))}</tbody>
+      </table>
     </div>
   );
 }

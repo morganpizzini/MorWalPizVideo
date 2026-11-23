@@ -371,6 +371,8 @@ const messages: Record<string, string> = {
   "Remove goal": "Rimuovi obiettivo",
   "Goal type": "Tipo di obiettivo",
   "Produced rounds": "Colpi prodotti",
+  "Produced": "Prodotti",
+  "Used": "Usati",
   "Target rounds": "Obiettivo colpi",
   "Set goal": "Imposta obiettivo",
   "Goals stay on this signed-in account and do not send reminders.": "Gli obiettivi restano su questo account autenticato e non inviano promemoria.",

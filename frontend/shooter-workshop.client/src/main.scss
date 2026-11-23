@@ -106,6 +106,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .shooting-session-firearm { margin: 0; color: var(--workshop-text); font-size: 1rem; font-weight: 800; }
 .shooting-session-meta time { color: var(--workshop-secondary); font-size: .84rem; }
 .shooting-session-rounds { color: var(--workshop-text); }
+.daily-activity-rounds { display: flex; flex-wrap: wrap; gap: .25rem .75rem; font-variant-numeric: tabular-nums; font-weight: 700; }
+.daily-activity-produced { color: var(--workshop-success); }
+.daily-activity-used { color: var(--workshop-error); }
 .shooting-session-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
 .shooting-session-actions .button { min-height: 2.75rem; margin: 0; }
 .shooting-session-details fieldset { width: min(100%, 36rem); margin: .25rem 0 0; }

@@ -358,7 +358,7 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
                 analytics.ProducedRounds, analytics.AvailableRounds, analytics.MaintenanceEvents,
                 analytics.MalfunctionEvents, analytics.CorrectionCount, analytics.ProjectionState,
                 analytics.Buckets.Select(x => new WorkshopAnalyticsBucketContract(x.Date, x.ShootingRounds,
-                    x.ProducedRounds, x.ShootingSessions)).ToArray()));
+                    x.ProducedRounds, x.ShootingSessions, x.Notes)).ToArray()));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }
@@ -388,7 +388,7 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
                     analytics.AvailableRounds, analytics.MaintenanceEvents, analytics.MalfunctionEvents,
                     analytics.CorrectionCount, analytics.ProjectionState,
                     analytics.Buckets.Select(x => new WorkshopAnalyticsBucketContract(x.Date, x.ShootingRounds,
-                        x.ProducedRounds, x.ShootingSessions)).ToArray()),
+                        x.ProducedRounds, x.ShootingSessions, x.Notes)).ToArray()),
                 report.Activities.Select(x => new WorkshopReportActivityContract(
                     x.Id, x.OperationId, x.Type, x.EffectiveAt, x.RecordedAt, x.Summary, x.EntityLabel)).ToArray()));
         }

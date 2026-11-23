@@ -266,7 +266,8 @@ public sealed record WorkshopDashboardContract(
     int RecentActivityCount, WorkshopProjectionState ProjectionState);
 
 public sealed record WorkshopAnalyticsBucketContract(
-    DateTime Date, long ShootingRounds, long ProducedRounds, int ShootingSessions);
+    DateTime Date, long ShootingRounds, long ProducedRounds, int ShootingSessions,
+    IReadOnlyList<string> Notes);
 
 public sealed record WorkshopAnalyticsContract(
     DateTime From, DateTime To, long ShootingRounds, int ShootingSessions,

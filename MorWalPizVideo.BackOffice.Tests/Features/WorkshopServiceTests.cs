@@ -274,10 +274,10 @@ public sealed class WorkshopServiceTests
         scenario.Add(DbCollections.WorkshopAmmoBatches, new AmmoBatch
         {
             Id = "analytics-batch", AccountId = "account-1", RecipeId = "analytics-recipe",
-            ProductionDate = date.AddDays(-1), ProducedQuantity = 100, OnHandQuantity = 100
+            ProductionDate = date, ProducedQuantity = 100, OnHandQuantity = 100, Notes = "fresh batch"
         });
         await service.RecordShootingAsync("account-1",
-            new(firearm.Id, date, 40, "practice", [new("analytics-recipe", 30)], 10, [], "analytics-shoot-1"));
+            new(firearm.Id, date, 40, "practice session", [new("analytics-recipe", 30)], 10, [], "analytics-shoot-1"));
 
         var analytics = await service.GetAnalyticsAsync("account-1", date.AddDays(-1), date.AddDays(1));
 
@@ -285,7 +285,11 @@ public sealed class WorkshopServiceTests
         Assert.Equal(30, analytics.TrackedRounds);
         Assert.Equal(10, analytics.UntrackedRounds);
         Assert.Equal(1, analytics.ShootingSessions);
-        Assert.Equal(40, analytics.Buckets.Single(bucket => bucket.ShootingRounds == 40).ShootingRounds);
+        var bucket = Assert.Single(analytics.Buckets);
+        Assert.Equal(40, bucket.ShootingRounds);
+        Assert.Equal(100, bucket.ProducedRounds);
+        Assert.Equal(1, bucket.ShootingSessions);
+        Assert.Equal(["practice session", "fresh batch"], bucket.Notes);
     }
 
     [Fact]

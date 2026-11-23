@@ -816,6 +816,7 @@ It should provide a concise overview of the user's equipment and ammunition situ
 - Recent production sessions.
 - Recent component installations.
 - Recent maintenance events.
+- Daily activity combines production and shooting totals in one rounds column, distinguishes production from use, shows a session count beside the date when multiple sessions occurred, and displays recorded notes or `-`.
 
 ### Quick actions
 - Add firearm.
