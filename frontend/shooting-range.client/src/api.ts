@@ -24,6 +24,18 @@ export type Bay = {
   reservedUntilUtc: string | null;
   whitelistUserIds: string[];
 };
+export type FriendBooking = { bayId: string; username: string; status: number };
+export type Friend = {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+};
+export type FriendRequest = Friend & { createdUtc: string };
+export type FriendRequestLists = {
+  incoming: FriendRequest[];
+  outgoing: FriendRequest[];
+};
 export type MechanismType = { id: string; name: string };
 export type Availability = {
   localDate: string;
@@ -31,6 +43,7 @@ export type Availability = {
   startUtc: string;
   endUtc: string;
   bays: Bay[];
+  friendBookings?: FriendBooking[];
 };
 export type Session = { periodKey: string; startUtc: string; endUtc: string };
 export type Sessions = {
@@ -43,7 +56,7 @@ export type RangeConfig = {
   creationDateTime: string;
   name: string;
   timeZone: string;
-  sessionMode: 0 | 1 | 2;
+  sessionMode: 0 | 1 | 2 | 3;
   openingDays: number[];
   morningStart: string;
   morningEnd: string;
@@ -195,6 +208,36 @@ export const book = (body: BookingRequest) =>
   request<Booking>(`${prefix}/bookings`, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+export const createAdminBooking = (body: BookingRequest & { userId: string }) =>
+  request<void>(`${prefix}/admin/bookings`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+export const friends = (signal?: AbortSignal) =>
+  request<Friend[]>(`${prefix}/friends`, { signal });
+export const friendRequests = (signal?: AbortSignal) =>
+  request<FriendRequestLists>(`${prefix}/friend-requests`, { signal });
+export const sendFriendRequest = (username: string) =>
+  request<void>(`${prefix}/friend-requests`, {
+    method: "POST",
+    body: JSON.stringify({ username }),
+  });
+export const acceptFriendRequest = (requestId: string) =>
+  request<void>(`${prefix}/friend-requests/${encodeURIComponent(requestId)}/accept`, {
+    method: "POST",
+  });
+export const declineFriendRequest = (requestId: string) =>
+  request<void>(`${prefix}/friend-requests/${encodeURIComponent(requestId)}/decline`, {
+    method: "POST",
+  });
+export const cancelFriendRequest = (requestId: string) =>
+  request<void>(`${prefix}/friend-requests/${encodeURIComponent(requestId)}`, {
+    method: "DELETE",
+  });
+export const removeFriend = (userId: string) =>
+  request<void>(`${prefix}/friends/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
   });
 export const myBookings = (signal?: AbortSignal) =>
   request<Booking[]>(`${prefix}/bookings/mine`, { signal });

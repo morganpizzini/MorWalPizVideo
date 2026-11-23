@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  acceptFriendRequest,
   ApiError,
   adminBays,
   adminBookings,
@@ -11,14 +12,22 @@ import {
   cancelBooking,
   changePassword,
   createMechanismType,
+  createAdminBooking,
   decideBooking,
   decideMessageStatus,
   getConfig,
   getSession,
+  friends,
+  friendRequests,
   login,
   messages,
   myBookings,
   sessions,
+  sendFriendRequest,
+  cancelFriendRequest,
+  declineFriendRequest,
+  removeFriend,
+  saveConfig,
   type Account,
   type RangeConfig,
   type Sessions,
@@ -30,12 +39,17 @@ import {
   adminLoader,
   bookingAction,
   bookingLoader,
+  friendsAction,
+  friendsLoader,
   messagesAction,
   messagesLoader,
 } from "./routeData";
 
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
+  acceptFriendRequest: vi.fn(),
+  cancelFriendRequest: vi.fn(),
+  declineFriendRequest: vi.fn(),
   adminConfig: vi.fn(),
   adminBays: vi.fn(),
   adminBookings: vi.fn(),
@@ -46,15 +60,21 @@ vi.mock("./api", async (importOriginal) => ({
   cancelBooking: vi.fn(),
   changePassword: vi.fn(),
   createMechanismType: vi.fn(),
+  createAdminBooking: vi.fn(),
   decideBooking: vi.fn(),
   decideMessageStatus: vi.fn(),
   getConfig: vi.fn(),
   getSession: vi.fn(),
+  friends: vi.fn(),
+  friendRequests: vi.fn(),
   login: vi.fn(),
   messages: vi.fn(),
   myBookings: vi.fn(),
   openMessage: vi.fn(),
   sessions: vi.fn(),
+  sendFriendRequest: vi.fn(),
+  removeFriend: vi.fn(),
+  saveConfig: vi.fn(),
 }));
 
 const account: Account = {
@@ -181,6 +201,7 @@ describe("Range route data security and mutations", () => {
     vi.mocked(adminUsers).mockResolvedValue([]);
     vi.mocked(adminBays).mockResolvedValue([]);
     vi.mocked(adminBookings).mockResolvedValue([]);
+    vi.mocked(sessions).mockResolvedValue(offered);
 
     await expect(adminBookingsLoader(
       loaderArgs("https://range.test/admin/bookings"),
@@ -329,6 +350,7 @@ describe("Range route data security and mutations", () => {
       bayId: "bay-1",
       localDate: "2030-01-12",
       periodKey: "09:00",
+      request: "",
       expectedStartUtc: "2030-01-12T07:00:00Z",
       expectedEndUtc: offered.sessions[0].endUtc,
     }));
@@ -336,6 +358,72 @@ describe("Range route data security and mutations", () => {
     expect(result).toMatchObject({ success: false });
     expect(result.message).toContain("Gli orari sono cambiati");
     expect(book).not.toHaveBeenCalled();
+  });
+
+  it("keeps the confirmed member note and rejects notes over the existing limit", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(book).mockResolvedValue({
+      id: "booking",
+      creationDateTime: "2030-01-01T00:00:00Z",
+      userId: account.id,
+      bayId: "bay-1",
+      localDate: "2030-01-12",
+      periodKey: offered.sessions[0].periodKey,
+      startUtc: offered.sessions[0].startUtc,
+      endUtc: offered.sessions[0].endUtc,
+      request: "Setup note",
+      status: 0,
+    });
+
+    const confirmed = await bookingAction(actionArgs("/", {
+      intent: "book",
+      bayId: "bay-1",
+      localDate: "2030-01-12",
+      periodKey: offered.sessions[0].periodKey,
+      expectedStartUtc: offered.sessions[0].startUtc,
+      expectedEndUtc: offered.sessions[0].endUtc,
+      request: "Setup note",
+    }));
+    expect(confirmed).toMatchObject({ success: true });
+    expect(book).toHaveBeenCalledWith(expect.objectContaining({ request: "Setup note" }));
+
+    vi.mocked(book).mockClear();
+    const tooLong = await bookingAction(actionArgs("/", {
+      intent: "book",
+      bayId: "bay-1",
+      localDate: "2030-01-12",
+      periodKey: offered.sessions[0].periodKey,
+      expectedStartUtc: offered.sessions[0].startUtc,
+      expectedEndUtc: offered.sessions[0].endUtc,
+      request: "x".repeat(1001),
+    }));
+    expect(tooLong).toMatchObject({ success: false, message: "La nota non può superare 1000 caratteri." });
+    expect(book).not.toHaveBeenCalled();
+  });
+
+  it("surfaces stale booking conflicts after validating the current session", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(book).mockRejectedValue(new ApiError(409, "Conflict"));
+
+    const result = await bookingAction(actionArgs("/", {
+      intent: "book",
+      bayId: "bay-1",
+      localDate: offered.localDate,
+      periodKey: offered.sessions[0].periodKey,
+      expectedStartUtc: offered.sessions[0].startUtc,
+      expectedEndUtc: offered.sessions[0].endUtc,
+      request: "Keep this note",
+    }));
+
+    expect(result).toMatchObject({
+      success: false,
+      status: 409,
+      message: "La postazione non è più disponibile. Seleziona un altro turno.",
+    });
   });
 
   it("loads availability only for a currently offered selected session", async () => {
@@ -496,6 +584,123 @@ describe("Range route data security and mutations", () => {
     expect(decidedBooking.success).toBe(true);
     expect(approveUser).toHaveBeenCalledWith("pending-user");
     expect(decideBooking).toHaveBeenCalledWith("booking-1", true);
+  });
+
+  it("accepts Mixed settings with 60- or 120-minute increments", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(saveConfig).mockResolvedValue({ ...config, sessionMode: 3, hourlyMinutes: 120 });
+
+    const result = await adminAction(actionArgs("/admin", {
+      intent: "save-config",
+      payload: JSON.stringify({ ...config, sessionMode: 3, hourlyMinutes: 120 }),
+    }));
+
+    expect(result).toMatchObject({ success: true });
+    expect(saveConfig).toHaveBeenCalledWith(expect.objectContaining({
+      sessionMode: 3,
+      hourlyMinutes: 120,
+    }));
+  });
+
+  it("creates an auto-approved admin booking only for a currently offered interval", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue({ ...account, isAdmin: true });
+    vi.mocked(sessions).mockResolvedValue(offered);
+    vi.mocked(createAdminBooking).mockResolvedValue(undefined);
+
+    const payload = {
+      userId: "member-1",
+      bayId: "bay-1",
+      localDate: offered.localDate,
+      periodKey: offered.sessions[0].periodKey,
+      request: "Setup",
+      expectedStartUtc: offered.sessions[0].startUtc,
+      expectedEndUtc: offered.sessions[0].endUtc,
+    };
+    const result = await adminAction(actionArgs("/admin/bookings", {
+      intent: "create-admin-booking",
+      payload: JSON.stringify(payload),
+    }));
+
+    expect(result).toMatchObject({ success: true, message: "Prenotazione creata e approvata." });
+    expect(createAdminBooking).toHaveBeenCalledWith(payload);
+  });
+
+  it("sends an invitation without claiming immediate friendship and handles request decisions", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sendFriendRequest).mockResolvedValue(undefined);
+    vi.mocked(acceptFriendRequest).mockResolvedValue(undefined);
+    vi.mocked(declineFriendRequest).mockResolvedValue(undefined);
+    vi.mocked(cancelFriendRequest).mockResolvedValue(undefined);
+    vi.mocked(removeFriend).mockResolvedValue(undefined);
+
+    const sent = await friendsAction(actionArgs("/friends", {
+      intent: "send-friend-request",
+      username: " exact-name ",
+    }));
+    const accepted = await friendsAction(actionArgs("/friends", {
+      intent: "accept-friend-request",
+      requestId: "incoming-1",
+    }));
+    const declined = await friendsAction(actionArgs("/friends", {
+      intent: "decline-friend-request",
+      requestId: "incoming-2",
+    }));
+    const cancelled = await friendsAction(actionArgs("/friends", {
+      intent: "cancel-friend-request",
+      requestId: "outgoing-1",
+    }));
+    const removed = await friendsAction(actionArgs("/friends", {
+      intent: "remove-friend",
+      userId: "friend-1",
+    }));
+
+    expect(sent).toMatchObject({
+      success: true,
+      message: expect.stringContaining("solo dopo l'accettazione"),
+    });
+    expect(accepted).toMatchObject({ success: true, message: "Richiesta accettata. Ora siete amici." });
+    expect(declined).toMatchObject({ success: true, message: "Richiesta rifiutata." });
+    expect(cancelled).toMatchObject({ success: true, message: "Richiesta annullata." });
+    expect(removed).toMatchObject({ success: true });
+    expect(sendFriendRequest).toHaveBeenCalledWith("exact-name");
+    expect(acceptFriendRequest).toHaveBeenCalledWith("incoming-1");
+    expect(declineFriendRequest).toHaveBeenCalledWith("incoming-2");
+    expect(cancelFriendRequest).toHaveBeenCalledWith("outgoing-1");
+    expect(removeFriend).toHaveBeenCalledWith("friend-1");
+  });
+
+  it("loads accepted friends and request directions separately for the current member", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    const friend = { id: "friend-1", username: "friend", firstName: "A", lastName: "B" };
+    const requests = { incoming: [], outgoing: [] };
+    vi.mocked(friends).mockResolvedValue([friend]);
+    vi.mocked(friendRequests).mockResolvedValue(requests);
+
+    await expect(friendsLoader(loaderArgs("https://range.test/friends"))).resolves.toEqual({
+      friends: [friend],
+      requests,
+    });
+    expect(friends).toHaveBeenCalledOnce();
+    expect(friendRequests).toHaveBeenCalledOnce();
+  });
+
+  it("returns an invitation API error without reporting success", async () => {
+    vi.stubGlobal("window", {});
+    vi.mocked(getSession).mockResolvedValue(account);
+    vi.mocked(sendFriendRequest).mockRejectedValue(new ApiError(409, "Richiesta già presente."));
+
+    await expect(friendsAction(actionArgs("/friends", {
+      intent: "send-friend-request",
+      username: "exact-name",
+    }))).resolves.toMatchObject({
+      success: false,
+      status: 409,
+      message: "Richiesta già presente.",
+    });
   });
 
   it("expires the browser session after a protected action receives 401", async () => {

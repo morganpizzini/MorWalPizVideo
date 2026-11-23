@@ -6,15 +6,23 @@ import {
   adminMechanismTypes,
   ApiError,
   availability,
+  acceptFriendRequest,
   book,
+  cancelFriendRequest,
   cancelBooking,
+  declineFriendRequest,
   createMechanismType,
+  createAdminBooking,
   changePassword,
   getConfig,
   getSession,
   login,
   logout,
   messages,
+  friends,
+  friendRequests,
+  removeFriend,
+  sendFriendRequest,
   decideMessageStatus,
   saveConfig,
   sessions,
@@ -269,6 +277,105 @@ describe("credentialed range API", () => {
     expect(fetch.mock.calls[1][1]).toMatchObject({
       method: "PUT",
       credentials: "include",
+    });
+  });
+
+  it("loads the accepted friends and separate incoming and outgoing requests", async () => {
+    const accepted = [{
+      id: "friend-1",
+      username: "accepted-user",
+      firstName: "Accepted",
+      lastName: "Friend",
+    }];
+    const pending = {
+      id: "request-1",
+      username: "pending-user",
+      firstName: "Pending",
+      lastName: "Friend",
+      createdUtc: "2030-01-12T08:00:00Z",
+    };
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(accepted)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        incoming: [pending],
+        outgoing: [{ ...pending, id: "request-2", username: "outgoing-user" }],
+      })));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(friends()).resolves.toEqual(accepted);
+    await expect(friendRequests()).resolves.toEqual({
+      incoming: [pending],
+      outgoing: [{ ...pending, id: "request-2", username: "outgoing-user" }],
+    });
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shooting-range/friends",
+      "/api/shooting-range/friend-requests",
+    ]);
+  });
+
+  it("uses the invitation lifecycle endpoints and protects every write with CSRF", async () => {
+    const fetch = vi.fn();
+    for (const token of ["send", "accept", "decline", "cancel", "remove"]) {
+      fetch
+        .mockResolvedValueOnce(new Response(JSON.stringify({ token: `${token}-csrf` })))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    }
+    vi.stubGlobal("fetch", fetch);
+
+    await sendFriendRequest("exact-user");
+    await acceptFriendRequest("request/1");
+    await declineFriendRequest("request-2");
+    await cancelFriendRequest("request-3");
+    await removeFriend("friend/1");
+
+    const writes = [1, 3, 5, 7, 9].map((index) => fetch.mock.calls[index]);
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/friend-requests",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/friend-requests/request%2F1/accept",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/friend-requests/request-2/decline",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/friend-requests/request-3",
+      "/api/shooting-range/csrf",
+      "/api/shooting-range/friends/friend%2F1",
+    ]);
+    expect(writes.map(([, init]) => init.method)).toEqual([
+      "POST", "POST", "POST", "DELETE", "DELETE",
+    ]);
+    expect(writes.map(([, init]) => init.headers.get("X-CSRF-TOKEN"))).toEqual([
+      "send-csrf",
+      "accept-csrf",
+      "decline-csrf",
+      "cancel-csrf",
+      "remove-csrf",
+    ]);
+    expect(JSON.parse(writes[0][1].body)).toEqual({ username: "exact-user" });
+  });
+
+  it("posts admin-created bookings with the selected user and expected UTC bounds", async () => {
+      const fetch = vi.fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ token: "admin-booking-csrf" })))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      vi.stubGlobal("fetch", fetch);
+
+      await createAdminBooking({
+        userId: "member-1",
+        bayId: "bay-1",
+        localDate: "2030-01-12",
+        periodKey: "09:00-11:00",
+        request: "Setup",
+        expectedStartUtc: "2030-01-12T08:00:00Z",
+        expectedEndUtc: "2030-01-12T10:00:00Z",
+      });
+
+      expect(fetch.mock.calls[1][0]).toBe("/api/shooting-range/admin/bookings");
+      expect(fetch.mock.calls[1][1]).toMatchObject({ method: "POST" });
+      expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({
+        userId: "member-1",
+        periodKey: "09:00-11:00",
+        request: "Setup",
     });
   });
 

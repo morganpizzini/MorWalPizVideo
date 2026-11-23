@@ -192,6 +192,12 @@ public sealed class ShootingRangeApiTests
                 Status = ShootingRangeAccountStatus.Approved,
                 IsAdmin = true
             });
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "second-only-account",
+                Username = "second-only",
+                Status = ShootingRangeAccountStatus.Approved
+            });
             await repositories.Bays.InsertAsync(new() { Id = "second-bay", Code = "Second" });
             await repositories.Threads.InsertAsync(new()
             {
@@ -227,6 +233,10 @@ public sealed class ShootingRangeApiTests
             "/api/shooting-range/admin/bays/second-bay",
             new ShootingRangeBay { Id = "second-bay", Code = "Overwritten" });
         crossTenantUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var crossTenantFriend = await firstTenantClient.PostAsJsonAsync(
+            "/api/shooting-range/friends", new CreateFriendRequest("second-only"));
+        crossTenantFriend.StatusCode.Should().Be(HttpStatusCode.Gone);
+        (await firstTenantClient.GetFromJsonAsync<FriendDto[]>("/api/shooting-range/friends")).Should().BeEmpty();
 
         (await repositories.Bays.GetAsync("second-bay")).Should().BeNull();
     }
@@ -333,6 +343,172 @@ public sealed class ShootingRangeApiTests
         rejectedOldPayload.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await client.GetFromJsonAsync<ShootingRangeBay[]>("/api/shooting-range/admin/bays"))!
             .Single(saved => saved.Id == bay.Id).Targets.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task Friendship_requests_require_recipient_acceptance_and_keep_shared_availability_private()
+    {
+        await using var factory = new Factory();
+        using var owner = await LoginAsync(factory, false, username: "friend-owner");
+        using var member = await LoginAsync(factory, false, username: "friend-member");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+            await repositories.Bays.InsertAsync(new() { Id = "friend-bay", Code = "F1" });
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "pending-target",
+                Username = "pending-target",
+                Status = ShootingRangeAccountStatus.Pending
+            });
+        }
+
+        await SetCsrfAsync(owner);
+        using var created = await owner.PostAsJsonAsync("/api/shooting-range/bookings",
+            new BookingRequest("friend-bay", new(2030, 1, 12), "morning", "private booking note"));
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await SetCsrfAsync(member);
+        using var oldAdd = await member.PostAsJsonAsync(
+            "/api/shooting-range/friends",
+            new CreateFriendRequest("friend-owner"));
+        oldAdd.StatusCode.Should().Be(HttpStatusCode.Gone);
+
+        member.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        using var requestWithoutCsrf = await member.PostAsJsonAsync(
+            "/api/shooting-range/friend-requests",
+            new CreateFriendRequest("friend-owner"));
+        requestWithoutCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await SetCsrfAsync(member);
+        using var createdRequest = await member.PostAsJsonAsync(
+            "/api/shooting-range/friend-requests",
+            new CreateFriendRequest("friend-owner"));
+        createdRequest.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var outgoing = await member.GetFromJsonAsync<FriendRequestsDto>("/api/shooting-range/friend-requests");
+        outgoing!.Outgoing.Should().ContainSingle();
+        using (var requestDtoResponse = await member.GetAsync("/api/shooting-range/friend-requests"))
+        using (var requestDtoDocument = JsonDocument.Parse(await requestDtoResponse.Content.ReadAsStringAsync()))
+            requestDtoDocument.RootElement.GetProperty("outgoing")[0].EnumerateObject()
+                .Select(property => property.Name)
+                .Should().Equal("id", "username", "firstName", "lastName", "createdUtc");
+        outgoing.Outgoing.Single().Should().Be(new FriendRequestDto(
+            outgoing.Outgoing.Single().Id, "friend-owner", string.Empty, string.Empty, outgoing.Outgoing.Single().CreatedUtc));
+        var requestId = outgoing.Outgoing.Single().Id;
+
+        using var requesterAccept = await member.PostAsync(
+            $"/api/shooting-range/friend-requests/{requestId}/accept",
+            null);
+        requesterAccept.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await member.GetFromJsonAsync<FriendDto[]>("/api/shooting-range/friends")).Should().BeEmpty();
+        using var unavailableBeforeAcceptance = await member.GetAsync(
+            "/api/shooting-range/availability?date=2030-01-12&period=morning");
+        (await unavailableBeforeAcceptance.Content.ReadFromJsonAsync<AvailabilityDto>())!
+            .Bays.Should().NotContain(bay => bay.Id == "friend-bay");
+
+        await SetCsrfAsync(owner);
+        using var accepted = await owner.PostAsync(
+            $"/api/shooting-range/friend-requests/{requestId}/accept",
+            null);
+        accepted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var friendResponse = await member.GetAsync("/api/shooting-range/friends");
+        var friendPayload = await friendResponse.Content.ReadAsStringAsync();
+        using var friendDocument = JsonDocument.Parse(friendPayload);
+        friendDocument.RootElement[0].EnumerateObject().Select(property => property.Name)
+            .Should().Equal("id", "username", "firstName", "lastName");
+        friendPayload.Should().NotContain("userId").And.NotContain("displayName");
+        var friends = JsonSerializer.Deserialize<FriendDto[]>(friendPayload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        friends.Should().ContainSingle()
+            .Which.Should().Be(new FriendDto("friend-owner", "friend-owner", string.Empty, string.Empty));
+        using var availability = await member.GetAsync("/api/shooting-range/availability?date=2030-01-12&period=morning");
+        availability.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await availability.Content.ReadAsStringAsync();
+        payload.Should().Contain("\"friendBookings\":[{\"bayId\":\"friend-bay\",\"username\":\"friend-owner\",\"status\":0}]");
+        payload.Should().NotContain("private booking note");
+        payload.Should().NotContain("request");
+
+        using var incomingRequestsResponse = await owner.GetAsync("/api/shooting-range/friend-requests");
+        var incomingRequests = await incomingRequestsResponse.Content.ReadFromJsonAsync<FriendRequestsDto>();
+        incomingRequests!.Incoming.Should().BeEmpty();
+        incomingRequests.Outgoing.Should().BeEmpty();
+
+        var failureBodies = new List<string>();
+        foreach (var username in new[] { "nobody", "friend-member", "friend-owner", "pending-target" })
+        {
+            using var failed = await member.PostAsJsonAsync("/api/shooting-range/friend-requests", new CreateFriendRequest(username));
+            failed.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            failureBodies.Add(await failed.Content.ReadAsStringAsync());
+        }
+        failureBodies.Distinct(StringComparer.Ordinal).Should().ContainSingle();
+
+        using var removed = await member.DeleteAsync("/api/shooting-range/friends/friend-owner");
+        removed.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await member.GetFromJsonAsync<FriendDto[]>("/api/shooting-range/friends")).Should().BeEmpty();
+        (await owner.GetFromJsonAsync<ShootingRangeBooking[]>("/api/shooting-range/bookings/mine"))!
+            .Should().ContainSingle(booking => booking.Status == ShootingRangeBookingStatus.Pending);
+        using var blockedAvailability = await member.GetAsync("/api/shooting-range/availability?date=2030-01-12&period=morning");
+        (await blockedAvailability.Content.ReadFromJsonAsync<AvailabilityDto>())!.Bays.Should().NotContain(bay => bay.Id == "friend-bay");
+    }
+
+    [Fact]
+    public async Task Admin_direct_booking_enforces_role_csrf_and_target_account_state()
+    {
+        await using var factory = new Factory();
+        using var member = await LoginAsync(factory, false, username: "booking-member");
+        using var admin = await LoginAsync(factory, true, username: "booking-admin");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "forced-target",
+                Username = "forced-target",
+                Status = ShootingRangeAccountStatus.Approved,
+                ForcePasswordChange = true
+            });
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "pending-target",
+                Username = "pending-target",
+                Status = ShootingRangeAccountStatus.Pending
+            });
+            await repositories.Users.InsertAsync(new()
+            {
+                Id = "approved-target",
+                Username = "approved-target",
+                Status = ShootingRangeAccountStatus.Approved
+            });
+            await repositories.Bays.InsertAsync(new() { Id = "admin-booking-bay", Code = "A1" });
+        }
+
+        var (start, end) = ShootingRangeService.ResolvePeriod(new(), new(2030, 1, 12), "morning");
+        var request = new AdminBookingRequest("approved-target", "admin-booking-bay", new(2030, 1, 12),
+            "morning", "admin-created", start, end);
+        await SetCsrfAsync(member);
+        using var forbidden = await member.PostAsJsonAsync("/api/shooting-range/admin/bookings", request);
+        forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var missingCsrf = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings", request);
+        missingCsrf.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await SetCsrfAsync(admin);
+        using var forced = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings", request with { UserId = "forced-target" });
+        forced.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var pending = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings", request with { UserId = "pending-target" });
+        pending.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var stale = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings",
+            request with { ExpectedStartUtc = start.AddHours(1) });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var created = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings", request);
+        created.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var conflict = await admin.PostAsJsonAsync("/api/shooting-range/admin/bookings", request);
+        conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using var scopeAfter = factory.Services.CreateScope();
+        var stored = (await scopeAfter.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>().Bookings.GetAllAsync())
+            .Single(booking => booking.UserId == "approved-target" && booking.BayId == "admin-booking-bay");
+        stored.Status.Should().Be(ShootingRangeBookingStatus.Approved);
     }
 
     [Fact]
@@ -686,7 +862,7 @@ public sealed class ShootingRangeApiTests
         stale.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         using var forced = await LoginAsync(factory, false, insert: false);
         (await forced.GetFromJsonAsync<AccountDto>("/api/shooting-range/auth/session"))!.ForcePasswordChange.Should().BeTrue();
-        foreach (var path in new[] { "bookings/mine", "messages", "config", "sessions?date=2030-01-12", "availability?date=2030-01-12" })
+        foreach (var path in new[] { "bookings/mine", "messages", "config", "sessions?date=2030-01-12", "availability?date=2030-01-12", "friends" })
         {
             using var forbidden = await forced.GetAsync("/api/shooting-range/" + path);
             forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);

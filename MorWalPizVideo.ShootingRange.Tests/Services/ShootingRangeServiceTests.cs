@@ -20,6 +20,53 @@ public sealed class ShootingRangeServiceTests
     }
 
     [Theory]
+    [InlineData(60, 22)]
+    [InlineData(120, 8)]
+    public void Mixed_mode_offers_whole_windows_and_every_contiguous_increment_block(int minutes, int expectedCount)
+    {
+        var config = new ShootingRangeConfig { SessionMode = ShootingRangeSessionMode.Mixed, HourlyMinutes = minutes };
+        var sessions = ShootingRangeService.GenerateSessions(config, new(2030, 1, 12));
+        sessions.Should().HaveCount(expectedCount);
+        sessions.Should().Contain(session => session.PeriodKey == "morning");
+        sessions.Should().Contain(session => session.PeriodKey == "afternoon");
+        sessions.Should().Contain(session => session.PeriodKey == (minutes == 60 ? "09:00-12:00" : "09:00-13:00"));
+        sessions.Should().NotContain(session => session.PeriodKey.Contains("13:00-14:00", StringComparison.Ordinal));
+        sessions.Select(session => session.PeriodKey).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void Mixed_mode_resolves_stable_interval_keys_and_rejects_stale_or_unsupported_duration()
+    {
+        var config = new ShootingRangeConfig { SessionMode = ShootingRangeSessionMode.Mixed, HourlyMinutes = 120 };
+        var interval = ShootingRangeService.ResolvePeriod(config, new(2030, 1, 12), "09:00-13:00");
+        (interval.EndUtc - interval.StartUtc).Should().Be(TimeSpan.FromHours(4));
+        var stale = () => ShootingRangeService.ResolvePeriod(config with { MorningEnd = new(12, 0, 0) }, new(2030, 1, 12), "09:00-13:00");
+        stale.Should().Throw<ArgumentException>();
+        var invalid = () => ShootingRangeService.ValidateConfig(config with { HourlyMinutes = 90 });
+        invalid.Should().Throw<ArgumentException>();
+        var legacyInvalid = () => ShootingRangeService.ValidateConfig(new() { SessionMode = ShootingRangeSessionMode.Hourly, HourlyMinutes = 120 });
+        legacyInvalid.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task Mixed_bookings_require_current_expected_utc_bounds()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Configs.ReplaceAsync(new() { Id = "default", SessionMode = ShootingRangeSessionMode.Mixed });
+        var service = new ShootingRangeService(repositories);
+        var date = new DateOnly(2030, 1, 12);
+        var missingBounds = () => service.CreateBookingAsync("user-1", new("bay-1", date, "09:00-11:00", ""), default);
+        await missingBounds.Should().ThrowAsync<InvalidOperationException>();
+        var (start, end) = ShootingRangeService.ResolvePeriod(
+            new() { SessionMode = ShootingRangeSessionMode.Mixed }, date, "09:00-11:00");
+        var staleBounds = () => service.CreateBookingAsync("user-1",
+            new("bay-1", date, "09:00-11:00", "", start.AddHours(1), end.AddHours(1)), default);
+        await staleBounds.Should().ThrowAsync<InvalidOperationException>();
+        (await repositories.Bookings.GetAllAsync()).Should().BeEmpty();
+    }
+
+    [Theory]
     [InlineData(ShootingRangeSessionMode.Periods, "09:00")]
     [InlineData(ShootingRangeSessionMode.Hourly, "morning")]
     [InlineData(ShootingRangeSessionMode.Hourly, "13:00")]
@@ -51,6 +98,176 @@ public sealed class ShootingRangeServiceTests
     }
 
     [Fact]
+    public async Task Exact_shared_booking_allows_three_members_when_each_joins_through_an_active_friend()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Bays.InsertAsync(new() { Id = "bay-2", Code = "02" });
+        var service = new ShootingRangeService(repositories);
+        var request = new BookingRequest("bay-1", new(2030, 1, 12), "morning", "private note");
+        var anchor = await service.CreateBookingAsync("user-1", request, default);
+        await service.CreateBookingAsync("user-1", request with { BayId = "bay-2" }, default);
+        (await service.GetAvailabilityAsync(request.LocalDate, "morning", default, "user-2")).Bays.Should().BeEmpty();
+
+        await AcceptFriendRequestAsync(service, "user-2", "user-1");
+        var availability = await service.GetAvailabilityAsync(request.LocalDate, "morning", default, "user-2");
+        availability.Bays.Select(bay => bay.Id).Should().Contain("bay-1", "bay-2");
+        availability.FriendBookings.Should().BeEquivalentTo(new[]
+        {
+            new FriendBookingDto("bay-1", "user-1", ShootingRangeBookingStatus.Pending),
+            new FriendBookingDto("bay-2", "user-1", ShootingRangeBookingStatus.Pending)
+        });
+
+        var second = await service.CreateBookingAsync("user-2", request, default);
+        (await service.GetAvailabilityAsync(request.LocalDate, "morning", default, "other-user")).Bays.Should().BeEmpty();
+        await AcceptFriendRequestAsync(service, "other-user", "user-2");
+        (await service.GetAvailabilityAsync(request.LocalDate, "morning", default, "other-user")).Bays
+            .Should().Contain(bay => bay.Id == "bay-1");
+        var third = await service.CreateBookingAsync("other-user", request, default);
+        await AcceptFriendRequestAsync(service, "approved-user", "other-user");
+        var inactive = await repositories.Bookings.InsertAsync(new ShootingRangeBooking
+        {
+            Id = "generic-reactivation",
+            UserId = "approved-user",
+            BayId = "bay-1",
+            LocalDate = request.LocalDate,
+            PeriodKey = "morning",
+            StartUtc = anchor.StartUtc,
+            EndUtc = anchor.EndUtc,
+            Status = ShootingRangeBookingStatus.Cancelled
+        });
+        await repositories.Bookings.ReplaceAsync(inactive with { Status = ShootingRangeBookingStatus.Pending });
+        (await repositories.Bookings.GetAllAsync())
+            .Where(booking => booking.BayId == "bay-1" && booking.StartUtc == anchor.StartUtc)
+            .Should().HaveCount(4);
+        second.Request.Should().Be("private note");
+        third.Status.Should().Be(ShootingRangeBookingStatus.Pending);
+    }
+
+    [Fact]
+    public async Task Shared_slots_reject_partial_overlap_duplicate_participant_and_generic_bypass()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Configs.ReplaceAsync(new() { Id = "default", SessionMode = ShootingRangeSessionMode.Mixed });
+        var service = new ShootingRangeService(repositories);
+        var date = new DateOnly(2030, 1, 12);
+        var firstStart = new DateTime(2030, 1, 12, 8, 0, 0, DateTimeKind.Utc);
+        var firstEnd = firstStart.AddHours(2);
+        var anchor = await service.CreateBookingAsync("user-1", new("bay-1", date, "09:00-11:00", "", firstStart, firstEnd), default);
+        await AcceptFriendRequestAsync(service, "user-2", "user-1");
+        var partialStart = firstStart.AddHours(1);
+        var partial = () => service.CreateBookingAsync("user-2", new("bay-1", date, "10:00-12:00", "", partialStart, partialStart.AddHours(2)), default);
+        await partial.Should().ThrowAsync<InvalidOperationException>();
+        var duplicate = () => repositories.Bookings.InsertAsync(anchor with { Id = "duplicate" });
+        await duplicate.Should().ThrowAsync<InvalidOperationException>();
+
+        var inactive = await repositories.Bookings.InsertAsync(anchor with { Id = "inactive", UserId = "user-2", Status = ShootingRangeBookingStatus.Cancelled });
+        await service.RemoveFriendAsync("user-2", "user-1", default);
+        var reactivate = () => repositories.Bookings.ReplaceAsync(inactive with { Status = ShootingRangeBookingStatus.Approved });
+        await reactivate.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task Approval_of_existing_pending_shared_reservation_survives_friend_removal()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        await repositories.Bays.InsertAsync(new() { Id = "bay-1", Code = "01" });
+        await repositories.Users.ReplaceAsync((await repositories.Users.GetAsync("user-1"))! with { IsAdmin = true });
+        var service = new ShootingRangeService(repositories);
+        var request = new BookingRequest("bay-1", new(2030, 1, 12), "morning", "");
+        await service.CreateBookingAsync("user-1", request, default);
+        await AcceptFriendRequestAsync(service, "user-2", "user-1");
+        var join = await service.CreateBookingAsync("user-2", request, default);
+        await service.RemoveFriendAsync("user-2", "user-1", default);
+        (await service.DecideBookingAsync("user-1", join.Id, true, default)).Status.Should().Be(ShootingRangeBookingStatus.Approved);
+    }
+
+    [Fact]
+    public async Task Friend_requests_require_recipient_consent_and_support_decline_and_cancel()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        var service = new ShootingRangeService(repositories);
+
+        await service.RequestFriendAsync("user-1", "user-2", default);
+        await service.RequestFriendAsync("user-1", " USER-2 ", default);
+        (await repositories.Friendships.GetAllAsync()).Should().ContainSingle()
+            .Which.Status.Should().Be(ShootingRangeFriendshipStatus.Pending);
+        (await service.GetFriendsAsync("user-1", default)).Should().BeEmpty();
+
+        var outgoing = await service.GetFriendRequestsAsync("user-1", default);
+        var incoming = await service.GetFriendRequestsAsync("user-2", default);
+        outgoing.Outgoing.Should().ContainSingle().Which.Username.Should().Be("user-2");
+        outgoing.Incoming.Should().BeEmpty();
+        incoming.Incoming.Should().ContainSingle().Which.Username.Should().Be("user-1");
+        incoming.Outgoing.Should().BeEmpty();
+        var requestId = incoming.Incoming.Single().Id;
+
+        var requesterAccept = () => service.RespondToFriendRequestAsync("user-1", requestId, true, default);
+        await requesterAccept.Should().ThrowAsync<InvalidOperationException>();
+        var requesterDecline = () => service.RespondToFriendRequestAsync("user-1", requestId, false, default);
+        await requesterDecline.Should().ThrowAsync<InvalidOperationException>();
+        var recipientCancel = () => service.CancelFriendRequestAsync("user-2", requestId, default);
+        await recipientCancel.Should().ThrowAsync<InvalidOperationException>();
+        await service.RespondToFriendRequestAsync("user-2", requestId, false, default);
+        (await repositories.Friendships.GetAllAsync()).Should().BeEmpty();
+
+        await service.RequestFriendAsync("user-1", "user-2", default);
+        var cancelledId = (await service.GetFriendRequestsAsync("user-1", default)).Outgoing.Single().Id;
+        var recipientCancels = () => service.CancelFriendRequestAsync("user-2", cancelledId, default);
+        await recipientCancels.Should().ThrowAsync<InvalidOperationException>();
+        await service.CancelFriendRequestAsync("user-1", cancelledId, default);
+        (await repositories.Friendships.GetAllAsync()).Should().BeEmpty();
+
+        (await service.GetFriendsAsync("user-1", default)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Opposite_pending_request_does_not_auto_accept()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        var service = new ShootingRangeService(repositories);
+        await service.RequestFriendAsync("user-1", "user-2", default);
+
+        var oppositeRequest = () => service.RequestFriendAsync("user-2", "user-1", default);
+        await oppositeRequest.Should().ThrowAsync<InvalidOperationException>();
+        (await repositories.Friendships.GetAllAsync()).Should().ContainSingle()
+            .Which.Status.Should().Be(ShootingRangeFriendshipStatus.Pending);
+        (await service.GetFriendsAsync("user-2", default)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Friend_request_does_not_reveal_cross_tenant_usernames()
+    {
+        var repositories = await CreateRepositoriesAsync();
+        const string secondTenantId = "second-test-tenant";
+        await repositories.Tenants.InsertAsync(new ShootingRangeTenant
+        {
+            Id = secondTenantId,
+            Slug = "second-test-range",
+            Name = "Second test range",
+            ClientOrigin = "https://second-test-range.example"
+        });
+
+        using (repositories.TenantContext.BeginScope(secondTenantId))
+            await repositories.Users.InsertAsync(new ShootingRangeUser
+            {
+                Id = "second-only-user",
+                Username = "second-only",
+                Status = ShootingRangeAccountStatus.Approved
+            });
+
+        var service = new ShootingRangeService(repositories);
+        (await repositories.Users.FindByUsernameAsync("second-only")).Should().BeNull();
+        var unknownUser = () => service.RequestFriendAsync("user-1", "unknown", default);
+        var crossTenantUser = () => service.RequestFriendAsync("user-1", "second-only", default);
+        await unknownUser.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Unable to create friend request.");
+        await crossTenantUser.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Unable to create friend request.");
+    }
+
+    [Fact]
     public async Task CreateBooking_applies_reserved_bay_threshold_to_non_whitelist_user()
     {
         var repositories = await CreateRepositoriesAsync();
@@ -73,6 +290,7 @@ public sealed class ShootingRangeServiceTests
         ShootingRangeIds.NewId().Should().MatchRegex("^[0-9a-f]{24}$");
         ((int)ShootingRangeSessionMode.Hourly).Should().Be(1);
         ((int)ShootingRangeSessionMode.HourlyContinuous).Should().Be(2);
+        ((int)ShootingRangeSessionMode.Mixed).Should().Be(3);
     }
 
     [Fact]
@@ -179,7 +397,7 @@ public sealed class ShootingRangeServiceTests
         await repositories.Configs.ReplaceAsync(new() { Id = "default", MorningStart = new(10, 0, 0) });
         var service = new ShootingRangeService(repositories);
         var action = () => service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 12), "morning", "", start, end), default);
-        await action.Should().ThrowAsync<ArgumentException>();
+        await action.Should().ThrowAsync<InvalidOperationException>();
         var booking = await service.CreateBookingAsync("user-1", new("bay-1", new(2030, 1, 12), "morning", ""), default);
         booking.StartUtc.Should().Be(start.AddHours(1));
     }
@@ -190,6 +408,26 @@ public sealed class ShootingRangeServiceTests
         var config = new ShootingRangeConfig { SessionMode = ShootingRangeSessionMode.HourlyContinuous, ContinuousStart = new(1, 0, 0), ContinuousEnd = new(5, 0, 0) };
         foreach (var date in new[] { new DateOnly(2030, 3, 31), new DateOnly(2030, 10, 27) })
             ShootingRangeService.GenerateSessions(config, date).Should().OnlyContain(session => session.EndUtc - session.StartUtc == TimeSpan.FromHours(1));
+    }
+
+    [Fact]
+    public void Mixed_sessions_skip_invalid_and_ambiguous_dst_windows()
+    {
+        var config = new ShootingRangeConfig
+        {
+            TimeZone = "Europe/Rome",
+            SessionMode = ShootingRangeSessionMode.Mixed,
+            MorningStart = new(2, 0, 0),
+            MorningEnd = new(4, 0, 0),
+            AfternoonStart = new(5, 0, 0),
+            AfternoonEnd = new(8, 0, 0)
+        };
+        foreach (var date in new[] { new DateOnly(2030, 3, 31), new DateOnly(2030, 10, 27) })
+        {
+            var sessions = ShootingRangeService.GenerateSessions(config, date);
+            sessions.Should().NotContain(session => session.PeriodKey == "morning");
+            sessions.Should().NotContain(session => session.PeriodKey.StartsWith("02:00-", StringComparison.Ordinal));
+        }
     }
 
     [Fact]
@@ -379,6 +617,16 @@ public sealed class ShootingRangeServiceTests
         foreach (var id in new[] { "user-1", "user-2", "other-user", "approved-user" })
             await repositories.Users.InsertAsync(new ShootingRangeUser { Id = id, Username = id, Status = ShootingRangeAccountStatus.Approved });
         return repositories;
+    }
+
+    private static async Task AcceptFriendRequestAsync(
+        ShootingRangeService service,
+        string requesterId,
+        string recipientId)
+    {
+        await service.RequestFriendAsync(requesterId, recipientId, default);
+        var request = (await service.GetFriendRequestsAsync(recipientId, default)).Incoming.Single();
+        await service.RespondToFriendRequestAsync(recipientId, request.Id, true, default);
     }
 
     private sealed class FixedClock : TimeProvider

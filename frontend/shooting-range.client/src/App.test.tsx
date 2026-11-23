@@ -20,6 +20,7 @@ const testDoubles = vi.hoisted(() => ({
   logout: vi.fn(),
   adminPendingBookingCount: vi.fn(),
   fetcherLoad: vi.fn(),
+  fetcherSubmit: vi.fn(),
   fetcherData: null as unknown,
 }));
 
@@ -50,12 +51,13 @@ vi.mock("react-router", async (importOriginal) => {
         formData,
         load: (href: string) => testDoubles.fetcherLoad(href),
         submit: (submitted: FormData) => {
+          testDoubles.fetcherSubmit(submitted);
           setFormData(submitted);
           setState("submitting");
           const intent = submitted.get("intent");
           const operation = intent === "login"
             ? testDoubles.login(submitted)
-            : testDoubles.logout();
+            : intent === "logout" ? testDoubles.logout() : Promise.resolve();
           void Promise.resolve(operation)
             .then((result) => setData({
               intent: typeof intent === "string" ? intent : "",
@@ -92,6 +94,7 @@ let container: HTMLDivElement;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.resetAllMocks();
+  testDoubles.fetcherData = null;
   vi.mocked(sessions).mockResolvedValue({
     localDate: "2030-01-12",
     timeZone: "Europe/Rome",
@@ -119,7 +122,7 @@ async function renderGate() {
   await act(async () => Promise.resolve());
 }
 async function click(label: string) {
-  const button = Array.from(container.querySelectorAll("button")).find(
+  const button = Array.from(document.querySelectorAll("button")).find(
     (button) => button.textContent === label,
   );
   expect(button).toBeDefined();
@@ -139,6 +142,125 @@ async function submitLogin() {
 }
 
 describe("Range session recovery", () => {
+  it("opens a recap, cancels without sending, then confirms with the optional note", async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const session = {
+      periodKey: "morning",
+      startUtc: `${date}T08:00:00Z`,
+      endUtc: `${date}T12:00:00Z`,
+    };
+    const mixedBlock = {
+      periodKey: "09:00-11:00",
+      startUtc: `${date}T08:00:00Z`,
+      endUtc: `${date}T10:00:00Z`,
+    };
+    const bay = {
+      id: "bay-1",
+      creationDateTime: "",
+      code: "01",
+      description: "Bay",
+      mechanisms: [],
+      targets: 0,
+      partitions: 0,
+      plates: 0,
+      pepper: 0,
+      height: null,
+      width: null,
+      status: 0,
+      reservedUntilUtc: null,
+      whitelistUserIds: [],
+    };
+    testDoubles.fetcherData = {
+      date,
+      period: "morning",
+      offered: {
+        localDate: date,
+        timeZone: "Europe/Rome",
+        sessions: [session, mixedBlock],
+      },
+      config: {
+        id: "default",
+        creationDateTime: "",
+        name: "Pepperbox",
+        timeZone: "Europe/Rome",
+        sessionMode: 3,
+        openingDays: [0, 1, 2, 3, 4, 5, 6],
+        morningStart: "09:00:00",
+        morningEnd: "13:00:00",
+        afternoonStart: "14:00:00",
+        afternoonEnd: "18:00:00",
+        hourlyMinutes: 120,
+        continuousStart: null,
+        continuousEnd: null,
+        reservedReleaseDaysBefore: 2,
+      },
+      history: Promise.resolve([]),
+      availability: Promise.resolve({
+        localDate: date,
+        periodKey: "morning",
+        startUtc: session.startUtc,
+        endUtc: session.endUtc,
+        bays: [bay, { ...bay, id: "bay-2", code: "02" }],
+        friendBookings: [
+          { bayId: "bay-1", username: "direct-friend", status: 0 },
+          { bayId: "bay-1", username: "second-friend", status: 1 },
+          { bayId: "bay-1", username: "third-friend", status: 1 },
+          { bayId: "bay-1", username: "fourth-friend", status: 0 },
+        ],
+      }),
+    };
+    await act(async () => root.render(
+      <MemoryRouter>
+        <Booking
+          account={account}
+          onLogout={() => {}}
+          loggingOut={false}
+          onPasswordChanged={() => {}}
+        />
+      </MemoryRouter>,
+    ));
+    await act(async () => Promise.resolve());
+    await act(async () => Promise.resolve());
+
+    expect(container.querySelector("select")?.textContent).toContain("09:00 - 11:00");
+    const bayCards = container.querySelectorAll(".bay");
+    expect(bayCards[0].textContent).toContain("Slot condiviso con amici diretti:");
+    expect(bayCards[0].textContent).toContain("@direct-friend (In attesa)");
+    expect(bayCards[0].textContent).toContain("@second-friend (Approvata)");
+    expect(bayCards[0].textContent).toContain("@third-friend (Approvata)");
+    expect(bayCards[0].textContent).toContain("@fourth-friend (In attesa)");
+    expect(bayCards[0].textContent).toContain("Richiedi di unirti a 01");
+    expect(bayCards[1].textContent).not.toContain("direct-friend");
+    expect(bayCards[1].textContent).toContain("Richiedi postazione 02");
+    await click("Richiedi di unirti a 01");
+    await act(async () => Promise.resolve());
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("Data:");
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("Orario:");
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("Postazione: 01");
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("@direct-friend");
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("@fourth-friend");
+    expect(testDoubles.fetcherSubmit).not.toHaveBeenCalled();
+
+    await click("Annulla");
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(testDoubles.fetcherSubmit).not.toHaveBeenCalled();
+
+    await click("Richiedi di unirti a 01");
+    await act(async () => Promise.resolve());
+    const note = document.body.querySelector<HTMLTextAreaElement>('[role="dialog"] textarea')!;
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    await act(async () => {
+      setValue.call(note, "Richiesta di prova");
+      note.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await click("Conferma e invia");
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    expect(testDoubles.fetcherSubmit).toHaveBeenCalledOnce();
+    expect(testDoubles.fetcherSubmit.mock.calls[0][0].get("request")).toBe("Richiesta di prova");
+    expect(testDoubles.fetcherSubmit.mock.calls[0][0].get("intent")).toBe("book");
+  });
+
   it("loads availability automatically when its selected session changes", async () => {
     const date = new Date().toISOString().slice(0, 10);
     const routeData: BookingRouteData = {

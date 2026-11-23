@@ -1,7 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
   ApiError,
+  acceptFriendRequest,
   addClosure,
+  cancelFriendRequest,
+  declineFriendRequest,
+  friendRequests,
   adminBays,
   adminBookings,
   adminClosures,
@@ -16,16 +20,20 @@ import {
   decideBooking,
   decideMessageStatus,
   createMechanismType,
+  createAdminBooking,
   getConfig,
   getSession,
+  friends,
   login,
   logout,
   messages,
   myBookings,
   openMessage,
+  sendFriendRequest,
   saveBay,
   saveClosure,
   saveConfig,
+  removeFriend,
   sessions,
   type Account,
   type AdminUser,
@@ -37,6 +45,8 @@ import {
   type MessageStatusDecision,
   type MessageThread,
   type Booking,
+  type Friend,
+  type FriendRequestLists,
   type Sessions,
 } from "./api";
 
@@ -92,6 +102,15 @@ export interface AdminBookingsRouteData {
   users: AdminUser[];
   bays: Bay[];
   bookings: Booking[];
+  date: string;
+  offered: Sessions;
+  period: string;
+  availability: Availability | null;
+}
+
+export interface FriendsRouteData {
+  friends: Friend[];
+  requests: FriendRequestLists;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -257,6 +276,10 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
       const periodKey = formData.get("periodKey");
       const expectedStartUtc = formData.get("expectedStartUtc");
       const expectedEndUtc = formData.get("expectedEndUtc");
+      const requestText = formData.get("request");
+      if (typeof requestText !== "string" || requestText.length > 1000) {
+        return { intent, success: false, message: "La nota non può superare 1000 caratteri." };
+      }
       if (
         typeof bayId !== "string" ||
         !bayId ||
@@ -280,7 +303,7 @@ export async function bookingAction({ request }: ActionFunctionArgs): Promise<Ac
         bayId,
         localDate,
         periodKey,
-        request: "",
+        request: requestText,
         expectedStartUtc,
         expectedEndUtc,
       });
@@ -422,15 +445,93 @@ export async function adminBookingsLoader({ request }: LoaderFunctionArgs) {
   if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
 
   try {
-    const [config, users, bays, bookings] = await Promise.all([
+    const url = new URL(request.url);
+    const date = url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
+    const period = url.searchParams.get("period") ?? "";
+    const [config, users, bays, bookings, offered] = await Promise.all([
       adminConfig(request.signal),
       adminUsers(request.signal),
       adminBays(request.signal),
       adminBookings(request.signal),
+      sessions(date, request.signal),
     ]);
-    return { config, users, bays, bookings };
+    const selected = offered.sessions.find((item) => item.periodKey === period);
+    const available = selected ? await availability(date, period, request.signal) : null;
+    return { config, users, bays, bookings, date, offered, period, availability: available };
   } catch (reason) {
     return { sessionError: readSessionResult(reason) };
+  }
+}
+
+export async function friendsLoader({ request }: LoaderFunctionArgs) {
+  if (typeof window === "undefined") return null;
+  const account = await browserAccount(request);
+  if (isSessionResult(account)) return { sessionError: account };
+  if (account.forcePasswordChange) {
+    return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
+  }
+  try {
+    const [acceptedFriends, requests] = await Promise.all([
+      friends(request.signal),
+      friendRequests(request.signal),
+    ]);
+    return { friends: acceptedFriends, requests };
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
+}
+
+export async function friendsAction({ request }: ActionFunctionArgs): Promise<ActionResult> {
+  const formData = await request.formData();
+  const intent = actionIntent(formData);
+  try {
+    const account = await getSession(request.signal);
+    if (account.forcePasswordChange) {
+      return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
+    }
+    if (intent === "send-friend-request") {
+      const username = formData.get("username");
+      if (typeof username !== "string" || !username.trim() || username.length > 80) {
+        return { intent, success: false, message: "Inserisci uno username valido." };
+      }
+      await sendFriendRequest(username.trim());
+      return {
+        intent,
+        success: true,
+        message: "Richiesta inviata. Sarà visibile tra gli amici solo dopo l'accettazione.",
+      };
+    }
+    if (intent === "remove-friend") {
+      const userId = formData.get("userId");
+      if (typeof userId !== "string" || !userId) {
+        return { intent, success: false, message: "Amico non valido." };
+      }
+      await removeFriend(userId);
+      return { intent, success: true, message: "Amicizia rimossa." };
+    }
+    if (
+      intent === "accept-friend-request" ||
+      intent === "decline-friend-request" ||
+      intent === "cancel-friend-request"
+    ) {
+      const requestId = formData.get("requestId");
+      if (typeof requestId !== "string" || !requestId) {
+        return { intent, success: false, message: "Richiesta di amicizia non valida." };
+      }
+      if (intent === "accept-friend-request") {
+        await acceptFriendRequest(requestId);
+        return { intent, success: true, message: "Richiesta accettata. Ora siete amici." };
+      }
+      if (intent === "decline-friend-request") {
+        await declineFriendRequest(requestId);
+        return { intent, success: true, message: "Richiesta rifiutata." };
+      }
+      await cancelFriendRequest(requestId);
+      return { intent, success: true, message: "Richiesta annullata." };
+    }
+    return { intent, success: false, message: "Operazione non riconosciuta." };
+  } catch (reason) {
+    return actionError(intent, reason);
   }
 }
 
@@ -450,7 +551,8 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
           typeof payload.name !== "string" ||
           typeof payload.timeZone !== "string" ||
           !Array.isArray(payload.openingDays) ||
-          (payload.sessionMode !== 0 && payload.sessionMode !== 1 && payload.sessionMode !== 2)
+          (payload.sessionMode !== 0 && payload.sessionMode !== 1 && payload.sessionMode !== 2 && payload.sessionMode !== 3) ||
+          (payload.sessionMode === 3 && payload.hourlyMinutes !== 60 && payload.hourlyMinutes !== 120)
         ) {
           return { intent, success: false, message: "La configurazione del campo non è valida." };
         }
@@ -465,7 +567,7 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
           morningEnd: String(payload.morningEnd ?? ""),
           afternoonStart: String(payload.afternoonStart ?? ""),
           afternoonEnd: String(payload.afternoonEnd ?? ""),
-          hourlyMinutes: Number(payload.hourlyMinutes),
+          hourlyMinutes: payload.sessionMode === 3 ? Number(payload.hourlyMinutes) : 60,
           continuousStart: typeof payload.continuousStart === "string" ? payload.continuousStart : null,
           continuousEnd: typeof payload.continuousEnd === "string" ? payload.continuousEnd : null,
           reservedReleaseDaysBefore: Number(payload.reservedReleaseDaysBefore),
@@ -575,6 +677,42 @@ export async function adminAction({ request }: ActionFunctionArgs): Promise<Acti
         }
         await decideBooking(id, approved);
         return { intent, success: true, message: approved ? "Prenotazione approvata." : "Prenotazione rifiutata." };
+      }
+      case "create-admin-booking": {
+        const payload = jsonField(formData, "payload");
+        const userId = payload?.userId;
+        const bayId = payload?.bayId;
+        const localDate = payload?.localDate;
+        const periodKey = payload?.periodKey;
+        const requestText = payload?.request;
+        const expectedStartUtc = payload?.expectedStartUtc;
+        const expectedEndUtc = payload?.expectedEndUtc;
+        if (
+          typeof userId !== "string" || !userId ||
+          typeof bayId !== "string" || !bayId ||
+          typeof localDate !== "string" || !localDate ||
+          typeof periodKey !== "string" || !periodKey ||
+          typeof requestText !== "string" || requestText.length > 1000 ||
+          typeof expectedStartUtc !== "string" || !expectedStartUtc ||
+          typeof expectedEndUtc !== "string" || !expectedEndUtc
+        ) {
+          return { intent, success: false, message: "Completa i dati della prenotazione." };
+        }
+        const offered = await sessions(localDate, request.signal);
+        const selected = offered.sessions.find((item) => item.periodKey === periodKey);
+        if (!selected || selected.startUtc !== expectedStartUtc || selected.endUtc !== expectedEndUtc) {
+          return { intent, success: false, message: "Gli orari sono cambiati. Seleziona un intervallo aggiornato." };
+        }
+        await createAdminBooking({
+          userId,
+          bayId,
+          localDate,
+          periodKey,
+          request: requestText,
+          expectedStartUtc,
+          expectedEndUtc,
+        });
+        return { intent, success: true, message: "Prenotazione creata e approvata." };
       }
       default:
         return { intent, success: false, message: "Operazione non riconosciuta." };

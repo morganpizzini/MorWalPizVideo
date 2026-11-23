@@ -32272,6 +32272,13 @@ const accountStatus = (status) => ["In attesa", "Approvato", "Disabilitato"][sta
 const bookingStatus = (status) => ["In attesa", "Approvata", "Rifiutata", "Annullata"][status] ?? "Stato sconosciuto";
 const prefix = "/api/shooting-range";
 const apiBaseUrl = typeof window !== "undefined" ? ((_a = window.ENV) == null ? void 0 : _a.API_BASE_URL) ?? void 0 ?? "" : "";
+function tenantSlug() {
+  var _a2;
+  const configured = typeof window !== "undefined" ? ((_a2 = window.ENV) == null ? void 0 : _a2.SHOOTING_RANGE) ?? void 0 : process.env.SHOOTING_RANGE ?? void 0;
+  if (!configured || !/^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$/.test(configured))
+    throw new Error("Shooting Range tenant is missing or invalid.");
+  return configured;
+}
 function apiUrl(path) {
   return apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
 }
@@ -32284,7 +32291,8 @@ class ApiError extends Error {
 async function request(path, init = {}) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
-  if (init.method && init.method !== "GET" && !path.includes("/auth/register")) {
+  headers.set("X-Shooting-Range", tenantSlug());
+  if (init.method && init.method !== "GET") {
     headers.set("X-CSRF-TOKEN", await getCsrf());
   }
   const response = await fetch(apiUrl(path), {
@@ -32306,10 +32314,6 @@ async function request(path, init = {}) {
 async function getCsrf() {
   return (await request(`${prefix}/csrf`)).token;
 }
-const register = (body) => request(`${prefix}/auth/register`, {
-  method: "POST",
-  body: JSON.stringify(body)
-});
 async function login(body) {
   const account = await request(`${prefix}/auth/login`, {
     method: "POST",
@@ -32330,6 +32334,7 @@ const logout = () => request(`${prefix}/auth/logout`, { method: "POST" });
 const sessions = (date, signal) => request(`${prefix}/sessions?date=${encodeURIComponent(date)}`, {
   signal
 });
+const getConfig = (signal) => request(`${prefix}/config`, { signal });
 const availability = (date, period, signal) => request(
   `${prefix}/availability?date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`,
   { signal }
@@ -32338,9 +32343,38 @@ const book = (body) => request(`${prefix}/bookings`, {
   method: "POST",
   body: JSON.stringify(body)
 });
+const createAdminBooking = (body) => request(`${prefix}/admin/bookings`, {
+  method: "POST",
+  body: JSON.stringify(body)
+});
+const friends = async (signal) => {
+  const result = await request(`${prefix}/friends`, { signal });
+  return result.map((friend) => ({
+    id: "id" in friend ? friend.id : friend.userId,
+    username: friend.username,
+    ..."displayName" in friend ? { displayName: friend.displayName } : {
+      firstName: friend.firstName,
+      lastName: friend.lastName
+    }
+  }));
+};
+const addFriend = (username) => request(`${prefix}/friends`, {
+  method: "POST",
+  body: JSON.stringify({ username })
+});
+const removeFriend = (userId) => request(`${prefix}/friends/${encodeURIComponent(userId)}`, {
+  method: "DELETE"
+});
 const myBookings = (signal) => request(`${prefix}/bookings/mine`, { signal });
+const cancelBooking = (id) => request(`${prefix}/bookings/${encodeURIComponent(id)}/cancel`, {
+  method: "POST"
+});
 const messages = (signal) => request(`${prefix}/messages`, { signal });
 const openMessage = (body) => request(`${prefix}/messages`, { method: "POST", body: JSON.stringify(body) });
+const decideMessageStatus = (id, status) => request(`${prefix}/admin/messages/${encodeURIComponent(id)}/status`, {
+  method: "POST",
+  body: JSON.stringify({ status })
+});
 const adminUsers = (signal) => request(`${prefix}/admin/users`, { signal });
 const adminConfig = (signal) => request(`${prefix}/admin/config`, { signal });
 const saveConfig = (body) => request(`${prefix}/admin/config`, {
@@ -32348,6 +32382,11 @@ const saveConfig = (body) => request(`${prefix}/admin/config`, {
   body: JSON.stringify(body)
 });
 const adminBays = (signal) => request(`${prefix}/admin/bays`, { signal });
+const adminMechanismTypes = (signal) => request(`${prefix}/admin/mechanism-types`, { signal });
+const createMechanismType = (name) => request(`${prefix}/admin/mechanism-types`, {
+  method: "POST",
+  body: JSON.stringify({ name })
+});
 const saveBay = (body) => request(`${prefix}/admin/bays/${encodeURIComponent(body.id)}`, {
   method: "PUT",
   body: JSON.stringify(body)
@@ -32362,6 +32401,9 @@ const saveClosure = (body) => request(
   { method: "PUT", body: JSON.stringify(body) }
 );
 const adminBookings = (signal) => request(`${prefix}/admin/bookings`, { signal });
+const adminPendingBookingCount = (signal) => request(`${prefix}/admin/bookings/pending-count`, {
+  signal
+});
 const decideBooking = (id, approved) => request(`${prefix}/admin/bookings/${encodeURIComponent(id)}/decision`, {
   method: "POST",
   body: JSON.stringify({ approved })
@@ -32369,6 +32411,135 @@ const decideBooking = (id, approved) => request(`${prefix}/admin/bookings/${enco
 const approveUser = (id) => request(`${prefix}/admin/users/${encodeURIComponent(id)}/approve`, {
   method: "POST"
 });
+const monthFormatter = new Intl.DateTimeFormat("it-IT", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC"
+});
+const dateFormatter = new Intl.DateTimeFormat("it-IT", {
+  dateStyle: "full",
+  timeZone: "UTC"
+});
+const weekdayFormatter = new Intl.DateTimeFormat("it-IT", {
+  weekday: "short",
+  timeZone: "UTC"
+});
+const weekdays = Array.from(
+  { length: 7 },
+  (_, index) => weekdayFormatter.format(new Date(Date.UTC(2020, 5, index + 1)))
+);
+function getCalendarMonth(value) {
+  const [year, month] = value.split("-").map(Number);
+  return { year, month };
+}
+function formatDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+function OpeningDayDatePicker({
+  value,
+  openingDays,
+  disabled: disabled2 = false,
+  onChange: onChange2
+}) {
+  const detailsRef = reactExports.useRef(null);
+  const [visibleMonth, setVisibleMonth] = reactExports.useState(() => getCalendarMonth(value));
+  const selectedDate = getCalendarMonth(value);
+  const selectedDay = Number(value.slice(-2));
+  const daysInMonth = new Date(
+    Date.UTC(visibleMonth.year, visibleMonth.month, 0)
+  ).getUTCDate();
+  const firstDay = new Date(
+    Date.UTC(visibleMonth.year, visibleMonth.month - 1, 1)
+  ).getUTCDay();
+  const mondayOffset = (firstDay + 6) % 7;
+  const monthLabel = monthFormatter.format(
+    new Date(Date.UTC(visibleMonth.year, visibleMonth.month - 1, 1))
+  );
+  const selectedLabel = dateFormatter.format(
+    new Date(Date.UTC(selectedDate.year, selectedDate.month - 1, selectedDay))
+  );
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const day = index - mondayOffset + 1;
+    return day > 0 && day <= daysInMonth ? day : null;
+  });
+  reactExports.useEffect(() => {
+    setVisibleMonth(getCalendarMonth(value));
+  }, [value]);
+  function moveMonth(amount) {
+    const next = new Date(
+      Date.UTC(visibleMonth.year, visibleMonth.month - 1 + amount, 1)
+    );
+    setVisibleMonth({
+      year: next.getUTCFullYear(),
+      month: next.getUTCMonth() + 1
+    });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-date-picker", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-date-picker__label", children: "Data" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "range-date-picker__details", ref: detailsRef, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { "aria-label": `Data selezionata: ${selectedLabel}`, children: selectedLabel }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-calendar", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-calendar__month", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "button button-quiet",
+              "aria-label": "Mese precedente",
+              disabled: disabled2,
+              onClick: () => moveMonth(-1),
+              children: "Prec."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: monthLabel }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "button button-quiet",
+              "aria-label": "Mese successivo",
+              disabled: disabled2,
+              onClick: () => moveMonth(1),
+              children: "Succ."
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-calendar__grid", children: [
+          weekdays.map((weekday) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-calendar__weekday", "aria-label": weekday, children: weekday }, weekday)),
+          days.map((day, index) => {
+            if (day === null) {
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-calendar__empty" }, `empty-${index}`);
+            }
+            const date = formatDate(visibleMonth.year, visibleMonth.month, day);
+            const weekday = new Date(
+              Date.UTC(visibleMonth.year, visibleMonth.month - 1, day)
+            ).getUTCDay();
+            const label = dateFormatter.format(
+              new Date(Date.UTC(visibleMonth.year, visibleMonth.month - 1, day))
+            );
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "range-calendar__day",
+                "data-date": date,
+                "aria-label": label,
+                "aria-pressed": visibleMonth.year === selectedDate.year && visibleMonth.month === selectedDate.month && day === selectedDay,
+                disabled: disabled2 || !openingDays.includes(weekday),
+                onClick: () => {
+                  onChange2(date);
+                  if (detailsRef.current) detailsRef.current.open = false;
+                },
+                children: day
+              },
+              date
+            );
+          })
+        ] })
+      ] })
+    ] })
+  ] });
+}
 function RangeSkeleton({
   rows = 3,
   label = "Caricamento dati..."
@@ -32592,7 +32763,89 @@ function TabbedWorkspace({ "aria-label": ariaLabel, tabs, selectedKey, onSelecte
     }, id: tabId, className: `mwp-tabbed-workspace__tab ${tabClassName ?? ""}`, type: "button", role: "tab", "data-tab-key": tab.key, "aria-selected": selected, "aria-controls": panelId, tabIndex: selected ? 0 : -1, disabled: tab.disabled, onClick: () => onSelectedKeyChange(tab.key), onKeyDown: moveFocus, children: tab.label }, tab.key);
   }) }), selectedTab ? jsxRuntimeExports.jsx("div", { id: `${instanceId}-panel-${selectedIndex}`, className: `mwp-tabbed-workspace__panel ${panelClassName ?? ""}`, role: "tabpanel", "aria-labelledby": `${instanceId}-tab-${selectedIndex}`, tabIndex: 0, children: selectedTab.panel }) : null] });
 }
-requireReactDom();
+var reactDomExports = requireReactDom();
+function getFocusable(dialog) {
+  return Array.from(dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+}
+function Dialog({ open, title, description, children, onClose, closeLabel, initialFocusRef, closeOnEscape = true, closeOnBackdrop = true, className, backdropClassName }) {
+  const instanceId = reactExports.useId();
+  const [portalHost, setPortalHost] = reactExports.useState(null);
+  const dialogRef = reactExports.useRef(null);
+  const returnFocusRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (typeof document === "undefined")
+      return;
+    const host = document.createElement("div");
+    host.dataset.mwpDialogHost = instanceId;
+    document.body.appendChild(host);
+    setPortalHost(host);
+    return () => host.remove();
+  }, [instanceId]);
+  reactExports.useEffect(() => {
+    if (!open || !portalHost)
+      return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const background = Array.from(document.body.children).filter((element) => element !== portalHost);
+    const previousState = background.map((element) => ({
+      element,
+      inert: element.inert,
+      ariaHidden: element.getAttribute("aria-hidden")
+    }));
+    background.forEach((element) => {
+      element.inert = true;
+      element.setAttribute("aria-hidden", "true");
+    });
+    const focusTarget = (initialFocusRef == null ? void 0 : initialFocusRef.current) ?? getFocusable(dialogRef.current ?? portalHost)[0] ?? dialogRef.current;
+    focusTarget == null ? void 0 : focusTarget.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && closeOnEscape) {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current)
+        return;
+      const focusable = getFocusable(dialogRef.current);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      var _a2;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousState.forEach(({ element, inert, ariaHidden }) => {
+        element.inert = inert;
+        if (ariaHidden === null)
+          element.removeAttribute("aria-hidden");
+        else
+          element.setAttribute("aria-hidden", ariaHidden);
+      });
+      (_a2 = returnFocusRef.current) == null ? void 0 : _a2.focus();
+      returnFocusRef.current = null;
+    };
+  }, [closeOnEscape, initialFocusRef, onClose, open, portalHost]);
+  if (!open || !portalHost)
+    return null;
+  const titleId = `${instanceId}-title`;
+  const descriptionId = `${instanceId}-description`;
+  const handleBackdropMouseDown = (event) => {
+    if (closeOnBackdrop && event.target === event.currentTarget)
+      onClose();
+  };
+  return reactDomExports.createPortal(jsxRuntimeExports.jsx("div", { className: `mwp-dialog-backdrop ${backdropClassName ?? ""}`, onMouseDown: handleBackdropMouseDown, "data-mwp-dialog-backdrop": true, style: { maxHeight: "100vh", overflowY: "auto" }, children: jsxRuntimeExports.jsxs("div", { ref: dialogRef, className: `mwp-dialog ${className ?? ""}`, role: "dialog", "aria-modal": "true", "aria-labelledby": titleId, "aria-describedby": description ? descriptionId : void 0, tabIndex: -1, children: [jsxRuntimeExports.jsxs("div", { className: "mwp-dialog__header", children: [jsxRuntimeExports.jsx("h2", { id: titleId, children: title }), jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, "aria-label": closeLabel, children: closeLabel })] }), description ? jsxRuntimeExports.jsx("div", { id: descriptionId, className: "mwp-dialog__description", children: description }) : null, jsxRuntimeExports.jsx("div", { className: "mwp-dialog__body", children })] }) }), portalHost);
+}
 var BlogCommentStatus;
 (function(BlogCommentStatus2) {
   BlogCommentStatus2[BlogCommentStatus2["Pending"] = 0] = "Pending";
@@ -37035,6 +37288,48 @@ function Shell({
   onLogout,
   loggingOut = false
 }) {
+  const [pendingRequestCount, setPendingRequestCount] = reactExports.useState(null);
+  const [notificationError, setNotificationError] = reactExports.useState(false);
+  const [notificationRetry, setNotificationRetry] = reactExports.useState(0);
+  reactExports.useEffect(() => {
+    if (!(account == null ? void 0 : account.isAdmin) || account.forcePasswordChange) {
+      setPendingRequestCount(null);
+      setNotificationError(false);
+      return;
+    }
+    let active = true;
+    let controller = null;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      controller == null ? void 0 : controller.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      void adminPendingBookingCount(requestController.signal).then(({ count }) => {
+        if (!active || controller !== requestController) return;
+        setPendingRequestCount(count);
+        setNotificationError(false);
+      }).catch(() => {
+        if (!active || controller !== requestController || requestController.signal.aborted) return;
+        setNotificationError(true);
+      });
+    };
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refreshOnVisibility, 6e4);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("range-admin-booking-changed", refresh);
+    document.addEventListener("visibilitychange", refreshOnVisibility);
+    refresh();
+    return () => {
+      active = false;
+      controller == null ? void 0 : controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("range-admin-booking-changed", refresh);
+      document.removeEventListener("visibilitychange", refreshOnVisibility);
+    };
+  }, [account == null ? void 0 : account.id, account == null ? void 0 : account.isAdmin, account == null ? void 0 : account.forcePasswordChange, notificationRetry]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-shell", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "range-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { className: "range-brand", to: "/", "aria-label": "MorWalPiz Shooting Range", children: [
@@ -37054,8 +37349,31 @@ function Shell({
       ),
       account && !account.forcePasswordChange && /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "range-navigation", "aria-label": "Navigazione principale", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/", end: true, children: "Prenota" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/friends", children: "Amici" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/messages", children: "Messaggi" }),
-        account.isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/admin", children: "Amministrazione" })
+        account.isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(NavLink, { to: "/admin", end: true, children: "Amministrazione" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            NavLink,
+            {
+              to: "/admin/bookings",
+              "aria-label": pendingRequestCount === null ? notificationError ? "Richieste di prenotazione: conteggio non disponibile" : "Richieste di prenotazione" : notificationError ? `Richieste di prenotazione: ultimo conteggio ${pendingRequestCount}, non aggiornato` : `Richieste di prenotazione: ${pendingRequestCount} da approvare`,
+              children: [
+                "Richieste",
+                pendingRequestCount !== null && pendingRequestCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-notification-badge", "aria-hidden": "true", children: pendingRequestCount > 99 ? "99+" : pendingRequestCount })
+              ]
+            }
+          ),
+          notificationError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "range-notification-retry",
+              onClick: () => setNotificationRetry((value) => value + 1),
+              children: "Conteggio non aggiornato · Riprova"
+            }
+          )
+        ] })
       ] }),
       account && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "range-account", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "range-account__name", children: [
@@ -37081,69 +37399,23 @@ function Shell({
 function Auth({
   onSubmit,
   pending,
-  result,
   error,
-  onRetry,
-  onModeChange
+  onRetry
 }) {
-  const [mode, setMode] = reactExports.useState("login");
   const [form, setForm] = reactExports.useState({
     username: "",
-    password: "",
-    firstName: "",
-    lastName: ""
+    password: ""
   });
-  const [notice, setNotice] = reactExports.useState("");
-  reactExports.useEffect(() => {
-    if ((result == null ? void 0 : result.intent) === "register" && result.success) {
-      setMode("login");
-      setNotice(result.message);
-      setForm((value) => ({ ...value, password: "" }));
-    } else if ((result == null ? void 0 : result.intent) === "register" && !result.success) {
-      setNotice("");
-    }
-  }, [result]);
   function submit(event) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    data.set("intent", mode);
+    data.set("intent", "login");
     onSubmit(data);
-    setNotice("");
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-auth", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: mode === "login" ? "Bentornato" : "Richiedi un account" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Gli account nuovi restano in attesa dell'approvazione dell'amministratore." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Bentornato" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Accedi con l'account fornito dalla tua amministrazione." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submit, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-fields", children: [
-      mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Nome",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "firstName",
-              required: true,
-              value: form.firstName,
-              autoComplete: "given-name",
-              disabled: pending,
-              onChange: (event) => setForm({ ...form, firstName: event.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Cognome",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              name: "lastName",
-              required: true,
-              value: form.lastName,
-              autoComplete: "family-name",
-              disabled: pending,
-              onChange: (event) => setForm({ ...form, lastName: event.target.value })
-            }
-          )
-        ] })
-      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
         "Username",
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37168,7 +37440,7 @@ function Auth({
             minLength: 7,
             type: "password",
             value: form.password,
-            autoComplete: mode === "login" ? "current-password" : "new-password",
+            autoComplete: "current-password",
             disabled: pending,
             onChange: (event) => setForm({ ...form, password: event.target.value })
           }
@@ -37180,29 +37452,14 @@ function Auth({
           type: "submit",
           className: "button button-primary",
           disabled: pending,
-          children: pending ? "Attendi..." : mode === "login" ? "Accedi" : "Invia richiesta"
+          children: pending ? "Attendi..." : "Accedi"
         }
       )
     ] }) }),
     error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "range-error", children: [
       error,
       error.includes("Sessione non disponibile") && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "button button-quiet", onClick: onRetry, children: "Riprova" })
-    ] }),
-    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        disabled: pending,
-        className: "range-link-button",
-        onClick: () => {
-          setMode(mode === "login" ? "register" : "login");
-          setNotice("");
-          onModeChange();
-        },
-        children: mode === "login" ? "Non hai un account?" : "Hai già un account?"
-      }
-    )
+    ] })
   ] });
 }
 function SessionGate({
@@ -37219,10 +37476,36 @@ function SessionGate({
   const accountRef = reactExports.useRef(account);
   const handledAuthResultRef = reactExports.useRef(null);
   const sessionExpiredRef = reactExports.useRef(false);
+  const focusCheckRef = reactExports.useRef(null);
   locationRef.current = location.pathname;
   accountRef.current = account;
   const authFetcher = useFetcher();
   const refreshAccount = reactExports.useCallback(() => setRevision((value) => value + 1), []);
+  const cancelFocusCheck = reactExports.useCallback(() => {
+    var _a3;
+    (_a3 = focusCheckRef.current) == null ? void 0 : _a3.abort();
+    focusCheckRef.current = null;
+  }, []);
+  const revalidateFocusedSession = reactExports.useCallback(async () => {
+    if (!accountRef.current || sessionExpiredRef.current || focusCheckRef.current) return;
+    const controller = new AbortController();
+    focusCheckRef.current = controller;
+    try {
+      const value = await getSession(controller.signal);
+      if (controller.signal.aborted || sessionExpiredRef.current) return;
+      setAccount(value);
+      setError("");
+    } catch (reason) {
+      if (controller.signal.aborted) return;
+      if (reason instanceof ApiError && reason.status === 401) {
+        window.dispatchEvent(new Event("range-session-expired"));
+      } else {
+        setError("Sessione non disponibile. Riprova.");
+      }
+    } finally {
+      if (focusCheckRef.current === controller) focusCheckRef.current = null;
+    }
+  }, []);
   reactExports.useEffect(() => {
     const controller = new AbortController();
     setRestoring(true);
@@ -37250,6 +37533,7 @@ function SessionGate({
     handledAuthResultRef.current = result;
     if (result.intent === "login") {
       if (result.success && result.account) {
+        cancelFocusCheck();
         sessionExpiredRef.current = false;
         setError("");
         setAccount(result.account);
@@ -37257,10 +37541,10 @@ function SessionGate({
       } else {
         setError(result.message);
       }
-    } else if (result.intent === "register") {
-      setError(result.success ? "" : result.message);
     } else if (result.intent === "logout") {
       if (result.success || result.status === 401) {
+        cancelFocusCheck();
+        sessionExpiredRef.current = true;
         setAccount(null);
         navigate("/");
       } else {
@@ -37269,27 +37553,27 @@ function SessionGate({
     } else if (result.intent === "password-change" && result.success) {
       setRevision((value) => value + 1);
     }
-  }, [authFetcher.data, navigate]);
+  }, [authFetcher.data, cancelFocusCheck, navigate]);
   reactExports.useEffect(() => {
     function expired() {
       if (!accountRef.current || sessionExpiredRef.current) return;
+      cancelFocusCheck();
       sessionExpiredRef.current = true;
       setAccount(null);
       setError("");
       if (locationRef.current !== "/") navigate("/", { replace: true });
     }
     function refresh() {
-      if (accountRef.current && !sessionExpiredRef.current) {
-        setRevision((value) => value + 1);
-      }
+      void revalidateFocusedSession();
     }
     window.addEventListener("range-session-expired", expired);
     window.addEventListener("focus", refresh);
     return () => {
       window.removeEventListener("range-session-expired", expired);
       window.removeEventListener("focus", refresh);
+      cancelFocusCheck();
     };
-  }, [navigate]);
+  }, [cancelFocusCheck, navigate, revalidateFocusedSession]);
   function submitRootAction(data) {
     authFetcher.submit(data, { method: "post", action: "/" });
   }
@@ -37307,10 +37591,8 @@ function SessionGate({
       {
         onSubmit: submitRootAction,
         pending: authFetcher.state !== "idle",
-        result: authFetcher.data,
         error,
-        onRetry: () => setRevision((value) => value + 1),
-        onModeChange: () => setError("")
+        onRetry: () => setRevision((value) => value + 1)
       }
     ) });
   }
@@ -37322,12 +37604,34 @@ function SessionGate({
   };
   if (account.forcePasswordChange || !children) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
+      error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "range-error session-error", children: [
+        error,
+        account && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "button button-quiet",
+            onClick: () => void revalidateFocusedSession(),
+            children: "Riprova controllo sessione"
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Booking, { ...props })
     ] });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error session-error", children: error }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "range-error session-error", children: [
+      error,
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "button button-quiet",
+          onClick: () => void revalidateFocusedSession(),
+          children: "Riprova controllo sessione"
+        }
+      )
+    ] }),
     children(props)
   ] });
 }
@@ -37342,6 +37646,8 @@ function Booking({
   const [availabilityKey, setAvailabilityKey] = reactExports.useState("");
   const [notice, setNotice] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
+  const [recap, setRecap] = reactExports.useState(null);
+  const recapInputRef = reactExports.useRef(null);
   const [passwords, setPasswords] = reactExports.useState({
     currentPassword: "",
     newPassword: ""
@@ -37354,7 +37660,11 @@ function Booking({
   const availabilityError = availabilityFetcher.data && "sessionError" in availabilityFetcher.data ? availabilityFetcher.data.sessionError : null;
   const routeData = routeFetcher.data && "date" in routeFetcher.data && routeFetcher.data.date === date ? routeFetcher.data : null;
   const availabilityData = availabilityKey === periodKey && availabilityFetcher.state !== "loading" && availabilityFetcher.data && "date" in availabilityFetcher.data && availabilityFetcher.data.date === date && availabilityFetcher.data.period === period ? availabilityFetcher.data : null;
+  const visibleAvailabilityError = availabilityKey === periodKey && availabilityFetcher.state === "idle" && availabilityError;
   const pending = actionFetcher.state !== "idle";
+  const closeRecap = reactExports.useCallback(() => {
+    if (!pending) setRecap(null);
+  }, [pending]);
   reactExports.useEffect(() => {
     if (!account.forcePasswordChange) {
       routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
@@ -37366,6 +37676,25 @@ function Booking({
     if (result.intent === "book") {
       setError(result.success ? "" : result.message);
       setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setRecap(null);
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+        window.dispatchEvent(new Event("range-admin-booking-changed"));
+      } else if (result.status === 409) {
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+      }
+    } else if (result.intent === "cancel-booking") {
+      setError(result.success ? "" : result.message);
+      setNotice(result.success ? result.message : "");
+      if (result.success) {
+        setAvailabilityKey("");
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+        window.dispatchEvent(new Event("range-admin-booking-changed"));
+      } else if (result.status === 404 || result.status === 409) {
+        routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
+      }
     } else if (result.intent === "password-change") {
       setError(result.success ? "" : result.message);
       setNotice(result.success ? result.message : "");
@@ -37374,8 +37703,8 @@ function Booking({
         onPasswordChanged();
       }
     }
-  }, [actionFetcher.data, onPasswordChanged]);
-  function search(selectedPeriod) {
+  }, [actionFetcher.data, date, onPasswordChanged, routeFetcher.load]);
+  const search = reactExports.useCallback((selectedPeriod) => {
     if (!selectedPeriod) return;
     setError("");
     setNotice("");
@@ -37383,8 +37712,12 @@ function Booking({
     availabilityFetcher.load(
       `/?date=${encodeURIComponent(date)}&period=${encodeURIComponent(selectedPeriod)}&search=1&region=availability`
     );
-  }
-  function submitBooking(bayId, selectedPeriod, session) {
+  }, [availabilityFetcher.load, date]);
+  reactExports.useEffect(() => {
+    if (!routeData || routeFetcher.state === "loading" || !period || !routeData.offered.sessions.some((session) => session.periodKey === period)) return;
+    search(period);
+  }, [period, routeData, routeFetcher.state, search]);
+  function submitBooking(bayId, selectedPeriod, session, requestText) {
     if (pending || !session) return;
     const formData = new FormData();
     formData.set("intent", "book");
@@ -37393,12 +37726,20 @@ function Booking({
     formData.set("periodKey", selectedPeriod);
     formData.set("expectedStartUtc", session.startUtc);
     formData.set("expectedEndUtc", session.endUtc);
+    formData.set("request", requestText);
     actionFetcher.submit(formData, { method: "post", action: "/" });
   }
   function submitPassword(event) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set("intent", "password-change");
+    actionFetcher.submit(formData, { method: "post", action: "/" });
+  }
+  function cancelReservation(id) {
+    if (pending || !window.confirm("Vuoi annullare questa prenotazione? La registrazione resterà visibile nello storico.")) return;
+    const formData = new FormData();
+    formData.set("intent", "cancel-booking");
+    formData.set("id", id);
     actionFetcher.submit(formData, { method: "post", action: "/" });
   }
   if (routeError) {
@@ -37455,24 +37796,21 @@ function Booking({
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "toolbar", disabled: pending, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "sr-only", children: "Selezione del turno" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          "Data",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              required: true,
-              value: date,
-              onChange: (event) => {
-                setDate(event.target.value);
-                setPeriod("");
-                setAvailabilityKey("");
-                setError("");
-                setNotice("");
-              }
+        routeData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          OpeningDayDatePicker,
+          {
+            value: date,
+            openingDays: routeData.config.openingDays,
+            disabled: pending,
+            onChange: (value) => {
+              setDate(value);
+              setPeriod("");
+              setAvailabilityKey("");
+              setError("");
+              setNotice("");
             }
-          )
-        ] }),
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 1, label: "Caricamento configurazione..." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
           "Sessione",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -37487,34 +37825,17 @@ function Booking({
               children: [
                 (!routeData || !period) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: routeData ? "Seleziona una sessione" : "Caricamento..." }),
                 routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  RangeDeferred,
+                  OfferedSessionOptions,
                   {
-                    resolve: routeData.offered,
-                    fallback: null,
-                    children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      OfferedSessionOptions,
-                      {
-                        offered,
-                        selectedPeriod: period,
-                        onDefaultPeriod: setPeriod
-                      }
-                    )
+                    offered: routeData.offered,
+                    selectedPeriod: period,
+                    onDefaultPeriod: setPeriod
                   }
                 )
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "button button-primary",
-            disabled: !routeData || !period,
-            onClick: () => search(period),
-            children: "Cerca disponibilità"
-          }
-        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -37533,29 +37854,19 @@ function Booking({
         (!routeData || routeFetcher.state === "loading") && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." })
       ] }),
       routeData && routeFetcher.state !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          RangeDeferred,
-          {
-            resolve: routeData.offered,
-            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento sessioni..." }),
-            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`),
-            children: (offered) => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: offered.timeZone }),
-              !offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna sessione prenotabile per questa data." })
-            ] })
-          }
-        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: routeData.offered.timeZone }),
+        !routeData.offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna sessione prenotabile per questa data." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Postazioni disponibili" }),
-          availabilityError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          visibleAvailabilityError && /* @__PURE__ */ jsxRuntimeExports.jsx(
             RouteSessionError,
             {
-              message: availabilityError.message ?? "Sessione non disponibile.",
-              status: availabilityError.status,
+              message: visibleAvailabilityError.message ?? "Sessione non disponibile.",
+              status: visibleAvailabilityError.status,
               onRetry: () => search(period)
             }
           ),
-          !availabilityData && !availabilityError && availabilityKey === periodKey && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
+          !availabilityData && !visibleAvailabilityError && availabilityKey === periodKey && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento postazioni..." }),
           availabilityData && /* @__PURE__ */ jsxRuntimeExports.jsx(
             RangeDeferred,
             {
@@ -37570,35 +37881,75 @@ function Booking({
                     " postazioni disponibili"
                   ] }),
                   !available.bays.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna postazione disponibile per questo turno." }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bay-grid", children: available.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "Configurazione standard" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        className: "button button-primary",
-                        disabled: pending,
-                        onClick: () => {
-                          void routeData.offered.then((offered) => {
-                            if (availabilityMatches(available, offered.sessions, date, period)) {
-                              const session = offered.sessions.find((item) => item.periodKey === period);
-                              if (session) submitBooking(bay.id, period, session);
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bay-grid", children: available.bays.map((bay) => {
+                    const friendBookings = (available.friendBookings ?? []).filter((friend) => friend.bayId === bay.id);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "bay", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bay-code", children: bay.code }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: bay.description || "Postazione operativa" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "bay-inventory", "aria-label": `Dettagli postazione ${bay.code}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                          "Bersagli: ",
+                          bay.targets
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                          "Paratie: ",
+                          bay.partitions
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                          "Piastre: ",
+                          bay.plates
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                          "Popper: ",
+                          bay.pepper
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                          "Dimensioni: ",
+                          bay.height !== null && bay.width !== null ? `${bay.height} × ${bay.width}` : "non specificate"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "bay-mechanisms", children: [
+                        "Meccanismi: ",
+                        bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "nessuno"
+                      ] }),
+                      friendBookings.length ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "friend-slot", children: [
+                        "Slot condiviso con",
+                        " ",
+                        friendBookings.map(
+                          (friend) => `${friend.username} (${bookingStatus(friend.status)})`
+                        ).join(", "),
+                        "."
+                      ] }) : null,
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          className: "button button-primary",
+                          disabled: pending,
+                          onClick: () => {
+                            if (availabilityMatches(available, routeData.offered.sessions, date, period)) {
+                              const session = routeData.offered.sessions.find((item) => item.periodKey === period);
+                              if (session) {
+                                setRecap({
+                                  bay,
+                                  friendBookings,
+                                  period,
+                                  session,
+                                  request: ""
+                                });
+                                setError("");
+                              }
                             } else {
                               setAvailabilityKey("");
                               setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
                               routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
                             }
-                          });
-                        },
-                        children: [
-                          "Richiedi postazione ",
-                          bay.code
-                        ]
-                      }
-                    )
-                  ] }, bay.id)) })
+                          },
+                          children: friendBookings.length ? `Richiedi di unirti a ${bay.code}` : `Richiedi postazione ${bay.code}`
+                        }
+                      )
+                    ] }, bay.id);
+                  }) })
                 ] });
               }
             }
@@ -37609,11 +37960,89 @@ function Booking({
           {
             history: routeData.history,
             offered: routeData.offered,
-            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`)
+            onRetry: () => routeFetcher.load(`/?date=${encodeURIComponent(date)}`),
+            onCancel: cancelReservation,
+            cancelling: pending
           }
         )
       ] })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Dialog,
+      {
+        open: recap !== null,
+        title: "Conferma la richiesta",
+        description: "Controlla i dettagli prima di inviare la prenotazione.",
+        onClose: closeRecap,
+        closeLabel: "Annulla",
+        initialFocusRef: recapInputRef,
+        closeOnEscape: !pending,
+        closeOnBackdrop: !pending,
+        children: recap && routeData && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "booking-recap", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Data:" }),
+            " ",
+            (/* @__PURE__ */ new Date(`${date}T12:00:00Z`)).toLocaleDateString("it-IT", {
+              timeZone: "UTC",
+              dateStyle: "long"
+            })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Orario:" }),
+            " ",
+            sessionLabel(recap.session, routeData.offered.timeZone)
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Postazione:" }),
+            " ",
+            recap.bay.code
+          ] }),
+          recap.friendBookings.length ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Richiesta di unirti a:" }),
+            " ",
+            recap.friendBookings.map(
+              (friend) => `${friend.username} (${bookingStatus(friend.status)})`
+            ).join(", ")
+          ] }) : null,
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Nota facoltativa (massimo 1000 caratteri)",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                ref: recapInputRef,
+                maxLength: 1e3,
+                value: recap.request,
+                disabled: pending,
+                onChange: (event) => setRecap({ ...recap, request: event.target.value })
+              }
+            )
+          ] }),
+          error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "button button-quiet",
+                disabled: pending,
+                onClick: () => setRecap(null),
+                children: "Annulla"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "button button-primary",
+                disabled: pending,
+                onClick: () => submitBooking(recap.bay.id, recap.period, recap.session, recap.request),
+                children: pending ? "Invio..." : "Conferma e invia"
+              }
+            )
+          ] })
+        ] })
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "range-muted account-note", children: [
       "Account: ",
       account.firstName,
@@ -37627,42 +38056,47 @@ function Booking({
 function BookingHistoryRegion({
   history,
   offered,
-  onRetry
+  onRetry,
+  onCancel,
+  cancelling
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Le mie prenotazioni" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       RangeDeferred,
       {
-        resolve: offered,
+        resolve: history,
         fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
-        children: (sessions2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          RangeDeferred,
-          {
-            resolve: history,
-            fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento prenotazioni..." }),
-            onRetry,
-            children: (items) => items.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: items.map((booking) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                booking.localDate,
-                " ·",
-                " ",
-                new Date(booking.startUtc).toLocaleString("it-IT", {
-                  timeZone: sessions2.timeZone
-                }),
-                " ",
-                "-",
-                " ",
-                new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                  timeZone: sessions2.timeZone,
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: bookingStatus(booking.status) })
-            ] }, booking.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna prenotazione." })
-          }
-        )
+        onRetry,
+        children: (items) => items.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: items.map((booking) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            booking.localDate,
+            " ·",
+            " ",
+            new Date(booking.startUtc).toLocaleString("it-IT", {
+              timeZone: offered.timeZone
+            }),
+            " ",
+            "-",
+            " ",
+            new Date(booking.endUtc).toLocaleTimeString("it-IT", {
+              timeZone: offered.timeZone,
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: bookingStatus(booking.status) }),
+          (booking.status === 0 || booking.status === 1) && new Date(booking.startUtc).getTime() > Date.now() && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "button button-quiet",
+              disabled: cancelling,
+              onClick: () => onCancel(booking.id),
+              children: "Annulla prenotazione"
+            }
+          )
+        ] }, booking.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna prenotazione." })
       }
     )
   ] });
@@ -37727,7 +38161,10 @@ function ConfigForm({
     {
       onSubmit: (event) => {
         event.preventDefault();
-        void onSave({ ...config2, hourlyMinutes: 60 });
+        void onSave({
+          ...config2,
+          hourlyMinutes: config2.sessionMode === 3 ? config2.hourlyMinutes : 60
+        });
       },
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "form-grid", disabled: busy, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { children: "Calendario e sessioni" }),
@@ -37769,7 +38206,8 @@ function ConfigForm({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 0, children: "Mattina o pomeriggio intero" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 1, children: "60 minuti, mattina e pomeriggio con pausa" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 2, children: "60 minuti, apertura continua" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 2, children: "60 minuti, apertura continua" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 3, children: "Sessioni intere o intervalli consecutivi" })
               ]
             }
           )
@@ -37859,16 +38297,29 @@ function ConfigForm({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        config2.sessionMode === 3 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Durata intervallo",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: config2.hourlyMinutes,
+              onChange: (event) => updateConfig({ ...config2, hourlyMinutes: Number(event.target.value) }),
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 60, children: "60 minuti" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: 120, children: "120 minuti" })
+              ]
+            }
+          )
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Durata slot orari" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("output", { children: "60 minuti" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("output", { children: "60 minuti (fissa)" })
         ] }),
-        initial2.hourlyMinutes !== 60 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "error wide-field", children: [
+        (config2.sessionMode === 3 && initial2.hourlyMinutes !== 60 && initial2.hourlyMinutes !== 120 || config2.sessionMode !== 3 && initial2.hourlyMinutes !== 60) && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { role: "alert", className: "error wide-field", children: [
           "Durata precedente non valida: ",
           initial2.hourlyMinutes,
           " minuti. Correggi la configurazione prima di accettare nuove prenotazioni."
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", children: "Salva configurazione" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "button button-primary", children: "Salva configurazione" })
       ] })
     }
   );
@@ -37876,6 +38327,7 @@ function ConfigForm({
 function BayForm({
   initial: initial2,
   users,
+  mechanismTypes,
   busy,
   onSave,
   onDraftChange
@@ -37945,6 +38397,20 @@ function BayForm({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Bersagli",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 0,
+              step: 1,
+              required: true,
+              value: bay.targets,
+              onChange: (event) => updateBay({ ...bay, targets: Number(event.target.value) })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
           "Paratie",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -37970,16 +38436,56 @@ function BayForm({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "check-label", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          "Popper",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
-              type: "checkbox",
-              checked: bay.pepper,
-              onChange: (event) => updateBay({ ...bay, pepper: event.target.checked })
+              type: "number",
+              min: 0,
+              step: 1,
+              required: true,
+              value: bay.pepper,
+              onChange: (event) => updateBay({ ...bay, pepper: Number(event.target.value) })
             }
-          ),
-          "Pepper"
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bay-dimension-fields", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Dimensioni" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Altezza",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: "0.01",
+                step: "0.01",
+                required: bay.width !== null,
+                value: bay.height ?? "",
+                onChange: (event) => updateBay({
+                  ...bay,
+                  height: event.target.value ? Number(event.target.value) : null
+                })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Larghezza",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: "0.01",
+                step: "0.01",
+                required: bay.height !== null,
+                value: bay.width ?? "",
+                onChange: (event) => updateBay({
+                  ...bay,
+                  width: event.target.value ? Number(event.target.value) : null
+                })
+              }
+            )
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "wide-field", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Utenti in whitelist" }),
@@ -38001,15 +38507,19 @@ function BayForm({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "wide-field", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "field-label", children: "Meccanismi" }),
-          bay.mechanisms.map((mechanism, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mechanism-row", children: [
+          bay.mechanisms.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mechanism-list", children: bay.mechanisms.map((mechanism, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mechanism-row", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
               "Tipo",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
                 {
                   required: true,
                   value: mechanism.type,
-                  onChange: (event) => updateMechanism(index, { type: event.target.value })
+                  onChange: (event) => updateMechanism(index, { type: event.target.value }),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Seleziona un tipo" }),
+                    mechanismTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type.name, children: type.name }, type.id))
+                  ]
                 }
               )
             ] }),
@@ -38021,6 +38531,7 @@ function BayForm({
                   type: "number",
                   required: true,
                   min: 1,
+                  step: 1,
                   value: mechanism.quantity,
                   onChange: (event) => updateMechanism(index, {
                     quantity: Number(event.target.value)
@@ -38032,7 +38543,7 @@ function BayForm({
               "button",
               {
                 type: "button",
-                className: "secondary-button",
+                className: "button button-quiet",
                 "aria-label": `Rimuovi meccanismo ${index + 1}`,
                 onClick: () => updateBay({
                   ...bay,
@@ -38043,21 +38554,26 @@ function BayForm({
                 children: "Rimuovi"
               }
             )
-          ] }, index)),
+          ] }, index)) }),
+          !mechanismTypes.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Crea prima un tipo di meccanismo." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "secondary-button",
+              className: "button button-quiet",
+              disabled: !mechanismTypes.length,
               onClick: () => updateBay({
                 ...bay,
-                mechanisms: [...bay.mechanisms, { type: "", quantity: 1 }]
+                mechanisms: [
+                  ...bay.mechanisms,
+                  { type: mechanismTypes[0].name, quantity: 1 }
+                ]
               }),
               children: "Aggiungi meccanismo"
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "submit", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "submit", className: "button button-primary", children: [
           "Salva bay ",
           bay.code
         ] })
@@ -38123,7 +38639,7 @@ function ClosureForm({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", children: "Aggiungi chiusura" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "button button-primary", children: "Aggiungi chiusura" })
       ] })
     }
   );
@@ -38142,6 +38658,7 @@ function Admin({
     reason: ""
   });
   const [newBay, setNewBay] = reactExports.useState(null);
+  const [mechanismTypeName, setMechanismTypeName] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const [notice, setNotice] = reactExports.useState("");
   const routeFetcher = useFetcher();
@@ -38157,6 +38674,10 @@ function Admin({
     if (result.success) {
       setNotice(result.message);
       if (result.intent === "save-config") setConfigDraft(null);
+      if (result.intent === "create-mechanism-type") {
+        setMechanismTypeName("");
+        routeFetcher.load("/admin");
+      }
       if (result.intent === "save-bay" && result.entityId) {
         setBayDrafts((value) => {
           const next = { ...value };
@@ -38191,9 +38712,12 @@ function Admin({
       code: "",
       description: "",
       mechanisms: [],
+      targets: 0,
       partitions: 0,
       plates: 0,
-      pepper: false,
+      pepper: 0,
+      height: null,
+      width: null,
       status: 0,
       reservedUntilUtc: null,
       whitelistUserIds: []
@@ -38251,10 +38775,53 @@ function Admin({
                   disabled: busy
                 },
                 {
+                  key: "mechanism-types",
+                  label: "Meccanismi",
+                  panel: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Tipi di meccanismo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Crea i tipi disponibili per la configurazione delle postazioni." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "form",
+                      {
+                        className: "mechanism-type-form",
+                        onSubmit: (event) => {
+                          event.preventDefault();
+                          perform2("create-mechanism-type", { name: mechanismTypeName });
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                            "Nome del tipo",
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                required: true,
+                                maxLength: 80,
+                                value: mechanismTypeName,
+                                onChange: (event) => setMechanismTypeName(event.target.value)
+                              }
+                            )
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "submit",
+                              className: "button button-primary",
+                              disabled: busy || !mechanismTypeName.trim(),
+                              children: "Crea tipo"
+                            }
+                          )
+                        ]
+                      }
+                    ),
+                    core.mechanismTypes.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: core.mechanismTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: type.name }) }, type.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessun tipo creato. Aggiungi un tipo per configurare i meccanismi delle postazioni." })
+                  ] }),
+                  disabled: busy
+                },
+                {
                   key: "bays",
                   label: "Postazioni",
                   panel: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-heading", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-heading mb-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Postazioni" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
@@ -38281,6 +38848,7 @@ function Admin({
                         {
                           initial: bayDrafts[bay.id] ?? bay,
                           users: core.users,
+                          mechanismTypes: core.mechanismTypes,
                           busy,
                           onDraftChange: (value) => setBayDrafts((drafts) => ({ ...drafts, [bay.id]: value })),
                           onSave: async (value) => perform2("save-bay", value)
@@ -38293,6 +38861,7 @@ function Admin({
                         {
                           initial: newBay,
                           users: core.users,
+                          mechanismTypes: core.mechanismTypes,
                           busy,
                           onDraftChange: setNewBay,
                           onSave: async (value) => perform2("save-bay", value)
@@ -38397,76 +38966,6 @@ function Admin({
                     ] }, user.id)) })
                   ] }),
                   disabled: busy
-                },
-                {
-                  key: "bookings",
-                  label: "Prenotazioni",
-                  panel: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Richieste di prenotazione" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      RangeDeferred,
-                      {
-                        resolve: routeData.bookings,
-                        fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 4, label: "Caricamento richieste..." }),
-                        onRetry: () => routeFetcher.load("/admin"),
-                        children: (data) => data.bookings.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: data.bookings.map((booking) => {
-                          var _a2, _b;
-                          return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                                booking.localDate,
-                                " · Postazione",
-                                " ",
-                                ((_a2 = data.bays.find((bay) => bay.id === booking.bayId)) == null ? void 0 : _a2.code) ?? booking.bayId
-                              ] }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                                new Date(booking.startUtc).toLocaleString("it-IT", { timeZone: data.config.timeZone }),
-                                " ",
-                                "-",
-                                " ",
-                                new Date(booking.endUtc).toLocaleTimeString("it-IT", {
-                                  timeZone: data.config.timeZone,
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                }),
-                                " ",
-                                "· ",
-                                bookingStatus(booking.status)
-                              ] }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                                ((_b = data.users.find((user) => user.id === booking.userId)) == null ? void 0 : _b.username) ?? booking.userId,
-                                " · ",
-                                booking.request
-                              ] })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-group", children: [
-                              booking.status !== 1 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                                "button",
-                                {
-                                  type: "button",
-                                  className: "button button-primary",
-                                  disabled: busy,
-                                  onClick: () => perform2("decide-booking", { id: booking.id, approved: true }),
-                                  children: "Approva"
-                                }
-                              ),
-                              booking.status !== 2 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                                "button",
-                                {
-                                  type: "button",
-                                  className: "button button-quiet",
-                                  disabled: busy,
-                                  onClick: () => perform2("decide-booking", { id: booking.id, approved: false }),
-                                  children: "Rifiuta"
-                                }
-                              )
-                            ] })
-                          ] }, booking.id);
-                        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna richiesta." })
-                      }
-                    )
-                  ] }),
-                  disabled: busy
                 }
               ];
               return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -38489,6 +38988,436 @@ function Admin({
     }
   );
 }
+function groupBookings(bookings) {
+  const dates = /* @__PURE__ */ new Map();
+  for (const booking of bookings) {
+    let intervals = dates.get(booking.localDate);
+    if (!intervals) {
+      intervals = /* @__PURE__ */ new Map();
+      dates.set(booking.localDate, intervals);
+    }
+    const key = `${booking.bayId}\0${booking.startUtc}\0${booking.endUtc}`;
+    let interval = intervals.get(key);
+    if (!interval) {
+      interval = {
+        bayId: booking.bayId,
+        startUtc: booking.startUtc,
+        endUtc: booking.endUtc,
+        bookings: []
+      };
+      intervals.set(key, interval);
+    }
+    interval.bookings.push(booking);
+  }
+  return [...dates.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([localDate, intervals]) => ({
+    localDate,
+    intervals: [...intervals.values()].sort(
+      (left, right) => left.bayId.localeCompare(right.bayId) || left.startUtc.localeCompare(right.startUtc)
+    )
+  }));
+}
+function AdminBookings({
+  account,
+  onLogout,
+  loggingOut
+}) {
+  var _a2, _b, _c, _d;
+  const initialDate = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const [date, setDate] = reactExports.useState(initialDate);
+  const [period, setPeriod] = reactExports.useState("");
+  const [targetUserId, setTargetUserId] = reactExports.useState("");
+  const [bayId, setBayId] = reactExports.useState("");
+  const [requestText, setRequestText] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const [notice, setNotice] = reactExports.useState("");
+  const routeFetcher = useFetcher();
+  const actionFetcher = useFetcher();
+  const busy = actionFetcher.state !== "idle";
+  const loading = routeFetcher.state !== "idle";
+  function loadBookings(selectedDate, selectedPeriod = "") {
+    const query = new URLSearchParams({ date: selectedDate });
+    if (selectedPeriod) query.set("period", selectedPeriod);
+    routeFetcher.load(`/admin/bookings?${query.toString()}`);
+  }
+  reactExports.useEffect(() => {
+    loadBookings(initialDate);
+  }, [account.id, routeFetcher.load]);
+  const routeError = routeFetcher.data && "sessionError" in routeFetcher.data ? routeFetcher.data.sessionError : null;
+  const routeData = routeFetcher.data && "bookings" in routeFetcher.data && routeFetcher.data.date === date && routeFetcher.data.period === period ? routeFetcher.data : null;
+  reactExports.useEffect(() => {
+    if (!routeData || period || routeData.offered.sessions.length === 0) return;
+    const firstPeriod = routeData.offered.sessions[0].periodKey;
+    setPeriod(firstPeriod);
+    loadBookings(date, firstPeriod);
+  }, [routeData, period, date]);
+  reactExports.useEffect(() => {
+    const result = actionFetcher.data;
+    if (!result || result.intent !== "decide-booking" && result.intent !== "create-admin-booking") return;
+    setError(result.success ? "" : result.message);
+    setNotice(result.success ? result.message : "");
+    if (result.success) {
+      if (result.intent === "create-admin-booking") {
+        setTargetUserId("");
+        setBayId("");
+        setRequestText("");
+      }
+      loadBookings(date, period);
+      window.dispatchEvent(new Event("range-admin-booking-changed"));
+    } else if (result.intent === "create-admin-booking" && result.status === 409) {
+      loadBookings(date, period);
+    }
+  }, [actionFetcher.data, date, period, routeFetcher.load]);
+  reactExports.useEffect(() => {
+    if ((routeData == null ? void 0 : routeData.availability) && !routeData.availability.bays.some((bay) => bay.id === bayId)) {
+      setBayId("");
+    }
+  }, [routeData == null ? void 0 : routeData.availability, bayId]);
+  function decide(booking, approved) {
+    if (busy) return;
+    const formData = new FormData();
+    formData.set("intent", "decide-booking");
+    formData.set("payload", JSON.stringify({ id: booking.id, approved }));
+    setError("");
+    setNotice("");
+    actionFetcher.submit(formData, { method: "post", action: "/admin/bookings" });
+  }
+  function createBooking(event) {
+    var _a3;
+    event.preventDefault();
+    if (busy || !routeData || !targetUserId || !bayId) return;
+    const selected = routeData.offered.sessions.find((session) => session.periodKey === period);
+    if (!selected || !((_a3 = routeData.availability) == null ? void 0 : _a3.bays.some((bay) => bay.id === bayId))) {
+      setError("L'intervallo o la postazione non sono più disponibili. Aggiorna la selezione.");
+      loadBookings(date, period);
+      return;
+    }
+    const formData = new FormData();
+    formData.set("intent", "create-admin-booking");
+    formData.set("payload", JSON.stringify({
+      userId: targetUserId,
+      bayId,
+      localDate: date,
+      periodKey: period,
+      request: requestText,
+      expectedStartUtc: selected.startUtc,
+      expectedEndUtc: selected.endUtc
+    }));
+    setError("");
+    setNotice("");
+    actionFetcher.submit(formData, { method: "post", action: "/admin/bookings" });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "booking-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Prenotazioni" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Richieste e occupazione da ieri in avanti, raggruppate per data e intervallo." })
+    ] }) }),
+    busy && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-pending", role: "status", children: "Aggiornamento in corso..." }),
+    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-success", role: "status", children: notice }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
+    routeError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      RouteSessionError,
+      {
+        message: routeError.message ?? "Sessione non disponibile.",
+        status: routeError.status,
+        onRetry: () => loadBookings(date, period)
+      }
+    ),
+    !routeError && !routeData && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 4, label: "Caricamento prenotazioni..." }),
+    !routeError && routeData && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", "aria-labelledby": "create-booking-heading", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "create-booking-heading", children: "Crea una prenotazione approvata" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("form", { className: "admin-booking-form", onSubmit: createBooking, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "form-grid", disabled: busy || loading, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Utente",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                required: true,
+                value: targetUserId,
+                onChange: (event) => setTargetUserId(event.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Seleziona un utente" }),
+                  routeData.users.filter((user) => user.status === 1 && !user.forcePasswordChange).map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: user.id, children: [
+                    user.firstName,
+                    " ",
+                    user.lastName,
+                    " (@",
+                    user.username,
+                    ")"
+                  ] }, user.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Data locale",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                required: true,
+                value: date,
+                onChange: (event) => {
+                  const nextDate = event.target.value;
+                  setDate(nextDate);
+                  setPeriod("");
+                  setBayId("");
+                  if (nextDate) loadBookings(nextDate);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Sessione o intervallo",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                required: true,
+                value: period,
+                onChange: (event) => {
+                  const nextPeriod = event.target.value;
+                  setPeriod(nextPeriod);
+                  setBayId("");
+                  loadBookings(date, nextPeriod);
+                },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Seleziona un intervallo" }),
+                  routeData.offered.sessions.map((session) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: session.periodKey, children: sessionLabel(session, routeData.config.timeZone) }, session.periodKey))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Postazione",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                required: true,
+                value: bayId,
+                disabled: !((_a2 = routeData.availability) == null ? void 0 : _a2.bays.length),
+                onChange: (event) => setBayId(event.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Seleziona una postazione" }),
+                  (_b = routeData.availability) == null ? void 0 : _b.bays.map((bay) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: bay.id, children: bay.code }, bay.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "wide-field", children: [
+            "Nota facoltativa (massimo 1000 caratteri)",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                maxLength: 1e3,
+                value: requestText,
+                onChange: (event) => setRequestText(event.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "submit",
+              className: "button button-primary",
+              disabled: !((_c = routeData.availability) == null ? void 0 : _c.bays.length) || !targetUserId || !bayId,
+              children: "Crea e approva"
+            }
+          )
+        ] }) }),
+        period && ((_d = routeData.availability) == null ? void 0 : _d.bays.length) === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-empty", children: "Intervallo non disponibile: scegli un altro turno o una postazione libera." }),
+        !routeData.offered.sessions.length && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-empty", children: "Nessun intervallo prenotabile per questa data." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", "aria-labelledby": "booking-list-heading", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "booking-list-heading", children: "Occupazione e richieste" }),
+        routeData.bookings.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "admin-booking-dates", children: groupBookings(routeData.bookings).map((dateGroup) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-labelledby": `booking-date-${dateGroup.localDate}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { id: `booking-date-${dateGroup.localDate}`, children: dateGroup.localDate }),
+          dateGroup.intervals.map((interval) => {
+            const bay = routeData.bays.find((item) => item.id === interval.bayId);
+            const activeParticipants = interval.bookings.filter(
+              (booking) => booking.status === 0 || booking.status === 1
+            ).length;
+            const start = new Date(interval.startUtc);
+            const end2 = new Date(interval.endUtc);
+            const time = `${start.toLocaleTimeString("it-IT", {
+              timeZone: routeData.config.timeZone,
+              hour: "2-digit",
+              minute: "2-digit"
+            })} - ${end2.toLocaleTimeString("it-IT", {
+              timeZone: routeData.config.timeZone,
+              hour: "2-digit",
+              minute: "2-digit"
+            })}`;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "admin-booking-interval", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { children: [
+                "Postazione ",
+                (bay == null ? void 0 : bay.code) ?? interval.bayId,
+                " · ",
+                time,
+                " · ",
+                activeParticipants,
+                " ",
+                activeParticipants === 1 ? "partecipante attivo" : "partecipanti attivi"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: interval.bookings.map((booking) => {
+                const user = routeData.users.find((item) => item.id === booking.userId);
+                const canDecide = new Date(booking.startUtc).getTime() > Date.now();
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: user ? `${user.firstName} ${user.lastName} (@${user.username})` : booking.userId }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                      "Stato: ",
+                      bookingStatus(booking.status)
+                    ] }),
+                    booking.request && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                      "Nota: ",
+                      booking.request
+                    ] })
+                  ] }),
+                  canDecide ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-group", children: [
+                    booking.status !== 1 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        className: "button button-primary",
+                        disabled: busy,
+                        onClick: () => decide(booking, true),
+                        children: booking.status === 3 ? "Ripristina e approva" : "Approva"
+                      }
+                    ),
+                    booking.status !== 2 && booking.status !== 3 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        className: "button button-quiet",
+                        disabled: busy,
+                        onClick: () => decide(booking, false),
+                        children: "Rifiuta"
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "range-muted", children: "Sessione iniziata: non più gestibile" })
+                ] }, booking.id);
+              }) })
+            ] }, `${interval.bayId}-${interval.startUtc}-${interval.endUtc}`);
+          })
+        ] }, dateGroup.localDate)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessuna prenotazione recente." })
+      ] })
+    ] })
+  ] });
+}
+function FriendList({
+  items,
+  busy,
+  onRemove
+}) {
+  if (!items.length) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Non hai ancora aggiunto amici." });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "record-list", children: items.map((friend) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: [friend.firstName, friend.lastName].filter(Boolean).join(" ") || friend.displayName || friend.username }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        "@",
+        friend.username
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        className: "button button-quiet",
+        disabled: busy,
+        onClick: () => onRemove(friend),
+        children: [
+          "Rimuovi ",
+          friend.username
+        ]
+      }
+    )
+  ] }, friend.id)) });
+}
+function Friends({ account, onLogout, loggingOut }) {
+  const [username, setUsername] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const [notice, setNotice] = reactExports.useState("");
+  const routeFetcher = useFetcher();
+  const actionFetcher = useFetcher();
+  const busy = actionFetcher.state !== "idle";
+  reactExports.useEffect(() => {
+    routeFetcher.load("/friends");
+  }, [account.id, routeFetcher.load]);
+  reactExports.useEffect(() => {
+    const result = actionFetcher.data;
+    if (!result || result.intent !== "add-friend" && result.intent !== "remove-friend") return;
+    setError(result.success ? "" : result.message);
+    setNotice(result.success ? result.message : "");
+    if (result.success) {
+      if (result.intent === "add-friend") setUsername("");
+      routeFetcher.load("/friends");
+    }
+  }, [actionFetcher.data, routeFetcher.load]);
+  const routeError = routeFetcher.data && "sessionError" in routeFetcher.data ? routeFetcher.data.sessionError : null;
+  const routeData = routeFetcher.data && "friends" in routeFetcher.data ? routeFetcher.data : null;
+  function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+    const formData = new FormData();
+    formData.set("intent", "add-friend");
+    formData.set("username", username);
+    setError("");
+    setNotice("");
+    actionFetcher.submit(formData, { method: "post", action: "/friends" });
+  }
+  function remove(friend) {
+    if (busy) return;
+    const formData = new FormData();
+    formData.set("intent", "remove-friend");
+    formData.set("userId", friend.id);
+    setError("");
+    setNotice("");
+    actionFetcher.submit(formData, { method: "post", action: "/friends" });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "booking-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Amici" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Aggiungi una persona tramite username esatto per poter richiedere di unirti ai suoi turni condivisibili." })
+    ] }) }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
+    notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
+    routeError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      RouteSessionError,
+      {
+        message: routeError.message ?? "Sessione non disponibile.",
+        status: routeError.status,
+        onRetry: () => routeFetcher.load("/friends")
+      }
+    ),
+    !routeError && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel range-form-panel", "aria-labelledby": "add-friend-heading", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "add-friend-heading", children: "Aggiungi un amico" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "friend-add-form", onSubmit: submit, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            "Username esatto",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                name: "username",
+                autoComplete: "off",
+                maxLength: 80,
+                required: true,
+                value: username,
+                disabled: busy,
+                onChange: (event) => setUsername(event.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "button button-primary", disabled: busy, children: busy ? "Aggiornamento..." : "Aggiungi" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", "aria-labelledby": "friends-heading", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "friends-heading", children: "I tuoi amici" }),
+        !routeData ? /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 2, label: "Caricamento amici..." }) : /* @__PURE__ */ jsxRuntimeExports.jsx(FriendList, { items: routeData.friends, busy, onRemove: remove })
+      ] })
+    ] })
+  ] });
+}
 function isRecord(value) {
   return typeof value === "object" && value !== null;
 }
@@ -38506,7 +39435,7 @@ function actionError(intent, reason) {
         message: "Username o password non validi, oppure account non approvato."
       };
     }
-    if (typeof window !== "undefined" && intent !== "login" && intent !== "register") {
+    if (typeof window !== "undefined" && intent !== "login") {
       window.dispatchEvent(new Event("range-session-expired"));
     }
     return { intent, success: false, status: 401, message: "Sessione scaduta. Accedi di nuovo." };
@@ -38566,15 +39495,24 @@ async function bookingLoader({ request: request2 }) {
   const date = url.searchParams.get("date") ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const period = url.searchParams.get("period") ?? "";
   const search = url.searchParams.get("search") === "1";
-  const offered = sessions(date, request2.signal);
+  let offered;
+  let config2;
+  try {
+    [offered, config2] = await Promise.all([
+      sessions(date, request2.signal),
+      getConfig(request2.signal)
+    ]);
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
   const history = url.searchParams.get("region") === "availability" ? Promise.resolve([]) : myBookings(request2.signal);
-  const available = search && period ? offered.then(async (result) => {
-    if (!result.sessions.some((item) => item.periodKey === period)) {
+  const available = search && period ? Promise.resolve().then(async () => {
+    if (!offered.sessions.some((item) => item.periodKey === period)) {
       throw new Error("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
     }
     return availability(date, period, request2.signal);
   }) : Promise.resolve(null);
-  return { date, period, offered, history, availability: available };
+  return { date, period, offered, config: config2, history, availability: available };
 }
 async function bookingAction({ request: request2 }) {
   const formData = await request2.formData();
@@ -38589,21 +39527,7 @@ async function bookingAction({ request: request2 }) {
       const account = await login({ username, password });
       return { intent, success: true, message: "", account };
     }
-    if (intent === "register") {
-      const username = formData.get("username");
-      const password = formData.get("password");
-      const firstName = formData.get("firstName");
-      const lastName = formData.get("lastName");
-      if (typeof username !== "string" || !username.trim() || typeof password !== "string" || !password || typeof firstName !== "string" || !firstName.trim() || typeof lastName !== "string" || !lastName.trim()) {
-        return { intent, success: false, message: "Completa tutti i campi richiesti." };
-      }
-      if (password.length < 7) {
-        return { intent, success: false, message: "La password deve contenere almeno 7 caratteri." };
-      }
-      await register({ username, password, firstName, lastName });
-      return { intent, success: true, message: "Richiesta inviata. Attendi l'approvazione dell'amministratore." };
-    }
-    if (intent === "logout" || intent === "password-change" || intent === "book") {
+    if (intent === "logout" || intent === "password-change" || intent === "book" || intent === "cancel-booking") {
       const account = await getSession(request2.signal);
       if (intent === "logout") {
         await logout();
@@ -38611,6 +39535,14 @@ async function bookingAction({ request: request2 }) {
       }
       if (account.forcePasswordChange && intent !== "password-change") {
         return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
+      }
+      if (intent === "cancel-booking") {
+        const id = formData.get("id");
+        if (typeof id !== "string" || !id) {
+          return { intent, success: false, message: "Prenotazione non valida." };
+        }
+        await cancelBooking(id);
+        return { intent, success: true, message: "Prenotazione annullata. La registrazione resta visibile nello storico." };
       }
       if (intent === "password-change") {
         const currentPassword = formData.get("currentPassword");
@@ -38626,6 +39558,10 @@ async function bookingAction({ request: request2 }) {
       const periodKey = formData.get("periodKey");
       const expectedStartUtc = formData.get("expectedStartUtc");
       const expectedEndUtc = formData.get("expectedEndUtc");
+      const requestText = formData.get("request");
+      if (typeof requestText !== "string" || requestText.length > 1e3) {
+        return { intent, success: false, message: "La nota non può superare 1000 caratteri." };
+      }
       if (typeof bayId !== "string" || !bayId || typeof localDate !== "string" || !localDate || typeof periodKey !== "string" || !periodKey || typeof expectedStartUtc !== "string" || !expectedStartUtc || typeof expectedEndUtc !== "string" || !expectedEndUtc) {
         return { intent, success: false, message: "Seleziona di nuovo data, sessione e postazione." };
       }
@@ -38638,7 +39574,7 @@ async function bookingAction({ request: request2 }) {
         bayId,
         localDate,
         periodKey,
-        request: "",
+        request: requestText,
         expectedStartUtc,
         expectedEndUtc
       });
@@ -38683,6 +39619,14 @@ async function bookingAction({ request: request2 }) {
         message: "La postazione non è più disponibile. Seleziona un altro turno."
       };
     }
+    if (intent === "cancel-booking" && reason instanceof ApiError && reason.status === 409) {
+      return {
+        intent,
+        success: false,
+        status: 409,
+        message: "La prenotazione è iniziata o non è più annullabile. Aggiorna lo storico."
+      };
+    }
     return actionError(intent, reason);
   }
 }
@@ -38691,7 +39635,10 @@ async function messagesLoader({ request: request2 }) {
   const account = await browserAccount(request2);
   if (isSessionResult(account)) return { sessionError: account };
   if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
-  return { items: messages(request2.signal) };
+  const users = account.isAdmin ? adminUsers(request2.signal) : Promise.resolve([]);
+  return {
+    items: Promise.all([messages(request2.signal), users]).then(([threads, adminUsersList]) => ({ threads, users: adminUsersList }))
+  };
 }
 async function messagesAction({ request: request2 }) {
   const formData = await request2.formData();
@@ -38701,18 +39648,41 @@ async function messagesAction({ request: request2 }) {
     if (account.forcePasswordChange) {
       return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
     }
-    if (intent !== "send-message") {
-      return { intent, success: false, message: "Operazione non riconosciuta." };
+    if (intent === "decide-message-status") {
+      if (!account.isAdmin) {
+        return { intent, success: false, status: 403, message: "Account non autorizzato." };
+      }
+      const payload = jsonField(formData, "payload");
+      const id = payload == null ? void 0 : payload.id;
+      const status = payload == null ? void 0 : payload.status;
+      if (typeof id !== "string" || !id || !isMessageStatusDecision(status)) {
+        return { intent, success: false, message: "Decisione sul messaggio non valida." };
+      }
+      await decideMessageStatus(id, status);
+      return {
+        intent,
+        success: true,
+        message: `Stato del messaggio aggiornato: ${messageStatusLabel(status)}.`
+      };
     }
-    const text = formData.get("text");
-    if (typeof text !== "string" || text.trim().length < 3 || text.length > 2e3) {
-      return { intent, success: false, message: "Il messaggio deve contenere da 3 a 2000 caratteri." };
+    if (intent === "send-message") {
+      const text = formData.get("text");
+      if (typeof text !== "string" || text.trim().length < 3 || text.length > 2e3) {
+        return { intent, success: false, message: "Il messaggio deve contenere da 3 a 2000 caratteri." };
+      }
+      await openMessage({ subject: "Richiesta dal portale", text });
+      return { intent, success: true, message: "Messaggio inviato." };
     }
-    await openMessage({ subject: "Richiesta dal portale", text });
-    return { intent, success: true, message: "Messaggio inviato." };
+    return { intent, success: false, message: "Operazione non riconosciuta." };
   } catch (reason) {
     return actionError(intent, reason);
   }
+}
+function isMessageStatusDecision(value) {
+  return value === 1 || value === 2 || value === 3;
+}
+function messageStatusLabel(status) {
+  return status === 1 ? "Presa in carico" : status === 2 ? "Completata" : "Rifiutata";
 }
 async function adminLoader({ request: request2 }) {
   if (typeof window === "undefined") return null;
@@ -38720,12 +39690,83 @@ async function adminLoader({ request: request2 }) {
   if (isSessionResult(account)) return { sessionError: account };
   if (!account.isAdmin) return { sessionError: { error: true, status: 403, message: "Account non autorizzato." } };
   if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
-  const core = Promise.all([adminConfig(request2.signal), adminUsers(request2.signal), adminBays(request2.signal)]).then(([config2, users, bays]) => ({ config: config2, users, bays }));
+  const core = Promise.all([
+    adminConfig(request2.signal),
+    adminUsers(request2.signal),
+    adminBays(request2.signal),
+    adminMechanismTypes(request2.signal)
+  ]).then(([config2, users, bays, mechanismTypes]) => ({ config: config2, users, bays, mechanismTypes }));
   const closures = adminClosures(request2.signal);
-  const bookings = Promise.all([core, adminBookings(request2.signal)]).then(([data, items]) => ({ ...data, bookings: items }));
-  return { core, closures, bookings };
+  return { core, closures };
+}
+async function adminBookingsLoader({ request: request2 }) {
+  if (typeof window === "undefined") return null;
+  const account = await browserAccount(request2);
+  if (isSessionResult(account)) return { sessionError: account };
+  if (!account.isAdmin) return { sessionError: { error: true, status: 403, message: "Account non autorizzato." } };
+  if (account.forcePasswordChange) return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
+  try {
+    const url = new URL(request2.url);
+    const date = url.searchParams.get("date") ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const period = url.searchParams.get("period") ?? "";
+    const [config2, users, bays, bookings, offered] = await Promise.all([
+      adminConfig(request2.signal),
+      adminUsers(request2.signal),
+      adminBays(request2.signal),
+      adminBookings(request2.signal),
+      sessions(date, request2.signal)
+    ]);
+    const selected = offered.sessions.find((item) => item.periodKey === period);
+    const available = selected ? await availability(date, period, request2.signal) : null;
+    return { config: config2, users, bays, bookings, date, offered, period, availability: available };
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
+}
+async function friendsLoader({ request: request2 }) {
+  if (typeof window === "undefined") return null;
+  const account = await browserAccount(request2);
+  if (isSessionResult(account)) return { sessionError: account };
+  if (account.forcePasswordChange) {
+    return { sessionError: { error: true, status: 403, message: "Aggiorna la password prima di continuare." } };
+  }
+  try {
+    return { friends: await friends(request2.signal) };
+  } catch (reason) {
+    return { sessionError: readSessionResult(reason) };
+  }
+}
+async function friendsAction({ request: request2 }) {
+  const formData = await request2.formData();
+  const intent = actionIntent(formData);
+  try {
+    const account = await getSession(request2.signal);
+    if (account.forcePasswordChange) {
+      return { intent, success: false, status: 403, message: "Aggiorna la password prima di continuare." };
+    }
+    if (intent === "add-friend") {
+      const username = formData.get("username");
+      if (typeof username !== "string" || !username.trim() || username.length > 80) {
+        return { intent, success: false, message: "Inserisci uno username valido." };
+      }
+      await addFriend(username.trim());
+      return { intent, success: true, message: "Amicizia aggiunta." };
+    }
+    if (intent === "remove-friend") {
+      const userId = formData.get("userId");
+      if (typeof userId !== "string" || !userId) {
+        return { intent, success: false, message: "Amico non valido." };
+      }
+      await removeFriend(userId);
+      return { intent, success: true, message: "Amicizia rimossa." };
+    }
+    return { intent, success: false, message: "Operazione non riconosciuta." };
+  } catch (reason) {
+    return actionError(intent, reason);
+  }
 }
 async function adminAction({ request: request2 }) {
+  var _a2;
   const formData = await request2.formData();
   const intent = actionIntent(formData);
   try {
@@ -38736,7 +39777,7 @@ async function adminAction({ request: request2 }) {
     switch (intent) {
       case "save-config": {
         const payload = jsonField(formData, "payload");
-        if (!payload || typeof payload.name !== "string" || typeof payload.timeZone !== "string" || !Array.isArray(payload.openingDays) || payload.sessionMode !== 0 && payload.sessionMode !== 1 && payload.sessionMode !== 2) {
+        if (!payload || typeof payload.name !== "string" || typeof payload.timeZone !== "string" || !Array.isArray(payload.openingDays) || payload.sessionMode !== 0 && payload.sessionMode !== 1 && payload.sessionMode !== 2 && payload.sessionMode !== 3 || payload.sessionMode === 3 && payload.hourlyMinutes !== 60 && payload.hourlyMinutes !== 120) {
           return { intent, success: false, message: "La configurazione del campo non è valida." };
         }
         const value = {
@@ -38750,7 +39791,7 @@ async function adminAction({ request: request2 }) {
           morningEnd: String(payload.morningEnd ?? ""),
           afternoonStart: String(payload.afternoonStart ?? ""),
           afternoonEnd: String(payload.afternoonEnd ?? ""),
-          hourlyMinutes: Number(payload.hourlyMinutes),
+          hourlyMinutes: payload.sessionMode === 3 ? Number(payload.hourlyMinutes) : 60,
           continuousStart: typeof payload.continuousStart === "string" ? payload.continuousStart : null,
           continuousEnd: typeof payload.continuousEnd === "string" ? payload.continuousEnd : null,
           reservedReleaseDaysBefore: Number(payload.reservedReleaseDaysBefore)
@@ -38760,7 +39801,15 @@ async function adminAction({ request: request2 }) {
       }
       case "save-bay": {
         const payload = jsonField(formData, "payload");
-        if (!payload || typeof payload.id !== "string" || typeof payload.code !== "string" || !Array.isArray(payload.mechanisms) || !Array.isArray(payload.whitelistUserIds)) {
+        const validCount = (value2) => typeof value2 === "number" && Number.isInteger(value2) && value2 >= 0;
+        const validDimension = (value2) => value2 === null || typeof value2 === "number" && Number.isFinite(value2) && value2 > 0;
+        const targets = payload == null ? void 0 : payload.targets;
+        const partitions = payload == null ? void 0 : payload.partitions;
+        const plates = payload == null ? void 0 : payload.plates;
+        const pepper = payload == null ? void 0 : payload.pepper;
+        const height = payload == null ? void 0 : payload.height;
+        const width = payload == null ? void 0 : payload.width;
+        if (!payload || typeof payload.id !== "string" || typeof payload.code !== "string" || !Array.isArray(payload.mechanisms) || !Array.isArray(payload.whitelistUserIds) || !validCount(targets) || !validCount(partitions) || !validCount(plates) || !validCount(pepper) || !validDimension(height) || !validDimension(width) || height === null !== (width === null)) {
           return { intent, success: false, message: "La configurazione della bay non è valida." };
         }
         const value = {
@@ -38768,19 +39817,30 @@ async function adminAction({ request: request2 }) {
           creationDateTime: String(payload.creationDateTime ?? ""),
           code: payload.code,
           description: String(payload.description ?? ""),
+          targets,
           mechanisms: payload.mechanisms.filter(isRecord).map((mechanism) => ({
             type: typeof mechanism.type === "string" ? mechanism.type : "",
             quantity: typeof mechanism.quantity === "number" ? mechanism.quantity : 0
           })),
-          partitions: Number(payload.partitions),
-          plates: Number(payload.plates),
-          pepper: payload.pepper === true,
+          partitions,
+          plates,
+          pepper,
+          height,
+          width,
           status: Number(payload.status),
           reservedUntilUtc: typeof payload.reservedUntilUtc === "string" ? payload.reservedUntilUtc : null,
           whitelistUserIds: payload.whitelistUserIds.filter((id) => typeof id === "string")
         };
         await saveBay(value);
         return { intent, success: true, message: "Bay salvata.", entityId: value.id };
+      }
+      case "create-mechanism-type": {
+        const payload = jsonField(formData, "payload");
+        if (!payload || typeof payload.name !== "string" || !payload.name.trim()) {
+          return { intent, success: false, message: "Inserisci il nome del meccanismo." };
+        }
+        await createMechanismType(payload.name);
+        return { intent, success: true, message: "Tipo di meccanismo creato." };
       }
       case "add-closure": {
         const payload = jsonField(formData, "payload");
@@ -38812,19 +39872,48 @@ async function adminAction({ request: request2 }) {
         return { intent, success: true, message: "Chiusura rimossa." };
       }
       case "approve-user": {
-        const id = formData.get("id");
+        const id = (_a2 = jsonField(formData, "payload")) == null ? void 0 : _a2.id;
         if (typeof id !== "string" || !id) return { intent, success: false, message: "Utente non valido." };
         await approveUser(id);
         return { intent, success: true, message: "Account approvato." };
       }
       case "decide-booking": {
-        const id = formData.get("id");
-        const approved = formData.get("approved");
-        if (typeof id !== "string" || !id || approved !== "true" && approved !== "false") {
+        const payload = jsonField(formData, "payload");
+        const id = payload == null ? void 0 : payload.id;
+        const approved = payload == null ? void 0 : payload.approved;
+        if (typeof id !== "string" || !id || typeof approved !== "boolean") {
           return { intent, success: false, message: "Decisione di prenotazione non valida." };
         }
-        await decideBooking(id, approved === "true");
-        return { intent, success: true, message: approved === "true" ? "Prenotazione approvata." : "Prenotazione rifiutata." };
+        await decideBooking(id, approved);
+        return { intent, success: true, message: approved ? "Prenotazione approvata." : "Prenotazione rifiutata." };
+      }
+      case "create-admin-booking": {
+        const payload = jsonField(formData, "payload");
+        const userId = payload == null ? void 0 : payload.userId;
+        const bayId = payload == null ? void 0 : payload.bayId;
+        const localDate = payload == null ? void 0 : payload.localDate;
+        const periodKey = payload == null ? void 0 : payload.periodKey;
+        const requestText = payload == null ? void 0 : payload.request;
+        const expectedStartUtc = payload == null ? void 0 : payload.expectedStartUtc;
+        const expectedEndUtc = payload == null ? void 0 : payload.expectedEndUtc;
+        if (typeof userId !== "string" || !userId || typeof bayId !== "string" || !bayId || typeof localDate !== "string" || !localDate || typeof periodKey !== "string" || !periodKey || typeof requestText !== "string" || requestText.length > 1e3 || typeof expectedStartUtc !== "string" || !expectedStartUtc || typeof expectedEndUtc !== "string" || !expectedEndUtc) {
+          return { intent, success: false, message: "Completa i dati della prenotazione." };
+        }
+        const offered = await sessions(localDate, request2.signal);
+        const selected = offered.sessions.find((item) => item.periodKey === periodKey);
+        if (!selected || selected.startUtc !== expectedStartUtc || selected.endUtc !== expectedEndUtc) {
+          return { intent, success: false, message: "Gli orari sono cambiati. Seleziona un intervallo aggiornato." };
+        }
+        await createAdminBooking({
+          userId,
+          bayId,
+          localDate,
+          periodKey,
+          request: requestText,
+          expectedStartUtc,
+          expectedEndUtc
+        });
+        return { intent, success: true, message: "Prenotazione creata e approvata." };
       }
       default:
         return { intent, success: false, message: "Operazione non riconosciuta." };
@@ -38832,6 +39921,82 @@ async function adminAction({ request: request2 }) {
   } catch (reason) {
     return actionError(intent, reason);
   }
+}
+const messageStatuses = [
+  { value: 1, label: "Presa in carico" },
+  { value: 2, label: "Completata" },
+  { value: 3, label: "Rifiutata" }
+];
+const messageStatusLabels = {
+  0: "In attesa",
+  1: "Presa in carico",
+  2: "Completata",
+  3: "Rifiutata"
+};
+function formatMessageDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Data non disponibile" : new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+function MessageThreadCard({
+  thread,
+  accountId,
+  isAdmin,
+  users,
+  busy,
+  onDecision
+}) {
+  const sender = users.find((user) => user.id === thread.userId);
+  const senderName = sender ? [sender.firstName, sender.lastName].filter(Boolean).join(" ") || sender.username : "Mittente non disponibile";
+  const knownStatus = typeof thread.status === "number" ? messageStatusLabels[thread.status] : void 0;
+  const threadMessages = Array.isArray(thread.messages) ? thread.messages : [];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("article", { className: "message", "aria-labelledby": `message-title-${thread.id}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "message__header", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: `message-title-${thread.id}`, children: thread.subject || "Richiesta senza titolo" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "message__status", children: [
+        "Stato: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: knownStatus ?? "Stato non disponibile" })
+      ] })
+    ] }),
+    isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "message__sender", children: [
+      "Mittente: ",
+      senderName,
+      sender && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        " (@",
+        sender.username,
+        ")"
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "message__entries", children: threadMessages.length ? threadMessages.map((message, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "section",
+      {
+        className: "message__entry",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "message__entry-header", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: message.fromAdmin ? "Team Shooting Range" : isAdmin ? senderName : message.authorUserId === accountId ? "Tu" : "Utente" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("time", { dateTime: message.createdUtc, children: formatMessageDate(message.createdUtc) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "message__text", children: message.text })
+        ]
+      },
+      `${message.authorUserId}-${message.createdUtc}-${index}`
+    )) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "message__empty", children: "Nessun messaggio disponibile." }) }),
+    isAdmin && knownStatus && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "message__decisions", role: "group", "aria-label": `Aggiorna stato per ${senderName}`, children: messageStatuses.map(({ value, label }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        className: thread.status === value ? "button button-primary" : "button button-quiet",
+        "aria-label": `Segna ${senderName} come ${label.toLowerCase()}`,
+        "aria-pressed": thread.status === value,
+        disabled: busy || thread.status === value,
+        onClick: () => onDecision(thread.id, value),
+        children: label
+      },
+      value
+    )) })
+  ] });
 }
 function Messages({
   account,
@@ -38848,11 +40013,14 @@ function Messages({
   }, [account.id, routeFetcher.load]);
   reactExports.useEffect(() => {
     const result = actionFetcher.data;
-    if (!result || result.intent !== "send-message") return;
+    if (!result || !["send-message", "decide-message-status"].includes(result.intent)) return;
     setError(result.success ? "" : result.message);
     setNotice(result.success ? result.message : "");
-    if (result.success) setText("");
-  }, [actionFetcher.data]);
+    if (result.success) {
+      if (result.intent === "send-message") setText("");
+      routeFetcher.load("/messages");
+    }
+  }, [actionFetcher.data, routeFetcher.load]);
   const routeError = routeFetcher.data && "sessionError" in routeFetcher.data ? routeFetcher.data.sessionError : null;
   const routeData = routeFetcher.data && "items" in routeFetcher.data ? routeFetcher.data : null;
   function submit(event) {
@@ -38864,6 +40032,16 @@ function Messages({
     setNotice("");
     actionFetcher.submit(data, { method: "post", action: "/messages" });
   }
+  function decide(threadId, status) {
+    if (actionFetcher.state !== "idle") return;
+    const data = new FormData();
+    data.set("intent", "decide-message-status");
+    data.set("payload", JSON.stringify({ id: threadId, status }));
+    setError("");
+    setNotice("");
+    actionFetcher.submit(data, { method: "post", action: "/messages" });
+  }
+  const busy = actionFetcher.state !== "idle";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Shell, { account, onLogout, loggingOut, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "booking-heading", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Messaggi" }),
@@ -38871,7 +40049,7 @@ function Messages({
     ] }),
     routeError && /* @__PURE__ */ jsxRuntimeExports.jsx(RouteSessionError, { message: routeError.message ?? "Sessione non disponibile.", status: routeError.status }),
     !routeError && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "range-panel", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submit, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submit, className: "mb-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
           "Messaggio",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -38881,6 +40059,7 @@ function Messages({
               required: true,
               minLength: 3,
               maxLength: 2e3,
+              disabled: busy,
               value: text,
               onChange: (event) => setText(event.target.value),
               placeholder: "Come possiamo aiutarti?"
@@ -38892,14 +40071,15 @@ function Messages({
           {
             type: "submit",
             className: "button button-primary",
-            disabled: actionFetcher.state !== "idle",
-            children: actionFetcher.state !== "idle" ? "Invio..." : "Invia messaggio"
+            disabled: busy,
+            children: busy ? "Aggiornamento..." : "Invia messaggio"
           }
         )
       ] }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "range-error", children: error }),
       notice && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "range-success", children: notice }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "message-list", "aria-live": "polite", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-muted", children: "Orari visualizzati nel fuso locale del dispositivo." }),
         !routeData && /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento messaggi..." }),
         routeData && /* @__PURE__ */ jsxRuntimeExports.jsx(
           RangeDeferred,
@@ -38907,7 +40087,18 @@ function Messages({
             resolve: routeData.items,
             fallback: /* @__PURE__ */ jsxRuntimeExports.jsx(RangeSkeleton, { rows: 3, label: "Caricamento messaggi..." }),
             onRetry: () => routeFetcher.load("/messages"),
-            children: (items) => items.length ? items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("article", { className: "message", children: JSON.stringify(item) }, index)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessun messaggio." })
+            children: ({ threads, users }) => threads.length ? threads.map((thread) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              MessageThreadCard,
+              {
+                thread,
+                accountId: account.id,
+                isAdmin: account.isAdmin,
+                users,
+                busy,
+                onDecision: decide
+              },
+              thread.id
+            )) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "range-empty", children: "Nessun messaggio." })
           }
         )
       ] })
@@ -38928,8 +40119,28 @@ function AdminRoute() {
     }
   ) });
 }
+function AdminBookingsRoute() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, { children: (props) => props.account.isAdmin ? /* @__PURE__ */ jsxRuntimeExports.jsx(AdminBookings, { ...props }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Shell,
+    {
+      account: props.account,
+      onLogout: props.onLogout,
+      loggingOut: props.loggingOut,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(RouteSessionError, { message: "Account non autorizzato.", status: 403 })
+    }
+  ) });
+}
+function FriendsRoute() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(SessionGate, { children: (props) => /* @__PURE__ */ jsxRuntimeExports.jsx(Friends, { ...props }) });
+}
 const routes = [
   { path: "/", Component: App, loader: bookingLoader, action: bookingAction },
+  {
+    path: "/friends",
+    Component: FriendsRoute,
+    loader: friendsLoader,
+    action: friendsAction
+  },
   {
     path: "/messages",
     Component: MessagesRoute,
@@ -38940,6 +40151,12 @@ const routes = [
     path: "/admin",
     Component: AdminRoute,
     loader: adminLoader,
+    action: adminAction
+  },
+  {
+    path: "/admin/bookings",
+    Component: AdminBookingsRoute,
+    loader: adminBookingsLoader,
     action: adminAction
   }
 ];

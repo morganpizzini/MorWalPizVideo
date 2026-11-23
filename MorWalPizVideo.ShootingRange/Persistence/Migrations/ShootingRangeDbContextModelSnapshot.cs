@@ -292,6 +292,69 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                     b.ToTable("shooting_range_exceptions", (string)null);
                 });
 
+            modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeFriendship", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreationDateTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("creation_date_time");
+
+                    b.Property<string>("RequesterUserId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("requester_user_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("UserAId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("user_a_id");
+
+                    b.Property<string>("UserBId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("user_b_id");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "RequesterUserId")
+                        .HasDatabaseName("ix_shooting_range_friendships_requester");
+
+                    b.HasIndex("TenantId", "UserBId")
+                        .HasDatabaseName("ix_shooting_range_friendships_user_b");
+
+                    b.HasIndex("TenantId", "UserAId", "UserBId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_shooting_range_friendships_pair");
+
+                    b.ToTable("shooting_range_friendships", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_shooting_range_friendships_canonical_pair", "[user_a_id] COLLATE Latin1_General_100_BIN2 < [user_b_id] COLLATE Latin1_General_100_BIN2");
+
+                            t.HasCheckConstraint("ck_shooting_range_friendships_requester", "[requester_user_id] COLLATE Latin1_General_100_BIN2 = [user_a_id] COLLATE Latin1_General_100_BIN2 OR [requester_user_id] COLLATE Latin1_General_100_BIN2 = [user_b_id] COLLATE Latin1_General_100_BIN2");
+
+                            t.HasCheckConstraint("ck_shooting_range_friendships_status", "[status] IN (0, 1)");
+                        });
+                });
+
             modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeLocalSession", b =>
                 {
                     b.Property<string>("Id")
@@ -619,6 +682,36 @@ namespace MorWalPizVideo.ShootingRange.Persistence.Migrations
                         .HasForeignKey("TenantId", "BayId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeFriendship", b =>
+                {
+                    b.HasOne("MorWalPizVideo.ShootingRange.Models.ShootingRangeTenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MorWalPizVideo.ShootingRange.Models.ShootingRangeUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RequesterUserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MorWalPizVideo.ShootingRange.Models.ShootingRangeUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "UserAId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MorWalPizVideo.ShootingRange.Models.ShootingRangeUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "UserBId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MorWalPizVideo.ShootingRange.Models.ShootingRangeLocalSession", b =>

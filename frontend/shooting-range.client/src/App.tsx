@@ -13,6 +13,7 @@ import {
   getSession,
   type Account,
   type Booking as StoredBooking,
+  type FriendBooking,
   type Sessions,
 } from "./api";
 import { OpeningDayDatePicker } from "./OpeningDayDatePicker";
@@ -22,7 +23,7 @@ import type {
   BookingRouteData,
   SessionErrorData,
 } from "./routeData";
-import { AppearanceSelector } from "@morwalpiz/layout";
+import { AppearanceSelector, Dialog } from "@morwalpiz/layout";
 
 export interface SessionViewProps {
   account: Account;
@@ -108,6 +109,7 @@ export function Shell({
         {account && !account.forcePasswordChange && (
           <nav className="range-navigation" aria-label="Navigazione principale">
             <NavLink to="/" end>Prenota</NavLink>
+            <NavLink to="/friends">Amici</NavLink>
             <NavLink to="/messages">Messaggi</NavLink>
             {account.isAdmin && (
               <>
@@ -453,6 +455,14 @@ export function Booking({
   const [availabilityKey, setAvailabilityKey] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [recap, setRecap] = useState<{
+    bay: import("./api").Bay;
+    friendBookings: FriendBooking[];
+    period: string;
+    session: Sessions["sessions"][number];
+    request: string;
+  } | null>(null);
+  const recapInputRef = useRef<HTMLTextAreaElement>(null);
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
@@ -490,6 +500,10 @@ export function Booking({
     availabilityError;
   const pending = actionFetcher.state !== "idle";
 
+  const closeRecap = useCallback(() => {
+    if (!pending) setRecap(null);
+  }, [pending]);
+
   useEffect(() => {
     if (!account.forcePasswordChange) {
       routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
@@ -503,6 +517,7 @@ export function Booking({
       setError(result.success ? "" : result.message);
       setNotice(result.success ? result.message : "");
       if (result.success) {
+        setRecap(null);
         setAvailabilityKey("");
         routeFetcher.load(`/?date=${encodeURIComponent(date)}`);
         window.dispatchEvent(new Event("range-admin-booking-changed"));
@@ -554,6 +569,7 @@ export function Booking({
     bayId: string,
     selectedPeriod: string,
     session: Sessions["sessions"][number],
+    requestText: string,
   ) {
     if (pending || !session) return;
     const formData = new FormData();
@@ -563,6 +579,7 @@ export function Booking({
     formData.set("periodKey", selectedPeriod);
     formData.set("expectedStartUtc", session.startUtc);
     formData.set("expectedEndUtc", session.endUtc);
+    formData.set("request", requestText);
     actionFetcher.submit(formData, { method: "post", action: "/" });
   }
 
@@ -725,8 +742,11 @@ export function Booking({
                             <p className="range-empty">Nessuna postazione disponibile per questo turno.</p>
                           )}
                           <div className="bay-grid">
-                            {available.bays.map((bay) => (
-                              <article className="bay" key={bay.id}>
+                            {available.bays.map((bay) => {
+                              const friendBookings = (available.friendBookings ?? [])
+                                .filter((friend) => friend.bayId === bay.id);
+                              return (
+                                <article className="bay" key={bay.id}>
                                 <span className="bay-code">{bay.code}</span>
                                 <h3>{bay.description || "Postazione operativa"}</h3>
                                 <ul className="bay-inventory" aria-label={`Dettagli postazione ${bay.code}`}>
@@ -743,6 +763,14 @@ export function Booking({
                                 <p className="bay-mechanisms">
                                   Meccanismi: {bay.mechanisms.map((item) => `${item.quantity} ${item.type}`).join(" · ") || "nessuno"}
                                 </p>
+                                {friendBookings.length ? (
+                                  <p className="friend-slot">
+                                    Slot condiviso con amici diretti:{" "}
+                                    {friendBookings.map((friend) =>
+                                      `@${friend.username} (${formatBookingStatus(friend.status)})`,
+                                    ).join(", ")}.
+                                  </p>
+                                ) : null}
                                 <button
                                   type="button"
                                   className="button button-primary"
@@ -750,7 +778,16 @@ export function Booking({
                                   onClick={() => {
                                     if (availabilityMatches(available, routeData.offered.sessions, date, period)) {
                                       const session = routeData.offered.sessions.find((item) => item.periodKey === period);
-                                      if (session) submitBooking(bay.id, period, session);
+                                      if (session) {
+                                        setRecap({
+                                          bay,
+                                          friendBookings,
+                                          period,
+                                          session,
+                                          request: "",
+                                        });
+                                        setError("");
+                                      }
                                     } else {
                                       setAvailabilityKey("");
                                       setError("Gli orari sono cambiati. Seleziona una sessione aggiornata.");
@@ -758,10 +795,13 @@ export function Booking({
                                     }
                                   }}
                                 >
-                                  Richiedi postazione {bay.code}
+                                  {friendBookings.length
+                                    ? `Richiedi di unirti a ${bay.code}`
+                                    : `Richiedi postazione ${bay.code}`}
                                 </button>
-                              </article>
-                            ))}
+                                </article>
+                              );
+                            })}
                           </div>
                         </>
                       );
@@ -780,6 +820,67 @@ export function Booking({
           )}
         </>
       )}
+      <Dialog
+        open={recap !== null}
+        title="Conferma la richiesta"
+        description="Controlla i dettagli prima di inviare la prenotazione."
+        onClose={closeRecap}
+        closeLabel="Annulla"
+        initialFocusRef={recapInputRef}
+        closeOnEscape={!pending}
+        closeOnBackdrop={!pending}
+      >
+        {recap && routeData && (
+          <div className="booking-recap">
+            <p>
+              <strong>Data:</strong>{" "}
+              {new Date(`${date}T12:00:00Z`).toLocaleDateString("it-IT", {
+                timeZone: "UTC",
+                dateStyle: "long",
+              })}
+            </p>
+            <p><strong>Orario:</strong> {formatSessionLabel(recap.session, routeData.offered.timeZone)}</p>
+            <p><strong>Postazione:</strong> {recap.bay.code}</p>
+            {recap.friendBookings.length ? (
+              <p>
+                <strong>Richiesta di unirti al turno condiviso con amici diretti:</strong>{" "}
+                {recap.friendBookings.map((friend) =>
+                  `@${friend.username} (${formatBookingStatus(friend.status)})`,
+                ).join(", ")}
+              </p>
+            ) : null}
+            <label>
+              Nota facoltativa (massimo 1000 caratteri)
+              <textarea
+                ref={recapInputRef}
+                maxLength={1000}
+                value={recap.request}
+                disabled={pending}
+                onChange={(event) => setRecap({ ...recap, request: event.target.value })}
+              />
+            </label>
+            {error && <p role="alert" className="range-error">{error}</p>}
+            <div className="action-group">
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={pending}
+                onClick={() => setRecap(null)}
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={pending}
+                onClick={() => submitBooking(recap.bay.id, recap.period, recap.session, recap.request)}
+              >
+                {pending ? "Invio..." : "Conferma e invia"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Dialog>
       <p className="range-muted account-note">
         Account: {account.firstName} {account.lastName} · {formatAccountStatus(account.status)}
       </p>

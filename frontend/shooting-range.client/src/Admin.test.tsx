@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BayForm, ConfigForm } from "./Admin";
+import { groupBookings } from "./AdminBookings";
 import { render } from "./entry-server";
 import type { RangeConfig } from "./api";
 
@@ -22,7 +23,34 @@ const config: RangeConfig = {
 };
 
 describe("admin form structure and SSR", () => {
-  it.each([0, 1, 2] as const)(
+  it("groups shared interval participants under local date, bay and stored time", () => {
+    const makeBooking = (values: Partial<import("./api").Booking>): import("./api").Booking => ({
+      id: "booking",
+      creationDateTime: config.creationDateTime,
+      userId: "user-1",
+      bayId: "bay-1",
+      localDate: "2030-01-13",
+      periodKey: "09:00-11:00",
+      startUtc: "2030-01-13T08:00:00Z",
+      endUtc: "2030-01-13T10:00:00Z",
+      request: "",
+      status: 0,
+      ...values,
+    });
+    const groups = groupBookings([
+      makeBooking({ id: "later", localDate: "2030-01-14", startUtc: "2030-01-14T08:00:00Z" }),
+      makeBooking({ id: "friend", status: 1 }),
+      makeBooking({ id: "separate", periodKey: "11:00-13:00", startUtc: "2030-01-13T10:00:00Z", endUtc: "2030-01-13T12:00:00Z" }),
+      makeBooking({ id: "owner", request: "Keep target setup ready" }),
+    ]);
+
+    expect(groups.map((group) => group.localDate)).toEqual(["2030-01-13", "2030-01-14"]);
+    expect(groups[0].intervals).toHaveLength(2);
+    expect(groups[0].intervals.find((interval) => interval.bookings.length === 2)?.bookings.map((item) => item.status)).toEqual([1, 0]);
+    expect(groups[0].intervals.flatMap((interval) => interval.bookings).find((item) => item.id === "owner")?.request).toBe("Keep target setup ready");
+  });
+
+  it.each([0, 1, 2, 3] as const)(
     "renders only relevant windows for numeric mode %s",
     (mode) => {
       const html = renderToStaticMarkup(
@@ -45,6 +73,11 @@ describe("admin form structure and SSR", () => {
         expect(html).toContain("Apertura mattina");
         expect(html).toContain("Chiusura pomeriggio");
         expect(html).not.toContain("Apertura continua");
+      }
+      if (mode === 3) {
+        expect(html).toContain("Sessioni intere o intervalli consecutivi");
+        expect(html).toContain("Durata intervallo");
+        expect(html).toContain("120 minuti");
       }
     },
   );

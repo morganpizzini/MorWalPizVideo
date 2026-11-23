@@ -22,6 +22,12 @@ public class MockShootingRangeRepository<T>(MockShootingRangeRepositorySet owner
         Task.FromResult<IReadOnlyList<T>>(Items.Values.Where(IsVisible).ToArray());
     public Task<T> InsertAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, false, cancellationToken);
     public Task<T> ReplaceAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, true, cancellationToken);
+    protected Task DeleteRecordAsync(string id, CancellationToken cancellationToken = default) => owner.ExecuteGuardedAsync(async () =>
+    {
+        var existing = await GetAsync(id, cancellationToken) ?? throw new KeyNotFoundException("Record not found.");
+        Items.TryRemove(id, out _);
+        return true;
+    }, cancellationToken);
     private Task<T> WriteAsync(T item, bool replacing, CancellationToken cancellationToken) => owner.ExecuteGuardedAsync(async () =>
     {
         item = ShootingRangeWriteValidation.Prepare(item, owner.TenantContext.TenantId);
@@ -37,9 +43,18 @@ public class MockShootingRangeRepository<T>(MockShootingRangeRepositorySet owner
         owner.TenantContext.TenantId is { } tenantId && item.TenantId == tenantId;
 }
 
+public sealed class MockShootingRangeFriendshipRepository(MockShootingRangeRepositorySet owner)
+    : MockShootingRangeRepository<ShootingRangeFriendship>(owner), IShootingRangeFriendshipRepository
+{
+    public Task DeleteFriendshipAsync(string id, CancellationToken cancellationToken = default) =>
+        DeleteRecordAsync(id, cancellationToken);
+}
+
 public sealed class MockShootingRangeUserRepository(MockShootingRangeRepositorySet owner) : MockShootingRangeRepository<ShootingRangeUser>(owner), IShootingRangeUserRepository
 {
-    public Task<ShootingRangeUser?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default) => Task.FromResult(Items.Values.FirstOrDefault(user => ShootingRangeWriteValidation.NormalizeUsername(user.Username) == ShootingRangeWriteValidation.NormalizeUsername(username)));
+    public async Task<ShootingRangeUser?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default) =>
+        (await GetAllAsync(cancellationToken)).FirstOrDefault(user =>
+            ShootingRangeWriteValidation.NormalizeUsername(user.Username) == ShootingRangeWriteValidation.NormalizeUsername(username));
 }
 
 public sealed class MockShootingRangeBookingRepository(MockShootingRangeRepositorySet owner) : MockShootingRangeRepository<ShootingRangeBooking>(owner), IShootingRangeBookingRepository
@@ -72,6 +87,9 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
         Bookings = bookings;
         Threads = Register(new MockShootingRangeRepository<ShootingRangeThread>(this));
         LocalSessions = Register(new MockShootingRangeRepository<ShootingRangeLocalSession>(this));
+        var friendships = new MockShootingRangeFriendshipRepository(this);
+        Register(friendships);
+        Friendships = friendships;
         ((MockShootingRangeRepository<ShootingRangeTenant>)Tenants).InsertAsync(new ShootingRangeTenant
         {
             Id = TenantContext.TenantId ?? "test-tenant",
@@ -104,4 +122,5 @@ public sealed class MockShootingRangeRepositorySet : IShootingRangeRepositorySet
     public IShootingRangeBookingRepository Bookings { get; }
     public IShootingRangeRepository<ShootingRangeThread> Threads { get; }
     public IShootingRangeRepository<ShootingRangeLocalSession> LocalSessions { get; }
+    public IShootingRangeFriendshipRepository Friendships { get; }
 }

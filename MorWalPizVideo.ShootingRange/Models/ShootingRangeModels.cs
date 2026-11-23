@@ -2,9 +2,10 @@ namespace MorWalPizVideo.ShootingRange.Models;
 
 public enum ShootingRangeAccountStatus { Pending, Approved, Disabled }
 public enum ShootingRangeBookingStatus { Pending, Approved, Rejected, Cancelled }
-public enum ShootingRangeSessionMode { Periods = 0, Hourly = 1, HourlyContinuous = 2 }
+public enum ShootingRangeSessionMode { Periods = 0, Hourly = 1, HourlyContinuous = 2, Mixed = 3 }
 public enum ShootingRangeBayStatus { Available, Maintenance, Disabled }
 public enum ShootingRangeThreadStatus { Pending, InProgress, Completed, Refused }
+public enum ShootingRangeFriendshipStatus { Pending, Accepted }
 
 public sealed record Mechanism(string Type, int Quantity);
 
@@ -81,6 +82,14 @@ public sealed record ShootingRangeLocalSession : BaseEntity
     public string SecurityVersion { get; init; } = string.Empty;
     public DateTime ExpiresUtc { get; init; }
     public bool Revoked { get; init; }
+}
+
+public sealed record ShootingRangeFriendship : BaseEntity
+{
+    public string UserAId { get; init; } = string.Empty;
+    public string UserBId { get; init; } = string.Empty;
+    public ShootingRangeFriendshipStatus Status { get; init; } = ShootingRangeFriendshipStatus.Pending;
+    public string RequesterUserId { get; init; } = string.Empty;
 }
 
 public sealed record ShootingRangeBooking : BaseEntity

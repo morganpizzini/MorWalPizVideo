@@ -32,6 +32,7 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
         Bookings = new SqlServerShootingRangeBookingRepository(this, context);
         Threads = new SqlServerShootingRangeRepository<ShootingRangeThread>(this, context);
         LocalSessions = new SqlServerShootingRangeRepository<ShootingRangeLocalSession>(this, context);
+        Friendships = new SqlServerShootingRangeFriendshipRepository(this, context);
     }
 
     internal bool IsGuarded => guarded.Value;
@@ -48,6 +49,7 @@ public sealed class SqlServerShootingRangeRepositorySet : IShootingRangeReposito
     public IShootingRangeBookingRepository Bookings { get; }
     public IShootingRangeRepository<ShootingRangeThread> Threads { get; }
     public IShootingRangeRepository<ShootingRangeLocalSession> LocalSessions { get; }
+    public IShootingRangeFriendshipRepository Friendships { get; }
 
     public async Task<T> ExecuteGuardedAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
@@ -146,6 +148,18 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
     public Task<T> InsertAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, false, cancellationToken);
     public Task<T> ReplaceAsync(T item, CancellationToken cancellationToken = default) => WriteAsync(item, true, cancellationToken);
 
+    protected Task DeleteRecordAsync(string id, CancellationToken cancellationToken = default) =>
+        owner.ExecuteGuardedAsync(async () =>
+        {
+            if (!owner.HasTransaction)
+                throw new InvalidOperationException("A database transaction is required for repository writes.");
+            var existing = await GetAsync(id, owner.OperationToken(cancellationToken))
+                ?? throw new KeyNotFoundException("Record not found.");
+            context.Set<T>().Attach(existing);
+            context.Entry(existing).State = EntityState.Deleted;
+            return true;
+        }, cancellationToken);
+
     private Task<T> WriteAsync(T item, bool replacing, CancellationToken cancellationToken) =>
         owner.ExecuteGuardedAsync(async () =>
         {
@@ -182,6 +196,15 @@ public class SqlServerShootingRangeRepository<T>(SqlServerShootingRangeRepositor
 
     private bool IsVisible(T item) => item is ShootingRangeTenant ||
         owner.TenantContext.TenantId is { } tenantId && item.TenantId == tenantId;
+}
+
+public sealed class SqlServerShootingRangeFriendshipRepository(
+    SqlServerShootingRangeRepositorySet owner,
+    ShootingRangeDbContext context)
+    : SqlServerShootingRangeRepository<ShootingRangeFriendship>(owner, context), IShootingRangeFriendshipRepository
+{
+    public Task DeleteFriendshipAsync(string id, CancellationToken cancellationToken = default) =>
+        DeleteRecordAsync(id, cancellationToken);
 }
 
 public sealed class SqlServerShootingRangeBookingRepository(SqlServerShootingRangeRepositorySet owner, ShootingRangeDbContext context)

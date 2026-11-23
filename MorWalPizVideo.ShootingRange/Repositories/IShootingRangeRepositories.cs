@@ -23,6 +23,11 @@ public interface IShootingRangeBookingRepository : IShootingRangeRepository<Shoo
     Task<ShootingRangeBooking> InsertIfAvailableAsync(ShootingRangeBooking booking, CancellationToken cancellationToken = default);
 }
 
+public interface IShootingRangeFriendshipRepository : IShootingRangeRepository<ShootingRangeFriendship>
+{
+    Task DeleteFriendshipAsync(string id, CancellationToken cancellationToken = default);
+}
+
 public interface IShootingRangeRepositorySet
 {
     TimeProvider Clock { get; }
@@ -37,6 +42,7 @@ public interface IShootingRangeRepositorySet
     IShootingRangeBookingRepository Bookings { get; }
     IShootingRangeRepository<ShootingRangeThread> Threads { get; }
     IShootingRangeRepository<ShootingRangeLocalSession> LocalSessions { get; }
+    IShootingRangeFriendshipRepository Friendships { get; }
 }
 
 internal static class ShootingRangeWriteValidation
@@ -65,6 +71,7 @@ internal static class ShootingRangeWriteValidation
                 NormalizedUsername = NormalizeUsername(user.Username)
             },
             ShootingRangeLocalSession session => session with { TenantId = tenantId },
+            ShootingRangeFriendship friendship => friendship with { TenantId = tenantId },
             ShootingRangeBooking booking => booking with { TenantId = tenantId },
             ShootingRangeThread thread => thread with { TenantId = tenantId },
             _ => throw new InvalidOperationException($"Unsupported tenant-owned record type {typeof(T).Name}.")
@@ -148,6 +155,49 @@ internal static class ShootingRangeWriteValidation
         if (item is ShootingRangeLocalSession session &&
             await repositories.Users.GetAsync(session.UserId, cancellationToken) is null)
             throw new ArgumentException("Session user must belong to this shooting range.");
+        if (item is ShootingRangeFriendship friendship)
+        {
+            if (string.CompareOrdinal(friendship.UserAId, friendship.UserBId) >= 0)
+                throw new ArgumentException("Friendship members must be distinct and canonically ordered.");
+            if (!Enum.IsDefined(friendship.Status) ||
+                friendship.RequesterUserId != friendship.UserAId &&
+                friendship.RequesterUserId != friendship.UserBId)
+                throw new ArgumentException("Invalid friendship state or requester.");
+            foreach (var userId in new[] { friendship.UserAId, friendship.UserBId })
+                if (await repositories.Users.GetAsync(userId, cancellationToken) is not { Status: ShootingRangeAccountStatus.Approved })
+                    throw new ArgumentException("Friendship members must be approved accounts.");
+            var existing = replacing
+                ? (await repositories.Friendships.GetAsync(friendship.Id, cancellationToken)
+                    ?? throw new KeyNotFoundException("Friendship not found."))
+                : null;
+            if (existing is null)
+            {
+                if (friendship.Status == ShootingRangeFriendshipStatus.Accepted)
+                    throw new InvalidOperationException("A friendship must be explicitly requested before acceptance.");
+            }
+            else
+            {
+                if (existing.UserAId != friendship.UserAId || existing.UserBId != friendship.UserBId)
+                    throw new InvalidOperationException("Friendship members cannot be changed.");
+                var validTransition = existing.Status switch
+                {
+                    ShootingRangeFriendshipStatus.Pending =>
+                        friendship.Status == ShootingRangeFriendshipStatus.Pending &&
+                            friendship.RequesterUserId == existing.RequesterUserId ||
+                        friendship.Status == ShootingRangeFriendshipStatus.Accepted &&
+                            friendship.RequesterUserId == existing.RequesterUserId,
+                    _ => false
+                };
+                if (!validTransition)
+                    throw new InvalidOperationException("Invalid friendship state transition.");
+            }
+        }
+        if (item is ShootingRangeFriendship friendshipRecord &&
+            (await repositories.Friendships.GetAllAsync(cancellationToken)).Any(existing =>
+                existing.Id != friendshipRecord.Id &&
+                existing.UserAId == friendshipRecord.UserAId &&
+                existing.UserBId == friendshipRecord.UserBId))
+            throw new InvalidOperationException("Friendship pair already exists.");
         if (item is not ShootingRangeBooking booking) return;
         if (!Enum.IsDefined(booking.Status) || booking.StartUtc.Kind != DateTimeKind.Utc || booking.EndUtc.Kind != DateTimeKind.Utc || booking.StartUtc >= booking.EndUtc) throw new ArgumentException("Invalid booking interval or status.");
         var previous = replacing ? await repositories.Bookings.GetAsync(booking.Id, cancellationToken) : null;
@@ -159,9 +209,32 @@ internal static class ShootingRangeWriteValidation
         if (await repositories.Bays.GetAsync(booking.BayId, cancellationToken) is null)
             throw new KeyNotFoundException("Bay not found.");
         if (booking.Status is not ShootingRangeBookingStatus.Pending and not ShootingRangeBookingStatus.Approved) return;
-        if (previous is null || previous.Status is ShootingRangeBookingStatus.Rejected or ShootingRangeBookingStatus.Cancelled)
+        var requiresNewAdmission = previous is null || previous.Status is ShootingRangeBookingStatus.Rejected or ShootingRangeBookingStatus.Cancelled;
+        if (requiresNewAdmission)
             await Services.ShootingRangeService.ValidateAdmissionAsync(repositories, booking, cancellationToken);
-        if ((await repositories.Bookings.GetAllAsync(cancellationToken)).Any(existing => existing.Id != booking.Id && Services.ShootingRangeService.BlocksBay(existing, booking.BayId, booking.StartUtc, booking.EndUtc)))
+        var overlaps = (await repositories.Bookings.GetAllAsync(cancellationToken))
+            .Where(existing => existing.Id != booking.Id && Services.ShootingRangeService.BlocksBay(existing, booking.BayId, booking.StartUtc, booking.EndUtc))
+            .ToArray();
+        if (overlaps.Length == 0) return;
+        var exactInterval = overlaps.All(existing =>
+            existing.StartUtc.Kind == DateTimeKind.Utc && existing.EndUtc.Kind == DateTimeKind.Utc &&
+            existing.StartUtc < existing.EndUtc &&
+            existing.StartUtc == booking.StartUtc && existing.EndUtc == booking.EndUtc);
+        var wasAlreadyActive = previous?.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved;
+        var validExistingSharedSlot = !requiresNewAdmission && wasAlreadyActive;
+        var existingUsersAreUnique = overlaps.Select(existing => existing.UserId)
+            .Distinct(StringComparer.Ordinal).Count() == overlaps.Length;
+        var requesterIsNotAnOccupant = overlaps.All(existing => existing.UserId != booking.UserId);
+        var hasAcceptedFriendAmongParticipants = false;
+        if (!validExistingSharedSlot && existingUsersAreUnique && requesterIsNotAnOccupant)
+            foreach (var existing in overlaps)
+                if (await Services.ShootingRangeService.IsMutualFriendAsync(repositories, booking.UserId, existing.UserId, cancellationToken))
+                {
+                    hasAcceptedFriendAmongParticipants = true;
+                    break;
+                }
+        if (!exactInterval || !existingUsersAreUnique || !requesterIsNotAnOccupant ||
+            !validExistingSharedSlot && !hasAcceptedFriendAmongParticipants)
             throw new InvalidOperationException("The selected slot is already pending or booked.");
     }
 

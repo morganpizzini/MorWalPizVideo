@@ -25,6 +25,7 @@ public sealed class ShootingRangeDbContext(
     public DbSet<ShootingRangeException> Exceptions => Set<ShootingRangeException>();
     public DbSet<ShootingRangeUser> Users => Set<ShootingRangeUser>();
     public DbSet<ShootingRangeLocalSession> LocalSessions => Set<ShootingRangeLocalSession>();
+    public DbSet<ShootingRangeFriendship> Friendships => Set<ShootingRangeFriendship>();
     public DbSet<ShootingRangeBooking> Bookings => Set<ShootingRangeBooking>();
     public DbSet<ShootingRangeThread> Threads => Set<ShootingRangeThread>();
     public DbSet<ShootingRangeMutationGuard> MutationGuards => Set<ShootingRangeMutationGuard>();
@@ -52,6 +53,7 @@ public sealed class ShootingRangeDbContext(
         ConfigureBase<ShootingRangeException>(modelBuilder, "shooting_range_exceptions");
         ConfigureBase<ShootingRangeUser>(modelBuilder, "shooting_range_users");
         ConfigureBase<ShootingRangeLocalSession>(modelBuilder, "shooting_range_local_sessions");
+        ConfigureBase<ShootingRangeFriendship>(modelBuilder, "shooting_range_friendships");
         ConfigureBase<ShootingRangeBooking>(modelBuilder, "shooting_range_bookings");
         ConfigureBase<ShootingRangeThread>(modelBuilder, "shooting_range_threads");
 
@@ -61,6 +63,7 @@ public sealed class ShootingRangeDbContext(
         ConfigureTenantOwned<ShootingRangeException>(modelBuilder);
         ConfigureTenantOwned<ShootingRangeUser>(modelBuilder);
         ConfigureTenantOwned<ShootingRangeLocalSession>(modelBuilder);
+        ConfigureTenantOwned<ShootingRangeFriendship>(modelBuilder);
         ConfigureTenantOwned<ShootingRangeBooking>(modelBuilder);
         ConfigureTenantOwned<ShootingRangeThread>(modelBuilder);
 
@@ -135,6 +138,35 @@ public sealed class ShootingRangeDbContext(
                 .HasConversion(UtcDateTimeConverter);
             entity.HasIndex(x => new { x.TenantId, x.UserId, x.Revoked, x.ExpiresUtc }).HasDatabaseName("ix_shooting_range_sessions_user_expiry");
             entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShootingRangeFriendship>(entity =>
+        {
+            entity.ToTable("shooting_range_friendships", table =>
+            {
+                table.HasCheckConstraint("ck_shooting_range_friendships_canonical_pair",
+                    "[user_a_id] COLLATE Latin1_General_100_BIN2 < [user_b_id] COLLATE Latin1_General_100_BIN2");
+                table.HasCheckConstraint("ck_shooting_range_friendships_status",
+                    "[status] IN (0, 1)");
+                table.HasCheckConstraint("ck_shooting_range_friendships_requester",
+                    "[requester_user_id] COLLATE Latin1_General_100_BIN2 = [user_a_id] COLLATE Latin1_General_100_BIN2 OR [requester_user_id] COLLATE Latin1_General_100_BIN2 = [user_b_id] COLLATE Latin1_General_100_BIN2");
+            });
+            entity.Property(x => x.UserAId).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.UserBId).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.RequesterUserId).HasMaxLength(128).IsRequired();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.HasIndex(x => new { x.TenantId, x.UserAId, x.UserBId }).IsUnique()
+                .HasDatabaseName("ux_shooting_range_friendships_pair");
+            entity.HasIndex(x => new { x.TenantId, x.UserBId }).HasDatabaseName("ix_shooting_range_friendships_user_b");
+            entity.HasIndex(x => new { x.TenantId, x.RequesterUserId })
+                .HasDatabaseName("ix_shooting_range_friendships_requester");
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserAId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserBId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ShootingRangeUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.RequesterUserId })
                 .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 

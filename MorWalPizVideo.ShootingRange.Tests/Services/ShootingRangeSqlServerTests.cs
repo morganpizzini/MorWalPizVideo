@@ -77,6 +77,35 @@ public sealed class ShootingRangeSqlServerTests
     }
 
     [SqlServerFact]
+    public async Task Concurrent_accepted_friends_can_join_one_exact_slot_without_a_numeric_cap()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var service = new ShootingRangeService(fixture.First);
+        await service.CreateBookingAsync(fixture.UserId, new(fixture.BayId, fixture.Date, "morning", "anchor"), default);
+        await AcceptFriendRequestAsync(service, fixture.SecondUserId, fixture.UserId);
+        await AcceptFriendRequestAsync(service, fixture.ThirdUserId, fixture.UserId);
+
+        async Task<bool> TryJoin(SqlServerShootingRangeRepositorySet repositories, string userId)
+        {
+            try
+            {
+                await new ShootingRangeService(repositories).CreateBookingAsync(
+                    userId, new(fixture.BayId, fixture.Date, "morning", ""), default);
+                return true;
+            }
+            catch (InvalidOperationException) { return false; }
+        }
+
+        var results = await Task.WhenAll(
+            Task.Run(() => TryJoin(fixture.First, fixture.SecondUserId)),
+            Task.Run(() => TryJoin(fixture.Second, fixture.ThirdUserId)));
+        results.Count(success => success).Should().Be(2);
+        (await fixture.First.Bookings.GetAllAsync())
+            .Count(booking => booking.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved)
+            .Should().Be(3);
+    }
+
+    [SqlServerFact]
     public async Task Guarded_failure_rolls_back_multiple_repository_mutations()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -199,6 +228,16 @@ public sealed class ShootingRangeSqlServerTests
         persisted.Messages.Select(message => message.Text).Should().Contain("Original").And.Contain("Reply");
     }
 
+    private static async Task AcceptFriendRequestAsync(
+        ShootingRangeService service,
+        string requesterId,
+        string recipientId)
+    {
+        await service.RequestFriendAsync(requesterId, recipientId, default);
+        var request = (await service.GetFriendRequestsAsync(recipientId, default)).Incoming.Single();
+        await service.RespondToFriendRequestAsync(recipientId, request.Id, true, default);
+    }
+
     private sealed class SqlServerFactAttribute : FactAttribute
     {
         public SqlServerFactAttribute()
@@ -206,6 +245,7 @@ public sealed class ShootingRangeSqlServerTests
             if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SHOOTING_RANGE_TEST_SQL_HOST")))
                 Skip = "Requires an explicitly configured disposable SQL Server test instance.";
         }
+
     }
 
     private sealed class Fixture : IAsyncDisposable
@@ -220,6 +260,8 @@ public sealed class ShootingRangeSqlServerTests
         public SqlServerShootingRangeRepositorySet First { get; }
         public SqlServerShootingRangeRepositorySet Second { get; }
         public string UserId { get; } = ShootingRangeIds.NewId();
+        public string SecondUserId { get; } = ShootingRangeIds.NewId();
+        public string ThirdUserId { get; } = ShootingRangeIds.NewId();
         public string BayId { get; } = ShootingRangeIds.NewId();
         public DateOnly Date { get; }
 
@@ -279,6 +321,8 @@ public sealed class ShootingRangeSqlServerTests
             (await fixture.First.Configs.GetAllAsync()).Should().BeEmpty();
             await fixture.First.Configs.ReplaceAsync(new() { Id = "default" });
             await fixture.First.Users.InsertAsync(new() { Id = fixture.UserId, Username = "test-only", Status = ShootingRangeAccountStatus.Approved });
+            await fixture.First.Users.InsertAsync(new() { Id = fixture.SecondUserId, Username = "second-test", Status = ShootingRangeAccountStatus.Approved });
+            await fixture.First.Users.InsertAsync(new() { Id = fixture.ThirdUserId, Username = "third-test", Status = ShootingRangeAccountStatus.Approved });
             await fixture.First.Bays.InsertAsync(new() { Id = fixture.BayId, Code = "01" });
             return fixture;
         }

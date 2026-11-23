@@ -73,6 +73,68 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpGet("availability"), Authorize]
     public Task<AvailabilityDto> Availability([FromQuery] DateOnly date, [FromQuery] string period = "morning", CancellationToken cancellationToken = default) => service.GetAvailabilityAsync(date, period, cancellationToken, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
+    [HttpGet("friends"), Authorize]
+    public Task<IReadOnlyList<FriendDto>> Friends(CancellationToken cancellationToken) =>
+        service.GetFriendsAsync(UserId(), cancellationToken);
+
+    [HttpPost("friends"), Authorize, ValidateAntiForgeryToken]
+    public IActionResult AddFriend()
+        => StatusCode(StatusCodes.Status410Gone, new { message = "Use friend requests to establish a friendship." });
+
+    [HttpGet("friend-requests"), Authorize]
+    public Task<FriendRequestsDto> FriendRequests(CancellationToken cancellationToken) =>
+        service.GetFriendRequestsAsync(UserId(), cancellationToken);
+
+    [HttpPost("friend-requests"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateFriendRequest(CreateFriendRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.RequestFriendAsync(UserId(), request.Username, cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Conflict(new { message = "Unable to create friend request." });
+        }
+    }
+
+    [HttpDelete("friends/{userId}"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveFriend(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.RemoveFriendAsync(UserId(), userId, cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Conflict(new { message = "Unable to remove friend." });
+        }
+    }
+
+    [HttpPost("friend-requests/{id}/accept"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AcceptFriendRequest(string id, CancellationToken cancellationToken) =>
+        await DecideFriendRequestAsync(id, true, cancellationToken);
+
+    [HttpPost("friend-requests/{id}/decline"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeclineFriendRequest(string id, CancellationToken cancellationToken) =>
+        await DecideFriendRequestAsync(id, false, cancellationToken);
+
+    [HttpDelete("friend-requests/{id}"), Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelFriendRequest(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.CancelFriendRequestAsync(UserId(), id, cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Conflict(new { message = "Unable to cancel friend request." });
+        }
+    }
+
     [HttpPost("bookings"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> Book(BookingRequest request, CancellationToken cancellationToken) { try { var booking = await service.CreateBookingAsync(UserId(), request, cancellationToken); return Created($"api/shooting-range/bookings/{booking.Id}", booking); } catch (UnauthorizedAccessException error) { return StatusCode(403, new { message = error.Message }); } catch (InvalidOperationException error) { return Conflict(new { message = error.Message }); } }
 
@@ -164,6 +226,20 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     [HttpGet("admin/bookings"), Authorize(Roles = "admin")]
     public Task<IReadOnlyList<ShootingRangeBooking>> AllBookings(CancellationToken cancellationToken) => service.GetAdminBookingsAsync(UserId(), cancellationToken);
 
+    [HttpPost("admin/bookings"), Authorize(Roles = "admin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateAdminBooking(AdminBookingRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.CreateAdminBookingAsync(UserId(), request, cancellationToken);
+            return NoContent();
+        }
+        catch (ArgumentException)
+        {
+            return Conflict(new { message = "The selected session is no longer available. Refresh sessions and try again." });
+        }
+    }
+
     [HttpGet("admin/bookings/pending-count"), Authorize(Roles = "admin")]
     public async Task<PendingBookingCountDto> PendingBookingCount(CancellationToken cancellationToken) =>
         new(await service.GetPendingBookingCountAsync(UserId(), cancellationToken));
@@ -229,4 +305,17 @@ public sealed class ShootingRangeController(ShootingRangeService service, IShoot
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException();
     private static AccountDto ToAccount(ShootingRangeUser user) => new(user.Id, user.Username, user.FirstName, user.LastName, user.Status, user.IsAdmin, user.ForcePasswordChange);
     private static bool PasswordMatches(ShootingRangeUser user, string password) { var parts = user.PasswordHash.Split(':', 2); return parts.Length == 2 && PasswordHashing.VerifyPassword(password, parts[0], parts[1]); }
+
+    private async Task<IActionResult> DecideFriendRequestAsync(string id, bool accept, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.RespondToFriendRequestAsync(UserId(), id, accept, cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Conflict(new { message = "Unable to decide friend request." });
+        }
+    }
 }

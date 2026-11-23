@@ -72,7 +72,10 @@ export function ConfigForm({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        void onSave({ ...config, hourlyMinutes: 60 });
+        void onSave({
+          ...config,
+          hourlyMinutes: config.sessionMode === 3 ? config.hourlyMinutes : 60,
+        });
       }}
     >
       <fieldset className="form-grid" disabled={busy}>
@@ -114,6 +117,7 @@ export function ConfigForm({
             <option value={0}>Mattina o pomeriggio intero</option>
             <option value={1}>60 minuti, mattina e pomeriggio con pausa</option>
             <option value={2}>60 minuti, apertura continua</option>
+            <option value={3}>Sessioni intere o intervalli consecutivi</option>
           </select>
         </label>
         {config.sessionMode === 2 ? (
@@ -203,11 +207,27 @@ export function ConfigForm({
             }
           />
         </label>
-        <div>
-          <span className="field-label">Durata slot orari</span>
-          <output>60 minuti</output>
-        </div>
-        {initial.hourlyMinutes !== 60 && (
+        {config.sessionMode === 3 ? (
+          <label>
+            Durata intervallo
+            <select
+              value={config.hourlyMinutes}
+              onChange={(event) =>
+                updateConfig({ ...config, hourlyMinutes: Number(event.target.value) })
+              }
+            >
+              <option value={60}>60 minuti</option>
+              <option value={120}>120 minuti</option>
+            </select>
+          </label>
+        ) : (
+          <div>
+            <span className="field-label">Durata slot orari</span>
+            <output>60 minuti (fissa)</output>
+          </div>
+        )}
+        {((config.sessionMode === 3 && initial.hourlyMinutes !== 60 && initial.hourlyMinutes !== 120) ||
+          (config.sessionMode !== 3 && initial.hourlyMinutes !== 60)) && (
           <p role="alert" className="error wide-field">
             Durata precedente non valida: {initial.hourlyMinutes} minuti.
             Correggi la configurazione prima di accettare nuove prenotazioni.

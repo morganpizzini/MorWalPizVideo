@@ -3,11 +3,14 @@ import { type RouteObject, useFetcher } from "react-router";
 import { App, SessionGate, Shell, type SessionViewProps } from "./App";
 import { Admin } from "./Admin";
 import { AdminBookings } from "./AdminBookings";
+import { Friends } from "./Friends";
 import { RangeDeferred, RangeSkeleton, RouteSessionError } from "./Loading";
 import {
   adminAction,
   adminBookingsLoader,
   adminLoader,
+  friendsAction,
+  friendsLoader,
   bookingAction,
   bookingLoader,
   messagesAction,
@@ -289,8 +292,18 @@ function AdminBookingsRoute() {
   );
 }
 
+function FriendsRoute() {
+  return <SessionGate>{(props) => <Friends {...props} />}</SessionGate>;
+}
+
 export const routes: RouteObject[] = [
   { path: "/", Component: App, loader: bookingLoader, action: bookingAction },
+  {
+    path: "/friends",
+    Component: FriendsRoute,
+    loader: friendsLoader,
+    action: friendsAction,
+  },
   {
     path: "/messages",
     Component: MessagesRoute,

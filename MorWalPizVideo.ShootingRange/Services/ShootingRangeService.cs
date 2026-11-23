@@ -42,14 +42,43 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
         var zone = TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone);
         var (start, end) = ResolvePeriod(config, localDate, periodKey);
         var exceptions = await repositories.Exceptions.GetAllAsync(cancellationToken);
-        if (start <= repositories.Clock.GetUtcNow().UtcDateTime || !config.OpeningDays.Contains(localDate.DayOfWeek) || exceptions.Any(x => x.LocalDate == localDate && x.IsClosed && x.BayId is null)) return new(localDate, periodKey, start, end, []);
+        if (start <= repositories.Clock.GetUtcNow().UtcDateTime || !config.OpeningDays.Contains(localDate.DayOfWeek) || exceptions.Any(x => x.LocalDate == localDate && x.IsClosed && x.BayId is null)) return new(localDate, periodKey, start, end, [], []);
         var bays = await repositories.Bays.GetAllAsync(cancellationToken);
         var dayExceptionBayIds = exceptions.Where(x => x.LocalDate == localDate && x.IsClosed && x.BayId is not null).Select(x => x.BayId!).ToHashSet();
         var nowLocal = TimeZoneInfo.ConvertTime(repositories.Clock.GetUtcNow(), zone).Date;
         var daysUntil = localDate.DayNumber - DateOnly.FromDateTime(nowLocal).DayNumber;
         var bookings = await repositories.Bookings.GetAllAsync(cancellationToken);
-        var visible = bays.Where(b => b.Status == ShootingRangeBayStatus.Available && !dayExceptionBayIds.Contains(b.Id)).Where(b => !bookings.Any(booking => BlocksBay(booking, b.Id, start, end))).Where(b => daysUntil <= config.ReservedReleaseDaysBefore || b.WhitelistUserIds.Count == 0 || userId is not null && b.WhitelistUserIds.Contains(userId)).ToArray();
-        return new(localDate, periodKey, start, end, visible);
+        var users = await repositories.Users.GetAllAsync(cancellationToken);
+        var requestingUser = userId is null ? null : await repositories.Users.GetAsync(userId, cancellationToken);
+        var friends = requestingUser is not { Status: ShootingRangeAccountStatus.Approved, ForcePasswordChange: false }
+            ? [] : await GetFriendIdsAsync(userId!, cancellationToken);
+        bool CanJoin(ShootingRangeBay bay)
+        {
+            var occupants = bookings.Where(booking => BlocksBay(booking, bay.Id, start, end)).ToArray();
+            return occupants.Length > 0 &&
+                occupants.All(booking => booking.StartUtc == start && booking.EndUtc == end &&
+                    booking.StartUtc.Kind == DateTimeKind.Utc && booking.EndUtc.Kind == DateTimeKind.Utc &&
+                    booking.StartUtc < booking.EndUtc) &&
+                occupants.Select(booking => booking.UserId).Distinct(StringComparer.Ordinal).Count() == occupants.Length &&
+                userId is not null && occupants.All(booking => booking.UserId != userId) &&
+                !bookings.Any(booking => booking.UserId == userId && booking.BayId == bay.Id &&
+                    booking.StartUtc == start && booking.EndUtc == end &&
+                    booking.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved) &&
+                occupants.Any(booking => friends.Contains(booking.UserId));
+        }
+        var visible = bays.Where(b => b.Status == ShootingRangeBayStatus.Available && !dayExceptionBayIds.Contains(b.Id))
+            .Where(b => !bookings.Any(booking => BlocksBay(booking, b.Id, start, end)) || CanJoin(b))
+            .Where(b => daysUntil <= config.ReservedReleaseDaysBefore || b.WhitelistUserIds.Count == 0 || userId is not null && b.WhitelistUserIds.Contains(userId)).ToArray();
+        var visibleBayIds = visible.Select(bay => bay.Id).ToHashSet(StringComparer.Ordinal);
+        var friendBookings = bookings
+            .Where(booking => visibleBayIds.Contains(booking.BayId) && booking.StartUtc == start && booking.EndUtc == end &&
+                (booking.Status is ShootingRangeBookingStatus.Pending or ShootingRangeBookingStatus.Approved) &&
+                friends.Contains(booking.UserId))
+            .Select(booking => (Booking: booking, User: users.FirstOrDefault(user => user.Id == booking.UserId)))
+            .Where(item => item.User is not null)
+            .Select(item => new FriendBookingDto(item.Booking.BayId, item.User!.Username, item.Booking.Status))
+            .ToArray();
+        return new(localDate, periodKey, start, end, visible, friendBookings);
     }
 
     public Task<T> AdminMutationAsync<T>(string actorId, Func<Task<T>> mutation, CancellationToken cancellationToken) => repositories.ExecuteGuardedAsync(async () =>
@@ -169,6 +198,194 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             .Count(booking => booking.Status == ShootingRangeBookingStatus.Pending && booking.StartUtc > now);
     }
 
+    public Task<IReadOnlyList<FriendDto>> GetFriendsAsync(string userId, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            var allUsers = await repositories.Users.GetAllAsync(cancellationToken);
+            var friends = await GetFriendIdsAsync(actor.Id, cancellationToken);
+            return (IReadOnlyList<FriendDto>)allUsers.Where(user => friends.Contains(user.Id) && user.Status == ShootingRangeAccountStatus.Approved)
+                .OrderBy(user => user.Username, StringComparer.OrdinalIgnoreCase)
+                .Select(user => new FriendDto(user.Id, user.Username, user.FirstName, user.LastName))
+                .ToArray();
+        }, cancellationToken);
+
+    public Task RequestFriendAsync(string userId, string username, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            if (string.IsNullOrWhiteSpace(username))
+                throw new InvalidOperationException("Unable to create friend request.");
+            var target = await repositories.Users.FindByUsernameAsync(username.Trim(), cancellationToken);
+            if (target is null || target.Id == actor.Id)
+                throw new InvalidOperationException("Unable to create friend request.");
+            var (userAId, userBId) = OrderPair(actor.Id, target.Id);
+            var existing = (await repositories.Friendships.GetAllAsync(cancellationToken))
+                .FirstOrDefault(friendship => friendship.UserAId == userAId && friendship.UserBId == userBId);
+            if (existing is { Status: ShootingRangeFriendshipStatus.Pending, RequesterUserId: var requesterId })
+            {
+                if (requesterId == actor.Id) return true;
+                throw new InvalidOperationException("Unable to create friend request.");
+            }
+            if (existing is { Status: ShootingRangeFriendshipStatus.Accepted })
+                throw new InvalidOperationException("Unable to create friend request.");
+            if (existing is not null)
+                throw new InvalidOperationException("Unable to create friend request.");
+            if (target is not { Status: ShootingRangeAccountStatus.Approved, ForcePasswordChange: false })
+                throw new InvalidOperationException("Unable to create friend request.");
+            await repositories.Friendships.InsertAsync(new ShootingRangeFriendship
+            {
+                Id = ShootingRangeIds.NewId(),
+                UserAId = userAId,
+                UserBId = userBId,
+                Status = ShootingRangeFriendshipStatus.Pending,
+                RequesterUserId = actor.Id,
+                CreationDateTime = repositories.Clock.GetUtcNow().UtcDateTime
+            }, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    public Task<FriendRequestsDto> GetFriendRequestsAsync(string userId, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            var usersById = (await repositories.Users.GetAllAsync(cancellationToken))
+                .Where(user => user.Status == ShootingRangeAccountStatus.Approved)
+                .ToDictionary(user => user.Id, StringComparer.Ordinal);
+            var incoming = new List<FriendRequestDto>();
+            var outgoing = new List<FriendRequestDto>();
+            foreach (var friendship in await repositories.Friendships.GetAllAsync(cancellationToken))
+            {
+                if (friendship.Status != ShootingRangeFriendshipStatus.Pending ||
+                    friendship.RequesterUserId is not { } requesterId ||
+                    requesterId != friendship.UserAId && requesterId != friendship.UserBId ||
+                    friendship.UserAId != actor.Id && friendship.UserBId != actor.Id)
+                    continue;
+
+                var otherUserId = friendship.UserAId == actor.Id ? friendship.UserBId : friendship.UserAId;
+                if (!usersById.TryGetValue(otherUserId, out var otherUser)) continue;
+                var request = new FriendRequestDto(
+                    friendship.Id,
+                    otherUser.Username,
+                    otherUser.FirstName,
+                    otherUser.LastName,
+                    DateTime.SpecifyKind(friendship.CreationDateTime, DateTimeKind.Utc));
+                (requesterId == actor.Id ? outgoing : incoming).Add(request);
+            }
+            return new FriendRequestsDto(
+                incoming.OrderBy(item => item.Username, StringComparer.OrdinalIgnoreCase).ToArray(),
+                outgoing.OrderBy(item => item.Username, StringComparer.OrdinalIgnoreCase).ToArray());
+        }, cancellationToken);
+
+    public Task RespondToFriendRequestAsync(string userId, string requestId, bool accept, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            var friendship = await repositories.Friendships.GetAsync(requestId, cancellationToken);
+            if (friendship is not { Status: ShootingRangeFriendshipStatus.Pending } ||
+                friendship.RequesterUserId is not { } requesterId || requesterId == actor.Id ||
+                friendship.UserAId != actor.Id && friendship.UserBId != actor.Id)
+                throw new InvalidOperationException("Unable to decide friend request.");
+
+            if (accept)
+            {
+                var requester = await repositories.Users.GetAsync(requesterId, cancellationToken);
+                if (requester is not { Status: ShootingRangeAccountStatus.Approved, ForcePasswordChange: false })
+                    throw new InvalidOperationException("Unable to decide friend request.");
+                await repositories.Friendships.ReplaceAsync(friendship with { Status = ShootingRangeFriendshipStatus.Accepted }, cancellationToken);
+            }
+            else
+                await repositories.Friendships.DeleteFriendshipAsync(friendship.Id, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    public Task CancelFriendRequestAsync(string userId, string requestId, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            var friendship = await repositories.Friendships.GetAsync(requestId, cancellationToken);
+            if (friendship is not { Status: ShootingRangeFriendshipStatus.Pending, RequesterUserId: var requesterId } ||
+                requesterId != actor.Id || friendship.UserAId != actor.Id && friendship.UserBId != actor.Id)
+                throw new InvalidOperationException("Unable to cancel friend request.");
+            await repositories.Friendships.DeleteFriendshipAsync(friendship.Id, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    public Task RemoveFriendAsync(string userId, string friendId, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            var actor = await RequireApprovedMemberAsync(userId, cancellationToken);
+            var friendship = (await repositories.Friendships.GetAllAsync(cancellationToken))
+                .FirstOrDefault(item =>
+                    item.Status == ShootingRangeFriendshipStatus.Accepted &&
+                    (item.UserAId == actor.Id && item.UserBId == friendId ||
+                     item.UserBId == actor.Id && item.UserAId == friendId));
+            if (friendship is null) throw new InvalidOperationException("Unable to remove friend.");
+            await repositories.Friendships.DeleteFriendshipAsync(friendship.Id, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    public Task CreateAdminBookingAsync(string actorId, AdminBookingRequest request, CancellationToken cancellationToken) =>
+        repositories.ExecuteGuardedAsync(async () =>
+        {
+            await RequireAdminAsync(actorId, cancellationToken);
+            var config = await GetConfigAsync(cancellationToken);
+            var (start, end) = ResolvePeriod(config, request.LocalDate, request.PeriodKey);
+            if (request.ExpectedStartUtc.Kind != DateTimeKind.Utc || request.ExpectedEndUtc.Kind != DateTimeKind.Utc ||
+                request.ExpectedStartUtc != start || request.ExpectedEndUtc != end)
+                throw new InvalidOperationException("The schedule changed. Refresh sessions before booking.");
+            await repositories.Bookings.InsertIfAvailableAsync(new ShootingRangeBooking
+            {
+                Id = ShootingRangeIds.NewId(),
+                UserId = request.UserId,
+                BayId = request.BayId,
+                LocalDate = request.LocalDate,
+                PeriodKey = request.PeriodKey,
+                StartUtc = start,
+                EndUtc = end,
+                Request = request.Request?.Trim() ?? string.Empty,
+                Status = ShootingRangeBookingStatus.Approved
+            }, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    private async Task<ShootingRangeUser> RequireApprovedMemberAsync(string userId, CancellationToken cancellationToken)
+    {
+        var actor = await repositories.Users.GetAsync(userId, cancellationToken);
+        if (actor is null || actor.Status != ShootingRangeAccountStatus.Approved || actor.ForcePasswordChange)
+            throw new UnauthorizedAccessException("An approved account without a required password change is necessary.");
+        return actor;
+    }
+
+    private async Task<HashSet<string>> GetFriendIdsAsync(string userId, CancellationToken cancellationToken)
+    {
+        var candidateIds = (await repositories.Friendships.GetAllAsync(cancellationToken))
+            .Where(friendship => friendship.Status == ShootingRangeFriendshipStatus.Accepted &&
+                (friendship.UserAId == userId || friendship.UserBId == userId))
+            .Select(friendship => friendship.UserAId == userId ? friendship.UserBId : friendship.UserAId)
+            .ToHashSet(StringComparer.Ordinal);
+        return (await repositories.Users.GetAllAsync(cancellationToken))
+            .Where(user => candidateIds.Contains(user.Id) && user.Status == ShootingRangeAccountStatus.Approved)
+            .Select(user => user.Id)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static (string UserAId, string UserBId) OrderPair(string first, string second) =>
+        string.CompareOrdinal(first, second) < 0 ? (first, second) : (second, first);
+
+    internal static async Task<bool> IsMutualFriendAsync(
+        IShootingRangeRepositorySet repositories, string firstUserId, string secondUserId, CancellationToken cancellationToken)
+    {
+        var (userAId, userBId) = OrderPair(firstUserId, secondUserId);
+        var first = await repositories.Users.GetAsync(firstUserId, cancellationToken);
+        var second = await repositories.Users.GetAsync(secondUserId, cancellationToken);
+        return first is { Status: ShootingRangeAccountStatus.Approved } &&
+            second is { Status: ShootingRangeAccountStatus.Approved } &&
+            (await repositories.Friendships.GetAllAsync(cancellationToken))
+                .Any(friendship => friendship.Status == ShootingRangeFriendshipStatus.Accepted &&
+                    friendship.UserAId == userAId && friendship.UserBId == userBId);
+    }
+
     private async Task<DateOnly> GetFirstVisibleBookingDateAsync(CancellationToken cancellationToken)
     {
         var config = await GetConfigAsync(cancellationToken);
@@ -181,9 +398,13 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
     {
         var config = await GetConfigAsync(cancellationToken);
         var (start, end) = ResolvePeriod(config, request.LocalDate, request.PeriodKey);
-        if ((request.ExpectedStartUtc.HasValue || request.ExpectedEndUtc.HasValue) && (request.ExpectedStartUtc != start || request.ExpectedEndUtc != end))
-            throw new ArgumentException("The schedule changed. Refresh sessions before booking.");
-        var booking = new ShootingRangeBooking { Id = ShootingRangeIds.NewId(), UserId = userId, BayId = request.BayId, LocalDate = request.LocalDate, PeriodKey = request.PeriodKey, StartUtc = start, EndUtc = end, Request = request.Request.Trim() };
+        if (config.SessionMode == ShootingRangeSessionMode.Mixed && (!request.ExpectedStartUtc.HasValue || !request.ExpectedEndUtc.HasValue) ||
+            request.ExpectedStartUtc.HasValue != request.ExpectedEndUtc.HasValue ||
+            request.ExpectedStartUtc.HasValue && (request.ExpectedStartUtc.Value.Kind != DateTimeKind.Utc ||
+                request.ExpectedEndUtc!.Value.Kind != DateTimeKind.Utc ||
+                request.ExpectedStartUtc != start || request.ExpectedEndUtc != end))
+            throw new InvalidOperationException("The schedule changed. Refresh sessions before booking.");
+        var booking = new ShootingRangeBooking { Id = ShootingRangeIds.NewId(), UserId = userId, BayId = request.BayId, LocalDate = request.LocalDate, PeriodKey = request.PeriodKey, StartUtc = start, EndUtc = end, Request = request.Request?.Trim() ?? string.Empty };
         return await repositories.Bookings.InsertIfAvailableAsync(booking, cancellationToken);
     }, cancellationToken);
 
@@ -212,8 +433,12 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
 
     public static void ValidateConfig(ShootingRangeConfig config)
     {
-        if (!Enum.IsDefined(config.SessionMode) || config.HourlyMinutes != 60 || config.ReservedReleaseDaysBefore < 0 || config.OpeningDays is null || config.OpeningDays.Count == 0 || config.OpeningDays.Any(day => !Enum.IsDefined(day)))
-            throw new ArgumentException("Select a valid mode, opening days and fixed 60-minute duration.");
+        if (!Enum.IsDefined(config.SessionMode) ||
+            (config.SessionMode == ShootingRangeSessionMode.Mixed
+                ? config.HourlyMinutes is not 60 and not 120
+                : config.HourlyMinutes != 60) ||
+            config.ReservedReleaseDaysBefore < 0 || config.OpeningDays is null || config.OpeningDays.Count == 0 || config.OpeningDays.Any(day => !Enum.IsDefined(day)))
+            throw new ArgumentException("Select a valid mode, opening days and supported duration.");
         try { TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone); }
         catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException) { throw new ArgumentException("Invalid field time zone.", exception); }
         static bool ValidWindow(TimeSpan? start, TimeSpan? end) => start.HasValue && end.HasValue && start >= TimeSpan.Zero && end < TimeSpan.FromDays(1) && start < end && start.Value.Ticks % TimeSpan.TicksPerMinute == 0 && end.Value.Ticks % TimeSpan.TicksPerMinute == 0;
@@ -239,7 +464,9 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             if (zone.IsInvalidTime(localStart) || zone.IsInvalidTime(localEnd) || zone.IsAmbiguousTime(localStart) || zone.IsAmbiguousTime(localEnd)) return;
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, zone);
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, zone);
-            if (config.SessionMode != ShootingRangeSessionMode.Periods && endUtc - startUtc != TimeSpan.FromHours(1)) return;
+            if (config.SessionMode == ShootingRangeSessionMode.Hourly && endUtc - startUtc != TimeSpan.FromHours(1)) return;
+            if (config.SessionMode == ShootingRangeSessionMode.Mixed && endUtc - startUtc != end - start) return;
+            if (config.SessionMode == ShootingRangeSessionMode.HourlyContinuous && endUtc - startUtc != TimeSpan.FromHours(1)) return;
             sessions.Add(new(key, startUtc, endUtc));
         }
         void AddHours(TimeSpan start, TimeSpan end)
@@ -257,8 +484,26 @@ public sealed class ShootingRangeService(IShootingRangeRepositorySet repositorie
             AddHours(config.MorningStart, config.MorningEnd);
             AddHours(config.AfternoonStart, config.AfternoonEnd);
         }
-        else AddHours(config.ContinuousStart!.Value, config.ContinuousEnd!.Value);
+        else if (config.SessionMode == ShootingRangeSessionMode.HourlyContinuous)
+            AddHours(config.ContinuousStart!.Value, config.ContinuousEnd!.Value);
+        else
+        {
+            Add("morning", config.MorningStart, config.MorningEnd);
+            Add("afternoon", config.AfternoonStart, config.AfternoonEnd);
+            AddMixedBlocks(config.MorningStart, config.MorningEnd);
+            AddMixedBlocks(config.AfternoonStart, config.AfternoonEnd);
+        }
         return sessions;
+
+        void AddMixedBlocks(TimeSpan windowStart, TimeSpan windowEnd)
+        {
+            var increment = TimeSpan.FromMinutes(config.HourlyMinutes);
+            for (var start = windowStart; start.Add(increment) <= windowEnd; start = start.Add(increment))
+            {
+                for (var end = start.Add(increment); end <= windowEnd; end = end.Add(increment))
+                    Add($"{start:hh\\:mm}-{end:hh\\:mm}", start, end);
+            }
+        }
     }
 
     internal static bool BlocksBay(ShootingRangeBooking booking, string bayId, DateTime start, DateTime end) => booking.BayId == bayId &&

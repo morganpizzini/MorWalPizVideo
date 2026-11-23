@@ -37,7 +37,7 @@ The deny-by-default fallback authorization policy is implemented and public regi
 
 Login, CSRF token acquisition, and health probes remain anonymous by necessity; this is not an exception for domain data. Direct links and browser refreshes require session restoration and protected client routing.
 
-Schedule, bay and closure administration and booking decisions are now accepted scope. Three modes preserve `Periods=0` and `Hourly=1`, adding `HourlyContinuous=2` with explicit continuous endpoints and fixed 60-minute slots. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal capacity admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. The existing message page now shows text, sent dates and request status to users; administrators also see the sender and can set or correct the status to InProgress, Completed or Refused. This limited slice does not add reply composition or notifications. Broader messaging expansion, rescheduling, push notifications, waitlists, custom-duration sessions, reporting, and invite-based onboarding remain deferred.
+Schedule, bay and closure administration and booking decisions are accepted scope. Four modes preserve `Periods=0`, `Hourly=1`, and `HourlyContinuous=2`, adding opt-in `Mixed=3` for whole morning/afternoon or contiguous 60/120-minute increments. User booking requests include an optional note and remain Pending; administrators see requests grouped by field-local date, bay and interval, and can also create a direct Approved booking for an approved member. Friendship requests are sent by exact username and become reciprocal only after the recipient accepts; incoming and outgoing requests remain distinct, and accepted relationships can be removed. A member may request to join an exact bay/UTC interval held by an accepted direct friend; there is no application-defined participant cap, while every member booking still requires its own admin decision. Partial overlaps and non-friend sharing remain conflicts. Friendship removal does not cancel existing bookings. User cancellation is supported for a user's own future Pending or Approved booking, retaining its Cancelled record; administrators may restore future cancelled bookings only through guarded approval and normal admission. Booking lists are filtered from yesterday onward in field-local dates. The dedicated admin booking page shows an accessible badge for future Pending bookings, refreshed while visible; this is not push. Bays also store nonnegative integer targets and optional paired positive height/width numbers, unit-free and precise to two decimal places. The existing message page shows text, sent dates and request status; administrators also see the sender and can set or correct status. Broader messaging expansion, rescheduling, push notifications, waitlists, arbitrary-duration sessions, and reporting remain deferred.
 
 ### Booking workflow amendment — 2026-11-20
 
@@ -99,6 +99,57 @@ Shooting Range test run passed 81 tests; eight SQL Server integration tests
 were skipped because no disposable SQL host was configured. This is not SQL
 Server/Azure migration or concurrency evidence.
 
+### Booking feedback amendment — 2026-11-21
+
+The member UI confirms date, local interval and bay before submission and
+accepts an optional 1,000-character reservation note. New `Mixed=3` schedule
+mode preserves existing numeric modes; the administrator configures a 60- or
+120-minute increment, while members may select a full morning/afternoon or a
+contiguous run of complete increments. UTC interval resolution and expected
+bounds remain authoritative. Continuous-hour mode and old stored booking
+intervals are unchanged.
+
+The original immediate-friendship and two-person limit described in this
+amendment were superseded by the friendship-consent amendment below.
+
+The admin page groups by field-local date and bay/interval while preserving
+each participant's status and note. A new antiforgery-protected admin action
+inserts a direct reservation as Approved inside the existing SQL mutation
+guard, rechecking administrator and target status, schedule, closure,
+whitelist, tenant and capacity.
+
+The additive `20261121171929_AddShootingRangeFriendships` migration has been
+generated but not applied. The original implementation's test results are
+historical; see the friendship-consent amendment below for current validation
+and release gates.
+
+### Friendship consent amendment — 2026-11-21
+
+Friendship requests do not grant friendship or shared-slot visibility until
+the recipient accepts. The requester may cancel; the recipient may decline;
+either participant may remove an accepted relationship. Old `POST /friends`
+clients receive `410 Gone`. The initial
+`20261121171929_AddShootingRangeFriendships` migration creates the final
+consent schema: requester is required, only Pending/Accepted states are
+allowed, and the requester must belong to the canonical pair. There is no
+legacy-unverified state or existing-pair backfill. The user confirmed that no
+database or historical friendship rows exist. The migration's down path
+refuses to drop the friendship table while any row remains.
+
+An accepted direct friend of any active participant may join an exact same
+bay and UTC interval. There is no application-defined participant cap; all
+participants retain separate Pending/Approved decisions. Partial overlaps,
+duplicate participants and joins without an accepted direct friend remain
+conflicts. Availability, SQL/mock generic write validation, and UI participant
+lists follow this rule.
+
+The local Range test project passed 93 tests; 9 SQL Server tests were skipped
+without `SHOOTING_RANGE_TEST_SQL_HOST`. EF reported no pending model changes.
+Focused client tests passed (65), App tests passed on rerun (16), and
+TypeScript checking plus client and SSR builds passed. The migration has not
+been applied or rehearsed against SQL; independent SQL concurrency and
+authenticated browser checks remain rollout gates.
+
 ## Migration And Rollback
 
 Old cookies without the session tenant claim require reauthentication. Sessions are persisted in the Azure SQL `shooting_range_local_sessions` table; account `security_version`, `normalized_username` and tenant ownership are required, and unique indexes use tenant-qualified binary-collated keys. Before migration, confirm that the target database is empty, pause traffic, drain old writers, apply the explicit EF migration and deploy the compatible API before clients. Do not run old API writers against the tenant-aware schema.
@@ -116,7 +167,7 @@ and unresolved public-release controls.
 
 ## Validation
 
-These are full release acceptance criteria, not a claim that every item passes in the current foundation. Local API/client validation has passed, but target Azure SQL migration, backup/restore, real-browser origin/session switching and Data Protection evidence remain required separately from local executable tests. The eight SQL Server tests were skipped without `SHOOTING_RANGE_TEST_SQL_HOST`.
+These are full release acceptance criteria, not a claim that every item passes in the current foundation. Local API/client validation has passed, but target Azure SQL migration, backup/restore, real-browser origin/session switching and Data Protection evidence remain required separately from local executable tests. Nine SQL Server tests were skipped without `SHOOTING_RANGE_TEST_SQL_HOST`.
 
 - Anonymous domain requests return `401`; normal users receive `403` from administrator operations.
 - Login, CSRF token acquisition, and health probes remain reachable anonymously.

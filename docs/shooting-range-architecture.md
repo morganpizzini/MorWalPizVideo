@@ -28,13 +28,13 @@ Domain endpoints require authentication by fallback policy. CSRF acquisition, lo
 
 The initial configuration is one global field named Pepperbox, timezone `Europe/Rome`, opening Saturday/Sunday, morning `09:00-13:00`, afternoon `14:00-18:00`, and one-hour hourly slots. `ReservedReleaseDaysBefore` defaults to `2`. Local field dates and period keys are authoritative; the API returns `startUtc` and `endUtc` as UTC instants. The browser formats those instants for display.
 
-Three administrator-selected modes are supported: whole morning/afternoon periods (`Periods=0`), split 60-minute windows (`Hourly=1`), and continuous 60-minute opening (`HourlyContinuous=2`). Existing enum values, routes and legitimate response fields remain unchanged. Continuous opening uses explicit nullable `ContinuousStart`/`ContinuousEnd`, never inferred from split windows. Configuration writes require `HourlyMinutes=60`, valid minute-precision same-day windows, and a positive break for split modes. Only complete hourly slots are offered; ambiguous/invalid DST boundaries are excluded. Legacy non-60 configurations remain readable but must be corrected before new bookings are accepted.
+Four administrator-selected modes are supported: whole morning/afternoon periods (`Periods=0`), split 60-minute windows (`Hourly=1`), continuous 60-minute opening (`HourlyContinuous=2`), and mixed whole-window or contiguous blocks (`Mixed=3`). Existing enum values, routes and legitimate response fields remain unchanged. Continuous opening uses explicit nullable `ContinuousStart`/`ContinuousEnd`, never inferred from split windows. Legacy modes require `HourlyMinutes=60`; Mixed accepts a 60- or 120-minute increment, defaulting to 60. It offers each full morning/afternoon window and every contiguous block of complete increments within those windows; no selection spans the afternoon break. Only complete increments are offered; ambiguous/invalid DST boundaries are excluded. Legacy non-60 configurations remain readable but must be corrected before new bookings are accepted.
 
 A reserved bay is restricted to its whitelist while the local field date is more than two calendar days away. At T-2 it is available to all users when no active booking exists. Administrative closures, bay exceptions and conflicts take precedence. This is calculated per request; no job is required for correctness. Sessions come from `/api/shooting-range/sessions`; the client displays them in the configured field timezone and submits expected UTC boundaries to detect stale selections.
 
 ## Data and concurrency
 
-Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_mechanism_types`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Mechanism types are immutable, administrator-created catalog entries; a bay stores its canonical mechanism name and quantity in the existing JSON list. Bay Pepper inventory is a nonnegative integer. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
+Azure SQL Database is the production persistence store for all Range data, including its independent accounts and sessions. EF Core maps Range-owned data to `shooting_range_configs`, `shooting_range_bays`, `shooting_range_mechanism_types`, `shooting_range_exceptions`, `shooting_range_users`, `shooting_range_bookings`, `shooting_range_friendships`, `shooting_range_threads`, `shooting_range_local_sessions` and the singleton `shooting_range_mutation_guards` row. Friendships are one tenant-owned row per canonically ordered, unique pair with tenant-qualified restrictive foreign keys to both users; the required requester and status distinguish pending consent from accepted friendship. The schema permits only Pending and Accepted states, and the requester must be one of the canonical pair members. Mechanism types are immutable, administrator-created catalog entries; a bay stores its canonical mechanism name and quantity in the existing JSON list. Bay Pepper inventory is a nonnegative integer. Existing nested value lists/messages are stored as JSON text in `nvarchar(max)` columns; primary business records remain separate relational rows. UTC instants use `datetime2` with an EF conversion that restores `DateTimeKind.Utc`; local `CreationDateTime` uses `datetime2` without conversion. The initial schema and later changes are versioned EF migrations. Run the API assembly with `--migrate-database` as an explicit operator action; normal SQL startup never creates/upgrades the schema and fails closed unless all migrations and the guard row are present.
 
 The mechanism-catalogue migration validates existing bay mechanism JSON and
 quantities, rejects ambiguous names and repeated types within one bay, and
@@ -48,7 +48,9 @@ The `FeatureManagement:EnableInMemoryDb` flag selects EF Core's in-memory provid
 
 Every repository write participates in a SQL Server `ReadCommitted` transaction and acquires the singleton mutation-guard row using `UPDLOCK, ROWLOCK` before reading validation/admission state. The lock has a 15-second deadline. Every Range writer, including account, session, schedule, bay, closure, booking, and message changes, must use this guard. This serializes writes globally by design for the POC; no process-local lock is used for correctness. Cookie issuance follows successful transaction commit. The readiness check is read-only and verifies database connectivity, schema and guard row.
 
-Pending and Approved consume capacity through half-open persisted UTC intervals per bay, regardless of period key or current mode. Adjacent intervals and different bays are allowed. Generic booking insert/replace paths also validate capacity; inactive-to-active transitions recheck admission, while Pending-to-Approved preserves the original reservation. Historical intervals and booking identity cannot be rewritten. Malformed active intervals block the affected bay until operational reconciliation. A unique normalized-username index with binary collation is a database backstop. The mock repository serializes mutations and restores its snapshot on failure; mock tests do not prove SQL Server locking or transaction rollback.
+The friendship-consent schema is part of the initial friendship-table migration; there is no legacy-pair state or backfill. The user confirmed that no database or historical friendship rows exist. Its down migration stops while any friendship row remains rather than silently dropping relationships. The migration has not been applied to a target database; verify target state before any operator applies it.
+
+Pending and Approved consume capacity through half-open persisted UTC intervals per bay, regardless of period key or current mode. Adjacent intervals and different bays are allowed. The only overlap exception is an exact same bay and UTC interval shared by distinct users, where each joining requester is an accepted direct friend of at least one active participant; there is no application-defined participant cap. Pending reservations may be joined; each participant retains an independent Pending/Approved decision. Partial overlaps remain conflicts. Friendship removal does not cancel existing reservations. Generic booking insert/replace paths enforce the same rule; inactive-to-active transitions recheck admission, while Pending-to-Approved preserves the existing reservation. Historical intervals and booking identity cannot be rewritten. Malformed active intervals block the affected bay until operational reconciliation. A unique normalized-username index with binary collation is a database backstop. The mock repository serializes mutations and restores its snapshot on failure; mock tests do not prove SQL Server locking or transaction rollback.
 
 Message threads persist a numeric `ShootingRangeThreadStatus`: Pending (`0`),
 InProgress (`1`), Completed (`2`) or Refused (`3`). The SQL migration defaults
@@ -84,18 +86,51 @@ Booking admission also rechecks current approved account status and `ForcePasswo
 
 Users may cancel their own future Pending or Approved reservation. The operation rechecks the approved account, ownership, active status, and future UTC start inside the guarded write, then sets the existing Cancelled status; the record remains visible in history. Administrators may restore a cancelled future reservation by approving it, subject to the normal guarded admission and capacity checks. User and admin booking lists include local field dates from yesterday onward; this is a read filter, not data deletion. The admin-only pending count includes future Pending reservations.
 
+## Booking and friendship workflows
+
+Members confirm the selected local date, time interval and bay before sending
+a Pending reservation. The confirmation dialog accepts an optional request
+note (up to 1,000 characters); notes are visible to administrators, not
+friends. An approved member may send an exact-username friendship request to
+another approved same-tenant member. The recipient must accept before the
+pair is returned as friends or grants access to shared-slot availability.
+Incoming and outgoing requests are listed separately; either member may
+remove an accepted relationship. There is no general member directory.
+Availability returns only bay-specific exact-interval reservations from the
+current member's accepted direct friends; it reveals no unrelated
+reservations or friend notes.
+
+Administrators see future/current requests grouped by field-local date, bay
+and interval, with each participant's status and note. They may create a
+reservation for an approved member; the API inserts it as Approved in the same
+guarded write that rechecks current administrator/target status, time bounds,
+closures, whitelist, tenant, friendship and capacity. The admin interface
+continues to show the yesterday-inclusive list range.
+
 ## Minimal UI scope
 
 The initial public-facing POC is limited to:
 
 - Login, session restoration, forced password change, and logout.
-- Authenticated availability search and booking.
+- Authenticated availability search, confirmation with optional notes, booking
+  and cancellation.
 - Booking dates use the field configuration's opening weekdays; closed weekdays are disabled in the calendar, and available sessions render only after the sessions response resolves.
 - The current user's bookings.
+- Accepted-friend management and exact-slot requests to join a slot occupied
+  by an accepted direct friend; each join remains Pending until individually
+  approved.
 - User cancellation of future Pending or Approved bookings, with the cancelled record retained in the current user's history.
 - Administrator booking decisions on the dedicated `/admin/bookings` page, linked in the top navigation with an accessible count badge for future pending requests. The client refreshes this count on navigation/focus, after relevant booking changes and every 60 seconds while visible; this is not push notification.
 
-Schedule, bay, mechanism-type catalogue, closure management and booking decisions are accepted administrator scope. Bays have nonnegative integer target, partition, plate and popper counts; optional height and width are unit-free positive decimal values, entered to two decimal places and supplied together. The client preserves `/`, `/messages` and `/admin` and adds `/admin/bookings`; this does not authorize unrelated messaging expansion. Rescheduling, push notifications, waitlists, custom-duration sessions, and reporting remain deferred.
+Schedule, bay, mechanism-type catalogue, closure management, grouped booking
+review and direct approved booking are accepted administrator scope. In Mixed
+mode the administrator selects a 60- or 120-minute increment. Bays have
+nonnegative integer target, partition, plate and popper counts; optional
+height and width are unit-free positive decimal values, entered to two decimal
+places and supplied together. The client preserves `/`, `/messages` and
+`/admin` and adds `/admin/bookings` and `/friends`; this does not authorize
+unrelated messaging expansion. Rescheduling, push notifications, waitlists,
+arbitrary-duration sessions, and reporting remain deferred.
 
 The existing `/messages` page displays request text and each message's sent
 date. Users see their request status; administrators also see the sender and
@@ -113,9 +148,16 @@ or account state. The initial HTML bootstrap applies the resolved theme before
 the client starts, while the React selector appears on the login and
 authenticated shell. Range-specific status roles map to shared semantic tokens.
 
-The Range test suite (**36 passed**), checked client build, and SSR build passed.
-Browser rendering, deployed content-security policy, and PWA/offline behavior
-were not verified locally because no Chromium-based browser was installed.
+The consent cleanup passed the full Range API test project (**94 passed, 9
+SQL Server tests skipped**); EF reports no pending model changes, and
+generated forward/down SQL confirms one friendship-table creation, no row
+backfill and a guarded table drop. The full client suite passed (84 tests);
+TypeScript checking and production/SSR builds passed. Disposable SQL migration
+and concurrency evidence, authenticated browser rendering, deployed
+content-security policy and PWA/offline behavior remain unverified. Independent
+review found no Critical/Major issue; its verified minor mock lookup finding
+was fixed. Review details are tracked in the
+[consent cleanup handoff](feature-handoffs/shooting-range-05-consent-cleanup-and-review-handoff.md).
 
 ## Future extension candidates
 
@@ -135,6 +177,15 @@ Reassess these only after real POC use establishes operational value:
 Development defaults to the EF Core in-memory provider through `FeatureManagement:EnableInMemoryDb`; this flag is allowed only in Development or Test and must remain disabled in production. The legacy mock repository remains available in Development/Test when the in-memory database flag is off; production rejects either non-SQL mode. Azure SQL uses external configuration key `ShootingRangeDatabase:ConnectionString`; when Key Vault is enabled, provide `ShootingRangeDatabase--ConnectionString` and grant the App Service managed identity read access. Prefer Azure SQL Microsoft Entra managed identity authentication where provisioned; otherwise keep the SQL credential in Key Vault. Require encryption and certificate validation for deployed connections. The API fails startup when the configured vault is unavailable or the required key is missing, and does not fall back to a direct connection value. A separately managed `ShootingRangeDatabase:MigrationConnectionString` may be supplied for explicit schema migration; it must not be used by normal runtime. Keep all connection values outside source, documentation and deployment workflows.
 
 Set the client App Service's `SHOOTING_RANGE` value separately for each deployment. Set `ShootingRange__ManagementKey` only on the API App Service and configure the exact client origin when provisioning each tenant. Apply `20261120233255_AddShootingRangeTenancy` explicitly with the API's migration command before deploying the new runtime. The user confirmed there is no existing data to preserve; nevertheless, verify the target database contains no business rows before applying the migration. Its required tenant ownership constraints intentionally prevent silently assigning existing rows to a tenant.
+
+Before deploying booking-feedback, back up SQL and verify the additive
+`20261121171929_AddShootingRangeFriendships` migration against a disposable
+SQL Server. Apply it explicitly before the compatible API. Drain old API
+writers before deploying the client or enabling Mixed mode: old versions do
+not recognize `SessionMode=3`, 120-minute increments, or shared exact-slot
+admission. Do not roll back to an old writer while shared active bookings
+exist; pause writes and use a compatible API or an explicitly approved
+recovery. No migration or deployment has been run for this change.
 
 The API and client continue to deploy independently through workflows bound to the GitHub `production` environment. Before public exposure, validate the authorization matrix, configured tenant origins, CSRF/login flow, persistent Data Protection keys, Azure SQL readiness, tenant-scoped uniqueness and relationships, booking concurrency, backup/restore, and successful login by the manually inserted tenant-owned administrator.
 
