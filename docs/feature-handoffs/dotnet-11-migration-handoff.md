@@ -177,6 +177,14 @@ database, frontend source, dependency lockfile, or deployment secret changed.
   the focused local test is skipped because no disposable SQL Server is
   configured. A disposable SQL Server run is still needed to confirm the
   expected unique-index error.
+  A later CI SQL Server run also exposed that the concurrent-friend test passed
+  the recipient's ID where `RequestFriendAsync` requires a username. Its helper
+  now supplies the seeded recipient username separately while retaining the
+  ID for request lookup and acceptance. The disposable SQL Server workflow
+  should rerun both corrected cases. After this correction the focused test
+  project build passed, all 54 `ShootingRangeServiceTests` passed, and the
+  concurrent SQL test was discovered but skipped locally because no
+  disposable SQL Server is configured.
 - `dotnet build MorWalPizVideo.FreezerAnalysis.Api.Tests/FreezerAnalysis.Api.Tests.csproj --configuration Release --no-restore -m:1 -p:BuildInParallel=false`
   passed. The full suite had 73 passed, 2 skipped and 2 failures because
   Playwright Chromium was not installed. Re-running with

@@ -88,8 +88,8 @@ public sealed class ShootingRangeSqlServerTests
         await using var fixture = await Fixture.CreateAsync();
         var service = new ShootingRangeService(fixture.First);
         await service.CreateBookingAsync(fixture.UserId, new(fixture.BayId, fixture.Date, "morning", "anchor"), default);
-        await AcceptFriendRequestAsync(service, fixture.SecondUserId, fixture.UserId);
-        await AcceptFriendRequestAsync(service, fixture.ThirdUserId, fixture.UserId);
+        await AcceptFriendRequestAsync(service, fixture.SecondUserId, fixture.UserId, "test-only");
+        await AcceptFriendRequestAsync(service, fixture.ThirdUserId, fixture.UserId, "test-only");
 
         async Task<bool> TryJoin(SqlServerShootingRangeRepositorySet repositories, string userId)
         {
@@ -237,9 +237,10 @@ public sealed class ShootingRangeSqlServerTests
     private static async Task AcceptFriendRequestAsync(
         ShootingRangeService service,
         string requesterId,
-        string recipientId)
+        string recipientId,
+        string recipientUsername)
     {
-        await service.RequestFriendAsync(requesterId, recipientId, default);
+        await service.RequestFriendAsync(requesterId, recipientUsername, default);
         var request = (await service.GetFriendRequestsAsync(recipientId, default)).Incoming.Single();
         await service.RespondToFriendRequestAsync(recipientId, request.Id, true, default);
     }
