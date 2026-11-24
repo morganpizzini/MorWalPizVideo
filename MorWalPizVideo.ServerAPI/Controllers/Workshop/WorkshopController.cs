@@ -42,14 +42,19 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
 
     [HttpGet("firearms/{firearmId}/detail")]
     public async Task<IActionResult> FirearmDetail(string firearmId, [FromQuery] int maintenancePage = 1,
-        [FromQuery] int shootingPage = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
+        [FromQuery] int shootingPage = 1, [FromQuery] int installationPage = 1,
+        [FromQuery] int pageSize = 15, CancellationToken ct = default)
     {
-        var detail = await service.GetFirearmDetailAsync(AccountId(), firearmId, maintenancePage, shootingPage, pageSize, ct);
+        var detail = await service.GetFirearmDetailAsync(AccountId(), firearmId, maintenancePage, shootingPage,
+            installationPage, pageSize, ct);
         if (detail is null) return NotFound();
         var shooting = detail.Shooting;
         return Ok(new WorkshopFirearmDetailContract(
             detail.Firearm,
             detail.Components.Select(x => new WorkshopComponentConditionContract(x.Component, x.Definition, x.Installation)).ToArray(),
+            new(detail.InstallationHistory.Select(x =>
+                new WorkshopComponentConditionContract(x.Component, x.Definition, x.Installation)).ToArray(),
+                installationPage, Math.Clamp(pageSize, 1, 100), detail.InstallationHistoryHasMore),
             new(detail.Maintenance, maintenancePage, Math.Clamp(pageSize, 1, 100), detail.MaintenanceHasMore),
             new(shooting.Select(x => new WorkshopShootingSessionContract(x.Session, x.Superseded)).ToArray(), shootingPage,
                 Math.Clamp(pageSize, 1, 100), detail.ShootingHasMore),

@@ -76,7 +76,7 @@ function FirearmsPanel({ items, showForm, onToggleForm, fetcher }: { items: Equi
   return <section>
     <button className="button button-primary" type="button" onClick={onToggleForm}>+ {t("Register firearm")}</button>
     {showForm && <FirearmForm fetcher={fetcher} />}
-    {items.length ? <div className="card-grid mt-3">{items.map((firearm) => <Link className="record-card" to={`/firearms/${firearm.id}`} key={firearm.id}><div className="record-card-top"><span className="eyebrow">{firearm.caliber}</span><span className="badge">{t(firearm.archived ? "archived" : "active")}</span></div><h2>{firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}</h2><p>{firearm.manufacturer} {firearm.model}</p><strong>{formatNumber(firearm.totalRounds, culture)} {t("rounds")}</strong></Link>)}</div> : <EmptyState title={t("No firearms registered")} message={t("Add a firearm to connect sessions, components and allocations.")} />}
+    {items.length ? <div className="card-grid mt-3">{items.map((firearm) => <Link className="record-card" to={`/firearms/${firearm.id}`} key={firearm.id}><div className="record-card-top"><span className="eyebrow">{firearm.caliber}</span><span className="badge">{t(firearm.archived ? "archived" : "active")}</span></div><h2>{firearm.nickname || `${firearm.manufacturer} ${firearm.model}`}</h2><p>{firearm.manufacturer} {firearm.model}</p><strong>{formatNumber(firearm.totalRounds, culture)} {t("rounds")}</strong></Link>)}</div> : <EmptyState title={t("No firearms registered")} message={t("Add a firearm to connect sessions, components and consumption records.")} />}
   </section>;
 }
 

@@ -9,6 +9,7 @@ export function loader({ params, request }: LoaderFunctionArgs) {
   return deferRouteData(getWorkshopFirearmDetail(firearmId, {
     maintenancePage: Number(url.searchParams.get("maintenancePage") ?? 1),
     shootingPage: Number(url.searchParams.get("shootingPage") ?? 1),
+    installationPage: Number(url.searchParams.get("installationPage") ?? 1),
     pageSize: Number(url.searchParams.get("pageSize") ?? 15),
   }));
 }

@@ -302,6 +302,7 @@ public sealed record WorkshopHistoryPageContract<T>(
 public sealed record WorkshopFirearmDetailContract(
     Firearm Firearm,
     IReadOnlyList<WorkshopComponentConditionContract> Components,
+    WorkshopHistoryPageContract<WorkshopComponentConditionContract> InstallationHistory,
     WorkshopHistoryPageContract<MaintenanceEvent> Maintenance,
     WorkshopHistoryPageContract<WorkshopShootingSessionContract> Shooting,
     IReadOnlyList<WorkshopRoundHistoryPointContract> RoundHistory,

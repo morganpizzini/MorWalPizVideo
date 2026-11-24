@@ -10,6 +10,7 @@ import {
   recordWorkshopProduction,
   recordWorkshopShooting,
   getWorkshopHistory,
+  getWorkshopFirearmDetail,
 } from "./workshopService";
 import { accountApiService } from "./apiTransport";
 
@@ -165,6 +166,21 @@ describe("Workshop account transport", () => {
     expect(String(fetchMock.mock.calls[0][0])).toBe(
       "/api/v1/workshop/history?page=2&pageSize=50&type=ShootingRecorded",
     );
+  });
+
+  it.each([
+    [0, "Current"],
+    [1, "Pending"],
+    [2, "Inconsistent"],
+    [9, "Unknown"],
+  ] as const)("normalizes the firearm projection state %s", async (wireState, expectedState) => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ projectionState: wireState }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const detail = await getWorkshopFirearmDetail("firearm-1", { installationPage: 2 });
+
+    expect(detail.projectionState).toBe(expectedState);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("installationPage=2");
   });
 
     it("posts a shooting correction to the append-only correction route", async () => {

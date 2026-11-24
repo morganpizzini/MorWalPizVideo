@@ -98,6 +98,46 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stat strong { font-size: 1.7rem; }
 .stat.warning strong { color: var(--workshop-warning); }
 .section-heading, .toolbar, .record-card-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.component-comparison-note { margin: -.35rem 0 .5rem; color: var(--workshop-secondary); font-size: .82rem; }
+.component-usage-list { display: grid; }
+.component-usage-row { display: grid; gap: .75rem 1.5rem; padding: 1rem 0; border-top: 1px solid var(--workshop-border); }
+.component-usage-row:first-child { padding-top: .5rem; border-top: 0; }
+.component-usage-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.component-usage-heading > div { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; }
+.component-usage-heading > div > span { color: var(--workshop-secondary); font-size: .82rem; }
+.component-usage-total { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.component-usage-meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .8rem 1.5rem; }
+.component-usage-meter-group { display: grid; align-content: start; gap: .35rem; min-width: 0; }
+.component-usage-meter-label { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; color: var(--workshop-secondary); font-size: .78rem; }
+.component-usage-meter-label strong { color: var(--workshop-text); font-variant-numeric: tabular-nums; }
+.component-usage-meter { height: .6rem; overflow: hidden; border: 1px solid var(--workshop-border); border-radius: 999px; background: var(--workshop-elevated); }
+.component-usage-meter span { display: block; height: 100%; border-radius: inherit; background: var(--workshop-accent); }
+.component-usage-meter-interval span { background: var(--workshop-success); }
+.component-usage-meter-interval.interval-attention span, .component-usage-meter-interval.interval-due-soon span { background: var(--workshop-warning); }
+.component-interval-status.interval-overdue { color: var(--workshop-error); }
+.component-usage-meter-interval.interval-overdue span { background: var(--workshop-error); }
+.component-interval-status.interval-attention, .component-interval-status.interval-due-soon { color: var(--workshop-warning) !important; }
+.component-usage-meter-group small { color: var(--workshop-secondary); font-variant-numeric: tabular-nums; }
+.firearm-detail .section-heading { align-items: flex-start; flex-wrap: wrap; }
+.firearm-detail .section-heading > .button { max-width: 100%; white-space: normal; text-align: left; }
+.firearm-projection-status { margin: 1rem 0 0; padding: .75rem 1rem; border: 1px solid var(--workshop-border); border-radius: 8px; background: var(--workshop-elevated); color: var(--workshop-secondary); font-size: .85rem; }
+.firearm-history h3 { margin: 0; font-size: .95rem; }
+.round-history-section { padding-top: .25rem; }
+.round-history-note { margin: .35rem 0 .75rem; color: var(--workshop-secondary); font-size: .8rem; }
+.round-history-toggle { display: none; align-items: center; gap: .35rem; }
+.round-history-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1rem; }
+.round-history-chart { min-width: 0; margin: 0; padding: .5rem; border: 1px solid var(--workshop-border); border-radius: 8px; background: var(--workshop-elevated); }
+.round-history-chart svg { display: block; width: 100%; height: auto; }
+.round-history-gridline { stroke: var(--workshop-border); stroke-width: 1; }
+.round-history-axis-label { fill: var(--workshop-secondary); font-size: 12px; }
+.round-history-table-wrap { min-width: 0; max-height: 12.5rem; overflow: auto; border: 1px solid var(--workshop-border); border-radius: 8px; }
+.round-history-table { min-width: 0; table-layout: fixed; }
+.round-history-table th, .round-history-table td { padding: .55rem .6rem; font-size: .78rem; }
+.round-history-table th:nth-child(n + 2), .round-history-table td:nth-child(n + 2) { text-align: right; }
+.round-history-table td { font-variant-numeric: tabular-nums; }
+.round-history-table td:first-child { white-space: nowrap; }
+.installation-history-table small { display: block; margin-top: .2rem; }
+.shooting-session-history { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--workshop-border); }
 .shooting-history-heading { margin: 0 0 1rem; }
 .shooting-session-list { display: grid; }
 .shooting-session-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; padding: 1.1rem 0; border-top: 1px solid var(--workshop-border); }
@@ -205,6 +245,7 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 .feedback-message { color: var(--workshop-accent); font-weight: 700; }.feedback-message-error { color: var(--workshop-error); }.feedback-message-success { color: var(--workshop-success); }
 .feedback-actions { display: flex; justify-content: flex-end; gap: .6rem; }
 @media (max-width: 900px) { .desktop-nav { justify-content: flex-start; }.dashboard-grid, .detail-grid, .components-grid, .recipe-production-layout { grid-template-columns: 1fr; }.quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }.component-filters { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .round-history-toggle { display: flex; }.round-history-layout { grid-template-columns: minmax(0, 1fr); }.round-history-layout[data-view="chart"] .round-history-table-wrap { display: none; }.round-history-layout[data-view="table"] .round-history-chart { display: none; } }
 @media (max-width: 560px) { .workshop-main { width: min(100% - 1.5rem, 1440px); }.workshop-header-top { flex-wrap: wrap; }.header-account { width: 100%; justify-content: flex-end; flex-wrap: wrap; white-space: normal; }.header-account-link { display: none; }.desktop-nav { justify-content: flex-start; }.nav-scroll-hint { width: 1.6rem; height: 1.6rem; }.install-prompt { align-items: stretch; flex-direction: column; }.install-prompt__actions { width: 100%; }.install-prompt__actions .button { flex: 1 1 8rem; }.quick-actions, .stats-grid, .form-grid, .shooting-ammunition-row, .recipe-detail-grid, .ammunition-production-grid { grid-template-columns: 1fr; }.dashboard-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.shooting-ammunition-row .button { margin-bottom: 1rem; justify-self: start; }.activity-list:not(.activity-list-compact) time { display: none; }.activity-list-compact time { font-size: .7rem; }.definition-list { grid-template-columns: 1fr; gap: .2rem; }.definition-list dd { margin-bottom: .8rem; }.recipe-detail-wide { grid-column: auto; }.account-header { grid-template-columns: minmax(0, 1fr); }.account-header-controls { grid-column: 1; grid-row: auto; }.account-header .account-subtitle { grid-column: 1; }.onboarding-header, .onboarding-actions, .onboarding-reopen, .history-toolbar { align-items: stretch; flex-direction: column; }.onboarding-progress { align-self: flex-start; }.capability-wizard-backdrop { padding: .5rem; }.capability-wizard-dialog { max-height: calc(100dvh - 1rem); }.capability-wizard-header, .capability-wizard-actions { align-items: stretch; flex-direction: column; }.capability-wizard-header-actions, .capability-wizard-actions > div { justify-content: space-between; }.capability-wizard-actions > div .button { flex: 1 1 auto; }.capability-wizard-route-actions .button { flex: 1 1 100%; }.goal-form { align-items: stretch; flex-direction: column; } }
 .shooting-history-heading { align-items: center; }
 @media (max-width: 560px) {

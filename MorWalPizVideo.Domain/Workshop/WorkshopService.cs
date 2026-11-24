@@ -61,6 +61,8 @@ sealed record WorkshopReplacementResolution(
 public sealed record WorkshopFirearmDetailData(
     Firearm Firearm,
     IReadOnlyList<(ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation)> Components,
+    IReadOnlyList<(ComponentInstance Component, ComponentDefinition Definition, ComponentInstallation Installation)> InstallationHistory,
+    bool InstallationHistoryHasMore,
     IReadOnlyList<MaintenanceEvent> Maintenance,
     bool MaintenanceHasMore,
     IReadOnlyList<WorkshopShootingSessionData> Shooting,
@@ -89,7 +91,7 @@ public sealed class WorkshopService(
 
     public async Task<WorkshopFirearmDetailData?> GetFirearmDetailAsync(
         string accountId, string firearmId, int maintenancePage = 1, int shootingPage = 1,
-        int pageSize = 15, CancellationToken ct = default)
+        int installationPage = 1, int pageSize = 15, CancellationToken ct = default)
     {
         var firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, firearmId, ct);
         if (firearm is null) return null;
@@ -98,11 +100,13 @@ public sealed class WorkshopService(
         var definitions = await GetComponentDefinitionsAsync(accountId, ct);
         var installations = await repository.ListAsync<ComponentInstallation>(
             DbCollections.WorkshopComponentInstallations, accountId, ct);
-        var current = installations.Where(x => x.FirearmId == firearmId && x.RemovedAt is null)
+        var allInstallationHistory = installations.Where(x => x.FirearmId == firearmId)
+            .OrderByDescending(x => x.InstalledAt).ThenByDescending(x => x.Id)
             .Join(components, x => x.ComponentId, x => x.Id, (installation, component) => (installation, component))
             .Join(definitions, x => x.component.DefinitionId, x => x.Id,
                 (x, definition) => (x.component, definition, x.installation))
             .ToArray();
+        var current = allInstallationHistory.Where(x => x.installation.RemovedAt is null).ToArray();
 
         var allMaintenance = (await repository.ListAsync<MaintenanceEvent>(
                 DbCollections.WorkshopMaintenanceEvents, accountId, ct))
@@ -139,11 +143,13 @@ public sealed class WorkshopService(
         var size = Math.Clamp(pageSize, 1, 100);
         var maintenanceOffset = (Math.Clamp(maintenancePage, 1, 10000) - 1) * size;
         var shootingOffset = (Math.Clamp(shootingPage, 1, 10000) - 1) * size;
+        var installationOffset = (Math.Clamp(installationPage, 1, 10000) - 1) * size;
         var maintenance = allMaintenance.Skip(maintenanceOffset).Take(size).ToArray();
         var shooting = allShooting.Skip(shootingOffset).Take(size)
             .Select(x => new WorkshopShootingSessionData(
                 x, x.OperationId is not null && correctionOperations.Contains(x.OperationId)))
             .ToArray();
+        var installationHistory = allInstallationHistory.Skip(installationOffset).Take(size).ToArray();
         var candidates = components.Where(x => x.Status == WorkshopComponentStatus.Inventory && !x.Archived)
             .Where(x => current.All(c => c.component.Id != x.Id || c.component.DefinitionId == x.DefinitionId))
             .ToArray();
@@ -151,6 +157,8 @@ public sealed class WorkshopService(
         return new(
             firearm,
             current.Select(x => (x.component, x.definition, x.installation)).ToArray(),
+            installationHistory,
+            installationOffset + installationHistory.Length < allInstallationHistory.Length,
             maintenance,
             maintenanceOffset + maintenance.Length < allMaintenance.Length,
             shooting,

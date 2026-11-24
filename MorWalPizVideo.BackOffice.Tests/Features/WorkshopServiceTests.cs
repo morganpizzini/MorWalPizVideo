@@ -44,6 +44,53 @@ public sealed class WorkshopServiceTests
     }
 
     [Fact]
+    public async Task Firearm_detail_returns_paginated_installation_history_for_the_requested_firearm()
+    {
+        var (service, scenario, firearm) = CreateService();
+        scenario.Add(DbCollections.WorkshopComponentDefinitions, new ComponentDefinition
+        {
+            Id = "definition-1", AccountId = "account-1", Name = "Optic"
+        });
+        foreach (var id in new[] { "component-current", "component-previous", "component-other" })
+        {
+            scenario.Add(DbCollections.WorkshopComponentInstances, new ComponentInstance
+            {
+                Id = id, AccountId = "account-1", DefinitionId = "definition-1",
+                IdentificationNote = id
+            });
+        }
+        scenario.Add(DbCollections.WorkshopFirearms, firearm with { Id = "firearm-2" });
+        scenario.Add(DbCollections.WorkshopComponentInstallations, new ComponentInstallation
+        {
+            Id = "installation-previous", AccountId = "account-1", ComponentId = "component-previous",
+            FirearmId = firearm.Id, InstalledAt = DateTime.UtcNow.AddDays(-10),
+            RemovedAt = DateTime.UtcNow.AddDays(-5)
+        });
+        scenario.Add(DbCollections.WorkshopComponentInstallations, new ComponentInstallation
+        {
+            Id = "installation-current", AccountId = "account-1", ComponentId = "component-current",
+            FirearmId = firearm.Id, InstalledAt = DateTime.UtcNow.AddDays(-2)
+        });
+        scenario.Add(DbCollections.WorkshopComponentInstallations, new ComponentInstallation
+        {
+            Id = "installation-other", AccountId = "account-1", ComponentId = "component-other",
+            FirearmId = "firearm-2", InstalledAt = DateTime.UtcNow.AddDays(-1)
+        });
+
+        var firstPage = await service.GetFirearmDetailAsync("account-1", firearm.Id,
+            installationPage: 1, pageSize: 1);
+        var secondPage = await service.GetFirearmDetailAsync("account-1", firearm.Id,
+            installationPage: 2, pageSize: 1);
+
+        Assert.NotNull(firstPage);
+        Assert.Equal("installation-current", firstPage.InstallationHistory.Single().Installation.Id);
+        Assert.True(firstPage.InstallationHistoryHasMore);
+        Assert.NotNull(secondPage);
+        Assert.Equal("installation-previous", secondPage.InstallationHistory.Single().Installation.Id);
+        Assert.False(secondPage.InstallationHistoryHasMore);
+    }
+
+    [Fact]
     public async Task Release_and_reallocate_retries_return_the_original_operation()
     {
         var (service, scenario, firearm) = CreateService();

@@ -32,6 +32,7 @@ import type {
   WorkshopMaintenanceEvent,
   WorkshopDashboard,
   WorkshopFirearmDetail,
+  WorkshopProjectionState,
   WorkshopShootingSessionRecord,
   WorkshopAnalytics,
 } from "@morwalpizvideo/models";
@@ -53,17 +54,27 @@ export const getWorkshopFirearms = (): Promise<WorkshopFirearm[]> =>
 
 export const getWorkshopFirearmDetail = (
   firearmId: string,
-  options: { maintenancePage?: number; shootingPage?: number; pageSize?: number } = {},
+  options: { maintenancePage?: number; shootingPage?: number; installationPage?: number; pageSize?: number } = {},
 ): Promise<WorkshopFirearmDetail> => {
   const query = new URLSearchParams({
     maintenancePage: String(options.maintenancePage ?? 1),
     shootingPage: String(options.shootingPage ?? 1),
+    installationPage: String(options.installationPage ?? 1),
     pageSize: String(options.pageSize ?? 15),
   });
-  return request(accountApiService.get(
-    `${frontendEndpoints.WORKSHOP_FIREARM_DETAIL_READ.replace("{firearmId}", encodeURIComponent(firearmId))}?${query}`,
-  ));
+  return request<Omit<WorkshopFirearmDetail, "projectionState"> & { projectionState: unknown }>(
+    accountApiService.get(
+      `${frontendEndpoints.WORKSHOP_FIREARM_DETAIL_READ.replace("{firearmId}", encodeURIComponent(firearmId))}?${query}`,
+    ),
+  ).then((detail) => ({ ...detail, projectionState: normalizeWorkshopProjectionState(detail.projectionState) }));
 };
+
+function normalizeWorkshopProjectionState(value: unknown): WorkshopProjectionState {
+  if (value === 0 || value === "Current") return "Current";
+  if (value === 1 || value === "Pending") return "Pending";
+  if (value === 2 || value === "Inconsistent") return "Inconsistent";
+  return "Unknown";
+}
 
 export const createWorkshopFirearm = (
   body: CreateWorkshopFirearmRequest,

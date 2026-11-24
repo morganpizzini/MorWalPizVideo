@@ -1,5 +1,46 @@
 # Shooter Workshop Architecture Handoff
 
+## Verification follow-up — 2026-11-24 firearm detail history and readability
+
+Firearm detail now exposes paginated installation history through the existing
+account-scoped detail read. Round history and shooting sessions share one activity
+panel, with the cumulative ledger chart and its date/change/total table shown together
+on desktop and switchable on narrow screens. The chart now labels its axes, maintenance
+saves announce success, component usage names its highest-use comparison baseline,
+and numeric projection states are normalized before rendering.
+
+Ammunition allocations remain excluded per the accepted allocation-removal target.
+Stale firearm-detail allocation requirements were reconciled in
+`docs/architecture/shooter-workshop.md`; batch stock stays in Ammunition and firearm
+consumption remains on shooting sessions.
+
+Changed files:
+
+- `MorWalPizVideo.Domain/Workshop/WorkshopService.cs`
+- `MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs`
+- `MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs`
+- `frontend/fe-packages/models/src/workshop.ts`
+- `frontend/fe-packages/services/src/workshopService.ts`
+- `frontend/fe-packages/services/src/workshopService.test.ts`
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/component.tsx`
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/component.test.tsx`
+- `frontend/shooter-workshop.client/src/routes/FirearmDetail/loader.ts`
+- `frontend/shooter-workshop.client/src/routes/Firearms/component.tsx`
+- `frontend/shooter-workshop.client/src/i18n.tsx`
+- `frontend/shooter-workshop.client/src/main.scss`
+- `MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs`
+- `docs/architecture/shooter-workshop.md`
+
+Validation:
+
+- Firearm detail component tests — 5 passed.
+- Workshop service tests — 11 passed.
+- Shooter Workshop TypeScript check — passed.
+- Vite production build to temporary output — passed.
+- Backend Release build — passed; existing ImageSharp vulnerability and package-reference warnings remain.
+- Focused firearm installation-history service test — 1 passed.
+- Rendered screenshot was attempted but unavailable because no Chromium-based browser is installed.
+
 ## Active Follow-up
 
 The allocation removal, per-recipe correction, component, firearm, maintenance,

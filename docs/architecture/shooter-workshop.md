@@ -128,10 +128,16 @@ make BackOffice part of the Workshop product flow.
 The authenticated Workshop route `/firearms/:id` owns a typed
 `GET /api/v1/workshop/firearms/{id}/detail` read. The account-scoped projection
 includes the firearm record, currently installed components with definitions and
-installation metadata, maintenance events correlated to component installation
-intervals, shooting sessions, immutable firearm round-history points, replacement
-inventory candidates, malfunction count, and reconciliation state. The route renders
-factual history only; it does not infer mechanical safety or resolution state.
+installation metadata, paged installation history, maintenance events correlated to
+component installation intervals, shooting sessions, immutable firearm round-history
+points, replacement inventory candidates, malfunction count, and reconciliation state.
+Round history offers chart and ledger-table views of the same operations; shooting
+session notes remain a distinct record list. The route renders factual history only; it
+does not infer mechanical safety or resolution state.
+
+Ammunition allocations are not part of the current product model. Batch stock is
+reviewed in Ammunition, and firearm consumption remains attributable through shooting
+sessions; the detail route must not recreate allocation records.
 
 Maintenance and malfunction recording use the existing maintenance-event model;
 `Malfunction` is an additive event value. The detail route also provides
@@ -288,9 +294,12 @@ A firearm represents a physical piece of equipment owned by the user.
 - View currently installed components.
 - View component installation history.
 - View maintenance history.
-- View ammunition allocations.
 - View shooting history.
 - Associate shooting sessions with a firearm.
+
+Ammunition allocations in earlier functional requirements are superseded by the
+accepted allocation-removal target above. Batch availability belongs to Ammunition;
+shooting-session records retain firearm consumption details.
 
 ### Privacy requirements
 
@@ -928,8 +937,10 @@ Each firearm detail page must include:
 - Installed components.
 - Installation history.
 - Maintenance history.
-- Ammunition allocations.
 - Shooting sessions.
+
+Ammunition allocations are not displayed because they are not part of the current
+Workshop model; review batch stock in Ammunition and consumption in shooting sessions.
 
 ## 12.3 Component domain
 

@@ -2,7 +2,7 @@
 
 export type WorkshopTrackingMode = "Counter" | "Interval" | "Manual";
 export type WorkshopMaintenanceEventType = "Inspection" | "Cleaning" | "ComponentMaintenance" | "Replacement" | "CounterAdjustment" | "General" | "Malfunction";
-export type WorkshopProjectionState = "Current" | "Pending" | "Inconsistent";
+export type WorkshopProjectionState = "Current" | "Pending" | "Inconsistent" | "Unknown";
 
 export interface WorkshopFirearm {
   id: string;
@@ -409,6 +409,7 @@ export interface WorkshopHistoryPage<T> {
 export interface WorkshopFirearmDetail {
   firearm: WorkshopFirearm;
   components: WorkshopComponentCondition[];
+  installationHistory: WorkshopHistoryPage<WorkshopComponentCondition>;
   maintenance: WorkshopHistoryPage<WorkshopMaintenanceEvent>;
   shooting: WorkshopHistoryPage<WorkshopShootingSession>;
   roundHistory: WorkshopRoundHistoryPoint[];
