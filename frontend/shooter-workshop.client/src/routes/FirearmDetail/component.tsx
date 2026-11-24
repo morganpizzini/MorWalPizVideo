@@ -76,7 +76,7 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
                 <tr key={installation.id}>
                   <td><strong>{definition.name}</strong>{component.identificationNote && <small>{component.identificationNote}</small>}</td>
                   <td>{formatDate(installation.installedAt, culture)}</td>
-                  <td>{installation.removedAt ? formatDate(installation.removedAt, culture) : ""}</td>
+                  <td>{installation.removedAt ? formatDate(installation.removedAt, culture) : "-"}</td>
                 </tr>
               ))}</tbody>
             </table>

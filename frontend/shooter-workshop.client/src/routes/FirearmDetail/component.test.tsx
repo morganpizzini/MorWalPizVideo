@@ -154,7 +154,7 @@ describe("Firearm detail component usage", () => {
 
     await screen.findByRole("heading", { name: "Component installation history", level: 2 });
     expect(screen.getByText("Component prior")).toBeTruthy();
-    expect(screen.getByText("Current")).toBeTruthy();
+    expect(screen.getByText("-")).toBeTruthy();
     expect(screen.getByRole("table").textContent).toContain("2026");
     expect(screen.getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/firearms/firearm-1?installationPage=2");
   });
