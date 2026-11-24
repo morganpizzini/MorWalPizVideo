@@ -27,6 +27,25 @@ public sealed class ShootingRangeTenantProvisioningService(
         return origin.Length <= 300;
     }
 
+    public async Task<ShootingRangeTenantDto?> FetchAsync(
+        string id,
+        CancellationToken cancellationToken)
+    {
+        var tenant = await repositories.Tenants.GetAsync(id, cancellationToken);
+        return tenant is null
+            ? null
+            : new ShootingRangeTenantDto(tenant.Id, tenant.Slug, tenant.Name, tenant.ClientOrigin, tenant.IsActive);
+    }
+
+    public async Task<IReadOnlyList<ShootingRangeTenantDto>> FetchAllAsync(CancellationToken cancellationToken)
+    {
+        var tenants = await repositories.Tenants.GetAllAsync(cancellationToken);
+        return tenants
+            .Select(tenant => new ShootingRangeTenantDto(
+                tenant.Id, tenant.Slug, tenant.Name, tenant.ClientOrigin, tenant.IsActive))
+            .ToArray();
+    }
+
     public Task<ShootingRangeTenantDto> CreateAsync(
         CreateShootingRangeTenantRequest request,
         CancellationToken cancellationToken) =>

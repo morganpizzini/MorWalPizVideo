@@ -170,6 +170,10 @@ public sealed class ShootingRangeApiTests
 
         using var unauthorized = await client.PostAsJsonAsync("/api/shooting-range/management/tenants", request);
         unauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var unauthorizedFetchAll = await client.GetAsync("/api/shooting-range/management/tenants");
+        unauthorizedFetchAll.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var unauthorizedFetch = await client.GetAsync("/api/shooting-range/management/tenants/test-tenant-id");
+        unauthorizedFetch.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         client.DefaultRequestHeaders.Add(
             ShootingRangeManagementAuthenticationHandler.HeaderName,
@@ -182,6 +186,21 @@ public sealed class ShootingRangeApiTests
         created.Content.Headers.ContentLength.Should().NotBeNull();
         (await created.Content.ReadAsStringAsync()).Should().NotContain("test-management-key");
 
+        using var fetched = await client.GetAsync($"/api/shooting-range/management/tenants/{tenant.Id}");
+        fetched.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await fetched.Content.ReadFromJsonAsync<ShootingRangeTenantDto>())
+            .Should().BeEquivalentTo(tenant);
+
+        using var fetchedAll = await client.GetAsync("/api/shooting-range/management/tenants");
+        fetchedAll.StatusCode.Should().Be(HttpStatusCode.OK);
+        var tenants = (await fetchedAll.Content.ReadFromJsonAsync<ShootingRangeTenantDto[]>())!;
+        tenants.Should().Contain(tenant);
+        tenants.Should().Contain(new ShootingRangeTenantDto(
+            "test-range-id", "test-range", "Local Shooting Range", Origin, true));
+
+        using var missing = await client.GetAsync("/api/shooting-range/management/tenants/missing-tenant");
+        missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
         using var scope = factory.Services.CreateScope();
         var repositories = scope.ServiceProvider.GetRequiredService<IShootingRangeRepositorySet>();
         using (repositories.TenantContext.BeginScope(tenant.Id))
@@ -189,6 +208,33 @@ public sealed class ShootingRangeApiTests
 
         using var duplicate = await client.PostAsJsonAsync("/api/shooting-range/management/tenants", request);
         duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Local_tenant_settings_are_anonymous_only_in_development()
+    {
+        await using var testFactory = new Factory();
+        using var testClient = testFactory.CreateClient();
+        using var unavailable = await testClient.GetAsync(
+            "/api/shooting-range/management/tenants/local-settings");
+        unavailable.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await using var developmentFactory = new Factory(environment: "Development", enableSwagger: true);
+        using var developmentClient = developmentFactory.CreateClient();
+        developmentClient.DefaultRequestHeaders.Remove("X-Shooting-Range");
+        using var response = await developmentClient.GetAsync(
+            "/api/shooting-range/management/tenants/local-settings");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<ShootingRangeLocalTenantSettingsDto>())
+            .Should().Be(new ShootingRangeLocalTenantSettingsDto("test-range", Origin));
+
+        using var swagger = await developmentClient.GetAsync("/swagger/v1/swagger.json");
+        using var document = JsonDocument.Parse(await swagger.Content.ReadAsStringAsync());
+        var localSettingsOperation = document.RootElement
+            .GetProperty("paths")
+            .GetProperty("/api/shooting-range/management/tenants/local-settings")
+            .GetProperty("get");
+        localSettingsOperation.TryGetProperty("security", out _).Should().BeFalse();
     }
 
     [Fact]

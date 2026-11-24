@@ -219,6 +219,8 @@ Reject lookalike suffixes. Configure AllowedHosts and forwarded-header trusted n
 
 Shooting Range is expected to become publicly reachable while remaining a minimal POC. The accepted release target is deny-by-default for all domain endpoints, including availability, with anonymous technical exceptions for login, CSRF and health. This target is not yet the current anonymous-domain posture.
 
+The tenant registry list, item lookup, and provisioning routes require the management key. A separate local-settings route is anonymous only in the Development environment and returns `404` elsewhere; it exposes only the configured local tenant slug and client origin.
+
 The first administrator is inserted manually into MongoDB. There is no bootstrap-admin endpoint and no secret or reusable password hash in source or documentation. Public registration is not part of the approved release posture; administrator-created ordinary users are the working assumption pending final confirmation.
 
 Required release controls are:

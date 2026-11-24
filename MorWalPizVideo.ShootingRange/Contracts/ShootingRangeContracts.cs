@@ -88,3 +88,4 @@ public sealed record CreateShootingRangeTenantRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Name,
     [Required, StringLength(300)] string ClientOrigin);
 public sealed record ShootingRangeTenantDto(string Id, string Slug, string Name, string ClientOrigin, bool IsActive);
+public sealed record ShootingRangeLocalTenantSettingsDto(string Slug, string ClientOrigin);
