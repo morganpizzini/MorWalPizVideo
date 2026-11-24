@@ -128,9 +128,10 @@ make BackOffice part of the Workshop product flow.
 The authenticated Workshop route `/firearms/:id` owns a typed
 `GET /api/v1/workshop/firearms/{id}/detail` read. The account-scoped projection
 includes the firearm record, currently installed components with definitions and
-installation metadata, paged installation history, maintenance events correlated to
-component installation intervals, shooting sessions, immutable firearm round-history
-points, replacement inventory candidates, malfunction count, and reconciliation state.
+installation metadata (including each installation date in the installed-component
+list), paged installation history, maintenance events correlated to component
+installation intervals, shooting sessions, immutable firearm round-history points,
+replacement inventory candidates, malfunction count, and reconciliation state.
 Round history offers chart and ledger-table views of the same operations; shooting
 session notes remain a distinct record list. The route renders factual history only; it
 does not infer mechanical safety or resolution state.

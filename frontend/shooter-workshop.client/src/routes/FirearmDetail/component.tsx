@@ -29,7 +29,7 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
   const processedMaintenance = useRef<unknown>(null);
   useEffect(() => {
     if (maintenanceFetcher.state !== "idle" || !maintenanceFetcher.data || !("ok" in maintenanceFetcher.data) ||
-        !maintenanceFetcher.data.ok || maintenanceFetcher.data === processedMaintenance.current) return;
+      !maintenanceFetcher.data.ok || maintenanceFetcher.data === processedMaintenance.current) return;
     processedMaintenance.current = maintenanceFetcher.data;
     setMaintenanceKey(crypto.randomUUID());
   }, [maintenanceFetcher.state, maintenanceFetcher.data]);
@@ -50,7 +50,7 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
   return (
     <div>
       <PageTitle title={title} subtitle={`${firearm.caliber}${firearm.category ? ` · ${firearm.category}` : ""}`} />
-      <div className="stats-grid">
+      <div className="stats-grid mb-3">
         <Stat label="Total rounds" value={formatNumber(firearm.totalRounds, culture)} />
         <Stat label="Status" value={t(firearm.archived ? "archived" : "active")} />
         <Stat label="Malfunctions" value={detail.malfunctionCount} />
@@ -76,7 +76,7 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
                 <tr key={installation.id}>
                   <td><strong>{definition.name}</strong>{component.identificationNote && <small>{component.identificationNote}</small>}</td>
                   <td>{formatDate(installation.installedAt, culture)}</td>
-                  <td>{installation.removedAt ? formatDate(installation.removedAt, culture) : t("Current")}</td>
+                  <td>{installation.removedAt ? formatDate(installation.removedAt, culture) : ""}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -123,13 +123,6 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
               </div>
             </>
           )}
-        </section>
-        <section className="shooting-session-history">
-          <div className="section-heading"><h3>{t("Shooting sessions")}</h3></div>
-        {detail.shooting.items.length === 0 ? <p>{t("No shooting sessions recorded.")}</p> : (
-          <ul className="timeline">{detail.shooting.items.map(({ session, superseded }) => <li key={session.id} className={superseded ? "timeline-muted" : ""}><strong>{formatNumber(session.totalRounds, culture)} {t("rounds")}{superseded && ` · ${t("superseded")}`}</strong>&nbsp;<time>{formatDate(session.date, culture)}</time>{session.notes && <p>{session.notes}</p>}</li>)}</ul>
-        )}
-        <HistoryPager kind="shooting" page={detail.shooting.page} hasMore={detail.shooting.hasMore} searchParams={searchParams} />
         </section>
       </section>
     </div>
@@ -237,6 +230,7 @@ function ComponentRow({ item, maxRounds }: { item: WorkshopComponentCondition; m
     <div className="component-usage-heading">
       <div>
         <strong>{item.definition.name}</strong>
+        <span>{t("Installed")}: <time dateTime={item.installation.installedAt}>{formatDate(item.installation.installedAt, culture)}</time></span>
         {item.component.identificationNote && <span>{item.component.identificationNote}</span>}
       </div>
       <strong className="component-usage-total">{formatNumber(item.component.totalRounds, culture)} {t("rounds")}</strong>

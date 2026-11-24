@@ -100,6 +100,10 @@ describe("Firearm detail component usage", () => {
     ]));
 
     await screen.findByRole("heading", { name: "Installed components", level: 2 });
+    const installedDate = screen.getByRole("heading", { name: "Installed components", level: 2 })
+      .closest(".panel")?.querySelector(".component-usage-row time");
+    expect(installedDate?.getAttribute("dateTime")).toBe("2026-01-01T00:00:00Z");
+    expect(installedDate?.parentElement?.textContent).toContain("Installed");
     const relativeMeters = screen.getAllByRole("meter", { name: "Relative use compared with the highest-use component" });
     expect(relativeMeters.map((meter) => meter.getAttribute("aria-valuenow"))).toEqual(["50", "100"]);
     expect(screen.getByRole("meter", { name: "Service interval usage" }).getAttribute("aria-valuenow")).toBe("50");

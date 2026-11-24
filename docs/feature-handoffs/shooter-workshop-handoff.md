@@ -3,7 +3,8 @@
 ## Verification follow-up — 2026-11-24 firearm detail history and readability
 
 Firearm detail now exposes paginated installation history through the existing
-account-scoped detail read. Round history and shooting sessions share one activity
+account-scoped detail read, and the installed-components list shows each component's
+localized installation date. Round history and shooting sessions share one activity
 panel, with the cumulative ledger chart and its date/change/total table shown together
 on desktop and switchable on narrow screens. The chart now labels its axes, maintenance
 saves announce success, component usage names its highest-use comparison baseline,
@@ -40,6 +41,20 @@ Validation:
 - Backend Release build — passed; existing ImageSharp vulnerability and package-reference warnings remain.
 - Focused firearm installation-history service test — 1 passed.
 - Rendered screenshot was attempted but unavailable because no Chromium-based browser is installed.
+
+## Verification follow-up — 2026-11-24 installed-component dates
+
+The Installed components list now shows each component's installation date using the
+active Workshop culture and existing date formatter. The date is exposed as a semantic
+`<time>` value as well as readable text.
+
+Validation:
+
+- Focused installation-date regression test — passed.
+- Shooter Workshop TypeScript check — passed.
+- The full firearm-detail component test file has one unrelated failure: its existing
+  “Current” assertion does not match the currently blank Removed cell for a current
+  installation. That cell is outside this change and was left untouched.
 
 ## Active Follow-up
 
