@@ -11,7 +11,7 @@ At the time this ADR was accepted, source allowed anonymous domain reads/registr
 
 ## Decision
 
-Apply deny-by-default authorization to every Shooting Range domain endpoint. The only anonymous technical exceptions are login, CSRF token acquisition, and liveness/readiness probes. Availability requires authentication, and administrator operations additionally require the `admin` role.
+Apply deny-by-default authorization to every Shooting Range domain endpoint. Login, CSRF token acquisition, and liveness/readiness probes remain anonymous technical exceptions. Availability requires authentication, and administrator operations additionally require the `admin` role. When enabled by `FeatureManagement:EnableSwagger`, the Swagger UI and OpenAPI document are accessible without application authentication; production access must be constrained at trusted ingress.
 
 The first administrator is inserted manually into the Shooting Range Azure SQL database using the current password-hashing implementation. No bootstrap-admin endpoint is introduced, and credentials or reusable password hashes are never stored in source or documentation.
 
@@ -85,7 +85,7 @@ requires actual requests to select the tenant bound to that origin.
 `ShootingRange:ManagementKey` setting. Provisioning creates a tenant and its
 initial configuration; it does not create an administrator or accept the key
 from a client deployment. Swagger exposes the management scheme in Development
-or when `ShootingRange:EnableSwagger` is enabled. Keep production ingress,
+or when `FeatureManagement:EnableSwagger` is enabled. Keep production ingress,
 secret rotation and Swagger access under operator control.
 
 The explicit `20261120233255_AddShootingRangeTenancy` migration adds the

@@ -22,7 +22,7 @@ Before cookie authentication, the API resolves exactly one active tenant and bin
 
 Domain endpoints require authentication by fallback policy. CSRF acquisition, login, health probes and the separately authenticated management API are technical exceptions. Public registration has been removed; provisioning creates a tenant and its initial configuration, not an administrator. The existing manual first-administrator policy remains in effect and the administrator row must be created with the new tenant ID.
 
-`POST /api/shooting-range/management/tenants` provisions a range using the `X-Shooting-Range-Management-Key` header. Configure `ShootingRange:ManagementKey` (App Service setting `ShootingRange__ManagementKey`) only on the API; production startup requires at least 32 characters. Swagger exposes the management-key scheme only in Development or when `ShootingRange:EnableSwagger` is enabled. Keep production Swagger and the provisioning route behind trusted ingress, and never put the key in client configuration.
+`POST /api/shooting-range/management/tenants` provisions a range using the `X-Shooting-Range-Management-Key` header. Configure `ShootingRange:ManagementKey` (App Service setting `ShootingRange__ManagementKey`) only on the API; production startup requires at least 32 characters. Swagger is controlled by `FeatureManagement:EnableSwagger`, disabled by default and enabled in Development settings. When enabled, its UI and OpenAPI document are accessible without application authentication and expose the management-key scheme. Keep production Swagger and the provisioning route behind trusted ingress, and never put the key in client configuration.
 
 ## Defaults and time
 

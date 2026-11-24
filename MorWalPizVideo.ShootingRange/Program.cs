@@ -25,7 +25,8 @@ builder.Services.AddSingleton(new ShootingRangeTenantContext(
 builder.Services.AddAntiforgery(options => { options.HeaderName = "X-CSRF-TOKEN"; options.Cookie.Name = "__Host-shooting-range-csrf"; options.Cookie.HttpOnly = false; options.Cookie.SecurePolicy = CookieSecurePolicy.Always; options.Cookie.SameSite = SameSiteMode.None; });
 builder.Services.AddScoped<ShootingRangeSessions>();
 builder.Services.AddScoped<ShootingRangeTenantProvisioningService>();
-var enableSwagger = builder.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ShootingRange:EnableSwagger");
+var enableSwagger = await StartupConfigurationValidation.IsFeatureEnabledAsync(
+    builder.Configuration, StartupConfigurationValidation.EnableSwagger);
 if (enableSwagger)
 {
     builder.Services.AddSwaggerGen(options =>
@@ -215,6 +216,11 @@ app.Use(async (context, next) =>
 });
 app.UseMiddleware<ShootingRangeCorsMiddleware>();
 app.UseMiddleware<ShootingRangeTenantMiddleware>();
+if (enableSwagger)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {
@@ -229,11 +235,6 @@ app.Use(async (context, next) =>
 });
 app.UseAuthorization();
 app.UseRateLimiter();
-if (enableSwagger)
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 app.MapControllers();
 app.Run();
 
@@ -244,6 +245,7 @@ internal static class StartupConfigurationValidation
     internal const string EnableInMemoryDb = "EnableInMemoryDb";
     internal const string UseMock = "UseMock";
     internal const string EnableKeyVault = "EnableKeyVault";
+    internal const string EnableSwagger = "EnableSwagger";
 
     internal static void ValidateManagementKey(IConfiguration configuration, IHostEnvironment environment)
     {

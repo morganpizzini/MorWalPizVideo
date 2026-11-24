@@ -84,6 +84,32 @@ public sealed class ShootingRangeApiTests
     }
 
     [Theory]
+    [InlineData(true, HttpStatusCode.OK)]
+    [InlineData(false, HttpStatusCode.NotFound)]
+    public async Task Swagger_is_controlled_by_feature_management(bool enabled, HttpStatusCode expectedStatus)
+    {
+        await using var factory = new Factory(enableSwagger: enabled);
+        using var client = await LoginAsync(factory, admin: false);
+
+        using var response = await client.GetAsync("/swagger/v1/swagger.json");
+
+        response.StatusCode.Should().Be(expectedStatus);
+    }
+
+    [Fact]
+    public async Task Swagger_is_accessible_without_authentication_when_enabled()
+    {
+        await using var factory = new Factory(enableSwagger: true);
+        using var client = factory.CreateClient();
+
+        using var uiResponse = await client.GetAsync("/swagger");
+        using var documentResponse = await client.GetAsync("/swagger/v1/swagger.json");
+
+        uiResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        documentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Theory]
     [InlineData(Origin, true)]
     [InlineData("https://evil.example", false)]
     [InlineData(Origin + ".evil.example", false)]
@@ -967,14 +993,21 @@ public sealed class ShootingRangeApiTests
     {
         private readonly bool enableInMemoryDb;
         private readonly bool useMock;
+        private readonly bool enableSwagger;
         private readonly string environment;
         private readonly string inMemoryDatabaseName = $"ShootingRange-{Guid.NewGuid():N}";
         public string? InMemoryAdminPassword { get; }
 
-        public Factory(bool enableInMemoryDb = true, bool useMock = false, string environment = "Test", bool seedInMemoryAdmin = false)
+        public Factory(
+            bool enableInMemoryDb = true,
+            bool useMock = false,
+            string environment = "Test",
+            bool seedInMemoryAdmin = false,
+            bool enableSwagger = false)
         {
             this.enableInMemoryDb = enableInMemoryDb;
             this.useMock = useMock;
+            this.enableSwagger = enableSwagger;
             this.environment = environment;
             InMemoryAdminPassword = seedInMemoryAdmin ? Guid.NewGuid().ToString("N") : null;
         }
@@ -994,11 +1027,13 @@ public sealed class ShootingRangeApiTests
             builder.UseSetting("FeatureManagement:UseMock", useMock.ToString());
             builder.UseSetting("FeatureManagement:EnableInMemoryDb", enableInMemoryDb.ToString());
             builder.UseSetting("FeatureManagement:EnableKeyVault", "false");
+            builder.UseSetting("FeatureManagement:EnableSwagger", enableSwagger.ToString());
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["FeatureManagement:UseMock"] = useMock.ToString(),
                 ["FeatureManagement:EnableInMemoryDb"] = enableInMemoryDb.ToString(),
                 ["FeatureManagement:EnableKeyVault"] = "false",
+                ["FeatureManagement:EnableSwagger"] = enableSwagger.ToString(),
                 ["ShootingRange:InMemoryAdminPassword"] = InMemoryAdminPassword,
                 ["ShootingRange:LocalTenantSlug"] = "test-range",
                 ["ShootingRange:LocalTenantOrigin"] = Origin,
