@@ -1,4 +1,4 @@
-import { Link, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import { Link, useLoaderData, useNavigate, useOutletContext, useSearchParams } from "react-router";
 import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
 import type { WorkshopAnalytics, WorkshopAnalyticsBucket, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
@@ -9,10 +9,12 @@ import { useI18n } from "../../i18n";
 import { formatDate, formatNumber } from "../../i18n-formatters";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { readWorkshopPreferences, writeWorkshopPreferences, type WorkshopPersonalGoal } from "../../services/workshopPreferences";
+import type { WorkshopShellContext } from "../../layouts/AppShell";
 
 export default function Dashboard() {
   const data = useLoaderData() as DashboardLoaderData;
   const { t } = useI18n();
+  const { offline } = useOutletContext<WorkshopShellContext>();
   return (
     <div>
       <PageTitle title={t("Workshop dashboard")} subtitle={t("Account-owned equipment, stock and operation history.")} />
@@ -20,6 +22,43 @@ export default function Dashboard() {
         <p className="eyebrow">{t("Operational overview")}</p>
         <h2>{t("Every operation remains attributable.")}</h2>
         <p>{t("Firearms, physical components, batches and shooting facts are kept independent by the API.")}</p>
+        <section className="dashboard-offline" aria-label={t("Offline readiness")}>
+          <div className="dashboard-offline-copy">
+            <strong>{offline.effectivelyOffline ? t("Offline workspace") : t("Offline readiness")}</strong>
+            <span>{offline.effectivelyOffline
+              ? t("Changes are saved on this device. Server session status will be checked when reconnected.")
+              : offline.preparedAt
+                ? t("This device has a saved Workshop snapshot.")
+                : t("Prepare this device while online before going to the range.")}</span>
+          </div>
+          <div className="dashboard-offline-actions">
+            {offline.pending > 0 && <span>{t("{count} pending", { count: offline.pending })}</span>}
+            {!offline.effectivelyOffline && (
+              <>
+                <button
+                  type="button"
+                  className="button button-quiet dashboard-offline-prepare"
+                  disabled={offline.busy || offline.effectivelyOffline}
+                  aria-busy={offline.preparing}
+                  onClick={offline.prepare}
+                >
+                  {offline.preparing && <span className="loading-spinner" aria-hidden="true" />}
+                  {offline.preparing ? t("Preparing…") : t("Prepare offline")}
+                </button>
+                {offline.pending > 0 && (
+                  <button
+                    type="button"
+                    className="button button-quiet"
+                    disabled={offline.busy || offline.effectivelyOffline}
+                    onClick={offline.sync}
+                  >
+                    {t("Sync now")}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </section>
         <Link className="button button-primary" to="/sessions/shooting">{t("Record a shooting session")}</Link>
       </section>
       <section className="panel">

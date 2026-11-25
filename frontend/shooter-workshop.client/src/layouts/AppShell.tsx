@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useFetcher, useLocation, useNavigate } from "react-router";
 import { markWorkshopCapabilityGuideSeen } from "@morwalpizvideo/services";
+import { useToast } from "@morwalpiz/layout/notifications";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
 import CapabilityWizard from "../components/CapabilityWizard";
@@ -19,6 +20,18 @@ const navigation = [
 
 type HeaderIcon = "globe" | "download" | "logout";
 
+export interface WorkshopShellContext {
+  offline: {
+    effectivelyOffline: boolean;
+    preparedAt: string | null;
+    pending: number;
+    busy: boolean;
+    preparing: boolean;
+    prepare: () => void;
+    sync: () => void;
+  };
+}
+
 function HeaderIcon({ name }: { name: HeaderIcon }) {
   if (name === "globe") {
     return <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8.5" /><path d="M3.8 12h16.4M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5S9.8 5.8 12 3.5Z" /></svg>;
@@ -32,6 +45,7 @@ function HeaderIcon({ name }: { name: HeaderIcon }) {
 export default function AppShell() {
   const { loading, session, error, logout, refresh, updateSession, offline } = useWorkshopAuth();
   const { t } = useI18n();
+  const toast = useToast();
   const { canInstall, installed, reopen } = useInstallPrompt();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +59,9 @@ export default function AppShell() {
   const offlineFetcher = useFetcher<typeof offlineAction>();
   const syncAttempted = useRef(false);
   const authRefreshAttempted = useRef<unknown>(null);
+  const activeOfflineIntent = useRef<"prepare" | "sync" | null>(null);
+  const lastOfflineIntent = useRef<"prepare" | "sync" | null>(null);
+  const preparationDataBeforeSubmit = useRef(offlineFetcher.data);
   const guideVersion = session.account?.workshopCapabilityGuideSeenVersion ?? 1;
   const handleSignOut = async () => {
     setLogoutError(null);
@@ -98,9 +115,37 @@ export default function AppShell() {
     return subscribeToOfflineChanges(refreshOfflineState);
   }, [session.account?.id]);
   useEffect(() => {
+    if (offlineFetcher.state !== "idle" || activeOfflineIntent.current !== "prepare" ||
+        !offlineFetcher.data || offlineFetcher.data === preparationDataBeforeSubmit.current) return;
+    if ("preparedAt" in offlineFetcher.data && offlineFetcher.data.ok) {
+      if (offlineFetcher.data.storagePersisted) {
+        toast.show(t("Offline readiness"), t("Offline data prepared."), { variant: "success" });
+      } else {
+        toast.show(t("Offline readiness"), t("Offline data prepared, but the browser may clear it."), {
+          variant: "warning",
+          autohide: false,
+        });
+      }
+    } else if ("error" in offlineFetcher.data) {
+      toast.show(t("Offline preparation failed"), offlineFetcher.data.error, {
+        variant: "danger",
+        autohide: false,
+      });
+    } else {
+      toast.show(t("Offline preparation failed"), t("The request could not be completed."), {
+        variant: "danger",
+        autohide: false,
+      });
+    }
+    activeOfflineIntent.current = null;
+    preparationDataBeforeSubmit.current = offlineFetcher.data;
+  }, [offlineFetcher.data, offlineFetcher.state, t, toast]);
+  useEffect(() => {
     if (effectivelyOffline || offlineState.pending === 0 || syncAttempted.current ||
       offlineFetcher.state !== "idle") return;
     syncAttempted.current = true;
+    activeOfflineIntent.current = "sync";
+    lastOfflineIntent.current = "sync";
     offlineFetcher.submit({ intent: "sync" }, { method: "post", action: "/" });
   }, [effectivelyOffline, offlineFetcher, offlineState.pending]);
   useEffect(() => {
@@ -136,6 +181,38 @@ export default function AppShell() {
   if (!session.authenticated) {
     return <LoadingState fullScreen label={error ?? t("Redirecting to account login…")} />;
   }
+  const prepareOffline = () => {
+    preparationDataBeforeSubmit.current = offlineFetcher.data;
+    activeOfflineIntent.current = "prepare";
+    lastOfflineIntent.current = "prepare";
+    offlineFetcher.submit({ intent: "prepare" }, { method: "post", action: "/" });
+  };
+  const syncOffline = () => {
+    syncAttempted.current = true;
+    activeOfflineIntent.current = "sync";
+    lastOfflineIntent.current = "sync";
+    offlineFetcher.submit({ intent: "sync" }, { method: "post", action: "/" });
+  };
+  const shellContext: WorkshopShellContext = {
+    offline: {
+      effectivelyOffline,
+      preparedAt: offlineState.preparedAt,
+      pending: offlineState.pending,
+      busy: offlineFetcher.state !== "idle",
+      preparing: offlineFetcher.state !== "idle" && activeOfflineIntent.current === "prepare",
+      prepare: prepareOffline,
+      sync: syncOffline,
+    },
+  };
+  const showSyncError = offlineFetcher.state === "idle" &&
+    lastOfflineIntent.current === "sync" &&
+    !!offlineFetcher.data &&
+    "error" in offlineFetcher.data;
+  const showSyncAuthError = offlineFetcher.state === "idle" &&
+    lastOfflineIntent.current === "sync" &&
+    !!offlineFetcher.data &&
+    "authRequired" in offlineFetcher.data &&
+    offlineFetcher.data.authRequired;
   return (
     <div className="workshop-shell">
       <header className="workshop-header">
@@ -174,45 +251,9 @@ export default function AppShell() {
         </div>
       </header>
       <main className="workshop-main" data-feedback-app-content>
-        <section className="offline-status" aria-live="polite">
-          <div>
-            <strong>{effectivelyOffline ? t("Offline workspace") : t("Offline readiness")}</strong>
-            <span>{effectivelyOffline
-              ? t("Changes are saved on this device. Server session status will be checked when reconnected.")
-              : offlineState.preparedAt
-                ? t("This device has a saved Workshop snapshot.")
-                : t("Prepare this device while online before going to the range.")}</span>
-          </div>
-          <div className="offline-status-actions">
-            {offlineState.pending > 0 && <span>{t("{count} pending", { count: offlineState.pending })}</span>}
-            {!effectivelyOffline && (
-              <>
-                <button
-                  type="button"
-                  className="button button-quiet"
-                  disabled={offlineFetcher.state !== "idle" || !navigator.onLine}
-                  onClick={() => offlineFetcher.submit({ intent: "prepare" }, { method: "post", action: "/" })}
-                >
-                  {offlineFetcher.state === "submitting" && offlineFetcher.formData?.get("intent") === "prepare"
-                    ? t("Preparing…")
-                    : t("Prepare offline")}
-                </button>
-                {offlineState.pending > 0 && (
-                  <button
-                    type="button"
-                    className="button button-quiet"
-                    disabled={offlineFetcher.state !== "idle" || !navigator.onLine}
-                    onClick={() => {
-                      syncAttempted.current = true;
-                      offlineFetcher.submit({ intent: "sync" }, { method: "post", action: "/" });
-                    }}
-                  >
-                    {t("Sync now")}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+        <InstallPrompt />
+        {(offlineState.blocked > 0 || showSyncError || showSyncAuthError || logoutError) && (
+          <div className="offline-shell-alerts">
           {offlineState.blocked > 0 && (
             <div className="offline-blocked" role="alert">
               {offlineState.commands.filter(command => command.status === "blocked").map(command => (
@@ -220,25 +261,16 @@ export default function AppShell() {
               ))}
             </div>
           )}
-          {offlineFetcher.state === "idle" && offlineFetcher.data && "error" in offlineFetcher.data && (
+          {showSyncError && offlineFetcher.data && "error" in offlineFetcher.data && (
             <p className="form-error" role="alert">{offlineFetcher.data.error}</p>
           )}
-          {offlineFetcher.state === "idle" && offlineFetcher.data && "authRequired" in offlineFetcher.data &&
-            offlineFetcher.data.authRequired && (
-              <p className="form-error" role="alert">{t("Your session expired. Sign in again to sync saved changes.")}</p>
-            )}
+          {showSyncAuthError && (
+            <p className="form-error" role="alert">{t("Your session expired. Sign in again to sync saved changes.")}</p>
+          )}
           {logoutError && <p className="form-error" role="alert">{logoutError}</p>}
-          {offlineFetcher.state === "idle" && offlineFetcher.data && "preparedAt" in offlineFetcher.data &&
-            offlineFetcher.data.ok && "storagePersisted" in offlineFetcher.data && offlineFetcher.data.storagePersisted && (
-              <p className="form-success" role="status">{t("Offline data prepared.")}</p>
-            )}
-          {offlineFetcher.state === "idle" && offlineFetcher.data && "preparedAt" in offlineFetcher.data &&
-            offlineFetcher.data.ok && "storagePersisted" in offlineFetcher.data && !offlineFetcher.data.storagePersisted && (
-              <p className="form-error" role="status">{t("Offline data prepared, but the browser may clear it.")}</p>
-            )}
-        </section>
-        <InstallPrompt />
-        <Outlet />
+          </div>
+        )}
+        <Outlet context={shellContext} />
       </main>
       {wizardOpen ? (
         <CapabilityWizard

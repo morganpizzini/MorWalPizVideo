@@ -41,6 +41,36 @@ describe('ToastProvider', () => {
     );
   });
 
+  it('keeps notifications independently dismissible when they are created together', async () => {
+    function Consumer() {
+      const toast = useToast();
+      return (
+        <button
+          onClick={() => {
+            toast.show('Success', 'First result', { autohide: false });
+            toast.show('Success', 'Second result', { autohide: false });
+          }}
+        >
+          Notify twice
+        </button>
+      );
+    }
+
+    render(
+      <ToastProvider closeLabel="Dismiss notification">
+        <Consumer />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notify twice' }));
+    expect(screen.getByText('First result')).toBeInTheDocument();
+    expect(screen.getByText('Second result')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss notification' })[0]);
+    await waitFor(() => expect(screen.queryByText('First result')).not.toBeInTheDocument());
+    expect(screen.getByText('Second result')).toBeInTheDocument();
+  });
+
   it('keeps a single page success toast visible after real router navigation', async () => {
     const action = vi.fn(async () => ({ success: true }));
     const router = createMemoryRouter(

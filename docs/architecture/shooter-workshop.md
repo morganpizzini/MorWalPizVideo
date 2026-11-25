@@ -56,6 +56,12 @@ The foreground shell syncs when connectivity returns; Background Sync and Push
 are not used. Confirmed sign-out warns and clears all local workspaces and queued
 commands. Preparation requests persistent browser storage where supported and
 warns if it is not granted; browser/device verification remains a release gate.
+The authenticated shell owns offline-state tracking and foreground reconnect
+sync on every protected route. The offline readiness status and explicit
+prepare/manual-sync controls render only in the dashboard hero; preparation
+success, persistence warnings, and failures use dismissible shared-layout toast
+notifications. Blocked commands and sync-session failures remain visible in
+shell-level alerts on every protected route.
 
 Workshop account login keeps the existing HttpOnly cookie transport. An unchecked
 login creates an eight-hour server session and a browser session cookie; selecting

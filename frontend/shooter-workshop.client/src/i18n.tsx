@@ -380,6 +380,8 @@ const italian: Record<string, string> = {
   "The dashboard response was empty.": "La risposta della dashboard era vuota.",
   "Offline workspace": "Spazio di lavoro offline",
   "Offline readiness": "Preparazione offline",
+  "Dismiss notification": "Chiudi notifica",
+  "Offline preparation failed": "Preparazione offline non riuscita",
   "Changes are saved on this device. Server session status will be checked when reconnected.": "Le modifiche sono salvate su questo dispositivo. La sessione verrà verificata quando tornerai online.",
   "This device has a saved Workshop snapshot.": "Questo dispositivo contiene una copia dei dati Workshop.",
   "Prepare this device while online before going to the range.": "Prepara questo dispositivo online prima di andare al poligono.",

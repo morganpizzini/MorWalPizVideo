@@ -38,6 +38,13 @@ Applications must not introduce direct `fetch` or Axios clients when this packag
 
 Owns reusable visual components used by more than one application. App-specific business workflows and routes remain local.
 
+The opt-in `@morwalpiz/layout/notifications` entry point exports the shared
+toast provider, hook, and types. It uses React Bootstrap, so consumers must
+provide compatible Bootstrap styles and mount the provider inside any required
+localization context. The export is opt-in; importing the base layout package
+does not mount a provider or add global styles. BackOffice retains its existing
+`ToastNotification` import paths as compatibility re-exports.
+
 The opt-in `@morwalpiz/layout/theme` stylesheet and appearance API own the shared
 System/Light/Dark preference contract and semantic palette for the public,
 Shooting Range, and Shooter Workshop clients. Preference is stored in
@@ -52,7 +59,7 @@ unchanged unless they import the theme subpath.
 - React 19 and React Router data routes.
 - Protected root loader validates authentication.
 - Feature routes use loaders, actions, and fetchers.
-- React Bootstrap, Lucide icons, shared services, and local reusable management components.
+- React Bootstrap, Lucide icons, shared services, and local reusable management components. Toasts use the shared opt-in layout notification provider through the existing BackOffice compatibility imports.
 - The installable shell uses the same-origin `manifest.webmanifest` and the existing `/push-sw.js` registration. `beforeinstallprompt` is captured before router bootstrap and exposed only inside the authenticated shell; no offline cache or authenticated response caching is introduced.
 
 Current authentication is secure HttpOnly cookie based with CSRF protection; the SPA neither stores a raw JWT nor sends browser Bearer headers. Real-browser cross-origin verification remains a release gate, not proof supplied by unit tests. Public video, Ask and Shooting ITA use isolated public transport; frozen shop retains its independent legacy instance. See [transport isolation](transport-isolation.md).
