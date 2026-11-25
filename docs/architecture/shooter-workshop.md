@@ -36,12 +36,26 @@ records carry additive summary metadata. The Workshop SPA exposes the compatible
 component, recipe, maintenance, shooting, history, initial-round, and safe-return-path
 flows without introducing browser-authored installation attribution.
 
-The Workshop SPA is also installable as a PWA. The client exposes a root-scoped
-manifest and dedicated application icons, captures the browser installation prompt
-before router bootstrap, and renders a localized installation invitation only inside
-the authenticated shell. Its service worker is lifecycle-only: it does not intercept
-requests or cache account/API data, and it does not add Push or background
-synchronization behavior.
+The Workshop SPA is installable and supports bounded offline work. Its root-scoped
+service worker precaches the application shell and static assets, serves the SPA
+entry point for offline navigation, and bypasses API requests. It never caches
+authenticated API responses. Native IndexedDB stores explicitly prepared,
+account-partitioned snapshots and a local command outbox. The supported offline
+operations are shooting sessions, maintenance events, catalogue create/archive,
+physical component creation, and component replacement; catalogue update/delete
+and unrelated routes remain online-only.
+
+Offline access requires a previously successful online sign-in and local device
+preparation. The browser stores only the remembered account identity, not the
+HttpOnly session cookie or a token. On reconnection, the server session is checked
+again and pending commands synchronize in order through existing authenticated
+APIs. Commands carry idempotency keys; server conflicts are reported and block
+dependent operations. Component replacement is a two-command remove-then-create
+sequence, so a failed second phase is explicitly surfaced as partial completion.
+The foreground shell syncs when connectivity returns; Background Sync and Push
+are not used. Confirmed sign-out warns and clears all local workspaces and queued
+commands. Preparation requests persistent browser storage where supported and
+warns if it is not granted; browser/device verification remains a release gate.
 
 Workshop account login keeps the existing HttpOnly cookie transport. An unchecked
 login creates an eight-hour server session and a browser session cookie; selecting
@@ -1076,10 +1090,10 @@ the existing culture preference. The bootstrap sets the document's resolved
 theme before client startup. The installation manifest and service-worker
 lifecycle colors remain static and unchanged.
 
-Workshop tests (**48 passed**) and the checked production build passed.
-Screenshot-based responsive review, deployed CSP, and service-worker
-update/offline verification remain release gates; the local environment had no
-Chromium-based browser available.
+Workshop unit suites and the checked production build have passed during their
+respective implementation gates. Screenshot-based responsive review, deployed CSP,
+and real-device offline preparation, reconnect, eviction, and sign-out verification
+remain release gates; the local environment had no Chromium-based browser available.
 
 ---
 

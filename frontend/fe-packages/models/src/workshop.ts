@@ -66,6 +66,7 @@ export interface CreateWorkshopComponentDefinitionRequest {
   defaultServiceInterval?: number | null;
   trackingMode?: WorkshopTrackingMode;
   compatibilityTags?: string[];
+  idempotencyKey?: string;
 }
 
 export interface UpdateWorkshopComponentDefinitionRequest extends CreateWorkshopComponentDefinitionRequest {

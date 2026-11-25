@@ -1,6 +1,8 @@
 import { correctWorkshopShooting, recordWorkshopShooting } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
 import { action as maintenanceAction } from "../Maintenance/action";
+import { getRememberedAccountId, shootingSnapshot } from "../../services/offlineStore";
+import { runOrQueueOffline } from "../../services/offlineMutations";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
@@ -36,7 +38,7 @@ export async function action(args: ActionFunctionArgs) {
           !Number.isInteger(untrackedAmmunition) || untrackedAmmunition < 0) {
         return { ok: false as const, error: "Please review the shooting form." };
       }
-      await recordWorkshopShooting({
+      const request = {
         firearmId,
         date: new Date(date).toISOString(),
         totalRounds,
@@ -45,7 +47,18 @@ export async function action(args: ActionFunctionArgs) {
         untrackedAmmunition,
         usageSegments: json(form, "usageSegments", []),
         idempotencyKey: text(form, "idempotencyKey") || crypto.randomUUID(),
-      });
+      };
+      const accountId = getRememberedAccountId() ?? "";
+      const localSessionId = `local:${crypto.randomUUID()}`;
+      const result = await runOrQueueOffline(
+        () => recordWorkshopShooting(request),
+        "shooting-create",
+        { request },
+        accountId
+          ? { sessions: { upsert: [shootingSnapshot(accountId, localSessionId, request)] } }
+          : undefined,
+      );
+      if (result.offline) return { ok: true as const, intent, offline: true };
       return { ok: true as const, intent };
     }
 

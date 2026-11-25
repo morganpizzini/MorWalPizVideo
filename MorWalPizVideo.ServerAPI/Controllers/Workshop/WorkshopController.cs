@@ -115,7 +115,7 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         {
             return Ok(await service.CreateComponentDefinitionAsync(AccountId(), new(request.Name, request.Manufacturer,
                 request.Model, request.Description, request.DefaultServiceInterval, request.TrackingMode, request.Notes,
-                request.CompatibilityTags), ct));
+                request.CompatibilityTags, request.IdempotencyKey), ct));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
     }

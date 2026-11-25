@@ -37,6 +37,7 @@ public sealed class CreateWorkshopComponentDefinitionRequest
     public WorkshopTrackingMode TrackingMode { get; init; } = WorkshopTrackingMode.Counter;
     [StringLength(4000)] public string? Notes { get; init; }
     public IReadOnlyList<string> CompatibilityTags { get; init; } = [];
+    [StringLength(80)] public string? IdempotencyKey { get; init; }
 }
 
 public sealed class UpdateWorkshopComponentDefinitionRequest

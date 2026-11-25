@@ -50,6 +50,47 @@ describe("installPrompt", () => {
     expect(getInstallPromptSnapshot().canInstall).toBe(false);
   });
 
+  it("reports a rejected browser prompt and consumes the one-shot event", async () => {
+    const prompt = vi.fn().mockRejectedValue(new Error("prompt unavailable"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    window.dispatchEvent(
+      Object.assign(new Event("beforeinstallprompt"), {
+        prompt,
+        userChoice: Promise.resolve({ outcome: "accepted" as const }),
+      }),
+    );
+    const { result } = renderHook(() => useInstallPrompt());
+
+    await act(async () => {
+      await expect(result.current.install()).resolves.toBe("failed");
+    });
+
+    expect(prompt).toHaveBeenCalledOnce();
+    expect(getInstallPromptSnapshot()).toMatchObject({ canInstall: false, installError: true });
+    await expect(result.current.install()).resolves.toBeUndefined();
+    error.mockRestore();
+  });
+
+  it("reports a failed browser choice and accepts a fresh install event", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    window.dispatchEvent(
+      Object.assign(new Event("beforeinstallprompt"), {
+        prompt: vi.fn().mockResolvedValue(undefined),
+        userChoice: Promise.reject(new Error("choice unavailable")),
+      }),
+    );
+    const { result } = renderHook(() => useInstallPrompt());
+
+    await act(async () => {
+      await expect(result.current.install()).resolves.toBe("failed");
+    });
+    expect(getInstallPromptSnapshot().installError).toBe(true);
+
+    dispatchInstallEvent();
+    expect(getInstallPromptSnapshot()).toMatchObject({ canInstall: true, installError: false });
+    error.mockRestore();
+  });
+
   it("persists dismissal and allows a deliberate reopen", () => {
     dispatchInstallEvent();
     const { result } = renderHook(() => useInstallPrompt());
@@ -66,6 +107,10 @@ describe("installPrompt", () => {
     dispatchInstallEvent();
     window.dispatchEvent(new Event("appinstalled"));
 
-    expect(getInstallPromptSnapshot()).toMatchObject({ canInstall: false, installed: true });
+    expect(getInstallPromptSnapshot()).toMatchObject({
+      canInstall: false,
+      installed: true,
+      installError: false,
+    });
   });
 });

@@ -14,7 +14,7 @@ public sealed record WorkshopUpdateFirearmCommand(string Manufacturer, string Mo
 public sealed record WorkshopArchiveFirearmCommand(long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopComponentDefinitionCommand(string Name, string? Manufacturer, string? Model,
     string? Description, long? DefaultServiceInterval, WorkshopTrackingMode TrackingMode, string? Notes,
-    IReadOnlyList<string>? CompatibilityTags = null);
+    IReadOnlyList<string>? CompatibilityTags = null, string? IdempotencyKey = null);
 public sealed record WorkshopComponentCommand(string DefinitionId, string? IdentificationNote, string? Manufacturer,
     string? Model, long? ServiceInterval, WorkshopTrackingMode? TrackingMode, string? Notes,
     IReadOnlyList<string>? CompatibilityTags = null, long InitialRounds = 0, string? IdempotencyKey = null);
@@ -660,16 +660,35 @@ public sealed class WorkshopService(
     public async Task<ComponentDefinition> CreateComponentDefinitionAsync(string accountId, WorkshopComponentDefinitionCommand command, CancellationToken ct = default)
     {
         RequireText(command.Name, "Name", 160);
+        var idempotencyKey = string.IsNullOrWhiteSpace(command.IdempotencyKey)
+            ? Guid.NewGuid().ToString("N")
+            : command.IdempotencyKey.Trim();
+        RequireText(idempotencyKey, "Idempotency key", 80);
+        command = command with { IdempotencyKey = idempotencyKey };
+        var definitionId = StableId(accountId, idempotencyKey, "component-definition");
+        var sourceIds = new[] { definitionId };
+        var payload = JsonSerializer.Serialize(command);
+        var expectedHash = PayloadHash(WorkshopOperationType.ComponentDefinitionCreated, [], sourceIds, payload, null);
+        var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
+        if (existing is not null)
+        {
+            if (existing.PayloadHash != expectedHash)
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+            return await repository.GetAsync<ComponentDefinition>(
+                       DbCollections.WorkshopComponentDefinitions, accountId, definitionId, ct)
+                   ?? throw new WorkshopConflictException("The idempotent catalogue item could not be recovered.");
+        }
         var definition = new ComponentDefinition
         {
-            Id = NewId(), AccountId = accountId, Name = command.Name.Trim(),
+            Id = definitionId, AccountId = accountId, Name = command.Name.Trim(),
             Manufacturer = Trim(command.Manufacturer), Model = Trim(command.Model),
             Description = Trim(command.Description), DefaultServiceInterval = command.DefaultServiceInterval,
             TrackingMode = command.TrackingMode, Notes = Trim(command.Notes),
             CompatibilityTags = NormalizeTags(command.CompatibilityTags), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopComponentDefinitions, definition, ct);
-        await RecordActivityAsync(accountId, WorkshopOperationType.ComponentDefinitionCreated, definition.Id, definition.Name, ct);
+        await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.ComponentDefinitionCreated,
+            Now(), [], sourceIds, payload, ct);
         return definition;
     }
 
@@ -717,12 +736,27 @@ public sealed class WorkshopService(
     {
         var current = await repository.GetAsync<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions, accountId, id, ct)
             ?? throw new WorkshopValidationException("Component definition was not found.");
+        var payload = JsonSerializer.Serialize(command);
+        var sourceIds = new[] { id };
+        var expectedHash = PayloadHash(WorkshopOperationType.ComponentDefinitionArchived, [], sourceIds, payload, null);
+        var existing = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
+        if (existing is not null)
+        {
+            if (existing.PayloadHash != expectedHash)
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+            return current.Archived
+                ? current
+                : throw new WorkshopConflictException("The idempotent archive could not be recovered.");
+        }
         if (current.Revision != command.ExpectedRevision)
             throw new WorkshopConflictException("Component definition changed. Reload before archiving.");
-        return await repository.ReplaceAsync(DbCollections.WorkshopComponentDefinitions,
+        var archived = await repository.ReplaceAsync(DbCollections.WorkshopComponentDefinitions,
             current with { Archived = true, Revision = current.Revision + 1 }, accountId, current.Revision, ct)
             ? current with { Archived = true, Revision = current.Revision + 1 }
             : throw new WorkshopConflictException("Component definition changed while archiving it.");
+        await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ComponentDefinitionArchived,
+            Now(), [], sourceIds, payload, ct);
+        return archived;
     }
 
     public async Task<ComponentInstance> UpdateComponentAsync(string accountId, string id,
@@ -829,6 +863,15 @@ public sealed class WorkshopService(
 
     public async Task<WorkshopOperationResult> RecordShootingAsync(string accountId, WorkshopShootingCommand command, CancellationToken ct = default)
     {
+        var requestHash = ClientRequestHash(command);
+        var existingOperation = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
+        if (existingOperation?.ClientRequestHash is not null)
+        {
+            if (existingOperation.ClientRequestHash != requestHash)
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+            await ApplyProjectionAsync(accountId, existingOperation.Deltas, ct);
+            return new(existingOperation, true);
+        }
         if (command.TotalRounds <= 0) throw new WorkshopValidationException("Total rounds must be positive.");
         var firearm = await repository.GetAsync<Firearm>(DbCollections.WorkshopFirearms, accountId, command.FirearmId, ct)
             ?? throw new WorkshopValidationException("Firearm was not found.");
@@ -877,7 +920,8 @@ public sealed class WorkshopService(
         }
 
         var operation = await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ShootingRecorded,
-            command.Date, deltas, [command.FirearmId], JsonSerializer.Serialize(command), ct);
+            command.Date, deltas, [command.FirearmId], JsonSerializer.Serialize(command), ct,
+            clientRequestHash: requestHash);
         if (!operation.Idempotent)
         {
             await repository.AddAsync(DbCollections.WorkshopShootingSessions, new ShootingSession
@@ -1212,13 +1256,17 @@ public sealed class WorkshopService(
 
     private async Task<WorkshopOperationResult> CommitAsync(string accountId, string key, WorkshopOperationType type,
         DateTime effectiveAt, IReadOnlyList<WorkshopDelta> deltas, IReadOnlyList<string> sourceIds,
-        string payloadIdentity, CancellationToken ct, string? originalOperationId = null)
+        string payloadIdentity, CancellationToken ct, string? originalOperationId = null,
+        string? clientRequestHash = null)
     {
         RequireText(key, "Idempotency key", 80);
         var hash = PayloadHash(type, deltas, sourceIds, payloadIdentity, originalOperationId);
         var existing = await repository.FindOperationAsync(accountId, key, ct);
         if (existing is not null)
         {
+            if (clientRequestHash is not null && existing.ClientRequestHash is not null &&
+                existing.ClientRequestHash != clientRequestHash)
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
             if (existing.PayloadHash != hash) throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
             await ApplyProjectionAsync(accountId, existing.Deltas, ct);
             return new(existing, true);
@@ -1226,6 +1274,7 @@ public sealed class WorkshopService(
         var operation = new WorkshopOperation
         {
             Id = NewId(), AccountId = accountId, ClientIdempotencyKey = key, PayloadHash = hash,
+            ClientRequestHash = clientRequestHash,
             OperationType = type, EffectiveAt = effectiveAt, RecordedAt = Now(), Deltas = deltas,
             SourceEntityIds = sourceIds, OriginalOperationId = originalOperationId,
             ContributionDigest = WorkshopReplay.Digest(deltas), CreationDateTime = Now()
@@ -1335,6 +1384,11 @@ public sealed class WorkshopService(
             case WorkshopOperationType.RecipeUpdated:
             case WorkshopOperationType.RecipeArchived:
                 return await RecipeLabelAsync(accountId, ids.FirstOrDefault(), ct);
+            case WorkshopOperationType.ComponentDefinitionCreated:
+            case WorkshopOperationType.ComponentDefinitionArchived:
+                var definition = await repository.GetAsync<ComponentDefinition>(
+                    DbCollections.WorkshopComponentDefinitions, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
+                return definition?.Name;
             case WorkshopOperationType.ProductionRecorded:
                 var batch = await repository.GetAsync<AmmoBatch>(
                     DbCollections.WorkshopAmmoBatches, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
@@ -1445,6 +1499,10 @@ public sealed class WorkshopService(
         IReadOnlyList<string> ids, string payloadIdentity, string? originalOperationId) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(new { type, deltas, ids, payloadIdentity, originalOperationId })))).ToLowerInvariant();
+
+    private static string ClientRequestHash(WorkshopShootingCommand command) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(command))))
+            .ToLowerInvariant();
 
     private static string StableId(string accountId, string idempotencyKey, string purpose)
     {

@@ -136,13 +136,30 @@ the ServerAPI HTTPS endpoint. Production account CORS must admit only the exact
 `https://workshop.morwalpiz.com` origin.
 
 The Workshop client is installable as a PWA. Its same-origin
-`manifest.webmanifest`, application icons, and lifecycle-only
-`workshop-sw.js` are served from the static root; the worker does not intercept
-requests, cache authenticated/API responses, handle Push, or perform background
-synchronization. The browser `beforeinstallprompt` event is captured before router
-bootstrap, while the localized installation invitation and reopen control render
-only inside the authenticated Workshop shell. Unsupported browsers retain their
-native installation affordances without a custom prompt.
+`manifest.webmanifest`, application icons, and `workshop-sw.js` are served from the
+static root. The worker precaches the application shell and linked static assets,
+provides an SPA navigation fallback when offline, and bypasses API requests; it
+does not cache authenticated API responses, handle Push, or use Background Sync.
+The browser `beforeinstallprompt` event is captured before router bootstrap, while
+the localized installation invitation and reopen control render only inside the
+authenticated Workshop shell. Unsupported browsers retain their native
+installation affordances without a custom prompt.
+
+Offline data uses native IndexedDB in account-partitioned workspace records. A user
+must sign in online and explicitly prepare the device to cache the supported route
+datasets. The remembered account identity is not a credential: offline restoration
+never stores the HttpOnly session cookie or a token, and the server session is
+revalidated when connectivity returns. Shooting sessions, maintenance events,
+catalogue create/archive, physical component creation, and component replacement
+are queued locally with optimistic projections and client idempotency keys. On
+reconnect, the foreground sync action sends operations serially through existing
+authenticated APIs; server conflicts block that command and dependent work with a
+visible abort reason. A component replacement is a remove-then-create sequence, not
+an atomic server operation, and partial completion is reported. Confirmed sign-out
+warns before deleting every local account workspace and pending command. Browser
+storage persistence is requested during preparation when supported; the interface
+warns when the browser does not grant it. Offline support is limited to prepared
+datasets and the named operations; other views and operations remain network-bound.
 
 Workshop localization is client-owned. The supported cultures are `it-IT` and
 `en-GB`; the browser resolves the first visit from its language preferences and falls

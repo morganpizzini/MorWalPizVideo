@@ -130,13 +130,13 @@ function FirearmDetailContent({ detail }: { detail: FirearmDetailLoaderData }) {
 }
 
 export function MaintenanceFeedback({ result, submitting }: {
-  result: { ok: boolean; error?: string } | null;
+  result: { ok: boolean; error?: string; offline?: boolean } | null;
   submitting: boolean;
 }) {
   const { t } = useI18n();
   if (!result || submitting) return null;
   return result.ok
-    ? <p className="form-success" role="status">{t("Maintenance recorded.")}</p>
+    ? <p className="form-success" role="status">{t(result.offline ? "Maintenance queued for sync." : "Maintenance recorded.")}</p>
     : <p className="form-error" role="alert">{result.error}</p>;
 }
 

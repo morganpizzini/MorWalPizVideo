@@ -1,3 +1,5 @@
+import "fake-indexeddb/auto";
+
 const values = new Map<string, string>();
 
 Object.defineProperty(window, "localStorage", {

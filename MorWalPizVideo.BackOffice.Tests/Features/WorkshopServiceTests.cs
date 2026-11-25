@@ -23,6 +23,68 @@ public sealed class WorkshopServiceTests
     }
 
     [Fact]
+    public async Task Component_definition_create_retry_returns_the_same_item_and_rejects_changed_payload()
+    {
+        var (service, scenario, _) = CreateService();
+        var command = new WorkshopComponentDefinitionCommand(
+            "Competition trigger", "Timney", "Alpha", null, 5000,
+            WorkshopTrackingMode.Interval, null, IdempotencyKey: "definition-create-1");
+
+        var created = await service.CreateComponentDefinitionAsync("account-1", command);
+        var retry = await service.CreateComponentDefinitionAsync("account-1", command);
+
+        Assert.Equal(created.Id, retry.Id);
+        Assert.Single(scenario.Read<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions));
+        Assert.Single(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations));
+        await Assert.ThrowsAsync<WorkshopConflictException>(() =>
+            service.CreateComponentDefinitionAsync("account-1", command with { Name = "Different trigger" }));
+    }
+
+    [Fact]
+    public async Task Component_definition_archive_retry_returns_archived_item()
+    {
+        var (service, scenario, _) = CreateService();
+        var definition = await service.CreateComponentDefinitionAsync("account-1",
+            new("Optic", null, null, null, null, WorkshopTrackingMode.Manual, null,
+                IdempotencyKey: "definition-create-archive"));
+        var command = new WorkshopArchiveComponentDefinitionCommand(0, "definition-archive-1");
+
+        var archived = await service.ArchiveComponentDefinitionAsync("account-1", definition.Id, command);
+        var retry = await service.ArchiveComponentDefinitionAsync("account-1", definition.Id, command);
+
+        Assert.True(archived.Archived);
+        Assert.Equal(archived.Revision, retry.Revision);
+        Assert.Equal(2, scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations).Count);
+    }
+
+    [Fact]
+    public async Task Shooting_retry_succeeds_after_its_ammunition_has_been_consumed()
+    {
+        var (service, scenario, firearm) = CreateService();
+        scenario.Add(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "recipe-1", AccountId = "account-1", Name = "Practice", Caliber = firearm.Caliber,
+            Status = WorkshopRecipeStatus.Active
+        });
+        scenario.Add(DbCollections.WorkshopAmmoBatches, new AmmoBatch
+        {
+            Id = "batch-1", AccountId = "account-1", RecipeId = "recipe-1",
+            ProductionDate = DateTime.UtcNow.AddDays(-1), ProducedQuantity = 20, OnHandQuantity = 20
+        });
+        var command = new WorkshopShootingCommand(
+            firearm.Id, DateTime.UtcNow, 20, null, [new("recipe-1", 20)], 0, [], "shoot-retry-1");
+
+        var first = await service.RecordShootingAsync("account-1", command);
+        var retry = await service.RecordShootingAsync("account-1", command);
+
+        Assert.False(first.Idempotent);
+        Assert.True(retry.Idempotent);
+        Assert.Equal(first.Operation.Id, retry.Operation.Id);
+        Assert.Single(scenario.Read<ShootingSession>(DbCollections.WorkshopShootingSessions));
+        Assert.Single(scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations));
+    }
+
+    [Fact]
     public async Task Firearm_edit_and_archive_use_revision_checks_and_are_idempotent()
     {
         var (service, scenario, firearm) = CreateService();

@@ -56,9 +56,9 @@ export function ActivitySkeleton({ rows = 5, compact = false }: { rows?: number;
   );
 }
 
-export function MetricSkeleton({ count = 4 }: { count?: number }) {
+export function MetricSkeleton({ count = 4, className = "" }: { count?: number, className?: string }) {
   return (
-    <div className="stats-grid loading-region" aria-busy="true">
+    <div className={`stats-grid loading-region ${className}`.trim()} aria-busy="true">
       <span className="visually-hidden"><LoadingStatus label="Loading summary…" /></span>
       {Array.from({ length: count }, (_, index) => (
         <div className="stat skeleton-stat" key={index} aria-hidden="true">
@@ -84,7 +84,7 @@ export function DetailSkeleton() {
     <div className="loading-region" aria-busy="true">
       <span className="visually-hidden"><LoadingStatus label="Loading details…" /></span>
       <SkeletonBlock className="skeleton-detail-title" />
-      <MetricSkeleton count={4} />
+      <MetricSkeleton className="mb-3" count={4} />
       <PanelSkeleton className="skeleton-detail-panel" />
       <PanelSkeleton className="skeleton-detail-panel" />
     </div>

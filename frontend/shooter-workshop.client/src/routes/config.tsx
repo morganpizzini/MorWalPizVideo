@@ -29,6 +29,7 @@ import { action as recipeProductionAction } from "./RecipeProduction/action";
 import { loader as recipeProductionLoader } from "./RecipeProduction/loader";
 import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
 import { DeferredRouteError } from "./shared";
+import { action as offlineAction } from "./offlineAction";
 
 export const routes: RouteObject[] = [
   { path: "/account/login", element: <AccountLogin /> },
@@ -41,6 +42,7 @@ export const routes: RouteObject[] = [
   },
   {
     path: "/",
+    action: offlineAction,
     element: (
       <FeedbackProvider>
         <AppShell />

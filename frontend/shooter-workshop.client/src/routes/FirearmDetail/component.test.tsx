@@ -166,4 +166,9 @@ describe("Firearm detail component usage", () => {
     render(<I18nProvider><MaintenanceFeedback result={{ ok: true }} submitting /></I18nProvider>);
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("announces when maintenance is saved locally for synchronization", () => {
+    render(<I18nProvider><MaintenanceFeedback result={{ ok: true, offline: true }} submitting={false} /></I18nProvider>);
+    expect(screen.getByRole("status").textContent).toContain("Maintenance queued for sync.");
+  });
 });

@@ -4,6 +4,7 @@ import {
   updateWorkshopFirearm,
 } from "@morwalpizvideo/services";
 import { redirect, type ActionFunctionArgs } from "react-router";
+import { runOrQueueOffline } from "../../services/offlineMutations";
 
 const value = (form: FormData, key: string) => {
   const result = form.get(key);
@@ -18,7 +19,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const idempotencyKey = value(form, "idempotencyKey") ?? crypto.randomUUID();
   if (intent === "maintenance") {
     try {
-      await recordWorkshopMaintenance({
+      const request = {
         firearmId,
         eventType: (value(form, "eventType") ?? "General") as "Inspection",
         date: value(form, "date") ?? new Date().toISOString(),
@@ -26,8 +27,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
         description: value(form, "description") ?? "",
         notes: value(form, "notes"),
         idempotencyKey,
-      });
-      return { ok: true as const, intent };
+      };
+      const result = await runOrQueueOffline(
+        () => recordWorkshopMaintenance(request),
+        "maintenance-create",
+        request,
+      );
+      return { ok: true as const, intent, offline: result.offline };
     } catch (error) {
       return { ok: false as const, intent, error: error instanceof Error ? error.message : "The request could not be completed." };
     }

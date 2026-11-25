@@ -10,6 +10,7 @@ import InventoryPanel from "./InventoryPanel";
 import CataloguePanel from "./CataloguePanel";
 import { DeferredRoute } from "../shared";
 import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
+import { useWorkshopAuth } from "../../auth/AuthProvider";
 
 export default function Firearms() {
   const resources = useLoaderData() as EquipmentLoaderResources;
@@ -18,6 +19,7 @@ export default function Firearms() {
 
 function FirearmsContent({ resources }: { resources: EquipmentLoaderResources }) {
   const { t } = useI18n();
+  const { offline } = useWorkshopAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
   const activeTab = rawTab === "inventory" || rawTab === "catalogue" ? rawTab : "firearms";
@@ -63,7 +65,7 @@ function FirearmsContent({ resources }: { resources: EquipmentLoaderResources })
                 if (value) next.set("firearmId", value); else next.delete("firearmId");
                 setSearchParams(next);
               }} />}</DeferredRoute> },
-              { key: "catalogue", label: t("Catalogue"), panel: <DeferredRoute data={resources.definitions} fallback={<PanelSkeleton />} >{(items) => <CataloguePanel items={items} />}</DeferredRoute> },
+              { key: "catalogue", label: t("Catalogue"), panel: <DeferredRoute data={resources.definitions} fallback={<PanelSkeleton />} >{(items) => <CataloguePanel items={items} offline={offline} />}</DeferredRoute> },
             ]}
           />
     </div>

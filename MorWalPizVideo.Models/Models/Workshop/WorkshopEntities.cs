@@ -181,6 +181,7 @@ public sealed record WorkshopOperation : BaseEntity
     [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
     [BsonElement("clientIdempotencyKey")] public string ClientIdempotencyKey { get; init; } = string.Empty;
     [BsonElement("payloadHash")] public string PayloadHash { get; init; } = string.Empty;
+    [BsonElement("clientRequestHash")] public string? ClientRequestHash { get; init; }
     [BsonElement("operationType")] public WorkshopOperationType OperationType { get; init; }
     [BsonElement("schemaVersion")] public int SchemaVersion { get; init; } = 1;
     [BsonElement("effectiveAt")] public DateTime EffectiveAt { get; init; }

@@ -1,16 +1,18 @@
 import { useSyncExternalStore } from "react";
 
-export type InstallPromptOutcome = "accepted" | "dismissed";
+export type InstallPromptOutcome = "accepted" | "dismissed" | "failed";
+type BrowserInstallPromptOutcome = Exclude<InstallPromptOutcome, "failed">;
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: InstallPromptOutcome }>;
+  userChoice: Promise<{ outcome: BrowserInstallPromptOutcome }>;
 };
 
 export interface InstallPromptState {
   canInstall: boolean;
   dismissed: boolean;
   installed: boolean;
+  installError: boolean;
 }
 
 const DISMISSED_STORAGE_KEY = "shooter-workshop.install-prompt-dismissed.v1";
@@ -20,6 +22,7 @@ let state: InstallPromptState = {
   canInstall: false,
   dismissed: readDismissedState(),
   installed: isStandaloneDisplayMode(),
+  installError: false,
 };
 
 function readDismissedState(): boolean {
@@ -55,12 +58,12 @@ function isStandaloneDisplayMode(): boolean {
 function handleBeforeInstallPrompt(event: Event): void {
   event.preventDefault();
   deferredPrompt = event as BeforeInstallPromptEvent;
-  updateState({ canInstall: true });
+  updateState({ canInstall: true, installError: false });
 }
 
 function handleAppInstalled(): void {
   deferredPrompt = undefined;
-  updateState({ canInstall: false, installed: true });
+  updateState({ canInstall: false, installed: true, installError: false });
 }
 
 if (typeof window !== "undefined") {
@@ -96,7 +99,7 @@ export function useInstallPrompt(): InstallPromptState & {
       } catch (error) {
         console.warn("Unable to persist Workshop install prompt dismissal", error);
       }
-      updateState({ dismissed: true });
+      updateState({ dismissed: true, installError: false });
     },
     install: async () => {
       if (!deferredPrompt) return undefined;
@@ -104,10 +107,16 @@ export function useInstallPrompt(): InstallPromptState & {
       const promptEvent = deferredPrompt;
       deferredPrompt = undefined;
       updateState({ canInstall: false });
-      await promptEvent.prompt();
-      const choice = await promptEvent.userChoice;
-      if (choice.outcome === "accepted") updateState({ dismissed: false });
-      return choice.outcome;
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice.outcome === "accepted") updateState({ dismissed: false });
+        return choice.outcome;
+      } catch (error) {
+        console.error("Unable to start the Workshop installation prompt", error);
+        updateState({ installError: true });
+        return "failed";
+      }
     },
     reopen: () => updateState({ dismissed: false }),
   };
@@ -115,6 +124,6 @@ export function useInstallPrompt(): InstallPromptState & {
 
 export function resetInstallPromptForTests(): void {
   deferredPrompt = undefined;
-  state = { canInstall: false, dismissed: false, installed: false };
+  state = { canInstall: false, dismissed: false, installed: false, installError: false };
   notify();
 }

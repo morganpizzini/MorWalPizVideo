@@ -29,6 +29,7 @@ export default function Maintenance({
   const fetcher = useFetcher<typeof action>();
   const [targetType, setTargetType] = useState<"firearm" | "component">("firearm");
   const [showForm, setShowForm] = useState(false);
+  const [successOffline, setSuccessOffline] = useState<boolean | null>(null);
   const [form, setForm] = useState<CreateWorkshopMaintenanceRequest>({
     firearmId: null,
     componentId: null,
@@ -42,6 +43,7 @@ export default function Maintenance({
   useEffect(() => {
     if (fetcher.state !== "idle" || !fetcher.data?.ok || fetcher.data === processedResult.current) return;
     processedResult.current = fetcher.data;
+    setSuccessOffline(fetcher.data.offline === true);
     setForm((current) => ({ ...current, idempotencyKey: crypto.randomUUID() }));
     setShowForm(false);
   }, [fetcher.state, fetcher.data]);
@@ -52,8 +54,13 @@ export default function Maintenance({
       <section className="panel">
         <div className="section-heading workspace-action-heading">
           <h2>{t("Maintenance")}</h2>
-          <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>+ {t("Record maintenance")}</button>
+          <button className="button button-primary" type="button" onClick={() => { setSuccessOffline(null); setShowForm(true); }}>+ {t("Record maintenance")}</button>
         </div>
+        {successOffline !== null && (
+          <p className="form-success" role="status">
+            {t(successOffline ? "Maintenance queued for sync." : "Maintenance recorded.")}
+          </p>
+        )}
         <Dialog open={showForm} title={t("Record maintenance")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
         <fetcher.Form method="post" className="panel form-panel">
           <input type="hidden" name="intent" value="maintenance" />

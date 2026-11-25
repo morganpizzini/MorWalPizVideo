@@ -5,6 +5,7 @@ import {
   getWorkshopFirearms,
 } from "@morwalpizvideo/services";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
+import { loadOfflineAware } from "../../services/offlineData";
 
 export interface EquipmentLoaderData {
   firearms: Awaited<ReturnType<typeof getWorkshopFirearms>>;
@@ -27,10 +28,10 @@ export interface EquipmentLoaderResources {
 }
 
 export function loader() {
-  const firearms = getWorkshopFirearms();
-  const definitions = getWorkshopComponentDefinitions();
-  const inventory = getWorkshopComponents();
-  const installations = getWorkshopComponentInstallations();
+  const firearms = loadOfflineAware("firearms", getWorkshopFirearms);
+  const definitions = loadOfflineAware("definitions", getWorkshopComponentDefinitions);
+  const inventory = loadOfflineAware("components", getWorkshopComponents);
+  const installations = loadOfflineAware("installations", getWorkshopComponentInstallations);
   return {
     firearms,
     definitions,
